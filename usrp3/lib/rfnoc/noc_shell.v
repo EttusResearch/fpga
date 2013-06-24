@@ -127,7 +127,19 @@ module noc_shell
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(str_src_fbfc_tdata), .fc_tlast(str_src_fbfc_tlast), .fc_tvalid(str_src_fbfc_tvalid), .fc_tready(str_src_fbfc_tready),
-      .in_tdata(tdata), .in_tlast(tlast), .in_tvalid(tvalid), .in_tready(tready),
+      .in_tdata(_tdata), .in_tlast(_tlast), .in_tvalid(_tvalid), .in_tready(_tready),
       .out_tdata(str_src_data_tdata), .out_tlast(str_src_data_tlast), .out_tvalid(str_src_data_tvalid), .out_tready(str_src_data_tready) );
+   
+   // ////////////////////////////////////////////////////////////////////////////////////
+   // Stream Sink
+   //      FIXME  do we follow the back of the fifo, or do we allow the device to generate
+   //             its own packet_consumed signals?
+   
+   tx_responder #(.BASE()) str_sink_fc_gen
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .ack_or_error(1'b0), .packet_consumed(), .seqnum(), .error_code(), .sid(),
+      .vita_time(),
+      .o_tdata(str_sink_fbfc_tdata), .o_tlast(str_sink_fbfc_tlast), .o_tvalid(str_sink_fbfc_tvalid), .o_tready(str_sink_fbfc_tready));
    
 endmodule // noc_shell
