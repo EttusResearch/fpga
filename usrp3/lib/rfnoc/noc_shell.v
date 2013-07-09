@@ -19,6 +19,9 @@ module noc_shell
     input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready
     );
 
+   localparam SB_SFC = 0;   // 2 regs
+   localparam SB_FCPG = 2;  // 2 regs
+   
    wire [63:0] 	 ctrl_sink_resp_tdata, ctrl_sink_cmd_tdata, ctrl_src_resp_tdata, ctrl_src_cmd_tdata,
 		 str_sink_data_tdata, str_sink_fbfc_tdata, str_src_data_tdata, str_src_fbfc_tdata;
    wire 	 ctrl_sink_resp_tlast, ctrl_sink_cmd_tlast, ctrl_src_resp_tlast, ctrl_src_cmd_tlast,
@@ -61,8 +64,8 @@ module noc_shell
    // ////////////////////////////////////////////////////////////////////////////////////
    // Control Sink (required)
 
-   wire 	 ready;
-   wire [63:0] 	 vita_time;
+   wire 	 ready = 1'b1;
+   wire [63:0] 	 vita_time = 64'd0;
    
    radio_ctrl_proc radio_ctrl_proc
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -73,6 +76,12 @@ module noc_shell
       .ready(ready), .readback(rb_data),
       .debug());
 
+   // ////////////////////////////////////////////////////////////////////////////////////
+   // Control Source (skeleton for now)
+
+   assign ctrl_src_resp_tready = 1'b1;  // Dump anything coming in
+   
+   
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
    //      FIXME need to pull out feedback from the FBFC bus before the source_flow_control block
@@ -85,7 +94,7 @@ module noc_shell
       .i_tdata(str_src_tdata), .i_tlast(str_src_tlast), .i_terror(1'b0), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
       .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast_int), .o_tvalid(str_src_tvalid_int), .o_tready(str_src_tready_int));
    
-   source_flow_control #(.BASE()) sfc
+   source_flow_control #(.BASE(SB_SFC)) sfc
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(str_src_fbfc_tdata), .fc_tlast(str_src_fbfc_tlast), .fc_tvalid(str_src_fbfc_tvalid), .fc_tready(str_src_fbfc_tready),
@@ -120,7 +129,7 @@ module noc_shell
 	  sid_hold <= str_sink_tdata[31:0];
        end
    
-   fc_packet_generator #(.BASE()) str_sink_fc_gen
+   fc_packet_generator #(.BASE(SB_FCPG)) str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready), .seqnum(seqnum_hold), .sid(sid_hold),
