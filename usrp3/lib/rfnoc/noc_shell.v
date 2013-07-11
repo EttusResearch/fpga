@@ -4,8 +4,8 @@ module noc_shell
    (input clk, input reset,
 
     // RFNoC interfaces
-    input [63:0] noci_tdata, input noci_tlast, input noci_tvalid, output noci_tready,
-    output [63:0] noco_tdata, output noco_tlast, output noco_tvalid, input noco_tready,
+    input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+    output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
     
     // Control Sink
     output [31:0] set_data, output [7:0] set_addr, output set_stb, input [63:0] rb_data,
@@ -40,7 +40,7 @@ module noc_shell
       .i1_tdata(ctrl_src_cmd_tdata), .i1_tlast(ctrl_src_cmd_tlast), .i1_tvalid(ctrl_src_cmd_tvalid), .i1_tready(ctrl_src_cmd_tready),
       .i2_tdata(str_sink_fbfc_tdata), .i2_tlast(str_sink_fbfc_tlast), .i2_tvalid(str_sink_fbfc_tvalid), .i2_tready(str_sink_fbfc_tready),
       .i3_tdata(str_src_data_tdata), .i3_tlast(str_src_data_tlast), .i3_tvalid(str_src_data_tvalid), .i3_tready(str_src_data_tready),
-      .o_tdata(noco_tdata), .o_tlast(noco_tlast), .o_tvalid(noco_tvalid), .o_tready(noco_tready));
+      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
 
    wire [63:0] 	 vheader;
    wire [1:0] 	 vdest = vheader[1:0];  // Switch by bottom 2 bits of SID
@@ -48,7 +48,7 @@ module noc_shell
    axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) input_demux
      (.clk(clk), .reset(reset), .clear(1'b0),
       .header(vheader), .dest(vdest),
-      .i_tdata(noci_tdata), .i_tlast(noci_tlast), .i_tvalid(noci_tvalid), .i_tready(noci_tready),
+      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(ctrl_sink_cmd_tdata), .o0_tlast(ctrl_sink_cmd_tlast), .o0_tvalid(ctrl_sink_cmd_tvalid), .o0_tready(ctrl_sink_cmd_tready),
       .o1_tdata(ctrl_src_resp_tdata), .o1_tlast(ctrl_src_resp_tlast), .o1_tvalid(ctrl_src_resp_tvalid), .o1_tready(ctrl_src_resp_tready),
       .o2_tdata(str_sink_data_tdata), .o2_tlast(str_sink_data_tlast), .o2_tvalid(str_sink_data_tvalid), .o2_tready(str_sink_data_tready),
