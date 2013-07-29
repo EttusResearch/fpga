@@ -223,14 +223,19 @@ module noc_shell_tb();
 	SetXbar(256,0);
 	
 	@(posedge clk);
+	// Port 0
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	#10000;
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0001}); // Command packet to set up source control window size
+	// Port 1
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	#10000;
+	// Port 2
+	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
+	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 
 	#10000;
