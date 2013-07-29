@@ -169,7 +169,7 @@ module noc_shell_tb();
       
       begin
 	 @(posedge clk);
-	 src_tdata <= { flags, seqnum, len*16'd2+16'd2, sid };
+	 src_tdata <= { flags, seqnum, len*16'd8+16'd8, sid };
 	 src_tlast <= 0;
 	 src_tvalid <= 1;
 	 @(posedge clk);
@@ -193,7 +193,7 @@ module noc_shell_tb();
       
       begin
 	 @(posedge clk);
-	 cmdout_tdata <= { 4'h8, seqnum, 16'h8, sid };
+	 cmdout_tdata <= { 4'h8, seqnum, 16'h16, sid };
 	 cmdout_tlast <= 0;
 	 cmdout_tvalid <= 1;
 	 while(~cmdout_tready) #1;

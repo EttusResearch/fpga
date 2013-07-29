@@ -44,7 +44,11 @@ module context_packet_gen
 
    always @*
      case(cp_state)
-       CP_HEAD : o_tdata <= { ((USE_TIME == 1) ? 4'h6 : 4'h4), seqnum, 16'd6, sid };
+       CP_HEAD : 
+	 if(USE_TIME == 1)
+	   o_tdata <= { 4'h6, seqnum, 16'd24, sid };
+	 else
+	   o_tdata <= { 4'h4, seqnum, 16'd16, sid };
        CP_TIME : o_tdata <= vita_time;
        CP_DATA : o_tdata <= body;
        default : o_tdata <= body;
