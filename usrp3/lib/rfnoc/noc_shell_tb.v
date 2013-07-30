@@ -4,7 +4,8 @@
 
 
 module noc_shell_tb();
-   
+   localparam STR_SINK_FIFOSIZE = 9;
+      
    reg clk, reset;
    always
      #100 clk = ~clk;
@@ -69,7 +70,7 @@ module noc_shell_tb();
       .rb_rd_stb(1'b0), .rb_addr(0), .rb_data());
    
    // Generator on port 0
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_0
+   noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_0
      (.clk(clk), .reset(reset),
       .i_tdata(noco_tdata[0]), .i_tlast(noco_tlast[0]), .i_tvalid(noco_tvalid[0]), .i_tready(noco_tready[0]),
       .o_tdata(noci_tdata[0]), .o_tlast(noci_tlast[0]), .o_tvalid(noci_tvalid[0]), .o_tready(noci_tready[0]),
@@ -82,25 +83,34 @@ module noc_shell_tb();
       .str_src_tdata(src_tdata), .str_src_tlast(src_tlast), .str_src_tvalid(src_tvalid), .str_src_tready(src_tready)
       );
 
-   wire [63:0] pass_tdata;
-   wire        pass_tlast, pass_tvalid, pass_tready;
+   // Converter on port 1
+   wire [31:0] set_data_1;
+   wire [7:0]  set_addr_1;
+   wire        set_stb_1;
+   wire [63:0] s1o_tdata, s1i_tdata;
+   wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
    
-   // Passthrough on port 1
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_1
+   noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_1
      (.clk(clk), .reset(reset),
       .i_tdata(noco_tdata[1]), .i_tlast(noco_tlast[1]), .i_tvalid(noco_tvalid[1]), .i_tready(noco_tready[1]),
       .o_tdata(noci_tdata[1]), .o_tlast(noci_tlast[1]), .o_tvalid(noci_tvalid[1]), .o_tready(noci_tready[1]),
-      .set_data(), .set_addr(), .set_stb(), .rb_data(64'd0),
+      .set_data(set_data_1), .set_addr(set_addr_1), .set_stb(set_stb_1), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
-      .str_sink_tdata(pass_tdata), .str_sink_tlast(pass_tlast), .str_sink_tvalid(pass_tvalid), .str_sink_tready(pass_tready),
-      .str_src_tdata(pass_tdata), .str_src_tlast(pass_tlast), .str_src_tvalid(pass_tvalid), .str_src_tready(pass_tready)
+      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
+      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
       );
 
+   chdr_8sc_to_16sc #(.BASE(8)) conv_8_16
+     (.clk(clk), .reset(reset),
+      .set_stb(set_stb_1), .set_addr(set_addr_1), .set_data(set_data_1),
+      .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
+      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
+      
    // Dumper on port 2
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_2
+   noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_2
      (.clk(clk), .reset(reset),
       .i_tdata(noco_tdata[2]), .i_tlast(noco_tlast[2]), .i_tvalid(noco_tvalid[2]), .i_tready(noco_tready[2]),
       .o_tdata(noci_tdata[2]), .o_tlast(noci_tlast[2]), .o_tvalid(noci_tvalid[2]), .o_tready(noci_tready[2]),
@@ -114,7 +124,7 @@ module noc_shell_tb();
       );
 
    // Control Source on port 3
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_3
+   noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_3
      (.clk(clk), .reset(reset),
       .i_tdata(noco_tdata[3]), .i_tlast(noco_tlast[3]), .i_tvalid(noco_tvalid[3]), .i_tready(noco_tready[3]),
       .o_tdata(noci_tdata[3]), .o_tlast(noci_tlast[3]), .o_tvalid(noci_tvalid[3]), .o_tready(noci_tready[3]),
@@ -173,14 +183,20 @@ module noc_shell_tb();
 	 src_tlast <= 0;
 	 src_tvalid <= 1;
 	 @(posedge clk);
+	 while(~src_tready)
+	   @(posedge clk);
 	 src_tdata <= data;
 	 repeat(len-1)
 	   begin
 	      @(posedge clk);
+	      while(~src_tready)
+		@(posedge clk);
 	      src_tdata <= src_tdata + 64'd1;
 	   end
 	 src_tlast <= 1;
 	 @(posedge clk);
+	 while(~src_tready)
+	   @(posedge clk);
 	 src_tvalid <= 0;
 	 @(posedge clk);
       end
@@ -224,28 +240,29 @@ module noc_shell_tb();
 	
 	@(posedge clk);
 	// Port 0
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	#10000;
 	// Port 1
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h8, 32'h0001_0002}); // Rewrite SID, send on to port 2
 	#10000;
 	// Port 2
-	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h0, 32'h0000_0002}); // Command packet to set up source control window size
+	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 
 	#10000;
-	SendPacket(4'h0, 12'd0, 16'd40, 32'h0000_0002, 64'hAAAA_AAAA_0000_0000); // data packet
-	SendPacket(4'h0, 12'd1, 16'd40, 32'h0000_0002, 64'hBBBB_BBBB_0000_0000); // data packet
-	SendPacket(4'h0, 12'd2, 16'd40, 32'h0000_0002, 64'hCCCC_CCCC_0000_0000); // data packet
-	SendPacket(4'h0, 12'd3, 16'd40, 32'h0000_0002, 64'hDDDD_DDDD_0000_0000); // data packet
-	SendPacket(4'h0, 12'd4, 16'd40, 32'h0000_0002, 64'hEEEE_EEEE_0000_0000); // data packet
-	SendPacket(4'h0, 12'd5, 16'd40, 32'h0000_0002, 64'hFFFF_FFFF_0000_0000); // data packet
-	SendPacket(4'h0, 12'd6, 16'd40, 32'h0000_0002, 64'h2222_2222_0000_0000); // data packet
+	SendPacket(4'h0, 12'd0, 16'd250, 32'h0000_0001, 64'hAAAA_AAAA_0000_0000); // data packet
+	SendPacket(4'h0, 12'd1, 16'd250, 32'h0000_0001, 64'hBBBB_BBBB_0000_0000); // data packet
+	SendPacket(4'h0, 12'd2, 16'd250, 32'h0000_0001, 64'hCCCC_CCCC_0000_0000); // data packet
+	SendPacket(4'h0, 12'd3, 16'd250, 32'h0000_0001, 64'hDDDD_DDDD_0000_0000); // data packet
+	SendPacket(4'h0, 12'd4, 16'd250, 32'h0000_0001, 64'hEEEE_EEEE_0000_0000); // data packet
+	SendPacket(4'h0, 12'd5, 16'd250, 32'h0000_0001, 64'hFFFF_FFFF_0000_0000); // data packet
+	SendPacket(4'h0, 12'd6, 16'd250, 32'h0000_0001, 64'h2222_2222_0000_0000); // data packet
      end
 
 endmodule // noc_shell_tb
