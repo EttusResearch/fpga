@@ -30,8 +30,7 @@ Inside the FPGA switching fabric, the first line of "compressed vita packets" wi
 The "CHDR" compresses the contents of the VRLP header and VRT header and streamID, and has the following format:
 
 BIT      Meaning
-63       is_extension_context  (0 for data, 1 for control packets)
-62       reserved
+63:62    Packet type -- 00 for data, 01 for flow control, 10 for command, 11 for response
 61       has_time (0 for no, 1 for time field on next line)
 60       EOB (end of burst indicator)
 59:48    12-bit sequence number (from VRLP frame count, bottom 4 bits should match VRT seq number)
