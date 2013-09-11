@@ -53,8 +53,8 @@ module source_flow_control
 	   SFC_HEAD :
 	     if(fc_tlast)
 	       sfc_state <= SFC_HEAD; // Error. CHDR packet with only a header is an error.
-	     else if(~fc_tdata[63])   // Is this NOT an extension context packet?
-	       sfc_state <= SFC_DUMP; // Error. Only extension context packets should come in on this interface.
+	     else if(fc_tdata[63:62] != 2'b01)   // Is this NOT a flow control packet?
+	       sfc_state <= SFC_DUMP; // Error. Only flow control packets should get here
 	     else if(fc_tdata[61])    // Does this packet have time?
 	       sfc_state <= SFC_TIME;
 	     else
