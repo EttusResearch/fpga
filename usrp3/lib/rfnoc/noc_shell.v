@@ -1,77 +1,32 @@
 
 module noc_shell
-  (input clk, input reset,
+  #(parameter STR_SINK_FIFOSIZE = 10)
+   (input clk, input reset,
 
-   // RFNoC interfaces
-   input [63:0] noci_tdata, input noci_tlast, input noci_tvalid, output noci_tready,
-   output [63:0] noco_tdata, output noco_tlast, output noco_tvalid, input noco_tready,
+    // RFNoC interfaces
+    input [63:0] noci_tdata, input noci_tlast, input noci_tvalid, output noci_tready,
+    output [63:0] noco_tdata, output noco_tlast, output noco_tvalid, input noco_tready,
+    
+    // Control Sink
+    output [31:0] set_data, output [7:0] set_addr, output set_stb, input [63:0] rb_data,
+    
+    // Control Source
+    
+    // Stream Sink
+    output [63:0] str_sink_tdata, output str_sink_tlast, output str_sink_tvalid, input str_sink_tready,
+    
+    // Stream Source
+    input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready
+    );
 
-   // Control Sink
-
-   // Control Source
-
-   // Stream Sink
-
-   // Stream Source
-
-   
-   // DDR3 access
-   input ddr3_clk, input ddr3_rst,
-   // DDR3 write port
-   output ddr3_axi_awid,
-   output [31:0] ddr3_axi_awaddr,
-   output [7:0] ddr3_axi_awlen,
-   output [2:0] ddr3_axi_awsize,
-   output [1:0] ddr3_axi_awburst,
-   output ddr3_axi_awlock,
-   output [3:0] ddr3_axi_awcache,
-   output [2:0] ddr3_axi_awprot,
-   output [3:0] ddr3_axi_awqos,
-   output ddr3_axi_awvalid,
-   input ddr3_axi_awready,
-   output [63:0] ddr3_axi_wdata,
-   output [7:0] ddr3_axi_wstrb,
-   output ddr3_axi_wlast,
-   output ddr3_axi_wvalid,
-   input ddr3_axi_wready,
-
-   input ddr3_axi_bid,
-   input [1:0] ddr3_axi_bresp,
-   input ddr3_axi_bvalid,
-   output ddr3_axi_bready,
-
-   // DDR3 read port
-   output ddr3_axi_arid,
-   output [31:0] ddr3_axi_araddr,
-   output [7:0] ddr3_axi_arlen,
-   output [2:0] ddr3_axi_arsize,
-   output [1:0] ddr3_axi_arburst,
-   output ddr3_axi_arlock,
-   output [3:0] ddr3_axi_arcache,
-   output [2:0] ddr3_axi_arprot,
-   output [3:0] ddr3_axi_arqos,
-   output ddr3_axi_arvalid,
-   input ddr3_axi_arready,
-   input ddr3_axi_rid,
-   input [63:0] ddr3_axi_rdata,
-   input [1:0] ddr3_axi_rresp,
-   input ddr3_axi_rlast,
-   input ddr3_axi_rvalid,
-   output ddr3_axi_rready
-   );
-
-   wire [31:0] set_data;
-   wire [7:0]  set_addr;
-   wire        set_stb;
-   
-   wire [63:0] ctrl_sink_resp_tdata, ctrl_sink_cmd_tdata, ctrl_src_resp_tdata, ctrl_src_cmd_tdata,
-	       str_sink_data_tdata, str_sink_fbfc_tdata, str_src_data_tdata, str_src_fbfc_tdata;
-   wire        ctrl_sink_resp_tlast, ctrl_sink_cmd_tlast, ctrl_src_resp_tlast, ctrl_src_cmd_tlast,
-	       str_sink_data_tlast, str_sink_fbfc_tlast, str_src_data_tlast, str_src_fbfc_tlast;
-   wire        ctrl_sink_resp_tvalid, ctrl_sink_cmd_tvalid, ctrl_src_resp_tvalid, ctrl_src_cmd_tvalid,
-	       str_sink_fbfc_tvalid, str_sink_data_tvalid, str_src_data_tvalid, str_src_fbfc_tvalid;
-   wire        ctrl_sink_resp_tready, ctrl_sink_cmd_tready, ctrl_src_resp_tready, ctrl_src_cmd_tready,
-	       str_sink_data_tready, str_sink_fbfc_tready, str_src_data_tready, str_src_fbfc_tready;
+   wire [63:0] 	 ctrl_sink_resp_tdata, ctrl_sink_cmd_tdata, ctrl_src_resp_tdata, ctrl_src_cmd_tdata,
+		 str_sink_data_tdata, str_sink_fbfc_tdata, str_src_data_tdata, str_src_fbfc_tdata;
+   wire 	 ctrl_sink_resp_tlast, ctrl_sink_cmd_tlast, ctrl_src_resp_tlast, ctrl_src_cmd_tlast,
+		 str_sink_data_tlast, str_sink_fbfc_tlast, str_src_data_tlast, str_src_fbfc_tlast;
+   wire 	 ctrl_sink_resp_tvalid, ctrl_sink_cmd_tvalid, ctrl_src_resp_tvalid, ctrl_src_cmd_tvalid,
+		 str_sink_fbfc_tvalid, str_sink_data_tvalid, str_src_data_tvalid, str_src_fbfc_tvalid;
+   wire 	 ctrl_sink_resp_tready, ctrl_sink_cmd_tready, ctrl_src_resp_tready, ctrl_src_cmd_tready,
+		 str_sink_data_tready, str_sink_fbfc_tready, str_src_data_tready, str_src_fbfc_tready;
    
    // ////////////////////////////////////////////////////////////////////////////////////
    // Mux and Demux to join/split streams going to/coming from RFNoC
@@ -84,8 +39,8 @@ module noc_shell
       .i3_tdata(str_src_data_tdata), .i3_tlast(str_src_data_tlast), .i3_tvalid(str_src_data_tvalid), .i3_tready(str_src_data_tready),
       .o_tdata(noco_tdata), .o_tlast(noco_tlast), .o_tvalid(noco_tvalid), .o_tready(noco_tready));
 
-   wire [63:0] vheader;
-   wire [1:0]  vdest = vheader[1:0];  // Switch by bottom 2 bits of SID
+   wire [63:0] 	 vheader;
+   wire [1:0] 	 vdest = vheader[1:0];  // Switch by bottom 2 bits of SID
 
    axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) input_demux
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -106,9 +61,8 @@ module noc_shell
    // ////////////////////////////////////////////////////////////////////////////////////
    // Control Sink (required)
 
-   wire        ready;
-   wire [63:0] rb_data;
-   wire [63:0] vita_time;
+   wire 	 ready;
+   wire [63:0] 	 vita_time;
    
    radio_ctrl_proc radio_ctrl_proc
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -123,23 +77,53 @@ module noc_shell
    // Stream Source
    //      FIXME need to pull out feedback from the FBFC bus before the source_flow_control block
 
+   wire [63:0] 	 str_src_tdata_int;
+   wire 	 str_src_tlast_int, str_src_tvalid_int, str_src_tready_int;
+   
+   axi_packet_gate #(.WIDTH(64), .SIZE(9)) str_src_gate
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .i_tdata(str_src_tdata), .i_tlast(str_src_tlast), .i_terror(1'b0), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
+      .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast_int), .o_tvalid(str_src_tvalid_int), .o_tready(str_src_tready_int));
+   
    source_flow_control #(.BASE()) sfc
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(str_src_fbfc_tdata), .fc_tlast(str_src_fbfc_tlast), .fc_tvalid(str_src_fbfc_tvalid), .fc_tready(str_src_fbfc_tready),
-      .in_tdata(_tdata), .in_tlast(_tlast), .in_tvalid(_tvalid), .in_tready(_tready),
+      .in_tdata(str_src_tdata_int), .in_tlast(str_src_tlast_int), .in_tvalid(str_src_tvalid_int), .in_tready(str_src_tready_int),
       .out_tdata(str_src_data_tdata), .out_tlast(str_src_data_tlast), .out_tvalid(str_src_data_tvalid), .out_tready(str_src_data_tready) );
    
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
    //      FIXME  do we follow the back of the fifo, or do we allow the device to generate
    //             its own packet_consumed signals?
+
+   axi_fifo #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) str_sink_fifo
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .i_tdata({str_sink_data_tlast,str_sink_data_tdata}), .i_tvalid(str_sink_data_tvalid), .i_tready(str_sink_data_tready),
+      .o_tdata({str_sink_tlast,str_sink_tdata}), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
+      .space(), .occupied());
+
+   reg [11:0] 	 seqnum_hold;
+   reg [31:0] 	 sid_hold;
+   reg 		 firstline;
    
-   tx_responder #(.BASE()) str_sink_fc_gen
+   always @(posedge clk)
+     if(reset)
+       firstline <= 1'b1;
+     else if(str_sink_tvalid & str_sink_tready)
+       firstline <= str_sink_tlast;
+
+   always @(posedge clk)
+     if(str_sink_tvalid & str_sink_tready & firstline)
+       begin
+	  seqnum_hold <= str_sink_tdata[59:48];
+	  sid_hold <= str_sink_tdata[31:0];
+       end
+   
+   fc_packet_generator #(.BASE()) str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack_or_error(1'b0), .packet_consumed(), .seqnum(), .error_code(), .sid(),
-      .vita_time(),
+      .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready), .seqnum(seqnum_hold), .sid(sid_hold),
       .o_tdata(str_sink_fbfc_tdata), .o_tlast(str_sink_fbfc_tlast), .o_tvalid(str_sink_fbfc_tvalid), .o_tready(str_sink_fbfc_tready));
    
 endmodule // noc_shell

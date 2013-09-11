@@ -1,0 +1,1 @@
+iverilog -Wall noc_shell.v -y . -y ../control/ -y ../fifo/ -y /opt/Xilinx/14.4/ISE_DS/ISE/verilog/src/unisims/ -y ../packet_proc/ -y ../timing/ -y ../vita/ 
