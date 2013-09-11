@@ -1,4 +1,12 @@
 
+
+// Issues
+//   Inline vs. Async commands
+//   Command and Response forwarding
+//   Different seqnums on incoming and outgoing
+//   Multiple streams
+//   Seqnum for different types
+
 module noc_shell
   #(parameter STR_SINK_FIFOSIZE = 10)
    (input clk, input reset,
