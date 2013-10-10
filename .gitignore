@@ -3,3 +3,6 @@
 a.out
 *.vcd
 *.lxt
+.metadata
+.project
+.settings
