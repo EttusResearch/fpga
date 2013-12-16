@@ -24,6 +24,7 @@ chdr_32f_to_16sc.v \
 chdr_16sc_to_32f.v \
 chdr_32f_to_16sc.v \
 chdr_16s_to_32f.v \
+xxs_to_xxf.v \
 float_to_iq.v \
 iq_to_float.v \
 ))
