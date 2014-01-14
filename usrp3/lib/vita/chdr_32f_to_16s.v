@@ -69,10 +69,12 @@ module chdr_32f_to_16s #
   reg [15:0] fixed1_old;
   reg [15:0] fixed0_old;
 
+  wire handshake_ok = o_tready & i_tvalid;
+
   always @ (posedge clk)
     if (rst)
       {fixed0_old, fixed1_old} <= {16'h0, 16'h0};
-    else
+    else if (handshake_ok)
       {fixed0_old, fixed1_old} <= {fixed0_cur, fixed1_cur};
 
   // Make routing (SID) available via settings bus
@@ -112,7 +114,6 @@ module chdr_32f_to_16s #
   localparam PREPARE = 2'd2;
   localparam OUTPUT  = 2'd3;
 
-  wire handshake_ok = o_tready & i_tvalid;
 
   reg [1:0] state;
 
