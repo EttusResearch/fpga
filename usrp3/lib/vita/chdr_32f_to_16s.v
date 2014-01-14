@@ -112,6 +112,8 @@ module chdr_32f_to_16s #
   localparam PREPARE = 2'd2;
   localparam OUTPUT  = 2'd3;
 
+  wire handshake_ok = o_tready & i_tvalid;
+
   reg [1:0] state;
 
   always @(posedge clk)
@@ -121,24 +123,26 @@ module chdr_32f_to_16s #
 
     else case(state)
       HEADER:
-        if (o_tready && i_tvalid) begin
+        // In case we see a i_last we just wait for the
+        // next header here, otherwise move on to the next states
+        if (handshake_ok & !i_tlast) begin
           state <= chdr_has_time ? TIME : PREPARE;
         end
 
       TIME:
-        if (o_tready && i_tvalid) begin
+        if (handshake_ok) begin
           // If we get a premature end of burst go back
           // to searching for the start of a new packet.
           state <= i_tlast ? HEADER : PREPARE;
         end
 
       PREPARE:
-        if (o_tready && i_tvalid) begin
+        if (handshake_ok) begin
           state <= i_tlast ? HEADER : OUTPUT;
         end
 
       OUTPUT:
-        if (o_tready && i_tvalid) begin
+        if (handshake_ok) begin
           state <= i_tlast ? HEADER : PREPARE;
         end
 
@@ -155,11 +159,9 @@ module chdr_32f_to_16s #
       TIME:
         o_tdata = i_tdata;
       PREPARE:
-        // Here old and cur is exchanged if i_tlast is asserted,.
-        // In this case the bits [31:0] of o_tdata are useless. The header will take
+        // The bits [31:0] of o_tdata are useless. The header will take
         // care of this by setting the correct length.
-        o_tdata = {fixed0_cur[15:0], fixed1_cur[15:0],
-                   fixed0_old[15:0], fixed1_old[15:0]};
+        o_tdata = {fixed0_cur[15:0], fixed1_cur[15:0], 32'h0};
       OUTPUT:
         o_tdata = {fixed0_old[15:0], fixed1_old[15:0],
                    fixed0_cur[15:0], fixed1_cur[15:0]};
