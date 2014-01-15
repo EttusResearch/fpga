@@ -1,7 +1,7 @@
 //
 // Copyright 2013, 2014 Ettus Research LLC
 //
-module chdr_16sc_to_8sc#
+module chdr_16sc_to_8sc #
 (
   parameter BASE=0
 )
