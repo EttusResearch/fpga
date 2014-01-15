@@ -1,7 +1,7 @@
 //
 // Copyright 2013, 2014 Ettus Research LLC
 //
-module chdr_16sc_to_8sc #
+module chdr_16s_to_8s #
 (
   parameter BASE=0
 )
@@ -48,7 +48,7 @@ module chdr_16sc_to_8sc #
   // and subtracting header length.
   wire [15:0] sample_byte_count_in = i_tdata[47:32] - chdr_header_bytes;
   // Calculate size of samples to be output by taking input size
-  // and dividing by two as sizeof(Q15) = 2*sizeof(float)
+  // and dividing by two as sizeof(Q15) = 2*sizeof(Q7)
   wire [15:0] sample_byte_count_out = sample_byte_count_in >> 1;
   // Calculate size of output CHDR packet by adding back header size to new
   // payload size.
@@ -85,7 +85,7 @@ module chdr_16sc_to_8sc #
   always @ (posedge clk)
     if (rst)
       {rounded_old0, rounded_old1, rounded_old2, rounded_old3} <= 32'h0;
-    else if (o_tready) begin
+    else if (handshake_ok) begin
       {rounded_old0, rounded_old1} <= {rounded_cur0, rounded_cur1};
       {rounded_old2, rounded_old3} <= {rounded_cur2, rounded_cur3};
   end
