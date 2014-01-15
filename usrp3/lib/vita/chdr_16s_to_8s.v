@@ -85,7 +85,7 @@ module chdr_16sc_to_8sc#
   always @ (posedge clk)
     if (rst)
       {rounded_old0, rounded_old1, rounded_old2, rounded_old3} <= 32'h0;
-  else if (o_tready) begin
+    else if (o_tready) begin
       {rounded_old0, rounded_old1} <= {rounded_cur0, rounded_cur1};
       {rounded_old2, rounded_old3} <= {rounded_cur2, rounded_cur3};
   end
