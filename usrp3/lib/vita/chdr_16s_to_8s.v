@@ -1,8 +1,8 @@
 //
 // Copyright 2013, 2014 Ettus Research LLC
 //
-module chdr_16s_to_8s #
-(
+module chdr_16s_to_8s
+#(
   parameter BASE=0
 )
 (
