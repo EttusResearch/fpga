@@ -1,0 +1,152 @@
+Welcome to Xilinx CORE Generator.
+Help system initialized.
+The IP Catalog has been reloaded.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Loaded all available family support information.
+Wrote CGP file for project 'coregen'.
+Customize and GenerateINFO:sim:172 - Generating IP...
+Applying current project options...
+Finished applying current project options.
+Cancelled executing Tcl generator.
+Customize and GenerateINFO:sim:172 - Generating IP...
+WARNING:sim:100 - The Simulation File Type <Behavioral> is not valid for this
+   core. Overriding with File Type <structural>.
+Applying current project options...
+Finished applying current project options.
+Customizing IP...
+Release 14.4 - Xilinx CORE Generator IP GUI Launcher P.49d (lin64)
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+Finished Customizing.
+Generating IP...
+WARNING:sim:100 - The Simulation File Type <Behavioral> is not valid for this
+   core. Overriding with File Type <structural>.
+Configuring files for chipscope_icon root...
+Gathering HDL files for chipscope_icon root...
+Creating XST project for chipscope_icon...
+Creating XST script file for chipscope_icon...
+Creating XST instantiation file for chipscope_icon...
+Running XST for chipscope_icon...
+XST: HDL Parsing
+XST: HDL Elaboration
+XST: HDL Synthesis
+XST: Advanced HDL Synthesis
+XST: Low Level Synthesis
+XST: Design Summary
+Not generating VHDL wrapper
+Generating Verilog wrapper
+Skipping VHDL instantiation template for chipscope_icon...
+Creating ISE instantiation template for chipscope_icon...
+Finished Generation.
+Generating IP instantiation template...
+Generating ASY schematic symbol...
+INFO:sim:949 - Finished generation of ASY schematic symbol.
+Generating metadata file...
+Generating ISE project...
+XCO file found: chipscope_icon.xco
+XMDF file found: chipscope_icon_xmdf.tcl
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.asy
+-view all -origin_type imported
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.ngc
+-view all -origin_type created
+Checking file
+"/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.ngc" for
+project device match ...
+File "/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.ngc"
+device information matches project device.
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.v
+-view all -origin_type created
+INFO:HDLCompiler:1845 - Analyzing Verilog file
+   "/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.v" into
+   library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_icon.veo
+-view all -origin_type imported
+INFO:TclTasksC:2116 - The automatic calculation of top has been turned-off.
+   Please set the new top explicitly by running the "project set top" command.
+   To re-calculate the new top automatically, set the "Auto Implementation Top"
+   property to true.
+Top level has been set to "/chipscope_icon"
+Generating README file...
+Generating FLIST file...
+INFO:sim:948 - Finished FLIST file generation.
+Launching README viewer...
+Moving files to output directory...
+Finished moving files to output directory
+Saved CGP file for project 'coregen'.
+Customize and GenerateINFO:sim:172 - Generating IP...
+WARNING:sim:100 - The Simulation File Type <Behavioral> is not valid for this
+   core. Overriding with File Type <structural>.
+Applying current project options...
+Finished applying current project options.
+Customizing IP...
+Release 14.4 - Xilinx CORE Generator IP GUI Launcher P.49d (lin64)
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+Finished Customizing.
+Generating IP...
+WARNING:sim:100 - The Simulation File Type <Behavioral> is not valid for this
+   core. Overriding with File Type <structural>.
+Configuring files for chipscope_ila root...
+Gathering HDL files for chipscope_ila root...
+Creating XST project for chipscope_ila...
+Creating XST script file for chipscope_ila...
+Creating XST instantiation file for chipscope_ila...
+Running XST for chipscope_ila...
+XST: HDL Parsing
+XST: HDL Elaboration
+XST: HDL Synthesis
+XST: Advanced HDL Synthesis
+XST: Low Level Synthesis
+XST: Design Summary
+Not generating VHDL wrapper
+Generating Verilog wrapper
+Skipping VHDL instantiation template for chipscope_ila...
+Creating ISE instantiation template for chipscope_ila...
+Finished Generation.
+Generating IP instantiation template...
+Generating ASY schematic symbol...
+INFO:sim:949 - Finished generation of ASY schematic symbol.
+Generating metadata file...
+Generating ISE project...
+XCO file found: chipscope_ila.xco
+XMDF file found: chipscope_ila_xmdf.tcl
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.asy
+-view all -origin_type imported
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.ngc
+-view all -origin_type created
+Checking file
+"/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.ngc" for
+project device match ...
+File "/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.ngc"
+device information matches project device.
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.v
+-view all -origin_type created
+INFO:HDLCompiler:1845 - Analyzing Verilog file
+   "/home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.v" into
+   library work
+INFO:ProjectMgmt - Parsing design hierarchy completed successfully.
+Adding /home/jblum/fpgapriv/usrp3/top/e200/chipscope/tmp/_cg/chipscope_ila.veo
+-view all -origin_type imported
+INFO:TclTasksC:2116 - The automatic calculation of top has been turned-off.
+   Please set the new top explicitly by running the "project set top" command.
+   To re-calculate the new top automatically, set the "Auto Implementation Top"
+   property to true.
+Top level has been set to "/chipscope_ila"
+Generating README file...
+Generating FLIST file...
+INFO:sim:948 - Finished FLIST file generation.
+Launching README viewer...
+Moving files to output directory...
+Finished moving files to output directory
+Saved CGP file for project 'coregen'.
+Saved CGP file for project 'coregen'.
+Closed project file.

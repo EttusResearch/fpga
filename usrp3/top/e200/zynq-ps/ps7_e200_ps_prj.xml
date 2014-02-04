@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<!DOCTYPE project PUBLIC "project" "project.dtd" >
+<project version="1.0" >
+  <set param="PCW::QSPI::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::I2C0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::I2C0::I2C0::IO" value="MIO 50 .. 51" />
+  <set param="PCW::UART1::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::ENET0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::CAN0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::CAN0::CAN0::IO" value="MIO 46 .. 47" />
+  <set param="PCW::SD0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::SD0::GRP_CD::ENABLE" value="1" />
+  <set param="PCW::SD0::GRP_WP::ENABLE" value="1" />
+  <set param="PCW::SD0::GRP_CD::IO" value="MIO 0" />
+  <set param="PCW::SD0::GRP_WP::IO" value="MIO 15" />
+  <set param="PCW::TTC0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::ENET0::GRP_MDIO::ENABLE" value="1" />
+  <set param="PCW::ENET0::ENET0::IO" value="MIO 16 .. 27" />
+  <set param="PCW::USB0::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::GPIO::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::GPIO::EMIO_GPIO::ENABLE" value="1" />
+  <set param="PCW::GPIO::EMIO_GPIO::IO" value="32" />
+  <set param="PCW::WDT::PERIPHERAL::ENABLE" value="1" />
+  <set param="PCW::UIPARAM::DDR::DQS_TO_CLK_DELAY_0" value="0.217" />
+  <set param="PCW::UIPARAM::DDR::DQS_TO_CLK_DELAY_1" value="0.133" />
+  <set param="PCW::UIPARAM::DDR::DQS_TO_CLK_DELAY_2" value="0.089" />
+  <set param="PCW::UIPARAM::DDR::DQS_TO_CLK_DELAY_3" value="0.248" />
+  <set param="PCW::UIPARAM::DDR::PARTNO" value="MT41J256M8 HX-15E" />
+  <set param="PCW::UIPARAM::DDR::SPEED_BIN" value="DDR3_1066F" />
+  <set param="PCW::UIPARAM::DDR::CWL" value="6" />
+  <set param="PCW::UIPARAM::DDR::T_RC" value="49.5" />
+  <set param="PCW::UIPARAM::DDR::T_RAS_MIN" value="36.0" />
+  <set param="PCW::UIPARAM::DDR::T_FAW" value="30.0" />
+  <set param="PCW:GPIO::EMIO_GPIO::WIDTH" value="32" />
+  <set param="PCW::GPIO::V2.00.A::C_EN_EMIO_GPIO" value="1" />
+  <set param="PCW::PRESET::GLOBAL::CONFIG" value="Default" />
+  <set param="PCW::PRESET::GLOBAL::DEFAULT" value="powerup" />
+  <set param="PCW::ENET0::PERIPHERAL::FREQMHZ" value="100 Mbps" />
+  <set param="PCW::SDIO::PERIPHERAL::FREQMHZ" value="50.000000" />
+  <set param="PCW::CAN::PERIPHERAL::FREQMHZ" value="100.000000" />
+  <set param="PCW::PRESET::FPGA::PARTNUMBER" value="xc7z020clg484-1" />
+  <set param="PCW::PRESET::FPGA::SPEED" value="-1" />
+  <set param="PCW::UIPARAM::DDR::TRAIN_WRITE_LEVEL" value="1" />
+  <set param="PCW::UIPARAM::DDR::TRAIN_READ_GATE" value="1" />
+  <set param="PCW::UIPARAM::DDR::TRAIN_DATA_EYE" value="1" />
+  <set param="PCW::UIPARAM::DDR::USE_INTERNAL_VREF" value="1" />
+  <set param="PCW::UIPARAM::DDR::BOARD_DELAY0" value="0.537" />
+  <set param="PCW::UIPARAM::DDR::BOARD_DELAY1" value="0.442" />
+  <set param="PCW::UIPARAM::DDR::BOARD_DELAY2" value="0.464" />
+  <set param="PCW::UIPARAM::DDR::BOARD_DELAY3" value="0.521" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP0_BASEADDR" value="0x00000000" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP0_HIGHADDR" value="0x3FFFFFFF" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP1_BASEADDR" value="0x00000000" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP1_HIGHADDR" value="0x3FFFFFFF" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP2_BASEADDR" value="0x00000000" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP2_HIGHADDR" value="0x3FFFFFFF" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP3_BASEADDR" value="0x00000000" />
+  <set param="PCW::DDR::V4.00.A::C_S_AXI_HP3_HIGHADDR" value="0x3FFFFFFF" />
+  <set param="PCW::DDR::AXI_HP0::DATAWIDTH" value="64" />
+</project>

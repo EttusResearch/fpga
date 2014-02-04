@@ -40,7 +40,7 @@ module axi_stream_to_wb
     //-- the wishbone interface
     input clk_i, input rst_i,
     input we_i, input stb_i, input cyc_i, output reg ack_o,
-    input [AWIDTH-1:0] adr_i, input [31:0] dat_i, output [31:0] dat_o,
+    input [AWIDTH-1:0] adr_i, input [31:0] dat_i, output reg [31:0] dat_o,
 
     //-- the axi stream interface input
     input [63:0] rx_tdata,
@@ -60,10 +60,23 @@ module axi_stream_to_wb
     output [31:0] debug_tx
 );
 
+    reg stb_i_del;
+    always @(posedge clk_i) begin
+        if (rst_i) stb_i_del <= 0;
+        else stb_i_del <= stb_i;
+    end
+
+    reg ack_o_del;
+    always @(posedge clk_i) begin
+        if (rst_i)  ack_o_del <= 0;
+        else        ack_o_del <= ack_o;
+    end
+
     //drive the ack signal
     always @(posedge clk_i) begin
-        if (rst_i) ack_o <= 0;
-        else ack_o <= stb_i & ~ack_o;
+        if (rst_i)      ack_o <= 0;
+        else if (we_i)  ack_o <= stb_i & ~ack_o;
+        else            ack_o <= stb_i & stb_i_del & ~ack_o & ~ack_o_del;
     end
 
     //control registers, status
@@ -119,7 +132,11 @@ module axi_stream_to_wb
     );
 
     //select the data source, status, or upper/lower 32 from bram
-    assign dat_o = ctrl_addressed ? status : ((!adr_i[2])? rx_bram_data64[63:32]: rx_bram_data64[31:0]);
+    wire [31:0] dat_o_pipeline;
+    assign dat_o_pipeline = ctrl_addressed ? status : ((!adr_i[2])? rx_bram_data64[63:32]: rx_bram_data64[31:0]);
+    always @(posedge clk_i) begin
+        dat_o <= dat_o_pipeline;
+    end
 
     //------------------------------------------------------------------
     //-- block ram interface between wb and output stream

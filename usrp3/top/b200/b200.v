@@ -250,11 +250,13 @@ module b200 (
         .sclk(sclk), .sen(sen), .mosi(mosi), .miso(miso),
         .rb_misc({31'b0, pll_lock}), .misc_outs(misc_outs),
 
-        .debug_scl(GPIF_CTL8), .debug_sda(GPIF_CTL6),
-        .debug_txd(FPGA_TXD0), .debug_rxd(FPGA_RXD0),
+       .debug_scl(GPIF_CTL8), .debug_sda(GPIF_CTL6),
+       .debug_txd(FPGA_TXD0), .debug_rxd(FPGA_RXD0),
 
         .debug()
     );
+
+   
 
     ///////////////////////////////////////////////////////////////////////
     // GPIF2

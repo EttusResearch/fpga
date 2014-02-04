@@ -1,0 +1,6 @@
+# codec_data_clk is the data clock from catalina, sample rate dependent
+# this clock equals sample rate in CMOS DDR 1R1T mode
+# this clock is double the sample rate in CMOS DDR 2R2T mode
+# Max clock rate is 61.44 MHz
+NET "CAT_DATA_CLK" TNM_NET = "CAT_DATA_CLK";
+TIMESPEC "TS_CAT_DATA_CLK" = PERIOD "CAT_DATA_CLK" 16276 ps HIGH 50 %;

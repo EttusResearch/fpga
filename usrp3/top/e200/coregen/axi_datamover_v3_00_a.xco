@@ -1,0 +1,77 @@
+##############################################################
+#
+# Xilinx Core Generator version 14.4
+# Date: Thu May 23 19:04:17 2013
+#
+##############################################################
+#
+#  This file contains the customisation parameters for a
+#  Xilinx CORE Generator IP GUI. It is strongly recommended
+#  that you do not manually alter this file as it may cause
+#  unexpected and unsupported behavior.
+#
+##############################################################
+#
+#  Generated from component: xilinx.com:ip:axi_datamover:3.00.a
+#
+##############################################################
+#
+# BEGIN Project Options
+SET addpads = false
+SET asysymbol = true
+SET busformat = BusFormatAngleBracketNotRipped
+SET createndf = false
+SET designentry = Verilog
+SET device = xc7z020
+SET devicefamily = zynq
+SET flowvendor = Other
+SET formalverification = false
+SET foundationsym = false
+SET implementationfiletype = Ngc
+SET package = clg484
+SET removerpms = false
+SET simulationfiles = Behavioral
+SET speedgrade = -2
+SET verilogsim = true
+SET vhdlsim = false
+# END Project Options
+# BEGIN Select
+SELECT AXI_DataMover xilinx.com:ip:axi_datamover:3.00.a
+# END Select
+# BEGIN Parameters
+CSET c_include_mm2s=Full
+CSET c_include_mm2s_dre=false
+CSET c_include_mm2s_stsfifo=true
+CSET c_include_s2mm=Full
+CSET c_include_s2mm_dre=false
+CSET c_include_s2mm_stsfifo=true
+CSET c_m_axi_mm2s_addr_width=32
+CSET c_m_axi_mm2s_arid=0
+CSET c_m_axi_mm2s_data_width=64
+CSET c_m_axi_mm2s_id_width=4
+CSET c_m_axi_s2mm_addr_width=32
+CSET c_m_axi_s2mm_awid=1
+CSET c_m_axi_s2mm_data_width=64
+CSET c_m_axi_s2mm_id_width=4
+CSET c_m_axis_mm2s_tdata_width=64
+CSET c_mm2s_addr_pipe_depth=1
+CSET c_mm2s_btt_used=16
+CSET c_mm2s_burst_size=32
+CSET c_mm2s_include_sf=false
+CSET c_mm2s_stscmd_fifo_depth=1
+CSET c_mm2s_stscmd_is_async=false
+CSET c_s2mm_addr_pipe_depth=1
+CSET c_s2mm_btt_used=16
+CSET c_s2mm_burst_size=32
+CSET c_s2mm_include_sf=false
+CSET c_s2mm_stscmd_fifo_depth=1
+CSET c_s2mm_stscmd_is_async=false
+CSET c_s2mm_support_indet_btt=true
+CSET c_s_axis_s2mm_tdata_width=64
+CSET component_name=axi_datamover_v3_00_a
+# END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2012-06-04T10:16:25Z
+# END Extra information
+GENERATE
+# CRC: c220ab68

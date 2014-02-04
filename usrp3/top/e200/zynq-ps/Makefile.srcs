@@ -1,0 +1,24 @@
+#
+# Copyright 2013 Ettus Research LLC
+#
+
+##################################################
+# ZYNQ PS Sources
+##################################################
+ZYNQ_PS_LIB = $(abspath $(BASE_DIR)/e200/zynq-ps)
+ZYNQ_PS_TMP = $(abspath $(BUILD_DIR)/zynq-ps)
+
+ZYNQ_PS_SRCS = $(abspath $(addprefix $(ZYNQ_PS_TMP)/, \
+	hdl/e200_ps_stub.v \
+	implementation/e200_ps.ngc \
+))
+
+##################################################
+# Generate ZYNQ PS Sub-system
+##################################################
+$(ZYNQ_PS_SRCS): $(ZYNQ_PS_LIB)/build_new_e200_proj.tcl $(ZYNQ_PS_LIB)/e200_master.mhs $(ZYNQ_PS_LIB)/ps7_e200_ps_prj.xml
+	@echo "Rebuilding ZYNQ PS subsystem"
+	@echo "source dir $(ZYNQ_PS_LIB)"
+	@echo "build dir $(ZYNQ_PS_TMP)"
+	mkdir -p $(ZYNQ_PS_TMP)
+	(cd $(ZYNQ_PS_TMP) ; xps -nw -scr $(ZYNQ_PS_LIB)/build_new_e200_proj.tcl)
