@@ -38,6 +38,8 @@ module gen_ddrlvds
    wire 	tx_clk_2x_int;
    wire 	tx_frame_int;
    
+   (* keep = "true", max_fanout = 10 *) wire phase_eq_phase2x = (phase == phase_2x);
+
 
    always @(posedge tx_clk_1x)
      if (reset)
@@ -65,8 +67,8 @@ module gen_ddrlvds
 	// To sync multiple AD9146 DAC's an extended assertion of FRAME is required,
 	// when sync flag set, squash one rising_edge assertion which causes a 3 word assertion of FRAME,
 	// also reset sync flag. "sync_dacs" comes from 1x clk and pulse lasts 2 2x clock cycles...this is accounted for.
-	sync_2x <=  ((phase == phase_2x) && sync_2x) ? 1'b0 /*RESET */ : (sync_dacs) ? 1'b1 /* SET */ : sync_2x /* HOLD */;
-	rising_edge <= ((phase == phase_2x) && ~sync_2x);
+	sync_2x <=  (phase_eq_phase2x && sync_2x) ? 1'b0 /*RESET */ : (sync_dacs) ? 1'b1 /* SET */ : sync_2x /* HOLD */;
+	rising_edge <= (phase_eq_phase2x && ~sync_2x);
 	phase_2x <= phase;
      end
 

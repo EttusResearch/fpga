@@ -290,7 +290,8 @@ module b200_core
      ******************************************************************/
     `ifdef B200_CAN_HAZ_R1
     assign radio_st = 8'h2;
-    wire [63:0] radio1_debug;
+   wire [63:0] radio1_debug;
+   
     radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE)) radio_1
     (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
@@ -374,7 +375,6 @@ module b200_core
       .rx_i(debug_rxd), 
       .baud_o()
       );
-   
 
    //
    // Debug

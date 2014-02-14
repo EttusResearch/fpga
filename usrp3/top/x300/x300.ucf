@@ -312,8 +312,8 @@ NET   FPGA_REFCLK_10MHz_n    IOSTANDARD = LVDS_25    |   LOC  =  AH24;
 
 
 ## CPRI output clock to clock synthesizer chip
-#NET   CPRI_CLK_OUT_P         IOSTANDARD = LVDS_18   |   LOC  =  AA17;
-#NET   CPRI_CLK_OUT_N         IOSTANDARD = LVDS_18   |   LOC  =  AA16;
+NET   CPRI_CLK_OUT_P         IOSTANDARD = LVDS       |   LOC  =  AA17;
+NET   CPRI_CLK_OUT_N         IOSTANDARD = LVDS       |   LOC  =  AA16;
 
 ## SFP low-speed IO
 NET   SFPP0_SCL              IOSTANDARD = LVCMOS33   |   LOC  =  U24;

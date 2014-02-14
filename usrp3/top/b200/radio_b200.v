@@ -239,7 +239,7 @@ module radio_b200
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
    wire [63:0] rx_tdata_i; wire rx_tlast_i, rx_tvalid_i, rx_tready_i;
-
+   
    new_rx_framer #(.BASE(SR_RX_CTRL+4),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE)) new_rx_framer
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -293,6 +293,9 @@ module radio_b200
       .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(rmux_tdata_r), .o_tlast(rmux_tlast_r), .o_tvalid(rmux_tvalid_r), .o_tready(rmux_tready_r));
 
+   // DEBUG LOGIC - NOT FOR PRODUCTION
+
+   
    assign debug = 0;
 
    

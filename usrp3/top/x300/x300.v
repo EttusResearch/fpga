@@ -201,7 +201,7 @@ module x300
    output EXT_PPS_OUT, input GPS_LOCK_OK,
    output GPSDO_PWR_ENA, output TCXO_ENA,
 
-   output CIPRI_CLKOUT_P, output CPRI_CLKOUT_N,   // IJB. How should these be driven?
+   output CPRI_CLK_OUT_P, output CPRI_CLK_OUT_N,
 
    input FPGA_REFCLK_10MHz_p, input FPGA_REFCLK_10MHz_n,
 
@@ -311,6 +311,16 @@ module x300
         .IB(FPGA_REFCLK_10MHz_n)
     );
 
+   //////////////////////////////////////////////////////////////////////
+   // CPRI Clock output -- this is the dirty recovered clock from the MGT
+   // This goes to the LMK04816 which locks to it and cleans it up
+   // We get the clean versions back as CPRI_CLK (for the CPRI MGT) 
+   // and FPGA_CLK (for our main rfclk)
+   //////////////////////////////////////////////////////////////////////
+
+   wire cpri_clk_out = 1'b0; // FIXME - connect to CPRI clock recovery when implemented
+   OBUFDS OBUFDS_cpri (.I(cpri_clk_out), .O(CPRI_CLK_OUT_P), .OB(CPRI_CLK_OUT_N));
+   
    /////////////////////////////////////////////////////////////////////
    //
    // power-on-reset logic.
@@ -331,10 +341,10 @@ module x300
 
    ////////////////////////////////////////////////////////////////////
    //
-   // Generate Radio Clocks from AD9510.
-   // Radio clock is nominally 120MHz, radio_clk_2x 240MHz.
-   // These clocks will likely be a lower frequency until ZPU programs
-   // the AD9510 after boot.
+   // Generate Radio Clocks from LMK04816
+   // Radio clock is normally 200MHz, radio_clk_2x 400MHz.
+   // In CPRI or LTE mode, radio clock is 184.32 MHz.
+   // radio_clk_2x is only to be used for clocking out TX samples to DAC
    //
    ////////////////////////////////////////////////////////////////////
    wire        radio_clk_locked;
@@ -355,6 +365,7 @@ module x300
    // after programming the AD9610.
    //
    ////////////////////////////////////////////////////////////////////
+   
    reset_sync radio_reset_sync
      (
       .clk(radio_clk),
@@ -1750,7 +1761,7 @@ module x300
    ///////////////////////////////////////////////////////////////////////////////////
    x300_core x300_core
      (
-      .radio_clk(radio_clk), .radio_clk_2x(radio_clk_2x), .radio_rst(radio_rst),
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
 `ifdef DEBUG_UART
       .fp_gpio(FrontPanelGpio[9:0]), // Discard upper unsued bits.

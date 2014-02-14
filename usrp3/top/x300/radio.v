@@ -15,7 +15,7 @@ module radio
     parameter CHIPSCOPE = 0,
     parameter DELETE_DSP = 0
     )
-  (input radio_clk, input radio_clk_2x, input radio_rst,
+  (input radio_clk, input radio_rst,
    input [31:0] rx, output [31:0] tx,
    inout [31:0] db_gpio,
    inout [31:0] fp_gpio,
@@ -44,7 +44,11 @@ module radio
    wire [63:0] 	 ctrl_tdata_b, ctrl_tdata_r;
    wire 	 ctrl_tready_b, ctrl_tready_r, ctrl_tvalid_b, ctrl_tvalid_r;
    wire 	 ctrl_tlast_b, ctrl_tlast_r;
-
+ 
+   wire [63:0] 	  ctrl_tdata_s_r;
+   wire 	  ctrl_tready_s_r,  ctrl_tvalid_s_r;
+   wire 	  ctrl_tlast_s_r;
+   
    wire [63:0] 	 resp_tdata_b, resp_tdata_r;
    wire 	 resp_tready_b, resp_tready_r, resp_tvalid_b, resp_tvalid_r;
    wire 	 resp_tlast_b, resp_tlast_r;
@@ -96,32 +100,25 @@ module radio
       .o1_tdata(ctrl_tdata_b), .o1_tlast(ctrl_tlast_b), .o1_tvalid(ctrl_tvalid_b), .o1_tready(ctrl_tready_b),  // Control
       .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
-/* -----\/----- EXCLUDED -----\/-----
-   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64)) radio_demux
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .header(vheader), .dest(vdest),
-      .i_tdata(in_tdata), .i_tlast(in_tlast), .i_tvalid(in_tvalid), .i_tready(in_tready),
-      .o0_tdata(tx_tdata_bo_debug), .o0_tlast(tx_tlast_bo_debug), .o0_tvalid(tx_tvalid_bo_debug), .o0_tready(tx_tready_bo_debug),  // TX Data
-      .o1_tdata(ctrl_tdata_b), .o1_tlast(ctrl_tlast_b), .o1_tvalid(ctrl_tvalid_b), .o1_tready(ctrl_tready_b),  // Control
-      .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
-      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
- -----/\----- EXCLUDED -----/\----- */
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) ctrl_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid_b), .i_tready(ctrl_tready_b), .i_tdata({ctrl_tlast_b,ctrl_tdata_b}),
-      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r), .o_tdata({ctrl_tlast_r,ctrl_tdata_r}));
+      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_s_r), .o_tready(ctrl_tready_s_r), .o_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}));
+
+   // For timing closure ..paths lead back from 64bit time comparison.
+   axi_fifo_short #(.WIDTH(65)) ctrl_fifo_s
+     (
+      .clk(radio_clk), .reset(radio_rst), .clear(1'b0),
+      .i_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}), .i_tvalid(ctrl_tvalid_s_r), .i_tready(ctrl_tready_s_r),
+      .o_tdata({ctrl_tlast_r,ctrl_tdata_r}), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r),
+      .space(), .occupied()
+      );
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(13)) tx_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(tx_tvalid_bi), .i_tready(tx_tready_bi), .i_tdata({tx_tlast_bi,tx_tdata_bi}),
       .o_aclk(radio_clk), .o_tvalid(tx_tvalid_r), .o_tready(tx_tready_r), .o_tdata({tx_tlast_r,tx_tdata_r}));
-/* -----\/----- EXCLUDED -----\/-----
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(13)) tx_fifo
-     (.reset(bus_rst),
-      .i_aclk(bus_clk), .i_tvalid(tx_tvalid_bo_debug), .i_tready(tx_tready_bo_debug), .i_tdata({tx_tlast_bo_debug,tx_tdata_bo_debug}),
-      .o_aclk(radio_clk), .o_tvalid(tx_tvalid_r), .o_tready(tx_tready_r), .o_tdata({tx_tlast_r,tx_tdata_r}));
- -----/\----- EXCLUDED -----/\----- */
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) resp_fifo
      (.reset(radio_rst),

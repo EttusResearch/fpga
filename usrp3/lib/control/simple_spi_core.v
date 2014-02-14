@@ -69,9 +69,9 @@ module simple_spi_core
         output ready,
 
         //spi interface, slave selects, clock, data in, data out
-        output [WIDTH-1:0] sen,
+        output reg [WIDTH-1:0] sen,
         output sclk,
-        output mosi,
+        output reg mosi,
         input miso,
 
         //optional debug output
@@ -113,22 +113,30 @@ module simple_spi_core
     assign sclk = sclk_reg;
 
     //serial enables either idle or enabled based on state
+    // IJB. One pipeline stage to break critical path from register in I/O pads.
     wire sen_is_idle = (state == WAIT_TRIG) || (state == IDLE_SEN);
     wire [23:0] sen24 = (sen_is_idle)? SEN_IDLE : (SEN_IDLE ^ slave_select);
     reg [WIDTH-1:0] sen_reg;
-    always @(posedge clock) sen_reg <= sen24[WIDTH-1:0];
-    assign sen = sen_reg;
+    always @(posedge clock) 
+      sen_reg <= sen24[WIDTH-1:0];
+    always @(posedge clock) 
+      sen <= sen_reg;
 
     //data output shift register
+   // IJB. One pipeline stage to break critical path from register in I/O pads.
     reg [31:0] dataout_reg;
     wire [31:0] dataout_next = {dataout_reg[30:0], 1'b0};
-    assign mosi = dataout_reg[31];
+   
+   always @(posedge clock)
+     mosi <= dataout_reg[31];
 
     //data input shift register
-   // IJB. One pipeline stage to break critical path from register in I/O pads.
-   reg 		miso_pipe;
-   always @(posedge clock)
-     miso_pipe = miso;
+   // IJB. Two pipeline stages to break critical path from register in I/O pads.
+   reg 		miso_pipe, miso_pipe2;
+   always @(posedge clock) begin
+      miso_pipe2 <= miso;
+      miso_pipe <= miso_pipe2;
+   end
    
     reg [31:0] datain_reg;
     wire [31:0] datain_next = {datain_reg[30:0], miso_pipe};

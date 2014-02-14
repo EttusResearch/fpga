@@ -71,6 +71,16 @@ x300.ucf \
 stc3.ucf \
 timing.ucf
 
+ifeq ($(FLOORPLAN), 1)
+  ifeq ($(DEVICE), XC7K325T)
+    TOP_SRCS+=floorplan_X300.ucf
+  endif
+
+  ifeq ($(DEVICE), XC7K410T)
+    TOP_SRCS+=floorplan_X310.ucf
+  endif
+endif
+
 ifdef BUILD_10G
 ETH_SRCS+=$(TEN_GIG_SRCS) $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath x300_10ge.ucf)
 endif
@@ -137,7 +147,7 @@ MAP_PROPERTIES = \
 
 PLACE_ROUTE_PROPERTIES = \
 "Place & Route Effort Level (Overall)" High \
-"Place & Route Extra Effort (Highest PAR level only)" NORMAL \
+"Extra Effort (Highest PAR level only)" Normal \
 "Enable Multi-Threading 4"
 
 STATIC_TIMING_PROPERTIES = \

@@ -2,7 +2,6 @@
 module x300_core
   (
    input radio_clk,
-   input radio_clk_2x,
    input radio_rst,
    input bus_clk,
    input bus_rst,
@@ -547,7 +546,7 @@ module x300_core
 	   )
    radio0
      (
-      .radio_clk(radio_clk), .radio_clk_2x(radio_clk_2x), .radio_rst(radio_rst),
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx0), .tx(tx0), .db_gpio(db_gpio0), .fp_gpio(fp_gpio),
       .sen(sen0), .sclk(sclk0), .mosi(mosi0), .miso(miso0),
       .misc_outs(misc_outs0), .leds(radio_led0),
@@ -580,7 +579,7 @@ module x300_core
 	   )
    radio1
      (
-      .radio_clk(radio_clk), .radio_clk_2x(radio_clk_2x), .radio_rst(radio_rst),
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx1), .tx(tx1), .db_gpio(db_gpio1),
       .sen(sen1), .sclk(sclk1), .mosi(mosi1), .miso(miso1),
       .misc_outs(misc_outs1), .leds(radio_led1),
@@ -1106,62 +1105,155 @@ module x300_core
 
    //
    // Alternate smaller internal SRAM based FIFO's for Tx when DRAM not compiled into FPGA.
+   // Short FIFO's added for ease of timing closure since large FIFO's spread all over die.
    //
+   wire [63:0] r0_tx_tdata_bos; wire r0_tx_tlast_bos, r0_tx_tvalid_bos, r0_tx_tready_bos;   
    wire [63:0] r0_tx_tdata_0; wire r0_tx_tlast_0, r0_tx_tvalid_0, r0_tx_tready_0;
+   wire [63:0] r0_tx_tdata_0s; wire r0_tx_tlast_0s, r0_tx_tvalid_0s, r0_tx_tready_0s;   
    wire [63:0] r0_tx_tdata_1; wire r0_tx_tlast_1, r0_tx_tvalid_1, r0_tx_tready_1;
+   wire [63:0] r0_tx_tdata_1s; wire r0_tx_tlast_1s, r0_tx_tvalid_1s, r0_tx_tready_1s;   
    wire [63:0] r0_tx_tdata_2; wire r0_tx_tlast_2, r0_tx_tvalid_2, r0_tx_tready_2;
+   wire [63:0] r0_tx_tdata_2s; wire r0_tx_tlast_2s, r0_tx_tvalid_2s, r0_tx_tready_2s;
+   wire [63:0] r0_tx_tdata_bis; wire r0_tx_tlast_bis, r0_tx_tvalid_bis, r0_tx_tready_bis;
+   
+   axi_fifo_short #(.WIDTH(65)) tx_fifo0_bos
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r0_tx_tlast_bo,r0_tx_tdata_bo}), .i_tvalid(r0_tx_tvalid_bo), .i_tready(r0_tx_tready_bo),
+      .o_tdata({r0_tx_tlast_bos,r0_tx_tdata_bos}), .o_tvalid(r0_tx_tvalid_bos), .o_tready(r0_tx_tready_bos),
+      .space(), .occupied()
+      );
 
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_0
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_bo,r0_tx_tdata_bo}), .i_tvalid(r0_tx_tvalid_bo), .i_tready(r0_tx_tready_bo),
+      .i_tdata({r0_tx_tlast_bos,r0_tx_tdata_bos}), .i_tvalid(r0_tx_tvalid_bos), .i_tready(r0_tx_tready_bos),
       .o_tdata({r0_tx_tlast_0,r0_tx_tdata_0}), .o_tvalid(r0_tx_tvalid_0), .o_tready(r0_tx_tready_0),
       .space(), .occupied());
+
+   axi_fifo_short #(.WIDTH(65)) tx_fifo0_0s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r0_tx_tlast_0,r0_tx_tdata_0}), .i_tvalid(r0_tx_tvalid_0), .i_tready(r0_tx_tready_0),
+      .o_tdata({r0_tx_tlast_0s,r0_tx_tdata_0s}), .o_tvalid(r0_tx_tvalid_0s), .o_tready(r0_tx_tready_0s),
+      .space(), .occupied()
+      );
    
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_1
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_0,r0_tx_tdata_0}), .i_tvalid(r0_tx_tvalid_0), .i_tready(r0_tx_tready_0),
+      .i_tdata({r0_tx_tlast_0s,r0_tx_tdata_0s}), .i_tvalid(r0_tx_tvalid_0s), .i_tready(r0_tx_tready_0s),
       .o_tdata({r0_tx_tlast_1,r0_tx_tdata_1}), .o_tvalid(r0_tx_tvalid_1), .o_tready(r0_tx_tready_1),
       .space(), .occupied());
-   
+
+   axi_fifo_short #(.WIDTH(65)) tx_fifo0_1s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r0_tx_tlast_1,r0_tx_tdata_1}), .i_tvalid(r0_tx_tvalid_1), .i_tready(r0_tx_tready_1),
+      .o_tdata({r0_tx_tlast_1s,r0_tx_tdata_1s}), .o_tvalid(r0_tx_tvalid_1s), .o_tready(r0_tx_tready_1s),
+      .space(), .occupied()
+      );
+      
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_2
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_1,r0_tx_tdata_1}), .i_tvalid(r0_tx_tvalid_1), .i_tready(r0_tx_tready_1),
+      .i_tdata({r0_tx_tlast_1s,r0_tx_tdata_1s}), .i_tvalid(r0_tx_tvalid_1s), .i_tready(r0_tx_tready_1s),
       .o_tdata({r0_tx_tlast_2,r0_tx_tdata_2}), .o_tvalid(r0_tx_tvalid_2), .o_tready(r0_tx_tready_2),
       .space(), .occupied());
    
+   axi_fifo_short #(.WIDTH(65)) tx_fifo0_2s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r0_tx_tlast_2,r0_tx_tdata_2}), .i_tvalid(r0_tx_tvalid_2), .i_tready(r0_tx_tready_2),
+      .o_tdata({r0_tx_tlast_2s,r0_tx_tdata_2s}), .o_tvalid(r0_tx_tvalid_2s), .o_tready(r0_tx_tready_2s),
+      .space(), .occupied()
+      );
+   
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_3
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_2,r0_tx_tdata_2}), .i_tvalid(r0_tx_tvalid_2), .i_tready(r0_tx_tready_2),
-      .o_tdata({r0_tx_tlast_bi,r0_tx_tdata_bi}), .o_tvalid(r0_tx_tvalid_bi), .o_tready(r0_tx_tready_bi),
+      .i_tdata({r0_tx_tlast_2s,r0_tx_tdata_2s}), .i_tvalid(r0_tx_tvalid_2s), .i_tready(r0_tx_tready_2s),
+      .o_tdata({r0_tx_tlast_bis,r0_tx_tdata_bis}), .o_tvalid(r0_tx_tvalid_bis), .o_tready(r0_tx_tready_bis),
       .space(), .occupied());
    
+   axi_fifo_short #(.WIDTH(65)) tx_fifo0_bis
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r0_tx_tlast_bis,r0_tx_tdata_bis}), .i_tvalid(r0_tx_tvalid_bis), .i_tready(r0_tx_tready_bis),
+      .o_tdata({r0_tx_tlast_bi,r0_tx_tdata_bi}), .o_tvalid(r0_tx_tvalid_bi), .o_tready(r0_tx_tready_bi),
+      .space(), .occupied()
+      );
+
+   wire [63:0] r1_tx_tdata_bos; wire r1_tx_tlast_bos, r1_tx_tvalid_bos, r1_tx_tready_bos;   
    wire [63:0] r1_tx_tdata_0; wire r1_tx_tlast_0, r1_tx_tvalid_0, r1_tx_tready_0;
+   wire [63:0] r1_tx_tdata_0s; wire r1_tx_tlast_0s, r1_tx_tvalid_0s, r1_tx_tready_0s;   
    wire [63:0] r1_tx_tdata_1; wire r1_tx_tlast_1, r1_tx_tvalid_1, r1_tx_tready_1;
+   wire [63:0] r1_tx_tdata_1s; wire r1_tx_tlast_1s, r1_tx_tvalid_1s, r1_tx_tready_1s;   
    wire [63:0] r1_tx_tdata_2; wire r1_tx_tlast_2, r1_tx_tvalid_2, r1_tx_tready_2;
+   wire [63:0] r1_tx_tdata_2s; wire r1_tx_tlast_2s, r1_tx_tvalid_2s, r1_tx_tready_2s;
+   wire [63:0] r1_tx_tdata_bis; wire r1_tx_tlast_bis, r1_tx_tvalid_bis, r1_tx_tready_bis;
+   
+   axi_fifo_short #(.WIDTH(65)) tx_fifo1_bos
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r1_tx_tlast_bo,r1_tx_tdata_bo}), .i_tvalid(r1_tx_tvalid_bo), .i_tready(r1_tx_tready_bo),
+      .o_tdata({r1_tx_tlast_bos,r1_tx_tdata_bos}), .o_tvalid(r1_tx_tvalid_bos), .o_tready(r1_tx_tready_bos),
+      .space(), .occupied()
+      );
 
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_0
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_bo,r1_tx_tdata_bo}), .i_tvalid(r1_tx_tvalid_bo), .i_tready(r1_tx_tready_bo),
+      .i_tdata({r1_tx_tlast_bos,r1_tx_tdata_bos}), .i_tvalid(r1_tx_tvalid_bos), .i_tready(r1_tx_tready_bos),
       .o_tdata({r1_tx_tlast_0,r1_tx_tdata_0}), .o_tvalid(r1_tx_tvalid_0), .o_tready(r1_tx_tready_0),
       .space(), .occupied());
+
+   axi_fifo_short #(.WIDTH(65)) tx_fifo1_0s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r1_tx_tlast_0,r1_tx_tdata_0}), .i_tvalid(r1_tx_tvalid_0), .i_tready(r1_tx_tready_0),
+      .o_tdata({r1_tx_tlast_0s,r1_tx_tdata_0s}), .o_tvalid(r1_tx_tvalid_0s), .o_tready(r1_tx_tready_0s),
+      .space(), .occupied()
+      );
    
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_1
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_0,r1_tx_tdata_0}), .i_tvalid(r1_tx_tvalid_0), .i_tready(r1_tx_tready_0),
+      .i_tdata({r1_tx_tlast_0s,r1_tx_tdata_0s}), .i_tvalid(r1_tx_tvalid_0s), .i_tready(r1_tx_tready_0s),
       .o_tdata({r1_tx_tlast_1,r1_tx_tdata_1}), .o_tvalid(r1_tx_tvalid_1), .o_tready(r1_tx_tready_1),
       .space(), .occupied());
-   
+
+   axi_fifo_short #(.WIDTH(65)) tx_fifo1_1s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r1_tx_tlast_1,r1_tx_tdata_1}), .i_tvalid(r1_tx_tvalid_1), .i_tready(r1_tx_tready_1),
+      .o_tdata({r1_tx_tlast_1s,r1_tx_tdata_1s}), .o_tvalid(r1_tx_tvalid_1s), .o_tready(r1_tx_tready_1s),
+      .space(), .occupied()
+      );
+      
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_2
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_1,r1_tx_tdata_1}), .i_tvalid(r1_tx_tvalid_1), .i_tready(r1_tx_tready_1),
+      .i_tdata({r1_tx_tlast_1s,r1_tx_tdata_1s}), .i_tvalid(r1_tx_tvalid_1s), .i_tready(r1_tx_tready_1s),
       .o_tdata({r1_tx_tlast_2,r1_tx_tdata_2}), .o_tvalid(r1_tx_tvalid_2), .o_tready(r1_tx_tready_2),
       .space(), .occupied());
    
+   axi_fifo_short #(.WIDTH(65)) tx_fifo1_2s
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r1_tx_tlast_2,r1_tx_tdata_2}), .i_tvalid(r1_tx_tvalid_2), .i_tready(r1_tx_tready_2),
+      .o_tdata({r1_tx_tlast_2s,r1_tx_tdata_2s}), .o_tvalid(r1_tx_tvalid_2s), .o_tready(r1_tx_tready_2s),
+      .space(), .occupied()
+      );
+   
    axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_3
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_2,r1_tx_tdata_2}), .i_tvalid(r1_tx_tvalid_2), .i_tready(r1_tx_tready_2),
-      .o_tdata({r1_tx_tlast_bi,r1_tx_tdata_bi}), .o_tvalid(r1_tx_tvalid_bi), .o_tready(r1_tx_tready_bi),
+      .i_tdata({r1_tx_tlast_2s,r1_tx_tdata_2s}), .i_tvalid(r1_tx_tvalid_2s), .i_tready(r1_tx_tready_2s),
+      .o_tdata({r1_tx_tlast_bis,r1_tx_tdata_bis}), .o_tvalid(r1_tx_tvalid_bis), .o_tready(r1_tx_tready_bis),
       .space(), .occupied());
+   
+   axi_fifo_short #(.WIDTH(65)) tx_fifo1_bis
+     (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({r1_tx_tlast_bis,r1_tx_tdata_bis}), .i_tvalid(r1_tx_tvalid_bis), .i_tready(r1_tx_tready_bis),
+      .o_tdata({r1_tx_tlast_bi,r1_tx_tdata_bi}), .o_tvalid(r1_tx_tvalid_bi), .o_tready(r1_tx_tready_bi),
+      .space(), .occupied()
+      );
+
+
  
 `endif //  `ifndef NO_DRAM_FIFOS
 

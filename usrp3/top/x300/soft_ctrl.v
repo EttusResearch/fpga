@@ -356,7 +356,7 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     // UART0 -- Slave #d
     ////////////////////////////////////////////////////////////////////
-    simple_uart #(.GPSDO_FIX(1'b1)) gps_uart
+    simple_uart gps_uart
     (
         .clk_i(clk), .rst_i(rst),
         .we_i(sd_we), .stb_i(sd_stb), .cyc_i(sd_cyc), .ack_o(sd_ack),
