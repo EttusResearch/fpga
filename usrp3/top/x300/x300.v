@@ -314,13 +314,13 @@ module x300
    //////////////////////////////////////////////////////////////////////
    // CPRI Clock output -- this is the dirty recovered clock from the MGT
    // This goes to the LMK04816 which locks to it and cleans it up
-   // We get the clean versions back as CPRI_CLK (for the CPRI MGT) 
+   // We get the clean versions back as CPRI_CLK (for the CPRI MGT)
    // and FPGA_CLK (for our main rfclk)
    //////////////////////////////////////////////////////////////////////
 
    wire cpri_clk_out = 1'b0; // FIXME - connect to CPRI clock recovery when implemented
    OBUFDS OBUFDS_cpri (.I(cpri_clk_out), .O(CPRI_CLK_OUT_P), .OB(CPRI_CLK_OUT_N));
-   
+
    /////////////////////////////////////////////////////////////////////
    //
    // power-on-reset logic.
@@ -365,7 +365,7 @@ module x300
    // after programming the AD9610.
    //
    ////////////////////////////////////////////////////////////////////
-   
+
    reset_sync radio_reset_sync
      (
       .clk(radio_clk),
@@ -382,7 +382,6 @@ module x300
 
    ////////////////////////////////////////////////////////////////////
 
-   assign LED_PPS = ~(GPS_PPS_OUT | EXT_PPS_IN);
    assign LED_GPSLOCK = ~GPS_LOCK_OK;
    assign LED_REFLOCK = ~LMK_Lock;
    assign {LED_RX1_RX,LED_TXRX1_TX,LED_TXRX1_RX} = ~led0;  // active low LED driver
@@ -451,7 +450,7 @@ module x300
    // Analog diff pairs on I side of ADC are inverted for layout reasons, but data diff pairs are all swapped as well
    //  so I gets a double negative, and is unchanged.  Q must be inverted.
 
-   capture_ddrlvds #(.WIDTH(14),.B250(1)) cap_db0
+   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db0
      (.clk(radio_clk), .reset(radio_rst), .ssclk_p(DB0_ADC_DCLK_P), .ssclk_n(DB0_ADC_DCLK_N),
       .in_p({{DB0_ADC_DA6_P, DB0_ADC_DA5_P, DB0_ADC_DA4_P, DB0_ADC_DA3_P, DB0_ADC_DA2_P, DB0_ADC_DA1_P, DB0_ADC_DA0_P},
          {DB0_ADC_DB6_P, DB0_ADC_DB5_P, DB0_ADC_DB4_P, DB0_ADC_DB3_P, DB0_ADC_DB2_P, DB0_ADC_DB1_P, DB0_ADC_DB0_P}}),
@@ -461,7 +460,7 @@ module x300
       .out({rx0_i,rx0_q_inv}));
    assign rx0[31:0] = { rx0_i, 2'b00, ~rx0_q_inv, 2'b00 };
 
-   capture_ddrlvds #(.WIDTH(14),.B250(1)) cap_db1
+   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db1
      (.clk(radio_clk),  .reset(radio_rst), .ssclk_p(DB1_ADC_DCLK_P), .ssclk_n(DB1_ADC_DCLK_N),
       .in_p({{DB1_ADC_DA6_P, DB1_ADC_DA5_P, DB1_ADC_DA4_P, DB1_ADC_DA3_P, DB1_ADC_DA2_P, DB1_ADC_DA1_P, DB1_ADC_DA0_P},
          {DB1_ADC_DB6_P, DB1_ADC_DB5_P, DB1_ADC_DB4_P, DB1_ADC_DB3_P, DB1_ADC_DB2_P, DB1_ADC_DB1_P, DB1_ADC_DB0_P}}),
@@ -470,7 +469,7 @@ module x300
          {DB1_ADC_DB6_N, DB1_ADC_DB5_N, DB1_ADC_DB4_N, DB1_ADC_DB3_N, DB1_ADC_DB2_N, DB1_ADC_DB1_N, DB1_ADC_DB0_N}}),
       .out({rx1_i,rx1_q_inv}));
    assign rx1[31:0] = { rx1_i, 2'b00, ~rx1_q_inv, 2'b00 };
- 
+
    /////////////////////////////////////////////////////////////////////
    //
    // DAC Interface for AD9146
@@ -1756,7 +1755,7 @@ module x300
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
-   // B250 Core
+   // X300 Core
    //
    ///////////////////////////////////////////////////////////////////////////////////
    x300_core x300_core
@@ -1837,7 +1836,7 @@ module x300
       .gmii_rxd1(gmii_rxd1), .gmii_rx_dv1(gmii_rx_dv1), .gmii_rx_er1(gmii_rx_er1),
 `endif // !`ifdef
       // GPS Signals
-      .gps_pps(GPS_PPS_OUT), .ext_pps(EXT_PPS_IN),
+      .gps_pps(GPS_PPS_OUT), .ext_pps(EXT_PPS_IN), .pps_led(LED_PPS),
       .gps_txd(GPS_SER_IN), .gps_rxd(GPS_SER_OUT),
       .pps_out(EXT_PPS_OUT),
       // Debug UART
