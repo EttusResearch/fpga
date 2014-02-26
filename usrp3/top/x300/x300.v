@@ -382,6 +382,8 @@ module x300
 
    ////////////////////////////////////////////////////////////////////
 
+   wire pps_led;
+   assign LED_PPS = ~pps_led;
    assign LED_GPSLOCK = ~GPS_LOCK_OK;
    assign LED_REFLOCK = ~LMK_Lock;
    assign {LED_RX1_RX,LED_TXRX1_TX,LED_TXRX1_RX} = ~led0;  // active low LED driver
@@ -1836,7 +1838,7 @@ module x300
       .gmii_rxd1(gmii_rxd1), .gmii_rx_dv1(gmii_rx_dv1), .gmii_rx_er1(gmii_rx_er1),
 `endif // !`ifdef
       // GPS Signals
-      .gps_pps(GPS_PPS_OUT), .ext_pps(EXT_PPS_IN), .pps_led(LED_PPS),
+      .gps_pps(GPS_PPS_OUT), .ext_pps(EXT_PPS_IN), .pps_led(pps_led),
       .gps_txd(GPS_SER_IN), .gps_rxd(GPS_SER_OUT),
       .pps_out(EXT_PPS_OUT),
       // Debug UART

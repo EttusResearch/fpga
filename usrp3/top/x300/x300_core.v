@@ -386,19 +386,24 @@ module x300_core
     //PPS multiplexer sets PPS source according to pps_select
     wire [4:0] pps_inputs = {gps_pps, int_pps, 1'b0, ext_pps};  //matches clock references
     wire [1:0] pps_select;
-    wire pps_int = pps_inputs[pps_select];
+    wire pps_in = pps_inputs[pps_select];
 
     //PPS output
     wire pps_out_enb;
-    assign pps_out = pps_out_enb & pps_int;
+    assign pps_out = pps_out_enb & pps_in;
 
-    //PPS LED output (active low)
-    assign pps_led = ~pps_int;
+    //PPS LED output
+    assign pps_led = pps_in;
 
     //PPS detection
     //Toggle pps_detect bit on each PPS rising edge.
+    //Flopping in PPS signal to avoid metastability issues.
     reg pps_detect;
-    always @(posedge pps_int) pps_detect <= ~pps_detect;
+    reg pps_int_del[1:0];
+    always @(posedge ext_ref_clk) begin
+        pps_in_del[1:0] <= {pps_in_del[0], pps_in};
+        if (pps_in_del == 2'b01) pps_detect <= ~pps_detect;
+    end
 
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
@@ -561,7 +566,7 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_int), .sync_dacs(sync_dacs_radio0)
+      .pps(pps_in), .sync_dacs(sync_dacs_radio0)
       );
 
      always @(posedge radio_clk)
@@ -594,7 +599,7 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_int), .sync_dacs(sync_dacs_radio1)
+      .pps(pps_in), .sync_dacs(sync_dacs_radio1)
       );
 
    always @(posedge radio_clk)
