@@ -399,7 +399,7 @@ module x300_core
     //Toggle pps_detect bit on each PPS rising edge.
     //Flopping in PPS signal to avoid metastability issues.
     reg pps_detect;
-    reg pps_int_del[1:0];
+    reg [1:0] pps_in_del;
     always @(posedge ext_ref_clk) begin
         pps_in_del[1:0] <= {pps_in_del[0], pps_in};
         if (pps_in_del == 2'b01) pps_detect <= ~pps_detect;
