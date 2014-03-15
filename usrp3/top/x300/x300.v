@@ -407,6 +407,7 @@ module x300
          2'b01  :   pps = 1'b0;
          2'b10  :   pps = int_pps;
          2'b11  :   pps = GPS_PPS_OUT;
+         default:   pps = 1'b0;
       endcase
    end
 
