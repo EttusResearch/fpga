@@ -104,10 +104,9 @@ module x300_core
 `endif // !`ifdef
 
    // Time
-   input gps_pps,
-   input ext_pps,
-   output pps_out,
-   output pps_led,
+   input pps,
+   output [1:0] pps_select,
+   output pps_out_enb,
    output gps_txd,
    input gps_rxd,
    // Debug UART
@@ -370,39 +369,20 @@ module x300_core
 
 
     /////////////////////////////////////////////////////////////////////////////////
-    // PPS synchronization and generation logic
+    // PPS synchronization logic
     /////////////////////////////////////////////////////////////////////////////////
+    //PPS input signals will be flopped in via the 10MHz reference clock.
+    //Its assumed that the radio clock, which is derived from the 10MHz,
+    //will be able to flop this captured PPS signal without metastability.
+    //And that the relation of the radio clock to this ref clock will be
+    //consistent enough across multiple units to use for this purpose.
+    reg [1:0] pps_del;
+    always @(posedge ext_ref_clk)  pps_del[1:0] <= {pps_del[0], pps};
 
-    //Generate an internal PPS signal with a 25% duty cycle
-    reg [31:0] pps_count;
-    wire int_pps = (pps_count < 32'd2500000);
-    always @(posedge ext_ref_clk) begin
-        if (pps_count == 32'd9999999)
-            pps_count <= 32'b0;
-        else
-            pps_count <= pps_count + 1'b1;
-    end
-
-    //PPS multiplexer sets PPS source according to pps_select
-    wire [4:0] pps_inputs = {gps_pps, int_pps, 1'b0, ext_pps};  //matches clock references
-    wire [1:0] pps_select;
-    wire pps_in = pps_inputs[pps_select];
-
-    //PPS output
-    wire pps_out_enb;
-    assign pps_out = pps_out_enb & pps_in;
-
-    //PPS LED output
-    assign pps_led = pps_in;
-
-    //PPS detection
-    //Toggle pps_detect bit on each PPS rising edge.
-    //Flopping in PPS signal to avoid metastability issues.
+    //PPS detection - toggle pps_detect on each PPS rising edge.
     reg pps_detect;
-    reg pps_int_del[1:0];
     always @(posedge ext_ref_clk) begin
-        pps_in_del[1:0] <= {pps_in_del[0], pps_in};
-        if (pps_in_del == 2'b01) pps_detect <= ~pps_detect;
+        if (pps_del == 2'b01) pps_detect <= ~pps_detect;
     end
 
    /////////////////////////////////////////////////////////////////////////////////
@@ -566,7 +546,7 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_in), .sync_dacs(sync_dacs_radio0)
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio0)
       );
 
      always @(posedge radio_clk)
@@ -599,7 +579,7 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_in), .sync_dacs(sync_dacs_radio1)
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio1)
       );
 
    always @(posedge radio_clk)

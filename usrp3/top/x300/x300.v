@@ -381,9 +381,39 @@ module x300
       );
 
    ////////////////////////////////////////////////////////////////////
+   // PPS
+   // Support for internal, external, and GPSDO PPS inputs
+   // Every attempt to minimize propagation between the external PPS
+   // input and outputs to support daisy-chaining the signal.
+   ////////////////////////////////////////////////////////////////////
 
-   wire pps_led;
-   assign LED_PPS = ~pps_led;
+   // Generate an internal PPS signal with a 25% duty cycle
+   reg [31:0] pps_count;
+   wire int_pps = (pps_count < 32'd2500000);
+   always @(posedge ref_clk_10mhz) begin
+      if (pps_count >= 32'd9999999)
+         pps_count <= 32'b0;
+      else
+         pps_count <= pps_count + 1'b1;
+   end
+
+   // PPS MUX - selects internal, external, or gpsdo PPS
+   reg pps;
+   wire [1:0] pps_select;
+   wire pps_out_enb;
+   always @(*) begin
+      case(pps_select)
+         2'b00  :   pps = EXT_PPS_IN;
+         2'b01  :   pps = 1'b0;
+         2'b10  :   pps = int_pps;
+         2'b11  :   pps = GPS_PPS_OUT;
+      endcase
+   end
+
+   // PPS out and LED
+   assign EXT_PPS_OUT = pps & pps_out_enb;
+   assign LED_PPS = ~pps;                                  // active low LED driver
+
    assign LED_GPSLOCK = ~GPS_LOCK_OK;
    assign LED_REFLOCK = ~LMK_Lock;
    assign {LED_RX1_RX,LED_TXRX1_TX,LED_TXRX1_RX} = ~led0;  // active low LED driver
@@ -1837,10 +1867,10 @@ module x300
       .gmii_txd1(gmii_txd1), .gmii_tx_en1(gmii_tx_en1), .gmii_tx_er1(gmii_tx_er1),
       .gmii_rxd1(gmii_rxd1), .gmii_rx_dv1(gmii_rx_dv1), .gmii_rx_er1(gmii_rx_er1),
 `endif // !`ifdef
+      // Time
+      .pps(pps),.pps_select(pps_select), .pps_out_enb(pps_out_enb),
       // GPS Signals
-      .gps_pps(GPS_PPS_OUT), .ext_pps(EXT_PPS_IN), .pps_led(pps_led),
       .gps_txd(GPS_SER_IN), .gps_rxd(GPS_SER_OUT),
-      .pps_out(EXT_PPS_OUT),
       // Debug UART
       .debug_rxd(debug_rxd), .debug_txd(debug_txd),
       // Misc.
