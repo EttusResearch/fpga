@@ -11,7 +11,7 @@
 //  the vita port.
 //
 //  If at the end of the headers we determine the packet should go to zpu, then we send an
-//  error indication on the out port, the rest of the packet to zpu and nothing on vita.  
+//  error indication on the out port, the rest of the packet to zpu and nothing on vita.
 //  If it should go to out, we send the error indication to zpu, the rest of the packet to out,
 //  and nothing on vita.
 //
@@ -40,36 +40,36 @@ module eth_dispatch
   #(parameter BASE=0)
    (
     // Clocking and reset interface
-    input clk, 
-    input reset, 
-    input clear, 
+    input clk,
+    input reset,
+    input clear,
     // Setting register interface
-    input set_stb, 
-    input [15:0] set_addr, 
+    input set_stb,
+    input [15:0] set_addr,
     input [31:0] set_data,
     // Input 68bit AXI-Stream interface (from MAC)
-    input [63:0] in_tdata, 
-    input [3:0] in_tuser, 
-    input in_tlast, 
-    input in_tvalid, 
+    input [63:0] in_tdata,
+    input [3:0] in_tuser,
+    input in_tlast,
+    input in_tvalid,
     output in_tready,
     // Output AXI-STream interface to VITA Radio Core
     output [63:0] vita_tdata,
-    output [3:0] vita_tuser, 
-    output vita_tlast, 
-    output vita_tvalid, 
+    output [3:0] vita_tuser,
+    output vita_tlast,
+    output vita_tvalid,
     input vita_tready,
     // Output AXI-Stream interface to ZPU
-    output [63:0] zpu_tdata, 
-    output [3:0] zpu_tuser, 
-    output zpu_tlast, 
-    output zpu_tvalid, 
+    output [63:0] zpu_tdata,
+    output [3:0] zpu_tuser,
+    output zpu_tlast,
+    output zpu_tvalid,
     input zpu_tready,
     // Output AXI-Stream interface to cross-over MAC
-    output [63:0] xo_tdata, 
-    output [3:0] xo_tuser, 
-    output xo_tlast, 
-    output xo_tvalid, 
+    output [63:0] xo_tdata,
+    output [3:0] xo_tuser,
+    output xo_tlast,
+    output xo_tvalid,
     input xo_tready,
     // Debug
     output [2:0] debug_flags,
@@ -80,7 +80,7 @@ module eth_dispatch
    // State machine declarations
    //
    reg [2:0] 	  state;
-   
+
    localparam WAIT_PACKET = 0;
    localparam READ_HEADER = 1;
    localparam FORWARD_ZPU = 2;
@@ -89,8 +89,8 @@ module eth_dispatch
    localparam FORWARD_RADIO_CORE = 5;
    localparam DROP_PACKET = 6;
    localparam CLASSIFY_PACKET = 7;
-   
-      
+
+
    //
    // Small RAM stores packet header during parsing.
    //
@@ -106,32 +106,32 @@ module eth_dispatch
 
    //
    reg [63:0] 	  in_tdata_reg;
-   
+
    //
    wire 	  out_tvalid;
    wire 	  out_tready;
    wire 	  out_tlast;
    wire [3:0] 	  out_tuser;
    wire [63:0] 	  out_tdata;
-   
+
    //
    // Output AXI-Stream interface to VITA Radio Core
    wire [63:0] 	  vita_pre_tdata;
-   wire [3:0] 	  vita_pre_tuser; 
-   wire 	  vita_pre_tlast; 
-   wire 	  vita_pre_tvalid; 
+   wire [3:0] 	  vita_pre_tuser;
+   wire 	  vita_pre_tlast;
+   wire 	  vita_pre_tvalid;
    wire 	  vita_pre_tready;
    // Output AXI-Stream interface to ZPU
-   wire [63:0] 	  zpu_pre_tdata; 
-   wire [3:0] 	  zpu_pre_tuser; 
-   wire 	  zpu_pre_tlast; 
-   wire 	  zpu_pre_tvalid; 
+   wire [63:0] 	  zpu_pre_tdata;
+   wire [3:0] 	  zpu_pre_tuser;
+   wire 	  zpu_pre_tlast;
+   wire 	  zpu_pre_tvalid;
    wire 	  zpu_pre_tready;
    // Output AXI-Stream interface to cross-over MAC
-   wire [63:0] 	  xo_pre_tdata; 
-   wire [3:0] 	  xo_pre_tuser; 
-   wire 	  xo_pre_tlast; 
-   wire 	  xo_pre_tvalid; 
+   wire [63:0] 	  xo_pre_tdata;
+   wire [3:0] 	  xo_pre_tuser;
+   wire 	  xo_pre_tlast;
+   wire 	  xo_pre_tvalid;
    wire 	  xo_pre_tready;
 
    //
@@ -146,13 +146,13 @@ module eth_dispatch
    reg [1:0] 	  is_udp_dst_ports;
    reg		  is_icmp_no_fwd;
    reg 		  is_chdr;
-   
+
    //
    // Settings regs
    //
-   
+
    wire [47:0] 	  my_mac;
-   
+
    setting_reg #(.my_addr(BASE), .awidth(16), .width(32)) sr_my_mac_lsb
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(my_mac[31:0]),.changed());
@@ -162,13 +162,13 @@ module eth_dispatch
       .in(set_data),.out(my_mac[47:32]),.changed());
 
    wire [31:0] 	  my_ip;
-   
+
    setting_reg #(.my_addr(BASE+2), .awidth(16), .width(32)) sr_my_ip
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(my_ip[31:0]),.changed());
-   
+
    wire [15:0] 	  my_port0, my_port1;
-   
+
    setting_reg #(.my_addr(BASE+3), .awidth(16), .width(32)) sr_udp_port
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out({my_port1[15:0],my_port0[15:0]}),.changed());
@@ -197,23 +197,23 @@ module eth_dispatch
    //
    // Packet Forwarding State machine.
    //
-   
-   always @(posedge clk) 
+
+   always @(posedge clk)
      if (reset || clear) begin
         state <= WAIT_PACKET;
         header_ram_addr <= 0;
-	drop_this_packet <= 0;	 
+	drop_this_packet <= 0;
 	fwd_input <= 0;
      end else begin
 	// Defaults.
 	drop_this_packet <= 0;
-	
+
 	case(state)
 	  //
 	  // Wait for start of a packet
 	  // IJB: Add protection for a premature EOF here
 	  //
-	  WAIT_PACKET: begin 
+	  WAIT_PACKET: begin
 	     if (in_tvalid && in_tready) begin
                 header_ram[header_ram_addr] <= {in_tlast,in_tuser,in_tdata};
                 header_ram_addr <= header_ram_addr + 1;
@@ -240,7 +240,7 @@ module eth_dispatch
 	  end // case: READ_HEADER
 
 	  //
-	  // Classify Packet 
+	  // Classify Packet
 	  //
 	  CLASSIFY_PACKET: begin
 	     // Make decision about where this packet is forwarded to.
@@ -264,7 +264,7 @@ module eth_dispatch
 		state <= FORWARD_ZPU;
 	     end
 	  end // case: CLASSIFY_PACKET
-	  	  
+
 	  //
 	  // Forward this packet only to local ZPU
 	  //
@@ -278,7 +278,7 @@ module eth_dispatch
 	     end
 	  end
 	  //
-	  // Forward this packet to both local ZPU and XO 
+	  // Forward this packet to both local ZPU and XO
 	  //
 	  FORWARD_ZPU_AND_XO: begin
 	     if (out_tvalid && out_tready) begin
@@ -327,7 +327,7 @@ module eth_dispatch
 	  end
 	endcase // case (state)
      end // else: !if(reset || clear)
-   
+
    //
    // Classifier State machine.
    // Deep packet inspection during header ingress.
@@ -343,13 +343,13 @@ module eth_dispatch
 	is_udp_dst_ports <= 0;
 	is_icmp_no_fwd <= 0;
 	is_chdr <= 1'b0;
-	
+
 	//	   space_in_fifo <= 0;
 	//	   is_there_fifo_space <= 1;
 	//	   packet_length <= 0;
      end else if (in_tvalid && in_tready) begin // if (reset || clear)
 	in_tdata_reg <= in_tdata;
-	
+
 	case (header_ram_addr)
 	  // Pipelined, so nothing to look at first cycle.
 	  // Reset all the flags here.
@@ -371,7 +371,7 @@ module eth_dispatch
 	     if (in_tdata_reg[15:0] == my_mac[47:32])
 	       is_eth_dst_addr <= 1'b1;
 	  end
-	  2: begin	
+	  2: begin
 	     // Look at lower 32bits of MAC Dst Addr.
 	     if (is_eth_broadcast && (in_tdata_reg[63:32] == 32'hFFFFFFFF))
 	       is_eth_broadcast <= 1'b1;
@@ -424,12 +424,12 @@ module eth_dispatch
 	     end
 	   endcase // case (header_ram_addr)
 	end // if (in_tvalid && in_tready)
-   
-   
+
+
    //
    // Output (Egress) Interface muxing
    //
-   assign out_tready = 
+   assign out_tready =
 		       (state == DROP_PACKET) ||
 		       ((state == FORWARD_RADIO_CORE) && vita_pre_tready) ||
 		       ((state == FORWARD_XO) && xo_pre_tready) ||
@@ -443,12 +443,11 @@ module eth_dispatch
 			(state == DROP_PACKET)) && (!fwd_input || in_tvalid);
 
    assign {out_tlast,out_tuser,out_tdata} = fwd_input ?  {in_tlast,in_tuser,in_tdata} : header_ram[header_ram_addr];
-   
-   assign in_tready = (state == WAIT_PACKET) || 
+
+   assign in_tready = (state == WAIT_PACKET) ||
 		      (state == READ_HEADER) ||
-		      (state == DROP_PACKET) ||
 		      (out_tready && fwd_input);
-   
+
 
    //
    // Because we can forward to both the ZPU and XO FIFO's concurrently
@@ -456,14 +455,14 @@ module eth_dispatch
    // This makes it possible for either destination to block the other.
    // Make sure (both) destination(s) can accept data before passing it.
    //
-   assign xo_pre_tvalid = out_tvalid && 
-			  ((state == FORWARD_XO) || 
+   assign xo_pre_tvalid = out_tvalid &&
+			  ((state == FORWARD_XO) ||
 			  ((state == FORWARD_ZPU_AND_XO) && zpu_pre_tready));
-   assign zpu_pre_tvalid = out_tvalid && 
+   assign zpu_pre_tvalid = out_tvalid &&
 			   ((state == FORWARD_ZPU) ||
 			   ((state == FORWARD_ZPU_AND_XO) && xo_pre_tready));
    assign vita_pre_tvalid = out_tvalid && (state == FORWARD_RADIO_CORE);
-   
+
    assign {zpu_pre_tuser,zpu_pre_tdata} = ((state == FORWARD_ZPU_AND_XO) || (state == FORWARD_ZPU)) ?
 					  {out_tuser,out_tdata} : 0;
 
@@ -473,15 +472,15 @@ module eth_dispatch
    assign {vita_pre_tuser,vita_pre_tdata} = (state == FORWARD_RADIO_CORE) ? {out_tuser,out_tdata} : 0;
 
    assign zpu_pre_tlast = out_tlast && ((state == FORWARD_ZPU) || (state == FORWARD_ZPU_AND_XO));
-   
+
    assign xo_pre_tlast =  out_tlast && ((state == FORWARD_XO) || (state == FORWARD_ZPU_AND_XO));
-   
+
    assign vita_pre_tlast = out_tlast && (state == FORWARD_RADIO_CORE);
-   
+
    //
    // Egress FIFO's (Large)
    //
-   axi_fifo #(.WIDTH(69),.SIZE(10)) 
+   axi_fifo #(.WIDTH(69),.SIZE(10))
    axi_fifo_zpu (
      .clk(clk),
      .reset(reset),
@@ -495,8 +494,8 @@ module eth_dispatch
      .space(),
      .occupied()
      );
-   
-   axi_fifo #(.WIDTH(69),.SIZE(10)) 
+
+   axi_fifo #(.WIDTH(69),.SIZE(10))
    axi_fifo_xo (
      .clk(clk),
      .reset(reset),
@@ -510,9 +509,9 @@ module eth_dispatch
      .space(),
      .occupied()
      );
-   
-   axi_fifo #(.WIDTH(69),.SIZE(10)) 
-   axi_fifo_vita (     
+
+   axi_fifo #(.WIDTH(69),.SIZE(10))
+   axi_fifo_vita (
      .clk(clk),
      .reset(reset),
      .clear(clear),
@@ -527,14 +526,14 @@ module eth_dispatch
      );
 
    assign debug_flags = {vita_pre_tready,xo_pre_tready,zpu_pre_tready};
-   
- 
-     
+
+
+
 /* -----\/----- EXCLUDED -----\/-----
-   
+
    wire 	  vready, zready, oready;
    wire 	  vvalid, zvalid, ovalid;
-   
+
    reg [2:0] 	  ed_state;
    localparam ED_IDLE     = 3'd0;
    localparam ED_IN_HDR   = 3'd1;
@@ -556,22 +555,22 @@ module eth_dispatch
 	     ;
        endcase // case (ed_state)
    */
-   
+
 /* -----\/----- EXCLUDED -----\/-----
    axi_packet_gate #(.WIDTH(64), .SIZE(10)) vita_gate
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(in_tdata), .i_tlast(), .i_terror(), .i_tvalid(1'b0), .i_tready(vready),
       .o_tdata(vita_tdata), .o_tlast(vita_tlast), .o_tvalid(vita_tvalid), .o_tready(vita_tready));
-   
+
    axi_packet_gate #(.WIDTH(68), .SIZE(10)) zpu_gate
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({in_tuser,in_tdata}), .i_tlast(in_tlast), .i_terror(in_tuser[3]), .i_tvalid(in_tvalid), .i_tready(in_tready),
       .o_tdata({zpu_tuser,zpu_tdata}), .o_tlast(zpu_tlast), .o_tvalid(zpu_tvalid), .o_tready(zpu_tready));
-   
+
    axi_packet_gate #(.WIDTH(68), .SIZE(10)) out_gate
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({in_tuser,in_tdata}), .i_tlast(), .i_terror(), .i_tvalid(1'b0), .i_tready(oready),
       .o_tdata({out_tuser,out_tdata}), .o_tlast(out_tlast), .o_tvalid(out_tvalid), .o_tready(out_tready));
  -----/\----- EXCLUDED -----/\----- */
-   
+
 endmodule // eth_dispatch
