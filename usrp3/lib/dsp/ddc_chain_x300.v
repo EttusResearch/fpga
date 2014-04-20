@@ -18,9 +18,9 @@ module ddc_chain_x300
    input [WIDTH-1:0] rx_fe_q,
 
    // To RX control
-   output [31:0] sample,
+   output reg [31:0] sample,
    input run,
-   output strobe,
+   output reg strobe,
    output [31:0] debug
    );
 
@@ -222,8 +222,11 @@ module ddc_chain_x300
 
    wire [42:0] i_scaled, q_scaled;
    wire [23:0] i_clip, q_clip;
+   wire [15:0] i_round, q_round;
    reg 	       strobe_scaled;
    wire        strobe_clip;
+   wire        strobe_round;
+   
    
    MULT_MACRO #(.DEVICE("7SERIES"),  // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6","7SERIES" 
 		.LATENCY(1),         // Desired clock cycle latency, 0-4
@@ -255,8 +258,16 @@ module ddc_chain_x300
      (.clk(clk), .in(q_scaled[42:14]), .strobe_in(strobe_scaled), .out(q_clip), .strobe_out());
 
    round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16)) round_i
-     (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(sample[31:16]), .strobe_out(strobe));
+     (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(i_round), .strobe_out(strobe_round));
    round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16)) round_q
-     (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(sample[15:0]), .strobe_out());
+     (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(q_round), .strobe_out());
+
+   // Add pipeline stage for timing closure reasons.
+   always @(posedge clk)
+     begin
+	sample[31:16] <= i_round;
+	sample[15:0] <= q_round;
+	strobe <= strobe_round;
+     end
    
 endmodule // ddc_chain

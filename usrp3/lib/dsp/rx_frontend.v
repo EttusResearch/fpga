@@ -9,7 +9,6 @@ module rx_frontend
     input [15:0] adc_b, input adc_ovf_b,
 
     output [23:0] i_out, output [23:0] q_out,
-    input run,
     output [31:0] debug
     );
    

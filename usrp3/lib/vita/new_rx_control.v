@@ -17,7 +17,8 @@ module new_rx_control
     input [63:0] vita_time,
     
     // DDC connections
-    output run, output eob,
+    output reg run_dsp, output reg run_gpio,
+    output eob,
     input strobe, input full,
     input [11:0] seqnum,
     input [31:0] sid,
@@ -114,10 +115,14 @@ module new_rx_control
 	  chain_sav <= 1'b0;
 	  reload_sav <= 1'b0;
 	  clear_halt <= 1'b0;
+	  run_gpio <= 1'b0;
+	  run_dsp <= 1'b0;
        end
      else
        case (ibs_state)
 	 IBS_IDLE : begin
+	   run_gpio <= 1'b0;
+	   run_dsp <= 1'b0;
 	   clear_halt <= 1'b0; // Incase we got here through a HALT.
 	   if (command_valid)
 	     // There is a valid command to pop from FIFO.
@@ -134,18 +139,27 @@ module new_rx_control
 		repeat_lines <= numlines;
 		chain_sav <= chain;
 		reload_sav <= reload;
+		run_gpio <= 1'b1;
+		run_dsp <= 1'b1;
+		
 	     end
 	 end // case: IBS_IDLE
 	 
-	 IBS_RUNNING : begin 
+	 IBS_RUNNING : begin
+	    run_gpio <= 1'b1;
+	    run_dsp <= 1'b1;
 	    if (strobe) begin 
 	       if (full) begin
 		  // Framing FIFO is full and we have just overrun.
+		  run_gpio <= 1'b0;
+		  run_dsp <= 1'b0;
 		  ibs_state <= IBS_OVERRUN;
 	       end else if (lines_left == 1) begin
 		  // Provide Halt mechanism used to bring RX into known IDLE state
 		  // at re-initialization.
 		  if (halt) begin
+		     run_gpio <= 1'b0;
+		     run_dsp <= 1'b0;
 		     ibs_state <= IBS_IDLE;
 		     clear_halt <= 1'b1;
 		  end else if (chain_sav) begin
@@ -157,6 +171,8 @@ module new_rx_control
 			reload_sav <= reload;
 			// If the new command includes stop then go idle.
 			if (stop) begin
+			   run_gpio <= 1'b0;
+			   run_dsp <= 1'b0;
 			   ibs_state <= IBS_IDLE;
 			end
 		     end else if (reload_sav) begin
@@ -164,10 +180,14 @@ module new_rx_control
 			lines_left <= repeat_lines;
 		     end else begin
 			// Chain has been broken, no commands left in FIFO and reload not set.
+			run_gpio <= 1'b0;
+			run_dsp <= 1'b0;
 			ibs_state <= IBS_BROKENCHAIN;
 		     end
 		  end else begin // if (chain_sav)
 		     // Chain is not true, so don't look for new command, instead go idle.
+		     run_gpio <= 1'b0;
+		     run_dsp <= 1'b0;
 		     ibs_state <= IBS_IDLE;
 		  end
 	       end else begin // if (lines_left == 1)
@@ -205,7 +225,7 @@ module new_rx_control
        default     : command_ready <= 1'b0;
      endcase // case (ibs_state)
 
-   assign run = (ibs_state == IBS_RUNNING);
+   //assign run = (ibs_state == IBS_RUNNING);
    assign eob = strobe && (lines_left == 1) && ( !chain_sav || (command_valid && stop) || (!command_valid && !reload_sav) || halt);
 
    always @*

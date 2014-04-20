@@ -162,7 +162,7 @@ module radio
    wire [31:0] 	set_data_b;
 
    wire [31:0] 	fp_gpio_readback, gpio_readback, spi_readback;
-   wire 	run_rx, run_tx;
+   wire 	run_rx_dsp, run_rx_gpio, run_tx;
    wire 	strobe_tx;
 
    wire 	spi_ready;
@@ -237,19 +237,19 @@ module radio
    gpio_atr #(.BASE(SR_GPIO), .WIDTH(32)) gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .rx(run_rx), .tx(run_tx),
+      .rx(run_rx_gpio), .tx(run_tx),
       .gpio(db_gpio), .gpio_readback(gpio_readback) );
 
    gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32)) fp_gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .rx(run_rx), .tx(run_tx),
+      .rx(run_rx_gpio), .tx(run_tx),
       .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
 
    gpio_atr #(.BASE(SR_LEDS), .WIDTH(3), .default_ddr(3'b111), .default_idle(3'b000)) gpio_leds
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .rx(run_rx), .tx(run_tx),
+      .rx(run_rx_gpio), .tx(run_tx),
       .gpio(leds), .gpio_readback() );
 
    timekeeper #(.BASE(SR_TIME)) timekeeper
@@ -328,7 +328,7 @@ module radio
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .sample(sample_rx), .run(run_rx), .eob(eob_rx), .full(full),
+      .strobe(strobe_rx), .sample(sample_rx), .run(run_rx_gpio), .eob(eob_rx), .full(full),
       .sid(rx_sid), .seqnum(rx_seqnum),
       .o_tdata(rx_tdata_r), .o_tlast(rx_tlast_r), .o_tvalid(rx_tvalid_r), .o_tready(rx_tready_r),
       .debug());
@@ -337,7 +337,7 @@ module radio
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .run(run_rx), .eob(eob_rx), .full(full),
+      .strobe(strobe_rx), .run_gpio(run_rx_gpio), .run_dsp(run_rx_dsp), .eob(eob_rx), .full(full),
       .sid(rx_sid), .seqnum(rx_seqnum),
       .err_tdata(rx_err_tdata_r), .err_tlast(rx_err_tlast_r), .err_tvalid(rx_err_tvalid_r), .err_tready(rx_err_tready_r),
       .debug());
@@ -356,13 +356,13 @@ module radio
 	      .adc_a(rx_fe[31:16]),.adc_ovf_a(1'b0),
 	      .adc_b(rx_fe[15:0]),.adc_ovf_b(1'b0),
 	      .i_out(rx_corr_i), .q_out(rx_corr_q),
-	      .run(run_rx0_d1 | run_rx1_d1), .debug());
+	      .debug());
 
 	   ddc_chain_x300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
 	     (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
 	      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .rx_fe_i(rx_corr_i),.rx_fe_q(rx_corr_q),
-	      .sample(sample_rx), .run(run_rx), .strobe(strobe_rx),
+	      .sample(sample_rx), .run(run_rx_dsp), .strobe(strobe_rx),
 	      .debug() );
 	end
    endgenerate
