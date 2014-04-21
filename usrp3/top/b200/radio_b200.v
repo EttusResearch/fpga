@@ -115,7 +115,7 @@ module radio_b200
    wire [7:0] 	set_addr;
    wire [31:0] 	set_data;
    wire [31:0] 	test_readback;
-   wire 	run_rx, run_tx;
+   wire 	run_rx_dsp, run_rx_gpio, run_tx;
 
    reg [63:0] 	rb_data;
    wire [1:0] 	rb_addr;
@@ -160,7 +160,7 @@ module radio_b200
    gpio_atr #(.BASE(SR_ATR), .WIDTH(32)) gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .rx(run_rx), .tx(run_tx),
+      .rx(run_rx_gpio), .tx(run_tx),
       .gpio(fe_atr), .gpio_readback() );
 
    // /////////////////////////////////////////////////////////////////////////////////
@@ -232,7 +232,7 @@ module radio_b200
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .sample(sample_rx), .run(run_rx), .eob(eob_rx), .full(full),
+      .strobe(strobe_rx), .sample(sample_rx), .run(run_rx_gpio), .eob(eob_rx), .full(full),
       .sid(rx_sid), .seqnum(rx_seqnum),
       .o_tdata(rx_tdata_i), .o_tlast(rx_tlast_i), .o_tvalid(rx_tvalid_i), .o_tready(rx_tready_i),
       .debug());
@@ -241,7 +241,7 @@ module radio_b200
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .run(run_rx), .eob(eob_rx), .full(full),
+      .strobe(strobe_rx), .run_gpio(run_rx_gpio), .run_dsp(run_rx_dsp), .eob(eob_rx), .full(full),
       .sid(rx_sid), .seqnum(rx_seqnum),
       .err_tdata(rx_err_tdata_r), .err_tlast(rx_err_tlast_r), .err_tvalid(rx_err_tvalid_r), .err_tready(rx_err_tready_r),
       .debug());
@@ -250,7 +250,7 @@ module radio_b200
      (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx_fe_i({rx[31:16],8'd0}),.rx_fe_q({rx[15:0],8'd0}),
-      .sample(sample_rx), .run(run_rx), .strobe(strobe_rx),
+      .sample(sample_rx), .run(run_rx_dsp), .strobe(strobe_rx),
       .debug() );
 
    chdr_16sc_to_xxxx_chain #(.BASE(SR_RX_FMT)) convert_16sc_to_xxxx
