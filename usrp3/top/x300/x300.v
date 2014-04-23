@@ -725,7 +725,7 @@ module x300
         .regi_tready(i_iop2_msg_tready),
 
         //Misc
-        .misc_status({31'h0, aStc3Gpio7}),
+        .misc_status({15'h0, aStc3Gpio7}),
         .debug()
     );
 
