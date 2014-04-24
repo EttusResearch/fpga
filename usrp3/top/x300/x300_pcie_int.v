@@ -248,7 +248,7 @@ module x300_pcie_int #(
                 .o_aclk(bus_clk), .o_tdata(`GET_DMA_BUS(dmatx_tdata_bclk,i)), .o_tvalid(dmatx_tvalid_bclk[i]), .o_tready(dmatx_tready_bclk[i])
             );
 
-            pcie_lossy_samp_gate rx_samp_gate (
+            pcie_lossy_samp_gate tx_samp_gate (
                 .i_tdata(`GET_DMA_BUS(dmatx_tdata_bclk,i)), .i_tvalid(dmatx_tvalid_bclk[i]), .i_tready(dmatx_tready_bclk[i]),
                 .o_tdata(`GET_DMA_BUS(dmatx_tdata_in,i)), .o_tvalid(dmatx_tvalid_in[i]), .o_tready(dmatx_tready_in[i]),
                 .drop(~dmatx_enabled[i]), .dropping(dmatx_busy[i])
