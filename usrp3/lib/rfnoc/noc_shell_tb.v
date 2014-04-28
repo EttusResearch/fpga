@@ -257,12 +257,14 @@ module noc_shell_tb();
 
 	#10000;
 	SendPacket(4'h0, 12'd0, 16'd250, 32'h0000_0001, 64'hAAAA_AAAA_0000_0000); // data packet
+	/*
 	SendPacket(4'h0, 12'd1, 16'd250, 32'h0000_0001, 64'hBBBB_BBBB_0000_0000); // data packet
 	SendPacket(4'h0, 12'd2, 16'd250, 32'h0000_0001, 64'hCCCC_CCCC_0000_0000); // data packet
 	SendPacket(4'h0, 12'd3, 16'd250, 32'h0000_0001, 64'hDDDD_DDDD_0000_0000); // data packet
 	SendPacket(4'h0, 12'd4, 16'd250, 32'h0000_0001, 64'hEEEE_EEEE_0000_0000); // data packet
 	SendPacket(4'h0, 12'd5, 16'd250, 32'h0000_0001, 64'hFFFF_FFFF_0000_0000); // data packet
 	SendPacket(4'h0, 12'd6, 16'd250, 32'h0000_0001, 64'h2222_2222_0000_0000); // data packet
+	 */
      end
 
 endmodule // noc_shell_tb

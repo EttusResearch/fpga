@@ -468,24 +468,42 @@ module x300_core
 
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
+   // Simple converter as the first CE
+   //
+   ///////////////////////////////////////////////////////////////////////////////////////////////
+
+   // local CE0 connections
+   wire [31:0] set_data_ce0;
+   wire [7:0]  set_addr_ce0;
+   wire        set_stb_ce0;
+
+   wire [63:0] s1o_tdata, s1i_tdata;
+   wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
+   
+   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_0
+     (.clk(bus_clk), .reset(bus_rst),
+      .i_tdata(ce0o_tdata), .i_tlast(ce0o_tlast), .i_tvalid(ce0o_tvalid), .i_tready(ce0o_tready),
+      .o_tdata(ce0i_tdata), .o_tlast(ce0i_tlast), .o_tvalid(ce0i_tvalid), .o_tready(ce0i_tready),
+      .set_data(set_data_ce0), .set_addr(set_addr_ce0), .set_stb(set_stb_ce0), .rb_data(64'd0),
+
+      .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
+      .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
+      
+      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
+      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      );
+
+   chdr_8sc_to_16sc #(.BASE(8)) conv_8_16
+     (.clk(bus_clk), .reset(bus_rst),
+      .set_stb(set_stb_ce0), .set_addr(set_addr_ce0), .set_data(set_data_ce0),
+      .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
+      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
+      
+   //////////////////////////////////////////////////////////////////////////////////////////////
+   //
    // AXI Loopbacks as place holders for CE's
    //
    ///////////////////////////////////////////////////////////////////////////////////////////////
-   axi_loopback axi_loopback_ce0
-     (
-      .clk(bus_clk),
-      .reset(bus_rst),
-      // Input AXIS
-      .i_tdata(ce0o_tdata),
-      .i_tlast(ce0o_tlast),
-      .i_tvalid(ce0o_tvalid),
-      .i_tready(ce0o_tready),
-      // Output AXIS
-      .o_tdata(ce0i_tdata),
-      .o_tlast(ce0i_tlast),
-      .o_tvalid(ce0i_tvalid),
-      .o_tready(ce0i_tready)
-      );
 
    axi_loopback axi_loopback_ce1
      (
