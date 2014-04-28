@@ -195,7 +195,9 @@ module x300_pcie_int #(
     assign fpga_status[7:0]    = {|(dmatx_error), 1'b0, dmatx_enabled};
     assign fpga_status[15:8]   = {|(dmarx_error), 1'b0, dmarx_enabled};
 
-    pcie_basic_regs basic_regs (
+    pcie_basic_regs #(
+        .SIGNATURE(32'h58333030 /*ASCII:"X300"*/), .CLK_FREQ(32'd166666667 /*bus_clk = 166.666667MHz*/)
+    ) basic_regs (
         .clk(bus_clk), .reset(bus_rst),
         .regi_tdata(basic_regi_tdata), .regi_tvalid(basic_regi_tvalid), .regi_tready(basic_regi_tready),
         .rego_tdata(basic_rego_tdata), .rego_tvalid(basic_rego_tvalid), .rego_tready(basic_rego_tready),

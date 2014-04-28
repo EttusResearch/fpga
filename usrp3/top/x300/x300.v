@@ -285,7 +285,7 @@ module x300
 
    bus_clk_gen bus_clk_gen (
       .CLK_IN1(fpga_clk125),                //Input Clock: 125MHz Clock from STC3
-      .CLK_OUT1(bus_clk),                   //Output Clock 1: 175MHz
+      .CLK_OUT1(bus_clk),                   //Output Clock 1: 166.666667MHz
       .CLK_OUT2(ioport2_clk),               //Output Clock 2: 125MHz
       .RESET(1'b0),
       .LOCKED(bus_clk_locked));
@@ -729,17 +729,18 @@ module x300
       .debug()
    );
 
-   //The PCIe logic will tend to stay close to the physical IoPort2 pins
-   //so add an additional stage of pipelining to give the tool more routing
-   //slack. This is significantly help timing closure.
+   // The PCIe logic will tend to stay close to the physical IoPort2 pins
+   // so add an additional stage of pipelining to give the tool more routing
+   // slack. This is significantly help timing closure.
+   
    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) pcii_pipeline_srl (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0)),
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata({dmatx_tlast, dmatx_tdata}), .i_tvalid(dmatx_tvalid), .i_tready(dmatx_tready),
       .o_tdata({pcii_tlast, pcii_tdata}), .o_tvalid(pcii_tvalid), .o_tready(pcii_tready),
       .space(), .occupied());
 
    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) pcio_pipeline_srl (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0)),
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata({pcio_tlast, pcio_tdata}), .i_tvalid(pcio_tvalid), .i_tready(pcio_tready),
       .o_tdata({dmarx_tlast, dmarx_tdata}), .o_tvalid(dmarx_tvalid), .o_tready(dmarx_tready),
       .space(), .occupied());
