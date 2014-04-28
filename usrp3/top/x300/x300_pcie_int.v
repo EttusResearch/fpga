@@ -238,9 +238,7 @@ module x300_pcie_int #(
 
     wire [DMA_STREAM_WIDTH-1:0]                     dmatx_tdata_mux;
     wire                                            dmatx_tvalid_mux, dmatx_tlast_mux, dmatx_tready_mux;
-    wire [DMA_STREAM_WIDTH-1:0] 		    dmatx_tdata_mux2;
-    wire 					    dmatx_tvalid_mux2, dmatx_tlast_mux2, dmatx_tready_mux2;
-	
+
     genvar i;
     generate
         for (i=0; i<NUM_TX_STREAMS; i=i+1) begin: tx_dma_stuff_generator
@@ -291,16 +289,9 @@ module x300_pcie_int #(
         .o_tdata(dmatx_tdata_mux), .o_tlast(dmatx_tlast_mux), .o_tvalid(dmatx_tvalid_mux), .o_tready(dmatx_tready_mux)
     );
 
-   // Extra short FIFO for timing closure.
-    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) tx_pipeline_srl1 (
+    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) tx_pipeline_srl (
         .clk(bus_clk), .reset(bus_rst), .clear(|(dmatx_clear)),
         .i_tdata({dmatx_tlast_mux, dmatx_tdata_mux}), .i_tvalid(dmatx_tvalid_mux), .i_tready(dmatx_tready_mux),
-	.o_tdata({dmatx_tlast_mux2, dmatx_tdata_mux2}), .o_tvalid(dmatx_tvalid_mux2), .o_tready(dmatx_tready_mux2),
-        .space(), .occupied());
-
-    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) tx_pipeline_srl2 (
-        .clk(bus_clk), .reset(bus_rst), .clear(|(dmatx_clear)),
-        .i_tdata({dmatx_tlast_mux2, dmatx_tdata_mux2}), .i_tvalid(dmatx_tvalid_mux2), .i_tready(dmatx_tready_mux2),
         .o_tdata({dmatx_tlast, dmatx_tdata}), .o_tvalid(dmatx_tvalid), .o_tready(dmatx_tready),
         .space(), .occupied());
     //
