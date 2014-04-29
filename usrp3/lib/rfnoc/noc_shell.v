@@ -9,11 +9,13 @@
 
 module noc_shell
   #(parameter STR_SINK_FIFOSIZE = 10)
-   (input clk, input reset,
-
-    // RFNoC interfaces
+   (// RFNoC interfaces, to Crossbar, all on bus_clk
+    input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
+
+    // Computation Engine interfaces, all on local clock
+    input clk, input reset,
     
     // Control Sink
     output [31:0] set_data, output [7:0] set_addr, output set_stb, input [63:0] rb_data,
@@ -40,6 +42,22 @@ module noc_shell
 		 cmdout_tvalid, cmdin_tvalid, ackout_tvalid, ackin_tvalid;
    wire 	 dataout_tready, datain_tready, fcin_tready, fcout_tready,
 		 cmdin_tready, cmdout_tready, ackout_tready, ackin_tready;
+
+   // ////////////////////////////////////////////////////////////////////////////////////
+   // 2-clock fifos to get the computation engine on its own clock
+
+   wire [63:0] 	 i_tdata_b, o_tdata_b;
+   wire 	 i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
+   
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) in_fifo
+     (.reset(bus_rst),
+      .i_aclk(bus_clk), .i_tvalid(i_tvalid), .i_tready(i_tready), .i_tdata({i_tlast,i_tdata}),
+      .o_aclk(clk), .o_tvalid(i_tvalid_b), .o_tready(i_tready_b), .o_tdata({i_tlast_b,i_tdata_b}));
+   
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) out_fifo
+     (.reset(bus_rst),
+      .i_aclk(clk), .i_tvalid(o_tvalid_b), .i_tready(o_tready_b), .i_tdata({o_tlast_b,o_tdata_b}),
+      .o_aclk(bus_clk), .o_tvalid(o_tvalid), .o_tready(o_tready), .o_tdata({o_tlast,o_tdata}));
    
    // ////////////////////////////////////////////////////////////////////////////////////
    // Mux and Demux to join/split streams going to/coming from RFNoC
@@ -50,7 +68,7 @@ module noc_shell
       .i1_tdata(fcout_tdata), .i1_tlast(fcout_tlast), .i1_tvalid(fcout_tvalid), .i1_tready(fcout_tready),
       .i2_tdata(cmdout_tdata), .i2_tlast(cmdout_tlast), .i2_tvalid(cmdout_tvalid), .i2_tready(cmdout_tready),
       .i3_tdata(ackout_tdata), .i3_tlast(ackout_tlast), .i3_tvalid(ackout_tvalid), .i3_tready(ackout_tready),
-      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
+      .o_tdata(o_tdata_b), .o_tlast(o_tlast_b), .o_tvalid(o_tvalid_b), .o_tready(o_tready_b));
 
    wire [63:0] 	 vheader;
    wire [1:0] 	 vdest = vheader[63:62];  // Switch by packet type
@@ -58,7 +76,7 @@ module noc_shell
    axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) input_demux
      (.clk(clk), .reset(reset), .clear(1'b0),
       .header(vheader), .dest(vdest),
-      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+      .i_tdata(i_tdata_b), .i_tlast(i_tlast_b), .i_tvalid(i_tvalid_b), .i_tready(i_tready_b),
       .o0_tdata(datain_tdata), .o0_tlast(datain_tlast), .o0_tvalid(datain_tvalid), .o0_tready(datain_tready),
       .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready),
       .o2_tdata(cmdin_tdata), .o2_tlast(cmdin_tlast), .o2_tvalid(cmdin_tvalid), .o2_tready(cmdin_tready),

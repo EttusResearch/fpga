@@ -71,9 +71,10 @@ module noc_shell_tb();
    
    // Generator on port 0
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_0
-     (.clk(clk), .reset(reset),
+     (.bus_clk(clk), .bus_rst(reset),
       .i_tdata(noco_tdata[0]), .i_tlast(noco_tlast[0]), .i_tvalid(noco_tvalid[0]), .i_tready(noco_tready[0]),
       .o_tdata(noci_tdata[0]), .o_tlast(noci_tlast[0]), .o_tvalid(noci_tvalid[0]), .o_tready(noci_tready[0]),
+      .clk(clk), .reset(reset),
       .set_data(), .set_addr(), .set_stb(), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
@@ -91,9 +92,10 @@ module noc_shell_tb();
    wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
    
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_1
-     (.clk(clk), .reset(reset),
+     (.bus_clk(clk), .bus_rst(reset),
       .i_tdata(noco_tdata[1]), .i_tlast(noco_tlast[1]), .i_tvalid(noco_tvalid[1]), .i_tready(noco_tready[1]),
       .o_tdata(noci_tdata[1]), .o_tlast(noci_tlast[1]), .o_tvalid(noci_tvalid[1]), .o_tready(noci_tready[1]),
+      .clk(clk), .reset(reset),
       .set_data(set_data_1), .set_addr(set_addr_1), .set_stb(set_stb_1), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
@@ -111,9 +113,11 @@ module noc_shell_tb();
       
    // Dumper on port 2
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_2
-     (.clk(clk), .reset(reset),
+     (.bus_clk(clk), .bus_rst(reset),
       .i_tdata(noco_tdata[2]), .i_tlast(noco_tlast[2]), .i_tvalid(noco_tvalid[2]), .i_tready(noco_tready[2]),
       .o_tdata(noci_tdata[2]), .o_tlast(noci_tlast[2]), .o_tvalid(noci_tvalid[2]), .o_tready(noci_tready[2]),
+      
+      .clk(clk), .reset(reset),
       .set_data(), .set_addr(), .set_stb(), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
@@ -125,9 +129,11 @@ module noc_shell_tb();
 
    // Control Source on port 3
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_3
-     (.clk(clk), .reset(reset),
+     (.bus_clk(clk), .bus_rst(reset),
       .i_tdata(noco_tdata[3]), .i_tlast(noco_tlast[3]), .i_tvalid(noco_tvalid[3]), .i_tready(noco_tready[3]),
       .o_tdata(noci_tdata[3]), .o_tlast(noci_tlast[3]), .o_tvalid(noci_tvalid[3]), .o_tready(noci_tready[3]),
+      
+      .clk(clk), .reset(reset),
       .set_data(), .set_addr(), .set_stb(), .rb_data(64'd0),
 
       .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),

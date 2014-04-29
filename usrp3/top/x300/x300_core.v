@@ -481,9 +481,10 @@ module x300_core
    wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
    
    noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_0
-     (.clk(bus_clk), .reset(bus_rst),
+     (.bus_clk(bus_clk), .bus_rst(bus_rst),
       .i_tdata(ce0o_tdata), .i_tlast(ce0o_tlast), .i_tvalid(ce0o_tvalid), .i_tready(ce0o_tready),
       .o_tdata(ce0i_tdata), .o_tlast(ce0i_tlast), .o_tvalid(ce0i_tvalid), .o_tready(ce0i_tready),
+      .clk(bus_clk), .reset(bus_rst),
       .set_data(set_data_ce0), .set_addr(set_addr_ce0), .set_stb(set_stb_ce0), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
