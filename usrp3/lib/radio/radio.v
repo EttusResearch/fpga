@@ -4,11 +4,11 @@
 //  Communication with outside world is exclusively via a single in/out axi cvita port
 //  Paths are separated by the lower 2 bits of stream ID, as follows:
 //
-//     SID[1:0]   IN                                 OUT
-//       0        Transmit Data           (DATA)     Transmit Flow Control, ACK/Error  (CTXT)
-//       1        Control (SPI, settings) (CTXT)     Response (readback)               (CTXT)
-//       2        Receive Flow Control    (CTXT)     Receive Data                      (DATA)
-//       3        Receive Commands        (CTXT)     Receive Command ACK/ERROR         (CTXT)
+//    CHDR[63:62] 
+//       0        Data
+//       1        Flow Control
+//       2        Command
+//       3        Response
 
 module radio #(
    parameter CHIPSCOPE = 0,
@@ -83,25 +83,27 @@ module radio #(
    wire 	 tx_tlast_bo_debug, tx_tvalid_bo_debug, tx_tready_bo_debug;
 
 
+   // FIXME tx flow control should be separate from ACKs.  ACKs should go with 
+   
    axi_mux4 #(.PRIO(0), .WIDTH(64), .BUFFER(1)) radio_mux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i0_tdata(txresp_tdata_b), .i0_tlast(txresp_tlast_b), .i0_tvalid(txresp_tvalid_b), .i0_tready(txresp_tready_b), // TX Flow Control/ACK
-      .i1_tdata(resp_tdata_b), .i1_tlast(resp_tlast_b), .i1_tvalid(resp_tvalid_b), .i1_tready(resp_tready_b), // Control Response
-      .i2_tdata(rx_tdata_b_fc), .i2_tlast(rx_tlast_b_fc), .i2_tvalid(rx_tvalid_b_fc), .i2_tready(rx_tready_b_fc), // RX Data
-      .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),   // RX Command ACK/ERR
+      .i0_tdata(rx_tdata_b_fc), .i0_tlast(rx_tlast_b_fc), .i0_tvalid(rx_tvalid_b_fc), .i0_tready(rx_tready_b_fc), // RX Data
+      .i1_tdata(txresp_tdata_b), .i1_tlast(txresp_tlast_b), .i1_tvalid(txresp_tvalid_b), .i1_tready(txresp_tready_b), // TX Flow Control/ACK
+      .i2_tdata(), .i2_tlast(), .i2_tvalid(1'b0), .i2_tready(),   // Commands out unused
+      .i3_tdata(resp_tdata_b), .i3_tlast(resp_tlast_b), .i3_tvalid(resp_tvalid_b), .i3_tready(resp_tready_b), // Control Response
       .o_tdata(out_tdata), .o_tlast(out_tlast), .o_tvalid(out_tvalid), .o_tready(out_tready));
 
    wire [63:0] 	 vheader;
-   wire [1:0] 	 vdest = vheader[1:0];  // Switch by bottom 2 bits of SID
+   wire [1:0] 	 vdest = vheader[63:62];  // Switch by bottom 2 bits of SID
 
    axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) radio_demux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(in_tdata), .i_tlast(in_tlast), .i_tvalid(in_tvalid), .i_tready(in_tready),
       .o0_tdata(tx_tdata_bo), .o0_tlast(tx_tlast_bo), .o0_tvalid(tx_tvalid_bo), .o0_tready(tx_tready_bo),  // TX Data
-      .o1_tdata(ctrl_tdata_b), .o1_tlast(ctrl_tlast_b), .o1_tvalid(ctrl_tvalid_b), .o1_tready(ctrl_tready_b),  // Control
-      .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
-      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
+      .o1_tdata(rxfc_tdata_b), .o1_tlast(rxfc_tlast_b), .o1_tvalid(rxfc_tvalid_b), .o1_tready(rxfc_tready_b), // RX Flow Control
+      .o2_tdata(ctrl_tdata_b), .o2_tlast(ctrl_tlast_b), .o2_tvalid(ctrl_tvalid_b), .o2_tready(ctrl_tready_b),  // Control
+      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // No CTRL Resp coming back
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
      (.reset(bus_rst),

@@ -36,7 +36,7 @@ module new_tx_deframer
 	   if(i_tvalid)
 	     begin
 		if(~i_tlast)
-		  if(i_tdata[63])
+		  if(i_tdata[63:62] != 2'b00)
 		    td_state <= TD_DUMP;
 		  else if(i_tdata[61])
 		    td_state <= TD_TIME;
