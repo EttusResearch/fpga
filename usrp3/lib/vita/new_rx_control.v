@@ -221,19 +221,19 @@ module new_rx_control
 
    always @*
      case (ibs_state)
-       IBS_OVERRUN : err_tdata_int <= { 4'hA, seqnum, 16'd24, sid };
+       IBS_OVERRUN : err_tdata_int <= { 4'hC, seqnum, 16'd24, sid };
        IBS_OVR_TIME : err_tdata_int <= vita_time;
        IBS_OVR_DATA : err_tdata_int <= {32'h8, 32'b0};
 
-       IBS_BROKENCHAIN : err_tdata_int <= { 4'hA, seqnum, 16'd24, sid };
+       IBS_BROKENCHAIN : err_tdata_int <= { 4'hC, seqnum, 16'd24, sid };
        IBS_BRK_TIME : err_tdata_int <= vita_time;
        IBS_BRK_DATA : err_tdata_int <= {32'h4, 32'b0};
 
-       IBS_LATECMD : err_tdata_int <= { 4'hA, seqnum, 16'd24, sid };
+       IBS_LATECMD : err_tdata_int <= { 4'hC, seqnum, 16'd24, sid };
        IBS_LATE_TIME : err_tdata_int <= vita_time;
        IBS_LATE_DATA : err_tdata_int <= {32'h2, 32'b0};
 
-       IBS_ZEROLEN : err_tdata_int <= { 4'hA, seqnum, 16'd24, sid };
+       IBS_ZEROLEN : err_tdata_int <= { 4'hC, seqnum, 16'd24, sid };
        IBS_ZERO_TIME : err_tdata_int <= vita_time;
        IBS_ZERO_DATA : err_tdata_int <= {32'hd, 32'b0};
 
