@@ -1,6 +1,7 @@
 
 module tx_responder
-  #(parameter BASE = 0)
+  #(parameter BASE = 0,
+    parameter USE_TIME = 1)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     
@@ -42,7 +43,7 @@ module tx_responder
       .o_tdata(ctxt_data), .o_tvalid(trigger_ctxt), .o_tready(done),
       .space(), .occupied());
    
-   context_packet_gen ack_err_gen
+   context_packet_gen #(.USE_TIME(USE_TIME)) ack_err_gen
      (.clk(clk), .reset(reset), .clear(clear),
       .trigger(trigger_ctxt), .seqnum(reply_seqnum), .sid(ctxt_data[95:64]),
       .body(ctxt_data[63:0]), .vita_time(vita_time),

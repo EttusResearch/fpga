@@ -153,10 +153,12 @@ module noc_shell
 	  sid_hold <= str_sink_tdata[31:0];
        end
    
-   fc_packet_generator #(.BASE(SB_FCPG)) str_sink_fc_gen
+   tx_responder #(.BASE(SB_FCPG), .USE_TIME(0)) str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready), .seqnum(seqnum_hold), .sid(sid_hold),
+      .ack_or_error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
+      .seqnum(seqnum_hold), .error_code(32'd0), .sid(sid_hold),
+      .vita_time(64'd0),
       .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
    
 endmodule // noc_shell
