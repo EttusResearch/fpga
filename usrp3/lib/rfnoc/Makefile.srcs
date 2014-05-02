@@ -7,5 +7,4 @@
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 noc_shell.v \
-fc_packet_generator.v \
 ))

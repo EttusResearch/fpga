@@ -131,7 +131,7 @@ module radio_ctrl_proc
 
    always @*
      case (rc_state)
-       RC_RESP_HEAD : { resp_tlast, resp_tdata } <= {1'b0, 4'hC, seqnum, 16'd24, sid[15:0], sid[31:16] };
+       RC_RESP_HEAD : { resp_tlast, resp_tdata } <= {1'b0, 4'hE, seqnum, 16'd24, sid[15:0], sid[31:16] };
        RC_RESP_TIME : { resp_tlast, resp_tdata } <= {1'b0, vita_time};
        RC_RESP_DATA : { resp_tlast, resp_tdata } <= {1'b1, readback};
        default : { resp_tlast, resp_tdata } <= 65'h0;

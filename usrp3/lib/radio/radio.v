@@ -96,7 +96,7 @@ module radio #(
    wire [63:0] 	 vheader;
    wire [1:0] 	 vdest = vheader[63:62];  // Switch by bottom 2 bits of SID
 
-   axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) radio_demux
+   axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64)) radio_demux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(in_tdata), .i_tlast(in_tlast), .i_tvalid(in_tvalid), .i_tready(in_tready),
@@ -275,7 +275,7 @@ module radio #(
    wire [175:0] txsample_tdata;
    wire 	txsample_tvalid, txsample_tready;
    wire [31:0] 	sample_tx;
-   wire 	ack_or_error, packet_consumed;
+   wire 	tx_ack, tx_error, packet_consumed;
    wire [11:0] 	seqnum;
    wire [63:0] 	error_code;
    wire [31:0] 	sid;
@@ -290,7 +290,7 @@ module radio #(
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
+      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready),
       .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
@@ -299,7 +299,7 @@ module radio #(
    tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
+      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .vita_time(vita_time),
       .o_tdata(txresp_tdata_r), .o_tlast(txresp_tlast_r), .o_tvalid(txresp_tvalid_r), .o_tready(txresp_tready_r));

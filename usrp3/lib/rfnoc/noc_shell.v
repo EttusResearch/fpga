@@ -73,12 +73,12 @@ module noc_shell
    wire [63:0] 	 vheader;
    wire [1:0] 	 vdest = vheader[63:62];  // Switch by packet type
 
-   axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) input_demux
+   axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64)) input_demux
      (.clk(clk), .reset(reset), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(i_tdata_b), .i_tlast(i_tlast_b), .i_tvalid(i_tvalid_b), .i_tready(i_tready_b),
       .o0_tdata(datain_tdata), .o0_tlast(datain_tlast), .o0_tvalid(datain_tvalid), .o0_tready(datain_tready),
-      .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready),
+      .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready), // FIXME may need
       .o2_tdata(cmdin_tdata), .o2_tlast(cmdin_tlast), .o2_tvalid(cmdin_tvalid), .o2_tready(cmdin_tready),
       .o3_tdata(ackin_tdata), .o3_tlast(ackin_tlast), .o3_tvalid(ackin_tvalid), .o3_tready(ackin_tready));
 
@@ -156,7 +156,7 @@ module noc_shell
    tx_responder #(.BASE(SB_FCPG), .USE_TIME(0)) str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack_or_error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
+      .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
       .seqnum(seqnum_hold), .error_code(32'd0), .sid(sid_hold),
       .vita_time(64'd0),
       .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));

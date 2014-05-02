@@ -1,8 +1,8 @@
 
 module context_packet_gen
-  #(parameter USE_TIME=0)
    (input clk, input reset, input clear,
     input trigger,
+    input [3:0] pkt_type,
     input [11:0] seqnum,
     input [31:0] sid,
     input [63:0] body,
@@ -16,6 +16,8 @@ module context_packet_gen
    localparam CP_HEAD = 2'd1;
    localparam CP_TIME = 2'd2;
    localparam CP_DATA = 2'd3;
+
+   wire 	      USE_TIME = pkt_type[1];
    
    always @(posedge clk)
      if(reset|clear)
@@ -27,7 +29,7 @@ module context_packet_gen
 	     cp_state <= CP_HEAD;
 	 CP_HEAD :
 	   if(o_tready)
-	     if(USE_TIME == 1)
+	     if(USE_TIME)
 	       cp_state <= CP_TIME;
 	     else
 	       cp_state <= CP_DATA;
@@ -46,9 +48,9 @@ module context_packet_gen
      case(cp_state)
        CP_HEAD : 
 	 if(USE_TIME == 1)
-	   o_tdata <= { 4'h6, seqnum, 16'd24, sid };
+	   o_tdata <= { pkt_type, seqnum, 16'd24, sid };
 	 else
-	   o_tdata <= { 4'h4, seqnum, 16'd16, sid };
+	   o_tdata <= { pkt_type, seqnum, 16'd16, sid };
        CP_TIME : o_tdata <= vita_time;
        CP_DATA : o_tdata <= body;
        default : o_tdata <= body;
