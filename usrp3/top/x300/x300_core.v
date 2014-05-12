@@ -430,7 +430,7 @@ module x300_core
       .ce1i_tdata(ce1i_tdata), .ce1i_tlast(ce1i_tlast), .ce1i_tvalid(ce1i_tvalid), .ce1i_tready(ce1i_tready),
       // CE 2
       .ce2o_tdata(ce2o_tdata), .ce2o_tlast(ce2o_tlast), .ce2o_tvalid(ce2o_tvalid), .ce2o_tready(ce2o_tready),
-      .ce2i_tdata(ce2i_tdata), .ce2i_tlast(ce2i_tlas), .ce2i_tvalid(ce2i_tvalid), .ce2i_tready(ce2i_tready),
+      .ce2i_tdata(ce2i_tdata), .ce2i_tlast(ce2i_tlast), .ce2i_tvalid(ce2i_tvalid), .ce2i_tready(ce2i_tready),
       // IoP2 Msgs
       .o_iop2_msg_tdata(o_iop2_msg_tdata), .o_iop2_msg_tvalid(o_iop2_msg_tvalid), .o_iop2_msg_tlast(o_iop2_msg_tlast), .o_iop2_msg_tready(o_iop2_msg_tready),
       .i_iop2_msg_tdata(i_iop2_msg_tdata), .i_iop2_msg_tvalid(i_iop2_msg_tvalid), .i_iop2_msg_tlast(i_iop2_msg_tlast), .i_iop2_msg_tready(i_iop2_msg_tready),
