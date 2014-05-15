@@ -556,7 +556,11 @@ module x300_core
       .m_axis_data_tready(post_tready),
       .m_axis_data_tlast(post_tlast),
       .m_axis_data_tdata(post_tdata),
-      .s_axis_config_tvalid(1'b0), .s_axis_reload_tvalid(1'b0)
+      .s_axis_config_tdata(0),
+      .s_axis_reload_tdata(0),
+      .s_axis_config_tvalid(1'b0), 
+      .s_axis_reload_tvalid(1'b0),
+      .s_axis_reload_tlast(1'b0)
       );
    
    //////////////////////////////////////////////////////////////////////////////////////////////
