@@ -40,7 +40,7 @@ module tx_responder
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .packet_consumed(packet_consumed), .trigger(trigger_fc));
 
-   axi_fifo_short #(.WIDTH(64+32)) ack_queue
+   axi_fifo_short #(.WIDTH(4+64+32)) ack_queue
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(msg_data), .i_tvalid(ack | error | trigger_fc), .i_tready(),
       .o_tdata(ctxt_data), .o_tvalid(trigger_ctxt), .o_tready(done),
