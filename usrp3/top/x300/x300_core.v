@@ -477,8 +477,8 @@ module x300_core
    wire [7:0]  set_addr_ce0;
    wire        set_stb_ce0;
 
-   wire [63:0] s1o_tdata, s1i_tdata;
-   wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
+   wire [63:0] s0o_tdata, s0i_tdata;
+   wire        s0o_tlast, s0i_tlast, s0o_tvalid, s0i_tvalid, s0o_tready, s0i_tready;
    
    noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_0
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -490,37 +490,80 @@ module x300_core
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
-      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
-      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      .str_sink_tdata(s0o_tdata), .str_sink_tlast(s0o_tlast), .str_sink_tvalid(s0o_tvalid), .str_sink_tready(s0o_tready),
+      .str_src_tdata(s0i_tdata), .str_src_tlast(s0i_tlast), .str_src_tvalid(s0i_tvalid), .str_src_tready(s0i_tready)
       );
 
    chdr_8sc_to_16sc #(.BASE(8)) conv_8_16
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce0), .set_addr(set_addr_ce0), .set_data(set_data_ce0),
-      .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
-      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
+      .i_tdata(s0o_tdata), .i_tlast(s0o_tlast), .i_tvalid(s0o_tvalid), .i_tready(s0o_tready),
+      .o_tdata(s0i_tdata), .o_tlast(s0i_tlast), .o_tvalid(s0i_tvalid), .o_tready(s0i_tready));
       
+   //////////////////////////////////////////////////////////////////////////////////////////////
+   //
+   // 5:4 Decimator (for 802.11 sample rates) as 2nd CE
+   //
+   ///////////////////////////////////////////////////////////////////////////////////////////////
+
+   // local CE1 connections
+   wire [31:0] set_data_ce1;
+   wire [7:0]  set_addr_ce1;
+   wire        set_stb_ce1;
+
+   wire [63:0] s1o_tdata, s1i_tdata;
+   wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
+
+   wire [31:0] pre_tdata, post_tdata;
+   wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
+   
+   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_1
+     (.bus_clk(bus_clk), .bus_rst(bus_rst),
+      .i_tdata(ce1o_tdata), .i_tlast(ce1o_tlast), .i_tvalid(ce1o_tvalid), .i_tready(ce1o_tready),
+      .o_tdata(ce1i_tdata), .o_tlast(ce1i_tlast), .o_tvalid(ce1i_tvalid), .o_tready(ce1i_tready),
+      .clk(bus_clk), .reset(bus_rst),
+      .set_data(set_data_ce1), .set_addr(set_addr_ce1), .set_stb(set_stb_ce1), .rb_data(64'd0),
+
+      .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
+      .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
+      
+      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
+      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      );
+   
+   simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
+     (.clk(bus_clk), .reset(bus_rst),
+      .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
+      .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
+      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready),
+      .m_axis_data_tdata(pre_tdata),
+      .m_axis_data_tlast(pre_tlast),
+      .m_axis_data_tvalid(pre_tvalid),
+      .m_axis_data_tready(pre_tready),
+      .s_axis_data_tdata(post_tdata),
+      .s_axis_data_tlast(post_tlast),
+      .s_axis_data_tvalid(post_tvalid),
+      .s_axis_data_tready(post_tready)
+      );
+      
+   simple_fir simple_fir
+     (.aresetn(bus_clk), .aclk(bus_rst),
+      .s_axis_data_tvalid(pre_tvalid),
+      .s_axis_data_tready(pre_tready),
+      .s_axis_data_tlast(pre_tlast),
+      .s_axis_data_tdata(pre_tdata),
+      .m_axis_data_tvalid(post_tvalid),
+      .m_axis_data_tready(post_tready),
+      .m_axis_data_tlast(post_tlast),
+      .m_axis_data_tdata(post_tdata),
+      .s_axis_config_tvalid(1'b0), .s_axis_reload_tvalid(1'b0)
+      );
+   
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
    // AXI Loopbacks as place holders for CE's
    //
    ///////////////////////////////////////////////////////////////////////////////////////////////
-
-   axi_loopback axi_loopback_ce1
-     (
-      .clk(bus_clk),
-      .reset(bus_rst),
-      // Input AXIS
-      .i_tdata(ce1o_tdata),
-      .i_tlast(ce1o_tlast),
-      .i_tvalid(ce1o_tvalid),
-      .i_tready(ce1o_tready),
-      // Output AXIS
-      .o_tdata(ce1i_tdata),
-      .o_tlast(ce1i_tlast),
-      .o_tvalid(ce1i_tvalid),
-      .o_tready(ce1i_tready)
-      );
 
    axi_loopback axi_loopback_ce2
      (

@@ -34,6 +34,7 @@ include ../../lib/io_port2/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
 include ../../lib/radio/Makefile.srcs
 include ../../lib/rfnoc/Makefile.srcs
+include ../../lib/coregen/Makefile.srcs
 
 promgen: $(BIT_FILE)
 	promgen -w -p bin -o $(BIN_FILE) -u 0 $<
