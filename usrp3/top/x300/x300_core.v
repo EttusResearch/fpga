@@ -502,7 +502,7 @@ module x300_core
       
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
-   // 5:4 Decimator (for 802.11 sample rates) as 2nd CE
+   // Simple FIR Filter CE
    //
    ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -565,26 +565,56 @@ module x300_core
    
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
-   // AXI Loopbacks as place holders for CE's
+   // FIFO as CE2, for testing.  Too narrow to be practical, as it is only 32 bits, not 64.
    //
    ///////////////////////////////////////////////////////////////////////////////////////////////
 
-   axi_loopback axi_loopback_ce2
-     (
-      .clk(bus_clk),
-      .reset(bus_rst),
-      // Input AXIS
-      .i_tdata(ce2o_tdata),
-      .i_tlast(ce2o_tlast),
-      .i_tvalid(ce2o_tvalid),
-      .i_tready(ce2o_tready),
-      // Output AXIS
-      .o_tdata(ce2i_tdata),
-      .o_tlast(ce2i_tlast),
-      .o_tvalid(ce2i_tvalid),
-      .o_tready(ce2i_tready)
+   // local CE2 connections
+   wire [31:0] set_data_ce2;
+   wire [7:0]  set_addr_ce2;
+   wire        set_stb_ce2;
+
+   wire [63:0] s2o_tdata, s2i_tdata;
+   wire        s2o_tlast, s2i_tlast, s2o_tvalid, s2i_tvalid, s2o_tready, s2i_tready;
+
+   wire [31:0] pre_tdata2, post_tdata2;
+   wire        pre_tlast2, post_tlast2, pre_tvalid2, post_tvalid2, pre_tready2, post_tready2;
+   
+   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_2
+     (.bus_clk(bus_clk), .bus_rst(bus_rst),
+      .i_tdata(ce2o_tdata), .i_tlast(ce2o_tlast), .i_tvalid(ce2o_tvalid), .i_tready(ce2o_tready),
+      .o_tdata(ce2i_tdata), .o_tlast(ce2i_tlast), .o_tvalid(ce2i_tvalid), .o_tready(ce2i_tready),
+      .clk(bus_clk), .reset(bus_rst),
+      .set_data(set_data_ce2), .set_addr(set_addr_ce2), .set_stb(set_stb_ce2), .rb_data(64'd0),
+
+      .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
+      .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
+      
+      .str_sink_tdata(s2o_tdata), .str_sink_tlast(s2o_tlast), .str_sink_tvalid(s2o_tvalid), .str_sink_tready(s2o_tready),
+      .str_src_tdata(s2i_tdata), .str_src_tlast(s2i_tlast), .str_src_tvalid(s2i_tvalid), .str_src_tready(s2i_tready)
+      );
+   
+   simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce2
+     (.clk(bus_clk), .reset(bus_rst),
+      .set_stb(set_stb_ce2), .set_addr(set_addr_ce2), .set_data(set_data_ce2),
+      .i_tdata(s2o_tdata), .i_tlast(s2o_tlast), .i_tvalid(s2o_tvalid), .i_tready(s2o_tready),
+      .o_tdata(s2i_tdata), .o_tlast(s2i_tlast), .o_tvalid(s2i_tvalid), .o_tready(s2i_tready),
+      .m_axis_data_tdata(pre_tdata2),
+      .m_axis_data_tlast(pre_tlast2),
+      .m_axis_data_tvalid(pre_tvalid2),
+      .m_axis_data_tready(pre_tready2),
+      .s_axis_data_tdata(post_tdata2),
+      .s_axis_data_tlast(post_tlast2),
+      .s_axis_data_tvalid(post_tvalid2),
+      .s_axis_data_tready(post_tready2)
       );
 
+   axi_fifo #(.WIDTH(33), .SIZE(12)) axi_fifo_ce2
+     (.clk(bus_clk), .reset(bus_rst),
+      .i_tdata({pre_tlast2,pre_tdata2}), .i_tvalid(pre_tvalid2), .i_tready(pre_tready2),
+      .o_tdata({post_tlast2,post_tdata2}), .o_tvalid(post_tvalid2), .o_tready(post_tready2),
+      .space(), .occupied());
+   
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Radio 0
