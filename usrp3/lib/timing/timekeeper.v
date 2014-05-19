@@ -63,12 +63,12 @@ module timekeeper
    // track the time at last pps so host can detect the pps
    //////////////////////////////////////////////////////////////////////////
    always @(posedge clk)
-        if(reset)
-            vita_time_lastpps <= 64'h0;
-        else if(pps_edge)
-            if(time_event)
-                vita_time_lastpps <= time_at_next_event;
-            else
-                vita_time_lastpps <= vita_time + 64'h1;
+     if(reset)
+       vita_time_lastpps <= 64'h0;
+     else if(pps_edge)
+       if(time_event)
+         vita_time_lastpps <= time_at_next_event;
+       else
+         vita_time_lastpps <= vita_time + 64'h1;
 
 endmodule // timekeeper
