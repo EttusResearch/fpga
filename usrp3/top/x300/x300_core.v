@@ -530,7 +530,15 @@ module x300_core
       .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
       .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
       );
-   
+
+   null_source #(.BASE(8)) null_source
+     (.clk(bus_clk), .reset(bus_rst),
+      .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
+      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
+
+   assign s1o_tready = 1'b1;  // dump everything coming to us
+         
+   /*
    simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
@@ -562,7 +570,7 @@ module x300_core
       .s_axis_reload_tvalid(1'b0),
       .s_axis_reload_tlast(1'b0)
       );
-   
+   */
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
    // FIFO as CE2, for testing.  Too narrow to be practical, as it is only 32 bits, not 64.
@@ -593,7 +601,11 @@ module x300_core
       .str_sink_tdata(s2o_tdata), .str_sink_tlast(s2o_tlast), .str_sink_tvalid(s2o_tvalid), .str_sink_tready(s2o_tready),
       .str_src_tdata(s2i_tdata), .str_src_tlast(s2i_tlast), .str_src_tvalid(s2i_tvalid), .str_src_tready(s2i_tready)
       );
+
+   assign s2o_tready = 1'b1;  // dump everything coming to us
+   assign s2i_tvalid = 1'b0;  // don't send anything
    
+   /*
    simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce2
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce2), .set_addr(set_addr_ce2), .set_data(set_data_ce2),
@@ -614,7 +626,7 @@ module x300_core
       .i_tdata({pre_tlast2,pre_tdata2}), .i_tvalid(pre_tvalid2), .i_tready(pre_tready2),
       .o_tdata({post_tlast2,post_tdata2}), .o_tvalid(post_tvalid2), .o_tready(post_tready2),
       .space(), .occupied());
-   
+   */
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Radio 0

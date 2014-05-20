@@ -8,4 +8,5 @@
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 noc_shell.v \
 simple_axi_wrapper.v \
+null_source.v \
 ))
