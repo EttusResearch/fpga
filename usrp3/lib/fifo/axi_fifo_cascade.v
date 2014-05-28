@@ -18,8 +18,8 @@ module axi_fifo_cascade
     output o_tvalid,
     input o_tready,
     
-    output reg [15:0] space,
-    output reg [15:0] occupied);
+    output [15:0] space,
+    output [15:0] occupied);
 
    wire [WIDTH-1:0]   int1_tdata, int2_tdata;
    wire 	      int1_tvalid, int1_tready, int2_tvalid, int2_tready;
