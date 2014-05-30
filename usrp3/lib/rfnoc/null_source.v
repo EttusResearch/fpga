@@ -21,7 +21,9 @@ module null_source
 
    wire [15:0] 	  len;
    reg [15:0] 	  count;
+   reg [15:0] 	  packet_count;
    wire 	  changed_sid;
+   wire 	  enable;
    
    setting_reg #(.my_addr(BASE), .width(32)) sid_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -34,6 +36,10 @@ module null_source
    setting_reg #(.my_addr(BASE+2), .width(16)) rate_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rate), .changed());
+
+   setting_reg #(.my_addr(BASE+3), .width(1)) enable_reg
+     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(enable), .changed());
 
    localparam IDLE = 2'd0;
    localparam HEAD = 2'd1;
@@ -51,7 +57,7 @@ module null_source
 	    seqnum <= 0;
 	  case(state)
 	    IDLE :
-	      if(len != 0)
+	      if(enable)
 		state <= HEAD;
 	    HEAD :
 	      if(int_tvalid & int_tready)
@@ -62,7 +68,7 @@ module null_source
 		end
 	    DATA :
 	      if(int_tvalid & int_tready)
-		if(count == len)
+		if(count >= len)
 		  begin
 		     state <= IDLE;
 		     count <= 0;
@@ -78,7 +84,7 @@ module null_source
    wire [15:0] pkt_len = { len[12:0], 3'b000 } + 16'd8;
    
    assign int_tdata = (state == HEAD) ? { 4'b0000, seqnum, pkt_len, sid } : {~count,count,count,count} ;
-   assign int_tlast = (count == len);
+   assign int_tlast = (count >= len);
 
    reg [15:0]  line_timer;
    always @(posedge clk)
@@ -92,7 +98,7 @@ module null_source
    
    assign int_tvalid = ((state==HEAD)|(state==DATA)) & (line_timer==0);
    
-   axi_packet_gate #(.WIDTH(64)) gate
+   axi_packet_gate #(.WIDTH(64), .SIZE(10)) gate
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i_tdata(int_tdata), .i_tlast(int_tlast), .i_terror(1'b0), .i_tvalid(int_tvalid), .i_tready(int_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));

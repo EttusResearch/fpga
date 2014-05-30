@@ -16,7 +16,7 @@ module null_source_tb();
    initial $dumpfile("null_source_tb.vcd");
    initial $dumpvars(0,null_source_tb);
 
-   initial #1000000 $finish;
+   //initial #10000000 $finish;
 
    reg [31:0] set_data;
    reg [7:0]  set_addr;
@@ -54,7 +54,24 @@ module null_source_tb();
 	set_addr <= 2;
 	set_data <= 32'h20; // Rate
 	@(posedge clk);
+	set_stb <= 1;
+	set_addr <= 3;
+	set_data <= 1;     // enable
+	@(posedge clk);
 	set_stb <= 0;
+	@(posedge clk);
+	#1000000;
+	@(posedge clk);
+	set_stb <= 1;
+	set_addr <= 3;
+	set_data <= 0;     // disable
+	@(posedge clk);
+	set_stb <= 0;
+	#1000000;
+
+	$finish;
+	
+	
      end
 
 endmodule // null_source_tb
