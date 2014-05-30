@@ -43,7 +43,7 @@ module noc_dsp_flow_tb();
 
    wire [63:0] dst_tdata;
    wire        dst_tlast, dst_tvalid;
-   reg 	       dst_tready;
+   wire        dst_tready = 1;
  	       
    localparam PORTS = 4;
 
@@ -243,7 +243,6 @@ module noc_dsp_flow_tb();
 	cmdout_tdata <= 64'd0;
 	cmdout_tlast <= 1'b0;
 	cmdout_tvalid <= 1'b0;
-	dst_tready <= 1'b1;
 	@(negedge reset);
 	@(posedge clk);
 	SetXbar(256,0);
@@ -254,7 +253,7 @@ module noc_dsp_flow_tb();
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h8, 32'h0000_0001}); // Command packet to set up SID
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hA, 32'h0000_0010}); // Command packet to set up Rate
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hA, 32'h0000_0000}); // Command packet to set up Rate
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0020}); // Command packet to set up Len
 	#10000;
 	// Port 1
@@ -279,5 +278,35 @@ module noc_dsp_flow_tb();
 	SendPacket(4'h0, 12'd6, 16'd250, 32'h0000_0001, 64'h2222_2222_0000_0000); // data packet
 */
      end
+
+   reg in_packet = 0;
+
+   integer outfile;
+   
+   initial
+     begin
+	outfile = $fopen("output.dat","w");
+	//src_tready <= 1'b1;
+     end
+
+   wire signed  [15:0] a,b,c,d;
+   assign a = src_tdata[63:48];
+   assign b = src_tdata[47:32];
+   assign c = src_tdata[31:16];
+   assign d = src_tdata[15:0];
+
+   always @(posedge clk)
+     if(src_tready & src_tvalid)
+       begin
+	  if(src_tlast)
+	    in_packet <= 0;
+	  else
+	    in_packet <= 1;
+	  if(in_packet)
+	    begin
+	       $fwrite(outfile,src_tdata);
+	       $write("%d,%d,%d,%d,",a,b,c,d);
+	    end
+       end
 
 endmodule // noc_dsp_flow_tb

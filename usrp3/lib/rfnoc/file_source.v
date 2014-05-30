@@ -92,8 +92,13 @@ module file_source
    
    
    wire [15:0] pkt_len = { len[12:0], 3'b000 } + 16'd8;
+
+   // Fix endianness issues with GNU Radio generated files by reversing.  Not sure if this is correct yet.
+   wire [63:0] reversed_sample = mem[index];   
+   assign int_tdata = (state == HEAD) ? { 4'b0000, seqnum, pkt_len, sid } : 
+		      { reversed_sample[55:48], reversed_sample[63:56], reversed_sample[39:32], reversed_sample[47:40],
+		       reversed_sample[23:16], reversed_sample[31:24], reversed_sample[7:0], reversed_sample[15:8] } ;
    
-   assign int_tdata = (state == HEAD) ? { 4'b0000, seqnum, pkt_len, sid } : mem[index] ;
    assign int_tlast = (count == len);
 
    reg [15:0]  line_timer;
