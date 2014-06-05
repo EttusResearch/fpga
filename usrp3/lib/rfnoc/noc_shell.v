@@ -28,7 +28,9 @@ module noc_shell
     output [63:0] str_sink_tdata, output str_sink_tlast, output str_sink_tvalid, input str_sink_tready,
     
     // Stream Source
-    input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready
+    input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready,
+
+    output [63:0] debug
     );
 
    localparam SB_SFC = 0;   // 2 regs
@@ -160,5 +162,32 @@ module noc_shell
       .seqnum(seqnum_hold), .error_code(32'd0), .sid(sid_hold),
       .vita_time(64'd0),
       .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
+
+   /*
+   assign debug = { { 5'd0, o_tvalid_b, o_tready_b, o_tlast_b, o_tdata_b }, // 72 bits
+		    { 5'd0, i_tvalid_b, i_tready_b, i_tlast_b, i_tdata_b }, // 72 bits
+		    { },
+ };*/
+
+   assign debug[31:0] = { // input side 16 bits
+			  4'b0000,
+			  i_tvalid_b, i_tready_b,
+			  datain_tvalid, datain_tready,
+			  fcin_tvalid, fcin_tready,
+			  cmdin_tvalid, cmdin_tready,
+			  ackin_tvalid, ackin_tready,
+			  str_sink_tvalid, str_sink_tready,
+			  // output side 16 bits
+			  2'b00,
+			  o_tdata_b, o_tvalid_b,
+			  dataout_tvalid, dataout_tready,
+			  fcout_tvalid, fcout_tready,
+			  cmdout_tvalid, cmdout_tready,
+			  ackout_tvalid, ackout_tready,
+			  str_src_tvalid_int, str_src_tready_int,
+			  str_src_tvalid, str_src_tready
+			  };
+
+   assign debug[63:32] = 32'hDEADBEEF;
    
 endmodule // noc_shell

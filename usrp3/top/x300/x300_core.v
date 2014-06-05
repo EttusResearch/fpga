@@ -220,6 +220,8 @@ module x300_core
    // assign eth1_tx_tready = 1'b1;
    //  assign eth1_rx_tvalid = 1'b0;
 
+   wire [63:0] debug_ce0, debug_ce1, debug_ce2;
+   
 `ifndef NO_DRAM_FIFOS
    //////////////////////////////////////////////////////////
    //
@@ -465,7 +467,7 @@ module x300_core
       // Debug
       .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
-
+   
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Simple converter as the first CE
@@ -491,7 +493,8 @@ module x300_core
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
       .str_sink_tdata(s0o_tdata), .str_sink_tlast(s0o_tlast), .str_sink_tvalid(s0o_tvalid), .str_sink_tready(s0o_tready),
-      .str_src_tdata(s0i_tdata), .str_src_tlast(s0i_tlast), .str_src_tvalid(s0i_tvalid), .str_src_tready(s0i_tready)
+      .str_src_tdata(s0i_tdata), .str_src_tlast(s0i_tlast), .str_src_tvalid(s0i_tvalid), .str_src_tready(s0i_tready),
+      .debug(debug_ce0)
       );
 
    chdr_16sc_to_8sc #(.BASE(8)) conv_8_16
@@ -528,7 +531,8 @@ module x300_core
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
       .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
-      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready),
+      .debug(debug_ce1)
       );
    /*
    null_source #(.BASE(8)) null_source
@@ -599,7 +603,8 @@ module x300_core
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
       .str_sink_tdata(s2o_tdata), .str_sink_tlast(s2o_tlast), .str_sink_tvalid(s2o_tvalid), .str_sink_tready(s2o_tready),
-      .str_src_tdata(s2i_tdata), .str_src_tlast(s2i_tlast), .str_src_tvalid(s2i_tvalid), .str_src_tready(s2i_tready)
+      .str_src_tdata(s2i_tdata), .str_src_tlast(s2i_tlast), .str_src_tvalid(s2i_tvalid), .str_src_tready(s2i_tready),
+      .debug(debug_ce2)
       );
 
    /*
@@ -1526,5 +1531,27 @@ module x300_core
       .CONTROL1(CONTROL1) // INOUT BUS [35:0]
       );
  -----/\----- EXCLUDED -----/\----- */
+
+
+   wire [35:0] CONTROL0;
+   reg [255:0] TRIG0;
+
+   always @(posedge bus_clk)
+     TRIG0 <= { { 64'h0 }, // 64 bits per line
+		{ debug_ce2 },
+		{ debug_ce1 },
+		{ debug_ce0 } };
+   
+   chipscope_ila chipscope_ila_i0
+     (
+      .CONTROL(CONTROL0), // INOUT BUS [35:0]
+      .CLK(bus_clk), // IN
+      .TRIG0(TRIG0 ) // IN BUS [255:0]
+      );
+
+   chipscope_icon chipscope_icon_i0
+     (
+      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
+      );
 
 endmodule // x300_core
