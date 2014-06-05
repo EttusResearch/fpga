@@ -179,7 +179,7 @@ module noc_shell
 			  str_sink_tvalid, str_sink_tready,
 			  // output side 16 bits
 			  2'b00,
-			  o_tdata_b, o_tvalid_b,
+			  o_tvalid_b, o_tready_b,
 			  dataout_tvalid, dataout_tready,
 			  fcout_tvalid, fcout_tready,
 			  cmdout_tvalid, cmdout_tready,
