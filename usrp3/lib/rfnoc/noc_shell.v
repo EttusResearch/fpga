@@ -35,6 +35,7 @@ module noc_shell
 
    localparam SB_SFC = 0;   // 2 regs
    localparam SB_FCPG = 2;  // 2 regs
+   localparam SB_CLEAR_TX_FC = 4;  // 1 reg
    
    wire [63:0] 	 dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
 		 cmdin_tdata, cmdout_tdata, ackout_tdata, ackin_tdata;
@@ -157,20 +158,20 @@ module noc_shell
 	  seqnum_hold <= str_sink_tdata[59:48];
 	  sid_hold <= str_sink_tdata[31:0];
        end
-   
+
+   wire clear_tx_fc;
+
+   setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
+     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+      .in(set_data),.out(),.changed(clear_tx_fc));
+
    tx_responder #(.BASE(SB_FCPG), .USE_TIME(0)) str_sink_fc_gen
-     (.clk(clk), .reset(reset), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(clear_tx_fc),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
       .seqnum(seqnum_hold), .error_code(32'd0), .sid(sid_hold),
       .vita_time(64'd0),
       .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
-
-   /*
-   assign debug = { { 5'd0, o_tvalid_b, o_tready_b, o_tlast_b, o_tdata_b }, // 72 bits
-		    { 5'd0, i_tvalid_b, i_tready_b, i_tlast_b, i_tdata_b }, // 72 bits
-		    { },
- };*/
 
    assign debug[31:0] = { // input side 16 bits
 			  4'b0000,
