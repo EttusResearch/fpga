@@ -45,6 +45,8 @@ module noc_shell
    wire 	 dataout_tready, datain_tready, fcin_tready, fcout_tready,
 		 cmdin_tready, cmdout_tready, ackout_tready, ackin_tready;
 
+   wire [31:0] 	 debug_sfc;
+   
    // ////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos to get the computation engine on its own clock
 
@@ -125,7 +127,8 @@ module noc_shell
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(fcin_tdata), .fc_tlast(fcin_tlast), .fc_tvalid(fcin_tvalid), .fc_tready(fcin_tready),
       .in_tdata(str_src_tdata_int), .in_tlast(str_src_tlast_int), .in_tvalid(str_src_tvalid_int), .in_tready(str_src_tready_int),
-      .out_tdata(dataout_tdata), .out_tlast(dataout_tlast), .out_tvalid(dataout_tvalid), .out_tready(dataout_tready) );
+      .out_tdata(dataout_tdata), .out_tlast(dataout_tlast), .out_tvalid(dataout_tvalid), .out_tready(dataout_tready),
+      .debug(debug_sfc) );
    
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
@@ -188,6 +191,6 @@ module noc_shell
 			  str_src_tvalid, str_src_tready
 			  };
 
-   assign debug[63:32] = 32'hDEADBEEF;
+   assign debug[63:32] = debug_sfc;
    
 endmodule // noc_shell

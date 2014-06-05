@@ -13,17 +13,24 @@ module tx_responder
     input [63:0] vita_time,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   reg [11:0] 	  seqnum_int;
+   reg [31:0] 	  seqnum_int;
 
    always @(posedge clk)
-     if(packet_consumed)
-       seqnum_int <= seqnum;
+     if(reset | clear)
+       seqnum_int <= 32'd0;
+     else
+       if(packet_consumed)
+	 begin
+	    if(seqnum_int[11:0] == 12'hFFF)
+	      seqnum_int[31:12] <= seqnum_int[31:12] + 20'd1;
+	    seqnum_int[11:0] <= seqnum;
+	 end
    
    wire 	  trigger_fc, trigger_ctxt;
    wire [1:0] 	  msg_type = error ? 2'b11 : 2'b01;
    wire 	  eob = ack | error;
    
-   wire [99:0] 	  msg_data = { msg_type[1:0], USE_TIME[0], eob, sid[15:0], sid[31:16], ((ack | error) ? error_code : {32'h0,20'h0,seqnum_int}) };
+   wire [99:0] 	  msg_data = { msg_type[1:0], USE_TIME[0], eob, sid[15:0], sid[31:16], ((ack | error) ? error_code : {32'h0,seqnum_int}) };
    wire [99:0] 	  ctxt_data;
 
    reg [11:0] 	  reply_seqnum;

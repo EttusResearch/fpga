@@ -14,7 +14,8 @@ module source_flow_control
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [63:0] fc_tdata, input fc_tlast, input fc_tvalid, output fc_tready,
     input [63:0] in_tdata, input in_tlast, input in_tvalid, output in_tready,
-    output [63:0] out_tdata, output out_tlast, output out_tvalid, input out_tready);
+    output [63:0] out_tdata, output out_tlast, output out_tvalid, input out_tready,
+    output [31:0] debug);
    
    reg [31:0] 	  last_seqnum_consumed;
    wire [31:0] 	  window_size;
@@ -111,11 +112,7 @@ module source_flow_control
        else 
 	 case(go)
 	   1'b0 :
-	     // This test assumes the host is well behaved in sending good numbers for packets consumed
-	     // and that current_seqnum increments always by 1 only.
-	     // This way wraps are dealt with without a large logic penalty.
-	     if (in_tvalid & (go_until_seqnum - current_seqnum != 0))
-	     // 	     if(in_tvalid & (go_until_seqnum > current_seqnum))  // FIXME will need to handle wrap of 32-bit seqnum
+	     if(in_tvalid & (go_until_seqnum > current_seqnum))  // FIXME will need to handle wrap of 32-bit seqnum
 	       go <= 1'b1;
 	   
 	   1'b1 :
@@ -125,3 +122,10 @@ module source_flow_control
 
    
 endmodule // source_flow_control
+
+// NOTE -- the below causes all sorts of problems.  We must use a proper ">" comparison!
+
+	     // This test assumes the host is well behaved in sending good numbers for packets consumed
+	     // and that current_seqnum increments always by 1 only.
+	     // This way wraps are dealt with without a large logic penalty.
+	     // if (in_tvalid & (go_until_seqnum - current_seqnum != 0))
