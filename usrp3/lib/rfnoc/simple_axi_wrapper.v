@@ -118,7 +118,7 @@ module simple_axi_wrapper
        ST_TIME : 
 	 begin
 	    i_tready <= header_in_tready;
-	    header_in <= {i_tdata, i_tdata};  // ignored
+	    header_in <= {held_header, i_tdata};
 	    header_in_tvalid <= i_tvalid & ~bad_packet; // Don't write if this is a short packet
 	    m_axis_data_tdata <= i_tdata[31:0];  //ignored
 	    m_axis_data_tlast <= 1'b0;
