@@ -497,12 +497,21 @@ module x300_core
       .debug(debug_ce0)
       );
 
+   /*
    chdr_16sc_to_8sc #(.BASE(8)) conv_16_to_8
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce0), .set_addr(set_addr_ce0), .set_data(set_data_ce0),
       .i_tdata(s0o_tdata), .i_tlast(s0o_tlast), .i_tvalid(s0o_tvalid), .i_tready(s0o_tready),
       .o_tdata(s0i_tdata), .o_tlast(s0i_tlast), .o_tvalid(s0i_tvalid), .o_tready(s0i_tready));
-      
+  */
+
+   null_source #(.BASE(8)) null_source
+     (.clk(bus_clk), .reset(bus_rst),
+      .set_stb(set_stb_ce0), .set_addr(set_addr_ce0), .set_data(set_data_ce0),
+      .o_tdata(s0i_tdata), .o_tlast(s0i_tlast), .o_tvalid(s0i_tvalid), .o_tready(s0i_tready));
+
+   assign s0o_tready = 1'b1;  // dump everything coming to us
+
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Simple FIR Filter CE
@@ -535,19 +544,13 @@ module x300_core
       .debug(debug_ce1)
       );
 
+   /*
    chdr_8sc_to_16sc #(.BASE(8)) conv_8_to_16
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
       .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
       .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
-      
-   /*
-   null_source #(.BASE(8)) null_source
-     (.clk(bus_clk), .reset(bus_rst),
-      .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
-      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
-
-   assign s1o_tready = 1'b1;  // dump everything coming to us
+     */ 
 
    simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(bus_clk), .reset(bus_rst),
@@ -580,7 +583,6 @@ module x300_core
       .s_axis_reload_tvalid(1'b0),
       .s_axis_reload_tlast(1'b0)
       );
-     */    
 
    //////////////////////////////////////////////////////////////////////////////////////////////
    //
