@@ -568,7 +568,7 @@ module x300_core
       );
       
    simple_fir simple_fir
-     (.aresetn(bus_rst), .aclk(bus_clk),
+     (.aresetn(~bus_rst), .aclk(bus_clk),
       .s_axis_data_tvalid(pre_tvalid),
       .s_axis_data_tready(pre_tready),
       .s_axis_data_tlast(pre_tlast),
