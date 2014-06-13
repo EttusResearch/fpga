@@ -118,7 +118,7 @@ module noc_shell
    wire [63:0] 	 str_src_tdata_int;
    wire 	 str_src_tlast_int, str_src_tvalid_int, str_src_tready_int;
    
-   axi_packet_gate #(.WIDTH(64), .SIZE(9)) str_src_gate
+   axi_packet_gate #(.WIDTH(64), .SIZE(10)) str_src_gate
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i_tdata(str_src_tdata), .i_tlast(str_src_tlast), .i_terror(1'b0), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
       .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast_int), .o_tvalid(str_src_tvalid_int), .o_tready(str_src_tready_int));
@@ -136,7 +136,7 @@ module noc_shell
    //      FIXME  do we follow the back of the fifo, or do we allow the device to generate
    //             its own packet_consumed signals?
 
-   axi_fifo #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) str_sink_fifo
+   axi_fifo_cascade #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) str_sink_fifo
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i_tdata({datain_tlast,datain_tdata}), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
       .o_tdata({str_sink_tlast,str_sink_tdata}), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
