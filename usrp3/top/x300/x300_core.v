@@ -482,7 +482,7 @@ module x300_core
    wire [63:0] s0o_tdata, s0i_tdata;
    wire        s0o_tlast, s0i_tlast, s0o_tvalid, s0i_tvalid, s0o_tready, s0i_tready;
    
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_0
+   noc_shell #(.STR_SINK_FIFOSIZE(13)) noc_shell_0
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
       .i_tdata(ce0o_tdata), .i_tlast(ce0o_tlast), .i_tvalid(ce0o_tvalid), .i_tready(ce0o_tready),
       .o_tdata(ce0i_tdata), .o_tlast(ce0i_tlast), .o_tvalid(ce0i_tvalid), .o_tready(ce0i_tready),
@@ -529,7 +529,7 @@ module x300_core
    wire [31:0] pre_tdata, post_tdata;
    wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
    
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_1
+   noc_shell #(.STR_SINK_FIFOSIZE(13)) noc_shell_1
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
       .i_tdata(ce1o_tdata), .i_tlast(ce1o_tlast), .i_tvalid(ce1o_tvalid), .i_tready(ce1o_tready),
       .o_tdata(ce1i_tdata), .o_tlast(ce1i_tlast), .o_tvalid(ce1i_tvalid), .o_tready(ce1i_tready),
@@ -601,7 +601,7 @@ module x300_core
    wire [31:0] pre_tdata2, post_tdata2;
    wire        pre_tlast2, post_tlast2, pre_tvalid2, post_tvalid2, pre_tready2, post_tready2;
    
-   noc_shell #(.STR_SINK_FIFOSIZE(10)) noc_shell_2
+   noc_shell #(.STR_SINK_FIFOSIZE(13)) noc_shell_2
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
       .i_tdata(ce2o_tdata), .i_tlast(ce2o_tlast), .i_tvalid(ce2o_tvalid), .i_tready(ce2o_tready),
       .o_tdata(ce2i_tdata), .o_tlast(ce2i_tlast), .o_tvalid(ce2i_tvalid), .o_tready(ce2i_tready),
