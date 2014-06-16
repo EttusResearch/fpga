@@ -8,7 +8,8 @@
 //   Seqnum for different types
 
 module noc_shell
-  #(parameter STR_SINK_FIFOSIZE = 10)
+  #(parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
+    parameter STR_SINK_FIFOSIZE = 10)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -36,6 +37,7 @@ module noc_shell
    localparam SB_SFC = 0;   // 2 regs
    localparam SB_FCPG = 2;  // 2 regs
    localparam SB_CLEAR_TX_FC = 4;  // 1 reg
+   localparam SB_RB_ADDR = 32;  // 1 reg
    
    wire [63:0] 	 dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
 		 cmdin_tdata, cmdout_tdata, ackout_tdata, ackin_tdata;
@@ -92,6 +94,9 @@ module noc_shell
 
    wire 	 ready = 1'b1;
    wire [63:0] 	 vita_time = 64'd0;
+   wire [1:0] 	 rb_addr;
+   reg [63:0] 	 rb_data_int;
+   wire [63:0] 	 buffer_alloc = { 56'h0, STR_SINK_FIFOSIZE[7:0] };
    
    radio_ctrl_proc radio_ctrl_proc
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -99,9 +104,21 @@ module noc_shell
       .resp_tdata(ackout_tdata), .resp_tlast(ackout_tlast), .resp_tvalid(ackout_tvalid), .resp_tready(ackout_tready),
       .vita_time(vita_time),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ready(ready), .readback(rb_data),
+      .ready(ready), .readback(rb_data_int),
       .debug());
 
+   setting_reg #(.my_addr(SB_RB_ADDR), .width(2), .at_reset(0)) sr_rb_addr
+     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+      .in(set_data),.out(rb_addr),.changed());
+
+   always @(posedge clk)
+     case(rb_addr)
+       2'd0 : rb_data_int <= NOC_ID;
+       2'd1 : rb_data_int <= buffer_alloc;
+       2'd2 : rb_data_int <= 64'h0;
+       2'd3 : rb_data_int <= rb_data;
+     endcase
+      
    // ////////////////////////////////////////////////////////////////////////////////////
    // Control Source (skeleton for now)
 
@@ -160,7 +177,7 @@ module noc_shell
        end
 
    wire clear_tx_fc;
-
+   
    setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(),.changed(clear_tx_fc));
