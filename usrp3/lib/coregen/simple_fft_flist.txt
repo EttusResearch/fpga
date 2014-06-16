@@ -1,0 +1,19 @@
+# Output products list for <simple_fft>
+_xmsgs/pn_parser.xmsgs
+demo_tb/tb_simple_fft.vhd
+simple_fft/cmodel/xfft_v8_0_bitacc_cmodel_lin.zip
+simple_fft/cmodel/xfft_v8_0_bitacc_cmodel_lin64.zip
+simple_fft/cmodel/xfft_v8_0_bitacc_cmodel_nt.zip
+simple_fft/cmodel/xfft_v8_0_bitacc_cmodel_nt64.zip
+simple_fft/doc/ds808_xfft.pdf
+simple_fft/doc/xfft_v8_0_readme.txt
+simple_fft/doc/xfft_v8_0_vinfo.html
+simple_fft.asy
+simple_fft.gise
+simple_fft.ngc
+simple_fft.v
+simple_fft.veo
+simple_fft.xco
+simple_fft.xise
+simple_fft_flist.txt
+simple_fft_xmdf.tcl
