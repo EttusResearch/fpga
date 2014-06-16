@@ -8,6 +8,8 @@
 LIBCOREGEN_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/coregen/, \
 simple_fir.v \
 simple_fir.xco \
+simple_fft.v \
+simple_fft.xco \
 ))
 
 

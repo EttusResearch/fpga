@@ -566,7 +566,7 @@ module x300_core
       .s_axis_data_tvalid(post_tvalid),
       .s_axis_data_tready(post_tready)
       );
-      
+/*      
    simple_fir simple_fir
      (.aresetn(~bus_rst), .aclk(bus_clk),
       .s_axis_data_tvalid(pre_tvalid),
@@ -582,6 +582,22 @@ module x300_core
       .s_axis_config_tvalid(1'b0), 
       .s_axis_reload_tvalid(1'b0),
       .s_axis_reload_tlast(1'b0)
+      ); 
+ */
+   
+   simple_fft simple_fft
+     (.aresetn(~bus_rst), .aclk(bus_clk),
+      .s_axis_data_tvalid(pre_tvalid),
+      .s_axis_data_tready(pre_tready),
+      .s_axis_data_tlast(pre_tlast),
+      .s_axis_data_tdata(pre_tdata),
+      .m_axis_data_tvalid(post_tvalid),
+      .m_axis_data_tready(post_tready),
+      .m_axis_data_tlast(post_tlast),
+      .m_axis_data_tdata(post_tdata),
+      .s_axis_config_tdata(0),
+      .s_axis_config_tvalid(1'b0), 
+      .s_axis_config_tready()
       );
 
    //////////////////////////////////////////////////////////////////////////////////////////////
