@@ -68,7 +68,7 @@ module simple_axi_wrapper
 	 ST_HEAD :
 	   if(i_tvalid & header_in_tready)
 	     begin
-		odd <= i_tdata[2] ^ (i_tdata[1] | i_tdata[0]);
+		odd <= i_tdata[34] ^ (i_tdata[33] | i_tdata[32]);
 		if(bad_packet & ~i_tlast)
 		  n2a_state <= ST_DUMP;   // FIXME Or maybe we just pass them through?
 		else

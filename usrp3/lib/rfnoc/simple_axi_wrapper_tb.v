@@ -40,16 +40,8 @@ module simple_axi_wrapper_tb();
    reg 	       src_tlast, src_tvalid;
    wire        src_tready;
 
-   reg [63:0]  cmdout_tdata;
-   reg 	       cmdout_tlast, cmdout_tvalid;
-   wire        cmdout_tready;
-
    localparam PORTS = 4;
 
-   // FIR filter on port 1
-   wire [31:0] set_data_1;
-   wire [7:0]  set_addr_1;
-   wire        set_stb_1;
    wire [63:0] s1o_tdata, s1i_tdata;
    wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
    
@@ -58,7 +50,7 @@ module simple_axi_wrapper_tb();
    
    simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(clk), .reset(reset),
-      .set_stb(set_stb_1), .set_addr(set_addr_1), .set_data(set_data_1),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .i_tdata(src_tdata), .i_tlast(src_tlast), .i_tvalid(src_tvalid), .i_tready(src_tready),
       .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready),
       .m_axis_data_tdata(pre_tdata),
@@ -103,14 +95,26 @@ module simple_axi_wrapper_tb();
       
       begin
 	 @(posedge clk);
-	 src_tdata <= { flags, seqnum, len*16'd8+16'd8, sid };
+	 src_tdata <= { flags, seqnum, len+16'd8 + (flags[1] ? 16'd8 : 16'd0), sid };
 	 src_tlast <= 0;
 	 src_tvalid <= 1;
 	 @(posedge clk);
 	 while(~src_tready)
 	   @(posedge clk);
+
+	 // send time if flags request it
+	 if(flags[1])
+	   begin
+	      src_tdata <= 64'h0123_4567_89ab_cdef;
+	      src_tlast <= 0;
+	      src_tvalid <= 1;
+	      @(posedge clk);
+	      while(~src_tready)
+		@(posedge clk);
+	   end
+
 	 src_tdata <= data;
-	 repeat(len-1)
+	 repeat(len[15:3] + (len[2]|len[1]|len[0])- 1 )
 	   begin
 	      @(posedge clk);
 	      while(~src_tready)
@@ -126,65 +130,24 @@ module simple_axi_wrapper_tb();
       end
    endtask // SendPacket
    
-   task SendCtrlPacket;
-      input [11:0] seqnum;
-      input [31:0] sid;
-      input [63:0] data;
-      
-      begin
-	 @(posedge clk);
-	 cmdout_tdata <= { 4'h8, seqnum, 16'h16, sid };
-	 cmdout_tlast <= 0;
-	 cmdout_tvalid <= 1;
-	 while(~cmdout_tready) #1;
-	 
-	 @(posedge clk);
-	 cmdout_tdata <= data;
-	 cmdout_tlast <= 1;
-	 while(~cmdout_tready) #1;
-	 
-	 @(posedge clk);
-	 cmdout_tvalid <= 0;
-	 @(posedge clk);
-      end
-   endtask // SendCtrlPacket
-   
    initial
      begin
 	src_tdata <= 64'd0;
 	src_tlast <= 1'b0;
 	src_tvalid <= 1'b0;
-	cmdout_tdata <= 64'd0;
-	cmdout_tlast <= 1'b0;
-	cmdout_tvalid <= 1'b0;
 	@(negedge reset);
 	@(posedge clk);
 	
 	@(posedge clk);
-	// Port 0
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
-	#10000;
-	// Port 1
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h8, 32'h0001_0002}); // Rewrite SID, send on to port 2
-	#10000;
-	// Port 2
-	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
-	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
-	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 
 	#10000;
-	SendPacket(4'h0, 12'd0, 16'd250, 32'h0000_0001, 64'hAAAA_AAAA_0000_0000); // data packet
-	SendPacket(4'h0, 12'd1, 16'd250, 32'h0000_0001, 64'hBBBB_BBBB_0000_0000); // data packet
-	SendPacket(4'h0, 12'd2, 16'd250, 32'h0000_0001, 64'hCCCC_CCCC_0000_0000); // data packet
-	SendPacket(4'h0, 12'd3, 16'd250, 32'h0000_0001, 64'hDDDD_DDDD_0000_0000); // data packet
-	SendPacket(4'h0, 12'd4, 16'd250, 32'h0000_0001, 64'hEEEE_EEEE_0000_0000); // data packet
-	SendPacket(4'h0, 12'd5, 16'd250, 32'h0000_0001, 64'hFFFF_FFFF_0000_0000); // data packet
-	SendPacket(4'h0, 12'd6, 16'd250, 32'h0000_0001, 64'h2222_2222_0000_0000); // data packet
+	SendPacket(4'h0, 12'd7, 16'd64, 32'h0002_0003, 64'hAAAA_AAAA_0000_0000); // data packet
+	SendPacket(4'h0, 12'd8, 16'd68, 32'h0004_0005, 64'hBBBB_BBBB_0000_0000); // data packet
+	//SendPacket(4'h0, 12'd2, 16'd8, 32'h0000_0001, 64'hCCCC_CCCC_0000_0000); // data packet
+	//SendPacket(4'h0, 12'd3, 16'd8, 32'h0000_0001, 64'hDDDD_DDDD_0000_0000); // data packet
+	//SendPacket(4'h0, 12'd4, 16'd8, 32'h0000_0001, 64'hEEEE_EEEE_0000_0000); // data packet
+	//SendPacket(4'h0, 12'd5, 16'd8, 32'h0000_0001, 64'hFFFF_FFFF_0000_0000); // data packet
+	//SendPacket(4'h0, 12'd6, 16'd8, 32'h0000_0001, 64'h2222_2222_0000_0000); // data packet
      end
 
 endmodule // simple_axi_wrapper_tb
