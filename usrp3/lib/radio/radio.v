@@ -32,9 +32,9 @@ module radio #(
 
    input pps,
    output sync_dacs,
-
-   output [31:0] debug
-);
+   
+   output [63:0] debug
+   );
 
    // ///////////////////////////////////////////////////////////////////////////////
    // FIFO Interfacing to the bus clk domain
@@ -177,8 +177,9 @@ module radio #(
    wire [63:0] 	vita_time, vita_time_lastpps;
    wire [31:0] test_readback;
    wire        loopback;
-
-
+   
+   wire [31:0] debug_sfc;
+   
 
    radio_ctrl_proc radio_ctrl_proc
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
@@ -340,7 +341,8 @@ module radio #(
       .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
       .fc_tdata(rxfc_tdata_b), .fc_tlast(rxfc_tlast_b), .fc_tvalid(rxfc_tvalid_b), .fc_tready(rxfc_tready_b),
       .in_tdata(rx_tdata_b), .in_tlast(rx_tlast_b), .in_tvalid(rx_tvalid_b), .in_tready(rx_tready_b),
-      .out_tdata(rx_tdata_b_fc), .out_tlast(rx_tlast_b_fc), .out_tvalid(rx_tvalid_b_fc), .out_tready(rx_tready_b_fc) );
+      .out_tdata(rx_tdata_b_fc), .out_tlast(rx_tlast_b_fc), .out_tvalid(rx_tvalid_b_fc), .out_tready(rx_tready_b_fc),
+      .debug(debug_sfc));
 
    new_rx_framer #(.BASE(SR_RX_CTRL+4),.CHIPSCOPE(CHIPSCOPE)) new_rx_framer
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
@@ -399,4 +401,7 @@ module radio #(
    // /////////////////////////////////////////////////////////////////////////////////
    //  Debug
 
+   assign debug[63:32] = debug_sfc;
+   assign debug[31:0] = 32'd0;
+   
 endmodule // radio

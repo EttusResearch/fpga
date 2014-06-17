@@ -220,7 +220,7 @@ module x300_core
    // assign eth1_tx_tready = 1'b1;
    //  assign eth1_rx_tvalid = 1'b0;
 
-   wire [63:0] debug_ce0, debug_ce1, debug_ce2;
+   wire [63:0] debug_ce0, debug_ce1, debug_ce2, debug_r0, debug_r1;
    
 `ifndef NO_DRAM_FIFOS
    //////////////////////////////////////////////////////////
@@ -687,7 +687,8 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio0)
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio0),
+      .debug(debug_r0)
       );
 
      always @(posedge radio_clk)
@@ -723,7 +724,8 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio1)
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio1),
+      .debug(debug_r1)
       );
 
    always @(posedge radio_clk)
@@ -1562,7 +1564,7 @@ module x300_core
    reg [255:0] TRIG0;
 
    always @(posedge bus_clk)
-     TRIG0 <= { { 64'h0 }, // 64 bits per line
+     TRIG0 <= { { debug_r0 }, // 64 bits per line
 		{ debug_ce2 },
 		{ debug_ce1 },
 		{ debug_ce0 } };

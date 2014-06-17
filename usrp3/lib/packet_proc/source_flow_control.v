@@ -120,7 +120,8 @@ module source_flow_control
 	       go <= 1'b0;
 	 endcase // case (go)
 
-   
+   assign debug = { window_enable, go, go_until_seqnum[5:0], last_seqnum_consumed[11:0], current_seqnum[11:0] };
+      
 endmodule // source_flow_control
 
 // NOTE -- the below causes all sorts of problems.  We must use a proper ">" comparison!
