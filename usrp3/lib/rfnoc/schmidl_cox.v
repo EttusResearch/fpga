@@ -44,7 +44,7 @@ module schmidl_cox
       
    moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(16)) ma_q
      (.clk(clk), .reset(reset), .clear(clear),
-      .len(16),
+      .len(144),
       .i_tdata(n5_tdata[15:0]), .i_tlast(n5_tlast), .i_tvalid(n5_tvalid), .i_tready(),
       .o_tdata(q_ma), .o_tlast(), .o_tvalid(), .o_tready(n6_tready));
       
