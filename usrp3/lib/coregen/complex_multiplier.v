@@ -1,23 +1,23 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+// Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
 ////////////////////////////////////////////////////////////////////////////////
 //   ____  ____
 //  /   /\/   /
 // /___/  \  /    Vendor: Xilinx
-// \   \   \/     Version: P.49d
+// \   \   \/     Version: P.68d
 //  \   \         Application: netgen
 //  /   /         Filename: complex_multiplier.v
-// /___/   /\     Timestamp: Wed Jun 18 15:19:59 2014
+// /___/   /\     Timestamp: Thu Jun 19 00:09:37 2014
 // \   \  /  \ 
 //  \___\/\___\
 //             
-// Command	: -w -sim -ofmt verilog /home/matt/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.ngc /home/matt/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.v 
+// Command	: -w -sim -ofmt verilog /usr/local/workspace/rfnoc/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.ngc /usr/local/workspace/rfnoc/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.v 
 // Device	: 7k410tffg900-2
-// Input file	: /home/matt/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.ngc
-// Output file	: /home/matt/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.v
+// Input file	: /usr/local/workspace/rfnoc/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.ngc
+// Output file	: /usr/local/workspace/rfnoc/fpgadev/usrp3/lib/coregen/tmp/_cg/complex_multiplier.v
 // # of Modules	: 1
 // Design Name	: complex_multiplier
-// Xilinx        : /opt/Xilinx/14.4/ISE_DS/ISE/
+// Xilinx        : /opt/Xilinx/14.6/ISE_DS/ISE/
 //             
 // Purpose:    
 //     This verilog netlist is a verification model and uses simulation 

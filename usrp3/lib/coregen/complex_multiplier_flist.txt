@@ -1,5 +1,4 @@
 # Output products list for <complex_multiplier>
-_xmsgs/pn_parser.xmsgs
 complex_multiplier/doc/cmpy_v5_0_readme.txt
 complex_multiplier/doc/cmpy_v5_0_vinfo.html
 complex_multiplier/doc/ds793_cmpy.pdf
