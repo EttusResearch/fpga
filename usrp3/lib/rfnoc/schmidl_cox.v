@@ -4,10 +4,10 @@ module schmidl_cox
    input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
    output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata;
-   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast;
-   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid;
-   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready;
+   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata;
+   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast;
+   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid;
+   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready;
 
    split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
      (.i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -47,10 +47,16 @@ module schmidl_cox
       .len(144),
       .i_tdata(n5_tdata[15:0]), .i_tlast(n5_tlast), .i_tvalid(n5_tvalid), .i_tready(),
       .o_tdata(q_ma), .o_tlast(), .o_tvalid(), .o_tready(n6_tready));
-      
-   assign o_tdata = n6_tdata;
-   assign o_tlast = n6_tlast;
-   assign o_tvalid = n6_tvalid;
-   assign n6_tready = o_tready;
+
+   complex_to_magsq #(.WIDTH(16)) cmag
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(n6_tdata), .i_tlast(n6_tlast), .i_tvalid(n6_tvalid), .i_tready(n6_tready),
+      .o_tdata(n7_tdata), .o_tlast(n7_tlast), .o_tvalid(n7_tvalid), .o_tready(n7_tready));
+    
+ 
+   assign o_tdata = n7_tdata;
+   assign o_tlast = n7_tlast;
+   assign o_tvalid = n7_tvalid;
+   assign n7_tready = o_tready;
    
 endmodule // schmidl_cox
