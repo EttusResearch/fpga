@@ -1,1 +1,5 @@
 noc_shell_tb
+moving_sum_tb
+noc_dsp_flow_tb
+simple_axi_wrapper_tb
+simple_fir_tb
