@@ -15,7 +15,8 @@ module simple_axi_wrapper
     
     // To AXI IP
     output reg [31:0] m_axis_data_tdata, output reg m_axis_data_tlast, output reg m_axis_data_tvalid, input m_axis_data_tready,
-    input [31:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output reg s_axis_data_tready
+    input [31:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output reg s_axis_data_tready,
+    output [31:0] m_axis_config_tdata, output m_axis_config_tvalid, input m_axis_config_tready
     );
 
    // Paramters for both input and output state machines
@@ -32,6 +33,13 @@ module simple_axi_wrapper
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(next_destination[15:0]));
 
+   // Simple single line axi stream to config cores like FFT and FIR from Xilinx
+   // FIXME need to make sure we don't overrun this if core can backpressure us
+   axi_fifo_short #(.WIDTH(32)) config_stream
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .i_tdata(set_data), .i_tvalid(set_stb & (set_addr == (BASE+8))), .i_tready(),
+      .o_tdata(m_axis_config_tdata), .o_tvalid(m_axis_config_tvalid), .o_tready(m_axis_config_tready));
+      
    // FIFO to hold header while their data is in the AXI DSP unit
    // Only 32 packets can be in-flight due to length of header FIFO
 

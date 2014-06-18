@@ -528,6 +528,9 @@ module x300_core
 
    wire [31:0] pre_tdata, post_tdata;
    wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
+
+   wire [31:0] axis_config_tdata1;
+   wire        axis_config_tvalid1, axis_config_tready1;
    
    noc_shell #(.NOC_ID(64'hAAAA_BBBB_CCCC_0001), .STR_SINK_FIFOSIZE(11)) noc_shell_1
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -544,14 +547,6 @@ module x300_core
       .debug(debug_ce1)
       );
 
-   /*
-   chdr_8sc_to_16sc #(.BASE(8)) conv_8_to_16
-     (.clk(bus_clk), .reset(bus_rst),
-      .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
-      .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
-      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
-     */ 
-
    simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(bus_clk), .reset(bus_rst),
       .set_stb(set_stb_ce1), .set_addr(set_addr_ce1), .set_data(set_data_ce1),
@@ -564,7 +559,10 @@ module x300_core
       .s_axis_data_tdata(post_tdata),
       .s_axis_data_tlast(post_tlast),
       .s_axis_data_tvalid(post_tvalid),
-      .s_axis_data_tready(post_tready)
+      .s_axis_data_tready(post_tready),
+      .m_axis_config_tdata(axis_config_tdata1),
+      .m_axis_config_tvalid(axis_config_tvalid1),
+      .m_axis_config_tready(axis_config_tready1)
       );
 /*      
    simple_fir simple_fir
@@ -577,9 +575,10 @@ module x300_core
       .m_axis_data_tready(post_tready),
       .m_axis_data_tlast(post_tlast),
       .m_axis_data_tdata(post_tdata),
-      .s_axis_config_tdata(0),
+      .s_axis_config_tdata(axis_config_tdata1),
+      .s_axis_config_tvalid(axis_config_tvalid1), 
+      .s_axis_config_tready(axis_config_tready1), 
       .s_axis_reload_tdata(0),
-      .s_axis_config_tvalid(1'b0), 
       .s_axis_reload_tvalid(1'b0),
       .s_axis_reload_tlast(1'b0)
       ); 
@@ -595,9 +594,9 @@ module x300_core
       .m_axis_data_tready(post_tready),
       .m_axis_data_tlast(post_tlast),
       .m_axis_data_tdata(post_tdata),
-      .s_axis_config_tdata(0),
-      .s_axis_config_tvalid(1'b0), 
-      .s_axis_config_tready()
+      .s_axis_config_tdata(axis_config_tdata1),
+      .s_axis_config_tvalid(axis_config_tvalid1),
+      .s_axis_config_tready(axis_config_tready1)
       );
 
    //////////////////////////////////////////////////////////////////////////////////////////////
