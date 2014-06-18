@@ -5,8 +5,8 @@ module moving_sum
     parameter WIDTH=16)
    (input clk, input reset, input clear,
     input [15:0] len,
-    input [WIDTH-1:0] i_tdata, input i_tvalid, output i_tready,
-    output [WIDTH+MAX_LEN_LOG2-1:0] o_tdata, output o_tvalid, input o_tready);
+    input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+    output [WIDTH+MAX_LEN_LOG2-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
    reg [WIDTH+MAX_LEN_LOG2-1:0]     sum;
    reg [15:0] 			    full_count;
@@ -38,5 +38,6 @@ module moving_sum
        sum <= sum + { {MAX_LEN_LOG2{i_tdata[WIDTH-1]}}, i_tdata } - (full ? {{MAX_LEN_LOG2{fifo_out[WIDTH-1]}}, fifo_out} : 0);
 
    assign o_tdata = sum;
+   assign o_tlast = i_tlast;
    
 endmodule // moving_sum

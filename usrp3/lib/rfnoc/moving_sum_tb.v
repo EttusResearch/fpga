@@ -29,8 +29,8 @@ module moving_sum_tb();
    moving_sum #(.MAX_LEN_LOG2(10), .WIDTH(16)) moving_sum
      (.clk(clk), .reset(reset), .clear(0),
       .len(20),
-      .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
-      .o_tdata(o_tdata), .o_tvalid(o_tvalid), .o_tready(o_tready));
+      .i_tdata(i_tdata), .i_tlast(), .i_tvalid(i_tvalid), .i_tready(i_tready),
+      .o_tdata(o_tdata), .o_tlast(), .o_tvalid(o_tvalid), .o_tready(o_tready));
 
    assign i_tdata = 1;
    assign i_tvalid = 1;

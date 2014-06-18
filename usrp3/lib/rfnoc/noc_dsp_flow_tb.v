@@ -99,6 +99,16 @@ module noc_dsp_flow_tb();
    wire        set_stb_1;
    wire [63:0] s1o_tdata, s1i_tdata;
    wire        s1o_tlast, s1i_tlast, s1o_tvalid, s1i_tvalid, s1o_tready, s1i_tready;
+
+   wire [31:0] pre_tdata, post_tdata;
+   wire        pre_tlast, pre_tvalid, pre_tready;
+   wire        post_tlast, post_tvalid, post_tready;
+
+   wire [15:0] pre_i = pre_tdata[31:16];
+   wire [15:0] pre_q = pre_tdata[15:0];
+   wire [15:0] post_i = post_tdata[31:16];
+   wire [15:0] post_q = post_tdata[15:0];
+   
    
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_1
      (.bus_clk(clk), .bus_rst(reset),
@@ -114,12 +124,36 @@ module noc_dsp_flow_tb();
       .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
       );
 
-   chdr_8sc_to_16sc #(.BASE(8)) conv_8_16
+   simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(clk), .reset(reset),
       .set_stb(set_stb_1), .set_addr(set_addr_1), .set_data(set_data_1),
       .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
-      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready));
-      
+      .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready),
+      .m_axis_data_tdata(pre_tdata),
+      .m_axis_data_tlast(pre_tlast),
+      .m_axis_data_tvalid(pre_tvalid),
+      .m_axis_data_tready(pre_tready),
+      .s_axis_data_tdata(post_tdata),
+      .s_axis_data_tlast(post_tlast),
+      .s_axis_data_tvalid(post_tvalid),
+      .s_axis_data_tready(post_tready)
+      );
+
+   wire [15+8:0] out_i, out_q;
+   assign post_tdata = { out_i[23:8], out_q[23:8] };
+   
+   moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(16)) moving_sum_i
+     (.clk(clk), .reset(reset), .clear(0),
+      .len(100),
+      .i_tdata(pre_tdata[31:16]), .i_tlast(pre_tlast), .i_tvalid(pre_tvalid), .i_tready(pre_tready),
+      .o_tdata(out_i), .o_tlast(post_tlast), .o_tvalid(post_tvalid), .o_tready(post_tready));
+
+   moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(16)) moving_sum_q
+     (.clk(clk), .reset(reset), .clear(0),
+      .len(100),
+      .i_tdata(pre_tdata[15:0]), .i_tlast(1'b0), .i_tvalid(pre_tvalid), .i_tready(),
+      .o_tdata(out_q), .o_tlast(), .o_tvalid(), .o_tready(post_tready));
+
    // Dumper on port 2
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_2
      (.bus_clk(clk), .bus_rst(reset),
@@ -254,7 +288,7 @@ module noc_dsp_flow_tb();
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h8, 32'h0000_0001}); // Command packet to set up SID
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hA, 32'h0000_0000}); // Command packet to set up Rate
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0020}); // Command packet to set up Len
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0200}); // Command packet to set up Len
 	#10000;
 	// Port 1
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
