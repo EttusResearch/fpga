@@ -68,7 +68,7 @@
 simple_fft your_instance_name (
   .aclk(aclk), // input aclk
   .aresetn(aresetn), // input aresetn
-  .s_axis_config_tdata(s_axis_config_tdata), // input [7 : 0] s_axis_config_tdata
+  .s_axis_config_tdata(s_axis_config_tdata), // input [23 : 0] s_axis_config_tdata
   .s_axis_config_tvalid(s_axis_config_tvalid), // input s_axis_config_tvalid
   .s_axis_config_tready(s_axis_config_tready), // output s_axis_config_tready
   .s_axis_data_tdata(s_axis_data_tdata), // input [31 : 0] s_axis_data_tdata

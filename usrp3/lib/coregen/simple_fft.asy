@@ -4,7 +4,7 @@ TEXT 32 32 LEFT 4 simple_fft
 RECTANGLE Normal 32 32 896 640
 LINE Wide 0 80 32 80
 PIN 0 80 LEFT 36
-PINATTR PinName s_axis_config_tdata[7:0]
+PINATTR PinName s_axis_config_tdata[23:0]
 PINATTR Polarity IN
 LINE Normal 0 112 32 112
 PIN 0 112 LEFT 36

@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.4
-# Date: Mon Jun 16 12:50:32 2014
+# Date: Wed Jun 18 12:16:05 2014
 #
 ##############################################################
 #
@@ -53,21 +53,21 @@ CSET memory_options_data=block_ram
 CSET memory_options_hybrid=false
 CSET memory_options_phase_factors=block_ram
 CSET memory_options_reorder=block_ram
-CSET number_of_stages_using_block_ram_for_data_and_phase_factors=0
+CSET number_of_stages_using_block_ram_for_data_and_phase_factors=4
 CSET output_ordering=natural_order
 CSET ovflo=false
 CSET phase_factor_width=16
 CSET rounding_modes=convergent_rounding
-CSET run_time_configurable_transform_length=false
+CSET run_time_configurable_transform_length=true
 CSET scaling_options=scaled
 CSET target_clock_frequency=200
 CSET target_data_throughput=200
 CSET throttle_scheme=nonrealtime
-CSET transform_length=64
+CSET transform_length=2048
 CSET xk_index=false
 # END Parameters
 # BEGIN Extra information
 MISC pkg_timestamp=2012-11-05T14:52:53Z
 # END Extra information
 GENERATE
-# CRC: cb71dd55
+# CRC: 4ef07ae0
