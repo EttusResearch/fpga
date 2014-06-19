@@ -56,6 +56,12 @@ module schmidl_cox
       .s_axis_cartesian_tdata(n6_tdata), .s_axis_cartesian_tlast(n6_tlast), .s_axis_cartesian_tvalid(n6_tvalid), .s_axis_cartesian_tready(n6_tready),
       .m_axis_dout_tdata(n7_tdata), .m_axis_dout_tlast(n7_tlast), .m_axis_dout_tvalid(n7_tvalid), .m_axis_dout_tready(n7_tready));
    
+   // extract magnitude from cordic
+   wire [15:0] n7_tdata_mag;
+   wire [15:0] n7_tdata_phase;
+   assign n7_tdata_mag = {n7_tdata[15:0]};
+   assign n7_tdata_phase = {n7_tdata[31:16]};
+   
    // magnitude of input signal conjugate multiply
    complex_to_magsq #(.WIDTH(16)) cmag2
      (.clk(clk), .reset(reset), .clear(clear),
@@ -71,22 +77,19 @@ module schmidl_cox
       .len(144),
       .i_tdata(n8_tdata), .i_tlast(n8_tlast), .i_tvalid(n8_tvalid), .i_tready(n8_tready),
       .o_tdata(n9_unscaled), .o_tlast(n9_tlast), .o_tvalid(n9_tvalid), .o_tready(n9_tready));
-   
- /*
-   // divide unscaled s&c metric by power for final normalized detection metric
-   divide_int32 div1
-    (.aclk(clk), .aresetn(~reset),
-     .s_axis_divisor_tdata(n9_tdata), .s_axis_divisor_tlast(n9_tlast), .s_axis_divisor_tvalid(n9_tvalid), .s_axis_divisor_tready(n9_tready),
-     .s_axis_dividend_tdata(n7_tdata), .s_axis_dividend_tlast(n7_tlast), .s_axis_dividend_tvalid(n7_tvalid), .s_axis_dividend_tready(n7_tready),
-     .m_axis_dout_tdata(n10_tdata), .m_axis_dout_tlast(n10_tlast), .m_axis_dout_tvalid(n10_tvalid), .m_axis_dout_tready(n10_tready));
-*/
+
+   // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
+   wire burst_detect;
+   threshold_scaled #(.WIDTH(32), .SCALAR(131072)) thresh1
+    (.clk(clk), .reset(reset), .clear(clear),
+     .i0_tdata(n9_tdata), .i0_tlast(n9_tlast), .i0_tvalid(n9_tvalid), .i0_tready(n9_tready),
+     .i1_tdata({16'd0, n7_tdata_mag}), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
+     .o_tdata(burst_detect), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
+   assign n10_tdata[31:0] = {31'd0, burst_detect};
+
    assign o_tdata = n10_tdata[31:0];
    assign o_tlast = n10_tlast;
    assign o_tvalid = n10_tvalid;
    assign n10_tready = o_tready;
 
-   assign n7_tready = 1;
-   
-   assign n9_tready = 1;
-   
 endmodule // schmidl_cox
