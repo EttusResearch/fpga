@@ -314,7 +314,7 @@ module schmidl_cox_tb();
    
    initial
      begin
-	outfile = $fopen("output.dat","w");
+	outfile = $fopen("output.dat","wb");
 	//src_tready <= 1'b1;
      end
 
@@ -333,8 +333,10 @@ module schmidl_cox_tb();
 	    in_packet <= 1;
 	  if(in_packet)
 	    begin
-	       $fwrite(outfile,src_tdata);
-	       $write("%d,%d,%d,%d,",a,b,c,d);
+	       //$fwrite(outfile,"%u",{q_out[15:0],i_out[15:0]}); // Correct endianness for GR
+	       //$write("%d,%d,%d,%d,",a,b,c,d);
+	       $fwrite(outfile,"%u",{dst_tdata[47:32],dst_tdata[63:48]});
+	       $fwrite(outfile,"%u",{dst_tdata[15:0],dst_tdata[31:16]});
 	    end
        end
 
