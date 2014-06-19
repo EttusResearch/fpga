@@ -4,10 +4,10 @@ module schmidl_cox
    input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
    output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata, n10_tdata;
-   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast, n10_tlast;
-   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid;
-   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready;
+   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata;
+   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast;
+   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid;
+   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready, n11_tready;
 
    split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0111)) split_head
      (.i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -78,11 +78,17 @@ module schmidl_cox
       .i_tdata(n8_tdata), .i_tlast(n8_tlast), .i_tvalid(n8_tvalid), .i_tready(n8_tready),
       .o_tdata(n9_unscaled), .o_tlast(n9_tlast), .o_tvalid(n9_tvalid), .o_tready(n9_tready));
 
+   // insert fifo to solve deadlock
+   axi_fifo_short #(.WIDTH(33)) fifo1
+   (.clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({n9_tlast, n9_tdata}), .i_tvalid(n9_tvalid), .i_tready(n9_tready),
+    .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
+      
    // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
    wire burst_detect;
    threshold_scaled #(.WIDTH(32), .SCALAR(131072)) thresh1
     (.clk(clk), .reset(reset), .clear(clear),
-     .i0_tdata(n9_tdata), .i0_tlast(n9_tlast), .i0_tvalid(n9_tvalid), .i0_tready(n9_tready),
+     .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
      .i1_tdata({16'd0, n7_tdata_mag}), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
      .o_tdata(burst_detect), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
    assign n10_tdata[31:0] = {31'd0, burst_detect};
