@@ -59,7 +59,7 @@ module schmidl_cox
    // magnitude of input signal conjugate multiply
    complex_to_magsq #(.WIDTH(16)) cmag2
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n0_tdata), .i_tlast(n0_tlast), .i_tvalid(n0_tvalid), .i_tready(n0_tready),
+      .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
       .o_tdata(n8_tdata), .o_tlast(n8_tlast), .o_tvalid(n8_tvalid), .o_tready(n8_tready));
     
    // moving average of input signal power
