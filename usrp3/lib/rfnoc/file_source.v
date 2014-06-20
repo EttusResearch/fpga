@@ -34,6 +34,7 @@ module file_source
    wire [15:0] 	  len;
    reg [15:0] 	  count;
    wire 	  changed_sid;
+   wire 	  send_time;
    
    setting_reg #(.my_addr(BASE), .width(32)) sid_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -47,9 +48,14 @@ module file_source
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rate), .changed());
 
+   setting_reg #(.my_addr(BASE+3), .width(1)) rate_send_time
+     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(send_time), .changed());
+
    localparam IDLE = 2'd0;
    localparam HEAD = 2'd1;
-   localparam DATA = 2'd2;
+   localparam TIME = 2'd2;
+   localparam DATA = 2'd3;
 
    always @(posedge clk)
      if(reset)
@@ -70,9 +76,15 @@ module file_source
 	      if(int_tvalid & int_tready)
 		begin
 		   count <= 1;
-		   state <= DATA;
+		   if(send_time)
+		     state <= TIME;
+		   else
+		     state <= DATA;
 		   seqnum <= seqnum + 1;
 		end
+	    TIME :
+	      if(int_tvalid & int_tready)
+		state <= DATA;
 	    DATA :
 	      if(int_tvalid & int_tready)
 		begin
@@ -91,11 +103,12 @@ module file_source
        end // else: !if(reset)
    
    
-   wire [15:0] pkt_len = { len[12:0], 3'b000 } + 16'd8;
+   wire [15:0] pkt_len = { len[12:0], 3'b000 } + 16'd8 + (send_time ? 16'd8 : 16'd0);
 
    // Fix endianness issues with GNU Radio generated files by reversing.  Not sure if this is correct yet.
    wire [63:0] reversed_sample = mem[index];   
-   assign int_tdata = (state == HEAD) ? { 4'b0000, seqnum, pkt_len, sid } : 
+   assign int_tdata = (state == HEAD) ? { 2'b00, send_time, 1'b0, seqnum, pkt_len, sid } :
+		      (state == TIME) ? 64'hDEADBEEF_01234567 :
 		      { reversed_sample[55:48], reversed_sample[63:56], reversed_sample[39:32], reversed_sample[47:40],
 		       reversed_sample[23:16], reversed_sample[31:24], reversed_sample[7:0], reversed_sample[15:8] } ;
    
@@ -111,7 +124,7 @@ module file_source
        else
 	 line_timer <= line_timer - 1;
    
-   assign int_tvalid = ((state==HEAD)|(state==DATA)) & (line_timer==0);
+   assign int_tvalid = ((state==HEAD)|(state==DATA)|(state==TIME)) & (line_timer==0);
    
    axi_packet_gate #(.WIDTH(64)) gate
      (.clk(clk), .reset(reset), .clear(1'b0),

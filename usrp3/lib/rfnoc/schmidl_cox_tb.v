@@ -126,7 +126,7 @@ module schmidl_cox_tb();
       .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
       );
 
-   simple_axi_wrapper #(.BASE(8)) axi_wrapper_ce1
+   axi_wrapper #(.BASE(8)) axi_wrapper_ce1
      (.clk(clk), .reset(reset),
       .set_stb(set_stb_1), .set_addr(set_addr_1), .set_data(set_data_1),
       .i_tdata(s1o_tdata), .i_tlast(s1o_tlast), .i_tvalid(s1o_tvalid), .i_tready(s1o_tready),
@@ -283,7 +283,8 @@ module schmidl_cox_tb();
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h8, 32'h0000_0001}); // Command packet to set up SID
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hA, 32'h0000_0000}); // Command packet to set up Rate
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0200}); // Command packet to set up Len
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hB, 32'h0000_0001}); // Command packet to set up send_time_field
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_000a}); // Command packet to set up Len
 	#10000;
 	// Port 1
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size

@@ -5,3 +5,6 @@ simple_axi_wrapper_tb
 simple_fir_tb
 schmidl_cox_tb
 coregen.log
+top_block.py
+test.dat
+output.dat

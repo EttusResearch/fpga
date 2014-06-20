@@ -1,4 +1,12 @@
 
+// Variables:
+//     length of delay between branches (16 for 802.11a STF)
+//     duration of moving average (144 for 9 STF in 802.11a)
+//     delay to first symbol after peak
+//     length of symbols
+//     length of CP
+//     number of syms
+
 module schmidl_cox
   (input clk, input reset, input clear,
    input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
