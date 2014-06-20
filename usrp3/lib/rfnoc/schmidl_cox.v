@@ -4,16 +4,20 @@ module schmidl_cox
    input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
    output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata;
-   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast;
-   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid;
-   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready, n11_tready;
+   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata, n12_tdata;
+   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast, n12_tlast;
+   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid, n12_tvalid;
+   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready, n11_tready, n12_tready;
 
-   split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0111)) split_head
+   split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
      (.i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(n0_tdata), .o0_tlast(n0_tlast), .o0_tvalid(n0_tvalid), .o0_tready(n0_tready),
-      .o1_tdata(n1_tdata), .o1_tlast(n1_tlast), .o1_tvalid(n1_tvalid), .o1_tready(n1_tready),
-      .o2_tdata(n2_tdata), .o2_tlast(n2_tlast), .o2_tvalid(n2_tvalid), .o2_tready(n2_tready));
+      .o1_tdata(n1_tdata), .o1_tlast(n1_tlast), .o1_tvalid(n1_tvalid), .o1_tready(n1_tready));
+   
+   split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_delayed
+     (.i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
+      .o0_tdata(n2_tdata), .o0_tlast(n2_tlast), .o0_tvalid(n2_tvalid), .o0_tready(n2_tready),
+      .o1_tdata(n12_tdata), .o1_tlast(n12_tlast), .o1_tvalid(n12_tvalid), .o1_tready(n12_tready));
    
    delay #(.MAX_LEN_LOG2(8), .WIDTH(32)) delay_input
      (.clk(clk), .reset(reset), .clear(clear),
@@ -23,7 +27,7 @@ module schmidl_cox
 
    conj #(.WIDTH(16)) conj
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
+      .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
       .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
 
    complex_multiplier cmult1
@@ -65,7 +69,7 @@ module schmidl_cox
    // magnitude of input signal conjugate multiply
    complex_to_magsq #(.WIDTH(16)) cmag2
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
+      .i_tdata(n12_tdata), .i_tlast(n12_tlast), .i_tvalid(n12_tvalid), .i_tready(n12_tready),
       .o_tdata(n8_tdata), .o_tlast(n8_tlast), .o_tvalid(n8_tvalid), .o_tready(n8_tready));
 
    wire [39:0] 	 n9_unscaled;
