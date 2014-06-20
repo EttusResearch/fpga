@@ -9,6 +9,31 @@ module schmidl_cox
    wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid, n12_tvalid;
    wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready, n11_tready, n12_tready;
 
+   // For debug purposes
+   wire [15:0] 	 n0i = n0_tdata[31:16];
+   wire [15:0] 	 n0q = n0_tdata[15:0];
+   
+   wire [15:0] 	 n1i = n1_tdata[31:16];
+   wire [15:0] 	 n1q = n1_tdata[15:0];
+   
+   wire [15:0] 	 n2i = n2_tdata[31:16];
+   wire [15:0] 	 n2q = n2_tdata[15:0];
+   
+   wire [15:0] 	 n3i = n3_tdata[31:16];
+   wire [15:0] 	 n3q = n3_tdata[15:0];
+   
+   wire [15:0] 	 n4i = n4_tdata[31:16];
+   wire [15:0] 	 n4q = n4_tdata[15:0];
+   
+   wire [15:0] 	 n5i = n5_tdata[31:16];
+   wire [15:0] 	 n5q = n5_tdata[15:0];
+   
+   wire [15:0] 	 n6i = n6_tdata[31:16];
+   wire [15:0] 	 n6q = n6_tdata[15:0];
+   
+   wire [15:0] 	 n7phase = n7_tdata[31:16];
+   wire [15:0] 	 n7mag = n7_tdata[15:0];
+   
    split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
      (.i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(n0_tdata), .o0_tlast(n0_tlast), .o0_tvalid(n0_tvalid), .o0_tready(n0_tready),
@@ -89,15 +114,14 @@ module schmidl_cox
     .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
       
    // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
-   wire burst_detect;
    threshold_scaled #(.WIDTH(32), .SCALAR(131072)) thresh1
     (.clk(clk), .reset(reset), .clear(clear),
      .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
      .i1_tdata({16'd0, n7_tdata_mag}), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
-     .o_tdata(burst_detect), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
-   assign n10_tdata[31:0] = {31'd0, burst_detect};
+     .o_tdata(n10_tdata[0]), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
+   assign n10_tdata[31:1] = 31'd0;
 
-   assign o_tdata = n10_tdata[31:0];
+   assign o_tdata = n10_tdata;
    assign o_tlast = n10_tlast;
    assign o_tvalid = n10_tvalid;
    assign n10_tready = o_tready;
