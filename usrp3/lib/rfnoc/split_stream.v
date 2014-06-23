@@ -20,4 +20,4 @@ module split_stream
    assign i_tready = ~|(~{o3_tready,o2_tready,o1_tready,o0_tready} & ACTIVE_MASK);
    assign { o3_tvalid, o2_tvalid, o1_tvalid, o0_tvalid } = {4{i_tready & i_tvalid}};
    
-endmodule // delay
+endmodule // split_stream
