@@ -2,16 +2,16 @@
 
 module peak_finder
   #(parameter SCALAR=131072)
-   (input clk, input reset, input clear, input thresh_met,
-    input [31:0] i0_tdata, input i0_tlast, input i0_tvalid, input i0_tready,        // power measurment
-    input [31:0] i1_tdata, input i1_tlast, input i1_tvalid, input i1_tready,        // cross power mag/phase
+   (input clk, input reset, input clear,
+    input [31:0] i0_tdata, input i0_tlast, input i0_tvalid, output i0_tready,        // power measurment
+    input [31:0] i1_tdata, input i1_tlast, input i1_tvalid, output i1_tready,        // cross power mag/phase
     output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-    wire [15:0] i_phase_tdata = i1_tdata[31:0];
+    wire [15:0] i_phase_tdata = i1_tdata[31:16];
     wire [15:0] i_mag_tdata = i1_tdata[15:0];
 
     // moved contents of threshold_scaled functionality here
-    wire signed [31:0] scaled_input = (i1_tdata-1)*SCALAR;
+    wire signed [31:0] scaled_input = (i_mag_tdata-1)*SCALAR;
     wire signed [31:0] difference = scaled_input - i0_tdata;
     wire thresh_met = difference > 0;
 
