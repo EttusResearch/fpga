@@ -26,7 +26,7 @@ module peak_finder
     reg found_burst;
     reg [15:0] burst_offset;
     reg [15:0] burst_phase;
-    reg [15:0] do_op;
+    wire do_op = (i0_tvalid & i1_tvalid & o_tready);
 
     // search for peaks durring (thresh_met = 1) periods
     // debounce the thresh_met line
@@ -44,9 +44,8 @@ module peak_finder
             burst_phase <= 0;
           end
         else
-            if(i0_tvalid & i1_tvalid & o_tready)
+            if(do_op)
               begin
-                do_op <= 1;
                 counter <= counter + 1;
                 if(thresh_met | (debounce_counter > 0))
                   begin
@@ -78,8 +77,6 @@ module peak_finder
                       burst_phase <= 0;
                     end
               end
-            else
-                do_op <= 0;
 
     assign o_tdata = {burst_offset, burst_phase};
     assign o_tlast = found_burst;
