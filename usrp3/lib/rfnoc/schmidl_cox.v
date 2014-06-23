@@ -122,12 +122,13 @@ module schmidl_cox
     .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
       
    // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
-   threshold_scaled #(.WIDTH(32), .SCALAR(131072)) thresh1
+   // then search for areas where the cross power meats a threshold, and find the peak of the timing metric within the region
+   // return a timing estimate and a phase offset used for cfo correction
+   peak_finder #(.SCALAR(131072)) pf1
     (.clk(clk), .reset(reset), .clear(clear),
      .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
-     .i1_tdata({16'd0, n7_tdata_mag}), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
-     .o_tdata(n10_tdata[0]), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
-   assign n10_tdata[31:1] = 31'd0;
+     .i1_tdata(n7_tdata), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
+     .o_tdata(n10_tdata), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
 
    assign o_tdata = n10_tdata;
    assign o_tlast = n10_tlast;
