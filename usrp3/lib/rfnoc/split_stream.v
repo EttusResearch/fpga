@@ -2,7 +2,8 @@
 module split_stream
   #(parameter WIDTH=16,
     parameter ACTIVE_MASK=4'b1111)
-   (input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+   (input clk, input reset, input clear,  // These are not used in plain split_stream
+    input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [WIDTH-1:0] o0_tdata, output o0_tlast, output o0_tvalid, input o0_tready,
     output [WIDTH-1:0] o1_tdata, output o1_tlast, output o1_tvalid, input o1_tready,
     output [WIDTH-1:0] o2_tdata, output o2_tlast, output o2_tvalid, input o2_tready,

@@ -8,15 +8,21 @@
 //     number of syms
 
 module schmidl_cox
-  (input clk, input reset, input clear,
-   input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-   output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
-
-   wire [31:0] 	 n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata, n12_tdata;
-   wire  	 n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast, n12_tlast;
-   wire  	 n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid, n12_tvalid;
-   wire  	 n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready, n10_tready, n11_tready, n12_tready;
-
+  #(parameter BASE=0)
+   (input clk, input reset, input clear,
+    input set_stb, input [7:0] set_addr, input [31:0] set_data,
+    input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+    output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
+   
+   wire [31:0] 	  n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata;
+   wire [31:0] 	  n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata, n12_tdata, n13_tdata, n14_tdata;
+   wire 	  n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast;
+   wire 	  n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast, n12_tlast, n13_tlast, n14_tlast;
+   wire 	  n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid;
+   wire 	  n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid, n12_tvalid, n13_tvalid, n14_tvalid;
+   wire 	  n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready;
+   wire 	  n7_tready, n8_tready, n9_tready, n10_tready, n11_tready, n12_tready, n13_tready, n14_tready;
+   
    // For debug purposes
    wire [15:0] 	 n0i = n0_tdata[31:16];
    wire [15:0] 	 n0q = n0_tdata[15:0];
@@ -42,15 +48,18 @@ module schmidl_cox
    wire [15:0] 	 n7phase = n7_tdata[31:16];
    wire [15:0] 	 n7mag = n7_tdata[15:0];
    
-   split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
-     (.i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+   split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(n0_tdata), .o0_tlast(n0_tlast), .o0_tvalid(n0_tvalid), .o0_tready(n0_tready),
       .o1_tdata(n1_tdata), .o1_tlast(n1_tlast), .o1_tvalid(n1_tvalid), .o1_tready(n1_tready));
    
-   split_stream #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_delayed
-     (.i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
+   split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0111)) split_delayed
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
       .o0_tdata(n2_tdata), .o0_tlast(n2_tlast), .o0_tvalid(n2_tvalid), .o0_tready(n2_tready),
-      .o1_tdata(n12_tdata), .o1_tlast(n12_tlast), .o1_tvalid(n12_tvalid), .o1_tready(n12_tready));
+      .o1_tdata(n12_tdata), .o1_tlast(n12_tlast), .o1_tvalid(n12_tvalid), .o1_tready(n12_tready),
+      .o2_tdata(n14_tdata), .o2_tlast(n14_tlast), .o2_tvalid(n14_tvalid), .o2_tready(n14_tready));
    
    delay #(.MAX_LEN_LOG2(8), .WIDTH(32)) delay_input
      (.clk(clk), .reset(reset), .clear(clear),
@@ -70,7 +79,7 @@ module schmidl_cox
       .s_axis_ctrl_tdata(0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
       .m_axis_dout_tdata(n5_tdata), .m_axis_dout_tlast(n5_tlast), .m_axis_dout_tvalid(n5_tvalid), .m_axis_dout_tready(n5_tready));
 
-   wire [23:0] 	 i_ma, q_ma;
+   wire [23:0] 	  i_ma, q_ma;
    assign n6_tdata = {i_ma[23:8], q_ma[23:8]};
    
    // moving average of I for S&C metric
@@ -94,8 +103,8 @@ module schmidl_cox
       .m_axis_dout_tdata(n7_tdata), .m_axis_dout_tlast(n7_tlast), .m_axis_dout_tvalid(n7_tvalid), .m_axis_dout_tready(n7_tready));
    
    // extract magnitude from cordic
-   wire [15:0] n7_tdata_mag;
-   wire [15:0] n7_tdata_phase;
+   wire [15:0] 	  n7_tdata_mag;
+   wire [15:0] 	  n7_tdata_phase;
    assign n7_tdata_mag = {n7_tdata[15:0]};
    assign n7_tdata_phase = {n7_tdata[31:16]};
    
@@ -105,7 +114,7 @@ module schmidl_cox
       .i_tdata(n12_tdata), .i_tlast(n12_tlast), .i_tvalid(n12_tvalid), .i_tready(n12_tready),
       .o_tdata(n8_tdata), .o_tlast(n8_tlast), .o_tvalid(n8_tvalid), .o_tready(n8_tready));
 
-   wire [39:0] 	 n9_unscaled;
+   wire [39:0] 	  n9_unscaled;
    assign n9_tdata = n9_unscaled[39:8];
    
    // moving average of input signal power
@@ -114,25 +123,34 @@ module schmidl_cox
       .len(144),
       .i_tdata(n8_tdata), .i_tlast(n8_tlast), .i_tvalid(n8_tvalid), .i_tready(n8_tready),
       .o_tdata(n9_unscaled), .o_tlast(n9_tlast), .o_tvalid(n9_tvalid), .o_tready(n9_tready));
-
+   
    // insert fifo to solve deadlock
    axi_fifo_short #(.WIDTH(33)) fifo1
-   (.clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({n9_tlast, n9_tdata}), .i_tvalid(n9_tvalid), .i_tready(n9_tready),
-    .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
-      
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata({n9_tlast, n9_tdata}), .i_tvalid(n9_tvalid), .i_tready(n9_tready),
+      .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
+   
    // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
    // then search for areas where the cross power meats a threshold, and find the peak of the timing metric within the region
    // return a timing estimate and a phase offset used for cfo correction
-   peak_finder #(.SCALAR(131072)) pf1
-    (.clk(clk), .reset(reset), .clear(clear),
-     .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
-     .i1_tdata(n7_tdata), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
-     .o_tdata(n10_tdata), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
-
-   assign o_tdata = n10_tdata;
-   assign o_tlast = n10_tlast;
-   assign o_tvalid = n10_tvalid;
-   assign n10_tready = o_tready;
+   peak_finder #(.SCALAR(131072)) peak_finder
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
+      .i1_tdata(n7_tdata), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
+      .o_tdata(n10_tdata), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
+   
+   periodic_framer #(.BASE(16), .WIDTH(32)) periodic_framer
+     (.clk(clk), .reset(reset), .clear(clear),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .stream_i_tdata(n14_tdata), .stream_i_tlast(n14_tlast), .stream_i_tvalid(n14_tvalid), .stream_i_tready(n14_tready),
+      .trigger_tdata(n10_tdata), .trigger_tlast(n10_tlast), .trigger_tvalid(n10_tvalid), .trigger_tready(n10_tready),
+      .stream_o_tdata(n13_tdata), .stream_o_tlast(n13_tlast), .stream_o_tvalid(n13_tvalid), .stream_o_tready(n13_tready),
+      .eob());
+   
+   
+   assign o_tdata = n13_tdata;
+   assign o_tlast = n13_tlast;
+   assign o_tvalid = n13_tvalid;
+   assign n13_tready = o_tready;
 
 endmodule // schmidl_cox

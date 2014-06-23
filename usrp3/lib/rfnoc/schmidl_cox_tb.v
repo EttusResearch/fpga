@@ -144,8 +144,9 @@ module schmidl_cox_tb();
       .m_axis_config_tready(1'b0)
       );
 
-   schmidl_cox schmidl_cox
+   schmidl_cox #(.BASE(16)) schmidl_cox
      (.clk(clk), .reset(reset), .clear(0),
+      .set_stb(set_stb_1), .set_addr(set_addr_1), .set_data(set_data_1),
       .i_tdata(pre_tdata), .i_tlast(pre_tlast), .i_tvalid(pre_tvalid), .i_tready(pre_tready),
       .o_tdata(post_tdata), .o_tlast(post_tlast), .o_tvalid(post_tvalid), .o_tready(post_tready));
 
@@ -284,13 +285,19 @@ module schmidl_cox_tb();
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h8, 32'h0000_0001}); // Command packet to set up SID
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hA, 32'h0000_0000}); // Command packet to set up Rate
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'hB, 32'h0000_0001}); // Command packet to set up send_time_field
-	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_000a}); // Command packet to set up Len
+	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0200}); // Command packet to set up Len
 	#10000;
 	// Port 1
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h8, 32'h0001_0002}); // Rewrite SID, send on to port 2
+	// periodic framer settings
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h10, 32'd64});  // frame_len  (FFTsize)
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h11, 32'd16});  // gap_len  (CP)
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h12, 32'd20}); // time offset to first frame
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h13, 32'd12});  // default max number of frames
+	//SendCtrlPacket(12'd0, 32'h0003_0001, {32'h14, 32'h0001_0002}); // Rewrite SID, send on to port 2
 	#10000;
 	// Port 2
 	SendCtrlPacket(12'd0, 32'h0003_0002, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
