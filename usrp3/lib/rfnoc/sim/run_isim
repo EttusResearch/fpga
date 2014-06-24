@@ -1,0 +1,25 @@
+vlogcomp -work work ${XILINX}/verilog/src/glbl.v
+#vlogcomp -i ../.. -work work ../../../lib/rfnoc/schmidl_cox_tb.v
+#vlogcomp -work work ../../../lib/fifo/axi_fifo_short.v
+
+
+
+vlogcomp -work work --sourcelibext .v \
+	 --sourcelibdir ../../../lib/dsp \
+         --sourcelibdir ../../../lib/control \
+         --sourcelibdir ../../../lib/rfnoc \
+         --sourcelibdir ../../../lib/fifo \
+         --sourcelibdir ../../../lib/vita \
+         --sourcelibdir ../../../lib/packet_proc \
+         --sourcelibdir ../../../lib/timing \
+         --sourcelibdir ../../../lib/coregen \
+	 --sourcelibdir ${XILINX}/verilog/src/unimacro \
+	 ../schmidl_cox_tb.v
+
+
+
+
+fuse work.schmidl_cox_tb work.glbl -L unisims_ver -L xilinxcorelib_ver -o schmidl_cox_tb.exe
+
+# run the simulation scrip
+./schmidl_cox_tb.exe -gui #-tclbatch simcmds.tcl

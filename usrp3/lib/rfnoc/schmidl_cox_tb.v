@@ -4,7 +4,7 @@
 
 
 module schmidl_cox_tb();
-   xlnx_glbl glbl (.GSR(),.GTS());
+   //xlnx_glbl glbl (.GSR(),.GTS());
 
    localparam STR_SINK_FIFOSIZE = 9;
   
@@ -24,6 +24,8 @@ module schmidl_cox_tb();
    wire [31:0] set_data;
    wire [7:0]  set_addr;
    wire        set_stb;
+
+   localparam PORTS = 5;
 
    wire [63:0] noci_tdata[PORTS-1:0];
    wire        noci_tlast[PORTS-1:0];
@@ -47,8 +49,6 @@ module schmidl_cox_tb();
    wire        dst_tlast, dst_tvalid;
    wire        dst_tready = 1;
  	       
-   localparam PORTS = 4;
-
    reg 	       set_stb_xbar;
    reg [15:0]  set_addr_xbar;
    reg [31:0]  set_data_xbar;
@@ -56,17 +56,17 @@ module schmidl_cox_tb();
    axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(PORTS), .NUM_OUTPUTS(PORTS)) crossbar
      (.clk(clk), .reset(reset), .clear(1'b0),
       .local_addr(8'd0),
-      .pkt_present({noci_tvalid[3],noci_tvalid[2],noci_tvalid[1],noci_tvalid[0]}),
+      .pkt_present({noci_tvalid[4],noci_tvalid[3],noci_tvalid[2],noci_tvalid[1],noci_tvalid[0]}),
       
-      .i_tdata({noci_tdata[3],noci_tdata[2],noci_tdata[1],noci_tdata[0]}),
-      .i_tlast({noci_tlast[3],noci_tlast[2],noci_tlast[1],noci_tlast[0]}),
-      .i_tvalid({noci_tvalid[3],noci_tvalid[2],noci_tvalid[1],noci_tvalid[0]}),
-      .i_tready({noci_tready[3],noci_tready[2],noci_tready[1],noci_tready[0]}),
+      .i_tdata({noci_tdata[4],noci_tdata[3],noci_tdata[2],noci_tdata[1],noci_tdata[0]}),
+      .i_tlast({noci_tlast[4],noci_tlast[3],noci_tlast[2],noci_tlast[1],noci_tlast[0]}),
+      .i_tvalid({noci_tvalid[4],noci_tvalid[3],noci_tvalid[2],noci_tvalid[1],noci_tvalid[0]}),
+      .i_tready({noci_tready[4],noci_tready[3],noci_tready[2],noci_tready[1],noci_tready[0]}),
 
-      .o_tdata({noco_tdata[3],noco_tdata[2],noco_tdata[1],noco_tdata[0]}),
-      .o_tlast({noco_tlast[3],noco_tlast[2],noco_tlast[1],noco_tlast[0]}),
-      .o_tvalid({noco_tvalid[3],noco_tvalid[2],noco_tvalid[1],noco_tvalid[0]}),
-      .o_tready({noco_tready[3],noco_tready[2],noco_tready[1],noco_tready[0]}),
+      .o_tdata({noco_tdata[4],noco_tdata[3],noco_tdata[2],noco_tdata[1],noco_tdata[0]}),
+      .o_tlast({noco_tlast[4],noco_tlast[3],noco_tlast[2],noco_tlast[1],noco_tlast[0]}),
+      .o_tvalid({noco_tvalid[4],noco_tvalid[3],noco_tvalid[2],noco_tvalid[1],noco_tvalid[0]}),
+      .o_tready({noco_tready[4],noco_tready[3],noco_tready[2],noco_tready[1],noco_tready[0]}),
 
       .set_stb(set_stb_xbar), .set_addr(set_addr_xbar), .set_data(set_data_xbar),
       .rb_rd_stb(1'b0), .rb_addr(0), .rb_data());
@@ -95,7 +95,7 @@ module schmidl_cox_tb();
       .set_data(set_data_0), .set_addr(set_addr_0), .set_stb(set_stb_0),
       .o_tdata(src_tdata), .o_tlast(src_tlast), .o_tvalid(src_tvalid), .o_tready(src_tready));
       
-   // Converter on port 1
+   // Schmidl & Cox sync on port 1
    wire [31:0] set_data_1;
    wire [7:0]  set_addr_1;
    wire        set_stb_1;
@@ -181,6 +181,75 @@ module schmidl_cox_tb();
       .str_sink_tdata(), .str_sink_tlast(), .str_sink_tvalid(), .str_sink_tready(1'b1), // unused port
       .str_src_tdata(64'd0), .str_src_tlast(1'd0), .str_src_tvalid(1'b0), .str_src_tready() // unused port
       );
+   
+   // FFT on port 4
+   wire [31:0] set_data_4;
+   wire [7:0]  set_addr_4;
+   wire        set_stb_4;
+   wire [63:0] s4o_tdata, s4i_tdata;
+   wire        s4o_tlast, s4i_tlast, s4o_tvalid, s4i_tvalid, s4o_tready, s4i_tready;
+
+   wire [31:0] pre_fft_tdata, post_fft_tdata;
+   wire        pre_fft_tlast, pre_fft_tvalid, pre_fft_tready;
+   wire        post_fft_tlast, post_fft_tvalid, post_fft_tready;
+
+   wire [15:0] pre_fft_i = pre_fft_tdata[31:16];
+   wire [15:0] pre_fft_q = pre_fft_tdata[15:0];
+   wire [15:0] post_fft_i = post_fft_tdata[31:16];
+   wire [15:0] post_fft_q = post_fft_tdata[15:0];
+
+   wire [31:0] axis_config_tdata;
+   wire        axis_config_tvalid, axis_config_tready;
+      
+   noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_4
+     (.bus_clk(clk), .bus_rst(reset),
+      .i_tdata(noco_tdata[1]), .i_tlast(noco_tlast[1]), .i_tvalid(noco_tvalid[1]), .i_tready(noco_tready[1]),
+      .o_tdata(noci_tdata[1]), .o_tlast(noci_tlast[1]), .o_tvalid(noci_tvalid[1]), .o_tready(noci_tready[1]),
+      .clk(clk), .reset(reset),
+      .set_data(set_data_1), .set_addr(set_addr_1), .set_stb(set_stb_1), .rb_data(64'd0),
+
+      .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
+      .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
+      
+      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
+      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      );
+
+   axi_wrapper #(.BASE(8)) axi_wrapper_ce4
+     (.clk(clk), .reset(reset),
+      .set_stb(set_stb_4), .set_addr(set_addr_4), .set_data(set_data_4),
+      .i_tdata(s4o_tdata), .i_tlast(s4o_tlast), .i_tvalid(s4o_tvalid), .i_tready(s4o_tready),
+      .o_tdata(s4i_tdata), .o_tlast(s4i_tlast), .o_tvalid(s4i_tvalid), .o_tready(s4i_tready),
+      .m_axis_data_tdata(pre_fft_tdata),
+      .m_axis_data_tlast(pre_fft_tlast),
+      .m_axis_data_tvalid(pre_fft_tvalid),
+      .m_axis_data_tready(pre_fft_tready),
+      .s_axis_data_tdata(post_fft_tdata),
+      .s_axis_data_tlast(post_fft_tlast),
+      .s_axis_data_tvalid(post_fft_tvalid),
+      .s_axis_data_tready(post_fft_tready),
+      .m_axis_config_tdata(axis_config_tdata),
+      .m_axis_config_tvalid(axis_config_tvalid),
+      .m_axis_config_tready(axis_config_tready)
+      );
+
+   simple_fft simple_fft
+     (.aclk(clk), // input aclk
+      .aresetn(~reset), // input aresetn
+      .s_axis_config_tdata(axis_config_tdata[23:0]),
+      .s_axis_config_tvalid(axis_config_tvalid),
+      .s_axis_config_tready(axis_config_tready),
+      .s_axis_data_tdata(pre_fft_tdata), .s_axis_data_tlast(pre_fft_tlast), .s_axis_data_tvalid(pre_fft_tvalid), .s_axis_data_tready(pre_fft_tready),
+      .m_axis_data_tdata(post_fft_tdata), .m_axis_data_tlast(post_fft_tlast), .m_axis_data_tvalid(post_fft_tvalid), .m_axis_data_tready(post_fft_tready),
+      .event_frame_started(event_frame_started),
+      .event_tlast_unexpected(event_tlast_unexpected),
+      .event_tlast_missing(event_tlast_missing),
+      .event_status_channel_halt(event_status_channel_halt),
+      .event_data_in_channel_halt(event_data_in_channel_halt),
+      .event_data_out_channel_halt(event_data_out_channel_halt)
+      );
+  
+   // ////////////////////////////////////////////////////////////////////////////////////
    
    task SetXbar;
       input [15:0] start_reg;
