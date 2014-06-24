@@ -14,6 +14,7 @@ vlogcomp -work work --sourcelibext .v \
          --sourcelibdir ../../../lib/timing \
          --sourcelibdir ../../../lib/coregen \
 	 --sourcelibdir ${XILINX}/verilog/src/unimacro \
+	 --sourcelibdir ../../../top/x300/coregen \
 	 ../schmidl_cox_tb.v
 
 

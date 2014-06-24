@@ -9,18 +9,7 @@ module schmidl_cox_tb();
    localparam STR_SINK_FIFOSIZE = 9;
   
    reg clk, reset;
-   always
-     #100 clk = ~clk;
-
-   initial clk = 0;
-   initial reset = 1;
-   initial #1000 reset = 0;
-   
-   initial $dumpfile("schmidl_cox_tb.vcd");
-   initial $dumpvars(0,schmidl_cox_tb);
-
-   initial #1000000 $finish;
-
+ 
    wire [31:0] set_data;
    wire [7:0]  set_addr;
    wire        set_stb;
@@ -28,14 +17,14 @@ module schmidl_cox_tb();
    localparam PORTS = 5;
 
    wire [63:0] noci_tdata[PORTS-1:0];
-   wire        noci_tlast[PORTS-1:0];
-   wire        noci_tvalid[PORTS-1:0];
-   wire        noci_tready[PORTS-1:0];
+   wire [PORTS-1:0]       noci_tlast;
+   wire [PORTS-1:0]       noci_tvalid;
+   wire [PORTS-1:0]       noci_tready;
 
    wire [63:0] noco_tdata[PORTS-1:0];
-   wire        noco_tlast[PORTS-1:0];
-   wire        noco_tvalid[PORTS-1:0];
-   wire        noco_tready[PORTS-1:0];
+   wire [PORTS-1:0]       noco_tlast;
+   wire [PORTS-1:0]       noco_tvalid;
+   wire [PORTS-1:0]       noco_tready;
    
    wire [63:0] src_tdata;
    wire	       src_tlast, src_tvalid;
@@ -52,6 +41,19 @@ module schmidl_cox_tb();
    reg 	       set_stb_xbar;
    reg [15:0]  set_addr_xbar;
    reg [31:0]  set_data_xbar;
+
+   always
+     #100 clk = ~clk;
+
+   initial clk = 0;
+   initial reset = 1;
+   initial #1000 reset = 0;
+   
+   initial $dumpfile("schmidl_cox_tb.vcd");
+   initial $dumpvars(0,schmidl_cox_tb);
+
+   initial #1000000 $finish;
+
 
    axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(PORTS), .NUM_OUTPUTS(PORTS)) crossbar
      (.clk(clk), .reset(reset), .clear(1'b0),
