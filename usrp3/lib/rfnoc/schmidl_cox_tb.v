@@ -6,7 +6,7 @@
 module schmidl_cox_tb();
    xlnx_glbl glbl (.GSR(),.GTS());
 
-   localparam STR_SINK_FIFOSIZE = 9;
+   localparam STR_SINK_FIFOSIZE = 11;
   
    reg clk, reset;
  
@@ -52,7 +52,7 @@ module schmidl_cox_tb();
    initial $dumpfile("schmidl_cox_tb.vcd");
    initial $dumpvars(0,schmidl_cox_tb);
 
-   initial #2000000 $finish;
+   initial #3000000 $finish;
 
 
    axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(PORTS), .NUM_OUTPUTS(PORTS)) crossbar
@@ -359,7 +359,7 @@ module schmidl_cox_tb();
 	SendCtrlPacket(12'd0, 32'h0003_0000, {32'h9, 32'h0000_0200}); // Command packet to set up Len
 	#10000;
 	// Port 1
-	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0003}); // Command packet to set up source control window size
+	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h0, 32'h0000_0013}); // Command packet to set up source control window size
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h1, 32'h0000_0001}); // Command packet to set up source control window enable
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h3, 32'h8000_0001}); // Command packet to set up flow control
 	SendCtrlPacket(12'd0, 32'h0003_0001, {32'h8, 32'h0001_0002}); // Rewrite SID, send on to port 2
