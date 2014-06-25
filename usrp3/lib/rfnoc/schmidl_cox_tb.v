@@ -4,7 +4,7 @@
 
 
 module schmidl_cox_tb();
-   //xlnx_glbl glbl (.GSR(),.GTS());
+   xlnx_glbl glbl (.GSR(),.GTS());
 
    localparam STR_SINK_FIFOSIZE = 9;
   
@@ -52,7 +52,7 @@ module schmidl_cox_tb();
    initial $dumpfile("schmidl_cox_tb.vcd");
    initial $dumpvars(0,schmidl_cox_tb);
 
-   initial #1000000 $finish;
+   initial #2000000 $finish;
 
 
    axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(PORTS), .NUM_OUTPUTS(PORTS)) crossbar
@@ -71,7 +71,7 @@ module schmidl_cox_tb();
       .o_tready({noco_tready[4],noco_tready[3],noco_tready[2],noco_tready[1],noco_tready[0]}),
 
       .set_stb(set_stb_xbar), .set_addr(set_addr_xbar), .set_data(set_data_xbar),
-      .rb_rd_stb(1'b0), .rb_addr(0), .rb_data());
+      .rb_rd_stb(1'b0), .rb_addr(4'd0), .rb_data());
    
    // Generator on port 0
    wire        set_stb_0;
@@ -234,7 +234,7 @@ module schmidl_cox_tb();
       .m_axis_config_tvalid(axis_config_tvalid),
       .m_axis_config_tready(axis_config_tready)
       );
-
+/*
    simple_fft simple_fft
      (.aclk(clk), // input aclk
       .aresetn(~reset), // input aresetn
@@ -250,7 +250,7 @@ module schmidl_cox_tb();
       .event_data_in_channel_halt(event_data_in_channel_halt),
       .event_data_out_channel_halt(event_data_out_channel_halt)
       );
-  
+  */
    // ////////////////////////////////////////////////////////////////////////////////////
    
    task SetXbar;

@@ -23,4 +23,4 @@ vlogcomp -work work --sourcelibext .v \
 fuse work.schmidl_cox_tb work.glbl -L unisims_ver -L xilinxcorelib_ver -o schmidl_cox_tb.exe
 
 # run the simulation scrip
-./schmidl_cox_tb.exe -gui #-tclbatch simcmds.tcl
+./schmidl_cox_tb.exe #-tclbatch simcmds.tcl

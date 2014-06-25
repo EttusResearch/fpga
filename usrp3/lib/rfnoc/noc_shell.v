@@ -186,7 +186,7 @@ module noc_shell
      (.clk(clk), .reset(reset), .clear(clear_tx_fc),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
-      .seqnum(seqnum_hold), .error_code(32'd0), .sid(sid_hold),
+      .seqnum(seqnum_hold), .error_code(64'd0), .sid(sid_hold),
       .vita_time(64'd0),
       .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
 

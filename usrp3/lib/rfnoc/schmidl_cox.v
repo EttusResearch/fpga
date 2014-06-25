@@ -52,18 +52,20 @@ module schmidl_cox
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(n0_tdata), .o0_tlast(n0_tlast), .o0_tvalid(n0_tvalid), .o0_tready(n0_tready),
-      .o1_tdata(n1_tdata), .o1_tlast(n1_tlast), .o1_tvalid(n1_tvalid), .o1_tready(n1_tready));
+      .o1_tdata(n1_tdata), .o1_tlast(n1_tlast), .o1_tvalid(n1_tvalid), .o1_tready(n1_tready),
+      .o2_tready(1'b0), .o3_tready(1'b0));
    
    split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0111)) split_delayed
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
       .o0_tdata(n2_tdata), .o0_tlast(n2_tlast), .o0_tvalid(n2_tvalid), .o0_tready(n2_tready),
       .o1_tdata(n12_tdata), .o1_tlast(n12_tlast), .o1_tvalid(n12_tvalid), .o1_tready(n12_tready),
-      .o2_tdata(n14_tdata), .o2_tlast(n14_tlast), .o2_tvalid(n14_tvalid), .o2_tready(n14_tready));
+      .o2_tdata(n14_tdata), .o2_tlast(n14_tlast), .o2_tvalid(n14_tvalid), .o2_tready(n14_tready),
+      .o3_tready(1'b0));
    
    delay #(.MAX_LEN_LOG2(8), .WIDTH(32)) delay_input
      (.clk(clk), .reset(reset), .clear(clear),
-      .len(16),
+      .len(16'd16),
       .i_tdata(n0_tdata), .i_tlast(n0_tlast), .i_tvalid(n0_tvalid), .i_tready(n0_tready),
       .o_tdata(n3_tdata), .o_tlast(n3_tlast), .o_tvalid(n3_tvalid), .o_tready(n3_tready));
 
@@ -76,7 +78,7 @@ module schmidl_cox
      (.aclk(clk), .aresetn(~reset),
       .s_axis_a_tdata(n1_tdata), .s_axis_a_tlast(n1_tlast), .s_axis_a_tvalid(n1_tvalid), .s_axis_a_tready(n1_tready),
       .s_axis_b_tdata(n4_tdata), .s_axis_b_tlast(n4_tlast), .s_axis_b_tvalid(n4_tvalid), .s_axis_b_tready(n4_tready),
-      .s_axis_ctrl_tdata(0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
+      .s_axis_ctrl_tdata(8'd0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
       .m_axis_dout_tdata(n5_tdata), .m_axis_dout_tlast(n5_tlast), .m_axis_dout_tvalid(n5_tvalid), .m_axis_dout_tready(n5_tready));
 
    wire [23:0] 	  i_ma, q_ma;
@@ -85,14 +87,14 @@ module schmidl_cox
    // moving average of I for S&C metric
    moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(16)) ma_i
      (.clk(clk), .reset(reset), .clear(clear),
-      .len(144),
+      .len(16'd144),
       .i_tdata(n5_tdata[31:16]), .i_tlast(n5_tlast), .i_tvalid(n5_tvalid), .i_tready(n5_tready),
       .o_tdata(i_ma), .o_tlast(n6_tlast), .o_tvalid(n6_tvalid), .o_tready(n6_tready));
       
    // moving average of Q for S&C metric
    moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(16)) ma_q
      (.clk(clk), .reset(reset), .clear(clear),
-      .len(144),
+      .len(16'd144),
       .i_tdata(n5_tdata[15:0]), .i_tlast(n5_tlast), .i_tvalid(n5_tvalid), .i_tready(),
       .o_tdata(q_ma), .o_tlast(), .o_tvalid(), .o_tready(n6_tready));
 
@@ -120,7 +122,7 @@ module schmidl_cox
    // moving average of input signal power
    moving_sum #(.MAX_LEN_LOG2(8), .WIDTH(32)) ma_pow
      (.clk(clk), .reset(reset), .clear(clear),
-      .len(144),
+      .len(16'd144),
       .i_tdata(n8_tdata), .i_tlast(n8_tlast), .i_tvalid(n8_tvalid), .i_tready(n8_tready),
       .o_tdata(n9_unscaled), .o_tlast(n9_tlast), .o_tvalid(n9_tvalid), .o_tready(n9_tready));
    

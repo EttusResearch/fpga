@@ -12,9 +12,11 @@ module periodic_framer
    wire [15:0] 	       frame_len;
    wire [15:0] 	       gap_len;
    wire [15:0] 	       offset;
-   wire [15:0] 	       numframes_max, numframes_thisburst;
-   wire [15:0] 	       burst_len;
    
+   wire [15:0] 	       numsymbols_max, numsymbols_thisburst, numsymbols_short;
+   wire [15:0] 	       burst_len;
+   wire 	       set_numsymbols;
+
    setting_reg #(.my_addr(BASE), .width(16)) reg_frame_len
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(frame_len), .changed());
@@ -27,13 +29,13 @@ module periodic_framer
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(offset), .changed());
 
-   setting_reg #(.my_addr(BASE+3), .width(16)) reg_max_frames
+   setting_reg #(.my_addr(BASE+3), .width(16)) reg_max_symbols
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(numframes_max), .changed());
+      .out(numsymbols_max), .changed());
 
-   setting_reg #(.my_addr(BASE+4), .width(16)) reg_frames_thisbursr
+   setting_reg #(.my_addr(BASE+4), .width(16)) reg_symbols_short
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(numframes_thisburst), .changed());
+      .out(numsymbols_short), .changed(set_numsymbols));
 
    localparam ST_WAIT_FOR_TRIG = 2'd0;
    localparam ST_DO_OFFSET = 2'd1;
@@ -43,9 +45,21 @@ module periodic_framer
    reg [1:0] 	       state;
    reg [15:0] 	       counter;
    reg 		       first_symbol;
-      
+   reg [15:0] 	       numsymbols;
+   
    wire 	       consume;
    
+   reg 	      shorten_burst;
+   always @(posedge clk)
+     if(reset | clear)
+       shorten_burst <= 1'b0;
+     else if(set_numsymbols)
+       shorten_burst <= 1'b1;
+     else if(state == ST_WAIT_FOR_TRIG)
+       shorten_burst <= 1'b0;
+
+   assign numsymbols_thisburst = shorten_burst ? numsymbols_short : numsymbols_max;
+
    always @(posedge clk)
      if(reset | clear)
        state <= ST_WAIT_FOR_TRIG;
@@ -64,6 +78,7 @@ module periodic_framer
 		  state <= ST_FRAME;
 		  counter <= 16'b1;
 		  first_symbol <= 1'b1;
+		  numsymbols <= 16'd1;
 	       end
 	     else
 	       counter <= counter + 16'd1;
@@ -72,8 +87,12 @@ module periodic_framer
 	       begin
 		  first_symbol <= 1'b0;
 		  if(~first_symbol)   // 802.11 does not have a CP between two LTFs
-		    state <= ST_GAP;
+		    if(numsymbols >= numsymbols_thisburst)
+		      state <= ST_WAIT_FOR_TRIG;
+		    else
+		      state <= ST_GAP;
 		  counter <= 1;
+		  numsymbols <= numsymbols + 1;
 	       end
 	     else
 	       counter <= counter + 16'd1;
@@ -94,5 +113,7 @@ module periodic_framer
    assign stream_i_tready = consume;
    assign trigger_tready = consume;
    assign consume = stream_i_tvalid & trigger_tvalid & ((state != ST_FRAME) | stream_o_tready);
-   
+
+   assign eob = (numsymbols >=  numsymbols_thisburst);
+      
 endmodule // periodic_framer
