@@ -78,7 +78,7 @@ module peak_finder
                     end
               end
 
-    assign o_tdata = {burst_offset, burst_phase};
+    assign o_tdata = {burst_phase, burst_offset};
     assign o_tlast = found_burst;
 
    assign do_op = (i0_tvalid & i1_tvalid & o_tready);

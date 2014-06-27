@@ -74,12 +74,13 @@ module schmidl_cox
       .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
       .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
 
+   // complex_mult assumes Q is high bits, I is low.  This is the opposite of our standard...
    complex_multiplier cmult1
      (.aclk(clk), .aresetn(~reset),
-      .s_axis_a_tdata(n1_tdata), .s_axis_a_tlast(n1_tlast), .s_axis_a_tvalid(n1_tvalid), .s_axis_a_tready(n1_tready),
-      .s_axis_b_tdata(n4_tdata), .s_axis_b_tlast(n4_tlast), .s_axis_b_tvalid(n4_tvalid), .s_axis_b_tready(n4_tready),
+      .s_axis_a_tdata({n1_tdata[15:0], n1_tdata[31:16]}), .s_axis_a_tlast(n1_tlast), .s_axis_a_tvalid(n1_tvalid), .s_axis_a_tready(n1_tready),
+      .s_axis_b_tdata({n4_tdata[15:0], n4_tdata[31:16]}), .s_axis_b_tlast(n4_tlast), .s_axis_b_tvalid(n4_tvalid), .s_axis_b_tready(n4_tready),
       .s_axis_ctrl_tdata(8'd0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
-      .m_axis_dout_tdata(n5_tdata), .m_axis_dout_tlast(n5_tlast), .m_axis_dout_tvalid(n5_tvalid), .m_axis_dout_tready(n5_tready));
+      .m_axis_dout_tdata({n5_tdata[15:0], n5_tdata[31:16]}), .m_axis_dout_tlast(n5_tlast), .m_axis_dout_tvalid(n5_tvalid), .m_axis_dout_tready(n5_tready));
 
    wire [23:0] 	  i_ma, q_ma;
    assign n6_tdata = {i_ma[23:8], q_ma[23:8]};
@@ -101,7 +102,7 @@ module schmidl_cox
    // magnitude of delay conjugate multiply
    complex_to_magphase c2magphase 
      (.aclk(clk), .aresetn(~reset),
-      .s_axis_cartesian_tdata(n6_tdata), .s_axis_cartesian_tlast(n6_tlast), .s_axis_cartesian_tvalid(n6_tvalid), .s_axis_cartesian_tready(n6_tready),
+      .s_axis_cartesian_tdata({n6_tdata[15:0], n6_tdata[31:16]}), .s_axis_cartesian_tlast(n6_tlast), .s_axis_cartesian_tvalid(n6_tvalid), .s_axis_cartesian_tready(n6_tready),
       .m_axis_dout_tdata(n7_tdata), .m_axis_dout_tlast(n7_tlast), .m_axis_dout_tvalid(n7_tvalid), .m_axis_dout_tready(n7_tready));
    
    // extract magnitude from cordic
@@ -140,7 +141,7 @@ module schmidl_cox
       .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
       .i1_tdata(n7_tdata), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
       .o_tdata(n10_tdata), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
-
+   
    split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_trig
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(n10_tdata), .i_tlast(n10_tlast), .i_tvalid(n10_tvalid), .i_tready(n10_tready),
@@ -151,7 +152,7 @@ module schmidl_cox
    // n18_tdata[31:16] is unused
    phase_acc #(.WIDTH(16)) phase_acc
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n17_tdata[15:0]), .i_tlast(n17_tlast), .i_tvalid(n17_tvalid), .i_tready(n17_tready),
+      .i_tdata(n17_tdata[31:16]), .i_tlast(n17_tlast), .i_tvalid(n17_tvalid), .i_tready(n17_tready),
       .o_tdata(n18_tdata[15:0]), .o_tlast(n18_tlast), .o_tvalid(n18_tvalid), .o_tready(n18_tready));
    
    // phase acc on n18
