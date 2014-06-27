@@ -67,7 +67,7 @@ module periodic_framer
        if(consume)
 	 case(state)
 	   ST_WAIT_FOR_TRIG :
-	     if(trigger_tdata)
+	     if(trigger_tlast)
 	       begin
 		  state <= ST_DO_OFFSET;
 		  counter <= 16'b1;

@@ -1,0 +1,15 @@
+# Output products list for <cordic_rotator>
+_xmsgs/pn_parser.xmsgs
+cordic_rotator/doc/cordic_v5_0_readme.txt
+cordic_rotator/doc/cordic_v5_0_vinfo.html
+cordic_rotator/doc/ds858_cordic.pdf
+cordic_rotator.asy
+cordic_rotator.gise
+cordic_rotator.ngc
+cordic_rotator.v
+cordic_rotator.veo
+cordic_rotator.xco
+cordic_rotator.xise
+cordic_rotator_flist.txt
+cordic_rotator_xmdf.tcl
+demo_tb/tb_cordic_rotator.vhd

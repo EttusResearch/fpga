@@ -14,14 +14,14 @@ module schmidl_cox
     input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
    
-   wire [31:0] 	  n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata;
-   wire [31:0] 	  n7_tdata, n8_tdata, n9_tdata, n10_tdata, n11_tdata, n12_tdata, n13_tdata, n14_tdata;
-   wire 	  n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast;
-   wire 	  n7_tlast, n8_tlast, n9_tlast, n10_tlast, n11_tlast, n12_tlast, n13_tlast, n14_tlast;
-   wire 	  n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid;
-   wire 	  n7_tvalid, n8_tvalid, n9_tvalid, n10_tvalid, n11_tvalid, n12_tvalid, n13_tvalid, n14_tvalid;
-   wire 	  n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready;
-   wire 	  n7_tready, n8_tready, n9_tready, n10_tready, n11_tready, n12_tready, n13_tready, n14_tready;
+   wire [31:0] 	  n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata;
+   wire [31:0] 	  n10_tdata, n11_tdata, n12_tdata, n13_tdata, n14_tdata, n15_tdata, n16_tdata, n17_tdata, n18_tdata;
+   wire 	  n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast;
+   wire 	  n10_tlast, n11_tlast, n12_tlast, n13_tlast, n14_tlast, n15_tlast, n16_tlast, n17_tlast, n18_tlast;
+   wire 	  n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid;
+   wire 	  n10_tvalid, n11_tvalid, n12_tvalid, n13_tvalid, n14_tvalid, n15_tvalid, n16_tvalid, n17_tvalid, n18_tvalid;
+   wire 	  n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready;
+   wire 	  n10_tready, n11_tready, n12_tready, n13_tready, n14_tready, n15_tready, n16_tready, n17_tready, n18_tready;
    
    // For debug purposes
    wire [15:0] 	 n0i = n0_tdata[31:16];
@@ -133,22 +133,50 @@ module schmidl_cox
       .o_tdata({n11_tlast, n11_tdata}), .o_tvalid(n11_tvalid), .o_tready(n11_tready));
    
    // compare scaled version of lower rail with upper rail to see if it is over the desired threshold ?(in0 < in1*scalar)
-   // then search for areas where the cross power meats a threshold, and find the peak of the timing metric within the region
+   // then search for areas where the cross power meets a threshold, and find the peak of the timing metric within the region
    // return a timing estimate and a phase offset used for cfo correction
    peak_finder #(.SCALAR(131072)) peak_finder
      (.clk(clk), .reset(reset), .clear(clear),
       .i0_tdata(n11_tdata), .i0_tlast(n11_tlast), .i0_tvalid(n11_tvalid), .i0_tready(n11_tready),
       .i1_tdata(n7_tdata), .i1_tlast(n7_tlast), .i1_tvalid(n7_tvalid), .i1_tready(n7_tready),
       .o_tdata(n10_tdata), .o_tlast(n10_tlast), .o_tvalid(n10_tvalid), .o_tready(n10_tready));
+
+   split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_trig
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(n10_tdata), .i_tlast(n10_tlast), .i_tvalid(n10_tvalid), .i_tready(n10_tready),
+      .o0_tdata(n16_tdata), .o0_tlast(n16_tlast), .o0_tvalid(n16_tvalid), .o0_tready(n16_tready),
+      .o1_tdata(n17_tdata), .o1_tlast(n17_tlast), .o1_tvalid(n17_tvalid), .o1_tready(n17_tready),
+      .o2_tready(1'b0), .o3_tready(1'b0));
+
+   // n18_tdata[31:16] is unused
+   phase_acc #(.WIDTH(16)) phase_acc
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(n17_tdata[15:0]), .i_tlast(n17_tlast), .i_tvalid(n17_tvalid), .i_tready(n17_tready),
+      .o_tdata(n18_tdata[15:0]), .o_tlast(n18_tlast), .o_tvalid(n18_tvalid), .o_tready(n18_tready));
+   
+   // phase acc on n18
+   cordic_rotator cfo_corrector
+     (.aclk(clk), .aresetn(~reset),
+      .s_axis_phase_tdata(n18_tdata[15:0]),
+      .s_axis_phase_tlast(n18_tlast),
+      .s_axis_phase_tvalid(n18_tvalid),
+      .s_axis_phase_tready(n18_tready),
+      .s_axis_cartesian_tdata(n14_tdata),
+      .s_axis_cartesian_tlast(n14_tlast),
+      .s_axis_cartesian_tvalid(n14_tvalid),
+      .s_axis_cartesian_tready(n14_tready),
+      .m_axis_dout_tdata(n15_tdata),
+      .m_axis_dout_tlast(n15_tlast),
+      .m_axis_dout_tvalid(n15_tvalid),
+      .m_axis_dout_tready(n15_tready));
    
    periodic_framer #(.BASE(16), .WIDTH(32)) periodic_framer
      (.clk(clk), .reset(reset), .clear(clear),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .stream_i_tdata(n14_tdata), .stream_i_tlast(n14_tlast), .stream_i_tvalid(n14_tvalid), .stream_i_tready(n14_tready),
-      .trigger_tdata(n10_tdata), .trigger_tlast(n10_tlast), .trigger_tvalid(n10_tvalid), .trigger_tready(n10_tready),
+      .stream_i_tdata(n15_tdata), .stream_i_tlast(n15_tlast), .stream_i_tvalid(n15_tvalid), .stream_i_tready(n15_tready),
+      .trigger_tdata(n16_tdata), .trigger_tlast(n16_tlast), .trigger_tvalid(n16_tvalid), .trigger_tready(n16_tready),
       .stream_o_tdata(n13_tdata), .stream_o_tlast(n13_tlast), .stream_o_tvalid(n13_tvalid), .stream_o_tready(n13_tready),
       .eob());
-   
    
    assign o_tdata = n13_tdata;
    assign o_tlast = n13_tlast;
