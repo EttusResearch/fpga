@@ -230,7 +230,7 @@ module schmidl_cox_tb();
       .m_axis_config_tvalid(axis_config_tvalid),
       .m_axis_config_tready(axis_config_tready)
       );
-/*
+
    simple_fft simple_fft
      (.aclk(clk), // input aclk
       .aresetn(~reset), // input aresetn
@@ -246,7 +246,7 @@ module schmidl_cox_tb();
       .event_data_in_channel_halt(event_data_in_channel_halt),
       .event_data_out_channel_halt(event_data_out_channel_halt)
       );
-  */
+
    // ////////////////////////////////////////////////////////////////////////////////////
    
    task SetXbar;
@@ -282,36 +282,6 @@ module schmidl_cox_tb();
       end
    endtask // set_xbar
 
-   /*
-   task SendPacket;
-      input [3:0]  flags;
-      input [11:0] seqnum;
-      input [15:0] len;
-      input [31:0] sid;
-      input [63:0] data;
-      
-      begin
-	 @(posedge clk);
-	 sample_tlast <= 0;
-	 sample_tvalid <= 1;
-	 sample_tdata <= data;
-	 repeat(len-1)
-	   begin
-	      @(posedge clk);
-	      while(~sample_tready)
-		@(posedge clk);
-	      sample_tdata <= sample_tdata + 32'd1;
-	   end
-	 sample_tlast <= 1;
-	 @(posedge clk);
-	 while(~sample_tready)
-	   @(posedge clk);
-	 sample_tvalid <= 0;
-	 @(posedge clk);
-      end
-   endtask // SendPacket
-   */
-   
    task SendCtrlPacket;
       input [11:0] seqnum;
       input [31:0] sid;
