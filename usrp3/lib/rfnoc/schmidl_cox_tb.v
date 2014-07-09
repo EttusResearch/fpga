@@ -10,10 +10,6 @@ module schmidl_cox_tb();
   
    reg clk, reset;
  
-   wire [31:0] set_data;
-   wire [7:0]  set_addr;
-   wire        set_stb;
-
    localparam PORTS = 5;
 
    wire [63:0] noci_tdata[PORTS-1:0];
@@ -205,16 +201,16 @@ module schmidl_cox_tb();
       
    noc_shell #(.STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_shell_4
      (.bus_clk(clk), .bus_rst(reset),
-      .i_tdata(noco_tdata[1]), .i_tlast(noco_tlast[1]), .i_tvalid(noco_tvalid[1]), .i_tready(noco_tready[1]),
-      .o_tdata(noci_tdata[1]), .o_tlast(noci_tlast[1]), .o_tvalid(noci_tvalid[1]), .o_tready(noci_tready[1]),
+      .i_tdata(noco_tdata[4]), .i_tlast(noco_tlast[4]), .i_tvalid(noco_tvalid[4]), .i_tready(noco_tready[4]),
+      .o_tdata(noci_tdata[4]), .o_tlast(noci_tlast[4]), .o_tvalid(noci_tvalid[4]), .o_tready(noci_tready[4]),
       .clk(clk), .reset(reset),
-      .set_data(set_data_1), .set_addr(set_addr_1), .set_stb(set_stb_1), .rb_data(64'd0),
+      .set_data(set_data_4), .set_addr(set_addr_4), .set_stb(set_stb_4), .rb_data(64'd0),
 
       .cmdout_tdata(64'h0), .cmdout_tlast(1'b0), .cmdout_tvalid(1'b0), .cmdout_tready(),
       .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(1'b1),
       
-      .str_sink_tdata(s1o_tdata), .str_sink_tlast(s1o_tlast), .str_sink_tvalid(s1o_tvalid), .str_sink_tready(s1o_tready),
-      .str_src_tdata(s1i_tdata), .str_src_tlast(s1i_tlast), .str_src_tvalid(s1i_tvalid), .str_src_tready(s1i_tready)
+      .str_sink_tdata(s4o_tdata), .str_sink_tlast(s4o_tlast), .str_sink_tvalid(s4o_tvalid), .str_sink_tready(s4o_tready),
+      .str_src_tdata(s4i_tdata), .str_src_tlast(s4i_tlast), .str_src_tvalid(s4i_tvalid), .str_src_tready(s4i_tready)
       );
 
    axi_wrapper #(.BASE(8)) axi_wrapper_ce4
