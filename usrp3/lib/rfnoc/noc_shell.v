@@ -40,13 +40,13 @@ module noc_shell
    localparam SB_RB_ADDR = 32;  // 1 reg
    
    wire [63:0] 	 dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
-		 cmdin_tdata, cmdout_tdata, ackout_tdata, ackin_tdata;
+		 cmdin_tdata,  ackout_tdata;
    wire 	 dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast,
-		 cmdin_tlast, cmdout_tlast, ackout_tlast, ackin_tlast;
+		 cmdin_tlast,  ackout_tlast;
    wire 	 dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid,
-		 cmdout_tvalid, cmdin_tvalid, ackout_tvalid, ackin_tvalid;
+		  cmdin_tvalid, ackout_tvalid;
    wire 	 dataout_tready, datain_tready, fcin_tready, fcout_tready,
-		 cmdin_tready, cmdout_tready, ackout_tready, ackin_tready;
+		 cmdin_tready,  ackout_tready;
 
    wire [31:0] 	 debug_sfc;
    

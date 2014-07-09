@@ -4,7 +4,7 @@
 
 
 module schmidl_cox_tb();
-   xlnx_glbl glbl (.GSR(),.GTS());
+ //  xlnx_glbl glbl (.GSR(),.GTS());
 
    localparam STR_SINK_FIFOSIZE = 11;
   

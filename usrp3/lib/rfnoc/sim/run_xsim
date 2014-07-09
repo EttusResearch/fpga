@@ -1,0 +1,51 @@
+#!/bin/bash
+
+while [[ $# > 0 ]]
+do
+    key="$1"
+    shift
+
+    case $key in
+	-g|--gui)
+	    GUI="-gui"
+	    ;;
+	-s|--script)
+	    TCL="-tclbatch"
+	    SCRIPT="$1"
+	    shift
+	    ;;
+	-a|--ascii)
+	    ASCIISIM="-d ASCII_DEBUG"
+	    ;;	
+	*)
+            # unknown option
+	    ;;
+    esac
+done
+
+
+rm -r xsim.dir
+
+xvlog $ASCIISIM -work work --sourcelibext .v \
+    /opt/Xilinx/Vivado/2013.4/data/verilog/src/glbl.v \
+         --sourcelibdir ../../../lib/dsp \
+         --sourcelibdir ../../../lib/control \
+         --sourcelibdir ../../../lib/rfnoc \
+         --sourcelibdir ../../../lib/fifo \
+         --sourcelibdir ../../../lib/vita \
+         --sourcelibdir ../../../lib/packet_proc \
+         --sourcelibdir ../../../lib/timing \
+         --sourcelibdir ../../../lib/coregen \
+         --sourcelibdir ${XILINX}/verilog/src/unimacro \
+         --sourcelibdir ../../../top/x300/coregen \
+         ../schmidl_cox_tb.v
+
+
+
+xelab work.schmidl_cox_tb  work.glbl $ASCIISIM -s schmidl_cox_tb -L unisims_ver  -L xilinxcorelib_ver -L secureip --debug all 
+
+
+xsim  schmidl_cox_tb  $GUI $TCL $SCRIPT
+
+
+
