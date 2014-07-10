@@ -36,13 +36,13 @@ xvlog $ASCIISIM -work work --sourcelibext .v \
          --sourcelibdir ../../../lib/packet_proc \
          --sourcelibdir ../../../lib/timing \
          --sourcelibdir ../../../lib/coregen \
-         --sourcelibdir ${XILINX}/verilog/src/unimacro \
+         --sourcelibdir ${XILINX_VIVADO}/data/verilog/src/unimacro \
          --sourcelibdir ../../../top/x300/coregen \
          ../schmidl_cox_tb.v
 
 
 
-xelab work.schmidl_cox_tb  work.glbl $ASCIISIM -s schmidl_cox_tb -L unisims_ver  -L xilinxcorelib_ver -L secureip --debug all 
+xelab work.schmidl_cox_tb  work.glbl $ASCIISIM -s schmidl_cox_tb -L unisims_ver  -L unimacro_ver -L xilinxcorelib_ver -L secureip --debug wave --O2
 
 
 xsim  schmidl_cox_tb  $GUI $TCL $SCRIPT
