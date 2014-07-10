@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 //
 // Copyright 2012-2013 Ettus Research LLC
 //
