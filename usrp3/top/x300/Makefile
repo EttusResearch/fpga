@@ -83,7 +83,7 @@ X310_HGS:
 	$(call post_build,X310,HGS)
 
 X300_HGS:
-	make -f Makefile.x300.inc bin NAME=$@ DEVICE=XC7K325T $(HYBRID_SRAM_DEFS) EXTRA_DEFS="$(HYBRID_SRAM_DEFS)"
+	make -f Makefile.x300.inc bin NAME=$@ DEVICE=XC7K325T FLOORPLAN=1 $(HYBRID_SRAM_DEFS) EXTRA_DEFS="$(HYBRID_SRAM_DEFS)"
 	$(call post_build,X300,HGS)
 
 # 10Gig on both ports, SRAM Tx FIFO's
