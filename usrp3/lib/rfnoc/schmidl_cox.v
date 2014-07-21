@@ -24,29 +24,29 @@ module schmidl_cox
    wire 	  n10_tready, n11_tready, n12_tready, n13_tready, n14_tready, n15_tready, n16_tready, n17_tready, n18_tready;
    
    // For debug purposes
-   wire [15:0] 	 n0i = n0_tdata[31:16];
-   wire [15:0] 	 n0q = n0_tdata[15:0];
+   wire [15:0] 	  n0i = n0_tdata[31:16];
+   wire [15:0] 	  n0q = n0_tdata[15:0];
    
-   wire [15:0] 	 n1i = n1_tdata[31:16];
-   wire [15:0] 	 n1q = n1_tdata[15:0];
+   wire [15:0] 	  n1i = n1_tdata[31:16];
+   wire [15:0] 	  n1q = n1_tdata[15:0];
    
-   wire [15:0] 	 n2i = n2_tdata[31:16];
-   wire [15:0] 	 n2q = n2_tdata[15:0];
+   wire [15:0] 	  n2i = n2_tdata[31:16];
+   wire [15:0] 	  n2q = n2_tdata[15:0];
    
-   wire [15:0] 	 n3i = n3_tdata[31:16];
-   wire [15:0] 	 n3q = n3_tdata[15:0];
+   wire [15:0] 	  n3i = n3_tdata[31:16];
+   wire [15:0] 	  n3q = n3_tdata[15:0];
    
-   wire [15:0] 	 n4i = n4_tdata[31:16];
-   wire [15:0] 	 n4q = n4_tdata[15:0];
+   wire [15:0] 	  n4i = n4_tdata[31:16];
+   wire [15:0] 	  n4q = n4_tdata[15:0];
    
-   wire [15:0] 	 n5i = n5_tdata[31:16];
-   wire [15:0] 	 n5q = n5_tdata[15:0];
+   wire [15:0] 	  n5i = n5_tdata[31:16];
+   wire [15:0] 	  n5q = n5_tdata[15:0];
    
-   wire [15:0] 	 n6i = n6_tdata[31:16];
-   wire [15:0] 	 n6q = n6_tdata[15:0];
+   wire [15:0] 	  n6i = n6_tdata[31:16];
+   wire [15:0] 	  n6q = n6_tdata[15:0];
    
-   wire [15:0] 	 n7phase = n7_tdata[31:16];
-   wire [15:0] 	 n7mag = n7_tdata[15:0];
+   wire [15:0] 	  n7phase = n7_tdata[31:16];
+   wire [15:0] 	  n7mag = n7_tdata[15:0];
    
    split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
      (.clk(clk), .reset(reset), .clear(clear),
