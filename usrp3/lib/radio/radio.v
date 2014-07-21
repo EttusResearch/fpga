@@ -47,10 +47,6 @@ module radio #(
    wire 	 ctrl_tready_b, ctrl_tready_r, ctrl_tvalid_b, ctrl_tvalid_r;
    wire 	 ctrl_tlast_b, ctrl_tlast_r;
 
-   wire [63:0] 	  ctrl_tdata_s_r;
-   wire 	  ctrl_tready_s_r,  ctrl_tvalid_s_r;
-   wire 	  ctrl_tlast_s_r;
-
    wire [63:0] 	 resp_tdata_b, resp_tdata_r;
    wire 	 resp_tready_b, resp_tready_r, resp_tvalid_b, resp_tvalid_r;
    wire 	 resp_tlast_b, resp_tlast_r;
@@ -71,17 +67,13 @@ module radio #(
    wire [63:0] 	 rxfc_tdata_b;
    wire 	 rxfc_tready_b, rxfc_tvalid_b, rxfc_tlast_b;
 
-    wire [63:0] 	 rx_mux_tdata_r;
+   wire [63:0] 	 rx_mux_tdata_r;
    wire 	 rx_mux_tready_r, rx_mux_tvalid_r;
    wire 	 rx_mux_tlast_r;
 
    wire [63:0] 	 rx_err_tdata_r;
    wire 	 rx_err_tready_r, rx_err_tvalid_r;
    wire 	 rx_err_tlast_r;
-   //IJB debug
-   wire [63:0] 	 tx_tdata_bo_debug;
-   wire 	 tx_tlast_bo_debug, tx_tvalid_bo_debug, tx_tready_bo_debug;
-
 
    // FIXME tx flow control should be separate from ACKs.  ACKs should go with 
    
@@ -94,7 +86,7 @@ module radio #(
       .o_tdata(out_tdata), .o_tlast(out_tlast), .o_tvalid(out_tvalid), .o_tready(out_tready));
 
    wire [63:0] 	 vheader;
-   wire [1:0] 	 vdest = vheader[63:62];  // Switch by bottom 2 bits of SID
+   wire [1:0] 	 vdest = vheader[63:62];  // Switch by packet type
 
    axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64)) radio_demux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -105,19 +97,10 @@ module radio #(
       .o2_tdata(ctrl_tdata_b), .o2_tlast(ctrl_tlast_b), .o2_tvalid(ctrl_tvalid_b), .o2_tready(ctrl_tready_b),  // Control
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // No CTRL Resp coming back
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
+   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid_b), .i_tready(ctrl_tready_b), .i_tdata({ctrl_tlast_b,ctrl_tdata_b}),
-      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_s_r), .o_tready(ctrl_tready_s_r), .o_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}));
-
-   // For timing closure ..paths lead back from 64bit time comparison.
-   axi_fifo_short #(.WIDTH(65)) ctrl_fifo_s
-     (
-      .clk(radio_clk), .reset(radio_rst), .clear(1'b0),
-      .i_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}), .i_tvalid(ctrl_tvalid_s_r), .i_tready(ctrl_tready_s_r),
-      .o_tdata({ctrl_tlast_r,ctrl_tdata_r}), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r),
-      .space(), .occupied()
-      );
+      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r), .o_tdata({ctrl_tlast_r,ctrl_tdata_r}));
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(DATA_FIFO_SIZE)) tx_fifo
      (.reset(bus_rst),
