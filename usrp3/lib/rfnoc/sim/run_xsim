@@ -27,7 +27,7 @@ done
 rm -r xsim.dir
 
 xvlog $ASCIISIM -work work --sourcelibext .v \
-    /opt/Xilinx/Vivado/2013.4/data/verilog/src/glbl.v \
+    /opt/Xilinx/Vivado/2014.2/data/verilog/src/glbl.v \
          --sourcelibdir ../../../lib/dsp \
          --sourcelibdir ../../../lib/control \
          --sourcelibdir ../../../lib/rfnoc \
