@@ -11,7 +11,7 @@ simple_fir.xco \
 simple_fft.v \
 simple_fft.xco \
 complex_multiplier.v \
-complex_multipler.xco \
+complex_multiplier.xco \
 ))
 
 
