@@ -17,7 +17,7 @@ module axi_wrapper
     // To AXI IP
     output [31:0] m_axis_data_tdata, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
     input [31:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready,
-    output [31:0] m_axis_config_tdata, output m_axis_config_tvalid, input m_axis_config_tready
+    output [31:0] m_axis_config_tdata, output m_axis_config_tlast, output m_axis_config_tvalid, input m_axis_config_tready
     );
 
    // Set next destination in chain
@@ -54,9 +54,10 @@ module axi_wrapper
           
    // Simple single line axi stream to config cores like FFT and FIR from Xilinx
    // FIXME need to make sure we don't overrun this if core can backpressure us
-   axi_fifo_short #(.WIDTH(32)) config_stream
+   // Write to BASE+8 is normal, BASE+9 asserts tlast
+   axi_fifo_short #(.WIDTH(33)) config_stream
      (.clk(clk), .reset(reset), .clear(1'b0),
-      .i_tdata(set_data), .i_tvalid(set_stb & (set_addr == (BASE+8))), .i_tready(),
-      .o_tdata(m_axis_config_tdata), .o_tvalid(m_axis_config_tvalid), .o_tready(m_axis_config_tready));
+      .i_tdata({(set_addr == (BASE+9)),set_data}), .i_tvalid(set_stb & ((set_addr == (BASE+8))|(set_addr == (BASE+9)))), .i_tready(),
+      .o_tdata({m_axis_config_tlast,m_axis_config_tdata}), .o_tvalid(m_axis_config_tvalid), .o_tready(m_axis_config_tready));
       
 endmodule // axi_wrapper
