@@ -517,14 +517,13 @@ module bus_int
       .in(set_data),.out(local_addr),.changed());
 
   // Base width of crossbar based on fixed components (ethernet, PCIE, etc)
-  localparam XBAR_FIXED_INPUTS = 5;
-  localparam XBAR_FIXED_OUTPUTS = 5;
+  localparam XBAR_FIXED_PORTS = 5;
 
   // Generate crossbar based on the inclusion of compute engines
   generate
     if (NUM_CE == 0) begin
       axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_INPUTS), .NUM_OUTPUTS(XBAR_FIXED_OUTPUTS))
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_PORTS), .NUM_OUTPUTS(XBAR_FIXED_PORTS))
       inst_axi_crossbar (
         .clk(clk), .reset(reset), .clear(0),
         .local_addr(local_addr),
@@ -539,12 +538,12 @@ module bus_int
         .o_tready({r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
         .pkt_present({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
         .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
-        .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar));
+        .rb_addr(rb_addr[`LOG2(XBAR_FIXED_PORTS)+`LOG2(XBAR_FIXED_PORTS)-1:0]), .rb_data(rb_data_crossbar));
     end
     else begin
       // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
       axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_INPUTS+NUM_CE), .NUM_OUTPUTS(XBAR_FIXED_OUTPUTS+NUM_CE))
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_PORTS+NUM_CE), .NUM_OUTPUTS(XBAR_FIXED_PORTS+NUM_CE))
       inst_axi_crossbar (
         .clk(clk), .reset(reset), .clear(0),
         .local_addr(local_addr),
@@ -559,7 +558,7 @@ module bus_int
         .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
         .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
         .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
-        .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar));
+        .rb_addr(rb_addr[`LOG2(XBAR_FIXED_PORTS)+`LOG2(XBAR_FIXED_PORTS)-1:0]), .rb_data(rb_data_crossbar));
     end
   endgenerate
 

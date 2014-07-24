@@ -3,6 +3,7 @@ module noc_block_fir_filter #(
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
+  input ce_clk, input ce_rst,
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready
 );
@@ -42,10 +43,6 @@ module noc_block_fir_filter #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
-
-  // CE uses same clock domain as RFNoC interface
-  assign ce_clk = bus_clk;
-  assign ce_rst = bus_rst;
 
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
