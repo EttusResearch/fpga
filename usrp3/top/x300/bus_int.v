@@ -517,14 +517,14 @@ module bus_int
       .in(set_data),.out(local_addr),.changed());
 
   // Base width of crossbar based on fixed components (ethernet, PCIE, etc)
-  localparam CROSSBAR_IN = 5;
-  localparam CROSSBAR_OUT = 5;
+  localparam XBAR_FIXED_INPUTS = 5;
+  localparam XBAR_FIXED_OUTPUTS = 5;
 
   // Generate crossbar based on the inclusion of compute engines
   generate
     if (NUM_CE == 0) begin
       axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN), .NUM_OUTPUTS(CROSSBAR_OUT))
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_INPUTS), .NUM_OUTPUTS(XBAR_FIXED_OUTPUTS))
       inst_axi_crossbar (
         .clk(clk), .reset(reset), .clear(0),
         .local_addr(local_addr),
@@ -542,9 +542,9 @@ module bus_int
         .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar));
     end
     else begin
-      // Note: The custom accelerator inputs / outputs bitwidth grow based on CROSSBAR_IN / CROSSBAR_OUT
+      // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
       axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN+NUM_CE), .NUM_OUTPUTS(CROSSBAR_OUT+NUM_CE))
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_INPUTS+NUM_CE), .NUM_OUTPUTS(XBAR_FIXED_OUTPUTS+NUM_CE))
       inst_axi_crossbar (
         .clk(clk), .reset(reset), .clear(0),
         .local_addr(local_addr),

@@ -2,11 +2,17 @@ module noc_block_null_source #(
   parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
   parameter STR_SINK_FIFOSIZE = 10)
 (
-  input bus_clk,
-  input bus_rst,
+  input bus_clk, input bus_rst,
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready
 );
+
+  /////////////////////////////////////////////////////////////
+  //
+  // RFNoC Shell
+  //
+  ////////////////////////////////////////////////////////////
+  wire        ce_clk, ce_rst;
 
   wire [31:0] set_data;
   wire [7:0]  set_addr;
@@ -26,7 +32,7 @@ module noc_block_null_source #(
     .i_tdata(o_tdata), .i_tlast(o_tlast), .i_tvalid(o_tvalid), .i_tready(o_tready),
     .o_tdata(i_tdata), .o_tlast(i_tlast), .o_tvalid(i_tvalid), .o_tready(i_tready),
     // Computer Engine Clock Domain
-    .clk(bus_clk), .reset(bus_rst),
+    .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr_ce0), .set_stb(set_stb_ce0), .rb_data(64'd0),
     // Control Source
@@ -37,11 +43,9 @@ module noc_block_null_source #(
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
 
-  null_source #(
-    .BASE(8))
-  null_source (.clk(bus_clk), .reset(bus_rst),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
+  // CE uses same clock domain as RFNoC interface
+  assign ce_clk = bus_clk;
+  assign ce_rst = bus_rst;
 
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
@@ -51,5 +55,17 @@ module noc_block_null_source #(
 
   // Stream Sink Unused
   assign str_sink_tready = 1'b1;  // dump everything coming to us
+
+  /////////////////////////////////////////////////////////////
+  //
+  // User code
+  //
+  ////////////////////////////////////////////////////////////
+
+  null_source #(
+    .BASE(8))
+  null_source (.clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
 
 endmodule
