@@ -17,9 +17,10 @@
 
 module bus_int
   #(
-    parameter  dw  = 32,  // Data bus width
-    parameter  aw  = 16,  // Address bus width, for byte addressibility, 16 = 64K byte memory space
-    parameter  sw  = 4   // Select width -- 32-bit data bus with 8-bit granularity.
+    parameter dw = 32,            // Data bus width
+    parameter aw = 16,            // Address bus width, for byte addressibility, 16 = 64K byte memory space
+    parameter sw = 4,             // Select width -- 32-bit data bus with 8-bit granularity.
+    parameter NUM_CE = 3         // Number of computation engines
     )
    (input clk, input reset,
     output sen, output sclk, output mosi, input miso,
@@ -57,15 +58,9 @@ module bus_int
     // Radio1
     output [63:0] r1o_tdata, output r1o_tlast, output r1o_tvalid, input r1o_tready,
     input [63:0] r1i_tdata, input r1i_tlast, input r1i_tvalid, output r1i_tready,
-    // CE0
-    output [63:0] ce0o_tdata, output ce0o_tlast, output ce0o_tvalid, input ce0o_tready,
-    input [63:0] ce0i_tdata, input ce0i_tlast, input ce0i_tvalid, output ce0i_tready,
-    // CE1
-    output [63:0] ce1o_tdata, output ce1o_tlast, output ce1o_tvalid, input ce1o_tready,
-    input [63:0] ce1i_tdata, input ce1i_tlast, input ce1i_tvalid, output ce1i_tready,
-    // CE2
-    output [63:0] ce2o_tdata, output ce2o_tlast, output ce2o_tvalid, input ce2o_tready,
-    input [63:0] ce2i_tdata, input ce2i_tlast, input ce2i_tvalid, output ce2i_tready,
+    // Computation Engines
+    output [NUM_CE*64-1:0] ce_o_tdata, output [NUM_CE-1:0] ce_o_tlast, output [NUM_CE-1:0] ce_o_tvalid, input  [NUM_CE-1:0] ce_o_tready,
+    input  [NUM_CE*64-1:0] ce_i_tdata, input  [NUM_CE-1:0] ce_i_tlast, input  [NUM_CE-1:0] ce_i_tvalid, output [NUM_CE-1:0] ce_i_tready,
     //iop2 message fifos
     output [63:0] o_iop2_msg_tdata, output o_iop2_msg_tvalid, output o_iop2_msg_tlast, input o_iop2_msg_tready,
     input [63:0] i_iop2_msg_tdata, input i_iop2_msg_tvalid, input i_iop2_msg_tlast, output i_iop2_msg_tready,
@@ -521,26 +516,52 @@ module bus_int
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(local_addr),.changed());
 
+  // Base width of crossbar based on fixed components (ethernet, PCIE, etc)
+  localparam CROSSBAR_IN = 5;
+  localparam CROSSBAR_OUT = 5;
 
-   localparam 		 CROSSBAR_IN = 8;
-   localparam 		 CROSSBAR_OUT = 8;
-
-   axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN), .NUM_OUTPUTS(CROSSBAR_OUT)) axi_crossbar
-     (.clk(clk), .reset(reset), .clear(0),
-      .local_addr(local_addr),
-      .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
-      .i_tdata({pcii_tdata,ce2i_tdata,ce1i_tdata,ce0i_tdata,r1i_tdata,r0i_tdata,e2v1_tdata,e2v0_tdata}),
-      .i_tlast({pcii_tlast,ce2i_tlast,ce1i_tlast,ce0i_tlast,r1i_tlast,r0i_tlast,e2v1_tlast,e2v0_tlast}),
-      .i_tvalid({pcii_tvalid,ce2i_tvalid,ce1i_tvalid,ce0i_tvalid,r1i_tvalid,r0i_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .i_tready({pcii_tready,ce2i_tready,ce1i_tready,ce0i_tready,r1i_tready,r0i_tready,e2v1_tready,e2v0_tready}),
-      .o_tdata({pcio_tdata,ce2o_tdata,ce1o_tdata,ce0o_tdata,r1o_tdata,r0o_tdata,v2e1_tdata,v2e0_tdata}),
-      .o_tlast({pcio_tlast,ce2o_tlast,ce1o_tlast,ce0o_tlast,r1o_tlast,r0o_tlast,v2e1_tlast,v2e0_tlast}),
-      .o_tvalid({pcio_tvalid,ce2o_tvalid,ce1o_tvalid,ce0o_tvalid,r1o_tvalid,r0o_tvalid,v2e1_tvalid,v2e0_tvalid}),
-      .o_tready({pcio_tready,ce2o_tready,ce1o_tready,ce0o_tready,r1o_tready,r0o_tready,v2e1_tready,v2e0_tready}),
-      .pkt_present({pcii_tvalid,ce2i_tvalid,ce1i_tvalid,ce0i_tvalid,r1i_tvalid,r0i_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
-      .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar)
-      );
+  // Generate crossbar based on the inclusion of compute engines
+  generate
+    if (NUM_CE == 0) begin
+      axi_crossbar #(
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN), .NUM_OUTPUTS(CROSSBAR_OUT))
+      inst_axi_crossbar (
+        .clk(clk), .reset(reset), .clear(0),
+        .local_addr(local_addr),
+        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
+        .i_tdata({r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
+        .i_tlast({r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
+        .i_tvalid({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .i_tready({r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
+        .o_tdata({r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
+        .o_tlast({r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
+        .o_tvalid({r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
+        .o_tready({r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
+        .pkt_present({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
+        .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar));
+    end
+    else begin
+      // Note: The custom accelerator inputs / outputs bitwidth grow based on CROSSBAR_IN / CROSSBAR_OUT
+      axi_crossbar #(
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN+NUM_CE), .NUM_OUTPUTS(CROSSBAR_OUT+NUM_CE))
+      inst_axi_crossbar (
+        .clk(clk), .reset(reset), .clear(0),
+        .local_addr(local_addr),
+        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
+        .i_tdata({ce_i_tdata,r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
+        .i_tlast({ce_i_tlast,r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
+        .i_tvalid({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .i_tready({ce_i_tready,r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
+        .o_tdata({ce_o_tdata,r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
+        .o_tlast({ce_o_tlast,r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
+        .o_tvalid({ce_o_tvalid,r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
+        .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
+        .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
+        .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar));
+    end
+  endgenerate
 
 /*
 assign debug2 = {
