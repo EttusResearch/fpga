@@ -9,17 +9,17 @@ module capture_ddrlvds
   #(parameter WIDTH=7,
     parameter X300=0)
    (input clk,
-    input reset,
     input ssclk_p,
     input ssclk_n,
     input [WIDTH-1:0] in_p,
     input [WIDTH-1:0] in_n,
-    output [(2*WIDTH)-1:0] out);
+    output reg [(2*WIDTH)-1:0] out);
 
    wire [WIDTH-1:0] 	   ddr_dat;
    wire 		   ssclk;
    wire [(2*WIDTH)-1:0]    out_pre1;
-   wire 		   ssclk_bufio1, ssclk_bufio2, ssclk_bufr, ssclk_bufmr;
+   reg  [(2*WIDTH)-1:0]    out_pre2;
+   wire 		   ssclk_bufio1, ssclk_bufio2, ssclk_bufmr;
 
    IBUFGDS #(.DIFF_TERM("TRUE"))
    clkbuf (.O(ssclk), .I(ssclk_p), .IB(ssclk_n));
@@ -33,19 +33,11 @@ module capture_ddrlvds
 		    .I(ssclk_bufmr),
 		    .O(ssclk_bufio1)
 		   );
+
    BUFIO clkbufio2 (
 		    .I(ssclk_bufmr),
 		    .O(ssclk_bufio2)
 		    );
-
-   BUFR
-     #(.SIM_DEVICE("7SERIES"),
-       .BUFR_DIVIDE("BYPASS"))
-   clkbufr (
-	    .I(ssclk_bufmr),
-	    .O(ssclk_bufr)
-	    );
-
 
    genvar 		   i;
 
@@ -68,34 +60,10 @@ module capture_ddrlvds
 	end
    endgenerate
 
+   always @(posedge clk)
+     out_pre2 <= out_pre1;
 
-
-   reg rd_en;
-   wire full, empty, almost_empty;
-
-
-   input_sample_fifo  input_sample_fifo_i
-     (
-      .rst(reset), // input rst
-      .wr_clk(ssclk_bufr), // input wr_clk
-      .rd_clk(clk), // input rd_clk
-      .din(out_pre1), // input [27 : 0] din
-      .wr_en(1'b1), // input wr_en
-      .rd_en(rd_en), // input rd_en
-      .dout(out), // output [27 : 0] dout
-      .full(full), // output full
-      .empty(empty), // output empty
-      .almost_empty(almost_empty) // output almost_empty
-      );
-
-
-   always @(posedge clk) begin
-      if (reset)
-	rd_en <= 0;
-      else if (~almost_empty)
-	rd_en <= 1;
-      else if (empty)
-	rd_en <= 0;
-   end
+   always @(posedge clk)
+     out <= out_pre2;
 
 endmodule // capture_ddrlvds
