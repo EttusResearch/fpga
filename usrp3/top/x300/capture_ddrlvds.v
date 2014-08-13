@@ -1,9 +1,10 @@
 //
-// Copyright 2011 Ettus Research LLC
+// Copyright 2011-2014 Ettus Research LLC
 //
 
-
-
+// The two clocks are aligned externally in order to eliminate the need for a FIFO.
+// A FIFO cannot be used to transition between clock domains because it can cause
+// alignment issues between the output of multiple modules.
 
 module capture_ddrlvds
   #(parameter WIDTH=7,
@@ -61,9 +62,6 @@ module capture_ddrlvds
    endgenerate
 
    always @(posedge clk)
-     out_pre2 <= out_pre1;
-
-   always @(posedge clk)
-     out <= out_pre2;
+     {out, out_pre2} <= {out_pre_2, out_pre1};
 
 endmodule // capture_ddrlvds
