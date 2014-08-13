@@ -62,6 +62,6 @@ module capture_ddrlvds
    endgenerate
 
    always @(posedge clk)
-     {out, out_pre2} <= {out_pre_2, out_pre1};
+     {out, out_pre2} <= {out_pre2, out_pre1};
 
 endmodule // capture_ddrlvds
