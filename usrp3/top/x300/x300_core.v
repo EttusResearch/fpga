@@ -210,7 +210,7 @@ module x300_core
    wire        r0_tx_tready_bi, r0_tx_tready_bo, r1_tx_tready_bi, r1_tx_tready_bo;
 
   // Compute Engine global connections
-  localparam NUM_CE = 3;
+  localparam NUM_CE = 11;
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE], ce_i_tdata[0:NUM_CE];
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
@@ -478,45 +478,23 @@ module x300_core
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //
-  // Simple converter as the first CE
+  // 11 FIFOs as CEs for testing.
   //
   ///////////////////////////////////////////////////////////////////////////////////////////////
-  noc_block_null_source #(
-    .NOC_ID(64'hAAAA_BBBB_CCCC_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_null_source (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_i_tdata[0]), .i_tlast(ce_i_tlast[0]), .i_tvalid(ce_i_tvalid[0]), .i_tready(ce_i_tready[0]),
-    .o_tdata(ce_o_tdata[0]), .o_tlast(ce_o_tlast[0]), .o_tvalid(ce_o_tvalid[0]), .o_tready(ce_o_tready[0]));
-
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // Simple FIR Filter CE
-  //
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  noc_block_fir_filter #(
-    .NOC_ID(64'hAAAA_BBBB_CCCC_0001),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_fir_filter (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_i_tdata[1]), .i_tlast(ce_i_tlast[1]), .i_tvalid(ce_i_tvalid[1]), .i_tready(ce_i_tready[1]),
-    .o_tdata(ce_o_tdata[1]), .o_tlast(ce_o_tlast[1]), .o_tvalid(ce_o_tvalid[1]), .o_tready(ce_o_tready[1]));
-
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // FIFO as CE2, for testing.  Too narrow to be practical, as it is only 32 bits, not 64.
-  //
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  noc_block_axi_fifo_loopback #(
-    .NOC_ID(64'hAAAA_BBBB_CCCC_0002),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_axi_fifo_loopback (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_i_tdata[2]), .i_tlast(ce_i_tlast[2]), .i_tvalid(ce_i_tvalid[2]), .i_tready(ce_i_tready[2]),
-    .o_tdata(ce_o_tdata[2]), .o_tlast(ce_o_tlast[2]), .o_tvalid(ce_o_tvalid[2]), .o_tready(ce_o_tready[2]));
+    // Flattern CE tdata arrays
+  genvar n;
+  generate
+    for (n = 0; n < NUM_CE; n = n + 1) begin
+      noc_block_axi_fifo_loopback #(
+        .NOC_ID(64'hF1F0_0000_0000_0000 + n),
+        .STR_SINK_FIFOSIZE(11))
+      inst_noc_block_axi_fifo_loopback (
+        .bus_clk(bus_clk), .bus_rst(bus_rst),
+        .ce_clk(bus_clk), .ce_rst(bus_rst),
+        .i_tdata(ce_i_tdata[n]), .i_tlast(ce_i_tlast[n]), .i_tvalid(ce_i_tvalid[n]), .i_tready(ce_i_tready[n]),
+        .o_tdata(ce_o_tdata[n]), .o_tlast(ce_o_tlast[n]), .o_tvalid(ce_o_tvalid[n]), .o_tready(ce_o_tready[n]));
+    end
+  endgenerate
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
