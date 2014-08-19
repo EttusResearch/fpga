@@ -127,7 +127,7 @@ module bus_int
    localparam RB_ETH_TYPE0    = 8'd04;
    localparam RB_ETH_TYPE1    = 8'd05;
    localparam RB_COMPAT_NUM   = 8'd06;
-
+   localparam RB_NUM_CE       = 8'd07;
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_FIFOFLAGS    = 8'd10;
@@ -332,6 +332,7 @@ module bus_int
 
    always @*
      casex (rb_addr)
+       RB_NUM_CE: rb_data = NUM_CE;
        RB_COMPAT_NUM: rb_data = {COMPAT_MAJOR, COMPAT_MINOR};
        RB_COUNTER: rb_data = counter;
        RB_SPI_RDY: rb_data = {31'b0, spi_ready};
