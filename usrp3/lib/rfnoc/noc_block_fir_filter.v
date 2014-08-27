@@ -5,7 +5,8 @@ module noc_block_fir_filter #(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
-  output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready
+  output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
+  output [63:0] debug
 );
 
   /////////////////////////////////////////////////////////////
@@ -35,14 +36,15 @@ module noc_block_fir_filter #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr_ce0), .set_stb(set_stb_ce0), .rb_data(64'd0),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
     // Stream Sink
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
-    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
+    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),,
+    .debug(debug));
 
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
@@ -80,26 +82,6 @@ module noc_block_fir_filter #(
     .m_axis_config_tdata(axis_config_tdata1),
     .m_axis_config_tvalid(axis_config_tvalid1),
     .m_axis_config_tready(axis_config_tready1));
-
-/*
-   simple_fir simple_fir
-     (.aresetn(~ce_rst), .aclk(ce_clk),
-      .s_axis_data_tvalid(pre_tvalid),
-      .s_axis_data_tready(pre_tready),
-      .s_axis_data_tlast(pre_tlast),
-      .s_axis_data_tdata(pre_tdata),
-      .m_axis_data_tvalid(post_tvalid),
-      .m_axis_data_tready(post_tready),
-      .m_axis_data_tlast(post_tlast),
-      .m_axis_data_tdata(post_tdata),
-      .s_axis_config_tdata(axis_config_tdata1),
-      .s_axis_config_tvalid(axis_config_tvalid1),
-      .s_axis_config_tready(axis_config_tready1),
-      .s_axis_reload_tdata(0),
-      .s_axis_reload_tvalid(1'b0),
-      .s_axis_reload_tlast(1'b0)
-      );
- */
 
    simple_fft simple_fft
      (.aresetn(~ce_rst), .aclk(ce_clk),
