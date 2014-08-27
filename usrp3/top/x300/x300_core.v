@@ -212,20 +212,19 @@ module x300_core
   // Compute Engine global connections
   localparam NUM_CE = 11;
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
-  wire [63:0]          ce_o_tdata[0:NUM_CE], ce_i_tdata[0:NUM_CE];
+  wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
-  wire [31:0]          set_data_ce[0:NUM_CE];
-  wire [7:0]           set_addr_ce[0:NUM_CE];
+  wire [63:0]          ce_debug[0:NUM_CE-1];
+  wire [31:0]          set_data_ce[0:NUM_CE-1];
+  wire [7:0]           set_addr_ce[0:NUM_CE-1];
   wire [NUM_CE-1:0]    set_stb_ce;
 
   // Flattern CE tdata arrays
   genvar k;
   generate
-    if (NUM_CE == 0) begin
-      for (k = 0; k < NUM_CE; k = k + 1) begin
-        assign ce_flat_o_tdata[k*64+63:0] = ce_o_tdata[k];
-        assign ce_flat_i_tdata[k*64+63:0] = ce_i_tdata[k];
-      end
+    for (k = 0; k < NUM_CE; k = k + 1) begin
+      assign ce_o_tdata[k] = ce_flat_o_tdata[k*64+63:k*64];
+      assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
     end
   endgenerate
 
@@ -235,7 +234,7 @@ module x300_core
    // assign eth1_tx_tready = 1'b1;
    //  assign eth1_rx_tvalid = 1'b0;
 
-   wire [63:0] debug_ce0, debug_ce1, debug_ce2, debug_r0, debug_r1;
+   wire [63:0] debug_r0, debug_r1;
 
 `ifndef NO_DRAM_FIFOS
    //////////////////////////////////////////////////////////
@@ -491,8 +490,9 @@ module x300_core
       inst_noc_block_axi_fifo_loopback (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .ce_clk(bus_clk), .ce_rst(bus_rst),
-        .i_tdata(ce_i_tdata[n]), .i_tlast(ce_i_tlast[n]), .i_tvalid(ce_i_tvalid[n]), .i_tready(ce_i_tready[n]),
-        .o_tdata(ce_o_tdata[n]), .o_tlast(ce_o_tlast[n]), .o_tvalid(ce_o_tvalid[n]), .o_tready(ce_o_tready[n]));
+        .i_tdata(ce_o_tdata[n]), .i_tlast(ce_o_tlast[n]), .i_tvalid(ce_o_tvalid[n]), .i_tready(ce_o_tready[n]),
+        .o_tdata(ce_i_tdata[n]), .o_tlast(ce_i_tlast[n]), .o_tvalid(ce_i_tvalid[n]), .o_tready(ce_i_tready[n]),
+        .debug(ce_debug[n]));
     end
   endgenerate
 
@@ -1398,15 +1398,14 @@ module x300_core
       );
  -----/\----- EXCLUDED -----/\----- */
 
-
    wire [35:0] CONTROL0;
    reg [255:0] TRIG0;
 
    always @(posedge bus_clk)
      TRIG0 <= { { debug_r0 }, // 64 bits per line
-		{ debug_ce2 },
-		{ debug_ce1 },
-		{ debug_ce0 } };
+		{ ce_debug[2] },
+		{ ce_debug[1] },
+		{ ce_debug[0] } };
 
    chipscope_ila chipscope_ila_i0
      (
