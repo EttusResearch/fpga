@@ -83,8 +83,8 @@ module noc_block_fir_filter #(
     .m_axis_config_tvalid(axis_config_tvalid1),
     .m_axis_config_tready(axis_config_tready1));
 
-  simple_fir simple_fir (
-    .aresetn(~bus_rst), .aclk(bus_clk),
+  simple_fft simple_fft (
+    .aresetn(~ce_rst), .aclk(ce_clk),
     .s_axis_data_tvalid(pre_tvalid),
     .s_axis_data_tready(pre_tready),
     .s_axis_data_tlast(pre_tlast),
@@ -95,9 +95,6 @@ module noc_block_fir_filter #(
     .m_axis_data_tdata(post_tdata),
     .s_axis_config_tdata(axis_config_tdata1),
     .s_axis_config_tvalid(axis_config_tvalid1),
-    .s_axis_config_tready(axis_config_tready1),
-    .s_axis_reload_tdata(0),
-    .s_axis_reload_tvalid(1'b0),
-    .s_axis_reload_tlast(1'b0));
+    .s_axis_config_tready(axis_config_tready1));
 
 endmodule
