@@ -1,4 +1,3 @@
-
 module noc_block_axi_fifo_loopback #(
   parameter NOC_ID = 64'hF1F0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
@@ -15,8 +14,6 @@ module noc_block_axi_fifo_loopback #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire        ce_clk, ce_rst;
-
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
@@ -62,14 +59,9 @@ module noc_block_axi_fifo_loopback #(
   wire [31:0] pre_tdata, post_tdata;
   wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
 
-  /*
-  assign s2o_tready = 1'b1;  // dump everything coming to us
-  assign s2i_tvalid = 1'b0;  // don't send anything
-  */
-
-  simple_axi_wrapper #(
+  axi_wrapper #(
     .BASE(8))
-  axi_wrapper (
+  inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),

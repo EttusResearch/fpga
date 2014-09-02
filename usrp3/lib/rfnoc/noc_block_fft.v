@@ -1,5 +1,5 @@
-module noc_block_fir_filter #(
-  parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
+module noc_block_fft #(
+  parameter NOC_ID = 64'h0000_0003_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
@@ -14,8 +14,6 @@ module noc_block_fir_filter #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire        ce_clk, ce_rst;
-
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
@@ -31,8 +29,8 @@ module noc_block_fir_filter #(
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
   inst_noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .i_tdata(o_tdata), .i_tlast(o_tlast), .i_tvalid(o_tvalid), .i_tready(o_tready),
-    .o_tdata(i_tdata), .o_tlast(i_tlast), .o_tvalid(i_tvalid), .o_tready(i_tready),
+    .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+    .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
@@ -43,7 +41,7 @@ module noc_block_fir_filter #(
     // Stream Sink
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
-    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),,
+    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     .debug(debug));
 
   // Control Source Unused
@@ -64,9 +62,9 @@ module noc_block_fir_filter #(
   wire [31:0] axis_config_tdata1;
   wire        axis_config_tvalid1, axis_config_tready1;
 
-  simple_axi_wrapper #(
+  axi_wrapper #(
     .BASE(8))
-  axi_wrapper (
+  inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
@@ -83,7 +81,7 @@ module noc_block_fir_filter #(
     .m_axis_config_tvalid(axis_config_tvalid1),
     .m_axis_config_tready(axis_config_tready1));
 
-  simple_fft simple_fft (
+  simple_fft inst_simple_fft (
     .aresetn(~ce_rst), .aclk(ce_clk),
     .s_axis_data_tvalid(pre_tvalid),
     .s_axis_data_tready(pre_tready),

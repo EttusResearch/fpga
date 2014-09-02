@@ -12,6 +12,10 @@ simple_fft.v \
 simple_fft.xco \
 complex_multiplier.v \
 complex_multiplier.xco \
+complex_to_magphase.v \
+complex_to_magphase.xco \
+cordic_rotator.v \
+cordic_rotator.xco \
 ))
 
 

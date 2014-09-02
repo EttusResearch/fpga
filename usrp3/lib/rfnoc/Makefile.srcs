@@ -6,10 +6,26 @@
 # RFNoC Sources
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
+chdr_framer.v \
+chdr_deframer.v \
 noc_shell.v \
 simple_axi_wrapper.v \
+axi_wrapper.v \
 null_source.v \
 noc_block_axi_fifo_loopback.v \
 noc_block_fir_filter.v \
+noc_block_fft.v \
 noc_block_null_source.v \
+noc_block_schmidl_cox.v \
+schmidl_cox.v \
+split_stream.v \
+split_stream_fifo.v \
+conj.v \
+delay.v \
+complex_to_magsq.v \
+phase_acc.v \
+periodic_framer.v \
+threshold_scaled.v \
+moving_sum.v \
+peak_finder.v \
 ))

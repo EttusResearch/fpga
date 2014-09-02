@@ -14,8 +14,6 @@ module noc_block_null_source #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire        ce_clk, ce_rst;
-
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
@@ -63,7 +61,7 @@ module noc_block_null_source #(
 
   null_source #(
     .BASE(8))
-  null_source (.clk(ce_clk), .reset(ce_rst),
+  inst_null_source (.clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
 
