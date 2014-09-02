@@ -1,4 +1,4 @@
-module noc_block_null_source #(
+module noc_block_null_source_sink #(
   parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
   parameter STR_SINK_FIFOSIZE = 10)
 (
@@ -50,8 +50,8 @@ module noc_block_null_source #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
-  // Stream Sink Unused
-  assign str_sink_tready = 1'b1;  // dump everything coming to us
+  // Null Sink, dump everything coming to us
+  assign str_sink_tready = 1'b1;
 
   /////////////////////////////////////////////////////////////
   //

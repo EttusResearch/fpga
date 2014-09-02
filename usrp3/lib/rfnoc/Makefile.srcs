@@ -15,7 +15,7 @@ null_source.v \
 noc_block_axi_fifo_loopback.v \
 noc_block_fir_filter.v \
 noc_block_fft.v \
-noc_block_null_source.v \
+noc_block_null_source_sink.v \
 noc_block_schmidl_cox.v \
 schmidl_cox.v \
 split_stream.v \
