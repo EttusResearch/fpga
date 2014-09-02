@@ -93,6 +93,11 @@ ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gt_usrclk_source.v \
 ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser_gt.v \
 ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser.v \
 
+ifdef RFNOC
+  TOPSRCS+=rfnoc_ce_auto_inst.v
+  CUSTOM_DEFS+=RFNOC=1
+endif
+
 ifeq ($(FLOORPLAN), 1)
   ifeq ($(DEVICE), XC7K325T)
     TOP_SRCS+=floorplan_X300.ucf
@@ -135,7 +140,7 @@ $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
 $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(ETH_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
-$(AXI_SRCS) $(RADIO_SRCS) $(RFNOC_SRCS)
+$(AXI_SRCS) $(RADIO_SRCS) $(RFNOC_SRCS) $(LIBCOREGEN_SRCS)
 
 
 ##################################################

@@ -209,25 +209,6 @@ module x300_core
    wire        r0_tx_tvalid_bi, r0_tx_tvalid_bo, r1_tx_tvalid_bi, r1_tx_tvalid_bo;
    wire        r0_tx_tready_bi, r0_tx_tready_bo, r1_tx_tready_bi, r1_tx_tready_bo;
 
-  // Compute Engine global connections
-  localparam NUM_CE = 11;
-  wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
-  wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
-  wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
-  wire [63:0]          ce_debug[0:NUM_CE-1];
-  wire [31:0]          set_data_ce[0:NUM_CE-1];
-  wire [7:0]           set_addr_ce[0:NUM_CE-1];
-  wire [NUM_CE-1:0]    set_stb_ce;
-
-  // Flattern CE tdata arrays
-  genvar k;
-  generate
-    for (k = 0; k < NUM_CE; k = k + 1) begin
-      assign ce_o_tdata[k] = ce_flat_o_tdata[k*64+63:k*64];
-      assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
-    end
-  endgenerate
-
    // Radio Misc outputs before pipeline.
    wire [7:0]  misc_outs0, misc_outs1;
 
@@ -400,9 +381,18 @@ module x300_core
   always @(posedge ext_ref_clk) begin
     if (pps_del == 2'b01) pps_detect <= ~pps_detect;
   end
+  
+  
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  // RFNoC
+  //////////////////////////////////////////////////////////////////////////////////////////////
+    
+  // Automatically instantiated CEs source file created by RFNoC mod tool
+  `include "rfnoc_ce_auto_inst.v"
+  
 
   /////////////////////////////////////////////////////////////////////////////////
-  // Bus Int containing soft CPU control, routing fabric
+  // Bus Int containing soft CPU control and crossbar for RFNoC
   /////////////////////////////////////////////////////////////////////////////////
   bus_int #(.NUM_CE(NUM_CE)) inst_bus_int (
     .clk(bus_clk), .reset(bus_rst),
@@ -474,27 +464,6 @@ module x300_core
     // Debug
     .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
     .debug0(debug0), .debug1(debug1), .debug2(debug2));
-
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // 11 FIFOs as CEs for testing.
-  //
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Flattern CE tdata arrays
-  genvar n;
-  generate
-    for (n = 0; n < NUM_CE; n = n + 1) begin
-      noc_block_axi_fifo_loopback #(
-        .NOC_ID(64'hF1F0_0000_0000_0000 + n),
-        .STR_SINK_FIFOSIZE(11))
-      inst_noc_block_axi_fifo_loopback (
-        .bus_clk(bus_clk), .bus_rst(bus_rst),
-        .ce_clk(bus_clk), .ce_rst(bus_rst),
-        .i_tdata(ce_o_tdata[n]), .i_tlast(ce_o_tlast[n]), .i_tvalid(ce_o_tvalid[n]), .i_tready(ce_o_tready[n]),
-        .o_tdata(ce_i_tdata[n]), .o_tlast(ce_i_tlast[n]), .o_tvalid(ce_i_tvalid[n]), .o_tready(ce_i_tready[n]),
-        .debug(ce_debug[n]));
-    end
-  endgenerate
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
