@@ -19,7 +19,7 @@
   
   // Automatically instantiated CEs
   noc_block_schmidl_cox #(
-    .NOC_ID(64'h0000_0001_0000_0000),
+    .NOC_ID(64'h5CC0_0000_0000_0000),
     .STR_SINK_FIFOSIZE(11))
   inst_noc_block_schmidl_cox (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -29,7 +29,7 @@
     .debug(ce_debug[0]));
   
   noc_block_fir_filter #(
-    .NOC_ID(64'h0000_0002_0000_0000),
+    .NOC_ID(64'hF112_0000_0000_0000),
     .STR_SINK_FIFOSIZE(11))
   inst_noc_block_fir_filter (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -39,7 +39,7 @@
     .debug(ce_debug[1]));
 
   noc_block_fft #(
-    .NOC_ID(64'h0000_0003_0000_0000),
+    .NOC_ID(64'hFF70_0000_0000_0000),
     .STR_SINK_FIFOSIZE(11))
   inst_noc_block_fft (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -47,10 +47,20 @@
     .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
     .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
     .debug(ce_debug[2]));
+    
+  noc_block_null_source_sink #(
+    .NOC_ID(64'h0000_0000_0000_0000),
+    .STR_SINK_FIFOSIZE(11))
+  inst_noc_block_null_source_sink (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(bus_clk), .ce_rst(bus_rst),
+    .i_tdata(ce_o_tdata[3]), .i_tlast(ce_o_tlast[3]), .i_tvalid(ce_o_tvalid[3]), .i_tready(ce_o_tready[3]),
+    .o_tdata(ce_i_tdata[3]), .o_tlast(ce_i_tlast[3]), .o_tvalid(ce_i_tvalid[3]), .o_tready(ce_i_tready[3]),
+    .debug(ce_debug[3]));
   
   genvar n;
   generate
-    for (n = 3; n < NUM_CE; n = n + 1) begin
+    for (n = 4; n < NUM_CE; n = n + 1) begin
       noc_block_axi_fifo_loopback #(
         .NOC_ID(64'hF1F0_0000_0000_0000 + n),
         .STR_SINK_FIFOSIZE(11))
