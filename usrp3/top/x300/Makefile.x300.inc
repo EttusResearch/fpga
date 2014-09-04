@@ -65,10 +65,22 @@ capture_ddrlvds.v \
 gen_ddrlvds.v \
 radio.v \
 bus_int.v \
-gige_phy_mdio.v \
 x300.ucf \
 stc3.ucf \
 timing.ucf
+
+ONE_GIG_SRCS = $(COREGEN_ONE_GIG_SRCS) \
+gige_phy/gige_phy_mdio.v \
+gige_phy/gige_sfp_mdio_block.v \
+gige_phy/gige_sfp_mdio_reset_sync.v \
+gige_phy/gige_sfp_mdio_sync_block.v \
+gige_phy/transceiver/gige_sfp_mdio_transceiver.v \
+gige_phy/transceiver/gige_sfp_mdio_gtwizard.v \
+gige_phy/transceiver/gige_sfp_mdio_gtwizard_gt.v \
+gige_phy/transceiver/gige_sfp_mdio_gtwizard_init.v \
+gige_phy/transceiver/gige_sfp_mdio_tx_startup_fsm.v \
+gige_phy/transceiver/gige_sfp_mdio_rx_startup_fsm.v \
+gige_phy/transceiver/gige_sfp_mdio_recclk_monitor.v \
 
 ifeq ($(FLOORPLAN), 1)
   ifeq ($(DEVICE), XC7K325T)
@@ -85,7 +97,7 @@ ETH_SRCS+=$(TEN_GIG_SRCS) $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath x300_10ge.
 endif
 
 ifdef BUILD_1G
-ETH_SRCS+=$(ONE_GIG_SRCS) $(abspath x300_1ge.ucf)
+ETH_SRCS+=$(abspath $(ONE_GIG_SRCS)) $(abspath x300_1ge.ucf)
 endif
 
 ifdef ETH10G_PORT0

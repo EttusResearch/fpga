@@ -44,18 +44,8 @@ chipscope_icon_2port.v \
 chipscope_icon_2port.xco \
 ))
 
-ONE_GIG_SRCS =  $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
+COREGEN_ONE_GIG_SRCS = $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
 gige_sfp_mdio.v \
-gige_sfp_mdio/example_design/gige_sfp_mdio_block.v \
-gige_sfp_mdio/example_design/gige_sfp_mdio_reset_sync.v \
-gige_sfp_mdio/example_design/gige_sfp_mdio_sync_block.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_transceiver.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_gtwizard.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_gtwizard_gt.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_gtwizard_init.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_tx_startup_fsm.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_rx_startup_fsm.v \
-gige_sfp_mdio/example_design/transceiver/gige_sfp_mdio_recclk_monitor.v \
 ))
 
 TEN_GIG_SRCS =  $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
