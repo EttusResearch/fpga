@@ -12,6 +12,7 @@ CG_BUILD_DIR = $(BUILD_DIR)/coregen
 COREGEN_SRCS = $(abspath $(addprefix $(CG_BUILD_DIR)/, \
 input_sample_fifo.v \
 input_sample_fifo.xco \
+axi64_4k_2clk_fifo.v \
 axi64_8k_2clk_fifo.v \
 fifo_4k_2clk.v \
 radio_clk_gen.v \

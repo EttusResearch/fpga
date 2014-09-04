@@ -464,7 +464,7 @@ module eth_dispatch
     //---------------------------------------------------------
     // These FIFO's have to be fairly large to prevent any egress
     // port from backpressuring the input state machine.
-    // The ZPU and XO ports are inherently slow processors to they
+    // The ZPU and XO ports are inherently slow consumers so they
     // get a large buffer. The VITA port is fast but high throughput
     // so even that needs a large FIFO.
     
