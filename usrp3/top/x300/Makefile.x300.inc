@@ -82,6 +82,15 @@ gige_phy/transceiver/gige_sfp_mdio_tx_startup_fsm.v \
 gige_phy/transceiver/gige_sfp_mdio_rx_startup_fsm.v \
 gige_phy/transceiver/gige_sfp_mdio_recclk_monitor.v \
 
+TEN_GIG_SRCS = $(COREGEN_TEN_GIG_SRCS) \
+ten_gige_phy/ten_gig_eth_pcs_pma_x300_top.v \
+ten_gige_phy/ten_gig_eth_pcs_pma_x300_top.ucf \
+ten_gige_phy/ten_gig_eth_pcs_pma_block.v \
+ten_gige_phy/ten_gig_eth_pcs_pma_mod.v \
+ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gt_usrclk_source.v \
+ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser_gt.v \
+ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser.v \
+
 ifeq ($(FLOORPLAN), 1)
   ifeq ($(DEVICE), XC7K325T)
     TOP_SRCS+=floorplan_X300.ucf
@@ -93,7 +102,7 @@ ifeq ($(FLOORPLAN), 1)
 endif
 
 ifdef BUILD_10G
-ETH_SRCS+=$(TEN_GIG_SRCS) $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath x300_10ge.ucf)
+ETH_SRCS+=$(abspath $(TEN_GIG_SRCS)) $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath x300_10ge.ucf)
 endif
 
 ifdef BUILD_1G

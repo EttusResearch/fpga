@@ -48,15 +48,8 @@ COREGEN_ONE_GIG_SRCS = $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
 gige_sfp_mdio.v \
 ))
 
-TEN_GIG_SRCS =  $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
+COREGEN_TEN_GIG_SRCS =  $(abspath $(addprefix $(CG_SOURCE_DIR)/, \
 ten_gig_eth_pcs_pma.v \
-ten_gig_eth_pcs_pma/example_design/ten_gig_eth_pcs_pma_x300_top.v \
-ten_gig_eth_pcs_pma/example_design/ten_gig_eth_pcs_pma_x300_top.ucf \
-ten_gig_eth_pcs_pma/example_design/ten_gig_eth_pcs_pma_block.v \
-ten_gig_eth_pcs_pma/example_design/ten_gig_eth_pcs_pma_mod.v \
-ten_gig_eth_pcs_pma/example_design/gtx/ten_gig_eth_pcs_pma_gt_usrclk_source.v \
-ten_gig_eth_pcs_pma/example_design/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser_gt.v \
-ten_gig_eth_pcs_pma/example_design/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser.v \
 ))
 
 #make rule to regenerate bootram when the coe file is changed
