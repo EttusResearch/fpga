@@ -65,7 +65,6 @@ capture_ddrlvds.v \
 gen_ddrlvds.v \
 radio.v \
 bus_int.v \
-gige_phy.v \
 gige_phy_mdio.v \
 x300.ucf \
 stc3.ucf \
