@@ -45,7 +45,7 @@ module window
    complex_multiplier cmult1
      (.aclk(clk), .aresetn(~reset),
       .s_axis_a_tdata({n3_tdata[15:0], n3_tdata[31:16]}), .s_axis_a_tlast(n3_tlast), .s_axis_a_tvalid(n3_tvalid), .s_axis_a_tready(n3_tready),
-      .s_axis_b_tdata({n1_tdata[15:0], n1_tdata[31:16]}), .s_axis_b_tlast(n1_tlast), .s_axis_b_tvalid(n1_tvalid), .s_axis_b_tready(n1_tready),
+      .s_axis_b_tdata({n0_tdata[15:0], n0_tdata[31:16]}), .s_axis_b_tlast(n0_tlast), .s_axis_b_tvalid(n0_tvalid), .s_axis_b_tready(n0_tready),
       .s_axis_ctrl_tdata(8'd0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
       .m_axis_dout_tdata({o_tdata[15:0], o_tdata[31:16]}), .m_axis_dout_tlast(o_tlast), .m_axis_dout_tvalid(o_tvalid), .m_axis_dout_tready(o_tready));
 

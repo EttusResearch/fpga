@@ -31,5 +31,5 @@ peak_finder.v \
 noc_block_window.v \
 window.v \
 counter.v \
-ram_to_counter.v \
+ram_to_fifo.v \
 ))
