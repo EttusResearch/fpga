@@ -157,19 +157,16 @@ MAP_PROPERTIES = \
 "Allow Logic Optimization Across Hierarchy" TRUE \
 "Pack I/O Registers/Latches into IOBs" "For Inputs and Outputs" \
 "Combinatorial Logic Optimization" TRUE \
-"Register Duplication" TRUE \
-"Optimization Strategy (Cover Mode)" Speed \
-"Map Effort Level" High \
-"Extra Effort" Normal \
-"Perform Timing-Driven Packing and Placement" TRUE \
-"Enable Multi-Threading 2" \
-"Starting Placer Cost Table (1-100)" $$(( $$RANDOM % 100 + 1 ))
-#"Map to Input Functions" 4 \
+"Register Duplication" On \
+"Placer Effort Level" High \
+"Placer Extra Effort" Normal \
+"Enable Multi-Threading" 2 \
+"Starting Placer Cost Table (1-100)" $( $(RANDOM) % 100 + 1 )
 
 PLACE_ROUTE_PROPERTIES = \
 "Place & Route Effort Level (Overall)" High \
 "Extra Effort (Highest PAR level only)" Normal \
-"Enable Multi-Threading 4"
+"Enable Multi-Threading" 4
 
 STATIC_TIMING_PROPERTIES = \
 "Number of Paths in Error/Verbose Report" 10 \
