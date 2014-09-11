@@ -70,7 +70,7 @@
   
   genvar n;
   generate
-    for (n = 0; n < NUM_CE-5; n = n + 1) begin
+    for (n = 5; n < NUM_CE; n = n + 1) begin
       noc_block_axi_fifo_loopback #(
         .NOC_ID(64'hF1F0_0000_0000_0000 + n),
         .STR_SINK_FIFOSIZE(11))
