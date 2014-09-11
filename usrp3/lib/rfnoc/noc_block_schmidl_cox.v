@@ -1,5 +1,5 @@
 module noc_block_schmidl_cox #(
-  parameter NOC_ID = 64'h0000_0001_0000_0000,
+  parameter NOC_ID = 64'h5CC0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
