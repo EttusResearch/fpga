@@ -28,4 +28,7 @@ periodic_framer.v \
 threshold_scaled.v \
 moving_sum.v \
 peak_finder.v \
+window.v \
+counter.v \
+ram_to_counter.v \
 ))
