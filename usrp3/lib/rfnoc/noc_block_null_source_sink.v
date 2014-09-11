@@ -1,5 +1,5 @@
 module noc_block_null_source_sink #(
-  parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
+  parameter NOC_ID = 64'h0000_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
@@ -29,8 +29,8 @@ module noc_block_null_source_sink #(
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
   inst_noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .i_tdata(o_tdata), .i_tlast(o_tlast), .i_tvalid(o_tvalid), .i_tready(o_tready),
-    .o_tdata(i_tdata), .o_tlast(i_tlast), .o_tvalid(i_tvalid), .o_tready(i_tready),
+    .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+    .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink

@@ -9,7 +9,7 @@ module noc_block_axi_fifo_loopback #(
   output [63:0] debug
 );
 
-  /////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   //
   // RFNoC Shell
   //
@@ -44,21 +44,22 @@ module noc_block_axi_fifo_loopback #(
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     .debug(debug));
 
-  // Control Source Unused
-  assign cmdout_tdata = 64'd0;
-  assign cmdout_tlast = 1'b0;
-  assign cmdout_tvalid = 1'b0;
-  assign ackin_tready = 1'b1;
-
-  /////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   //
-  // User code
+  // AXI Wrapper
+  // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-
-  wire [31:0] pre_tdata, post_tdata;
-  wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
-
+  wire [31:0] m_axis_data_tdata;
+  wire        m_axis_data_tlast;
+  wire        m_axis_data_tvalid;
+  wire        m_axis_data_tready;
+  
+  wire [31:0] s_axis_data_tdata;
+  wire        s_axis_data_tlast;
+  wire        s_axis_data_tvalid;
+  wire        s_axis_data_tready;
+  
   axi_wrapper #(
     .BASE(8))
   inst_axi_wrapper (
@@ -66,21 +67,37 @@ module noc_block_axi_fifo_loopback #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
-    .m_axis_data_tdata(pre_tdata),
-    .m_axis_data_tlast(pre_tlast),
-    .m_axis_data_tvalid(pre_tvalid),
-    .m_axis_data_tready(pre_tready),
-    .s_axis_data_tdata(post_tdata),
-    .s_axis_data_tlast(post_tlast),
-    .s_axis_data_tvalid(post_tvalid),
-    .s_axis_data_tready(post_tready));
+    .m_axis_data_tdata(m_axis_data_tdata),
+    .m_axis_data_tlast(m_axis_data_tlast),
+    .m_axis_data_tvalid(m_axis_data_tvalid),
+    .m_axis_data_tready(m_axis_data_tready),
+    .s_axis_data_tdata(s_axis_data_tdata),
+    .s_axis_data_tlast(s_axis_data_tlast),
+    .s_axis_data_tvalid(s_axis_data_tvalid),
+    .s_axis_data_tready(s_axis_data_tready),
+    .m_axis_config_tdata(),
+    .m_axis_config_tlast(),
+    .m_axis_config_tvalid(), 
+    .m_axis_config_tready());
+
+  ////////////////////////////////////////////////////////////
+  //
+  // User code
+  //
+  ////////////////////////////////////////////////////////////
+
+  // Control Source Unused
+  assign cmdout_tdata = 64'd0;
+  assign cmdout_tlast = 1'b0;
+  assign cmdout_tvalid = 1'b0;
+  assign ackin_tready = 1'b1;
 
   axi_fifo #(
     .WIDTH(33), .SIZE(12))
   inst_axi_fifo (
     .clk(ce_clk), .reset(ce_rst),
-    .i_tdata({pre_tlast,pre_tdata}), .i_tvalid(pre_tvalid), .i_tready(pre_tready),
-    .o_tdata({post_tlast,post_tdata}), .o_tvalid(post_tvalid), .o_tready(post_tready),
+    .i_tdata({m_axis_data_tlast,m_axis_data_tdata}), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
+    .o_tdata({s_axis_data_tlast,s_axis_data_tdata}), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready),
     .space(), .occupied());
 
 endmodule

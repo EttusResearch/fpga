@@ -1,5 +1,5 @@
 module noc_block_fft #(
-  parameter NOC_ID = 64'h0000_0003_0000_0000,
+  parameter NOC_ID = 64'hFF70_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
@@ -44,55 +44,73 @@ module noc_block_fft #(
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     .debug(debug));
 
+  ////////////////////////////////////////////////////////////
+  //
+  // AXI Wrapper
+  // Convert RFNoC Shell interface into AXI stream interface
+  //
+  ////////////////////////////////////////////////////////////
+  localparam NUM_AXI_CONFIG_BUS = 1;
+  
+  wire [31:0] m_axis_data_tdata;
+  wire        m_axis_data_tlast;
+  wire        m_axis_data_tvalid;
+  wire        m_axis_data_tready;
+  
+  wire [31:0] s_axis_data_tdata;
+  wire        s_axis_data_tlast;
+  wire        s_axis_data_tvalid;
+  wire        s_axis_data_tready;
+  
+  wire [31:0] m_axis_config_tdata;
+  wire        m_axis_config_tvalid;
+  wire        m_axis_config_tready;
+  
+  axi_wrapper #(
+    .BASE(8),
+    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
+  inst_axi_wrapper (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
+    .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
+    .m_axis_data_tdata(m_axis_data_tdata),
+    .m_axis_data_tlast(m_axis_data_tlast),
+    .m_axis_data_tvalid(m_axis_data_tvalid),
+    .m_axis_data_tready(m_axis_data_tready),
+    .s_axis_data_tdata(s_axis_data_tdata),
+    .s_axis_data_tlast(s_axis_data_tlast),
+    .s_axis_data_tvalid(s_axis_data_tvalid),
+    .s_axis_data_tready(s_axis_data_tready),
+    .m_axis_config_tdata(m_axis_config_tdata),
+    .m_axis_config_tlast(),
+    .m_axis_config_tvalid(m_axis_config_tvalid), 
+    .m_axis_config_tready(m_axis_config_tready));
+  
+  ////////////////////////////////////////////////////////////
+  //
+  // User code
+  //
+  ////////////////////////////////////////////////////////////
+  
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
   assign cmdout_tlast = 1'b0;
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
-  /////////////////////////////////////////////////////////////
-  //
-  // User code
-  //
-  ////////////////////////////////////////////////////////////
-
-  wire [31:0] pre_tdata, post_tdata;
-  wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
-
-  wire [31:0] axis_config_tdata1;
-  wire        axis_config_tvalid1, axis_config_tready1;
-
-  axi_wrapper #(
-    .BASE(8))
-  inst_axi_wrapper (
-    .clk(ce_clk), .reset(ce_rst),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
-    .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
-    .m_axis_data_tdata(pre_tdata),
-    .m_axis_data_tlast(pre_tlast),
-    .m_axis_data_tvalid(pre_tvalid),
-    .m_axis_data_tready(pre_tready),
-    .s_axis_data_tdata(post_tdata),
-    .s_axis_data_tlast(post_tlast),
-    .s_axis_data_tvalid(post_tvalid),
-    .s_axis_data_tready(post_tready),
-    .m_axis_config_tdata(axis_config_tdata1),
-    .m_axis_config_tvalid(axis_config_tvalid1),
-    .m_axis_config_tready(axis_config_tready1));
-
   simple_fft inst_simple_fft (
     .aresetn(~ce_rst), .aclk(ce_clk),
-    .s_axis_data_tvalid(pre_tvalid),
-    .s_axis_data_tready(pre_tready),
-    .s_axis_data_tlast(pre_tlast),
-    .s_axis_data_tdata(pre_tdata),
-    .m_axis_data_tvalid(post_tvalid),
-    .m_axis_data_tready(post_tready),
-    .m_axis_data_tlast(post_tlast),
-    .m_axis_data_tdata(post_tdata),
-    .s_axis_config_tdata(axis_config_tdata1),
-    .s_axis_config_tvalid(axis_config_tvalid1),
-    .s_axis_config_tready(axis_config_tready1));
+    .s_axis_data_tvalid(m_axis_data_tvalid),
+    .s_axis_data_tready(m_axis_data_tready),
+    .s_axis_data_tlast(m_axis_data_tlast),
+    .s_axis_data_tdata(m_axis_data_tdata),
+    .m_axis_data_tvalid(s_axis_data_tvalid),
+    .m_axis_data_tready(s_axis_data_tready),
+    .m_axis_data_tlast(s_axis_data_tlast),
+    .m_axis_data_tdata(s_axis_data_tdata),
+    .s_axis_config_tdata(m_axis_config_tdata),
+    .s_axis_config_tvalid(m_axis_config_tvalid),
+    .s_axis_config_tready(m_axis_config_tready));
 
 endmodule
