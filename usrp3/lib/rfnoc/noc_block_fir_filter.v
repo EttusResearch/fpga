@@ -82,7 +82,8 @@ module noc_block_fir_filter #(
   
   axi_wrapper #(
     .BASE(8),
-    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
+    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
+    .CONFIG_BUS_FIFO_DEPTH(6)) // Need deeper FIFO to prevent overflow when configuring coefficients
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
