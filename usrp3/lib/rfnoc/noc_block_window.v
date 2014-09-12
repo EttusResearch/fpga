@@ -1,5 +1,5 @@
 module noc_block_window #(
-  parameter NOC_ID = 64'hD053_0000_0000_0000,
+  parameter NOC_ID = 64'hD05E_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
@@ -103,7 +103,22 @@ module noc_block_window #(
   assign ackin_tready = 1'b1;
   
   localparam MAX_WINDOW_SIZE = 2048;
-
+  localparam RB_ADDR_WIDTH = 3;
+  
+  wire [RB_ADDR_WIDTH-1:0] rb_addr;
+  setting_reg #(
+    .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH)) 
+  sr_rdback (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(rb_addr), .changed());
+  
+  // Readback register for maximum window size
+  always @*
+    case(rb_addr)
+      3'd0    : rb_data <= {MAX_WINDOW_SIZE};
+      default : rb_data <= 64'h0BADC0DE0BADC0DE;
+  endcase
+  
   window #(
     .BASE(32),
     .MAX_LOG2_OF_WINDOW_SIZE($clog2(MAX_WINDOW_SIZE)))
