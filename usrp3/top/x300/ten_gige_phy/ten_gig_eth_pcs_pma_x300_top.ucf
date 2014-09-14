@@ -43,61 +43,23 @@
 ##
 ## THIS COPYRIGHT NOTICE AND DISCLAIMER MUST BE RETAINED AS
 ## PART OF THIS FILE AT ALL TIMES.
-
 #######################################################################
 # Clock frequencies/periods and clock management                      #
 #                                                                     #
 #######################################################################
-NET "*sfp_clk" TNM_NET="refclk";
-
-TIMESPEC "TS_refclk" = PERIOD "refclk" 6400 ps;
-
-NET "*clk156_buf*" TNM_NET="clk156";
-
-TIMESPEC "TS_clk156" = PERIOD "clk156" 6400 ps;
-
-NET "*gt0_rxoutclk_i" TNM_NET="rxoutclk";
-
-TIMESPEC "TS_rxoutclk" = PERIOD "rxoutclk" 3103 ps;
-
-NET "*gt0_txoutclk_i" TNM_NET="txoutclk";
-
-TIMESPEC "TS_txoutclk" = PERIOD "txoutclk" 3103 ps;
-
-NET "*txclk322" TNM_NET="txclk322";
-
-TIMESPEC "TS_txclk322" = PERIOD "txclk322" 3103 ps;
-
-NET "*rxclk322" TNM_NET="rxusrclk2";
-
-TIMESPEC "TS_rxusrclk2" = PERIOD "rxusrclk2" 3103 ps;
-
-NET "*rxusrclk2_en156*" TNM_NET = FFS "rxusrclk_en_grp";
-
-TIMESPEC "TS_rx_multiclk" = FROM "rxusrclk_en_grp" to "rxusrclk_en_grp" TS_rxusrclk2*2;
-
-NET "*dclk_buf" TNM_NET="dclk";
-
-TIMESPEC "TS_dclk" = PERIOD "dclk" TS_clk156*2;
-
+#NET "*gt0_rxoutclk_i" TNM_NET="rxoutclk";
+#TIMESPEC "TS_rxoutclk" = PERIOD "rxoutclk" 3103 ps;
+#NET "*gt0_txoutclk_i" TNM_NET="txoutclk";
+#TIMESPEC "TS_txoutclk" = PERIOD "txoutclk" 3103 ps;
 # Edit these constraints to select the correct transceiver for your design
 #INST *gtxe2_i LOC=GTXE2_CHANNEL_X0Y12;
 #INST *gtxe2_i LOC=GTXE2_CHANNEL_X0Y0;
 #INST "*gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y0";
-# IJB Experimental dual 10G declaration
-#INST "*ten_gig_eth_pcs_pma_b250_top_port0*gtxe2_i"  LOC=GTXE2_CHANNEL_X0Y0;
-#INST "*ten_gig_eth_pcs_pma_b250_top_port0*gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y0";
-#INST "ten_gig_eth_pcs_pma_b250_top_port0/ten_gig_eth_pcs_pma_block/gtwizard_10gbaser_i/gtxe2_i"  LOC=GTXE2_CHANNEL_X0Y0;
-#INST "ten_gig_eth_pcs_pma_b250_top_port0/ten_gig_eth_pcs_pma_block/gtwizard_10gbaser_i/gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y0";
-#INST "ten_gig_eth_pcs_pma_b250_top_port1/ten_gig_eth_pcs_pma_block/gtwizard_10gbaser_i/gtxe2_i"  LOC=GTXE2_CHANNEL_X0Y4;
-#INST "ten_gig_eth_pcs_pma_b250_top_port1/ten_gig_eth_pcs_pma_block/gtwizard_10gbaser_i/gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y1";
 # JAB moved this to individual port ucfs in top level
 #INST "*port0/*gtxe2_i"  LOC=GTXE2_CHANNEL_X0Y0;
 #INST "*port0/*gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y0";
 #INST "*port1/*gtxe2_i"  LOC=GTXE2_CHANNEL_X0Y4;
 #INST "*port1/*gtxe2_common_0_i" LOC = "GTXE2_COMMON_X0Y1";
-
-
 
 NET "*cable_pull_reset" MAXDELAY = 2.0 ns;
 NET "*cable_unpull_reset" MAXDELAY = 2.0 ns;
@@ -110,17 +72,14 @@ NET "*elastic_buffer_i?can_insert_wra" TIG;
 NET "*wr_gray*<?>" MAXDELAY = 6.0 ns;
 NET "*rd_lastgray*<?>" MAXDELAY = 6.0 ns;
 ###################################################################
+NET "*sfp_clk" TNM_NET="refclk";
+NET "*clk156_buf*" TNM_NET="clk156";
+NET "*rxclk322" TNM_NET="rxusrclk2";
+NET "*txclk322" TNM_NET="txclk322";
 
 TIMESPEC "TS_rxusrclk2_to_clk156" = FROM rxusrclk2 TO clk156 TIG;
-
 TIMESPEC "TS_rxusrclk2_to_txclk322" = FROM rxusrclk2 TO txclk322 TIG;
-
 TIMESPEC "TS_clk156_to_txclk322" = FROM clk156 TO txclk322 TIG;
-
 TIMESPEC "TS_clk156_to_refclk" = FROM clk156 TO refclk TIG;
-
 TIMESPEC "TS_txclk322_to_clk156" = FROM txclk322 TO clk156 TIG;
-
 TIMESPEC "TS_rxusrclk2_to_refclk" = FROM rxusrclk2 TO refclk TIG;
-
-
