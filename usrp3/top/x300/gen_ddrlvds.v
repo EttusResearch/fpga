@@ -24,7 +24,7 @@ module gen_ddrlvds (
    input sync_dacs
 );
 
-   localparam SYNC_CYCLES = 3'd4;
+   localparam SYNC_PULSE_WIDTH = 3'd2;
 
    //
    // Figure out the 1X clock level
@@ -79,7 +79,7 @@ module gen_ddrlvds (
       
       // Sample phase to determine when 1x clock edges occur.
       // To sync multiple AD9146 DAC's an extended assertion of FRAME is required,
-      // when sync flag set, squash one frame assertion which causes a SYNC_CYCLES+1 word assertion of FRAME,
+      // when sync flag set, squash one frame assertion which causes a SYNC_PULSE_WIDTH+1 word assertion of FRAME,
       // also reset sync flag. "sync_dacs" comes from 1x clk and pulse lasts 2 2x clock cycles...this is accounted for.
       if (reset_2x) begin
          frame <= 0;
@@ -87,7 +87,7 @@ module gen_ddrlvds (
       end else begin
          frame <= (tx_clk_1x_level == TX_CLK_1X_LOW) | (sync_count != 3'd0);
          if ((tx_clk_1x_level == TX_CLK_1X_LOW) & sync_dacs_reg)
-            sync_count <= SYNC_CYCLES;
+            sync_count <= SYNC_PULSE_WIDTH;
          else if (sync_count > 3'd0)
             sync_count <= sync_count - 3'd1;
       end
