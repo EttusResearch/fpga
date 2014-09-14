@@ -150,7 +150,7 @@ SYNTHESIZE_PROPERTIES = \
 "Verilog Macros" "$(EXTRA_DEFS) $(CUSTOM_DEFS)"
 
 TRANSLATE_PROPERTIES = \
-"Macro Search Path" "$(shell pwd)/../../coregen/"
+"Macro Search Path" "$(shell pwd)/coregen"
 
 MAP_PROPERTIES = \
 "Generate Detailed MAP Report" TRUE \
