@@ -25,7 +25,7 @@ module counter
    
    assign o_tdata = count;
    assign o_tlast = (count >= max) | i_tlast;
-   assign o_tvalid = do_it;
+   assign o_tvalid = i_tvalid;
    assign i_tready = do_it;
    
 endmodule // counter
