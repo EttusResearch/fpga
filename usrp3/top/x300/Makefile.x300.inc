@@ -161,7 +161,7 @@ MAP_PROPERTIES = \
 "Placer Effort Level" High \
 "Placer Extra Effort" Normal \
 "Enable Multi-Threading" 2 \
-"Starting Placer Cost Table (1-100)" $( $(RANDOM) % 100 + 1 )
+"Starting Placer Cost Table (1-100)" $(shell awk 'BEGIN{srand();printf("%d", (100*rand()%100)+1)}') 
 
 PLACE_ROUTE_PROPERTIES = \
 "Place & Route Effort Level (Overall)" High \
