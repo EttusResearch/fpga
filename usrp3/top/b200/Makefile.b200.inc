@@ -69,6 +69,10 @@ timing.ucf \
 S6CLK2PIN.v \
 $(B200_COREGEN_SRCS)
 
+ifeq ($(NAME),B210)
+TOP_SRCS+=gpio.ucf
+endif
+
 SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) \
 $(TIMING_SRCS) $(OPENCORES_SRCS) \

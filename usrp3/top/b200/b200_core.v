@@ -24,43 +24,46 @@ module b200_core
     ////////////////////////////////////////////////////////////////////
     // bus interfaces
     ////////////////////////////////////////////////////////////////////
-    input bus_clk,
-    input bus_rst,
+    input 	  bus_clk,
+    input 	  bus_rst,
 
-    input [63:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
+    input [63:0]  tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
     output [63:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-    input [63:0] ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output ctrl_tready,
+    input [63:0]  ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output ctrl_tready,
     output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready,
 
     ////////////////////////////////////////////////////////////////////
     // radio interfaces
     ////////////////////////////////////////////////////////////////////
-    input radio_clk,
-    input radio_rst,
+    input 	  radio_clk,
+    input 	  radio_rst,
 
-    input [31:0] rx0, input [31:0] rx1,
+    input [31:0]  rx0, input [31:0] rx1,
     output [31:0] tx0, output [31:0] tx1,
-    inout [31:0] fe_atr0,
-    inout [31:0] fe_atr1,
-    input pps_int, input pps_ext,
+    inout [31:0]  fe_atr0,
+    inout [31:0]  fe_atr1,
+`ifdef FP_GPIO
+    inout [7:0]   fp_gpio,
+`endif
+    input 	  pps_int, input pps_ext,
 
     ////////////////////////////////////////////////////////////////////
     // gpsdo uart
     ////////////////////////////////////////////////////////////////////
-    input rxd,
-    output txd,
+    input 	  rxd,
+    output 	  txd,
 
     ////////////////////////////////////////////////////////////////////
     // core interfaces
     ////////////////////////////////////////////////////////////////////
-    output [7:0] sen, output sclk, output mosi, input miso,
-    input [31:0] rb_misc,
+    output [7:0]  sen, output sclk, output mosi, input miso,
+    input [31:0]  rb_misc,
     output [31:0] misc_outs,
     ////////////////////////////////////////////////////////////////////
     // debug UART
     ////////////////////////////////////////////////////////////////////
-    output debug_txd, input debug_rxd,
-    input debug_scl, input debug_sda,
+    inout 	  debug_txd, inout debug_rxd,
+    input 	  debug_scl, input debug_sda,
     ////////////////////////////////////////////////////////////////////
     // debug signals
     ////////////////////////////////////////////////////////////////////
@@ -72,6 +75,7 @@ module b200_core
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_PPS_SEL   = 8'd48;
+
     localparam COMPAT_MAJOR      = 16'h0004;
     localparam COMPAT_MINOR      = 16'h0000;
 
@@ -272,11 +276,31 @@ module b200_core
      ******************************************************************/
    wire [63:0] radio0_debug;
    
-   radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE)) radio_0
+`ifndef FP_GPIO
+   wire [7:0]  discard3;
+`endif
+   
+`ifndef B200_UART_IS_GPIO
+   wire        discard1, discard2; 
+ `endif
+   
+   radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),.FP_GPIO(1)) radio_0
     (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
         .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps),
-
+     `ifdef FP_GPIO
+      `ifdef B200_UART_IS_GPIO
+     .fp_gpio({debug_rxd,debug_txd,fp_gpio}), // B210 no UART
+      `else
+     .fp_gpio({discard1,discard2,fp_gpio}), // B210 with UART
+      `endif
+     `else
+      `ifdef B200_UART_IS_GPIO
+     .fp_gpio({debug_rxd,debug_txd,discard3}), // B200 no UART
+      `else
+     .fp_gpio({discard1,discard2,discard3}), // B200 with UART
+      `endif
+     `endif // !`ifdef FP_GPIO  
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .tx_tdata(r0_tx_tdata), .tx_tlast(r0_tx_tlast), .tx_tvalid(r0_tx_tvalid), .tx_tready(r0_tx_tready),
         .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
@@ -285,15 +309,16 @@ module b200_core
 
         .debug(radio0_debug)
     );
+   
 
     /*******************************************************************
      * Radio 1
      ******************************************************************/
-    `ifdef B200_CAN_HAZ_R1
+    `ifdef B210 // B210 Has two radio instances.
     assign radio_st = 8'h2;
    wire [63:0] radio1_debug;
    
-    radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE)) radio_1
+    radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE), .FP_GPIO(0) ) radio_1
     (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
         .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps),
@@ -326,12 +351,13 @@ module b200_core
     assign r1_rx_tvalid = r1_tx_tvalid;
     assign r1_tx_tready = r1_tx_tready;
 
-    `endif // !`ifdef B200_CAN_HAZ_R1
+    `endif // !`ifdef B210
 
    /*******************************************************************
     * Debug UART for FX3
     ******************************************************************/
-   wire    debug_stb;
+   
+   wire        debug_stb;
    wire [31:0] debug_data;
    wire [7:0]  debug_addr;
    wire [31:0] debug_serial;
@@ -358,7 +384,15 @@ module b200_core
      wb_stb <= debug_stb ? 1 : ((wb_ack_o) ? 0 : wb_stb);
    
    
+  
+   wire        debug_txd_out, debug_rxd_in;
+ `ifndef B200_UART_IS_GPIO
+   assign debug_txd = debug_txd_out;
+ `endif
    
+   assign debug_rxd_in = debug_rxd;
+  
+  
    simple_uart debug_uart
      (
       .clk_i(bus_clk), 
@@ -372,11 +406,12 @@ module b200_core
       .dat_o(),
       .rx_int_o(), 
       .tx_int_o(), 
-      .tx_o(debug_txd), 
-      .rx_i(debug_rxd), 
+      .tx_o(debug_txd_out), 
+      .rx_i(debug_rxd_in), 
       .baud_o()
       );
-
+   
+  
    //
    // Debug
    //

@@ -9,16 +9,17 @@
 module radio_b200
   #(
     parameter RADIO_FIFO_SIZE = 13,
-    parameter SAMPLE_FIFO_SIZE = 11
+    parameter SAMPLE_FIFO_SIZE = 11,
+    parameter FP_GPIO = 0
   )
   (input radio_clk, input radio_rst,
-   input [31:0] rx, output [31:0] tx,
-   inout [31:0] fe_atr, input pps,
-
-   input bus_clk, input bus_rst,
-   input [63:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
+   input [31:0]  rx, output [31:0] tx,
+   inout [31:0]  fe_atr, input pps,
+   inout [9:0] 	 fp_gpio,
+   input 	 bus_clk, input bus_rst,
+   input [63:0]  tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
    output [63:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-   input [63:0] ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output ctrl_tready,
+   input [63:0]  ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output ctrl_tready,
    output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready,
 
    output [63:0] debug
@@ -109,16 +110,17 @@ module radio_b200
    localparam SR_TIME      = 8'd128;
    localparam SR_RX_FMT    = 8'd136;
    localparam SR_TX_FMT    = 8'd138;
-
+   localparam SR_FP_GPIO   = 8'd200;
 
    wire 	set_stb;
    wire [7:0] 	set_addr;
    wire [31:0] 	set_data;
    wire [31:0] 	test_readback;
+   wire [9:0] 	fp_gpio_readback;
    wire 	run_rx, run_tx;
 
    reg [63:0] 	rb_data;
-   wire [1:0] 	rb_addr;
+   wire [2:0] 	rb_addr;
 
    wire [63:0] vita_time, vita_time_lastpps;
    timekeeper #(.BASE(SR_TIME)) timekeeper
@@ -137,10 +139,12 @@ module radio_b200
 
    always @*
      case(rb_addr)
-       2'd0 : rb_data <= { 32'b0, test_readback };
-       2'd1 : rb_data <= vita_time;
-       2'd2 : rb_data <= vita_time_lastpps;
-       2'd3 : rb_data <= {tx, rx};
+       3'd0 : rb_data <= { 32'b0, test_readback };
+       3'd1 : rb_data <= vita_time;
+       3'd2 : rb_data <= vita_time_lastpps;
+       3'd3 : rb_data <= {tx, rx};
+       3'd6 : rb_data <= {54'h0,fp_gpio_readback};
+       
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 
@@ -153,7 +157,7 @@ module radio_b200
      (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(tx_idle), .changed());
 
-   setting_reg #(.my_addr(SR_READBACK), .awidth(8), .width(2)) sr_rdback
+   setting_reg #(.my_addr(SR_READBACK), .awidth(8), .width(3)) sr_rdback
      (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rb_addr), .changed());
 
@@ -163,6 +167,17 @@ module radio_b200
       .rx(run_rx), .tx(run_tx),
       .gpio(fe_atr), .gpio_readback() );
 
+   generate
+      if (FP_GPIO != 0) begin: add_fp_gpio
+   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(10)) fp_gpio_atr
+     (.clk(radio_clk),.reset(radio_rst),
+      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+      .rx(run_rx), .tx(run_tx),
+      .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
+      end
+   endgenerate
+   
+      
    // /////////////////////////////////////////////////////////////////////////////////
    //  TX Chain
 

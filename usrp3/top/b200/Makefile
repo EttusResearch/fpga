@@ -14,7 +14,12 @@ clean:
 B200:
 	make -f Makefile.b200.inc bin NAME=B200 DEVICE=XC6SLX75
 
+# To use J400 UART header as 2 GPIO pins @ 1.8V
+B200_UART_GPIO:
+	make -f Makefile.b200.inc bin NAME=B200 DEVICE=XC6SLX75 EXTRA_DEFS="B200_UART_IS_GPIO=1"
+
+# All revs of B210 have FP_GPIO enabled. These balls just not connected to traces on revs 1-5
 B210:
-	make -f Makefile.b200.inc bin NAME=B210 DEVICE=XC6SLX150 EXTRA_DEFS="B200_CAN_HAZ_R1=1"
+	make -f Makefile.b200.inc bin NAME=B210 DEVICE=XC6SLX150 EXTRA_DEFS="B210=1 FP_GPIO=1"
 
 .PHONY: all clean
