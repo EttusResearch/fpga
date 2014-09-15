@@ -59,6 +59,9 @@ module eth_interface
    //
    // Based on programmed rules, parse network headers and decide which internal destination(s) this packet will be forwarded to.
    //
+   wire [63:0]    e2v_tdata_int;
+   wire           e2v_tlast_int, e2v_tvalid_int, e2v_tready_int;
+
    wire [63:0]    e2z_tdata_int;
    wire [3:0]     e2z_tuser_int;
    wire           e2z_tlast_int, e2z_tvalid_int, e2z_tready_int;
@@ -68,10 +71,17 @@ module eth_interface
      (.clk(clk), .reset(reset), .clear(clear),
       .set_stb(set_stb), .set_addr(set_addr) , .set_data(set_data),
       .in_tdata(epg_tdata_int), .in_tuser(epg_tuser_int), .in_tlast(epg_tlast_int), .in_tvalid(epg_tvalid_int), .in_tready(epg_tready_int),
-      .vita_tdata(e2v_tdata), .vita_tlast(e2v_tlast), .vita_tvalid(e2v_tvalid), .vita_tready(e2v_tready),
+      .vita_tdata(e2v_tdata_int), .vita_tlast(e2v_tlast_int), .vita_tvalid(e2v_tvalid_int), .vita_tready(e2v_tready_int),
       .zpu_tdata(e2z_tdata_int), .zpu_tuser(e2z_tuser_int), .zpu_tlast(e2z_tlast_int), .zpu_tvalid(e2z_tvalid_int), .zpu_tready(e2z_tready_int),
       .xo_tdata(xo_tdata), .xo_tuser(xo_tuser), .xo_tlast(xo_tlast), .xo_tvalid(xo_tvalid), .xo_tready(xo_tready), // to other eth port
       .debug_flags(dispatch_debug_flags),.debug(debug));
+
+   axi_fifo_short #(.WIDTH(65)) e2v_pipeline_srl
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata({e2v_tlast_int,e2v_tdata_int}), .i_tvalid(e2v_tvalid_int), .i_tready(e2v_tready_int),
+      .o_tdata({e2v_tlast,e2v_tdata}), .o_tvalid(e2v_tvalid), .o_tready(e2v_tready),
+      .space(), .occupied()
+      );
 
    //
    // ZPU can be slow to respond (relative to packet wirespeed) so extra buffer for packets destined there so it doesn't back up.
