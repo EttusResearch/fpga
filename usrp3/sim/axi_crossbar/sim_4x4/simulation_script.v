@@ -139,7 +139,7 @@ initial
 	      //
 	      // addr 2.0 to Slave0
 	      for (seq_o0 = 30; seq_o0 < 40; seq_o0=seq_o0 + 1)
-		enqueue_chdr_pkt_count(0,seq_o0,32+seq_o0,1,'h45678901+seq_o0*100,0,0,`SID(0,0,2,0));
+		dequeue_chdr_pkt_count(0,seq_o0,32+seq_o0,1,'h45678901+seq_o0*100,0,0,`SID(0,0,2,0));
 	   end
 
 	   begin
@@ -154,7 +154,7 @@ initial
 	      //
 	      // addr 2.1 to Slave1
 	      for (seq_o1 = 20; seq_o1 < 30; seq_o1=seq_o1 + 1)
-		enqueue_chdr_pkt_count(1,seq_o1,32+seq_o1,1,'h34567890+seq_o1*100,0,0,`SID(0,0,2,1));
+		dequeue_chdr_pkt_count(1,seq_o1,32+seq_o1,1,'h34567890+seq_o1*100,0,0,`SID(0,0,2,1));
 	   end
 
 	   begin
@@ -166,7 +166,7 @@ initial
 	      //
 	      // addr 2.2 to Slave2
 	      for (seq_o2 = 10; seq_o2 < 20; seq_o2=seq_o2 + 1)
-		enqueue_chdr_pkt_count(2,seq_o2,32+seq_o2,1,'h23456789+seq_o2*100,0,0,`SID(0,0,2,2));
+		dequeue_chdr_pkt_count(2,seq_o2,32+seq_o2,1,'h23456789+seq_o2*100,0,0,`SID(0,0,2,2));
 	   end
 
 	   begin
@@ -178,7 +178,7 @@ initial
 	      //
 	      // addr 2.3 to Slave3
 	      for (seq_o3 = 0; seq_o3 < 10; seq_o3=seq_o3 + 1)
-		enqueue_chdr_pkt_count(3,seq_o3,32+seq_o3,1,'h12345678+seq_o3*100,0,0,`SID(0,0,2,3));
+		dequeue_chdr_pkt_count(3,seq_o3,32+seq_o3,1,'h12345678+seq_o3*100,0,0,`SID(0,0,2,3));
 	   end
 
 	join

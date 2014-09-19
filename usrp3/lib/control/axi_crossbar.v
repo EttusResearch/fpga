@@ -46,7 +46,7 @@ module axi_crossbar
      input [NUM_OUTPUTS-1:0] 		   o_tready,
      // readback bus
      input                        rb_rd_stb,
-     input [`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)-1:0] rb_addr,
+     input [`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):0] rb_addr,
      output [31:0]                rb_data
      );
   
@@ -155,14 +155,14 @@ module axi_crossbar
 	      .forward_valid(forward_valid_out[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]), 
 	      .forward_ack(forward_ack_in[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]),
 	      // Readback bus
-	      .rb_rd_stb(rb_rd_stb && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)-1:`LOG2(NUM_OUTPUTS)] == m)),
-	      .rb_addr(rb_addr[`LOG2(NUM_OUTPUTS)-1:0]),
+	      .rb_rd_stb(rb_rd_strobe && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)] == m)),
+	      .rb_addr(rb_addr[`LOG2(NUM_OUTPUTS):0]),
 	      .rb_data(rb_data_mux[m])
 	      );
       end // block: instantiate_fifo_header
    endgenerate
 
-   assign rb_data = rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)-1:`LOG2(NUM_OUTPUTS)]]; 
+   assign rb_data = rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)]]; 
    
 
 endmodule // axi_crossbar
