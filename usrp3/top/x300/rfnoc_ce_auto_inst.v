@@ -4,9 +4,6 @@
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
   wire [63:0]          ce_debug[0:NUM_CE-1];
-  wire [31:0]          set_data_ce[0:NUM_CE-1];
-  wire [7:0]           set_addr_ce[0:NUM_CE-1];
-  wire [NUM_CE-1:0]    set_stb_ce;
       
   // Flattern CE tdata arrays
   genvar k;

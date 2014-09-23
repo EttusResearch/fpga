@@ -70,25 +70,25 @@ module noc_block_window #(
   wire        m_axis_config_tready;
   
   axi_wrapper #(
-          .BASE(8),
-          .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
-      inst_axi_wrapper (
-          .clk(ce_clk), .reset(ce_rst),
-          .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-          .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
-          .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
-          .m_axis_data_tdata(m_axis_data_tdata),
-          .m_axis_data_tlast(m_axis_data_tlast),
-          .m_axis_data_tvalid(m_axis_data_tvalid),
-          .m_axis_data_tready(m_axis_data_tready),
-          .s_axis_data_tdata(s_axis_data_tdata),
-          .s_axis_data_tlast(s_axis_data_tlast),
-          .s_axis_data_tvalid(s_axis_data_tvalid),
-          .s_axis_data_tready(s_axis_data_tready),
-          .m_axis_config_tdata(m_axis_config_tdata),
-          .m_axis_config_tlast(),
-          .m_axis_config_tvalid(m_axis_config_tvalid), 
-          .m_axis_config_tready(m_axis_config_tready));
+    .BASE(8),
+    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
+  inst_axi_wrapper (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
+    .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
+    .m_axis_data_tdata(m_axis_data_tdata),
+    .m_axis_data_tlast(m_axis_data_tlast),
+    .m_axis_data_tvalid(m_axis_data_tvalid),
+    .m_axis_data_tready(m_axis_data_tready),
+    .s_axis_data_tdata(s_axis_data_tdata),
+    .s_axis_data_tlast(s_axis_data_tlast),
+    .s_axis_data_tvalid(s_axis_data_tvalid),
+    .s_axis_data_tready(s_axis_data_tready),
+    .m_axis_config_tdata(m_axis_config_tdata),
+    .m_axis_config_tlast(),
+    .m_axis_config_tvalid(m_axis_config_tvalid), 
+    .m_axis_config_tready(m_axis_config_tready));
   
   ////////////////////////////////////////////////////////////
   //
