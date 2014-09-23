@@ -196,6 +196,9 @@ endtask // close_files
 
 ///////////////////////////////////////////////////////////////////
 //
+// These tasks build and queue/dequeue and check entire CHDR packets.
+// The payload is an incrementing count of unsigned 16bit values.
+//
 // CHDR Header format:
 // Word1: FLAGS [63:60], SEQ_ID [59:48], SIZE [47:32], SID [31:0]
 //        [63]ExtensionContext, [62]HasTrailer, [61]HasTime, [60]EOB
