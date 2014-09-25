@@ -93,7 +93,7 @@ module b200 (
    // Only present on Rev6 and later boards...these pins unused on Rev5 and earlier.
    // NOTE: These pins are allocated from complimentry pairs and could potentially be used
    // as differential style I/O.
-  `ifdef FP_GPIO
+  `ifdef B210
    inout [7:0] 	 fp_gpio,
   `endif
    // Misc Hardware Control
@@ -126,6 +126,12 @@ module b200 (
 
     wire reset_global = GPIF_CTL9;
 
+  `ifndef FP_GPIO
+   `ifdef B210
+   assign fp_gpi0 = 8'h0;
+   `endif
+  `endif
+   
     ///////////////////////////////////////////////////////////////////////
     // generate clocks from always on codec main clk
     ///////////////////////////////////////////////////////////////////////
