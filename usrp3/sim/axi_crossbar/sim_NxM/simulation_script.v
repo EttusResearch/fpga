@@ -1,13 +1,20 @@
-// Simulate a 5x5 switch configuration
-localparam NUM_INPUTS = 5;
-localparam NUM_OUTPUTS = 5;
+// Simulate an NxM switch configuration
+localparam NUM_INPUTS = `N_DIMENSION;
+localparam NUM_OUTPUTS = `M_DIMENSION;
 
 //initial $dumpfile("axi_crossbar_tb.vcd");
 //initial $dumpvars(0,axi_crossbar_tb);
 
 reg [15:0] x;
-reg [31:0] seq_i0, seq_i1, seq_i2, seq_i3, seq_o0, seq_o1, seq_o2, seq_o3, seq_i4, seq_o4;
+//reg [31:0] seq_i0, seq_i1, seq_i2, seq_i3, seq_o0, seq_o1, seq_o2, seq_o3, seq_i4, seq_o4;
+reg [31:0] seq_i [0:NUM_INPUTS];
+reg [31:0] seq_o [0:NUM_OUTPUTS];
+
+
 reg sync_flag0, sync_flag1;
+
+integer input_port_in , output_port_in;
+integer input_port_out , output_port_out;
 
 
 /////////////////////////////////////////////
@@ -19,7 +26,7 @@ initial
   begin
      // Flags to synchronise test bench threads
      sync_flag0 <= 0;
-     sync_flag1 <= 0;
+//     sync_flag1 <= 0;
 
      @(posedge clk);
      reset <= 1;
@@ -27,26 +34,50 @@ initial
      @(posedge clk);
      reset <= 0;
      @(posedge clk);
-     // 2x2 Switch so only mask one bit of SID for route dest.
-     // Each slave must have a unique address, logic doesn't check for this.
+     // NxM Switch. Populate TCAM so that 4 SID LSB's correspond to output ports.
+     // Unused ports will default to egress via port 0.
+     // Local crossbar address is 2.
+     // Non local packets will egress via port 0.
+     // All unprogrammed locations default to value 0.
      //
      // Local Addr = 2
      write_setting_bus(512,2);
-     // Network Addr 0 & 1 go to Slave 0.
+
+     for (output_port_in = 0; output_port_in < NUM_OUTPUTS; output_port_in = output_port_in + 1) begin
+	// Host Addr 2.M goes to Slave M...
+	write_setting_bus(256+output_port_in,output_port_in); // 2.0 goes to Port 0
+     end
+     // Network Addr 0.x & 1.x go to Slave 0.
      write_setting_bus(0,0);   // 0.X goes to Port 0
      write_setting_bus(1,0);   // 1.X goes to Port 0
-     // Host Addr 0 goes to Slave 0...
-     write_setting_bus(256,0); // 2.0 goes to Port 0
-     // ...Host Addr 1 goes to Slave 1...
-     write_setting_bus(257,1); // 2.1 goes to Port 1
-     // ...Host Addr 2 goes to Slave 2...
-     write_setting_bus(258,2); // 2.2 goes to Port 2
-     // ...Host Addr 3 goes to Slave 3...
-     write_setting_bus(259,3); // 2.3 goes to Port 3
-     // ...Host Addr 4 goes to Slave 4...
-     write_setting_bus(260,4); // 2.4 goes to Port 4
+
+     //IJB NOTE: VISIT current SID bit allocation with Martin.
 
      //
+     // Begin pushing CHDR packets sequentially into the input ports of the switch.
+     // Start with the lowest input port and push one packet in for each of the available output ports.
+     // Then move to the next input port until all input ports have been tested.
+     // Each of these packets is addressed local to the switch has a non-default match.
+    
+     @(posedge clk)
+       begin
+	  for (input_port_in = 0 ; input_port_in < NUM_INPUTS ; input_port_in = input_port_in + 1)
+	    for (output_port_in = 0; output_port_in < NUM_OUTPUTS ; output_port_in = output_port_in + 1) begin
+	       enqueue_chdr_pkt_count(input_port_in,0/*SEQID*/,32+input_port_in/*SIZE*/,1/*HAS_TIME*/,
+				      'h12345678+input_port_in*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				      `SID(0,0,2,output_port_in));
+	       @(posedge clk);	       
+	    end
+       end
+
+     // Spin here and wait on synchronization from receiver process.
+     while (sync_flag0 !== 1'b1)
+       @(posedge clk);
+    
+     
+/* -----\/----- EXCLUDED -----\/-----
+
+ 
      @(posedge clk);
      fork
 	begin
@@ -119,11 +150,13 @@ initial
 	end
 
      join
-
+ -----/\----- EXCLUDED -----/\----- */
+     
      repeat (1000) @(posedge clk);
 
 
   end // initial begin
+
 
 
    /////////////////////////////////////////////
@@ -131,6 +164,7 @@ initial
    // Control and input data thread.
    //
    /////////////////////////////////////////////
+   
    initial
      begin
 	// Wait for reset to go high
@@ -139,8 +173,25 @@ initial
 	// Wait for reset to go low
 	while (reset!==1'b0)
 	  @(posedge clk);
-	// Fork concurrent output checkers for each egress port.
+	//
+	// Sequential output checkers run iteratively for all M egress ports, for N iterations
+	//
+	for (input_port_out = 0; input_port_out < NUM_OUTPUTS ; input_port_out = input_port_out + 1)
+	  for (output_port_out = 0; output_port_out < NUM_INPUTS; output_port_out = output_port_out + 1) begin
+	     dequeue_chdr_pkt_count(output_port_out,0/*SEQID*/,32+input_port_out/*SIZE*/,1/*HAS_TIME*/,
+				    'h12345678+input_port_out*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				    `SID(0,0,2,output_port_out));
+
+	  end
+	// Synchoronize with input test pattern
+	sync_flag0 <= 1'b1;
+
+
+/* -----\/----- EXCLUDED -----\/-----
+
+	
 	fork
+	  
 	   begin
 	      // Slave0 Recevier thread.
 	      //
@@ -209,6 +260,7 @@ initial
 
 
 	join
+ -----/\----- EXCLUDED -----/\----- */
 
 	repeat (1000) @(posedge clk);
 	$finish;

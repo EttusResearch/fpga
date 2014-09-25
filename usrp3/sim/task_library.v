@@ -177,17 +177,20 @@ endtask // close_files
       output last;
       output [63:0] data;
       begin
+	 ready_out[output_port] <= 1;
+	 @(posedge clk);
+	 
 	 while (~valid_out[output_port]) begin
-	    ready_out[output_port] <= 1;
             @(posedge clk);
          end
-
 	 // NOTE: A subtle constraint of Verilog is that non-blocking assignments can not be used
 	 // to an automatically allocated variable. Fall back to blocking assignent
-         data = data_out[output_port];
+      
+	 //@(negedge clk);
+	 data = data_out[output_port];
 	 last = last_out[output_port];
-         ready_out[output_port] <= 1;
-	 @(posedge clk);
+	 //@(posedge clk);
+	 
 	 ready_out[output_port] <= 0;
 
       end
