@@ -26,3 +26,4 @@ do
 	./axi_crossbar_tb.exe  -tclbatch simcmds.tcl #-gui
     done
 done
+

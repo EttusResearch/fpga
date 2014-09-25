@@ -26,7 +26,7 @@ initial
   begin
      // Flags to synchronise test bench threads
      sync_flag0 <= 0;
-//     sync_flag1 <= 0;
+     sync_flag1 <= 0;
 
      @(posedge clk);
      reset <= 1;
@@ -42,16 +42,27 @@ initial
      //
      // Local Addr = 2
      write_setting_bus(512,2);
+     
+     // Initialize TCAM for remote addresses
+     for (output_port_in = 0; output_port_in < 256; output_port_in = output_port_in + 1) begin
+	// Host Addr X.M goes to Slave 0...
+	write_setting_bus(output_port_in,0); // x.x goes to Port 0
+     end
+     // Initialize TCAM for local addresses
+     for (output_port_in = 0; output_port_in < 256; output_port_in = output_port_in + 1) begin
+	// Host Addr 2.M goes to Slave 0...
+	write_setting_bus(256+output_port_in,0); // 2.0 goes to Port 0
+     end
 
      for (output_port_in = 0; output_port_in < NUM_OUTPUTS; output_port_in = output_port_in + 1) begin
 	// Host Addr 2.M goes to Slave M...
 	write_setting_bus(256+output_port_in,output_port_in); // 2.0 goes to Port 0
      end
+     
      // Network Addr 0.x & 1.x go to Slave 0.
      write_setting_bus(0,0);   // 0.X goes to Port 0
      write_setting_bus(1,0);   // 1.X goes to Port 0
 
-     //IJB NOTE: VISIT current SID bit allocation with Martin.
 
      //
      // Begin pushing CHDR packets sequentially into the input ports of the switch.
@@ -73,8 +84,33 @@ initial
      // Spin here and wait on synchronization from receiver process.
      while (sync_flag0 !== 1'b1)
        @(posedge clk);
-    
+
+     //
+     // Test "default" forwarding behavior.
+     // All these packets should egress via Port0
+     //
+     @(posedge clk)
+       begin
+	  for (input_port_in = 0 ; input_port_in < NUM_INPUTS ; input_port_in = input_port_in + 1)
+	    enqueue_chdr_pkt_count(input_port_in,0/*SEQID*/,64+input_port_in/*SIZE*/,1/*HAS_TIME*/,
+				   'h12345678+input_port_in*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				   `SID(0,0,1,input_port_in));
+	  @(posedge clk);	       
+       end
      
+    @(posedge clk)
+       begin
+	  for (input_port_in = 0 ; input_port_in < NUM_INPUTS ; input_port_in = input_port_in + 1)
+	    enqueue_chdr_pkt_count(input_port_in,0/*SEQID*/,64+input_port_in/*SIZE*/,1/*HAS_TIME*/,
+				   'h12345678+input_port_in*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				   `SID(0,0,2,input_port_in+16));
+	  @(posedge clk);	       
+       end
+    
+     // Spin here and wait on synchronization from receiver process.
+     while (sync_flag1 !== 1'b1)
+       @(posedge clk);
+
 /* -----\/----- EXCLUDED -----\/-----
 
  
@@ -176,16 +212,35 @@ initial
 	//
 	// Sequential output checkers run iteratively for all M egress ports, for N iterations
 	//
-	for (input_port_out = 0; input_port_out < NUM_OUTPUTS ; input_port_out = input_port_out + 1)
-	  for (output_port_out = 0; output_port_out < NUM_INPUTS; output_port_out = output_port_out + 1) begin
+	for (input_port_out = 0; input_port_out < NUM_INPUTS ; input_port_out = input_port_out + 1)
+	  for (output_port_out = 0; output_port_out < NUM_OUTPUTS; output_port_out = output_port_out + 1) begin
 	     dequeue_chdr_pkt_count(output_port_out,0/*SEQID*/,32+input_port_out/*SIZE*/,1/*HAS_TIME*/,
 				    'h12345678+input_port_out*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
 				    `SID(0,0,2,output_port_out));
 
 	  end
 	// Synchoronize with input test pattern
+	$display("Sequential packet routing test complete");
+	
 	sync_flag0 <= 1'b1;
 
+	//
+	// Sequential output checkers run iteratively for all M egress ports, for N iterations
+	//
+	for (input_port_out = 0; input_port_out < NUM_INPUTS ; input_port_out = input_port_out + 1) begin	   
+	   dequeue_chdr_pkt_count(0,0/*SEQID*/,64+input_port_out/*SIZE*/,1/*HAS_TIME*/,
+				  'h12345678+input_port_out*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				  `SID(0,0,1,input_port_out));
+	end
+	for (input_port_out = 0; input_port_out < NUM_INPUTS ; input_port_out = input_port_out + 1) begin	   
+	   dequeue_chdr_pkt_count(0,0/*SEQID*/,64+input_port_out/*SIZE*/,1/*HAS_TIME*/,
+				  'h12345678+input_port_out*100/*TIME*/,0/*IS_EXTENSION*/,0/*IS_EOB*/,
+				  `SID(0,0,2,input_port_out+16));
+	end
+	// Synchoronize with input test pattern
+	$display("Default routing test complete");
+		
+	sync_flag1 <= 1'b1;
 
 /* -----\/----- EXCLUDED -----\/-----
 
@@ -265,3 +320,11 @@ initial
 	repeat (1000) @(posedge clk);
 	$finish;
      end // initial begin
+
+   // Watchdog timer in case simulation goes bad. (96uS at 125MHz)
+   initial
+     begin
+	repeat (12000) @(posedge clk);
+	$display("FAILED: Simulation Watchdog Timeout @ 12000 clk cycles");
+	$finish;
+     end 
