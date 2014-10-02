@@ -47,7 +47,8 @@ module axi_wrapper
 
    wire [15:0] 	 my_sid;
    assign sid_out = { my_sid, next_destination };
-   
+
+   // Insert time and burst handling here.  A simple FIFO works only if packets are produced 1-for-1 (they may be of different sizes, though)
    axi_fifo_short #(.WIDTH(82)) header_fifo
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i_tdata({send_time_in, vita_time_in, sid_in[15:0], eob_in}), .i_tvalid(sof_in&m_axis_data_tvalid&m_axis_data_tready), .i_tready(),
