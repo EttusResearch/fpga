@@ -3,7 +3,8 @@
 //   Implements destination flow control for a single port
 
 module noc_input_port
-  #(parameter PORT_NUM = 0,
+  #(parameter BASE = 0,
+    parameter PORT_NUM = 0,
     parameter STR_SINK_FIFOSIZE = 10)
    (input clk, input reset,
 
@@ -12,13 +13,11 @@ module noc_input_port
     // To/From NoC Shell
     input [63:0] datain_tdata, input datain_tlast, input datain_tvalid, output datain_tready,
     output [63:0] fcout_tdata, output fcout_tlast, output fcout_tvalid, output fcout_tready,
+    input clear_tx_fc,
     
     // To Stream Sink
     output [63:0] str_sink_tdata, output str_sink_tlast, output str_sink_tvalid, input str_sink_tready    
     );
-
-   localparam SB_FCPG = 2;  // 2 regs
-   localparam SB_CLEAR_TX_FC = 4;  // 1 reg
 
    axi_fifo_cascade #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) str_sink_fifo
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -43,13 +42,7 @@ module noc_input_port
 	  sid_hold <= str_sink_tdata[31:0];
        end
 
-   wire clear_tx_fc;
-   
-   setting_reg #(.my_addr(SB_CLEAR_TX_FC+PORT_NUM*4), .at_reset(0)) sr_clear_tx_fc
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(),.changed(clear_tx_fc));
-
-   tx_responder #(.BASE(SB_FCPG+PORT_NUM*4), .USE_TIME(0)) str_sink_fc_gen
+   tx_responder #(.BASE(BASE), .USE_TIME(0)) str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(clear_tx_fc),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),

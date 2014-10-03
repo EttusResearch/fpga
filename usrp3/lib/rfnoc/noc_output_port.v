@@ -2,7 +2,8 @@
 // NoC Output port.  Implements source flow control on a single stream
 
 module noc_output_port
-  #(parameter PORT_NUM=0,
+  #(parameter BASE=0,
+    parameter PORT_NUM=0,
     parameter MTU=10)
    (input clk, input reset,
     // Settings bus
@@ -13,8 +14,6 @@ module noc_output_port
     // To CE
     input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready
     );
-
-   localparam SFC_BASE = 8;
    
    wire [63:0] 	 str_src_tdata_int;
    wire 	 str_src_tlast_int, str_src_tvalid_int, str_src_tready_int;
@@ -24,7 +23,7 @@ module noc_output_port
       .i_tdata(str_src_tdata), .i_tlast(str_src_tlast), .i_terror(1'b0), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
       .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast_int), .o_tvalid(str_src_tvalid_int), .o_tready(str_src_tready_int));
    
-   source_flow_control #(.BASE(SFC_BASE+PORT_NUM*2)) sfc
+   source_flow_control #(.BASE(BASE)) sfc
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(fcin_tdata), .fc_tlast(fcin_tlast), .fc_tvalid(fcin_tvalid), .fc_tready(fcin_tready),

@@ -35,10 +35,11 @@ module noc_shell
     output [63:0] debug
     );
 
-   localparam SB_SFC = 0;   // 2 regs
-   localparam SB_FCPG = 2;  // 2 regs
-   localparam SB_CLEAR_TX_FC = 4;  // 1 reg
-   localparam SB_RB_ADDR = 32;  // 1 reg
+   localparam SB_INPUT_BASE  = 0;    // 2 regs per port, 16 ports
+   localparam SB_OUTPUT_BASE = 32;   // 2 regs per port, 16 ports
+   localparam SB_CLEAR_TX_FC = 126;  // 1 reg
+   localparam SB_RB_ADDR = 127;      // 1 reg
+   // Allocate all regs 128-255 to user device
    
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
 		  cmdin_tdata,  ackout_tdata;
@@ -130,7 +131,7 @@ module noc_shell
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
 
-   noc_output_port #(.PORT_NUM(0), .MTU(MTU)) noc_output_port_0
+   noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU)) noc_output_port_0
      (.clk(clk), .reset(reset),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
@@ -140,11 +141,18 @@ module noc_shell
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
 
-   noc_input_port #(.PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+   wire 	 clear_tx_fc;
+   
+   setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
+     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+      .in(set_data),.out(),.changed(clear_tx_fc));
+   
+   noc_input_port #(.BASE(SB_INPUT_BASE), .PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
      (.clk(clk), .reset(reset),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
       .fcout_tdata(fcout_tdata), .fcout_tlast(fcout_tlast), .fcout_tvalid(fcout_tvalid), .fcout_tready(fcout_tready),
+      .clear_tx_fc(clear_tx_fc),
       .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready));
    
    // ////////////////////////////////////////////////////////////////////////////////////
