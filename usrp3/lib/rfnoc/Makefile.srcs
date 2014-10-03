@@ -32,4 +32,7 @@ noc_block_window.v \
 window.v \
 counter.v \
 ram_to_fifo.v \
+cmul.v \
+noc_input_port.v \
+noc_output_port.v \
 ))

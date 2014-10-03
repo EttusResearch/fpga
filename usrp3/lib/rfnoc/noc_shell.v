@@ -9,7 +9,8 @@
 
 module noc_shell
   #(parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
-    parameter STR_SINK_FIFOSIZE = 10)
+    parameter STR_SINK_FIFOSIZE = 10,
+    parameter MTU = 10)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -39,23 +40,22 @@ module noc_shell
    localparam SB_CLEAR_TX_FC = 4;  // 1 reg
    localparam SB_RB_ADDR = 32;  // 1 reg
    
-   wire [63:0] 	 dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
-		 cmdin_tdata,  ackout_tdata;
-   wire 	 dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast,
-		 cmdin_tlast,  ackout_tlast;
-   wire 	 dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid,
+   wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
+		  cmdin_tdata,  ackout_tdata;
+   wire 	  dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast,
+		  cmdin_tlast,  ackout_tlast;
+   wire 	  dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid,
 		  cmdin_tvalid, ackout_tvalid;
-   wire 	 dataout_tready, datain_tready, fcin_tready, fcout_tready,
-		 cmdin_tready,  ackout_tready;
+   wire 	  dataout_tready, datain_tready, fcin_tready, fcout_tready,
+		  cmdin_tready,  ackout_tready;
 
-   wire [31:0] 	 debug_sfc;
+   wire [31:0] 	  debug_sfc;
    
    // ////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos to get the computation engine on its own clock
 
-   wire [63:0] 	 i_tdata_b, o_tdata_b;
-   wire 	 i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
-   
+   wire [63:0] 	  i_tdata_b, o_tdata_b;
+   wire 	  i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
    axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(9)) in_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(i_tvalid), .i_tready(i_tready), .i_tdata({i_tlast,i_tdata}),
@@ -122,73 +122,33 @@ module noc_shell
    // ////////////////////////////////////////////////////////////////////////////////////
    // Control Source (skeleton for now)
 
-   /*
    assign ackin_tready = 1'b1;    // Dump anything coming in
    assign cmdout_tdata = 64'd0;
    assign cmdout_tlast = 1'b0;
    assign cmdout_tvalid = 1'b0;
-   */
+
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
-   //      FIXME need to pull out feedback from the FBFC bus before the source_flow_control block
 
-   wire [63:0] 	 str_src_tdata_int;
-   wire 	 str_src_tlast_int, str_src_tvalid_int, str_src_tready_int;
-   
-   axi_packet_gate #(.WIDTH(64), .SIZE(10)) str_src_gate
-     (.clk(clk), .reset(reset), .clear(1'b0),
-      .i_tdata(str_src_tdata), .i_tlast(str_src_tlast), .i_terror(1'b0), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
-      .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast_int), .o_tvalid(str_src_tvalid_int), .o_tready(str_src_tready_int));
-   
-   source_flow_control #(.BASE(SB_SFC)) sfc
-     (.clk(clk), .reset(reset), .clear(1'b0),
+   noc_output_port #(.PORT_NUM(0), .MTU(MTU)) noc_output_port_0
+     (.clk(clk), .reset(reset),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .fc_tdata(fcin_tdata), .fc_tlast(fcin_tlast), .fc_tvalid(fcin_tvalid), .fc_tready(fcin_tready),
-      .in_tdata(str_src_tdata_int), .in_tlast(str_src_tlast_int), .in_tvalid(str_src_tvalid_int), .in_tready(str_src_tready_int),
-      .out_tdata(dataout_tdata), .out_tlast(dataout_tlast), .out_tvalid(dataout_tvalid), .out_tready(dataout_tready),
-      .debug(debug_sfc) );
-   
+      .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
+      .fcin_tdata(fcin_tdata), .fcin_tlast(fcin_tlast), .fcin_tvalid(fcin_tvalid), .fcin_tready(fcin_tready),
+      .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
+      
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
-   //      FIXME  do we follow the back of the fifo, or do we allow the device to generate
-   //             its own packet_consumed signals?
 
-   axi_fifo_cascade #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) str_sink_fifo
-     (.clk(clk), .reset(reset), .clear(1'b0),
-      .i_tdata({datain_tlast,datain_tdata}), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
-      .o_tdata({str_sink_tlast,str_sink_tdata}), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
-      .space(), .occupied());
-
-   reg [11:0] 	 seqnum_hold;
-   reg [31:0] 	 sid_hold;
-   reg 		 firstline;
-   
-   always @(posedge clk)
-     if(reset)
-       firstline <= 1'b1;
-     else if(str_sink_tvalid & str_sink_tready)
-       firstline <= str_sink_tlast;
-
-   always @(posedge clk)
-     if(str_sink_tvalid & str_sink_tready & firstline)
-       begin
-	  seqnum_hold <= str_sink_tdata[59:48];
-	  sid_hold <= str_sink_tdata[31:0];
-       end
-
-   wire clear_tx_fc;
-   
-   setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(),.changed(clear_tx_fc));
-
-   tx_responder #(.BASE(SB_FCPG), .USE_TIME(0)) str_sink_fc_gen
-     (.clk(clk), .reset(reset), .clear(clear_tx_fc),
+   noc_input_port #(.PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+     (.clk(clk), .reset(reset),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),
-      .seqnum(seqnum_hold), .error_code(64'd0), .sid(sid_hold),
-      .vita_time(64'd0),
-      .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
+      .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
+      .fcout_tdata(fcout_tdata), .fcout_tlast(fcout_tlast), .fcout_tvalid(fcout_tvalid), .fcout_tready(fcout_tready),
+      .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready));
+   
+   // ////////////////////////////////////////////////////////////////////////////////////
+   // Debug pins
 
    assign debug[31:0] = { // input side 16 bits
 			  4'b0000,
@@ -205,7 +165,7 @@ module noc_shell
 			  fcout_tvalid, fcout_tready,
 			  cmdout_tvalid, cmdout_tready,
 			  ackout_tvalid, ackout_tready,
-			  str_src_tvalid_int, str_src_tready_int,
+			  2'b00,
 			  str_src_tvalid, str_src_tready
 			  };
 
