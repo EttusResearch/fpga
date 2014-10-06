@@ -1,10 +1,11 @@
 
+// FIXME -- detect seqnum errors?
+
 module chdr_deframer
   (input clk, input reset, input clear,
    input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-   output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
-   output reg send_time, output reg [63:0] vita_time, output reg [31:0] sid, output reg eob, output reg sof);
-      
+   output [31:0] o_tdata, output reg [127:0] o_tuser, output o_tlast, output o_tvalid, input o_tready);
+   
    localparam ST_HEAD = 2'd0;
    localparam ST_TIME = 2'd1;
    localparam ST_BODY = 2'd2;
@@ -26,12 +27,10 @@ module chdr_deframer
 	 ST_HEAD :
 	   if(i_tvalid & i_tready)
 	     begin
-		sid <= i_tdata[31:0];
-		eob <= i_tdata[60];
-		send_time <= i_tdata[61];
-		sof <= 1'b1;
 		even_phase <= 1'b0;
 		odd_length <= i_tdata[34] ^ (i_tdata[33] | i_tdata[32]);
+		o_tuser[127:64] <= i_tdata;
+		o_tuser[63:0] <= 64'd0;
 		if(i_tdata[61])
 		  chdr_state <= ST_TIME;
 		else
@@ -40,13 +39,12 @@ module chdr_deframer
 	 ST_TIME :
 	   if(i_tvalid & i_tready)
 	     begin
-		vita_time <= i_tdata;
+		o_tuser[63:0] <= i_tdata;
 		chdr_state <= ST_BODY;
 	     end
 	 ST_BODY :
 	   if(o_tvalid & o_tready)
 	     begin
-		sof <= 1'b0;
 		even_phase <= ~even_phase;
 		if(o_tlast)
 		  chdr_state <= ST_HEAD;
