@@ -12,7 +12,7 @@ module noc_input_port
     
     // To/From NoC Shell
     input [63:0] datain_tdata, input datain_tlast, input datain_tvalid, output datain_tready,
-    output [63:0] fcout_tdata, output fcout_tlast, output fcout_tvalid, output fcout_tready,
+    output [63:0] fcout_tdata, output fcout_tlast, output fcout_tvalid, input fcout_tready,
     input clear_tx_fc,
     
     // To Stream Sink
