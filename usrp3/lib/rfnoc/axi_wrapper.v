@@ -2,8 +2,9 @@
 // Copyright 2014 Ettus Research
 
 // Assumes 32-bit elements (like 16cs) carried over AXI
-// User block controls packet sizes with tlast, numbers of packets do not need to coincide
-// timestamps and EOB will be a bit harder to handle
+// User block controls packet sizes with tlast
+// simple_mode=1 allows user to ignore chdr stuff, must produce 1 packet for each one consume
+// simple_mode=0 user controls all chdr info, must control s_axis_data_tuser
 
 module axi_wrapper
   #(parameter BASE=0,

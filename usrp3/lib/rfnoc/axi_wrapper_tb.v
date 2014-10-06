@@ -47,17 +47,20 @@ module axi_wrapper_tb();
    
    wire [31:0] pre_tdata, post_tdata;
    wire        pre_tlast, post_tlast, pre_tvalid, post_tvalid, pre_tready, post_tready;
-   
+   wire [127:0] pre_tuser, post_tuser;
+      
    axi_wrapper #(.BASE(8), .NUM_AXI_CONFIG_BUS(1), .CONFIG_BUS_FIFO_DEPTH(5), .SIMPLE_MODE(1)) axi_wrapper_ce1
      (.clk(clk), .reset(reset),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .i_tdata(src_tdata), .i_tlast(src_tlast), .i_tvalid(src_tvalid), .i_tready(src_tready),
       .o_tdata(s1i_tdata), .o_tlast(s1i_tlast), .o_tvalid(s1i_tvalid), .o_tready(s1i_tready),
       .m_axis_data_tdata(pre_tdata),
+      .m_axis_data_tuser(pre_tuser),
       .m_axis_data_tlast(pre_tlast),
       .m_axis_data_tvalid(pre_tvalid),
       .m_axis_data_tready(pre_tready),
       .s_axis_data_tdata(post_tdata),
+      .s_axis_data_tuser(post_tuser),
       .s_axis_data_tlast(post_tlast),
       .s_axis_data_tvalid(post_tvalid),
       .s_axis_data_tready(post_tready)
