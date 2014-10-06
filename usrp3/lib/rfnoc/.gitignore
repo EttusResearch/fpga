@@ -9,3 +9,5 @@ top_block.py
 test.dat
 output.dat
 isim
+#*
+axi_wrapper_tb

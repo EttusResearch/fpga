@@ -46,10 +46,11 @@ module chdr_framer
        length <= 0;
      else if(i_tvalid & i_tready)
        length <= length + 4;
-   
+
+   // FIXME don't really need a FIFO, could just use a register or maybe even wires
    axi_fifo_short #(.WIDTH(128)) header_fifo
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(i_tuser), .i_tvalid(header_i_tvalid), .i_tready(header_i_tready),
+      .i_tdata({i_tuser[127:112],length,i_tuser[95:0]}), .i_tvalid(header_i_tvalid), .i_tready(header_i_tready),
       .o_tdata(header_o_tdata), .o_tvalid(header_o_tvalid), .o_tready(header_o_tready));
 
    axi_fifo #(.WIDTH(65), .SIZE(SIZE)) body_fifo
@@ -63,7 +64,6 @@ module chdr_framer
    localparam ST_TIME = 2;
    localparam ST_BODY = 3;
 
-   // FIXME need a what 
    always @(posedge clk)
      if(reset)
        chdr_state <= ST_IDLE;
@@ -93,7 +93,7 @@ module chdr_framer
        if(o_tvalid & o_tready & o_tlast)
 	 seqnum <= seqnum + 12'd1;
    
-   wire [15:0] 	  out_length = header_o_tdata[111:96] + (header_o_tdata[113] ? 16'd20 : 16'd12);
+   wire [15:0] 	  out_length = header_o_tdata[111:96] + (header_o_tdata[125] ? 16'd20 : 16'd12);
    
    assign o_tvalid = (chdr_state == ST_HEAD) | (chdr_state == ST_TIME) | (body_o_tvalid & (chdr_state == ST_BODY));
    assign o_tlast = (chdr_state == ST_BODY) & body_o_tlast;
