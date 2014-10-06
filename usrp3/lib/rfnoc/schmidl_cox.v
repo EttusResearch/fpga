@@ -74,13 +74,11 @@ module schmidl_cox
       .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
       .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
 
-   // complex_mult assumes Q is high bits, I is low.  This is the opposite of our standard...
-   complex_multiplier cmult1
-     (.aclk(clk), .aresetn(~reset),
-      .s_axis_a_tdata({n1_tdata[15:0], n1_tdata[31:16]}), .s_axis_a_tlast(n1_tlast), .s_axis_a_tvalid(n1_tvalid), .s_axis_a_tready(n1_tready),
-      .s_axis_b_tdata({n4_tdata[15:0], n4_tdata[31:16]}), .s_axis_b_tlast(n4_tlast), .s_axis_b_tvalid(n4_tvalid), .s_axis_b_tready(n4_tready),
-      .s_axis_ctrl_tdata(8'd0), .s_axis_ctrl_tvalid(1'b1), .s_axis_ctrl_tready(),
-      .m_axis_dout_tdata({n5_tdata[15:0], n5_tdata[31:16]}), .m_axis_dout_tlast(n5_tlast), .m_axis_dout_tvalid(n5_tvalid), .m_axis_dout_tready(n5_tready));
+   cmul cmult1
+     (.clk(clk), .reset(reset),
+      .a_tdata(n1_tdata), .a_tlast(n1_tlast), .a_tvalid(n1_tvalid), .a_tready(n1_tready),
+      .b_tdata(n4_tdata), .b_tlast(n4_tlast), .b_tvalid(n4_tvalid), .b_tready(n4_tready),
+      .o_tdata(n5_tdata), .o_tlast(n5_tlast), .o_tvalid(n5_tvalid), .o_tready(n5_tready));
 
    wire [23:0] 	  i_ma, q_ma;
    assign n6_tdata = {i_ma[23:8], q_ma[23:8]};

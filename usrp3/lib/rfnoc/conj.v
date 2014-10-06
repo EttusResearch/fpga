@@ -1,4 +1,5 @@
 
+// NOTE -- does not flop the output.  could cause timing issues, so follow with axi_fifo_flop if you need it
 
 module conj
   #(parameter WIDTH=16)
