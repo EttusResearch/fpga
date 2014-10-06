@@ -1,4 +1,5 @@
 
+// FIXME axi_fifo_flop added by mne to address timing issues.  Should probably use a proper Xilinx coregen, though
 
 module complex_to_magsq
   #(parameter WIDTH=16)
@@ -14,9 +15,11 @@ module complex_to_magsq
    assign in_i_mag = in_i*in_i;
    assign in_q_mag = in_q*in_q;
 
-   assign o_tdata = in_i_mag + in_q_mag;
-   assign o_tlast = i_tlast;
-   assign o_tvalid = i_tvalid;
-   assign i_tready = o_tready;
+   wire [2*WIDTH-1:0] mag = in_i_mag + in_q_mag;
    
+   axi_fifo_flop #(.WIDTH(WIDTH*2+1)) axi_fifo_flop
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .i_tdata({i_tlast,mag}), .i_tvalid(i_tvalid), .i_tready(i_tready),
+      .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready));
+      
 endmodule // complex_to_magsq
