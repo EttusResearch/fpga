@@ -10,6 +10,8 @@ axi_mux4.v \
 axi_mux8.v \
 axi_demux4.v \
 axi_demux8.v \
+axi_mux.v \
+axi_demux.v \
 axi_fifo_short.v \
 axi_fifo_flop.v \
 axi_packet_gate.v \
