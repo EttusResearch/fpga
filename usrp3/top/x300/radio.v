@@ -10,12 +10,14 @@
 //       2        Receive Flow Control    (CTXT)     Receive Data                      (DATA)
 //       3        Receive Commands        (CTXT)     Receive Command ACK/ERROR         (CTXT)
 
-module radio
-  #(
-    parameter CHIPSCOPE = 0,
-    parameter DELETE_DSP = 0
-    )
-  (input radio_clk, input radio_rst,
+module radio #(
+   parameter CHIPSCOPE = 0,
+   parameter DELETE_DSP = 0,
+   parameter RADIO_NUM = 0,
+   parameter DATA_FIFO_SIZE = 10,
+   parameter MSG_FIFO_SIZE = 9
+) (
+   input radio_clk, input radio_rst,
    input [31:0] rx, output [31:0] tx,
    inout [31:0] db_gpio,
    inout [31:0] fp_gpio,
@@ -30,9 +32,9 @@ module radio
 
    input pps,
    output sync_dacs,
-   
+
    output [31:0] debug
-   );
+);
 
    // ///////////////////////////////////////////////////////////////////////////////
    // FIFO Interfacing to the bus clk domain
@@ -44,11 +46,11 @@ module radio
    wire [63:0] 	 ctrl_tdata_b, ctrl_tdata_r;
    wire 	 ctrl_tready_b, ctrl_tready_r, ctrl_tvalid_b, ctrl_tvalid_r;
    wire 	 ctrl_tlast_b, ctrl_tlast_r;
- 
+
    wire [63:0] 	  ctrl_tdata_s_r;
    wire 	  ctrl_tready_s_r,  ctrl_tvalid_s_r;
    wire 	  ctrl_tlast_s_r;
-   
+
    wire [63:0] 	 resp_tdata_b, resp_tdata_r;
    wire 	 resp_tready_b, resp_tready_r, resp_tvalid_b, resp_tvalid_r;
    wire 	 resp_tlast_b, resp_tlast_r;
@@ -101,7 +103,7 @@ module radio
       .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) ctrl_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid_b), .i_tready(ctrl_tready_b), .i_tdata({ctrl_tlast_b,ctrl_tdata_b}),
       .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_s_r), .o_tready(ctrl_tready_s_r), .o_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}));
@@ -115,22 +117,22 @@ module radio
       .space(), .occupied()
       );
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(13)) tx_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(DATA_FIFO_SIZE)) tx_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(tx_tvalid_bi), .i_tready(tx_tready_bi), .i_tdata({tx_tlast_bi,tx_tdata_bi}),
       .o_aclk(radio_clk), .o_tvalid(tx_tvalid_r), .o_tready(tx_tready_r), .o_tdata({tx_tlast_r,tx_tdata_r}));
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) resp_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) resp_fifo
      (.reset(radio_rst),
       .i_aclk(radio_clk), .i_tvalid(resp_tvalid_r), .i_tready(resp_tready_r), .i_tdata({resp_tlast_r,resp_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(resp_tvalid_b), .o_tready(resp_tready_b), .o_tdata({resp_tlast_b,resp_tdata_b}));
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(10)) rx_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(DATA_FIFO_SIZE)) rx_fifo
      (.reset(radio_rst),
       .i_aclk(radio_clk), .i_tvalid(rx_mux_tvalid_r), .i_tready(rx_mux_tready_r), .i_tdata({rx_mux_tlast_r,rx_mux_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(rx_tvalid_b), .o_tready(rx_tready_b), .o_tdata({rx_tlast_b,rx_tdata_b}));
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) txresp_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) txresp_fifo
      (.reset(radio_rst),
       .i_aclk(radio_clk), .i_tvalid(txresp_tvalid_r), .i_tready(txresp_tready_r), .i_tdata({txresp_tlast_r,txresp_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(txresp_tvalid_b), .o_tready(txresp_tready_b), .o_tdata({txresp_tlast_b,txresp_tdata_b}));
@@ -153,6 +155,7 @@ module radio
    localparam SR_FP_GPIO   = 8'd200;
    localparam SR_RX_FRONT  = 8'd208;
    localparam SR_TX_FRONT  = 8'd216;
+   localparam SR_CODEC_IDLE = 8'd250;
 
    wire 	set_stb;
    wire [7:0] 	set_addr;
@@ -172,7 +175,7 @@ module radio
    wire [63:0] 	vita_time, vita_time_lastpps;
    wire [31:0] test_readback;
    wire        loopback;
-   
+
 
 
    radio_ctrl_proc radio_ctrl_proc
@@ -191,7 +194,9 @@ module radio
        3'd1 : rb_data <= vita_time;
        3'd2 : rb_data <= vita_time_lastpps;
        3'd3 : rb_data <= {rx, test_readback};
-       3'd4 : rb_data <= {32'b0, fp_gpio_readback};
+       3'd4 : rb_data <= {32'h0, fp_gpio_readback};
+       3'd5 : rb_data <= {tx,rx};
+       3'd6 : rb_data <= {32'h0,RADIO_NUM};
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 
@@ -257,6 +262,11 @@ module radio
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
+   wire [31:0] tx_idle;
+   setting_reg #(.my_addr(SR_CODEC_IDLE), .awidth(8), .width(32)) sr_codec_idle
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(tx_idle), .changed());
+
    // /////////////////////////////////////////////////////////////////////////////////
    //  TX Chain
 
@@ -292,6 +302,8 @@ module radio
       .vita_time(vita_time),
       .o_tdata(txresp_tdata_r), .o_tlast(txresp_tlast_r), .o_tvalid(txresp_tvalid_r), .o_tready(txresp_tready_r));
 
+   wire [15:0] 	tx_i_running, tx_q_running;
+
    generate
       if (DELETE_DSP==0) begin:	tx_dsp
 	 duc_chain #(.BASE(SR_TX_DSP), .DSPNO(0), .WIDTH(24)) duc_chain
@@ -304,9 +316,13 @@ module radio
 	   (.clk(radio_clk), .rst(radio_rst),
 	    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	    .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run_tx),
-	    .dac_a(tx[31:16]), .dac_b(tx[15:0]));
+	    .dac_a(tx_i_running), .dac_b(tx_q_running));
       end
    endgenerate
+
+   assign tx[31:16] = (run_tx)? tx_i_running : tx_idle[31:16];
+   assign tx[15:0]  = (run_tx)? tx_q_running : tx_idle[15:0];
+
 
    // /////////////////////////////////////////////////////////////////////////////////
    //  RX Chain
@@ -346,7 +362,7 @@ module radio
 
    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend).
    wire [31:0] 	  rx_fe = loopback ? tx : rx;
-   
+
    generate
       if (DELETE_DSP==0)
 	begin:	rx_dsp
@@ -356,7 +372,7 @@ module radio
 	      .adc_a(rx_fe[31:16]),.adc_ovf_a(1'b0),
 	      .adc_b(rx_fe[15:0]),.adc_ovf_b(1'b0),
 	      .i_out(rx_corr_i), .q_out(rx_corr_q),
-	      .run(run_rx0_d1 | run_rx1_d1), .debug());
+	      .run(run_rx), .debug());
 
 	   ddc_chain_x300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
 	     (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
@@ -380,151 +396,5 @@ module radio
 
    // /////////////////////////////////////////////////////////////////////////////////
    //  Debug
-/* -----\/----- EXCLUDED -----\/-----
-  generate
-      if (CHIPSCOPE) begin: chipscope_gen
-	 
-   (* keep = "true", max_fanout = 10 *)   reg             debug_set_stb;
-   (* keep = "true", max_fanout = 10 *)   reg [7:0]       debug_set_addr;
-   (* keep = "true", max_fanout = 10 *)   reg [31:0]      debug_set_data;
-   (* keep = "true", max_fanout = 10 *)   reg [63:0]      debug_ctrl_tdata_r;
-   (* keep = "true", max_fanout = 10 *)   reg debug_ctrl_tlast_r;  
-   (* keep = "true", max_fanout = 10 *)   reg debug_ctrl_tvalid_r;  
-   (* keep = "true", max_fanout = 10 *)   reg debug_ctrl_tready_r;
-   
-   
-    always @(posedge radio_clk) begin
-       debug_set_stb <= set_stb;
-       debug_set_addr <= set_addr[7:0];
-       debug_set_data <= set_data[31:0];
-       debug_ctrl_tdata_r <= ctrl_tdata_r;
-       debug_ctrl_tlast_r <= ctrl_tlast_r;
-       debug_ctrl_tvalid_r <= ctrl_tvalid_r;
-       debug_ctrl_tready_r <= ctrl_tready_r;
-    end
-   
-       
-   wire [35:0] CONTROL0;
-   wire [63:0] TRIG0;
-
-   assign      TRIG0 = {
-			sync_dacs,       // 109
-			loopback,        // 108
-			debug_ctrl_tready_r, // 107
-			debug_ctrl_tvalid_r, // 106
-			debug_ctrl_tlast_r, // 105
-			debug_ctrl_tdata_r, // 104:41
-			debug_set_stb,   // 40
-			debug_set_addr,  // 39:32
-			debug_set_data   // 31:0
-			};
-   
-
-    chipscope_ila chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(radio_clk), // IN
-      .TRIG0(TRIG0 ) // IN BUS [255:0]
-      );
-  
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
-
-      end // block: chipscope
-   endgenerate
- -----/\----- EXCLUDED -----/\----- */
-   
-/* -----\/----- EXCLUDED -----\/-----
-
-   generate
-      if (CHIPSCOPE) begin: chipscope_gen
-	 (* keep = "true", max_fanout = 10 *)   reg [5:0]	debug_error_code;        // 174:169
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_ack_or_error;      // 168
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_run_rx;            // 167
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_strobe_rx;         // 166
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_err_tvalid_r;   // 165
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_err_tready_r;   // 164
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_err_tlast_r;    // 163
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_tvalid_r;   // 162
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_tready_r;   // 161
-	 (* keep = "true", max_fanout = 10 *)   reg 		debug_rx_tlast_r;    // 160
-	 (* keep = "true", max_fanout = 10 *)   reg [31:0] 	debug_sample_rx;         // 159:128
-	 (* keep = "true", max_fanout = 10 *)   reg [63:0] 	debug_rx_err_tdata_r;    // 127:64
-	 (* keep = "true", max_fanout = 10 *)   reg [63:0] 	debug_rx_tdata_r;    // 63:0
-	 (* keep = "true", max_fanout = 10 *)   reg             debug_set_stb;
-	 (* keep = "true", max_fanout = 10 *)   reg [7:0]       debug_set_addr;
-	 (* keep = "true", max_fanout = 10 *)   reg [7:0]       debug_set_data;
-	 (* keep = "true", max_fanout = 10 *)   reg [63:0]      debug_tx_tdata_r;
-	 (* keep = "true", max_fanout = 10 *)   reg             debug_tx_tlast_r;
-	 (* keep = "true", max_fanout = 10 *)   reg             debug_tx_tvalid_r;
-	 (* keep = "true", max_fanout = 10 *)   reg             debug_tx_tready_r;
-	 (* keep = "true", max_fanout = 10 *)   reg [11:0]      debug_seq_id;
- 	 (* keep = "true", max_fanout = 10 *)   reg   	        debug_run_tx;
-	 (* keep = "true", max_fanout = 10 *)   reg  	        debug_strobe_tx;
-	 
-
-	 always @(posedge radio_clk) begin
-	    debug_set_stb <= set_stb;
-	    debug_set_addr <= set_addr;
-	    debug_set_data <= set_data[7:0];
-	    debug_error_code <= error_code[37:32];
-	    debug_ack_or_error <= ack_or_error;
-	    debug_run_rx <=  run_rx ;
-	    debug_strobe_rx <= strobe_rx;
-	    debug_rx_err_tvalid_r <= rx_err_tvalid_r;
-	    debug_rx_err_tready_r <= rx_err_tready_r;
-	    debug_rx_err_tlast_r <=  rx_err_tlast_r;
-	    debug_rx_tvalid_r <=  rx_tvalid_r ;
-	    debug_rx_tready_r <=   rx_tready_r;
-	    debug_rx_tlast_r <=  rx_tlast_r;
-	    debug_sample_rx[31:0] <=  sample_rx[31:0];
-	    debug_rx_err_tdata_r[63:0] <= rx_err_tdata_r[63:0];
-	    debug_rx_tdata_r[63:0] <= rx_tdata_r[63:0];
-	    debug_tx_tdata_r <= tx_tdata_r;
-	    debug_tx_tlast_r <= tx_tlast_r;
-	    debug_tx_tvalid_r <= tx_tvalid_r;
-	    debug_tx_tready_r <= tx_tready_r;
-	    debug_seq_id <= error_code[11:0];
-	    debug_ack_or_error <= ack_or_error;
-	    debug_run_tx <= run_tx;
-	    debug_strobe_tx <= strobe_tx;
-	    
-	 end // always @ (posedge radio_clk)
-   
-   wire [35:0] CONTROL0;
-   wire [255:0] TRIG0;
-
-   assign TRIG0 = {
-		   debug_strobe_tx,       // 87
-		   debug_run_tx,          // 86
-		   debug_ack_or_error,    // 85
-		   debug_error_code[5:0], // 84:79
-		   debug_seq_id[11:0],    // 78:67
- 		   debug_tx_tready_r,     // 66
-		   debug_tx_tvalid_r,     // 65
-		   debug_tx_tlast_r,      // 64
-		   debug_tx_tdata_r[63:0] // 63:0
-		   };
-   
-   
-   chipscope_ila chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(radio_clk), // IN
-      .TRIG0(TRIG0 ) // IN BUS [255:0]
-      );
-  
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
-
-      end // block: chipscope
-   endgenerate
- -----/\----- EXCLUDED -----/\----- */
-
-
 
 endmodule // radio

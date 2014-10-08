@@ -530,9 +530,12 @@ module x300_core
 `endif
 
    radio #(
-	   .CHIPSCOPE(0),
-	   .DELETE_DSP(`DELETE_DSP0)
-	   )
+           .CHIPSCOPE(0),
+           .DELETE_DSP(`DELETE_DSP0),
+           .RADIO_NUM(0),
+           .DATA_FIFO_SIZE(10),
+           .MSG_FIFO_SIZE(9)
+           )
    radio0
      (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
@@ -563,9 +566,12 @@ module x300_core
 `endif
 
    radio #(
-	   .CHIPSCOPE(0),
-	   .DELETE_DSP(`DELETE_DSP1)
-	   )
+           .CHIPSCOPE(0),
+           .DELETE_DSP(`DELETE_DSP1),
+           .RADIO_NUM(1),
+           .DATA_FIFO_SIZE(10),
+           .MSG_FIFO_SIZE(9)
+           )
    radio1
      (
       .radio_clk(radio_clk), .radio_rst(radio_rst),

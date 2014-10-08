@@ -1,0 +1,22 @@
+# codec_data_clk is the data clock from catalina, sample rate dependent
+# this clock equals sample rate in CMOS DDR 1R1T mode
+# this clock is double the sample rate in CMOS DDR 2R2T mode
+# Max clock rate is 61.44 MHz
+NET "CAT_DATA_CLK" TNM_NET = "CAT_DATA_CLK";
+TIMESPEC "TS_CAT_DATA_CLK" = PERIOD "CAT_DATA_CLK" 16276 ps HIGH 50 %;
+
+NET "*rx_clk_bufr" TNM_NET = FFS "rx_clk_bufr_ffs";
+TIMESPEC "TS_rx_clk_bufr" = PERIOD "rx_clk_bufr" 16276 ps HIGH 50%;
+
+NET "*codec_clk" TNM_NET = FFS "codec_clk_ffs";
+TIMESPEC "TS_codec_clk" = PERIOD "codec_clk" 16276 ps HIGH 50%;
+
+NET "*half_clk" TNM_NET = FFS "half_clk_ffs";
+TIMESPEC "TS_half_clk" = PERIOD "half_clk" 32552 ps HIGH 50%;
+
+NET "*radio_clk" TNM_NET = FFS "radio_clk_ffs";
+TIMESPEC "TS_radio_clk" = PERIOD "radio_clk" 16276 ps HIGH 50%;
+
+TIMESPEC TS_rx_clk_to_codec_clk = FROM "rx_clk_bufr_ffs" TO "codec_clk_ffs" 10 ns;
+TIMESPEC TS_codec_clk_to_radio_clk = FROM "codec_clk_ffs" TO "radio_clk_ffs" 10 ns;
+TIMESPEC TS_half_clk_to_radio_clk = FROM "half_clk_ffs" TO "radio_clk_ffs" 10 ns;
