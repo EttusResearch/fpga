@@ -6,6 +6,10 @@
 // simple_mode=1 allows user to ignore chdr stuff, must produce 1 packet for each one consume
 // simple_mode=0 user controls all chdr info, must control s_axis_data_tuser
 
+// _tuser bit definitions
+//   [127:64] == CHDR header
+//   [63:0] == timestamp
+
 module axi_wrapper
   #(parameter BASE=0,
     parameter NUM_AXI_CONFIG_BUS=1,
