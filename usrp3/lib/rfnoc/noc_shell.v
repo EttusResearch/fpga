@@ -10,7 +10,9 @@
 module noc_shell
   #(parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,
     parameter STR_SINK_FIFOSIZE = 10,
-    parameter MTU = 10)
+    parameter MTU = 10,
+    parameter INPUT_PORTS = 1,
+    parameter OUTPUT_PORTS = 1)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -27,10 +29,12 @@ module noc_shell
     output [63:0] ackin_tdata, output ackin_tlast, output ackin_tvalid, input ackin_tready,
     
     // Stream Sink
-    output [63:0] str_sink_tdata, output str_sink_tlast, output str_sink_tvalid, input str_sink_tready,
+    output [INPUT_PORTS*64-1:0] str_sink_tdata, output [INPUT_PORTS-1:0] str_sink_tlast,
+    output [INPUT_PORTS-1:0] str_sink_tvalid, input [INPUT_PORTS-1:0] str_sink_tready,
     
     // Stream Source
-    input [63:0] str_src_tdata, input str_src_tlast, input str_src_tvalid, output str_src_tready,
+    input [OUTPUT_PORTS*64-1:0] str_src_tdata, input [OUTPUT_PORTS-1:0] str_src_tlast,
+    input [OUTPUT_PORTS-1:0] str_src_tvalid, output [OUTPUT_PORTS-1:0] str_src_tready,
 
     output [63:0] debug
     );
@@ -130,31 +134,100 @@ module noc_shell
 
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
+ 
+   wire [64*OUTPUT_PORTS-1:0] dataout_ports_tdata;
+   wire [OUTPUT_PORTS-1:0]    dataout_ports_tvalid, dataout_ports_tready, dataout_ports_tlast;
+   
+   wire [64*OUTPUT_PORTS-1:0] fcin_ports_tdata;
+   wire [OUTPUT_PORTS-1:0]    fcin_ports_tvalid, fcin_ports_tready, fcin_ports_tlast;
 
-   noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU)) noc_output_port_0
-     (.clk(clk), .reset(reset),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
-      .fcin_tdata(fcin_tdata), .fcin_tlast(fcin_tlast), .fcin_tvalid(fcin_tvalid), .fcin_tready(fcin_tready),
-      .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
-      
+   wire [63:0] 		      header_fcin;
+   
+   genvar 		      i;
+   generate
+      if(OUTPUT_PORTS == 1)
+	noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU)) noc_output_port_0
+	  (.clk(clk), .reset(reset),
+	   .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+	   .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
+	   .fcin_tdata(fcin_tdata), .fcin_tlast(fcin_tlast), .fcin_tvalid(fcin_tvalid), .fcin_tready(fcin_tready),
+	   .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
+      else
+	begin
+	   for(i=0 ; i < OUTPUT_PORTS ; i = i + 1)
+	     noc_output_port #(.BASE(SB_OUTPUT_BASE+i*2), .PORT_NUM(i), .MTU(MTU)) noc_output_port_0
+		 (.clk(clk), .reset(reset),
+		  .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+		  .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
+		  .dataout_tvalid(dataout_ports_tvalid[i]), .dataout_tready(dataout_ports_tready[i]),
+		  .fcin_tdata(fcin_ports_tdata[64*i+63:64*i]), .fcin_tlast(fcin_ports_tlast[i]),
+		  .fcin_tvalid(fcin_ports_tvalid[i]), .fcin_tready(fcin_ports_tready[i]),
+		  .str_src_tdata(str_src_tdata[64*i+63:64*i]), .str_src_tlast(str_src_tlast[i]),
+		  .str_src_tvalid(str_src_tvalid[i]), .str_src_tready(str_src_tready[i]));
+	   axi_mux #(.PRIO(0), .WIDTH(64), .BUFFER(0), .SIZE(OUTPUT_PORTS)) mux_dataout
+	     (.clk(clk), .reset(reset), .clear(0),
+	      .i_tdata(dataout_ports_tdata), .i_tlast(dataout_ports_tlast), .i_tvalid(dataout_ports_tvalid), .i_tready(dataout_ports_tready),
+	      .o_tdata(dataout_tdata), .o_tlast(dataout_tlast), .o_tvalid(dataout_tvalid), .o_tready(dataout_tready));
+	   axi_demux #(.WIDTH(64), .SIZE(OUTPUT_PORTS)) demux_fcin
+	     (.clk(clk), .reset(reset), .clear(0),
+	      .header(header_fcin), .dest(header_fcin[3:0]),
+	      .i_tdata(fcin_tdata), .i_tlast(fcin_tlast), .i_tvalid(fcin_tvalid), .i_tready(fcin_tready),
+	      .o_tdata(fcin_ports_tdata), .o_tlast(fcin_ports_tlast), .o_tvalid(fcin_ports_tvalid), .o_tready(fcin_ports_tready));
+	end
+   endgenerate
+   
    // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
 
-   wire 	 clear_tx_fc;
+   wire [64*INPUT_PORTS-1:0] datain_ports_tdata;
+   wire [INPUT_PORTS-1:0]    datain_ports_tvalid, datain_ports_tready, datain_ports_tlast;
+   
+   wire [64*INPUT_PORTS-1:0] fcout_ports_tdata;
+   wire [INPUT_PORTS-1:0]    fcout_ports_tvalid, fcout_ports_tready, fcout_ports_tlast;
+
+   wire [63:0] 		      header_datain;
+   wire 		      clear_tx_fc;
    
    setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(),.changed(clear_tx_fc));
-   
-   noc_input_port #(.BASE(SB_INPUT_BASE), .PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
-     (.clk(clk), .reset(reset),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
-      .fcout_tdata(fcout_tdata), .fcout_tlast(fcout_tlast), .fcout_tvalid(fcout_tvalid), .fcout_tready(fcout_tready),
-      .clear_tx_fc(clear_tx_fc),
-      .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready));
-   
+
+   genvar 	 j;
+   generate
+      if(INPUT_PORTS == 1)
+	noc_input_port #(.BASE(SB_INPUT_BASE), .PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+	  (.clk(clk), .reset(reset),
+	   .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+	   .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
+	   .fcout_tdata(fcout_tdata), .fcout_tlast(fcout_tlast), .fcout_tvalid(fcout_tvalid), .fcout_tready(fcout_tready),
+	   .clear_tx_fc(clear_tx_fc),
+	   .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready));
+      else
+	begin
+	   for(j=0; j<INPUT_PORTS; j=j+1)
+	     noc_input_port #(.BASE(SB_INPUT_BASE+j*2), .PORT_NUM(j), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+		 (.clk(clk), .reset(reset),
+		  .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+		  .datain_tdata(datain_ports_tdata[64*j+63:64*j]), .datain_tlast(datain_ports_tlast[j]),
+		  .datain_tvalid(datain_ports_tvalid[j]), .datain_tready(datain_ports_tready[j]),
+		  .fcout_tdata(fcout_ports_tdata[64*j+63:64*j]), .fcout_tlast(fcout_ports_tlast[j]),
+		  .fcout_tvalid(fcout_ports_tvalid[j]), .fcout_tready(fcout_ports_tready[j]),
+		  .clear_tx_fc(clear_tx_fc),
+		  .str_sink_tdata(str_sink_tdata[64*j+63:64*j]), .str_sink_tlast(str_sink_tlast[j]),
+		  .str_sink_tvalid(str_sink_tvalid[j]), .str_sink_tready(str_sink_tready[j]));
+	   axi_demux #(.WIDTH(64), .SIZE(INPUT_PORTS)) demux_datain
+	     (.clk(clk), .reset(reset), .clear(0),
+	      .header(header_datain), .dest(header_datain[3:0]),
+	      .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
+	      .o_tdata(datain_ports_tdata), .o_tlast(datain_ports_tlast), .o_tvalid(datain_ports_tvalid), .o_tready(datain_ports_tready));
+	   axi_mux #(.PRIO(0), .WIDTH(64), .BUFFER(0), .SIZE(INPUT_PORTS)) mux_fcout
+	     (.clk(clk), .reset(reset), .clear(0),
+	      .i_tdata(fcout_ports_tdata), .i_tlast(fcout_ports_tlast), .i_tvalid(fcout_ports_tvalid), .i_tready(fcout_ports_tready),
+	      .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
+	   
+	end
+   endgenerate
+      
    // ////////////////////////////////////////////////////////////////////////////////////
    // Debug pins
 
