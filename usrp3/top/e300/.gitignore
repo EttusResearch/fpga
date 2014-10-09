@@ -1,4 +1,5 @@
 /build
+/build-*
 build.log
 chipscope/_xmsgs/
 coregen/_xmsgs/

@@ -1,133 +1,84 @@
 #
-# Copyright 2008-2013 Ettus Research LLC
+# Copyright 2012-2014 Ettus Research LLC
 #
 
-##################################################
-# Project Setup
-##################################################
-TOP_MODULE = e300
-BUILD_DIR = $(abspath build$(ISE))
+# NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
+##-------------------
+##USRP E3X0 FPGA Help
+##-------------------
+##Usage:
+## make <Targets> <Options>
+##
+##Output:
+## build/usrp_<product>_fpga.bit:    Configuration bitstream with header
+## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga.syr:    Xilinx system report
+## build/usrp_<product>_fpga.twr:    Xilinx timing report
 
-# set me in a custom makefile
-CUSTOM_SRCS =
-CUSTOM_DEFS =
+print_report = \
+	echo "========================================================================"; \
+	cat $(1)/e300.syr | grep "Device utilization summary:" -A 30; \
+	echo "========================================================================"; \
+	echo "Timing Summary:\n"; \
+	cat $(1)/e300.twr | grep constraint | grep met | grep -v "*"; \
+	echo "========================================================================";
 
-##################################################
-# Include other makefiles
-##################################################
+# pre_build($1=Device)
+ifeq ($(EXPORT_ONLY),1)
+	pre_build = @test -s build-$(1)/e300.bit || { echo "EXPORT_ONLY requires the project in build-$(1) to be fully built."; false; }
+else
+	pre_build = @echo "ISE Version: $(shell xtclsh -h | head -n1)"
+endif
 
-include ../Makefile.common
+# ise_build($1=Device, $2=Definitions)
+ifeq ($(PROJECT_ONLY),1)
+	ise_build = make -f Makefile.e300.inc proj NAME=$@ DEVICE=$1 EXTRA_DEFS="$2"
+else ifeq ($(EXPORT_ONLY),1)
+	ise_build = @echo "Skipping ISE build and exporting pre-built files.";
+else
+	ise_build = make -f Makefile.e300.inc bin NAME=$@ DEVICE=$1 EXTRA_DEFS="$2"
+endif
 
-include ../../lib/control/Makefile.srcs
-include ../../lib/fifo/Makefile.srcs
-include ../../lib/zynq_fifo/Makefile.srcs
-include ../../lib/control/Makefile.srcs
-include ../../lib/timing/Makefile.srcs
-include ../../lib/packet_proc/Makefile.srcs
-include ../../lib/vita/Makefile.srcs
-include ../../lib/dsp/Makefile.srcs
-include zynq-ps/Makefile.srcs
+# post_build($1=Device)
+ifeq ($(PROJECT_ONLY),1)
+	post_build = \
+		@echo "Generated $(shell pwd)/build-$(1)/e300.xise"; \
+		echo "\nProject Generation DONE ... $(1)\n";
+else
+	post_build = \
+		@$(call print_report,build-$(1)) \
+		mkdir -p build; \
+		echo "Exporting bitstream files..."; \
+		cp build-$(1)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bin; \
+		cp build-$(1)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bit; \
+		echo "Exporting logs..."; \
+		cp build-$(1)/e300.syr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.syr; \
+		cp build-$(1)/e300.twr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.twr; \
+		echo "\nBuild DONE ... $(1)\n";
+endif
 
-promgen: $(BIT_FILE)
-	promgen -w -p bin -c FF -o $(BIN_FILE) -b -s 4096 -u 00000000 $< -bpi_dc parallel -data_width 32
+##
+##Supported Targets
+##-----------------
 
-##################################################
-# Git Hash
-##################################################
-export SHORT_HASH = $(shell ../git-hash.sh)
+E310:  ##Build USRP E310 design.
+	$(call pre_build,E310)
+	$(call ise_build,XC7Z020,)
+	$(call post_build,E310)
 
-##################################################
-# Project Properties
-##################################################
-export PROJECT_PROPERTIES := \
-family "Zynq" \
-device XC7Z020 \
-package CLG484 \
-speed -1 \
-top_level_module_type "HDL" \
-synthesis_tool "XST (VHDL/Verilog)" \
-simulator "ISim (VHDL/Verilog)" \
-"Preferred Language" "Verilog" \
-"Enable Message Filtering" FALSE \
-"Display Incremental Messages" FALSE
+all: E310
 
-##################################################
-# Sources
-##################################################
-TOP_SRCS = \
-	e300.v \
-	e300_core.v \
-	../b200/catgen_ddr_cmos.v \
-	../b200/catcap_ddr_cmos.v \
-	../b200/catcodec_ddr_cmos.v \
-	$(CHIPSCOPE_SRCS) \
-	coregen/axi_datamover_v3_00_a.xco \
-	coregen/fifo_4k_2clk.v \
-	coregen/fifo_short_2clk.xco \
-	coregen/catcodec_mmcm.xco \
-	../x300/radio.v \
-        ../x300/coregen_dsp/hbdec1.xco \
-        ../x300/coregen_dsp/hbdec1.v \
-        ../x300/coregen_dsp/hbdec2.xco \
-        ../x300/coregen_dsp/hbdec2.v \
-        ../x300/coregen_dsp/hbdec3.xco \
-        ../x300/coregen_dsp/hbdec3.v \
-	e300.ucf \
-	timing.ucf \
-	rf_board.ucf
+clean:
+	rm -rf build-*
+	rm -rf build
 
-CHIPSCOPE_SRCS = \
-	chipscope/chipscope_icon.v \
-	chipscope/chipscope_icon.xco \
-	chipscope/chipscope_ila.v \
-	chipscope/chipscope_ila.xco
+help: ## Show this help message.
+	@grep -h "##" Makefile | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
 
-SOURCES = \
-	$(abspath $(TOP_SRCS)) \
-	$(ZYNQ_PS_SRCS) \
-	$(ZYNQ_FIFO_SRCS) \
-	$(FIFO_SRCS) \
-	$(VITA_SRCS) \
-	$(TIMING_SRCS) \
-	$(DSP_SRCS) \
-	$(PACKET_PROC_SRCS) \
-	$(CONTROL_LIB_SRCS)
+##
+##Supported Options
+##-----------------
+##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
+##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory. Requires the project in build-*_* to be built.
 
-##################################################
-# Process Properties
-##################################################
-SYNTHESIZE_PROPERTIES = \
-"Number of Clock Buffers" 8 \
-"Pack I/O Registers into IOBs" Yes \
-"Optimization Effort" High \
-"Optimize Instantiated Primitives" TRUE \
-"Register Balancing" Yes \
-"Use Clock Enable" Auto \
-"Use Synchronous Reset" Auto \
-"Use Synchronous Set" Auto \
-"Verilog Macros" "GIT_HASH=$(SHORT_HASH)"
-
-TRANSLATE_PROPERTIES = \
-"Macro Search Path" "$(shell pwd)/coregen/"
-
-MAP_PROPERTIES = \
-"Generate Detailed MAP Report" TRUE \
-"Allow Logic Optimization Across Hierarchy" TRUE \
-"Pack I/O Registers/Latches into IOBs" "For Inputs and Outputs" \
-"Combinatorial Logic Optimization" TRUE \
-"Register Duplication" ON
-
-PLACE_ROUTE_PROPERTIES = \
-"Place & Route Effort Level (Overall)" High
-
-STATIC_TIMING_PROPERTIES = \
-"Number of Paths in Error/Verbose Report" 10 \
-"Report Type" "Error Report"
-
-GEN_PROG_FILE_PROPERTIES = \
-"Create Binary Configuration File" TRUE \
-"Done (Output Events)" 5 \
-"Enable Bitstream Compression" TRUE \
-"Enable Outputs (Output Events)" 6
-
-SIM_MODEL_PROPERTIES = ""
+.PHONY: all clean help
