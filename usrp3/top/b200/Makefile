@@ -61,6 +61,8 @@ endif
 ##Supported Targets
 ##-----------------
 
+all:   B200 B210  ##(Default target)
+
 B200:  ##Build USRP B200 design.
 	$(call pre_build,B200)
 	$(call ise_build,XC6SLX75,)
@@ -71,9 +73,7 @@ B210:  ##Build USRP B210 design.
 	$(call ise_build,XC6SLX150,B200_CAN_HAZ_R1=1)
 	$(call post_build,B210)
 
-all: B200 B210
-
-clean:
+clean: ##Clean up all build output.
 	rm -rf build-*
 	rm -rf build
 
@@ -83,7 +83,9 @@ help: ## Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
-##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory. Requires the project in build-*_* to be built.
+##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). 
+##                 Useful for use with the ISE GUI.
+##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
+##                 Requires the project in build-*_* to be built.
 
 .PHONY: all clean help

@@ -80,6 +80,8 @@ endif
 ##Supported Targets
 ##-----------------
 
+all:      X300_HGS X310_HGS ##(Default target)
+
 X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
 	$(call pre_build,X310,1G)
 	$(call ise_build,XC7K410T,$(GIGE_DEFS))
@@ -130,23 +132,19 @@ X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
 	$(call ise_build,XC7K325T,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X300,XGS)
 
-X300: X300_HGS X300_HG X300_XGS X300_XG
-
-X310: X310_HGS X310_HG X310_XGS X310_XG
-
-all: X300 X310
-
-clean:
+clean:    ##Clean up all build output.
 	rm -rf build-*_*
 	rm -rf build
 
-help: ##    Show this help message.
+help:     ##Show this help message.
 	@grep -h "##" Makefile | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
 
 ##
 ##Supported Options
 ##-----------------
-##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
-##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory. Requires the project in build-*_* to be built.
+##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). 
+##                 Useful for use with the ISE GUI.
+##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
+##                 Requires the project in build-*_* to be built.
 
 .PHONY: all clean X300 X310 help

@@ -61,14 +61,14 @@ endif
 ##Supported Targets
 ##-----------------
 
+all:   E310 ##(Default target)
+
 E310:  ##Build USRP E310 design.
 	$(call pre_build,E310)
 	$(call ise_build,XC7Z020,)
 	$(call post_build,E310)
 
-all: E310
-
-clean:
+clean: ##Clean up all build output.
 	rm -rf build-*
 	rm -rf build
 
@@ -78,7 +78,9 @@ help: ## Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
-##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory. Requires the project in build-*_* to be built.
+##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). 
+##                 Useful for use with the ISE GUI.
+##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
+##                 Requires the project in build-*_* to be built.
 
 .PHONY: all clean help
