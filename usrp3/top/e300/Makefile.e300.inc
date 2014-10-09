@@ -26,6 +26,8 @@ include ../../lib/timing/Makefile.srcs
 include ../../lib/packet_proc/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/dsp/Makefile.srcs
+include ../../lib/radio/Makefile.srcs
+include ../../lib/io_cap_gen/Makefile.srcs
 include zynq-ps/Makefile.srcs
 
 promgen: $(BIT_FILE)
@@ -57,21 +59,17 @@ simulator "ISim (VHDL/Verilog)" \
 TOP_SRCS = \
 	e300.v \
 	e300_core.v \
-	../b200/catgen_ddr_cmos.v \
-	../b200/catcap_ddr_cmos.v \
-	../b200/catcodec_ddr_cmos.v \
 	$(CHIPSCOPE_SRCS) \
 	coregen/axi_datamover_v3_00_a.xco \
 	coregen/fifo_4k_2clk.v \
 	coregen/fifo_short_2clk.xco \
 	coregen/catcodec_mmcm.xco \
-	../x300/radio.v \
-        ../x300/coregen_dsp/hbdec1.xco \
-        ../x300/coregen_dsp/hbdec1.v \
-        ../x300/coregen_dsp/hbdec2.xco \
-        ../x300/coregen_dsp/hbdec2.v \
-        ../x300/coregen_dsp/hbdec3.xco \
-        ../x300/coregen_dsp/hbdec3.v \
+	../x300/coregen_dsp/hbdec1.xco \
+	../x300/coregen_dsp/hbdec1.v \
+	../x300/coregen_dsp/hbdec2.xco \
+	../x300/coregen_dsp/hbdec2.v \
+	../x300/coregen_dsp/hbdec3.xco \
+	../x300/coregen_dsp/hbdec3.v \
 	e300.ucf \
 	timing.ucf \
 	rf_board.ucf
@@ -91,7 +89,9 @@ SOURCES = \
 	$(TIMING_SRCS) \
 	$(DSP_SRCS) \
 	$(PACKET_PROC_SRCS) \
-	$(CONTROL_LIB_SRCS)
+	$(CONTROL_LIB_SRCS) \
+	$(RADIO_SRCS) \
+	$(CAT_CAP_GEN_SRCS)
 
 ##################################################
 # Process Properties
