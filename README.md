@@ -3,7 +3,7 @@ USRP FPGA HDL Source
 
 Welcome to the USRP FPGA HDL source code tree! This repository contains
 free & open-source FPGA HDL for the Universal Software Radio Peripheral
-(USRP&trade;) SDR platform, created and sold by Ettus Research. Most of
+(USRP™) SDR platform, created and sold by Ettus Research. Most of
 the source is written in Verilog and the rest is in VHDL.
 
 ## Product Generations
@@ -44,8 +44,8 @@ tools above for more information.
 
 * Download and install __Xilinx ISE 12.2__ from http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v12_2.html
 * To add xtclsh to the PATH and to setup up the Xilinx build environment run
-  ``source <install dir>/Xilinx/12.2/ISE_DS/settings64.sh`` for 64-bit platforms or
-  ``source <install dir>/Xilinx/12.2/ISE_DS/settings32.sh`` for 32-bit platforms.
+  ``source <install_dir>/Xilinx/12.2/ISE_DS/settings64.sh`` for 64-bit platforms or
+  ``source <install_dir>/Xilinx/12.2/ISE_DS/settings32.sh`` for 32-bit platforms.
 * Navigate ``to usrp2/top/{project}`` where project is B100, E1x0, N2x0 or USRP2
 * To build a binary configuration bitstream run ``make -f Makefile.<device> bin``
 * The build output will be a product specific binary file in the ``usrp2/top/{project}/build``
@@ -55,8 +55,8 @@ tools above for more information.
 
 * Download and install __Xilinx ISE 14.7__ from http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html
 * To add xtclsh to the PATH and to setup up the Xilinx build environment run
-  ``source <install dir>/Xilinx/14.7/ISE_DS/settings64.sh`` for 64-bit platforms or
-  ``source <install dir>/Xilinx/14.7/ISE_DS/settings32.sh`` for 32-bit platforms.
+  ``source <install_dir>/Xilinx/14.7/ISE_DS/settings64.sh`` for 64-bit platforms or
+  ``source <install_dir>/Xilinx/14.7/ISE_DS/settings32.sh`` for 32-bit platforms.
 * Navigate ``to usrp3/top/{project}`` where project is b200, x300, or e300
 * To build a binary configuration bitstream run ``make <target>``
   where the target is specific to each product. To get a list of supported targets run

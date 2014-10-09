@@ -1,5 +1,5 @@
 #
-# Copyright 2012-2013 Ettus Research LLC
+# Copyright 2012-2014 Ettus Research LLC
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
@@ -30,16 +30,6 @@ HYBRID_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 $(OPTIONS)
 XGIGE_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 $(OPTIONS)
 HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
-
-X300: X300_HGS X300_HG X300_XGS X300_XG
-
-X310: X310_HGS X310_HG X310_XGS X310_XG
-
-all: X300 X310
-
-clean:
-	rm -rf build-*_*
-	rm -rf build
 
 print_report = \
 	echo "========================================================================"; \
@@ -140,6 +130,16 @@ X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
 	$(call ise_build,XC7K325T,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X300,XGS)
 
+X300: X300_HGS X300_HG X300_XGS X300_XG
+
+X310: X310_HGS X310_HG X310_XGS X310_XG
+
+all: X300 X310
+
+clean:
+	rm -rf build-*_*
+	rm -rf build
+
 help: ##    Show this help message.
 	@grep -h "##" Makefile | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
 
@@ -149,4 +149,4 @@ help: ##    Show this help message.
 ##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
 ##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory. Requires the project in build-*_* to be built.
 
-.PHONY: all clean
+.PHONY: all clean X300 X310 help
