@@ -50,6 +50,7 @@ module noc_block_schmidl_cox #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
+   // FIXME this needs an axi_wrapper, it talks 32bit data
   schmidl_cox inst_schmidl_cox (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),

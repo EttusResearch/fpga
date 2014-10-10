@@ -125,14 +125,6 @@ module noc_shell
      endcase
       
    // ////////////////////////////////////////////////////////////////////////////////////
-   // Control Source (skeleton for now)
-
-   assign ackin_tready = 1'b1;    // Dump anything coming in
-   assign cmdout_tdata = 64'd0;
-   assign cmdout_tlast = 1'b0;
-   assign cmdout_tvalid = 1'b0;
-
-   // ////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
  
    wire [64*OUTPUT_PORTS-1:0] dataout_ports_tdata;

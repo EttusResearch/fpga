@@ -1,4 +1,6 @@
 
+// FIXME handle odd length inputs
+
 module chdr_framer
   #(parameter SIZE=10)
    (input clk, input reset, input clear,
