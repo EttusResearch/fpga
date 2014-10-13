@@ -39,4 +39,6 @@ noc_input_port.v \
 noc_output_port.v \
 keep_one_in_n_vec.v \
 packet_resizer.v \
+noc_block_addsub.v \
+addsub.v \
 ))
