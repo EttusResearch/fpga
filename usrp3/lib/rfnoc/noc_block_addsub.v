@@ -31,7 +31,7 @@ module noc_block_addsub
    wire [1:0] 	  in_tlast, in_tvalid, in_tready;
    
    wire [31:0] 	  out_tdata[0:1];
-   wire [127:0]   out_tuser[0:1];
+   wire [127:0]   out_tuser[0:1], out_tuser_pre[0:1];
    wire [1:0] 	  out_tlast, out_tvalid, out_tready;
    
    noc_shell #(.NOC_ID(NOC_ID),
@@ -73,12 +73,28 @@ module noc_block_addsub
 
    // throw away tuser on 2nd input, just use first
    // FIXME we should probably stall the chain if this isn't ready for the last line of output
+
+   wire [15:0] 	  next_destination[0:1];
+   localparam BASE = 0;
+   wire [127:0]   out_tuser_pre0, out_tuser_pre1;
+   
+   setting_reg #(.my_addr(BASE), .width(16)) new_destination
+     (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(next_destination[0]));
+
+   setting_reg #(.my_addr(BASE+1), .width(16)) new_destination1
+     (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(next_destination[1]));
+
    split_stream_fifo #(.WIDTH(128), .ACTIVE_MASK(4'b0011)) tuser_splitter
      (.clk(ce_clk), .reset(ce_rst), .clear(1'b0),
       .i_tdata(in_tuser[0]), .i_tlast(1'b0), .i_tvalid(in_tvalid[0] & in_tlast[0]), .i_tready(),
-      .o0_tdata(out_tuser[0]), .o0_tlast(), .o0_tvalid(), .o0_tready(out_tlast[0] & out_tready[0]),
-      .o1_tdata(out_tuser[1]), .o1_tlast(), .o1_tvalid(), .o1_tready(out_tlast[1] & out_tready[1]),
+      .o0_tdata(out_tuser_pre[0]), .o0_tlast(), .o0_tvalid(), .o0_tready(out_tlast[0] & out_tready[0]),
+      .o1_tdata(out_tuser_pre[1]), .o1_tlast(), .o1_tvalid(), .o1_tready(out_tlast[1] & out_tready[1]),
       .o2_tready(1'b1), .o3_tready(1'b1));
+
+   assign out_tuser[0] = { out_tuser_pre0[127:96], out_tuser_pre0[79:64],next_destination[0], out_tuser_pre0[63:0] };
+   assign out_tuser[0] = { out_tuser_pre1[127:96], out_tuser_pre1[79:64],next_destination[1], out_tuser_pre1[63:0] };
    
    genvar 	  j;
    generate
