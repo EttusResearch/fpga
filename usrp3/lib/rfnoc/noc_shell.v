@@ -12,7 +12,8 @@ module noc_shell
     parameter STR_SINK_FIFOSIZE = 10,
     parameter MTU = 10,
     parameter INPUT_PORTS = 1,
-    parameter OUTPUT_PORTS = 1)
+    parameter OUTPUT_PORTS = 1,
+    parameter USE_GATE = 0)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -138,7 +139,7 @@ module noc_shell
    genvar 		      i;
    generate
       if(OUTPUT_PORTS == 1)
-	noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU)) noc_output_port_0
+	noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU), .USE_GATE(USE_GATE)) noc_output_port_0
 	  (.clk(clk), .reset(reset),
 	   .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	   .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
@@ -147,7 +148,7 @@ module noc_shell
       else
 	begin
 	   for(i=0 ; i < OUTPUT_PORTS ; i = i + 1)
-	     noc_output_port #(.BASE(SB_OUTPUT_BASE+i*2), .PORT_NUM(i), .MTU(MTU)) noc_output_port_0
+	     noc_output_port #(.BASE(SB_OUTPUT_BASE+i*2), .PORT_NUM(i), .MTU(MTU), .USE_GATE(USE_GATE)) noc_output_port_0
 		 (.clk(clk), .reset(reset),
 		  .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 		  .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
