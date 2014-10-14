@@ -49,7 +49,7 @@ module gpif2_to_fifo64
    //
    // This FIFO is provdied purely to easy FPGA timing closure as data is comming from I/O pins.
    //
-   axi_fifo #(.WIDTH(33), .SIZE(0)) ingress_timing_fifo
+   axi_fifo #(.WIDTH(33), .SIZE(1)) ingress_timing_fifo
      (
       .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
       .i_tdata({i_tlast, i_tdata}), .i_tvalid(i_tvalid), .i_tready(i_tready), .space(),

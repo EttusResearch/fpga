@@ -17,7 +17,9 @@ module axi_fifo_flop
     output i_tready,
     output reg [WIDTH-1:0] o_tdata,
     output reg o_tvalid,
-    input o_tready);
+    input o_tready,
+    output space,
+    output occupied);
 
    assign i_tready = ~o_tvalid | o_tready;
 
@@ -30,5 +32,9 @@ module axi_fifo_flop
    always @(posedge clk)
      if(i_tvalid & i_tready)
        o_tdata <= i_tdata;
+
+   // These aren't terribly useful, but include them for consistency
+   assign space = i_tready;
+   assign occupied = o_tvalid;
    
 endmodule // axi_fifo_flop

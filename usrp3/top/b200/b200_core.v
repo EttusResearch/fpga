@@ -15,7 +15,7 @@ module b200_core
     parameter R0_DATA_SID = 8'h50,
     parameter R1_DATA_SID = 8'h60,
     parameter DEMUX_SID_MASK = 8'hf0,
-    parameter EXTRA_BUFF_SIZE = 0,
+    parameter EXTRA_BUFF_SIZE = 1,
     parameter RADIO_FIFO_SIZE = 12,
     parameter SAMPLE_FIFO_SIZE = 11
  
@@ -158,7 +158,7 @@ module b200_core
      ******************************************************************/
     wire [63:0] u0i_ctrl_tdata; wire u0i_ctrl_tlast, u0i_ctrl_tvalid, u0i_ctrl_tready;
 
-    axi_fifo #(.WIDTH(65), .SIZE(0)) uart_timing_fifo
+    axi_fifo #(.WIDTH(65), .SIZE(1)) uart_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
         .i_tdata({u0_ctrl_tlast, u0_ctrl_tdata}), .i_tvalid(u0_ctrl_tvalid), .i_tready(u0_ctrl_tready), .space(),
@@ -190,7 +190,7 @@ module b200_core
 
     wire [63:0] l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
-    axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
+    axi_fifo #(.WIDTH(65), .SIZE(1)) radio_ctrl_proc_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
         .i_tdata({l0_ctrl_tlast, l0_ctrl_tdata}), .i_tvalid(l0_ctrl_tvalid), .i_tready(l0_ctrl_tready), .space(),
