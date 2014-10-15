@@ -93,7 +93,7 @@ module noc_block_axi_fifo_loopback #(
   assign ackin_tready = 1'b1;
 
   axi_fifo #(
-    .WIDTH(33), .SIZE(12))
+    .WIDTH(33), .SIZE(2))
   inst_axi_fifo (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .i_tdata({m_axis_data_tlast,m_axis_data_tdata}), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
