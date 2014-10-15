@@ -17,6 +17,7 @@ noc_block_fir_filter.v \
 noc_block_fft.v \
 noc_block_null_source_sink.v \
 noc_block_schmidl_cox.v \
+noc_block_packet_resizer.v \
 schmidl_cox.v \
 split_stream.v \
 split_stream_fifo.v \
@@ -37,4 +38,5 @@ cmul.v \
 noc_input_port.v \
 noc_output_port.v \
 keep_one_in_n_vec.v \
+packet_resizer.v \
 ))

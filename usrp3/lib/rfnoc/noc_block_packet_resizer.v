@@ -1,5 +1,5 @@
 module noc_block_packet_resizer #(
-  parameter NOC_ID = 64'hFF70_0000_0000_0000,
+  parameter NOC_ID = 64'h12E5_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input bus_clk, input bus_rst,
@@ -51,24 +51,24 @@ module noc_block_packet_resizer #(
   //
   ////////////////////////////////////////////////////////////
   localparam NUM_AXI_CONFIG_BUS = 1;
-  
+
   wire [31:0] m_axis_data_tdata;
   wire [127:0] m_axis_data_tuser;
   wire 	      m_axis_data_tlast;
   wire        m_axis_data_tvalid;
   wire        m_axis_data_tready;
-  
+
   wire [31:0] s_axis_data_tdata;
   wire [127:0] s_axis_data_tuser;
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
-  
+
   wire [31:0] m_axis_config_tdata;
   wire        m_axis_config_tlast;
   wire        m_axis_config_tvalid;
   wire        m_axis_config_tready;
-  
+
   axi_wrapper #(
     .BASE(8),
     .NUM_AXI_CONFIG_BUS(1),
@@ -90,15 +90,15 @@ module noc_block_packet_resizer #(
     .s_axis_data_tready(s_axis_data_tready),
     .m_axis_config_tdata(m_axis_config_tdata),
     .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid), 
+    .m_axis_config_tvalid(m_axis_config_tvalid),
     .m_axis_config_tready(m_axis_config_tready));
-  
+
   ////////////////////////////////////////////////////////////
   //
   // User code
   //
   ////////////////////////////////////////////////////////////
-  
+
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
   assign cmdout_tlast = 1'b0;
@@ -118,5 +118,5 @@ module noc_block_packet_resizer #(
       .o_tlast(s_axis_data_tlast),
       .o_tvalid(s_axis_data_tvalid),
       .o_tready(s_axis_data_tready));
-      
+
 endmodule // noc_block_packet_resizer
