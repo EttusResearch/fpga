@@ -61,7 +61,7 @@ module noc_shell
 
    wire [63:0] 	  i_tdata_b, o_tdata_b;
    wire 	  i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
-   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(9)) in_fifo
+   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(5)) in_fifo   // Very little buffering needed here, only a clock domain crossing
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(i_tvalid), .i_tready(i_tready), .i_tdata({i_tlast,i_tdata}),
       .o_aclk(clk), .o_tvalid(i_tvalid_b), .o_tready(i_tready_b), .o_tdata({i_tlast_b,i_tdata_b}));
