@@ -130,7 +130,7 @@ module radio #(
    localparam SR_SPI       = 8'd8;
    localparam SR_GPIO      = 8'd16;
    localparam SR_MISC_OUTS = 8'd24;
-   localparam SR_READBACK  = 8'd32;
+   localparam SR_READBACK  = 8'd127;
    localparam SR_TX_CTRL   = 8'd64;
    localparam SR_RX_CTRL   = 8'd96;
    localparam SR_TIME      = 8'd128;
