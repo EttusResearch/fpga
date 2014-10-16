@@ -1,6 +1,6 @@
 module noc_block_window #(
-  parameter NOC_ID = 64'hD05E_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 10)
+  parameter NOC_ID = 64'hD053_0000_0000_0000,
+  parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,

@@ -1,6 +1,6 @@
 module noc_block_null_source_sink #(
   parameter NOC_ID = 64'h0000_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 10)
+  parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
