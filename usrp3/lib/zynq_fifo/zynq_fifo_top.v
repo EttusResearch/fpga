@@ -136,7 +136,7 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
+    wire set_stb, set_stb_s2h, set_stb_h2s;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
     wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
