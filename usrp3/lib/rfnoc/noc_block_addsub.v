@@ -94,7 +94,7 @@ module noc_block_addsub
       .o2_tready(1'b1), .o3_tready(1'b1));
 
    assign out_tuser[0] = { out_tuser_pre0[127:96], out_tuser_pre0[79:64],next_destination[0], out_tuser_pre0[63:0] };
-   assign out_tuser[0] = { out_tuser_pre1[127:96], out_tuser_pre1[79:64],next_destination[1], out_tuser_pre1[63:0] };
+   assign out_tuser[1] = { out_tuser_pre1[127:96], out_tuser_pre1[79:64],next_destination[1], out_tuser_pre1[63:0] };
    
    genvar 	  j;
    generate
