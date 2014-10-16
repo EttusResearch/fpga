@@ -1,7 +1,7 @@
 
 module noc_block_addsub
-  #(parameter NOC_ID = 64'hFF70_0000_0000_0000,
-    parameter STR_SINK_FIFOSIZE = 10)
+  #(parameter NOC_ID = 64'hADD0_0000_0000_0000,
+    parameter STR_SINK_FIFOSIZE = 11)
    (input bus_clk, input bus_rst,
     input ce_clk, input ce_rst,
     input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
