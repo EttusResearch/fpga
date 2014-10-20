@@ -27,6 +27,8 @@ include ../../lib/packet_proc/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/dsp/Makefile.srcs
 include ../../lib/radio/Makefile.srcs
+include ../../lib/rfnoc/Makefile.srcs
+include ../../lib/coregen/Makefile.srcs
 include ../../lib/io_cap_gen/Makefile.srcs
 include zynq-ps/Makefile.srcs
 
@@ -91,7 +93,9 @@ SOURCES = \
 	$(PACKET_PROC_SRCS) \
 	$(CONTROL_LIB_SRCS) \
 	$(RADIO_SRCS) \
-	$(CAT_CAP_GEN_SRCS)
+	$(CAT_CAP_GEN_SRCS) \
+	$(RFNOC_SRCS) \
+	$(LIBCOREGEN_SRCS)
 
 ##################################################
 # Process Properties
