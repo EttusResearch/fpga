@@ -5,7 +5,6 @@ module vector_iir
     parameter MAX_LOG2_OF_SIZE = 10)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    input [31:0] m_axis_config_tdata, input m_axis_config_tlast, input m_axis_config_tvalid, output m_axis_config_tready,
     input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
    
