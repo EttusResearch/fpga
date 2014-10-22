@@ -1,4 +1,7 @@
 
+// Copyright 2014 Ettus Research
+
+
 module axi_pipe
   #(parameter STAGES=3)
    (input clk, input reset, input clear,
