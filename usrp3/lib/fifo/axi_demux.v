@@ -18,6 +18,8 @@ module axi_demux
    assign o_tvalid = {SIZE{i_tvalid}} & st;
    assign i_tready = |(o_tready & st);
 
+   assign header = i_tdata;
+   
    always @(posedge clk)
      if(reset | clear)
        st <= {SIZE{1'b0}};
