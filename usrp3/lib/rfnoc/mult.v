@@ -43,9 +43,9 @@ module mult
    axi_pipe_join #(.PRE_JOIN_STAGES0(AREG_IN), .PRE_JOIN_STAGES1(AREG_IN),
 		   .POST_JOIN_STAGES(MREG_IN+PREG_IN)) axi_pipe
      (.clk(clk), .reset(reset), .clear(0),
-      .i0_tvalid(a_tvalid), .i0_tready(a_tready),
-      .i1_tvalid(b_tvalid), .i1_tready(b_tready),
-      .o_tvalid(p_tvalid), .o_tready(p_tready),
+      .i0_tlast(a_tlast), .i0_tvalid(a_tvalid), .i0_tready(a_tready),
+      .i1_tlast(a_tlast), .i1_tvalid(b_tvalid), .i1_tready(b_tready),
+      .o_tlast(p_tlast), .o_tvalid(p_tvalid), .o_tready(p_tready),
       .enables0(en0), .enables1(en1), .enables_post(en_post));
    
    DSP48E1 #(.ACASCREG(AREG_IN),       

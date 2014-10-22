@@ -5,8 +5,8 @@
 module axi_pipe
   #(parameter STAGES=3)
    (input clk, input reset, input clear,
-    input i_tvalid, output i_tready,
-    output o_tvalid, input o_tready,
+    input i_tlast, input i_tvalid, output i_tready,
+    output o_tlast, output o_tvalid, input o_tready,
     output [STAGES-1:0] enables,
     output reg [STAGES-1:0] valids);
 
@@ -35,6 +35,25 @@ module axi_pipe
       for(j=0; j<STAGES-1; j=j+1)
 	assign enables[j] = o_tready | (|(~valids[STAGES-1:j+1]));
    endgenerate
+
+   reg [STAGES-1:0] 	    tlast;
    
-       
+   genvar 		    k;
+   generate
+      for(k=1; k<STAGES; k=k+1)
+	always @(posedge clk)
+	  if(reset | clear)
+	    tlast[k] <= 1'b0;
+	  else if(enables[k])
+	    tlast[k] <= tlast[k-1];
+   endgenerate
+
+   always @(posedge clk)
+	  if(reset | clear)
+	    tlast[0] <= 1'b0;
+	  else if(enables[0])
+	    tlast[0] <= i_tlast;
+
+   assign o_tlast = tlast[STAGES-1];
+   
 endmodule // axi_pipe
