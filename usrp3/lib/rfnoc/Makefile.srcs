@@ -45,4 +45,6 @@ noc_block_vector_iir.v \
 noc_block_addsub.v \
 addsub.v \
 packet_resizer.v \
+axi_pipe.v \
+mult.v \
 ))
