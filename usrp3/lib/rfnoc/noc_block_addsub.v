@@ -64,7 +64,7 @@ module noc_block_addsub
 	     .o_tdata(in_tdata[i]), .o_tuser(in_tuser[i]), .o_tlast(in_tlast[i]), .o_tvalid(in_tvalid[i]), .o_tready(in_tready[i]));
    endgenerate
    
-   addsub #(.WIDTH(16)) addsub
+   addsub #(.WIDTH(16)) inst_addsub
      (.clk(ce_clk), .reset(ce_rst),
       .i0_tdata(in_tdata[0]), .i0_tlast(in_tlast[0]), .i0_tvalid(in_tvalid[0]), .i0_tready(in_tready[0]),
       .i1_tdata(in_tdata[1]), .i1_tlast(in_tlast[1]), .i1_tvalid(in_tvalid[1]), .i1_tready(in_tready[1]),
@@ -76,7 +76,8 @@ module noc_block_addsub
 
    wire [15:0] 	  next_destination[0:1];
    localparam BASE = 0;
-   wire [127:0]   out_tuser_pre0, out_tuser_pre1;
+   wire [127:0]   out_tuser_pre0 = out_tuser_pre[0];
+   wire [127:0]   out_tuser_pre1 = out_tuser_pre[1];
    
    setting_reg #(.my_addr(BASE), .width(16)) new_destination
      (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
