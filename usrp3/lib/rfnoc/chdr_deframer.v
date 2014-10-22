@@ -17,7 +17,7 @@ module chdr_deframer
    assign o_tdata = even_phase ? i_tdata[31:0] : i_tdata[63:32];
    assign o_tlast = i_tlast & (even_phase | odd_length);
    assign o_tvalid = i_tvalid & (chdr_state == ST_BODY);
-   assign i_tready = o_tready & ( (chdr_state != ST_BODY) | even_phase | (odd_length & i_tlast) );
+   assign i_tready = (chdr_state == ST_BODY) ? o_tready & ( even_phase | (odd_length & i_tlast)) : 1'b1;
    
    always @(posedge clk)
      if(reset)
