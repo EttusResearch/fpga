@@ -9,7 +9,8 @@
 //  These packets should not have a time value, but if they do it will be ignored.
 
 module source_flow_control
-  #(parameter BASE=0)
+  #(parameter SR_FLOW_CTRL_WINDOW_SIZE = 0,
+    parameter SR_FLOW_CTRL_WINDOW_EN = 1)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [63:0] fc_tdata, input fc_tlast, input fc_tvalid, output fc_tready,
@@ -25,11 +26,11 @@ module source_flow_control
    wire 	  window_enable;
    wire 	  setting_changed;
    
-   setting_reg #(.my_addr(BASE)) sr_window_size
+   setting_reg #(.my_addr(SR_FLOW_CTRL_WINDOW_SIZE)) sr_window_size
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
       .out(window_size),.changed(setting_changed));
 
-   setting_reg #(.my_addr(BASE+1), .width(1)) sr_window_enable
+   setting_reg #(.my_addr(SR_FLOW_CTRL_WINDOW_EN), .width(1)) sr_window_enable
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
       .out(window_enable),.changed(window_reset));
 

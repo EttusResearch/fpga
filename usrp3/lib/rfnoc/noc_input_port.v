@@ -3,7 +3,8 @@
 //   Implements destination flow control for a single port
 
 module noc_input_port
-  #(parameter BASE = 0,
+  #(parameter SR_FLOW_CTRL_CYCS_PER_ACK = 0,
+    parameter SR_FLOW_CTRL_PKTS_PER_ACK = 1,
     parameter PORT_NUM = 0,
     parameter STR_SINK_FIFOSIZE = 10)
    (input clk, input reset,
@@ -42,7 +43,11 @@ module noc_input_port
 	  sid_hold <= str_sink_tdata[31:0];
        end
 
-   tx_responder #(.BASE(BASE), .USE_TIME(0)) str_sink_fc_gen
+   tx_responder
+    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
+      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
+      .USE_TIME(0))
+   str_sink_fc_gen
      (.clk(clk), .reset(reset), .clear(clear_tx_fc),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(1'b0), .error(1'b0), .packet_consumed(str_sink_tlast & str_sink_tvalid & str_sink_tready),

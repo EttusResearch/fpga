@@ -280,7 +280,10 @@ module radio #(
       .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
       .debug());
 
-   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
+   tx_responder
+    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_TX_CTRL+2),
+      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_TX_CTRL+3))
+   tx_responder
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
@@ -319,7 +322,10 @@ module radio #(
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
 
-   source_flow_control #(.BASE(SR_RX_CTRL+6)) rx_sfc
+   source_flow_control
+    #(.SR_FLOW_CTRL_WINDOW_SIZE(SR_RX_CTRL+6),
+      .SR_FLOW_CTRL_WINDOW_EN(SR_RX_CTRL+7))
+    rx_sfc
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
       .fc_tdata(rxfc_tdata_b), .fc_tlast(rxfc_tlast_b), .fc_tvalid(rxfc_tvalid_b), .fc_tready(rxfc_tready_b),

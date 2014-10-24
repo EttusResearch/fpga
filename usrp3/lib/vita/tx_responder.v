@@ -1,6 +1,7 @@
 
 module tx_responder
-  #(parameter BASE = 0,
+  #(parameter SR_FLOW_CTRL_CYCS_PER_ACK = 0,
+    parameter SR_FLOW_CTRL_PKTS_PER_ACK = 1,
     parameter USE_TIME = 1)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -42,7 +43,10 @@ module tx_responder
      else if(done)
        reply_seqnum <= reply_seqnum + 12'd1;
    
-   trigger_context_pkt #(.BASE(BASE)) trig
+   trigger_context_pkt
+    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
+      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK))
+   trig
      (.clk(clk), .reset(reset), .clear(clear),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .packet_consumed(packet_consumed), .trigger(trigger_fc));

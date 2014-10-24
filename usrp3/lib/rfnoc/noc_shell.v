@@ -40,10 +40,15 @@ module noc_shell
     output [63:0] debug
     );
 
-   localparam SB_INPUT_BASE  = 0;    // 2 regs per port, 16 ports
-   localparam SB_OUTPUT_BASE = 32;   // 2 regs per port, 16 ports
-   localparam SB_CLEAR_TX_FC = 126;  // 1 reg
-   localparam SB_RB_ADDR = 127;      // 1 reg
+   // One register per port, spaced by 16 for 16 ports
+   localparam SR_FLOW_CTRL_CYCS_PER_ACK_BASE = 0;
+   localparam SR_FLOW_CTRL_PKTS_PER_ACK_BASE = 16;
+   localparam SR_FLOW_CTRL_WINDOW_SIZE_BASE  = 32;
+   localparam SR_FLOW_CTRL_WINDOW_EN_BASE    = 48;
+
+   // One register per noc shell
+   localparam SR_CLEAR_TX_FC                 = 126;
+   localparam SR_RB_ADDR                     = 127;
    // Allocate all regs 128-255 to user device
    
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
@@ -113,7 +118,7 @@ module noc_shell
       .ready(ready), .readback(rb_data_int),
       .debug());
 
-   setting_reg #(.my_addr(SB_RB_ADDR), .width(2), .at_reset(0)) sr_rb_addr
+   setting_reg #(.my_addr(SR_RB_ADDR), .width(2), .at_reset(0)) sr_rb_addr
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(rb_addr),.changed());
 
@@ -139,7 +144,11 @@ module noc_shell
    genvar 		      i;
    generate
       if(OUTPUT_PORTS == 1)
-	noc_output_port #(.BASE(SB_OUTPUT_BASE), .PORT_NUM(0), .MTU(MTU), .USE_GATE(USE_GATE)) noc_output_port_0
+         noc_output_port
+           #(.SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE_BASE),
+             .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN_BASE),
+             .PORT_NUM(0), .MTU(MTU), .USE_GATE(USE_GATE))
+         noc_output_port_0
 	  (.clk(clk), .reset(reset),
 	   .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	   .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
@@ -148,7 +157,11 @@ module noc_shell
       else
 	begin
 	   for(i=0 ; i < OUTPUT_PORTS ; i = i + 1)
-	     noc_output_port #(.BASE(SB_OUTPUT_BASE+i*2), .PORT_NUM(i), .MTU(MTU), .USE_GATE(USE_GATE)) noc_output_port_0
+         noc_output_port
+           #(.SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE_BASE+i),
+             .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN_BASE+i),
+             .PORT_NUM(i), .MTU(MTU), .USE_GATE(USE_GATE))
+         noc_output_port_0
 		 (.clk(clk), .reset(reset),
 		  .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 		  .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
@@ -180,15 +193,22 @@ module noc_shell
 
    wire [63:0] 		      header_datain;
    wire 		      clear_tx_fc;
+   // Clearing the flow control window can also be used to reset the sequence number
+   assign clear_tx_seqnum = clear_tx_fc;
    
-   setting_reg #(.my_addr(SB_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
+   setting_reg #(.my_addr(SR_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(),.changed(clear_tx_fc));
 
    genvar 	 j;
    generate
       if(INPUT_PORTS == 1)
-	noc_input_port #(.BASE(SB_INPUT_BASE), .PORT_NUM(0), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+	noc_input_port
+     #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK_BASE),
+       .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK_BASE),
+       .PORT_NUM(0),
+       .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
+    inst_noc_input_port
 	  (.clk(clk), .reset(reset),
 	   .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	   .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
@@ -198,7 +218,12 @@ module noc_shell
       else
 	begin
 	   for(j=0; j<INPUT_PORTS; j=j+1)
-	     noc_input_port #(.BASE(SB_INPUT_BASE+j*2), .PORT_NUM(j), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) noc_input_port_0
+         noc_input_port
+          #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK_BASE+j),
+            .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK_BASE+j),
+            .PORT_NUM(j),
+            .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
+         inst_noc_input_port
 		 (.clk(clk), .reset(reset),
 		  .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 		  .datain_tdata(datain_ports_tdata[64*j+63:64*j]), .datain_tlast(datain_ports_tlast[j]),
