@@ -1366,7 +1366,7 @@ module x300_core
       .CONTROL1(CONTROL1) // INOUT BUS [35:0]
       );
  -----/\----- EXCLUDED -----/\----- */
-
+/*
    wire [35:0] CONTROL0;
    reg [255:0] TRIG0;
 
@@ -1387,5 +1387,5 @@ module x300_core
      (
       .CONTROL0(CONTROL0) // INOUT BUS [35:0]
       );
-
+*/
 endmodule // x300_core
