@@ -37,6 +37,9 @@ module noc_shell
     input [OUTPUT_PORTS*64-1:0] str_src_tdata, input [OUTPUT_PORTS-1:0] str_src_tlast,
     input [OUTPUT_PORTS-1:0] str_src_tvalid, output [OUTPUT_PORTS-1:0] str_src_tready,
 
+    // Clear TX Sequence Number
+    output clear_tx_seqnum,
+
     output [63:0] debug
     );
 

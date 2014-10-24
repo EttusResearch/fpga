@@ -17,6 +17,8 @@ module axi_wrapper
     parameter SIMPLE_MODE=1)
    (input clk, input reset,
 
+    input clear_tx_seqnum,
+
     // To NoC Shell
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -76,7 +78,7 @@ module axi_wrapper
    // /////////////////////////////////////////////////////////
    // Output side handling, chdr_framer
    chdr_framer #(.SIZE(10)) chdr_framer
-     (.clk(clk), .reset(reset), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
       .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
 

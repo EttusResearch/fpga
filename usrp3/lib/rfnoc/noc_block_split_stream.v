@@ -37,6 +37,8 @@ module noc_block_split_stream
    wire [127:0]   out_tuser[0:1], out_tuser_pre[0:1];
    wire [1:0] 	  out_tlast, out_tvalid, out_tready;
    
+   wire           clear_tx_seqnum;
+
    noc_shell #(.NOC_ID(NOC_ID),
 	       .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
 	       .MTU(MTU),
@@ -56,6 +58,7 @@ module noc_block_split_stream
       .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
       // Stream Source
       .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+      .clear_tx_seqnum(clear_tx_seqnum),
       .debug(debug));
 
    chdr_deframer deframer
@@ -86,7 +89,7 @@ module noc_block_split_stream
 	    (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
 	     .out(next_destination[i]));
 	   chdr_framer #(.SIZE(MTU)) framer
-	     (.clk(ce_clk), .reset(ce_rst), .clear(1'b0),
+	     (.clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum),
 	      .i_tdata(out_tdata[i]), .i_tuser(out_tuser[i]), .i_tlast(out_tlast[i]), .i_tvalid(out_tvalid[i]), .i_tready(out_tready[i]),
 	      .o_tdata(str_src_tdata[i*64+63:i*64]), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
 	end
