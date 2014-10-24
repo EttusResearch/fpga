@@ -70,7 +70,7 @@ module noc_block_window #(
   wire        m_axis_config_tready;
   
   axi_wrapper #(
-    .BASE(8),
+    .BASE(AXI_WRAPPER_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
@@ -87,7 +87,7 @@ module noc_block_window #(
     .s_axis_data_tready(s_axis_data_tready),
     .m_axis_config_tdata(m_axis_config_tdata),
     .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid), 
+    .m_axis_config_tvalid(m_axis_config_tvalid),
     .m_axis_config_tready(m_axis_config_tready));
   
   ////////////////////////////////////////////////////////////

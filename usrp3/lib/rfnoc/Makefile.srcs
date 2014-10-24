@@ -11,13 +11,17 @@ chdr_deframer.v \
 noc_shell.v \
 simple_axi_wrapper.v \
 axi_wrapper.v \
-null_source.v \
 noc_block_axi_fifo_loopback.v \
 noc_block_fir_filter.v \
 noc_block_fft.v \
 noc_block_null_source_sink.v \
 noc_block_schmidl_cox.v \
 noc_block_packet_resizer.v \
+noc_block_split_stream.v \
+noc_block_vector_iir.v \
+noc_block_addsub.v \
+noc_block_window.v \
+null_source.v \
 schmidl_cox.v \
 split_stream.v \
 split_stream_fifo.v \
@@ -29,7 +33,6 @@ periodic_framer.v \
 threshold_scaled.v \
 moving_sum.v \
 peak_finder.v \
-noc_block_window.v \
 window.v \
 counter.v \
 ram_to_fifo.v \
@@ -41,8 +44,6 @@ noc_input_port.v \
 noc_output_port.v \
 keep_one_in_n_vec.v \
 vector_iir.v \
-noc_block_vector_iir.v \
-noc_block_addsub.v \
 addsub.v \
 packet_resizer.v \
 axi_pipe.v \

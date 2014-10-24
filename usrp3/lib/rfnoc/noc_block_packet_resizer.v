@@ -105,7 +105,7 @@ module noc_block_packet_resizer #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
-   packet_resizer #(.BASE(128)) packet_resizer
+  packet_resizer #(.BASE(128)) inst_packet_resizer
      (.clk(ce_clk), .reset(ce_rst),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .i_tdata(m_axis_data_tdata),
