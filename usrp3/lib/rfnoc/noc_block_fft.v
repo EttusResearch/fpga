@@ -66,8 +66,10 @@ module noc_block_fft #(
   wire        m_axis_config_tvalid;
   wire        m_axis_config_tready;
   
+  localparam AXI_WRAPPER_BASE = 128;
+
   axi_wrapper #(
-    .BASE(8),
+    .BASE(AXI_WRAPPER_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),

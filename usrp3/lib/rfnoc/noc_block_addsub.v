@@ -75,15 +75,13 @@ module noc_block_addsub
    // FIXME we should probably stall the chain if this isn't ready for the last line of output
 
    wire [15:0] 	  next_destination[0:1];
-   localparam BASE = 0;
-   wire [127:0]   out_tuser_pre0 = out_tuser_pre[0];
-   wire [127:0]   out_tuser_pre1 = out_tuser_pre[1];
+   localparam SR_NEXT_DST_BASE = 128;
    
-   setting_reg #(.my_addr(BASE), .width(16)) new_destination
+   setting_reg #(.my_addr(SR_NEXT_DST_BASE), .width(16)) next_destination_0
      (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(next_destination[0]));
 
-   setting_reg #(.my_addr(BASE+1), .width(16)) new_destination1
+   setting_reg #(.my_addr(SR_NEXT_DST_BASE+1), .width(16)) next_destination_1
      (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(next_destination[1]));
 
@@ -94,8 +92,8 @@ module noc_block_addsub
       .o1_tdata(out_tuser_pre[1]), .o1_tlast(), .o1_tvalid(), .o1_tready(out_tlast[1] & out_tready[1]),
       .o2_tready(1'b1), .o3_tready(1'b1));
 
-   assign out_tuser[0] = { out_tuser_pre0[127:96], out_tuser_pre0[79:68], 4'b0000, next_destination[0], out_tuser_pre0[63:0] };
-   assign out_tuser[1] = { out_tuser_pre1[127:96], out_tuser_pre1[79:68], 4'b0001, next_destination[1], out_tuser_pre1[63:0] };
+   assign out_tuser[0] = { out_tuser_pre[0][127:96], out_tuser_pre[0][79:68], 4'b0000, next_destination[0], out_tuser_pre[0][63:0] };
+   assign out_tuser[1] = { out_tuser_pre[1][127:96], out_tuser_pre[1][79:68], 4'b0001, next_destination[1], out_tuser_pre[1][63:0] };
    
    genvar 	  j;
    generate

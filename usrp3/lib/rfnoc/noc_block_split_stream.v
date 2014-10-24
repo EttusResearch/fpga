@@ -72,18 +72,17 @@ module noc_block_split_stream
       .o2_tready(1'b1), .o3_tready(1'b1));
    
    wire [15:0] 	  next_destination[0:NUM_OUTPUTS-1];
-   localparam BASE = 0;
-   wire [127:0]   out_tuser_pre0, out_tuser_pre1;
+   localparam SR_NEXT_DST = 128;
    
    // FIXME variable numbers of the following
-   assign out_tuser[0] = { out_tuser_pre0[127:96], out_tuser_pre0[79:64],next_destination[0], out_tuser_pre0[63:0] };
-   assign out_tuser[1] = { out_tuser_pre1[127:96], out_tuser_pre1[79:64],next_destination[1], out_tuser_pre1[63:0] };
+   assign out_tuser[0] = { out_tuser_pre[0][127:96], out_tuser_pre[0][79:68], 4'b0000, next_destination[0], out_tuser_pre[0][63:0] };
+   assign out_tuser[1] = { out_tuser_pre[1][127:96], out_tuser_pre[1][79:68], 4'b0001, next_destination[1], out_tuser_pre[1][63:0] };
    
    genvar 	  i;
    generate
       for(i=0; i<NUM_OUTPUTS; i=i+1)
 	begin
-	   setting_reg #(.my_addr(BASE+i), .width(16)) new_destination
+	   setting_reg #(.my_addr(SR_NEXT_DST+i), .width(16)) new_destination
 	    (.clk(ce_clk), .rst(ce_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
 	     .out(next_destination[i]));
 	   chdr_framer #(.SIZE(MTU)) framer

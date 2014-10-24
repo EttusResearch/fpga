@@ -80,8 +80,10 @@ module noc_block_fir_filter #(
     end
   endgenerate
   
+  localparam AXI_WRAPPER_BASE = 128;
+
   axi_wrapper #(
-    .BASE(8),
+    .BASE(AXI_WRAPPER_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
     .CONFIG_BUS_FIFO_DEPTH(6)) // Need deeper FIFO to prevent overflow when configuring coefficients
   inst_axi_wrapper (

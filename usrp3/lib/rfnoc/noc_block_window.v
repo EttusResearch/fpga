@@ -69,6 +69,8 @@ module noc_block_window #(
   wire        m_axis_config_tvalid;
   wire        m_axis_config_tready;
   
+  localparam AXI_WRAPPER_BASE = 128;
+
   axi_wrapper #(
     .BASE(AXI_WRAPPER_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
