@@ -59,9 +59,11 @@ module noc_block_axi_fifo_loopback #(
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
-  
+
+  localparam AXI_WRAPPER_BASE = 128;
+
   axi_wrapper #(
-    .BASE(8))
+    .BASE(AXI_WRAPPER_BASE))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
