@@ -64,19 +64,11 @@ module noc_block_packet_resizer #(
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
 
-  wire [31:0] m_axis_config_tdata;
-  wire        m_axis_config_tlast;
-  wire        m_axis_config_tvalid;
-  wire        m_axis_config_tready;
-
   localparam AXI_WRAPPER_BASE    = 128;
   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
-  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
   axi_wrapper #(
     .SR_NEXT_DST(SR_NEXT_DST),
-    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-    .NUM_AXI_CONFIG_BUS(1),
     .SIMPLE_MODE(0))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
@@ -93,10 +85,10 @@ module noc_block_packet_resizer #(
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
-    .m_axis_config_tdata(m_axis_config_tdata),
-    .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid),
-    .m_axis_config_tready(m_axis_config_tready));
+    .m_axis_config_tdata(),
+    .m_axis_config_tlast(),
+    .m_axis_config_tvalid(),
+    .m_axis_config_tready());
 
   ////////////////////////////////////////////////////////////
   //
@@ -110,18 +102,24 @@ module noc_block_packet_resizer #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
-  packet_resizer #(.BASE(128)) inst_packet_resizer
-     (.clk(ce_clk), .reset(ce_rst),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .i_tdata(m_axis_data_tdata),
-      .i_tuser(m_axis_data_tuser),
-      .i_tlast(m_axis_data_tlast),
-      .i_tvalid(m_axis_data_tvalid),
-      .i_tready(m_axis_data_tready),
-      .o_tdata(s_axis_data_tdata),
-      .o_tuser(s_axis_data_tuser),
-      .o_tlast(s_axis_data_tlast),
-      .o_tvalid(s_axis_data_tvalid),
-      .o_tready(s_axis_data_tready));
+  // User register
+  localparam SR_PKT_SIZE         = 129;
+
+  packet_resizer #(
+    .SR_NEXT_DST(SR_NEXT_DST),
+    .SR_PKT_SIZE(SR_PKT_SIZE))
+  inst_packet_resizer (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .i_tdata(m_axis_data_tdata),
+    .i_tuser(m_axis_data_tuser),
+    .i_tlast(m_axis_data_tlast),
+    .i_tvalid(m_axis_data_tvalid),
+    .i_tready(m_axis_data_tready),
+    .o_tdata(s_axis_data_tdata),
+    .o_tuser(s_axis_data_tuser),
+    .o_tlast(s_axis_data_tlast),
+    .o_tvalid(s_axis_data_tvalid),
+    .o_tready(s_axis_data_tready));
 
 endmodule // noc_block_packet_resizer

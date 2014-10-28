@@ -4,7 +4,8 @@
 
 
 module packet_resizer
-  #(parameter BASE=0)
+  #(parameter SR_NEXT_DST=0,
+    parameter SR_PKT_SIZE=1)
    (input clk, input reset,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [31:0] i_tdata, input [127:0] i_tuser, input i_tlast, input i_tvalid, output i_tready,
@@ -15,11 +16,11 @@ module packet_resizer
    reg [15:0] 	  count;
    reg 		  first_packet_in_burst = 1'b1;
    
-   setting_reg #(.my_addr(BASE), .width(16)) new_destination
+   setting_reg #(.my_addr(SR_NEXT_DST), .width(16)) new_destination
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(next_destination[15:0]));
    
-   setting_reg #(.my_addr(BASE+1), .width(16)) reg_pkt_size
+   setting_reg #(.my_addr(SR_PKT_SIZE), .width(16)) reg_pkt_size
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(pkt_size));
 
