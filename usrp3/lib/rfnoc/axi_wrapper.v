@@ -12,7 +12,7 @@
 
 module axi_wrapper
   #(parameter SR_NEXT_DST=128,          // Next destination
-    parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range used depends on NUM_AXI_CONFIG_BUS
+    parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
     parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1)            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
@@ -94,8 +94,8 @@ module axi_wrapper
       for (k = 0; k < NUM_AXI_CONFIG_BUS; k = k + 1) begin
          axi_fifo #(.WIDTH(33), .SIZE(CONFIG_BUS_FIFO_DEPTH)) config_stream
            (.clk(clk), .reset(reset), .clear(1'b0),
-            .i_tdata({(set_addr == (SR_AXI_CONFIG_BASE+1+2*k+1)),set_data}),
-            .i_tvalid(set_stb & ((set_addr == (SR_AXI_CONFIG_BASE+1+2*k))|(set_addr == (SR_AXI_CONFIG_BASE+1+2*k+1)))),
+            .i_tdata({(set_addr == (SR_AXI_CONFIG_BASE+2*k+1)),set_data}),
+            .i_tvalid(set_stb & ((set_addr == (SR_AXI_CONFIG_BASE+2*k))|(set_addr == (SR_AXI_CONFIG_BASE+2*k+1)))),
             .i_tready(),
             .o_tdata({m_axis_config_tlast[k],m_axis_config_tdata[32*k+31:32*k]}),
             .o_tvalid(m_axis_config_tvalid[k]),
