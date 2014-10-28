@@ -11,10 +11,11 @@
 //   [63:0] == timestamp
 
 module axi_wrapper
-  #(parameter BASE=128,
-    parameter NUM_AXI_CONFIG_BUS=1,
-    parameter CONFIG_BUS_FIFO_DEPTH=5,
-    parameter SIMPLE_MODE=1)
+  #(parameter SR_NEXT_DST=128,          // Next destination
+    parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range used depends on NUM_AXI_CONFIG_BUS
+    parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
+    parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
+    parameter SIMPLE_MODE=1)            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
    (input clk, input reset,
 
     input clear_tx_seqnum,
@@ -61,7 +62,7 @@ module axi_wrapper
       if(SIMPLE_MODE)
 	begin
 	   // Set next destination in chain
-	   setting_reg #(.my_addr(BASE), .width(16)) new_destination
+	   setting_reg #(.my_addr(SR_NEXT_DST), .width(16)) new_destination
 	     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
 	      .out(next_destination[15:0]));
 	   // FIFO for 
@@ -87,14 +88,18 @@ module axi_wrapper
    // FIXME we could put inline control here...
    // Generate additional AXI stream interfaces for configuration. 
    // FIXME need to make sure we don't overrun this if core can backpressure us
-   // Write to BASE+8+2*(CONFIG BUS #) asserts tvalid, BASE+8+2*(CONFIG BUS #)+1 asserts tvalid & tlast
+   // Write to SR_AXI_CONFIG_BASE+1+2*(CONFIG BUS #) asserts tvalid, SR_AXI_CONFIG_BASE+1+2*(CONFIG BUS #)+1 asserts tvalid & tlast
    genvar k;
    generate
       for (k = 0; k < NUM_AXI_CONFIG_BUS; k = k + 1) begin
          axi_fifo #(.WIDTH(33), .SIZE(CONFIG_BUS_FIFO_DEPTH)) config_stream
            (.clk(clk), .reset(reset), .clear(1'b0),
-            .i_tdata({(set_addr == (BASE+1+2*k+1)),set_data}), .i_tvalid(set_stb & ((set_addr == (BASE+1+2*k))|(set_addr == (BASE+1+2*k+1)))), .i_tready(),
-            .o_tdata({m_axis_config_tlast[k],m_axis_config_tdata[32*k+31:32*k]}), .o_tvalid(m_axis_config_tvalid[k]), .o_tready(m_axis_config_tready[k]));
+            .i_tdata({(set_addr == (SR_AXI_CONFIG_BASE+1+2*k+1)),set_data}),
+            .i_tvalid(set_stb & ((set_addr == (SR_AXI_CONFIG_BASE+1+2*k))|(set_addr == (SR_AXI_CONFIG_BASE+1+2*k+1)))),
+            .i_tready(),
+            .o_tdata({m_axis_config_tlast[k],m_axis_config_tdata[32*k+31:32*k]}),
+            .o_tvalid(m_axis_config_tvalid[k]),
+            .o_tready(m_axis_config_tready[k]));
       end
    endgenerate
    

@@ -69,8 +69,13 @@ module noc_block_packet_resizer #(
   wire        m_axis_config_tvalid;
   wire        m_axis_config_tready;
 
+  localparam AXI_WRAPPER_BASE    = 128;
+  localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
+  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
+
   axi_wrapper #(
-    .BASE(8),
+    .SR_NEXT_DST(SR_NEXT_DST),
+    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(1),
     .SIMPLE_MODE(0))
   inst_axi_wrapper (

@@ -69,10 +69,13 @@ module noc_block_window #(
   wire        m_axis_config_tvalid;
   wire        m_axis_config_tready;
   
-  localparam AXI_WRAPPER_BASE = 128;
+  localparam AXI_WRAPPER_BASE    = 128;
+  localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
+  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
   axi_wrapper #(
-    .BASE(AXI_WRAPPER_BASE),
+    .SR_NEXT_DST(SR_NEXT_DST),
+    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
