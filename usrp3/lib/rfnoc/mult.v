@@ -1,6 +1,6 @@
 
 // Write xilinx DSP48E1 primitive for multiplication with AXI interfaces
-// Latency must be 1 to 4
+// Latency must be 2 to 4
 
 // FIXME handle tlast
 
@@ -28,7 +28,7 @@ module mult
    wire [A1REG_IN:0] 		   en0, en1;
    wire [PREG_IN:0] 		   en_post;
    reg 				   CEP, CEM, CEA2, CEA1, CEB2, CEB1;
-   wire 			   CE = 1'b1;   // FIXME
+   wire 			   CE = 1'b0;   // FIXME
    
    always @*
      case(LATENCY)
@@ -81,7 +81,7 @@ module mult
                .CEB2(CEB2),      
                .CEC(CE),       //
                .CECARRYIN(CE), 
-               .CECTRL(CE), 
+               .CECTRL(1'b1), 
                .CED(CE),
                .CEINMODE(CE),
                .CEM(CEM),       
