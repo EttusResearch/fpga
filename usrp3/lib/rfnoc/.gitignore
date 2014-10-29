@@ -11,3 +11,5 @@ output.dat
 isim
 #*
 axi_wrapper_tb
+*.dat
+*.sav
