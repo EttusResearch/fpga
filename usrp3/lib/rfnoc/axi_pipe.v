@@ -12,8 +12,9 @@ module axi_pipe
 
    assign o_tvalid = valids[STAGES-1];
    assign i_tready = enables[0];
-   assign enables[STAGES-1] = o_tready;
-   
+
+   // //////////////////////////////
+   // Valids
    genvar 		    i;
    generate
       for(i=1; i<STAGES; i=i+1)
@@ -30,12 +31,16 @@ module axi_pipe
      else
        valids[0] <= i_tvalid | (valids[0] & ~enables[0]);
 
+   // //////////////////////////////
+   // Enables
    genvar 		    j;
    generate
-      for(j=0; j<STAGES-1; j=j+1)
-	assign enables[j] = o_tready | (|(~valids[STAGES-1:j+1]));
+      for(j=0; j<STAGES; j=j+1)
+	assign enables[j] = o_tready | (|(~valids[STAGES-1:j]));
    endgenerate
 
+   // /////////////////////////////
+   // tlast
    reg [STAGES-1:0] 	    tlast;
    
    genvar 		    k;

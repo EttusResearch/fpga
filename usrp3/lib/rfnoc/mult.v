@@ -7,16 +7,13 @@
 module mult
   #(parameter WIDTH_A=25,
     parameter WIDTH_B=18,
-    parameter WIDTH_P=0,
+    parameter WIDTH_P=48,
     parameter LATENCY=3)
    (input clk, input reset,
     input [WIDTH_A-1:0] a_tdata, input a_tlast, input a_tvalid, output a_tready,
     input [WIDTH_B-1:0] b_tdata, input b_tlast, input b_tvalid, output b_tready,
-    /* p_tdata declared below */ output p_tlast, output p_tvalid, output p_tready);
+    output [WIDTH_P-1:0] p_tdata, output p_tlast, output p_tvalid, input p_tready);
    
-   localparam WIDTH_P_IN = (WIDTH_P == 0) ? (WIDTH_A+WIDTH_B) : WIDTH_P;
-   output [WIDTH_P_IN-1:0] p_tdata;
-
    wire [47:0] 		   P1_OUT;
    wire [24:0] 		   A_IN = { a_tdata, {(25-(WIDTH_A)){1'b0}}};
    wire [17:0] 		   B_IN = { b_tdata, {(18-(WIDTH_B)){1'b0}}};
@@ -41,7 +38,7 @@ module mult
      endcase
 	 
    axi_pipe_join #(.PRE_JOIN_STAGES0(AREG_IN), .PRE_JOIN_STAGES1(AREG_IN),
-		   .POST_JOIN_STAGES(MREG_IN+PREG_IN)) axi_pipe
+		   .POST_JOIN_STAGES(MREG_IN+PREG_IN)) axi_pipe_join
      (.clk(clk), .reset(reset), .clear(0),
       .i0_tlast(a_tlast), .i0_tvalid(a_tvalid), .i0_tready(a_tready),
       .i1_tlast(a_tlast), .i1_tvalid(b_tvalid), .i1_tready(b_tready),
