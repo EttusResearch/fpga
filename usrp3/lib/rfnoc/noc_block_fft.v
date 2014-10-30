@@ -24,6 +24,8 @@ module noc_block_fft #(
   wire [63:0] str_sink_tdata, str_src_tdata;
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
+  wire        clear_tx_seqnum;
+
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
@@ -42,6 +44,7 @@ module noc_block_fft #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+    .clear_tx_seqnum(clear_tx_seqnum),
     .debug(debug));
 
   ////////////////////////////////////////////////////////////
@@ -76,6 +79,7 @@ module noc_block_fft #(
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
+    .clear_tx_seqnum(clear_tx_seqnum),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
