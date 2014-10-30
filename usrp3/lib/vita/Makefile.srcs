@@ -29,5 +29,4 @@ chdr_16s_to_32f.v \
 xxs_to_xxf.v \
 float_to_iq.v \
 iq_to_float.v \
-binary_encoder.v \
 ))
