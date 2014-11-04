@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module vector_iir
   #(parameter BASE=0,

@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 module tx_frontend
   #(parameter BASE=0,
     parameter WIDTH_OUT=16,

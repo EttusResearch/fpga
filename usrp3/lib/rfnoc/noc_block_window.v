@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module noc_block_window #(
   parameter NOC_ID = 64'hD053_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)

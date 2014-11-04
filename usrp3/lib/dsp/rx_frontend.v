@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 module rx_frontend
   #(parameter BASE = 0,
     parameter IQCOMP_EN = 1)

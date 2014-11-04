@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 `timescale 1ns/1ps
 
 module chdr_16sc_to_8sc_tb();

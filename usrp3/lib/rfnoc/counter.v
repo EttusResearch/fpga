@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Simple counter, reset by i_tlast on input side.  i_tdata not connected
 //  Most useful for indexing a RAM, creating a ramp, etc.
 

@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module new_tx_control
   #(parameter BASE=0)

@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // NoC input port
 //   Implements destination flow control for a single port
 

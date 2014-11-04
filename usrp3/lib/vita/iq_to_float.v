@@ -1,5 +1,9 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module iq_to_float
-  
+
   #(parameter BITS_IN =16,
     parameter BITS_OUT = 32
     )

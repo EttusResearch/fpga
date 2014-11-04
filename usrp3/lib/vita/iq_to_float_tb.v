@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module iq_to_float_tb();
 
 

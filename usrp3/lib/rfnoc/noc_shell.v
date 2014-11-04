@@ -1,5 +1,6 @@
-
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Issues
 //   Inline vs. Async commands
 //   Command and Response forwarding

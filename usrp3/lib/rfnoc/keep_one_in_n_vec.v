@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module keep_one_in_n_vec
   #(parameter WIDTH=16)

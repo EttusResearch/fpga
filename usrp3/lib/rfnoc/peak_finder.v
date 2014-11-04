@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module peak_finder
   #(parameter SCALAR=131072)

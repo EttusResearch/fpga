@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module tx_responder
   #(parameter SR_FLOW_CTRL_CYCS_PER_ACK = 0,

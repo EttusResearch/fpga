@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // This block exists only to wrap the Xilinx IP which has a different interface
 //   Xilinx puts Q in the high bits, I in the low bits, and inverts reset
 

@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // FIXME -- detect seqnum errors?
 
 module chdr_deframer

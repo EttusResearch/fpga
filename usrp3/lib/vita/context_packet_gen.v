@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module context_packet_gen
    (input clk, input reset, input clear,

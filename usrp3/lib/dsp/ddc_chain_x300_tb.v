@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 `timescale 1ns/1ps
 
 module ddc_chain_x300_tb();

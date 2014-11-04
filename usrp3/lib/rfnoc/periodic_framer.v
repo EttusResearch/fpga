@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module periodic_framer
   #(parameter BASE=0,

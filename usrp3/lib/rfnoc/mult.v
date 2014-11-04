@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Write xilinx DSP48E1 primitive for multiplication with AXI interfaces
 // Latency must be 2 to 4
 

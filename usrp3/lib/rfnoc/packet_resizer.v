@@ -1,7 +1,7 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Not necessarily that useful in general, but a good test block
-
-
 
 module packet_resizer
   #(parameter SR_NEXT_DST=0,

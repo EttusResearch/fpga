@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // FIXME I don't like the way this is implemented.  Should we remove the FIFO completely?
 
 module delay

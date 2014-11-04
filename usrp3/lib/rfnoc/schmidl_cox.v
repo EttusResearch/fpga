@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 // Variables:
 //     length of delay between branches (16 for 802.11a STF)

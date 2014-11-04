@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module moving_sum
   #(parameter MAX_LEN_LOG2=10,

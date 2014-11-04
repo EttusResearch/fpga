@@ -1,4 +1,6 @@
-
+//
+// Copyright 2013 Ettus Research LLC
+//
 // Demonstration of two input, two output block
 
 module addsub

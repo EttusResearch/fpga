@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Discard silently packets which don't match this SID
 
 module filter_bad_sid

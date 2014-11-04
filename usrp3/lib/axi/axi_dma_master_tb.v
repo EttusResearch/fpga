@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 module axi_dma_master_tb;
 
 

@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 `timescale 1ns/1ps
 
 module axi_packet_gate_tb();

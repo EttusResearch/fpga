@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // FIXME axi_fifo_flop added by mne to address timing issues.  Should probably use a proper Xilinx coregen, though
 
 module complex_to_magsq

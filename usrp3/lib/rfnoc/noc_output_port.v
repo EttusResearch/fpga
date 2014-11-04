@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // NoC Output port.  Implements source flow control on a single stream
 
 module noc_output_port

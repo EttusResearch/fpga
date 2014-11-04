@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // source_flow_control.v
 //
 //  This block passes the in_* AXI port to the out_* AXI port only when it has

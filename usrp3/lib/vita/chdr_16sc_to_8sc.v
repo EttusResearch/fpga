@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module chdr_16sc_to_8sc
   #(parameter BASE=0)
    (input clk, input reset,

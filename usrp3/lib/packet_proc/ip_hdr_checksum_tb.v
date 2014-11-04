@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 module ip_hdr_checksum_tb();
    
    initial $dumpfile("ip_hdr_checksum_tb.vcd");

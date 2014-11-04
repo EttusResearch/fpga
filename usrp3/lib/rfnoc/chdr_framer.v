@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // FIXME handle odd length inputs
 
 module chdr_framer

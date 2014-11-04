@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module const_sreg
   #(parameter BASE=0,

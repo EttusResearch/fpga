@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module threshold_scaled
   #(parameter WIDTH=32, SCALAR=131072)

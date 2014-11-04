@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Map the endpoint dest part of the SID in the CVITA header to a destination
 // This destination (o_tdest) signal will be valid with o_tdata
 // This only works with VALID CVITA frames

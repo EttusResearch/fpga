@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module noc_block_fir_filter #(
   parameter NOC_ID = 64'hF112_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)

@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
   localparam [1:0] CHDR_DATA_PKT_TYPE             = 0;
   localparam [1:0] CHDR_FC_PKT_TYPE               = 1;

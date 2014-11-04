@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // NOTE -- does not flop the output.  could cause timing issues, so follow with axi_fifo_flop if you need it
 
 module conj

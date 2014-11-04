@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 //Purpose: to test 8 to 16 converter
 `timescale 1ns/1ps
 

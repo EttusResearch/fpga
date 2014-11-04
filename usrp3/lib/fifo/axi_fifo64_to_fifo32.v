@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module axi_fifo64_to_fifo32
   (input clk, input reset, input clear,

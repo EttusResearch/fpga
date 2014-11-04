@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module round_sd
   #(parameter WIDTH_IN=18,

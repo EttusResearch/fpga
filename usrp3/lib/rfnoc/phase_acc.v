@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module phase_acc
   #(parameter WIDTH = 16)

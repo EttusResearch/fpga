@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module noc_block_split_stream
   #(parameter NOC_ID = 64'h5757_0000_0000_0000,

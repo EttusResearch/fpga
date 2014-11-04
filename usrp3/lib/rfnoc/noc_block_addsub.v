@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module noc_block_addsub
   #(parameter NOC_ID = 64'hADD0_0000_0000_0000,

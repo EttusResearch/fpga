@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 `timescale 1ns/1ns
 module rx_frontend_tb();
    

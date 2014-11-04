@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module split_stream_fifo
   #(parameter WIDTH=16,

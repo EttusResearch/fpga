@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 `timescale 1ns/1ps
 
 module vrlp_to_compressed_vita_tb();

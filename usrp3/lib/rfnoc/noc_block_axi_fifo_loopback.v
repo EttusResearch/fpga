@@ -1,3 +1,7 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
+
 module noc_block_axi_fifo_loopback #(
   parameter NOC_ID = 64'hF1F0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)

@@ -1,4 +1,7 @@
 //
+// Copyright 2014 Ettus Research LLC
+//
+//
 // Synthesizable test pattern generators and checkers
 // for CHDR that can be used to test transparent blocks
 // (FIFOs, switches, etc)

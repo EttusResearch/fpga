@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 //
 // There are various obligations put on this code not present in regular BRAM based FIFO's
 //

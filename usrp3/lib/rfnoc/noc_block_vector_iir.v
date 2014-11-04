@@ -1,5 +1,8 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
-module noc_block_vector_iir 
+module noc_block_vector_iir
   #(parameter NOC_ID = 64'hFF70_0000_0000_0000,
     parameter STR_SINK_FIFOSIZE = 11)
    (input bus_clk, input bus_rst,

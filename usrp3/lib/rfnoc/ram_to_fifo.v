@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 // Dual ported ram attached to a FIFO for readout
 //   Most useful for storing coefficients for windows, filters, etc.
