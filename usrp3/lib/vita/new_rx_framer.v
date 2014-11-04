@@ -42,10 +42,7 @@ module new_rx_framer
 
    wire [15:0] 	  maxlen;
    reg [31:0] 	  holding;
-    
-	
-   // FIXME need to handle case where hdr fifo is full (i.e. too many tiny packets)
-   assign full = (sample_space == 16'd0) | (sample_space == 16'd1) | ~hdr_tready;
+
    
    setting_reg #(.my_addr(BASE), .width(16)) sr_maxlen
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -63,7 +60,20 @@ module new_rx_framer
    reg [1:0] 	  instate;
    reg [15:0] 	  numsamps;
    reg 		  nearly_eop;
+
+   wire     eop = eob | nearly_eop | full;
    
+   wire [63:0]    sample_tdata = (instate == SECOND) ? {holding, sample} : {sample, 32'h0};
+   wire     sample_tlast = eop;
+   wire     sample_tvalid = run & strobe & ( (instate == SECOND) | eop );
+   wire     sample_tready;
+   
+   wire [80:0]    hdr_tdata = {eob,len[13:0],2'b0,(instate == START) ? vita_time : hold_time};
+   wire     hdr_tvalid = sample_tlast && sample_tvalid && sample_tready;
+   wire     hdr_tready;
+
+   // FIXME need to handle case where hdr fifo is full (i.e. too many tiny packets)
+   assign full = (sample_space == 16'd0) | (sample_space == 16'd1) | ~hdr_tready;
    
    always @(posedge clk)
      if(reset | clear)
@@ -152,20 +162,6 @@ module new_rx_framer
      else
        if(o_tlast_int & o_tvalid_int & o_tready_int)
 	 seqnum <= seqnum + 12'd1;
-   
-
- 
-   wire 	  eop = eob | nearly_eop | full;
-   
-   wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample} : {sample, 32'h0};
-   wire 	  sample_tlast = eop;
-   wire 	  sample_tvalid = run & strobe & ( (instate == SECOND) | eop );
-   wire 	  sample_tready;
-   
-   wire [80:0] 	  hdr_tdata = {eob,len[13:0],2'b0,(instate == START) ? vita_time : hold_time};
-   wire 	  hdr_tvalid = sample_tlast && sample_tvalid && sample_tready;
-   wire 	  hdr_tready;
-
    
    axi_fifo #(.WIDTH(65), .SIZE(SAMPLE_FIFO_SIZE)) datafifo
      (.clk(clk), .reset(reset), .clear(clear),

@@ -16,11 +16,13 @@
                 )
 
 module priority_encoder
+#(
+  parameter WIDTH = 16
+)
 (
   input  [WIDTH-1:0]        in,
   output [`log2(WIDTH)-1:0] out
 );
-  parameter WIDTH = 16;
 
   wire [WIDTH-1:0] one_hot;
 

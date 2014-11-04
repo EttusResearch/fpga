@@ -38,7 +38,6 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Input side handling, chdr_deframer
-   wire [127:0]  m_axis_data_tuser;
    
    chdr_deframer chdr_deframer
      (.clk(clk), .reset(reset), .clear(1'b0),

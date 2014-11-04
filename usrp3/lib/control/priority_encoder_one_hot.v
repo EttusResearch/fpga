@@ -3,11 +3,13 @@
 //
 
 module priority_encoder_one_hot
+#(
+  parameter WIDTH = 16
+)
 (
   input  [WIDTH-1:0]        in,
   output [WIDTH-1:0]        out
 );
-  parameter WIDTH = 16;
 
   wire [WIDTH-1:0] in_rev;
   wire [WIDTH-1:0] in_rev_inv_po = ~in_rev + 1;

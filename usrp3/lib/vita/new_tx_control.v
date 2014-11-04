@@ -49,17 +49,17 @@ module new_tx_control
      time_compare (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(send_time),
 		   .now(now), .early(early), .late(late), .too_early(too_early));
 
-   assign run = (state == ST_SAMP0) | (state == ST_SAMP1);
-
-   assign sample = (state == ST_SAMP0) ? sample0 : sample1;
-
-   reg [2:0] 	 state;
+   reg [2:0]     state;
 
    localparam ST_IDLE  = 0;
    localparam ST_SAMP0 = 1;
    localparam ST_SAMP1 = 2;
    localparam ST_ERROR = 3;
    localparam ST_WAIT  = 4;
+
+   assign run = (state == ST_SAMP0) | (state == ST_SAMP1);
+
+   assign sample = (state == ST_SAMP0) ? sample0 : sample1;
 
    reg [11:0]  expected_seqnum;
 

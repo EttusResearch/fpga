@@ -17,13 +17,14 @@
                 )
 
 module xxs_to_xxf
+#(
+  parameter FBITS = 32,               // # of bits for the float
+  parameter integer QWIDTH = 16       // # of bits in total, e.g. 16 for a Q15
+)
 (
   input  [QWIDTH-1:0] i_fixed,
   output [FBITS-1:0]  o_float
 );
-
-  // # of bits for the float
-  parameter FBITS = 32;
 
   // # of bits for the mantissa
   parameter MBITS = 23;
@@ -33,9 +34,6 @@ module xxs_to_xxf
 
   // # of fractional bits, e.g. 15 for Q15
   parameter integer RADIX = 15;
-
-  // # of bits in total, e.g. 16 for a Q15
-  parameter integer QWIDTH = 16;
 
   // the bias for the exponent
   parameter integer BIAS = (1 << EBITS -1) - 1;
@@ -50,6 +48,10 @@ module xxs_to_xxf
   // Get absolute value
   wire [QWIDTH-1:0] abs      = is_neg ? ~i_fixed + 1 : i_fixed;
 
+  wire [`log2(QWIDTH)-1:0] leading_zero;
+
+  wire [QWIDTH-1:0] shift = QWIDTH-leading_zero;
+
   wire [QWIDTH-1:0] abs_shifted = abs << shift;
 
   wire [MBITS-1:0]  mantissa;
@@ -57,7 +59,6 @@ module xxs_to_xxf
 
   // Determine the position of the leading zero
   // using priority encoding.
-  wire [`log2(QWIDTH)-1:0] leading_zero;
   priority_encoder #
   (
     .WIDTH(QWIDTH)
@@ -67,7 +68,6 @@ module xxs_to_xxf
     .in(abs),
     .out(leading_zero)
   );
-  wire [QWIDTH-1:0] shift = QWIDTH-leading_zero;
 
   // This was only tested for the case MBITS > QWIDTH
   generate

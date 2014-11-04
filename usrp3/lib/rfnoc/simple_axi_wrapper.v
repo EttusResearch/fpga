@@ -19,6 +19,7 @@ module simple_axi_wrapper
     output [31:0] m_axis_config_tdata, output m_axis_config_tvalid, input m_axis_config_tready
     );
 
+   reg [1:0]     n2a_state;
    // Paramters for both input and output state machines
    localparam ST_HEAD = 3'd0;
    localparam ST_TIME = 3'd1;
@@ -64,7 +65,6 @@ module simple_axi_wrapper
    // ////////////////////////
    // NoC to AXI IP
 
-   reg [1:0] 	 n2a_state;
    reg 		 odd;
    wire 	 bad_packet = i_tdata[63:62] != 2'b00;
    

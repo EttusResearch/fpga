@@ -30,6 +30,12 @@ module chdr_16s_to_32f #
   output [63:0]      debug
 );
 
+  reg [1:0] state;
+  localparam HEADER  = 2'd0;
+  localparam TIME    = 2'd1;
+  localparam ODD     = 2'd2;
+  localparam EVEN    = 2'd3;
+
   // split up the input for lazyness reasons
   wire [15:0] fixed0 = i_tdata[63:48];
   wire [15:0] fixed1 = i_tdata[47:32];
@@ -103,12 +109,6 @@ module chdr_16s_to_32f #
   // payload size.
   wire [15:0] output_chdr_pkt_size = sample_byte_count_out + chdr_header_bytes;
 
-  localparam HEADER  = 2'd0;
-  localparam TIME    = 2'd1;
-  localparam ODD = 2'd2;
-  localparam EVEN  = 2'd3;
-
-  reg [1:0] state;
   reg end_on_odd;
 
   always @(posedge clk)

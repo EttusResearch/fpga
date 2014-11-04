@@ -3,13 +3,14 @@
 //
 
 module xxf_to_xxs
+#(
+  parameter FBITS = 32,               // # of bits for the float
+  parameter integer QWIDTH = 16       // # of bits in total, e.g. 16 for a Q15
+)
 (
   input      [FBITS-1:0]   i_float,
   output reg [QWIDTH-1:0]  o_fixed
 );
-
-  // # of bits for the float
-  parameter FBITS = 32;
 
   // # of bits for the mantissa
   parameter MBITS = 23;
@@ -19,9 +20,6 @@ module xxf_to_xxs
 
   // # of fractional bits, e.g. 15 for Q15
   parameter integer RADIX = 15;
-
-  // # of bits in total, e.g. 16 for a Q15
-  parameter integer QWIDTH = 16;
 
   // the bias for the exponent
   parameter integer BIAS = (1 << EBITS -1) - 1;
