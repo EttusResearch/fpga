@@ -136,8 +136,8 @@ module bus_int
    localparam RB_BIST         = 8'd128;
 
 
-   localparam COMPAT_MAJOR    = 16'h0008;
-   localparam COMPAT_MINOR    = 16'h0000;
+   localparam COMPAT_MAJOR    = 16'd1000;
+   localparam COMPAT_MINOR    = 16'd0000;
 
    wire [31:0] 	  set_data;
    wire [7:0] 	  set_addr;
