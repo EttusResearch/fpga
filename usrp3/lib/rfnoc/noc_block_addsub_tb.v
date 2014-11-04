@@ -3,7 +3,7 @@
 //
 `timescale 1ns/1ps
 
-module noc_shell_addsub_tb();
+module noc_block_addsub_tb();
   /*********************************************
   ** User variables
   *********************************************/
