@@ -21,8 +21,6 @@ chdr_16sc_to_8sc.v \
 chdr_8sc_to_16sc.v \
 chdr_16sc_to_32f.v \
 chdr_32f_to_16sc.v \
-chdr_16sc_to_32f.v \
-chdr_32f_to_16sc.v \
 chdr_32f_to_16s.v \
 xxf_to_xxs.v \
 chdr_16s_to_32f.v \
