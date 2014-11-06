@@ -5,27 +5,22 @@
 
 // FIXME Issues:
 //   vita time fed to noc_shell for command timing?  or separate radio_ctrl_proc?
-//   same for spi_ready
 //   put rx and tx on separate ports?
 //   multiple rx?
 
 module radio_rx
   #(parameter BASE = 0,
-    parameter DELETE_DSP = 0)
+    parameter DELETE_DSP = 1)
    (input radio_clk, input radio_rst,
     // Interface to the physical radio (ADC, DAC, controls)
-    input [31:0] rx,
+    input [31:0] rx, output run,
     
     // Interface to the noc_shell
     input set_stb, input [7:0] set_addr, input [31:0] set_data, output reg [63:0] rb_data,
     input [63:0] vita_time,
     
-    output [63:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-    output [127:0] rx_tuser,
-
-    // To TX and ctrl
-    output run_rx
-    );
+    output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
+    output [127:0] rx_tuser);
 
    // /////////////////////////////////////////////////////////////////////////////////////
    // Setting bus and controls
@@ -47,8 +42,6 @@ module radio_rx
    localparam SR_TX_FRONT  = 8'd216;
    localparam SR_CODEC_IDLE = 8'd100;
 
-   wire 	spi_ready;
-
    wire 	loopback;
    
    // Set this register to loop TX data directly to RX data.
@@ -65,28 +58,18 @@ module radio_rx
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
 
-   new_rx_framer #(.BASE(SR_RX_CTRL+4),.CHIPSCOPE(0)) new_rx_framer
+   rx_control_gen3 #(.BASE(SR_RX_CTRL)) new_rx_control
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .sample(sample_rx), .run(run_rx), .eob(eob_rx), .full(full),
+      .strobe(strobe_rx), .run(run), .eob(eob_rx), .full(full),
       .sid(rx_sid), .seqnum(rx_seqnum),
-      .o_tdata(rx_tdata_r), .o_tlast(rx_tlast_r), .o_tvalid(rx_tvalid_r), .o_tready(rx_tready_r),
-      .debug());
-
-   new_rx_control #(.BASE(SR_RX_CTRL)) new_rx_control
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .vita_time(vita_time),
-      .strobe(strobe_rx), .run(run_rx), .eob(eob_rx), .full(full),
-      .sid(rx_sid), .seqnum(rx_seqnum),
-      .err_tdata(rx_err_tdata_r), .err_tlast(rx_err_tlast_r), .err_tvalid(rx_err_tvalid_r), .err_tready(rx_err_tready_r),
-      .debug());
-
+      .rx_tdata(rx_tdata), .rx_tlast(rx_tlast), .rx_tvalid(rx_tvalid), .rx_tready(rx_tready), .rx_tuser(rx_tuser));
+   
+   // ///////////////////////////////////////////////////////////////////////////////////
+   // Signal Processing
    wire [23:0] 	  rx_corr_i, rx_corr_q;
-
-   // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend).
-   wire [31:0] 	  rx_fe = loopback ? tx : rx;
+   wire [31:0] 	  rx_fe = loopback ? tx : rx;    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend)
    
    generate
       if (DELETE_DSP==0)
@@ -97,26 +80,20 @@ module radio_rx
 	      .adc_a(rx_fe[31:16]),.adc_ovf_a(1'b0),
 	      .adc_b(rx_fe[15:0]),.adc_ovf_b(1'b0),
 	      .i_out(rx_corr_i), .q_out(rx_corr_q),
-	      .run(run_rx), .debug());
+	      .run(run), .debug());
 
 	   ddc_chain_x300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
 	     (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
 	      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .rx_fe_i(rx_corr_i),.rx_fe_q(rx_corr_q),
-	      .sample(sample_rx), .run(run_rx), .strobe(strobe_rx),
+	      .sample(sample_rx), .run(run), .strobe(strobe_rx),
 	      .debug() );
+	end // block: rx_dsp
+      else
+	begin
+	   assign sample_rx = rx_fe;
+	   assign strobe_rx = run;
 	end
    endgenerate
-
-   // /////////////////////////////////////////////////////////////////////////////////
-   //  RX Channel Muxing
-
-   axi_mux4 #(.PRIO(1), .WIDTH(64)) rx_mux
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
-      .i0_tdata(rx_tdata_r), .i0_tlast(rx_tlast_r), .i0_tvalid(rx_tvalid_r), .i0_tready(rx_tready_r),
-      .i1_tdata(rx_err_tdata_r), .i1_tlast(rx_err_tlast_r), .i1_tvalid(rx_err_tvalid_r), .i1_tready(rx_err_tready_r),
-      .i2_tdata(), .i2_tlast(), .i2_tvalid(1'b0), .i2_tready(),
-      .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),
-      .o_tdata(rx_mux_tdata_r), .o_tlast(rx_mux_tlast_r), .o_tvalid(rx_mux_tvalid_r), .o_tready(rx_mux_tready_r));
 
 endmodule // radio_rx

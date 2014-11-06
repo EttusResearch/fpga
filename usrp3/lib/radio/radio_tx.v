@@ -14,18 +14,14 @@ module radio_tx
     parameter DELETE_DSP = 0)
    (input radio_clk, input radio_rst,
     // Interface to the physical radio (ADC, DAC, controls)
-    output [31:0] tx,
+    output [31:0] tx, output run,
     
     // Interface to the noc_shell
     input set_stb, input [7:0] set_addr, input [31:0] set_data, output reg [63:0] rb_data,
     input [63:0] vita_time,
     
     input [63:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
-    input [127:0] tx_tuser,
-
-    // To ctrl and rx
-    output run_tx
-    );
+    input [127:0] tx_tuser);
 
    // /////////////////////////////////////////////////////////////////////////////////////
    // Setting bus and controls
@@ -83,7 +79,7 @@ module radio_tx
       .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready),
-      .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
+      .sample(sample_tx), .run(run), .strobe(strobe_tx),
       .debug());
 
    tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
@@ -102,17 +98,17 @@ module radio_tx
 	   (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
 	    .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	    .tx_fe_i(tx_fe_i),.tx_fe_q(tx_fe_q),
-	    .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
+	    .sample(sample_tx), .run(run), .strobe(strobe_tx),
 	    .debug() );
 	 tx_frontend #(.BASE(SR_TX_FRONT), .WIDTH_OUT(16), .IQCOMP_EN(1)) tx_frontend
 	   (.clk(radio_clk), .rst(radio_rst),
 	    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-	    .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run_tx),
+	    .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run),
 	    .dac_a(tx_i_running), .dac_b(tx_q_running));
       end
    endgenerate
 
-   assign tx[31:16] = (run_tx)? tx_i_running : tx_idle[31:16];
-   assign tx[15:0]  = (run_tx)? tx_q_running : tx_idle[15:0];
+   assign tx[31:16] = run ? tx_i_running : tx_idle[31:16];
+   assign tx[15:0]  = run ? tx_q_running : tx_idle[15:0];
 
 endmodule // radio_tx

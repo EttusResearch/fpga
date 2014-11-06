@@ -16,8 +16,8 @@ module radio_ctrl
     // Interface to the physical radio (ADC, DAC, controls)
     inout [31:0] db_gpio,
     inout [31:0] fp_gpio,
-    output [7:0] sen, output sclk, output mosi, input miso,
     output [7:0] misc_outs, output [2:0] leds,
+    output [7:0] sen, output sclk, output mosi, input miso,
     input pps,
     output sync_dacs,
     
