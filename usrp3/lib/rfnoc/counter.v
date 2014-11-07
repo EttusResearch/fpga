@@ -14,19 +14,20 @@ module counter
    reg [WIDTH-1:0]     count;
    
    wire 	       do_it = o_tready & i_tvalid;
+   wire 	       done = (count >= (max-1));
    
    always @(posedge clk)
      if(reset | clear)
        count <= 0;
      else
        if(do_it)
-	 if( (count >= max) | i_tlast )
+	 if( done | i_tlast )
 	   count <= 0;
    	 else
 	   count <= count + 1;
    
    assign o_tdata = count;
-   assign o_tlast = (count >= max) | i_tlast;
+   assign o_tlast = done | i_tlast;
    assign o_tvalid = i_tvalid;
    assign i_tready = do_it;
    
