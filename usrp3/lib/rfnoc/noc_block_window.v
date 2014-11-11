@@ -116,7 +116,8 @@ module noc_block_window #(
   assign ackin_tready = 1'b1;
   
   localparam MAX_WINDOW_SIZE = 2048;
-  localparam RB_ADDR_WIDTH = 3;
+  localparam SR_WINDOW_SIZE  = 131;   // Note: AXI config bus in AXI wrapper uses 129 & 130
+  localparam RB_ADDR_WIDTH   = 3;
   
   wire [RB_ADDR_WIDTH-1:0] rb_addr;
   setting_reg #(
@@ -133,7 +134,7 @@ module noc_block_window #(
   endcase
   
   window #(
-    .BASE(32),
+    .SR_WINDOW_SIZE(SR_WINDOW_SIZE),
     .MAX_LOG2_OF_WINDOW_SIZE($clog2(MAX_WINDOW_SIZE)))
   inst_window (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),

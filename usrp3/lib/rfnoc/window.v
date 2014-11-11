@@ -3,7 +3,7 @@
 //
 
 module window
-  #(parameter BASE=0,
+  #(parameter SR_WINDOW_SIZE=0,
     parameter MAX_LOG2_OF_WINDOW_SIZE = 10)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -19,7 +19,7 @@ module window
    wire [MAX_LOG2_OF_WINDOW_SIZE-1:0] n2_tdata;
    wire [MAX_LOG2_OF_WINDOW_SIZE-1:0] max;
    
-   setting_reg #(.my_addr(BASE), .width(MAX_LOG2_OF_WINDOW_SIZE)) reg_max
+   setting_reg #(.my_addr(SR_WINDOW_SIZE), .width(MAX_LOG2_OF_WINDOW_SIZE)) reg_max
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data), .out(max));
 
    // FIXME need to set max
