@@ -34,6 +34,8 @@ module e300_core
   // gpio controls
   output [31:0]     ctrl_out0,
   output [31:0]     ctrl_out1,
+  output [2:0]      leds0,
+  output [2:0]      leds1,
 
   // settings bus to control global registers
   input [31:0]      set_data,
@@ -329,7 +331,7 @@ module e300_core
     .db_gpio(ctrl_out0),
     .fp_gpio(fp_gpio),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .leds(leds0),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -362,7 +364,7 @@ module e300_core
     .db_gpio(ctrl_out1),
     .fp_gpio(),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .leds(leds1),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),

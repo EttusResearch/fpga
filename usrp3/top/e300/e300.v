@@ -350,16 +350,17 @@ module e300
   //------------------------------------------------------------------
 
   wire [31:0] gpio0, gpio1;
+  wire [2:0]  leds0, leds1;
 
-  assign { LED_TXRX1_TX, LED_TXRX1_RX, LED_RX1_RX, //3
-           VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
+  assign {LED_RX1_RX, LED_TXRX1_TX, LED_TXRX1_RX} = leds0;
+  assign { VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
            TX_ENABLE1B, TX_ENABLE1A //2
-         } = gpio0[18:10];
+         } = gpio0[15:10];
 
-  assign { LED_TXRX2_TX, LED_TXRX2_RX, LED_RX2_RX, //3
-           VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
+  assign {LED_RX2_RX, LED_TXRX2_TX, LED_TXRX2_RX} = leds1;
+  assign { VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
            TX_ENABLE2B, TX_ENABLE2A //2
-         } = gpio1[18:10];
+         } = gpio1[15:10];
 
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.
@@ -507,6 +508,8 @@ module e300
     // case ... this is a hack
     .ctrl_out0(gpio1),
     .ctrl_out1(gpio0),
+    .leds0(leds1),
+    .leds1(leds0),
 
     .fp_gpio(PL_GPIO),
 
