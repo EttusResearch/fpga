@@ -275,33 +275,20 @@ module e300_core
     .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
   );
 
+  noc_block_axi_fifo_loopback #(
+    .NOC_ID(64'hF1F0_0000_0000_0000),
+    .STR_SINK_FIFOSIZE(11))
+  inst_noc_block_axi_fifo_loopback0 (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(bus_clk), .ce_rst(bus_rst),
+    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
+    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
+    .debug());
 
-  /*
   noc_block_fir_filter #(
     .NOC_ID(64'hF112_0000_0000_0000),
     .STR_SINK_FIFOSIZE(11))
   inst_noc_block_fir_filter (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-    .debug());
-    */
-
-  noc_block_axi_fifo_loopback #(
-    .NOC_ID(64'hF1F0_0000_0000_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_axi_fifo_loopback (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-    .debug());
-
-  noc_block_null_source_sink #(
-    .NOC_ID(64'h0000_0000_0000_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_null_source_sink (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(bus_clk), .ce_rst(bus_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
