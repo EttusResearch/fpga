@@ -3,6 +3,9 @@
 //
 
 module e300_core
+#(
+  parameter NUM_CE = 3
+)
 (
   // bus interfaces
   input             bus_clk,
@@ -31,6 +34,8 @@ module e300_core
   // gpio controls
   output [31:0]     ctrl_out0,
   output [31:0]     ctrl_out1,
+  output [2:0]      leds0,
+  output [2:0]      leds1,
 
   // settings bus to control global registers
   input [31:0]      set_data,
@@ -91,6 +96,7 @@ module e300_core
   localparam RB32_CORE_COMPAT   = 5'd2;
   localparam RB32_CORE_GITHASH  = 5'd3;
   localparam RB32_CORE_PLL      = 5'd4;
+  localparam RB32_CORE_NUMCE    = 5'd8;
   localparam RB32_CORE_TEST     = 5'd24;
 
   wire [4:0]  rb_addr;
@@ -168,6 +174,7 @@ module e300_core
       RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'h4, 8'h0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
+      RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE};
       default           : rb_data <= 64'hdeadbeef;
     endcase
 
@@ -176,15 +183,39 @@ module e300_core
   // routing logic, aka crossbar
   ////////////////////////////////////////////////////////////////////
 
-  wire [63:0] ro_tdata [1:0]; wire ro_tlast [1:0]; wire ro_tvalid [1:0]; wire ro_tready [1:0];
-  wire [63:0] ri_tdata [1:0]; wire ri_tlast [1:0]; wire ri_tvalid [1:0]; wire ri_tready [1:0];
+  wire [63:0]          ro_tdata [1:0];
+  wire                 ro_tlast [1:0];
+  wire                 ro_tvalid [1:0];
+  wire                 ro_tready [1:0];
 
-  wire [63:0] cei_tdata [1:0]; wire cei_tlast [1:0]; wire cei_tvalid [1:0]; wire cei_tready [1:0];
-  wire [63:0] ceo_tdata [1:0]; wire ceo_tlast [1:0]; wire ceo_tvalid [1:0]; wire ceo_tready [1:0];
+  wire [63:0]          ri_tdata [1:0];
+  wire                 ri_tlast [1:0];
+  wire                 ri_tvalid [1:0];
+  wire                 ri_tready [1:0];
 
+  wire [NUM_CE*64-1:0] ce_flat_o_tdata;
+  wire [63:0]          ce_o_tdata[NUM_CE-1:0];
+  wire [NUM_CE-1:0]    ce_o_tlast;
+  wire [NUM_CE-1:0]    ce_o_tvalid;
+  wire [NUM_CE-1:0]    ce_o_tready;
 
-  localparam CROSSBAR_IN = 5;
-  localparam CROSSBAR_OUT = 5;
+  wire [NUM_CE*64-1:0] ce_flat_i_tdata;
+  wire [63:0]          ce_i_tdata[NUM_CE-1:0];
+  wire [NUM_CE-1:0]    ce_i_tlast;
+  wire [NUM_CE-1:0]    ce_i_tvalid;
+  wire [NUM_CE-1:0]    ce_i_tready;
+
+  // Flattern CE tdata arrays
+  genvar k;
+  generate
+  for (k = 0; k < NUM_CE; k = k + 1) begin
+    assign ce_o_tdata[k] = ce_flat_o_tdata[k*64+63:k*64];
+    assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
+  end
+  endgenerate
+
+  localparam CROSSBAR_IN = 3 + NUM_CE;
+  localparam CROSSBAR_OUT = 3 + NUM_CE;
 
   `define LOG2(N) (\
                  N < 2 ? 0 : \
@@ -199,13 +230,13 @@ module e300_core
                  N < 1024 ? 9 : \
                  10)
 
-
   // axi crossbar ports
   // 0 - Host
   // 1 - Radio0
   // 2 - Radio1
   // 3 - CE0
   // 4 - CE1
+  // 5 - CE2
 
   axi_crossbar
   #(
@@ -218,7 +249,7 @@ module e300_core
   (
     .clk(bus_clk),
     .reset(bus_rst),
-    .clear(0),
+    .clear(1'b0),
     .local_addr(xb_local_addr),
 
     // settings bus for config
@@ -231,51 +262,48 @@ module e300_core
     .rb_data(xbar_rb_data),
 
     // inputs, real men flatten busses
-    .i_tdata({cei_tdata[1], cei_tdata[0], ri_tdata[1], ri_tdata[0], h2s_tdata}),
-    .i_tlast({cei_tlast[1], cei_tlast[0], ri_tlast[1], ri_tlast[0], h2s_tlast}),
-    .i_tvalid({cei_tvalid[1], cei_tvalid[0], ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
-    .i_tready({cei_tready[1], cei_tready[0], ri_tready[1], ri_tready[0], h2s_tready}),
+    .i_tdata({ce_flat_i_tdata, ri_tdata[1], ri_tdata[0], h2s_tdata}),
+    .i_tlast({ce_i_tlast, ri_tlast[1], ri_tlast[0], h2s_tlast}),
+    .i_tvalid({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
+    .i_tready({ce_i_tready, ri_tready[1], ri_tready[0], h2s_tready}),
 
     // outputs, real men flatten busses
-    .o_tdata({ceo_tdata[1], ceo_tdata[0], ro_tdata[1], ro_tdata[0], s2h_tdata}),
-    .o_tlast({ceo_tlast[1], ceo_tlast[0], ro_tlast[1], ro_tlast[0], s2h_tlast}),
-    .o_tvalid({ceo_tvalid[1], ceo_tvalid[0], ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
-    .o_tready({ceo_tready[1], ceo_tready[0], ro_tready[1], ro_tready[0], s2h_tready}),
-    .pkt_present({cei_tvalid[1], cei_tvalid[0], ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
+    .o_tdata({ce_flat_o_tdata, ro_tdata[1], ro_tdata[0], s2h_tdata}),
+    .o_tlast({ce_o_tlast, ro_tlast[1], ro_tlast[0], s2h_tlast}),
+    .o_tvalid({ce_o_tvalid, ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
+    .o_tready({ce_o_tready, ro_tready[1], ro_tready[0], s2h_tready}),
+    .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
   );
 
-  // placeholder computational engines
-  axi_loopback axi_loopback_ce0
-  (
-    .clk(bus_clk),
-    .reset(bus_rst),
-    // Input AXIS
-    .i_tdata(ceo_tdata[0]),
-    .i_tlast(ceo_tlast[0]),
-    .i_tvalid(ceo_tvalid[0]),
-    .i_tready(ceo_tready[0]),
-    // Output AXIS
-    .o_tdata(cei_tdata[0]),
-    .o_tlast(cei_tlast[0]),
-    .o_tvalid(cei_tvalid[0]),
-    .o_tready(cei_tready[0])
-  );
+  noc_block_axi_fifo_loopback #(
+    .NOC_ID(64'hF1F0_0000_0000_0000),
+    .STR_SINK_FIFOSIZE(11))
+  inst_noc_block_axi_fifo_loopback0 (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(bus_clk), .ce_rst(bus_rst),
+    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
+    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
+    .debug());
 
-  axi_loopback axi_loopback_ce1
-  (
-    .clk(bus_clk),
-    .reset(bus_rst),
-    // Input AXIS
-    .i_tdata(ceo_tdata[1]),
-    .i_tlast(ceo_tlast[1]),
-    .i_tvalid(ceo_tvalid[1]),
-    .i_tready(ceo_tready[1]),
-    // Output AXIS
-    .o_tdata(cei_tdata[1]),
-    .o_tlast(cei_tlast[1]),
-    .o_tvalid(cei_tvalid[1]),
-    .o_tready(cei_tready[1])
-  );
+  noc_block_fir_filter #(
+    .NOC_ID(64'hF112_0000_0000_0000),
+    .STR_SINK_FIFOSIZE(11))
+  inst_noc_block_fir_filter (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(bus_clk), .ce_rst(bus_rst),
+    .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
+    .o_tdata(ce_i_tdata[1]), .o_tlast(ce_i_tlast[1]), .o_tvalid(ce_i_tvalid[1]), .o_tready(ce_i_tready[1]),
+    .debug());
+
+  noc_block_fft #(
+    .NOC_ID(64'hFF70_0000_0000_0000),
+    .STR_SINK_FIFOSIZE(11))
+  inst_noc_block_fft (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(bus_clk), .ce_rst(bus_rst),
+    .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
+    .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
+    .debug());
 
   ////////////////////////////////////////////////////////////////////
   // radio instantiation
@@ -286,10 +314,10 @@ module e300_core
 
   axi_fifo #(.WIDTH(65), .SIZE(11)) axi_fifo_tx_packet_buff0
   (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({tx_tlast_bo[0], tx_tdata_bo[0]}), .i_tvalid(tx_tvalid_bo[0]), .i_tready(tx_tready_bo[0]),
-      .o_tdata({tx_tlast_bi[0], tx_tdata_bi[0]}), .o_tvalid(tx_tvalid_bi[0]), .o_tready(tx_tready_bi[0]),
-      .occupied()
+    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+    .i_tdata({tx_tlast_bo[0], tx_tdata_bo[0]}), .i_tvalid(tx_tvalid_bo[0]), .i_tready(tx_tready_bo[0]),
+    .o_tdata({tx_tlast_bi[0], tx_tdata_bi[0]}), .o_tvalid(tx_tvalid_bi[0]), .o_tready(tx_tready_bi[0]),
+    .occupied()
   );
 
   radio #(.RADIO_NUM(0), .DATA_FIFO_SIZE(13), .MSG_FIFO_SIZE(9)) radio0
@@ -302,7 +330,7 @@ module e300_core
     .db_gpio(ctrl_out0),
     .fp_gpio(fp_gpio),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .leds(leds0),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -319,10 +347,10 @@ module e300_core
 
   axi_fifo #(.WIDTH(65), .SIZE(11)) axi_fifo_tx_packet_buff1
   (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({tx_tlast_bo[1], tx_tdata_bo[1]}), .i_tvalid(tx_tvalid_bo[1]), .i_tready(tx_tready_bo[1]),
-      .o_tdata({tx_tlast_bi[1], tx_tdata_bi[1]}), .o_tvalid(tx_tvalid_bi[1]), .o_tready(tx_tready_bi[1]),
-      .occupied()
+    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+    .i_tdata({tx_tlast_bo[1], tx_tdata_bo[1]}), .i_tvalid(tx_tvalid_bo[1]), .i_tready(tx_tready_bo[1]),
+    .o_tdata({tx_tlast_bi[1], tx_tdata_bi[1]}), .o_tvalid(tx_tvalid_bi[1]), .o_tready(tx_tready_bi[1]),
+    .occupied()
   );
 
   radio #(.RADIO_NUM(1), .DATA_FIFO_SIZE(13), .MSG_FIFO_SIZE(9)) radio1
@@ -335,7 +363,7 @@ module e300_core
     .db_gpio(ctrl_out1),
     .fp_gpio(),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .leds(leds1),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),

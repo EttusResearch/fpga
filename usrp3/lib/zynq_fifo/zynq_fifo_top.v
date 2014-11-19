@@ -111,7 +111,7 @@ module zynq_fifo_top
     output [31:0] core_set_addr,
     output        core_set_stb,
     input [31:0]  core_rb_data,
-    
+
     //------------------------------------------------------------------
     // Settings bus interface for crossbar (in e300 core)
     //------------------------------------------------------------------
@@ -136,7 +136,7 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
+    wire set_stb, set_stb_s2h, set_stb_h2s;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
     wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
@@ -217,11 +217,22 @@ module zynq_fifo_top
 
     cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
-        .clk(clk), .rst(rst),
-        .set_stb(dest_lookup_set_stb), .set_addr(set_addr[9:2]), .set_data(set_data),
-        .i_tdata(s2h_tdata), .i_tlast(s2h_tlast), .i_tvalid(s2h_tvalid), .i_tready(s2h_tready),
-        .o_tdata(s2h_tdata_i0), .o_tlast(s2h_tlast_i0), .o_tvalid(s2h_tvalid_i0), .o_tready(s2h_tready_i0),
-        .o_tdest(which_stream_s2h)
+      .clk(clk), .rst(rst),
+
+      .set_stb(dest_lookup_set_stb),
+      .set_addr(set_addr[9:2]),
+      .set_data(set_data),
+
+      .i_tdata(s2h_tdata),
+      .i_tlast(s2h_tlast),
+      .i_tvalid(s2h_tvalid),
+      .i_tready(s2h_tready),
+
+      .o_tdata(s2h_tdata_i0),
+      .o_tlast(s2h_tlast_i0),
+      .o_tvalid(s2h_tvalid_i0),
+      .o_tready(s2h_tready_i0),
+      .o_tdest(which_stream_s2h)
     );
 
     //only active in cycles between command and tlast
