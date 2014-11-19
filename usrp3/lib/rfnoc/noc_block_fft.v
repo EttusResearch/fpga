@@ -112,8 +112,29 @@ module noc_block_fft #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
+  localparam SR_FFT_RESET = 131;
+
+  wire fft_reset_trigger;
+  setting_reg #(
+    .my_addr(SR_FFT_RESET), .awidth(8), .width(8))
+  sr_fft_reset (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(), .changed(fft_reset_trigger));
+
+  // FFT core requires minimum reset pulse width of 2 clock cycles
+  reg [1:0] fft_reset;
+  always @(posedge ce_clk) begin
+    if (fft_reset_trigger) begin
+      fft_reset = 2'b11;
+    end
+    else begin
+      fft_reset[0] = 1'b0;
+      fft_reset[1] = fft_reset[0];
+    end
+  end
+
   simple_fft inst_simple_fft (
-    .aresetn(~ce_rst), .aclk(ce_clk),
+    .aresetn(~(ce_rst | fft_reset[1])), .aclk(ce_clk),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tlast(m_axis_data_tlast),
