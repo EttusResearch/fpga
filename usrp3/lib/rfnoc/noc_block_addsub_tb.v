@@ -11,31 +11,7 @@ module noc_block_addsub_tb();
   localparam RESET_TIME = 100;    // ns
 
   /*********************************************
-  ** Clock, Reset, & Testbench timeout
-  *********************************************/
-  reg clk;
-  initial clk = 1'b0;
-  localparam CLOCK_PERIOD = 1e9/CLOCK_FREQ;
-  always
-    #(CLOCK_PERIOD) clk = ~clk;
-
-  reg rst;
-  wire rst_n;
-  assign rst_n = ~rst;
-  initial
-  begin
-    rst = 1'b1;
-    #(RESET_TIME) rst = 1'b0;
-  end
-
-  reg [63:0] i_tdata;
-  reg i_tlast, i_tvalid;
-  wire i_tready;
-  wire [63:0] o_tdata;
-  wire o_tlast, o_tvalid, o_tready;
-
-  /*********************************************
-  ** Helper Tasks
+  ** Clock, Reset, & CHDR Packet Helper Tasks
   *********************************************/
   `include "rfnoc_sim_lib.v"
 

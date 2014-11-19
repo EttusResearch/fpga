@@ -18,6 +18,27 @@
   localparam [7:0] SR_NEXT_DST_BASE               = 128;
   localparam [7:0] SR_READBACK_ADDR               = 255;
 
+  reg clk;
+  initial clk = 1'b0;
+  localparam CLOCK_PERIOD = 1e9/CLOCK_FREQ;
+  always
+    #(CLOCK_PERIOD) clk = ~clk;
+
+  reg rst;
+  wire rst_n;
+  assign rst_n = ~rst;
+  initial
+  begin
+    rst = 1'b1;
+    #(RESET_TIME) rst = 1'b0;
+  end
+
+  reg [63:0] i_tdata;
+  reg i_tlast, i_tvalid;
+  wire i_tready;
+  wire [63:0] o_tdata;
+  wire o_tlast, o_tvalid, o_tready;
+
   task SendCtrlPacket;
     input [11:0] seqnum;
     input [31:0] sid;
