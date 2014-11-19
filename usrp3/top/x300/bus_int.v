@@ -106,18 +106,20 @@ module bus_int
    localparam SR_AWIDTH = 8;
    localparam RB_AWIDTH = 8;
 
-   localparam SR_LEDS       = 8'd00;
-   localparam SR_SW_RST     = 8'd01;
-   localparam SR_CLOCK_CTRL = 8'd02;
-   localparam SR_XB_LOCAL   = 8'd03;
-   localparam SR_SFPP_CTRL0 = 8'd08;
-   localparam SR_SFPP_CTRL1 = 8'd09;
-   localparam SR_FIFOFLAGS  = 8'd10;
-   localparam SR_SPI        = 8'd32;
-   localparam SR_ETHINT0    = 8'd40;
-   localparam SR_ETHINT1    = 8'd56;
+   localparam SR_LEDS         = 8'd00;
+   localparam SR_SW_RST       = 8'd01;
+   localparam SR_CLOCK_CTRL   = 8'd02;
+   localparam SR_XB_LOCAL     = 8'd03;
+   localparam SR_SFPP_CTRL0   = 8'd08;
+   localparam SR_SFPP_CTRL1   = 8'd09;
+   localparam SR_FIFOFLAGS    = 8'd10;
+   localparam SR_SPI          = 8'd32;
+   localparam SR_ETHINT0      = 8'd40;
+   localparam SR_ETHINT1      = 8'd56;
+   // Sets the readback bus address dedicated to the xbar
+   localparam SR_RB_ADDR_XBAR = 8'd64;
    // For AXI_DRAM_FIFO debug, not production
-   localparam SR_BIST       = 8'd128;
+   localparam SR_BIST         = 8'd128;
 
 
    localparam RB_COUNTER      = 8'd00;
@@ -131,7 +133,7 @@ module bus_int
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_FIFOFLAGS    = 8'd10;
-   localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
+   localparam RB_CROSSBAR     = 8'd64;
    // For AXI_DRAM_FIFO debug, not production
    localparam RB_BIST         = 8'd128;
 
@@ -357,7 +359,7 @@ module bus_int
        // Read FIFO status from Ethernet Interfaces
        RB_FIFOFLAGS: rb_data = debug_flags;
 
-       (RB_CROSSBAR | 6'bxxxxxx): rb_data = rb_data_crossbar;
+       RB_CROSSBAR: rb_data = rb_data_crossbar;
        // AXI_DRAM_FIFO BIST. Not for production.
        RB_BIST: rb_data = {29'h0,bist_done,bist_fail,bist_start};
 
@@ -504,66 +506,47 @@ module bus_int
    // axi_crossbar ports
    // 0 - ETH0
    // 1 - ETH1
-   // 2 - Radio0
-   // 3 - Radio1
-   // 4 - CE0
-   // 5 - CE1
-   // 6 - CE2
-   // 7 - PCIe
-
-    wire [7:0] 		 local_addr;
+   // 2 - PCIe
+   // 3 - Radio0
+   // 4 - Radio1
+   // 5 - CE0
+   // ...
+   // 16 - CE10
+   
+  // Base width of crossbar based on fixed components (ethernet, PCIE, etc)
+   localparam XBAR_FIXED_PORTS = 5;
+   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
+   
+   wire [7:0] local_addr;
+   // Dedicated address space readback of xbar stats (up to 16x16)
+   wire [`LOG2(XBAR_NUM_PORTS)+`LOG2(XBAR_NUM_PORTS)-1:0] rb_addr_xbar;
 
    setting_reg #(.my_addr(SR_XB_LOCAL), .awidth(SR_AWIDTH), .width(8)) sr_local_addr
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(local_addr),.changed());
 
-  // Base width of crossbar based on fixed components (ethernet, PCIE, etc)
-  localparam XBAR_FIXED_PORTS = 5;
-  localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
+   setting_reg #(.my_addr(SR_RB_ADDR_XBAR), .awidth(SR_AWIDTH), .width(`LOG2(XBAR_NUM_PORTS)+`LOG2(XBAR_NUM_PORTS))) sr_rb_addr_xbar
+     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+      .in(set_data),.out(rb_addr_xbar),.changed());
   
-
-  // Generate crossbar based on the inclusion of compute engines
-  generate
-    if (NUM_CE == 0) begin
-      axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_FIXED_PORTS), .NUM_OUTPUTS(XBAR_FIXED_PORTS))
-      inst_axi_crossbar (
-        .clk(clk), .reset(reset), .clear(0),
-        .local_addr(local_addr),
-        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
-        .i_tdata({r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
-        .i_tlast({r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
-        .i_tvalid({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-        .i_tready({r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
-        .o_tdata({r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
-        .o_tlast({r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
-        .o_tvalid({r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
-        .o_tready({r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
-        .pkt_present({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-        .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
-        .rb_addr(rb_addr[`LOG2(XBAR_FIXED_PORTS)+`LOG2(XBAR_FIXED_PORTS)-1:0]), .rb_data(rb_data_crossbar));
-    end
-    else begin
-      // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-      axi_crossbar #(
-        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
-      inst_axi_crossbar (
-        .clk(clk), .reset(reset), .clear(0),
-        .local_addr(local_addr),
-        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
-        .i_tdata({ce_i_tdata,r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
-        .i_tlast({ce_i_tlast,r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
-        .i_tvalid({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-        .i_tready({ce_i_tready,r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
-        .o_tdata({ce_o_tdata,r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
-        .o_tlast({ce_o_tlast,r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
-        .o_tvalid({ce_o_tvalid,r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
-        .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
-        .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-        .rb_rd_stb(rb_rd_stb && ((rb_addr >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS))) == RB_CROSSBAR >> (`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)))),
-        .rb_addr(rb_addr[`LOG2(XBAR_NUM_PORTS)+`LOG2(XBAR_NUM_PORTS)-1:0]), .rb_data(rb_data_crossbar));
-    end
-  endgenerate
+   // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
+   axi_crossbar #(
+      .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
+   inst_axi_crossbar (
+      .clk(clk), .reset(reset), .clear(0),
+      .local_addr(local_addr),
+      .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
+      .i_tdata({ce_i_tdata,r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
+      .i_tlast({ce_i_tlast,r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
+      .i_tvalid({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .i_tready({ce_i_tready,r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
+      .o_tdata({ce_o_tdata,r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
+      .o_tlast({ce_o_tlast,r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
+      .o_tvalid({ce_o_tvalid,r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
+      .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
+      .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
+      .rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar));
 
 /*
 assign debug2 = {
