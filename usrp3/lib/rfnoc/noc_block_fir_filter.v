@@ -95,7 +95,7 @@ module noc_block_fir_filter #(
     .SR_NEXT_DST(SR_NEXT_DST),
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
-    .CONFIG_BUS_FIFO_DEPTH(6)) // Need deeper FIFO to prevent overflow when configuring coefficients
+    .CONFIG_BUS_FIFO_DEPTH(7)) // Need deeper FIFO to prevent overflow when configuring coefficients
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
