@@ -4,7 +4,8 @@
 // Latency must be 3 or 4
 
 module axi_pipe_mac
-  #(parameter LATENCY=3)
+  #(parameter LATENCY=3,
+    parameter CASCADE_IN=0)
    (input clk, input reset, input clear,
     input a_tlast, input a_tvalid, output a_tready,
     input b_tlast, input b_tvalid, output b_tready,
@@ -44,12 +45,23 @@ module axi_pipe_mac
       .i_tlast(join_tlast), .i_tvalid(join_tvalid), .i_tready(join_tready),
       .o_tlast(int2_tlast), .o_tvalid(int2_tvalid), .o_tready(int2_tready),
       .enables(enable_m), .valids());
-   
-   axi_pipe #(.STAGES(1)) pipe_c
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i_tlast(c_tlast), .i_tvalid(c_tvalid), .i_tready(c_tready),
-      .o_tlast(int3_tlast), .o_tvalid(int3_tvalid), .o_tready(int3_tready),
-      .enables(enable_c), .valids());
+
+   // If we use the cascade input, there is no flop in the input side adder
+   generate
+      if(CASCADE_IN)
+	begin
+	   assign int3_tlast = c_tlast;
+	   assign int3_tvalid = c_tvalid;
+	   assign c_tready = int3_tready;
+	   assign enable_c = 1'b0;
+	end
+      else
+	axi_pipe #(.STAGES(1)) pipe_c
+	  (.clk(clk), .reset(reset), .clear(clear),
+	   .i_tlast(c_tlast), .i_tvalid(c_tvalid), .i_tready(c_tready),
+	   .o_tlast(int3_tlast), .o_tvalid(int3_tvalid), .o_tready(int3_tready),
+	   .enables(enable_c), .valids());
+   endgenerate
    
    axi_join #(.INPUTS(2)) joiner_mc
      (.i_tlast({int2_tlast,int3_tlast}), .i_tvalid({int2_tvalid,int3_tvalid}), .i_tready({int2_tready,int3_tready}),

@@ -6,18 +6,23 @@ module mult_add
   #(parameter WIDTH_A=25,
     parameter WIDTH_B=18,
     parameter WIDTH_P=48,
-    parameter LATENCY=3)
+    parameter LATENCY=3,
+    parameter CASCADE_IN=0,
+    parameter CASCADE_OUT=0)
    (input clk, input reset,
     input [WIDTH_A-1:0] a_tdata, input a_tlast, input a_tvalid, output a_tready,
     input [WIDTH_B-1:0] b_tdata, input b_tlast, input b_tvalid, output b_tready,
     input [WIDTH_P-1:0] c_tdata, input c_tlast, input c_tvalid, output c_tready,
     output [WIDTH_P-1:0] p_tdata, output p_tlast, output p_tvalid, input p_tready);
    
-   wire [47:0] 		 P1_OUT;
+   wire [47:0] 		 P1_OUT, P1_OUT_CASC;
    wire [24:0] 		 A_IN = { a_tdata, {(25-(WIDTH_A)){1'b0}}};
    wire [17:0] 		 B_IN = { b_tdata, {(18-(WIDTH_B)){1'b0}}};
-   assign p_tdata = P1_OUT[47:48-WIDTH_P];
-   
+   assign p_tdata = CASCADE_OUT ? P1_OUT_CASC[47:48-WIDTH_P] : P1_OUT[47:48-WIDTH_P];
+
+   wire [47:0] 		 CIN  = CASCADE_IN ? 48'hFFFF_FFFF_FFFF : c_tdata;
+   wire [47:0] 		 PCIN = CASCADE_IN ? c_tdata : 48'hFFFF_FFFF_FFFF;
+
    localparam MREG_IN = 1;    // Always have this reg
    localparam PREG_IN = (LATENCY >= 3) ? 1 : 0;
    localparam A2REG_IN = (LATENCY >= 2) ? 1 : 0;
@@ -38,7 +43,7 @@ module mult_add
        4 : {CEA2, CEA1, CEB2, CEB1} <= { enables_a[1], enables_a[0], enables_b[1], enables_b[0] };
      endcase
    
-   axi_pipe_mac #(.LATENCY(LATENCY)) axi_pipe_mac
+   axi_pipe_mac #(.LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN)) axi_pipe_mac
      (.clk(clk), .reset(reset), .clear(0),
       .a_tlast(a_tlast), .a_tvalid(a_tvalid), .a_tready(a_tready),
       .b_tlast(b_tlast), .b_tvalid(b_tvalid), .b_tready(b_tready),
@@ -63,14 +68,14 @@ module mult_add
                .P(P1_OUT),          
                .PATTERNBDETECT(), 
                .PATTERNDETECT(), 
-               .PCOUT(),  
+               .PCOUT(P1_OUT_CASC),  
                .UNDERFLOW(), 
                .A({5'b0,A_IN}),   // Inputs start here
                .ACIN(30'b0),    
                .ALUMODE(4'b0000),   //////////////////////
                .B(B_IN),       
                .BCIN(18'b0),    
-               .C(c_tdata),          ///////////////////////
+               .C(CIN),          ///////////////////////
                .CARRYCASCIN(1'b0), 
                .CARRYIN(1'b0), 
                .CARRYINSEL(3'b0), 
@@ -91,8 +96,8 @@ module mult_add
                .D(25'b0),
                .INMODE(5'b0),    ///////////////////////
                .MULTSIGNIN(1'b0), 
-               .OPMODE({2'b01, LOAD, 4'b0101}), // ////////////////////
-               .PCIN(48'b0),      //////////////////////
+               .OPMODE({(CASCADE_IN ? 2'b00 : 2'b01), LOAD, 4'b0101}), // ////////////////////
+               .PCIN(PCIN),      //////////////////////
                .RSTA(reset),     
                .RSTALLCARRYIN(reset), 
                .RSTALUMODE(reset), 

@@ -59,7 +59,8 @@ module mult_add_tb();
       .i_tlast(0), .i_tvalid(pi_tvalid), .i_tready(),
       .o_tdata(pin_tdata), .o_tlast(pin_tlast), .o_tvalid(pin_tvalid), .o_tready(pin_tready));
    
-   mult_add #(.WIDTH_A(AW), .WIDTH_B(BW), .WIDTH_P(PW), .LATENCY(4)) mult_add
+   mult_add #(.WIDTH_A(AW), .WIDTH_B(BW), .WIDTH_P(PW),
+	      .LATENCY(3), .CASCADE_IN(1), .CASCADE_OUT(1)) mult_add
      (.clk(clk), .reset(reset),
       .a_tdata(a_tdata), .a_tlast(a_tlast), .a_tvalid(a_tvalid), .a_tready(a_tready),
       .b_tdata(b_tdata), .b_tlast(b_tlast), .b_tvalid(b_tvalid), .b_tready(b_tready),
