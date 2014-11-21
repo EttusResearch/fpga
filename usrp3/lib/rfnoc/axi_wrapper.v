@@ -46,16 +46,22 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Insert time and burst handling here.  A simple FIFO works only if packets are produced 1-for-1 (they may be of different sizes, though)
-   wire [15:0] 	 next_destination;
-   wire [127:0]  s_axis_data_tuser_int;
-   reg 		 sof_in = 1'b1;
+   wire [15:0]  next_destination;
+   wire [127:0] s_axis_data_tuser_int;
+   reg          sof_in = 1'b1;
+   wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_destination,m_axis_data_tuser[63:0]};
+   wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
+   // Only store header once per packet
    always @(posedge clk)
      if(reset)
        sof_in <= 1'b1;
      else
        if(m_axis_data_tvalid & m_axis_data_tready)
-	 sof_in <= ~m_axis_data_tlast;
+         if(m_axis_data_tlast)
+           sof_in <= 1'b1;
+         else
+           sof_in <= 1'b0;
    
    generate
       if(SIMPLE_MODE)
@@ -67,8 +73,8 @@ module axi_wrapper
 	   // FIFO for 
 	   axi_fifo_short #(.WIDTH(128)) header_fifo
 	     (.clk(clk), .reset(reset), .clear(1'b0),
-	      .i_tdata({m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_destination,m_axis_data_tuser[63:0]}),
-	      .i_tvalid(sof_in&m_axis_data_tvalid&m_axis_data_tready), .i_tready(),
+	      .i_tdata(header_fifo_i_tdata),
+	      .i_tvalid(header_fifo_i_tvalid), .i_tready(),
 	      .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast&s_axis_data_tvalid&s_axis_data_tready));
 	end // if (SIMPLE_MODE)
       else
