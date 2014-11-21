@@ -63,8 +63,16 @@ module noc_block_null_source_sink #(
   //
   ////////////////////////////////////////////////////////////
 
+  localparam SR_NEXT_DST            = 128;
+  localparam SR_LINES_PER_PACKET    = 129;
+  localparam SR_LINE_RATE           = 130;
+  localparam SR_ENABLE_STREAM       = 131;
+
   null_source #(
-    .BASE(8))
+    .SR_NEXT_DST(SR_NEXT_DST),
+    .SR_LINES_PER_PACKET(SR_LINES_PER_PACKET),
+    .SR_LINE_RATE(SR_LINE_RATE),
+    .SR_ENABLE_STREAM(SR_ENABLE_STREAM))
   inst_null_source (.clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));

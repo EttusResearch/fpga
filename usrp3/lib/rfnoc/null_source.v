@@ -5,7 +5,10 @@
 // Will generate as fast as it can.
 
 module null_source
-  #(parameter BASE=0)
+  #(parameter SR_NEXT_DST            = 128,
+    parameter SR_LINES_PER_PACKET    = 129,
+    parameter SR_LINE_RATE           = 130,
+    parameter SR_ENABLE_STREAM       = 131)
    (input clk, input reset,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
@@ -25,19 +28,19 @@ module null_source
    wire 	  changed_sid;
    wire 	  enable;
    
-   setting_reg #(.my_addr(BASE), .width(32)) sid_reg
+   setting_reg #(.my_addr(SR_NEXT_DST), .width(32)) sid_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(sid), .changed(changed_sid));
    
-   setting_reg #(.my_addr(BASE+1), .width(16)) len_reg
+   setting_reg #(.my_addr(SR_LINES_PER_PACKET), .width(16)) len_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(len), .changed());
 		 
-   setting_reg #(.my_addr(BASE+2), .width(16)) rate_reg
+   setting_reg #(.my_addr(SR_LINE_RATE), .width(16)) rate_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rate), .changed());
 
-   setting_reg #(.my_addr(BASE+3), .width(1)) enable_reg
+   setting_reg #(.my_addr(SR_ENABLE_STREAM), .width(1)) enable_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(enable), .changed());
 
