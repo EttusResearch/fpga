@@ -103,7 +103,7 @@ module simple_gemac_rx
      if(reset)
        rx_state 	<= RX_IDLE;
      else
-       if(rx_er_d1) // | (~pkt_long_enough & ~rx_dv_d1) & (rx_state != RX_IDLE))
+       if(rx_er_d1 & ~((rxd_d1==8'h0F)&(~rx_dv_d1)))  //Handle odd-length pkts from Xilinx IP.
 	 rx_state 	<= RX_ERROR;
        else
 	 case(rx_state)

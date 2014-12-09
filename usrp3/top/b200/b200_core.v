@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Ettus Research LLC
+// Copyright 2013-14 Ettus Research LLC
 //
 
 
@@ -61,6 +61,12 @@ module b200_core
     ////////////////////////////////////////////////////////////////////
     output debug_txd, input debug_rxd,
     input debug_scl, input debug_sda,
+
+    ////////////////////////////////////////////////////////////////////
+    // fe lock signals
+    ////////////////////////////////////////////////////////////////////
+    input [1:0] lock_signals,
+
     ////////////////////////////////////////////////////////////////////
     // debug signals
     ////////////////////////////////////////////////////////////////////
@@ -72,17 +78,40 @@ module b200_core
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_PPS_SEL   = 8'd48;
-    localparam COMPAT_MAJOR      = 16'h0003;
+    localparam COMPAT_MAJOR      = 16'h0004;
     localparam COMPAT_MINOR      = 16'h0000;
+
+    reg [1:0] lock_state;
+    reg [1:0] lock_state_r;
+
+    always @(posedge bus_clk)
+      if (bus_rst)
+        {lock_state_r, lock_state} <= 4'h0;
+      else
+        {lock_state_r, lock_state} <= {lock_state, lock_signals};
+
 
     /*******************************************************************
      * PPS Timing stuff
      ******************************************************************/
-    reg [1:0] 	 int_pps_del, ext_pps_del;
+
+    // Generate an internal PPS signal
+    wire int_pps;
+    pps_generator #(.CLK_FREQ(100000000)) pps_gen
+    (.clk(bus_clk), .pps(int_pps));
+
+    // Flop PPS signals into radio clock domain
+    reg [1:0] 	 gpsdo_pps_del, ext_pps_del, int_pps_del;
     always @(posedge radio_clk) ext_pps_del[1:0] <= {ext_pps_del[0], pps_ext};
-    always @(posedge radio_clk) int_pps_del[1:0] <= {int_pps_del[0], pps_int};
-    wire pps_select;
-    wire pps = pps_select? ext_pps_del[1] : int_pps_del[1];
+    always @(posedge radio_clk) gpsdo_pps_del[1:0] <= {gpsdo_pps_del[0], pps_int};
+    always @(posedge radio_clk) int_pps_del[1:0] <= {int_pps_del[0], int_pps};
+
+    // PPS mux
+    wire [1:0] pps_select;
+    wire pps =  (pps_select == 2'b00)? gpsdo_pps_del[1] :
+                (pps_select == 2'b01)? ext_pps_del[1] :
+                (pps_select == 2'b10)? int_pps_del[1] :
+                1'b0;
 
     /*******************************************************************
      * Response mux Routing logic
@@ -189,7 +218,7 @@ module b200_core
      (.clk(bus_clk), .rst(1'b0/*keep*/), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(gpsdo_st), .changed());
 
-    setting_reg #(.my_addr(SR_CORE_PPS_SEL), .awidth(8), .width(1)) sr_pps_sel
+    setting_reg #(.my_addr(SR_CORE_PPS_SEL), .awidth(8), .width(2)) sr_pps_sel
      (.clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(pps_select), .changed());
 
@@ -205,6 +234,7 @@ module b200_core
        2'd0 : rb_data <= { 32'hACE0BA5E, COMPAT_MAJOR, COMPAT_MINOR };
        2'd1 : rb_data <= { 32'b0, spi_readback };
        2'd2 : rb_data <= { 16'b0, radio_st, gpsdo_st, rb_misc };
+       2'd3 : rb_data <= { 30'h0, lock_state_r };
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 

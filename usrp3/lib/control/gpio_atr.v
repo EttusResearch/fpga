@@ -42,8 +42,14 @@ module gpio_atr
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
       .out(ddr),.changed());
 
+   // Delay rx and tx signals by 2 cycles, giving them enough time to get to the IOBUFs
+   //  and not cause timing or fanout problems (hopefully)
+   reg [1:0] 	      rx_d, tx_d;
+   always @(posedge clk) rx_d <= {rx_d[0],rx};
+   always @(posedge clk) tx_d <= {tx_d[0],tx};
+   
    always @(posedge clk)
-     case({tx,rx})
+     case({tx_d[1],rx_d[1]})
        2'b00: rgpio <= in_idle;
        2'b01: rgpio <= in_rx;
        2'b10: rgpio <= in_tx;

@@ -17,7 +17,8 @@ module new_rx_control
     input [63:0] vita_time,
     
     // DDC connections
-    output run, output eob,
+    output reg run,
+    output eob,
     input strobe, input full,
     input [11:0] seqnum,
     input [31:0] sid,
@@ -111,6 +112,7 @@ module new_rx_control
      if(reset | clear)
        begin
 	  ibs_state <= IBS_IDLE;
+	  run <= 1'b0;
 	  chain_sav <= 1'b0;
 	  reload_sav <= 1'b0;
 	  clear_halt <= 1'b0;
@@ -130,6 +132,7 @@ module new_rx_control
 	     end else if (now | send_imm) begin
 		// Either its time to run this command or it should run immediately without a time.
 		ibs_state <= IBS_RUNNING;
+		run <= 1'b1;
 		lines_left <= numlines;
 		repeat_lines <= numlines;
 		chain_sav <= chain;
@@ -142,11 +145,13 @@ module new_rx_control
 	       if (full) begin
 		  // Framing FIFO is full and we have just overrun.
 		  ibs_state <= IBS_OVERRUN;
+		  run <= 1'b0;
 	       end else if (lines_left == 1) begin
 		  // Provide Halt mechanism used to bring RX into known IDLE state
 		  // at re-initialization.
 		  if (halt) begin
 		     ibs_state <= IBS_IDLE;
+		     run <= 1'b0;
 		     clear_halt <= 1'b1;
 		  end else if (chain_sav) begin
 		     // If chain_sav is true then execute the next command now this one finished.
@@ -158,6 +163,7 @@ module new_rx_control
 			// If the new command includes stop then go idle.
 			if (stop) begin
 			   ibs_state <= IBS_IDLE;
+			   run <= 1'b0;
 			end
 		     end else if (reload_sav) begin
 			// There is no new command to pop from FIFO so re-run previous command.
@@ -165,10 +171,12 @@ module new_rx_control
 		     end else begin
 			// Chain has been broken, no commands left in FIFO and reload not set.
 			ibs_state <= IBS_BROKENCHAIN;
+			run <= 1'b0;
 		     end
 		  end else begin // if (chain_sav)
 		     // Chain is not true, so don't look for new command, instead go idle.
 		     ibs_state <= IBS_IDLE;
+		     run <= 1'b0;
 		  end
 	       end else begin // if (lines_left == 1)
 		  // Still counting down lines in current command.
@@ -194,7 +202,11 @@ module new_rx_control
 	IBS_ZERO_TIME: if(err_tready_int) ibs_state <= IBS_ZERO_DATA;
 	IBS_ZERO_DATA: if(err_tready_int) ibs_state <= IBS_IDLE;
 
-	default: ibs_state <= IBS_IDLE;
+	default: 
+	  begin
+	     ibs_state <= IBS_IDLE;
+	     run <= 1'b0;
+	  end
 
        endcase // case (ibs_state)
 
@@ -205,7 +217,6 @@ module new_rx_control
        default     : command_ready <= 1'b0;
      endcase // case (ibs_state)
 
-   assign run = (ibs_state == IBS_RUNNING);
    assign eob = strobe && (lines_left == 1) && ( !chain_sav || (command_valid && stop) || (!command_valid && !reload_sav) || halt);
 
    always @*
