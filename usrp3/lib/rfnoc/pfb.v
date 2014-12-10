@@ -41,7 +41,7 @@ module pfb
    genvar 			    i;
    generate
       for(i=0;i<TAPS_PER_BIN;i=i+1)
-	pfb_stage #(.BASE(BASE+i+1), .DWIDTH(WIDTH_IN), .CWIDTH(25), .PWIDTH(PWIDTH), .MAX_BINS_LOG2(MAX_BINS_LOG2)) stage
+	pfb_stage #(.BASE(BASE+i*2+2), .DWIDTH(WIDTH_IN), .CWIDTH(25), .PWIDTH(PWIDTH), .MAX_BINS_LOG2(MAX_BINS_LOG2)) stage
 	    (.clk(clk), .reset(reset), .clear(clear),
 	     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	     .bins(bins),

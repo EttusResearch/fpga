@@ -54,7 +54,7 @@ module pfb_stage
 
    ram_to_fifo #(.DWIDTH(CWIDTH), .AWIDTH(MAX_BINS_LOG2)) coeffs_ram
      (.clk(clk), .reset(reset), .clear(clear),
-      .config_tdata(m_axis_config_tdata), .config_tlast(m_axis_config_tlast), .config_tvalid(m_axis_config_tvalid), .config_tready(m_axis_config_tready),
+      .config_tdata(set_data[CWIDTH-1:0]), .config_tlast(set_addr[0]), .config_tvalid(set_addr[7:1]==BASE[7:1]), .config_tready(),
       .i_tdata(n4_tdata), .i_tlast(n4_tlast), .i_tvalid(n4_tvalid), .i_tready(n4_tready),
       .o_tdata(n5_tdata), .o_tlast(n5_tlast), .o_tvalid(n5_tvalid), .o_tready(n5_tready));
    
