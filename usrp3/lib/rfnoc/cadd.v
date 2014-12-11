@@ -10,8 +10,9 @@ module cadd
     input [WIDTH*2-1:0] b_tdata, input b_tlast, input b_tvalid, output b_tready,
     output [WIDTH*2-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   wire 		 int_tlast, int_tvalid, int_tready;
-   wire [WIDTH*2-1:0] 	 int_tdata;
+   wire int_tlast = a_tlast | b_tlast;
+   wire int_tvalid, int_tready;
+   wire [WIDTH*2-1:0] int_tdata;
 
    assign int_tdata[WIDTH*2-1:WIDTH] = a_tdata[WIDTH*2-1:WIDTH] + b_tdata[WIDTH*2-1:WIDTH];
    assign int_tdata[WIDTH-1:0] = a_tdata[WIDTH-1:0] + b_tdata[WIDTH-1:0];
