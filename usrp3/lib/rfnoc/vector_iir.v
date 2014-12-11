@@ -38,7 +38,7 @@ module vector_iir
       .b_tdata(n0_tdata), .b_tlast(n0_tlast), .b_tvalid(n0_tvalid), .b_tready(n0_tready),
       .o_tdata(n1_tdata), .o_tlast(n1_tlast), .o_tvalid(n1_tvalid), .o_tready(n1_tready));
 
-   cadcd cadd
+   cadd cadd
      (.clk(clk), .reset(reset),
       .a_tdata(n1_tdata), .a_tlast(n1_tlast), .a_tvalid(n1_tvalid), .a_tready(n1_tready),
       .b_tdata(n6_tdata), .b_tlast(n6_tlast), .b_tvalid(n6_tvalid), .b_tready(n6_tready),
