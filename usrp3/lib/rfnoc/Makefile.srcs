@@ -27,6 +27,7 @@ split_stream.v \
 split_stream_fifo.v \
 conj.v \
 delay.v \
+delay_type2.v \
 complex_to_magsq.v \
 phase_acc.v \
 periodic_framer.v \
