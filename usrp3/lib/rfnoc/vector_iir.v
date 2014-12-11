@@ -53,7 +53,7 @@ module vector_iir
       .o1_tdata(o_tdata), .o1_tlast(o_tlast), .o1_tvalid(o_tvalid), .o1_tready(o_tready),
       .o2_tready(1'b0), .o3_tready(1'b0));
 
-   delay_type2 #(.MAX_LEN_LOG2(MAX_LOG2_OF_SIZE), .WIDTH(32)) delay_input
+   delay_type3 #(.FIFOSIZE(MAX_LOG2_OF_SIZE), .MAX_LEN_LOG2(MAX_LOG2_OF_SIZE), .WIDTH(32)) delay_input
      (.clk(clk), .reset(reset), .clear(clear),
       .len(vector_len),
       .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
