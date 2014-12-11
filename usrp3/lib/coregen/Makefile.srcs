@@ -10,6 +10,8 @@ simple_fir.v \
 simple_fir.xco \
 simple_fft.v \
 simple_fft.xco \
+streaming_fft.v \
+streaming_fft.xco \
 complex_multiplier.v \
 complex_multiplier.xco \
 complex_to_magphase.v \
