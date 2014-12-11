@@ -44,7 +44,7 @@ module mult_add
      endcase
    
    axi_pipe_mac #(.LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN)) axi_pipe_mac
-     (.clk(clk), .reset(reset), .clear(0),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .a_tlast(a_tlast), .a_tvalid(a_tvalid), .a_tready(a_tready),
       .b_tlast(b_tlast), .b_tvalid(b_tvalid), .b_tready(b_tready),
       .c_tlast(c_tlast), .c_tvalid(c_tvalid), .c_tready(c_tready),
