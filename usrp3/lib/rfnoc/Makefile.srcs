@@ -50,4 +50,5 @@ addsub.v \
 packet_resizer.v \
 axi_pipe.v \
 mult.v \
+fft_shift.v \
 ))

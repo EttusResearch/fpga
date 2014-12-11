@@ -107,12 +107,20 @@ module noc_block_fft #(
   ////////////////////////////////////////////////////////////
   
   // Control Source Unused
-  assign cmdout_tdata = 64'd0;
-  assign cmdout_tlast = 1'b0;
+  assign cmdout_tdata  = 64'd0;
+  assign cmdout_tlast  = 1'b0;
   assign cmdout_tvalid = 1'b0;
-  assign ackin_tready = 1'b1;
+  assign ackin_tready  = 1'b1;
 
-  localparam SR_FFT_RESET = 131;
+  localparam [7:0] SR_FFT_RESET     = 131;
+  localparam [7:0] SR_FFT_SIZE_LOG2 = 132;
+  localparam MAX_FFT_SIZE_LOG2      = $clog2(2048);
+  
+  wire [31:0] s_axis_fft_data_tdata;
+  wire        s_axis_fft_data_tlast;
+  wire        s_axis_fft_data_tvalid;
+  wire        s_axis_fft_data_tready;
+  wire [15:0] s_axis_fft_data_tuser;
 
   wire fft_reset_trigger;
   setting_reg #(
@@ -120,6 +128,14 @@ module noc_block_fft #(
   sr_fft_reset (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(), .changed(fft_reset_trigger));
+
+  wire [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata;
+  axi_setting_reg #(
+    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH($clog2(MAX_FFT_SIZE_LOG2)))
+  sr_fft_size_log2 (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(fft_size_log2_tdata), .o_tlast(), .o_tvalid(fft_size_log2_tvalid), .o_tready(fft_size_log2_tready));
 
   // FFT core requires minimum reset pulse width of 2 clock cycles
   reg [1:0] fft_reset;
@@ -133,18 +149,28 @@ module noc_block_fft #(
     end
   end
 
-  simple_fft inst_simple_fft (
+  streaming_fft inst_streaming_fft (
     .aresetn(~(ce_rst | fft_reset[1])), .aclk(ce_clk),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tlast(m_axis_data_tlast),
     .s_axis_data_tdata(m_axis_data_tdata),
-    .m_axis_data_tvalid(s_axis_data_tvalid),
-    .m_axis_data_tready(s_axis_data_tready),
-    .m_axis_data_tlast(s_axis_data_tlast),
-    .m_axis_data_tdata(s_axis_data_tdata),
-    .s_axis_config_tdata(m_axis_config_tdata),
+    .m_axis_data_tvalid(s_axis_fft_data_tvalid),
+    .m_axis_data_tready(s_axis_fft_data_tready),
+    .m_axis_data_tlast(s_axis_fft_data_tlast),
+    .m_axis_data_tdata(s_axis_fft_data_tdata),
+    .m_axis_data_tuser(s_axis_fft_data_tuser), // FFT index
+    .s_axis_config_tdata(m_axis_config_tdata[23:0]),
     .s_axis_config_tvalid(m_axis_config_tvalid),
     .s_axis_config_tready(m_axis_config_tready));
+
+  fft_shift #(
+    .MAX_FFT_SIZE_LOG2(MAX_FFT_SIZE_LOG2),
+    .WIDTH(32))
+  inst_fft_shift (
+    .clk(ce_clk), .reset(ce_rst | fft_reset[1]),
+    .fft_size_log2_tdata(fft_size_log2_tdata), .fft_size_log2_tvalid(fft_size_log2_tvalid), .fft_size_log2_tready(fft_size_log2_tready),
+    .i_tdata(s_axis_fft_data_tdata), .i_tlast(s_axis_fft_data_tlast), .i_tvalid(s_axis_fft_data_tvalid), .i_tready(s_axis_fft_data_tready), .i_tuser(s_axis_fft_data_tuser[MAX_FFT_SIZE_LOG2-1:0]),
+    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));
 
 endmodule
