@@ -5,12 +5,14 @@
 // Latency must be 2 to 4
 
 // FIXME handle tlast
+// FIXME handle CASCADE_OUT
 
 module mult
   #(parameter WIDTH_A=25,
     parameter WIDTH_B=18,
     parameter WIDTH_P=48,
-    parameter LATENCY=3)
+    parameter LATENCY=3,
+    parameter CASCADE_OUT=0)
    (input clk, input reset,
     input [WIDTH_A-1:0] a_tdata, input a_tlast, input a_tvalid, output a_tready,
     input [WIDTH_B-1:0] b_tdata, input b_tlast, input b_tvalid, output b_tready,
