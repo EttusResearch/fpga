@@ -1,30 +1,34 @@
 //
 // Copyright 2014 Ettus Research LLC
 //
+// H(z) = alpha/(1 - beta*z^-1)
+// Typically beta = 1 - alpha
 
 module vector_iir
-  #(parameter BASE=0,
+  #(parameter SR_VECTOR_LEN=0,
+    parameter SR_ALPHA=0,
+    parameter SR_BETA=0,
     parameter MAX_LOG2_OF_SIZE = 10)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [31:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
    
-   wire [31:0] 	  n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata;
-   wire 	  n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast;
-   wire 	  n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid;
-   wire 	  n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready;
+   wire [31:0]   n0_tdata, n1_tdata, n2_tdata, n3_tdata, n4_tdata, n5_tdata, n6_tdata, n7_tdata, n8_tdata, n9_tdata;
+   wire          n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast;
+   wire          n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid;
+   wire          n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready;
    
    wire [MAX_LOG2_OF_SIZE-1:0] vector_len;
    
-   setting_reg #(.my_addr(BASE), .width(MAX_LOG2_OF_SIZE)) reg_len
+   setting_reg #(.my_addr(SR_VECTOR_LEN), .width(MAX_LOG2_OF_SIZE)) reg_len
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data), .out(vector_len));
 
-   const_sreg #(.BASE(BASE+1), .WIDTH(32)) c1
+   axi_setting_reg #(.ADDR(SR_BETA), .WIDTH(32), .ALWAYS_VALID(1)) c1
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(n0_tdata), .o_tlast(n0_tlast), .o_tvalid(n0_tvalid), .o_tready(n0_tready));
    
-   const_sreg #(.BASE(BASE+1), .WIDTH(32)) c2
+   axi_setting_reg #(.ADDR(SR_ALPHA), .WIDTH(32), .ALWAYS_VALID(1)) c2
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(n5_tdata), .o_tlast(n5_tlast), .o_tvalid(n5_tvalid), .o_tready(n5_tready));
    
@@ -34,7 +38,7 @@ module vector_iir
       .b_tdata(n0_tdata), .b_tlast(n0_tlast), .b_tvalid(n0_tvalid), .b_tready(n0_tready),
       .o_tdata(n1_tdata), .o_tlast(n1_tlast), .o_tvalid(n1_tvalid), .o_tready(n1_tready));
 
-   cadd cadd
+   cadcd cadd
      (.clk(clk), .reset(reset),
       .a_tdata(n1_tdata), .a_tlast(n1_tlast), .a_tvalid(n1_tvalid), .a_tready(n1_tready),
       .b_tdata(n6_tdata), .b_tlast(n6_tlast), .b_tvalid(n6_tvalid), .b_tready(n6_tready),
