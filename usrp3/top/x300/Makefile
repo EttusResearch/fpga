@@ -31,50 +31,18 @@ XGIGE_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 $(OPTIONS)
 HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 
-print_report = \
-	echo "========================================================================"; \
-	cat $(1)/x300.syr | grep "Device utilization summary:" -A 30; \
-	echo "========================================================================"; \
-	echo "Timing Summary:\n"; \
-	cat $(1)/x300.twr | grep constraint | grep met | grep -v "*"; \
-	echo "========================================================================";
+# vivado_build($1=Device, $2=Definitions)
+vivado_build = make -f Makefile.x300.inc bin NAME=$@ PART_ID=$1/ffg900/-2 $2 EXTRA_DEFS="$2" SAVE_PROJECT=$(SAVE_PROJECT)
 
-# pre_build($1=Device, $2=Flavor)
-ifeq ($(EXPORT_ONLY),1)
-	pre_build = @test -s build-$(1)_$(2)/x300.bit || { echo "EXPORT_ONLY requires the project in build-$(1)_$(2) to be fully built."; false; }
-else
-	pre_build = @echo "ISE Version: $(shell xtclsh -h | head -n1)"
-endif
-
-# ise_build($1=Device, $2=Definitions)
-ifeq ($(PROJECT_ONLY),1)
-	ise_build = make -f Makefile.x300.inc proj NAME=$@ DEVICE=$1 $2 EXTRA_DEFS="$2"
-else ifeq ($(EXPORT_ONLY),1)
-	ise_build = @echo "Skipping ISE build and exporting pre-built files.";
-else
-	ise_build = make -f Makefile.x300.inc bin NAME=$@ DEVICE=$1 $2 EXTRA_DEFS="$2"
-endif
-
-# post_build($1=Device, $2=Flavor)
-ifeq ($(PROJECT_ONLY),1)
-	post_build = \
-		@echo "Generated $(shell pwd)/build-$(1)_$(2)/x300.xise"; \
-		echo "\nProject Generation DONE ... $(1)_$(2)\n";
-else
-	post_build = \
-		@$(call print_report,build-$(1)_$(2)) \
-		mkdir -p build; \
-		echo "Exporting bitstream files..."; \
-		cp build-$(1)_$(2)/x300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bin; \
-		cp build-$(1)_$(2)/x300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
-		echo "Generating LVBITX..."; \
-		$(CREATE_LVBITX) --input-bin=build-$(1)_$(2)/x300.bin --output-lvbitx=build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).lvbitx --device="USRP $(1)" x3x0_base.lvbitx; \
-		cp -f x3x0_base.lvbitx build/`echo $(1) | tr A-Z a-z`.lvbitx_base; \
-		echo "Exporting logs..."; \
-		cp build-$(1)_$(2)/x300.syr build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).syr; \
-		cp build-$(1)_$(2)/x300.twr build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).twr; \
-		echo "\nBuild DONE ... $(1)_$(2)\n";
-endif
+post_build = @\
+	mkdir -p build; \
+	echo "Exporting bitstream files..."; \
+	cp build-$(1)_$(2)/x300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bin; \
+	cp build-$(1)_$(2)/x300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
+	echo "Generating LVBITX..."; \
+	$(CREATE_LVBITX) --input-bin=build-$(1)_$(2)/x300.bin --output-lvbitx=build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).lvbitx --device="USRP $(1)" x3x0_base.lvbitx; \
+	cp -f x3x0_base.lvbitx build/`echo $(1) | tr A-Z a-z`.lvbitx_base; \
+	echo "Build DONE ... $(1)_$(2)";
 
 ##
 ##Supported Targets
@@ -83,58 +51,55 @@ endif
 all:      X300_HGS X310_HGS ##(Default target)
 
 X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call pre_build,X310,1G)
-	$(call ise_build,XC7K410T,$(GIGE_DEFS))
+	$(call vivado_build,xc7k410t,$(GIGE_DEFS))
 	$(call post_build,X310,1G)
 
 X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call pre_build,X300,1G)
-	$(call ise_build,XC7K325T,$(GIGE_DEFS))
+	$(call vivado_build,xc7k325t,$(GIGE_DEFS))
 	$(call post_build,X300,1G)
 
 X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call pre_build,X310,HG)
-	$(call ise_build,XC7K410T,$(HYBRID_DEFS))
+	$(call vivado_build,xc7k410t,$(HYBRID_DEFS))
 	$(call post_build,X310,HG)
 
 X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call pre_build,X300,HG)
-	$(call ise_build,XC7K325T,$(HYBRID_DEFS))
+	$(call vivado_build,xc7k325t,$(HYBRID_DEFS))
 	$(call post_build,X300,HG)
 
 X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call pre_build,X310,XG)
-	$(call ise_build,XC7K410T,$(XGIGE_DEFS))
+	$(call vivado_build,xc7k410t,$(XGIGE_DEFS))
 	$(call post_build,X310,XG)
 
 X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call pre_build,X300,XG)
-	$(call ise_build,XC7K325T,$(XGIGE_DEFS))
+	$(call vivado_build,xc7k325t,$(XGIGE_DEFS))
 	$(call post_build,X300,XG)
 
 X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call pre_build,X310,HGS)
-	$(call ise_build,XC7K410T,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,xc7k410t,$(HYBRID_SRAM_DEFS))
 	$(call post_build,X310,HGS)
 
 X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call pre_build,X300,HGS)
-	$(call ise_build,XC7K325T,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,xc7k325t,$(HYBRID_SRAM_DEFS))
 	$(call post_build,X300,HGS)
 
 X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call pre_build,X310,XGS)
-	$(call ise_build,XC7K410T,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,xc7k410t,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X310,XGS)
 
 X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call pre_build,X300,XGS)
-	$(call ise_build,XC7K325T,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,xc7k325t,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X300,XGS)
 
-clean:    ##Clean up all build output.
-	rm -rf build-*_*
-	rm -rf build
+clean:    ##Clean up all target build outputs.
+	@echo "Cleaning targets..."
+	@rm -rf build-X3*_*
+	@rm -rf build
+
+cleanall: ##Clean up all target and ip build outputs.
+	@echo "Cleaning targets and IP..."
+	@rm -rf build-ip
+	@rm -rf build-X3*_*
+	@rm -rf build
 
 help:     ##Show this help message.
 	@grep -h "##" Makefile | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
@@ -142,9 +107,8 @@ help:     ##Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). 
-##                 Useful for use with the ISE GUI.
-##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
-##                 Requires the project in build-*_* to be built.
+##SAVE_PROJECT=1   Save the Vivado project used for the build to disk. 
+##                 (Build must finish for project to be valid).
+##GUI=1            Launch the build in the Vivado GUI. 
 
 .PHONY: all clean X300 X310 help

@@ -350,9 +350,11 @@ module x300
    wire        radio_clk_locked;
 
    radio_clk_gen radio_clk_gen
-     (.CLK_IN1_P(FPGA_CLK_p), .CLK_IN1_N(FPGA_CLK_n), .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x),
+     (.CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n), .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x),
       .RESET(sw_rst[2]), .LOCKED(radio_clk_locked));
-   defparam radio_clk_gen.clkin1_buf.DIFF_TERM = "TRUE";
+   
+   //TODO: Ashish: Disabled for Vivado
+   //defparam radio_clk_gen.clkin1_buf.DIFF_TERM = "TRUE";
 
    ////////////////////////////////////////////////////////////////////
    //
@@ -751,21 +753,28 @@ module x300
    //
    //////////////////////////////////////////////////////////////////////
 `ifdef BUILD_1G
-   wire        gige_sfp_clk;
+   wire  gige_refclk;
 
-   IBUFDS_GTE2 gige_clk_sfp_pin (.O(gige_sfp_clk),.I(ETH_CLK_p),.IB(ETH_CLK_n), .CEB(1'b0));
+   one_gige_phy_clk_gen gige_clk_gen_i (
+      .areset(global_rst | sw_rst[0]),
+      .refclk_p(ETH_CLK_p),
+      .refclk_n(ETH_CLK_n),
+      .refclk(gige_refclk)
+   );
 `endif
 `ifdef BUILD_10G
-   wire        xgige_sfp_clk;
-   wire        xgige_sfp_clk_bufg;
-
-   IBUFDS_GTE2 clk_sfp_pin (.O(xgige_sfp_clk),.I(XG_CLK_p),.IB(XG_CLK_n), .CEB(1'b0));
-
-   BUFG xgige_bufg_inst
-     (
-      .I (xgige_sfp_clk),
-      .O (xgige_sfp_clk_bufg)
-      );
+   wire  xgige_refclk;
+   wire  xgige_clk156;
+   wire  xgige_dclk;
+   
+   ten_gige_phy_clk_gen xgige_clk_gen_i (
+      .areset(global_rst | sw_rst[0]),
+      .refclk_p(XG_CLK_p),
+      .refclk_n(XG_CLK_n),
+      .refclk(xgige_refclk),
+      .clk156(xgige_clk156),
+      .dclk(xgige_dclk)
+   );
 `endif
 
    //////////////////////////////////////////////////////////////////////
@@ -788,34 +797,42 @@ module x300
    wire [63:0] xgmii_rxd0;
    wire [7:0]  xgmii_rxc0;
 
-   wire [7:0]  core_status0;
+   wire [7:0]  xgmii_status0;
    wire        xge_phy_resetdone0;
 
-   ten_gig_eth_pcs_pma_x300_top ten_gig_eth_pcs_pma_x300_top_port0
-     (
-      .refclk156(xgige_sfp_clk),
-      .refclk156_buf(xgige_sfp_clk_bufg),
-      .clk156(xgmii_clk0),
-      .reset(global_rst | sw_rst[0]),
-      .xgmii_txd(xgmii_txd0),
-      .xgmii_txc(xgmii_txc0),
-      .xgmii_rxd(xgmii_rxd0),
-      .xgmii_rxc(xgmii_rxc0),
-      .txp(SFP0_TX_p),
-      .txn(SFP0_TX_n),
-      .rxp(SFP0_RX_p),
-      .rxn(SFP0_RX_n),
-      .mdc(mdc0),
-      .mdio_in(mdio_in0),
-      .mdio_out(mdio_out0),
-      .mdio_tri(mdio_tri0),
+   ten_gige_phy ten_gige_phy_port0
+   (
+      // Clocks and Reset
+      .areset(global_rst | sw_rst[0]), // Asynchronous reset for entire core.
+      .refclk(xgige_refclk),           // Transciever reference clock: 156.25MHz
+      .clk156(xgige_clk156),           // Globally buffered core clock: 156.25MHz
+      .dclk(xgige_dclk),               // Management/DRP clock: 78.125MHz
+      .sim_speedup_control(1'b0),
+      // GMII Interface (client MAC <=> PCS)
+      .xgmii_txd(xgmii_txd0),          // Transmit data from client MAC.
+      .xgmii_txc(xgmii_txc0),          // Transmit control signal from client MAC.
+      .xgmii_rxd(xgmii_rxd0),          // Received Data to client MAC.
+      .xgmii_rxc(xgmii_rxc0),          // Received control signal to client MAC.
+      // Tranceiver Interface
+      .txp(SFP0_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
+      .txn(SFP0_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
+      .rxp(SFP0_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
+      .rxn(SFP0_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
+      // Management: MDIO Interface
+      .mdc(mdc0),                      // Management Data Clock
+      .mdio_in(mdio_in0),              // Management Data In
+      .mdio_out(mdio_out0),            // Management Data Out
+      .mdio_tri(mdio_tri0),            // Management Data Tristate
       .prtad(prtad0),
-      .core_status(core_status0),    // Ignore for now. IJB
+      // General IO's
+      .core_status(xgmii_status0),     // Core status. (Ignored for now)
       .resetdone(xge_phy_resetdone0),
-      .signal_detect(~SFPP0_RxLOS),  // Undocumented, but it seems Xilinx expect this to be inverted.
+      .signal_detect(~SFPP0_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
       .tx_fault(SFPP0_TxFault),
       .tx_disable(SFPP0_TxDisable)
-      );
+   );
+   
+   assign xgmii_clk0 = xgige_clk156;
 
 `else
 
@@ -824,8 +841,6 @@ module x300
    // 1000Base-X PHY with GMII interface to MAC
    //
    //////////////////////////////////////////////////////////////////////
-   wire [31:0] gige_phy_misc_dbg0;
-   wire [15:0] gige_phy_int_data0;
    wire [7:0]  gmii_txd0, gmii_rxd0;
    wire        gmii_tx_en0, gmii_tx_er0, gmii_rx_dv0, gmii_rx_er0;
    wire        gmii_clk0;
@@ -833,59 +848,37 @@ module x300
 
    assign SFPP0_TxDisable = 1'b0; // Always on.
 
-   gige_phy_mdio gige_phy_port0
-     (
-      .reset(global_rst | sw_rst[0]),
+   one_gige_phy one_gige_phy_port0 
+   (
+      .reset(global_rst | sw_rst[0]),  // Asynchronous reset for entire core.
       .independent_clock(bus_clk),
-      .sfp_clk(gige_sfp_clk),
-      .SFP_TX_p(SFP0_TX_p),
-      .SFP_TX_n(SFP0_TX_n),
-      .SFP_RX_p(SFP0_RX_p),
-      .SFP_RX_n(SFP0_RX_n),
-      .gmii_clk(gmii_clk0),
-      .gmii_txd(gmii_txd0),
-      .gmii_tx_en(gmii_tx_en0),
-      .gmii_tx_er(gmii_tx_er0),
-      .gmii_rxd(gmii_rxd0),
-      .gmii_rx_dv(gmii_rx_dv0),
-      .gmii_rx_er(gmii_rx_er0),
-      .misc_debug(gige_phy_misc_dbg0),
-      .int_data(gige_phy_int_data0),
-      .status_vector(gmii_status0),
-      // MDIO signals
-      .prtad(prtad0),
-      .mdc(mdc0),
-      .mdio_i(mdio_in0),
-      .mdio_o(mdio_out0),
-      .mdio_t(mdio_tri0)
-      );
+      // Tranceiver Interface
+      .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
+      .txp(SFP0_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
+      .txn(SFP0_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
+      .rxp(SFP0_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
+      .rxn(SFP0_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
+      // GMII Interface (client MAC <=> PCS)
+      .gmii_clk(gmii_clk0),            // Clock to client MAC.
+      .gmii_txd(gmii_txd0),            // Transmit data from client MAC.
+      .gmii_tx_en(gmii_tx_en0),        // Transmit control signal from client MAC.
+      .gmii_tx_er(gmii_tx_er0),        // Transmit control signal from client MAC.
+      .gmii_rxd(gmii_rxd0),            // Received Data to client MAC.
+      .gmii_rx_dv(gmii_rx_dv0),        // Received control signal to client MAC.
+      .gmii_rx_er(gmii_rx_er0),        // Received control signal to client MAC.
+      // Management: MDIO Interface
+      .mdc(mdc0),                      // Management Data Clock
+      .mdio_i(mdio_in0),               // Management Data In
+      .mdio_o(mdio_out0),              // Management Data Out
+      .mdio_t(mdio_tri0),              // Management Data Tristate
+      .configuration_vector(5'd0),     // Alternative to MDIO interface.
+      .configuration_valid(1'b0),      // Validation signal for Config vector
+      // General IO's
+      .status_vector(gmii_status0),    // Core status.
+      .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
+   );
 
-      wire [35:0] CONTROL0;
-
-
-/* -----\/----- EXCLUDED -----\/-----
-
-   chipscope_ila chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(mdc0), // IN
-      .TRIG0(
-         {
-           gmii_status0, //31:16
-           3'b0, prtad0, //15:8
-           4'b0, 1'b0, mdio_in0, mdio_out0, mdio_tri0 //7:0
-          }
-         ) // IN BUS [191:0]
-      );
-
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
-
- -----/\----- EXCLUDED -----/\----- */
-
-`endif // !`ifdef
+`endif // `ifdef ETH10G_PORT0
 
    //////////////////////////////////////////////////////////////////////
    //
@@ -907,34 +900,42 @@ module x300
    wire [63:0] xgmii_rxd1;
    wire [7:0]  xgmii_rxc1;
 
-   wire [7:0]  core_status1;
+   wire [7:0]  xgmii_status1;
    wire        xge_phy_resetdone1;
 
-    ten_gig_eth_pcs_pma_x300_top ten_gig_eth_pcs_pma_x300_top_port1
-     (
-      .refclk156(xgige_sfp_clk),
-      .refclk156_buf(xgige_sfp_clk_bufg),
-      .clk156(xgmii_clk1),
-      .reset(global_rst | sw_rst[0]),
-      .xgmii_txd(xgmii_txd1),
-      .xgmii_txc(xgmii_txc1),
-      .xgmii_rxd(xgmii_rxd1),
-      .xgmii_rxc(xgmii_rxc1),
-      .txp(SFP1_TX_p),
-      .txn(SFP1_TX_n),
-      .rxp(SFP1_RX_p),
-      .rxn(SFP1_RX_n),
-      .mdc(mdc1),
-      .mdio_in(mdio_in1),
-      .mdio_out(mdio_out1),
-      .mdio_tri(mdio_tri1),
+   ten_gige_phy ten_gige_phy_port1
+   (
+      // Clocks and Reset
+      .areset(global_rst | sw_rst[0]), // Asynchronous reset for entire core.
+      .refclk(xgige_refclk),           // Transciever reference clock: 156.25MHz
+      .clk156(xgige_clk156),           // Globally buffered core clock: 156.25MHz
+      .dclk(xgige_dclk),               // Management/DRP clock: 78.125MHz
+      .sim_speedup_control(1'b0),
+      // GMII Interface (client MAC <=> PCS)
+      .xgmii_txd(xgmii_txd1),          // Transmit data from client MAC.
+      .xgmii_txc(xgmii_txc1),          // Transmit control signal from client MAC.
+      .xgmii_rxd(xgmii_rxd1),          // Received Data to client MAC.
+      .xgmii_rxc(xgmii_rxc1),          // Received control signal to client MAC.
+      // Tranceiver Interface
+      .txp(SFP1_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
+      .txn(SFP1_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
+      .rxp(SFP1_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
+      .rxn(SFP1_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
+      // Management: MDIO Interface
+      .mdc(mdc1),                      // Management Data Clock
+      .mdio_in(mdio_in1),              // Management Data In
+      .mdio_out(mdio_out1),            // Management Data Out
+      .mdio_tri(mdio_tri1),            // Management Data Tristate
       .prtad(prtad0),
-      .core_status(core_status1),    // Ignore for now. IJB
+      // General IO's
+      .core_status(xgmii_status1),     // Core status. (Ignored for now)
       .resetdone(xge_phy_resetdone1),
-      .signal_detect(~SFPP1_RxLOS),  // Undocumented, but it seems Xilinx expect this to be inverted.
+      .signal_detect(~SFPP1_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
       .tx_fault(SFPP1_TxFault),
       .tx_disable(SFPP1_TxDisable)
-      );
+   );
+
+   assign xgmii_clk1 = xgige_clk156;
 
 `else
 
@@ -952,52 +953,43 @@ module x300
 
    assign SFPP1_TxDisable = 1'b0; // Always on.
 
-   gige_phy_mdio gige_phy_port1
-     (
-      .reset(global_rst | sw_rst[0]),
+   one_gige_phy one_gige_phy_port1 
+   (
+      .reset(global_rst | sw_rst[0]),  // Asynchronous reset for entire core.
       .independent_clock(bus_clk),
-      .sfp_clk(gige_sfp_clk),
-      .SFP_TX_p(SFP1_TX_p),
-      .SFP_TX_n(SFP1_TX_n),
-      .SFP_RX_p(SFP1_RX_p),
-      .SFP_RX_n(SFP1_RX_n),
-      .gmii_clk(gmii_clk1),
-      .gmii_txd(gmii_txd1),
-      .gmii_tx_en(gmii_tx_en1),
-      .gmii_tx_er(gmii_tx_er1),
-      .gmii_rxd(gmii_rxd1),
-      .gmii_rx_dv(gmii_rx_dv1),
-      .gmii_rx_er(gmii_rx_er1),
-      .misc_debug(gige_phy_misc_dbg1),
-      .int_data(gige_phy_int_data1),
-      .status_vector(gmii_status1),
-      // MDIO signals
-      .prtad(prtad0),
-      .mdc(mdc1),
-      .mdio_i(mdio_in1),
-      .mdio_o(mdio_out1),
-      .mdio_t(mdio_tri1)
-      );
-`endif // !`ifdef
+      // Tranceiver Interface
+      .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
+      .txp(SFP1_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
+      .txn(SFP1_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
+      .rxp(SFP1_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
+      .rxn(SFP1_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
+      // GMII Interface (client MAC <=> PCS)
+      .gmii_clk(gmii_clk1),            // Clock to client MAC.
+      .gmii_txd(gmii_txd1),            // Transmit data from client MAC.
+      .gmii_tx_en(gmii_tx_en1),        // Transmit control signal from client MAC.
+      .gmii_tx_er(gmii_tx_er1),        // Transmit control signal from client MAC.
+      .gmii_rxd(gmii_rxd1),            // Received Data to client MAC.
+      .gmii_rx_dv(gmii_rx_dv1),        // Received control signal to client MAC.
+      .gmii_rx_er(gmii_rx_er1),        // Received control signal to client MAC.
+      // Management: MDIO Interface
+      .mdc(mdc1),                      // Management Data Clock
+      .mdio_i(mdio_in1),               // Management Data In
+      .mdio_o(mdio_out1),              // Management Data Out
+      .mdio_t(mdio_tri1),              // Management Data Tristate
+      .configuration_vector(5'd0),     // Alternative to MDIO interface.
+      .configuration_valid(1'b0),      // Validation signal for Config vector
+      // General IO's
+      .status_vector(gmii_status1),    // Core status.
+      .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
+   );
+
+`endif // `ifdef ETH10G_PORT1
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
    // Debug bus for logic analyzer use.
    //
    ///////////////////////////////////////////////////////////////////////////////////
-
-//   assign {DB0_TX_IO,DB0_RX_IO} = debug0;
-
-//   assign {DB1_TX_IO,DB1_RX_IO} = debug1;
-
-/*
-   assign debug = {
-        2'b0, SFPP1_ModAbs, SFPP1_RxLOS, SFPP1_TxFault, SFPP1_RS0, SFPP1_RS1, SFPP1_TxDisable, //8
-        4'b0, gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er, //8
-        gmii_txd, gmii_rxd //16
-    };
-*/
-
 
 `ifndef NO_DRAM_FIFOS
 

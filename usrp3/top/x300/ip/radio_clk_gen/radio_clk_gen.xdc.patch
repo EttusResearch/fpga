@@ -1,0 +1,6 @@
+55,56c55,56
+< create_clock -period 5.0 [get_ports CLK_IN1_p]
+< set_input_jitter [get_clocks -of_objects [get_ports CLK_IN1_p]] 0.05
+---
+> #create_clock -period 5.0 [get_ports CLK_IN1_p]
+> #set_input_jitter [get_clocks -of_objects [get_ports CLK_IN1_p]] 0.05

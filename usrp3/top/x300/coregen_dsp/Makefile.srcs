@@ -8,16 +8,16 @@
 
 COREGEN_DSP_SRCS = $(abspath $(addprefix $(BASE_DIR)/../top/x300/coregen_dsp/, \
 hbdec1.v \
-hbdec1.xco \
+hbdec1.ngc \
 hbdec2.v \
-hbdec2.xco \
+hbdec2.ngc \
 hbdec3.v \
-hbdec3.xco \
+hbdec3.ngc \
 hbint1.v \
-hbint1.xco \
+hbint1.ngc \
 hbint2.v \
-hbint2.xco \
+hbint2.ngc \
 hbint3.v \
-hbint3.xco \
+hbint3.ngc \
 ))
 
