@@ -13,7 +13,8 @@ module vector_iir
     parameter OWIDTH=16,
     parameter ALPHAWIDTH=18,
     parameter BETAWIDTH=25,
-    parameter PWIDTH=25)
+    parameter PWIDTH=25,
+    parameter DROP_TOP_P=6)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [IWIDTH*2-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -39,13 +40,13 @@ module vector_iir
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(alpha_tdata), .o_tlast(alpha_tlast), .o_tvalid(alpha_tvalid), .o_tready(alpha_tready));
    
-   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(PWIDTH), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
+   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
      (.clk(clk), .reset(reset),
       .real_tdata(beta_tdata), .real_tlast(beta_tlast), .real_tvalid(beta_tvalid), .real_tready(beta_tready),
       .cplx_tdata(i_tdata), .cplx_tlast(i_tlast), .cplx_tvalid(i_tvalid), .cplx_tready(i_tready),
       .p_tdata(n1_tdata), .p_tlast(n1_tlast), .p_tvalid(n1_tvalid), .p_tready(n1_tready));
 
-   mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(PWIDTH), .LATENCY(4),
+   mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4),
 		 .CASCADE_IN(1), .CASCADE_OUT(0)) mul_add_c2
      (.clk(clk), .reset(reset),
       .real_tdata(alpha_tdata), .real_tlast(alpha_tlast), .real_tvalid(alpha_tvalid), .real_tready(alpha_tready),

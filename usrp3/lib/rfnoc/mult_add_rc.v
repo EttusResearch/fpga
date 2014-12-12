@@ -6,6 +6,7 @@ module mult_add_rc
   #(parameter WIDTH_REAL=25,
     parameter WIDTH_CPLX=18,
     parameter WIDTH_P=48,
+    parameter DROP_TOP_P=0,
     parameter LATENCY=3,
     parameter CASCADE_IN=0,
     parameter CASCADE_OUT=0)
@@ -21,7 +22,7 @@ module mult_add_rc
    generate
       if(WIDTH_REAL > WIDTH_CPLX)
 	begin
-	   mult_add #(.WIDTH_A(WIDTH_REAL), .WIDTH_B(WIDTH_CPLX), .WIDTH_P(WIDTH_P),
+	   mult_add #(.WIDTH_A(WIDTH_REAL), .WIDTH_B(WIDTH_CPLX), .WIDTH_P(WIDTH_P), .DROP_TOP_P(DROP_TOP_P),
 		      .LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN), .CASCADE_OUT(CASCADE_OUT)) mult_add_i
 	     (.clk(clk), .reset(reset),
 	      .a_tdata(real_tdata), .a_tlast(real_tlast), .a_tvalid(real_tvalid), .a_tready(real_tready),
@@ -29,7 +30,7 @@ module mult_add_rc
 	      .c_tdata(c_tdata[2*WIDTH_P-1:WIDTH_P]), .c_tlast(c_tlast), .c_tvalid(c_tvalid), .c_tready(c_tready),
 	      .p_tdata(p_tdata[2*WIDTH_P-1:WIDTH_P]), .p_tlast(p_tlast), .p_tvalid(p_tvalid), .p_tready(p_tready));
            
-	   mult_add #(.WIDTH_A(WIDTH_REAL), .WIDTH_B(WIDTH_CPLX), .WIDTH_P(WIDTH_P),
+	   mult_add #(.WIDTH_A(WIDTH_REAL), .WIDTH_B(WIDTH_CPLX), .WIDTH_P(WIDTH_P), .DROP_TOP_P(DROP_TOP_P),
 		      .LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN), .CASCADE_OUT(CASCADE_OUT)) mult_add_q
 	     (.clk(clk), .reset(reset),
 	      .a_tdata(real_tdata), .a_tlast(real_tlast), .a_tvalid(real_tvalid), .a_tready(),
@@ -39,7 +40,7 @@ module mult_add_rc
         end // if (WIDTH_REAL > WIDTH_CPLX)
       else
 	begin
-	   mult_add #(.WIDTH_A(WIDTH_CPLX), .WIDTH_B(WIDTH_REAL), .WIDTH_P(WIDTH_P),
+	   mult_add #(.WIDTH_A(WIDTH_CPLX), .WIDTH_B(WIDTH_REAL), .WIDTH_P(WIDTH_P), .DROP_TOP_P(DROP_TOP_P),
 		      .LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN), .CASCADE_OUT(CASCADE_OUT)) mult_add_i
 	     (.clk(clk), .reset(reset),
 	      .a_tdata(cplx_tdata[2*WIDTH_CPLX-1:WIDTH_CPLX]), .a_tlast(cplx_tlast), .a_tvalid(cplx_tvalid), .a_tready(cplx_tready),
@@ -47,7 +48,7 @@ module mult_add_rc
 	      .c_tdata(c_tdata[2*WIDTH_P-1:WIDTH_P]), .c_tlast(c_tlast), .c_tvalid(c_tvalid), .c_tready(c_tready),
 	      .p_tdata(p_tdata[2*WIDTH_P-1:WIDTH_P]), .p_tlast(p_tlast), .p_tvalid(p_tvalid), .p_tready(p_tready));
            
-	   mult_add #(.WIDTH_A(WIDTH_CPLX), .WIDTH_B(WIDTH_REAL), .WIDTH_P(WIDTH_P),
+	   mult_add #(.WIDTH_A(WIDTH_CPLX), .WIDTH_B(WIDTH_REAL), .WIDTH_P(WIDTH_P), .DROP_TOP_P(DROP_TOP_P),
 		      .LATENCY(LATENCY), .CASCADE_IN(CASCADE_IN), .CASCADE_OUT(CASCADE_OUT)) mult_add_q
 	     (.clk(clk), .reset(reset),
 	      .a_tdata(cplx_tdata[WIDTH_CPLX-1:0]), .a_tlast(cplx_tlast), .a_tvalid(cplx_tvalid), .a_tready(),

@@ -11,6 +11,7 @@ module mult
   #(parameter WIDTH_A=25,
     parameter WIDTH_B=18,
     parameter WIDTH_P=48,
+    parameter DROP_TOP_P=0,
     parameter LATENCY=3,
     parameter CASCADE_OUT=0)
    (input clk, input reset,
@@ -18,10 +19,11 @@ module mult
     input [WIDTH_B-1:0] b_tdata, input b_tlast, input b_tvalid, output b_tready,
     output [WIDTH_P-1:0] p_tdata, output p_tlast, output p_tvalid, input p_tready);
    
-   wire [47:0] 		   P1_OUT, P1_OUT_CASC;
    wire [24:0] 		   A_IN = { a_tdata, {(25-(WIDTH_A)){1'b0}}};
    wire [17:0] 		   B_IN = { b_tdata, {(18-(WIDTH_B)){1'b0}}};
-   assign p_tdata = CASCADE_OUT ? P1_OUT_CASC[47:48-WIDTH_P] : P1_OUT[47:48-WIDTH_P];
+   wire [47:0] 		   P1_OUT, P1_OUT_CASC;
+   wire [47:0] 		   p_tdata_int = CASCADE_OUT ? P1_OUT_CASC : P1_OUT;
+   assign p_tdata = p_tdata_int[47-DROP_TOP_P:48-WIDTH_P-DROP_TOP_P];
       
    localparam MREG_IN = 1;    // Always have this reg
    localparam PREG_IN = (LATENCY >= 3) ? 1 : 0;
