@@ -25,7 +25,7 @@ module noc_block_vector_iir_tb();
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     .debug());
 
-  localparam [15:0] FFT_SIZE = 256;
+  localparam [15:0] FFT_SIZE = 8;
 
   wire [7:0] fft_size_log2 = $clog2(FFT_SIZE);      // Set FFT size
   wire fft_direction       = 0;                     // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
@@ -46,8 +46,8 @@ module noc_block_vector_iir_tb();
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                  // Command packet to set up source control window enable
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_NEXT_DST_BASE, {16'd0,32'h0000_0001}});                     // Set next destination
     SendCtrlPacket(12'd0, 32'h0003_0000, {32'd129, 16'd0, FFT_SIZE});  // Set Vector length register
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd130, 16'hFFFF, 16'hFFFF});    // Alpha = 1 (as close as we can get)
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd131, 16'h4000, 16'h4000});     // 1 - Alpha = 0.5
+    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd130, 32'h00FF_FFFF});    // Alpha = 1 (as close as we can get)
+    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd131, 32'h00FF_FFFF});     // 1 - Alpha = 0.5
     #1000;
 
     // Send 1/8th sample rate sine wave

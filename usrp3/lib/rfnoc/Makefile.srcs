@@ -55,4 +55,13 @@ mult_add.v \
 mult_rc.v \
 mult_add_rc.v \
 fft_shift.v \
+axi_pipe_join.v \
+axi_pipe_mac.v \
+round_and_clip_complex.v \
+axi_join.v \
+split_complex.v \
+round_and_clip.v \
+join_complex.v \
+round.v \
+clip.v \
 ))
