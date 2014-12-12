@@ -9,7 +9,9 @@ module axi_setting_reg #(
   parameter WIDTH = 32,
   parameter DATA_AT_RESET = 0,
   parameter VALID_AT_RESET = 0,
-  parameter REPEATS = 0)
+  parameter REPEATS = 0,
+  parameter MSB_ALIGN = 0
+)
 (
   input clk, input reset, 
   input set_stb, input [AWIDTH-1:0] set_addr, input [31:0] set_data,
@@ -26,7 +28,7 @@ module axi_setting_reg #(
     end else begin
       if (set_stb & (ADDR==set_addr)) begin
         init <= 1'b1;
-        o_tdata  <= set_data[WIDTH-1:0];
+        o_tdata  <= (MSB_ALIGN == 0) ? set_data[WIDTH-1:0] : set_data[31:32-WIDTH];
         o_tvalid <= 1'b1;
       end
       if (o_tvalid & o_tready) begin
