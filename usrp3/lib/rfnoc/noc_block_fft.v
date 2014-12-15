@@ -116,7 +116,7 @@ module noc_block_fft #(
   localparam [7:0] SR_FFT_RESET     = 131;
   localparam [7:0] SR_FFT_SIZE_LOG2 = 132;
   localparam [7:0] SR_MAGNITUDE_OUT = 133;
-  localparam MAX_FFT_SIZE_LOG2      = $clog2(2048);
+  localparam MAX_FFT_SIZE_LOG2      = 11;
   
   wire [31:0] fft_data_o_tdata;
   wire        fft_data_o_tlast;
