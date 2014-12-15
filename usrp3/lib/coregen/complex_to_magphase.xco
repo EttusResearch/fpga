@@ -1,7 +1,7 @@
 ##############################################################
 #
-# Xilinx Core Generator version 14.6
-# Date: Thu Jun 19 12:55:57 2014
+# Xilinx Core Generator version 14.7
+# Date: Sat Dec 13 00:02:12 2014
 #
 ##############################################################
 #
@@ -46,7 +46,7 @@ CSET cartesian_has_tlast=true
 CSET cartesian_has_tuser=false
 CSET cartesian_tuser_width=1
 CSET coarse_rotation=true
-CSET compensation_scaling=No_Scale_Compensation
+CSET compensation_scaling=Embedded_Multiplier
 CSET component_name=complex_to_magphase
 CSET data_format=SignedFraction
 CSET flow_control=Blocking
@@ -56,17 +56,17 @@ CSET iterations=0
 CSET optimize_goal=Performance
 CSET out_tlast_behv=Pass_Cartesian_TLAST
 CSET out_tready=true
-CSET output_width=16
+CSET output_width=15
 CSET phase_format=Scaled_Radians
 CSET phase_has_tlast=false
 CSET phase_has_tuser=false
 CSET phase_tuser_width=1
 CSET pipelining_mode=Maximum
 CSET precision=0
-CSET round_mode=Truncate
+CSET round_mode=Round_Pos_Neg_Inf
 # END Parameters
 # BEGIN Extra information
-MISC pkg_timestamp=2012-11-05T14:59:52Z
+MISC pkg_timestamp=2013-07-22T10:47:11Z
 # END Extra information
 GENERATE
-# CRC: 20748b47
+# CRC:  f364cc1
