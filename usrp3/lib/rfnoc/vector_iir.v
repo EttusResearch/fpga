@@ -19,27 +19,27 @@ module vector_iir
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [IWIDTH*2-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [OWIDTH*2-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
-   
+
    wire [BETAWIDTH-1:0]   beta_tdata;
    wire [ALPHAWIDTH-1:0]  alpha_tdata;
-   wire [PWIDTH*2-1:0] 	  n1_tdata, n2_tdata, n3_tdata, n4_tdata, n6_tdata;
-   wire 		  beta_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, alpha_tlast, n6_tlast;
-   wire 		  beta_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, alpha_tvalid, n6_tvalid;
-   wire 		  beta_tready, n1_tready, n2_tready, n3_tready, n4_tready, alpha_tready, n6_tready;
-   
+   wire [PWIDTH*2-1:0]    n1_tdata, n2_tdata, n3_tdata, n4_tdata, n6_tdata;
+   wire                   beta_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, alpha_tlast, n6_tlast;
+   wire                   beta_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, alpha_tvalid, n6_tvalid;
+   wire                   beta_tready, n1_tready, n2_tready, n3_tready, n4_tready, alpha_tready, n6_tready;
+
    wire [MAX_LOG2_OF_SIZE-1:0] vector_len;
-   
+
    setting_reg #(.my_addr(SR_VECTOR_LEN), .width(MAX_LOG2_OF_SIZE)) reg_len
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data), .out(vector_len));
 
    axi_setting_reg #(.ADDR(SR_BETA), .WIDTH(BETAWIDTH), .REPEATS(1), .MSB_ALIGN(1)) c1
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(beta_tdata), .o_tlast(beta_tlast), .o_tvalid(beta_tvalid), .o_tready(beta_tready));
-   
+
    axi_setting_reg #(.ADDR(SR_ALPHA), .WIDTH(ALPHAWIDTH), .REPEATS(1), .MSB_ALIGN(1)) c2
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(alpha_tdata), .o_tlast(alpha_tlast), .o_tvalid(alpha_tvalid), .o_tready(alpha_tready));
-   
+
    mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
      (.clk(clk), .reset(reset),
       .real_tdata(beta_tdata), .real_tlast(beta_tlast), .real_tvalid(beta_tvalid), .real_tready(beta_tready),
@@ -47,7 +47,7 @@ module vector_iir
       .p_tdata(n1_tdata), .p_tlast(n1_tlast), .p_tvalid(n1_tvalid), .p_tready(n1_tready));
 
    mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4),
-		 .CASCADE_IN(1), .CASCADE_OUT(0)) mul_add_c2
+                 .CASCADE_IN(1), .CASCADE_OUT(0)) mul_add_c2
      (.clk(clk), .reset(reset),
       .real_tdata(alpha_tdata), .real_tlast(alpha_tlast), .real_tvalid(alpha_tvalid), .real_tready(alpha_tready),
       .cplx_tdata(n4_tdata), .cplx_tlast(n4_tlast), .cplx_tvalid(n4_tvalid), .cplx_tready(n4_tready),
@@ -67,9 +67,9 @@ module vector_iir
       .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
       .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
 
-   round_and_clip_complex #(.WIDTH_IN(PWIDTH), .WIDTH_OUT(OWIDTH), .CLIP_BITS(0), .FIFOSIZE(0)) round_and_clip
+   axi_round_and_clip_complex #(.WIDTH_IN(PWIDTH), .WIDTH_OUT(OWIDTH), .CLIP_BITS(0), .FIFOSIZE(0)) round_and_clip
      (.clk(clk), .reset(reset),
       .i_tdata(n6_tdata), .i_tlast(n6_tlast), .i_tvalid(n6_tvalid), .i_tready(n6_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
-        
+
 endmodule // vector_iir
