@@ -112,16 +112,13 @@
     end
     i_tlast = 1'b0;
     i_tvalid = 1'b1;
-    $display("1");
     @(posedge clk);
     while(~i_tready) @(posedge clk);
-    $display("2");
     if (flags & CHDR_HAS_TIME) begin
       i_tdata = vita_time;
       @(posedge clk);
       while(~i_tready) @(posedge clk);
     end
-    $display("3");
   end
   endtask
   
@@ -131,14 +128,11 @@
   begin
     i_tdata = data;
     i_tlast = last;
-    $display("4");
     @(posedge clk);
     while(~i_tready) @(posedge clk);
-    $display("5");
     if (last) begin
       i_tvalid = 1'b0;
       i_tlast = 1'b0;
     end
-    $display("6");
   end
   endtask
