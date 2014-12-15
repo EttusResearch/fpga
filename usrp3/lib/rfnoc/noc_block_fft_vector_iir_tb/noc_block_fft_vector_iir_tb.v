@@ -27,7 +27,9 @@ module noc_block_fft_vector_iir_tb();
   wire vector_iir_o_tvalid, fft_o_tvalid, keep_one_in_n_o_tvalid;
   wire vector_iir_o_tready, fft_o_tready, keep_one_in_n_o_tready;
 
-  noc_block_fft inst_noc_block_fft (
+  noc_block_fft #(
+    .ENABLE_MAGNITUDE_OUT(1))
+  inst_noc_block_fft (
     .bus_clk(clk), .bus_rst(rst),
     .ce_clk(clk), .ce_rst(rst),
     .i_tdata(fft_o_tdata), .i_tlast(fft_o_tlast), .i_tvalid(fft_o_tvalid), .i_tready(fft_o_tready),
@@ -92,6 +94,9 @@ module noc_block_fft_vector_iir_tb();
   wire [20:0] fft_ctrl_word = {fft_scale, fft_direction, fft_size_log2};
   integer i;
 
+  localparam [31:0] ALPHA = $floor(0.9*2**31);
+  localparam [31:0] BETA = $floor(0.1*2**31);
+
   initial begin
     @(negedge rst);
     @(posedge clk);
@@ -139,30 +144,31 @@ module noc_block_fft_vector_iir_tb();
     #1000;
 
     // Setup FFT
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});              // Command packet to set up flow control
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});               // Command packet to set up source control window size
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                 // Command packet to set up source control window enable
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {SR_NEXT_DST_BASE, {16'd0, VECTOR_IIR_SID}});             // Set next destination
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word}});                     // Configure FFT core
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {inst_noc_block_fft.SR_FFT_SIZE_LOG2, {27'd0, fft_size_log2}});    // Set FFT size register
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});              // Command packet to set up flow control
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});               // Command packet to set up source control window size
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                 // Command packet to set up source control window enable
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_NEXT_DST_BASE, {16'd0, VECTOR_IIR_SID}});                      // Set next destination
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word}});                     // Configure FFT core
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, inst_noc_block_fft.SR_FFT_SIZE_LOG2, {24'd0, fft_size_log2}});    // Set FFT size register
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, inst_noc_block_fft.SR_MAGNITUDE_OUT, {31'd0, 1'b1}});             // Enable magnitude out
     #1000;
 
     // Setup Vector IIR
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});               // Command packet to set up flow control
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});                // Command packet to set up source control window size
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                  // Command packet to set up source control window enable
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {SR_NEXT_DST_BASE, {16'd0,KEEP_ONE_IN_N_SID}});                 // Set next destination
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {inst_noc_block_vector_iir.SR_VECTOR_LEN, {16'd0, FFT_SIZE}});  // Set Vector length register
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {inst_noc_block_vector_iir.SR_ALPHA, {16'hFFFF, 16'hFFFF}});    // Alpha = 1 (as close as we can get)
-    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {inst_noc_block_vector_iir.SR_BETA, {16'h4000, 16'h4000}});     // 1 - Alpha = 0.5
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});               // Command packet to set up flow control
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});                // Command packet to set up source control window size
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                  // Command packet to set up source control window enable
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, SR_NEXT_DST_BASE, {16'd0,KEEP_ONE_IN_N_SID}});                 // Set next destination
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, inst_noc_block_vector_iir.SR_VECTOR_LEN, {16'd0, FFT_SIZE}});  // Set Vector length register
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, inst_noc_block_vector_iir.SR_ALPHA, ALPHA});
+    SendCtrlPacket(12'd0, {SRC_SID,VECTOR_IIR_SID}, {24'd0, inst_noc_block_vector_iir.SR_BETA, BETA});
     #1000;
 
     // Setup Keep one in n
-    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});            // Command packet to set up flow control
-    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});             // Command packet to set up source control window size
-    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});               // Command packet to set up source control window enable
-    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {SR_NEXT_DST_BASE, {16'd0,SRC_SID}});                        // Set next destination
-    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {inst_noc_block_keep_one_in_n.SR_N, {16'h4000, 16'd4}});     // Keep 1 in 4
+    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});            // Command packet to set up flow control
+    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});             // Command packet to set up source control window size
+    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});               // Command packet to set up source control window enable
+    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {24'd0, SR_NEXT_DST_BASE, {16'd0,SRC_SID}});                        // Set next destination
+    SendCtrlPacket(12'd0, {SRC_SID,KEEP_ONE_IN_N_SID}, {24'd0, inst_noc_block_keep_one_in_n.SR_N, {32'd4}});     // Keep 1 in 4
     #1000;
 
     // Send 1/8th sample rate sine wave

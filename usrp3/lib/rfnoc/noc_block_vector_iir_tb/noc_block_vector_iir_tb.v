@@ -46,8 +46,8 @@ module noc_block_vector_iir_tb();
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                  // Command packet to set up source control window enable
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_NEXT_DST_BASE, {16'd0,32'h0000_0001}});                     // Set next destination
     SendCtrlPacket(12'd0, 32'h0003_0000, {32'd129, 16'd0, FFT_SIZE});  // Set Vector length register
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd130, 32'h00FF_FFFF});    // Alpha = 1 (as close as we can get)
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd131, 32'h00FF_FFFF});     // 1 - Alpha = 0.5
+    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd130, 32'h7FFF_FFFF});    // Alpha = 1 (as close as we can get)
+    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd131, 32'h4000_0000});     // 1 - Alpha = 0.5
     #1000;
 
     // Send 1/8th sample rate sine wave
