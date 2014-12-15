@@ -67,7 +67,7 @@ module vector_iir
       .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
       .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
 
-   round_and_clip_complex #(.WIDTH_IN(PWIDTH), .WIDTH_OUT(OWIDTH), .CLIP_BITS(6), .FIFOSIZE(0)) round_and_clip
+   round_and_clip_complex #(.WIDTH_IN(PWIDTH), .WIDTH_OUT(OWIDTH), .CLIP_BITS(0), .FIFOSIZE(0)) round_and_clip
      (.clk(clk), .reset(reset),
       .i_tdata(n6_tdata), .i_tlast(n6_tlast), .i_tvalid(n6_tvalid), .i_tready(n6_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
