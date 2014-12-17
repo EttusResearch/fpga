@@ -69,7 +69,7 @@ module radio_tx
 
    new_tx_deframer tx_deframer
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
-      .i_tdata(tx_tdata_r), .i_tlast(tx_tlast_r), .i_tvalid(tx_tvalid_r), .i_tready(tx_tready_r),
+      .i_tdata(tx_tdata), .i_tlast(tx_tlast), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
       .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready));
 
    new_tx_control #(.BASE(SR_TX_CTRL)) tx_control

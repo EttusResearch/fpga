@@ -20,7 +20,9 @@ module radio_rx
     input [63:0] vita_time,
     
     output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-    output [127:0] rx_tuser);
+    output [127:0] rx_tuser,
+    
+    input [31:0] tx_loopback);
 
    // /////////////////////////////////////////////////////////////////////////////////////
    // Setting bus and controls
@@ -52,24 +54,20 @@ module radio_rx
    // /////////////////////////////////////////////////////////////////////////////////
    //  RX Chain
 
-   wire 	full, eob_rx;
    wire 	strobe_rx;
    wire [31:0] 	sample_rx;
-   wire [31:0] 	  rx_sid;
-   wire [11:0] 	  rx_seqnum;
 
-   rx_control_gen3 #(.BASE(SR_RX_CTRL)) new_rx_control
+   rx_control_gen3 #(.BASE(SR_RX_CTRL)) rx_control_gen3
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .strobe(strobe_rx), .run(run), .eob(eob_rx), .full(full),
-      .sid(rx_sid), .seqnum(rx_seqnum),
+      .strobe(strobe_rx), .sample(sample_rx), .run(run),
       .rx_tdata(rx_tdata), .rx_tlast(rx_tlast), .rx_tvalid(rx_tvalid), .rx_tready(rx_tready), .rx_tuser(rx_tuser));
    
    // ///////////////////////////////////////////////////////////////////////////////////
    // Signal Processing
    wire [23:0] 	  rx_corr_i, rx_corr_q;
-   wire [31:0] 	  rx_fe = loopback ? tx : rx;    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend)
+   wire [31:0] 	  rx_fe = loopback ? tx_loopback : rx;    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend)
    
    generate
       if (DELETE_DSP==0)

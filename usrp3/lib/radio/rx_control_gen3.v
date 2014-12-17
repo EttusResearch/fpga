@@ -15,8 +15,6 @@ module rx_control_gen3
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     
     input [63:0] vita_time,
-    
-    // DDC connections
     output run,
     input [31:0] sample,
     input strobe,

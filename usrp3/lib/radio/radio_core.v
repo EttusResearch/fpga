@@ -11,7 +11,7 @@
 
 module radio_core
   #(parameter BASE = 0,
-    parameter DELETE_DSP = 0,
+    parameter DELETE_DSP = 1,
     parameter RADIO_NUM = 0)
    (input radio_clk, input radio_rst,
     // Interface to the physical radio (ADC, DAC, controls)
@@ -27,43 +27,118 @@ module radio_core
     input set_stb, input [7:0] set_addr, input [31:0] set_data, output reg [63:0] rb_data,
     output [63:0] vita_time,
     
-    input [63:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
+    input [31:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
     input [127:0] tx_tuser,
     
-    output [63:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
+    output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
     output [127:0] rx_tuser,
     
     output [63:0] debug
     );
 
+   localparam BASE_RX = BASE + 32;
+   localparam BASE_TX = BASE + 64;
+   
+   // Control Section
+   //   most misc settings here, keeps time, etc.
+   //   FIXME -- how do we handle conflict of this vs. toplevel noc_shell handling of settings bus?
+   //   FIXME -- should timekeeping even be handled here, or should it be handled by ZPU or another NoC block?
+
+   wire [63:0] 	  rb_data_rx, rb_data_tx;
    wire [31:0] 	  fp_gpio_readback, gpio_readback, spi_readback;
    wire 	  run_rx, run_tx;
    wire 	  strobe_tx;
    wire 	  spi_ready;
    wire [31:0] 	  test_readback;
-
-   // radio_ctrl
-   //   most misc settings here, keeps time, etc.
-   //   FIXME -- how do we handle conflict of this vs. toplevel noc_shell handling of settings bus?
-   //   FIXME -- should timekeeping even be handled here, or should it be handled by ZPU or another NoC block?
-
-   radio_ctrl #(.BASE(BASE_CTRL), .RADIO_NUM(RADIO_NUM)) radio_ctrl
-     (.radio_clk(radio_clk), .radio_rst(radio_rst),
-      .db_gpio(db_gpio), .fp_gpio(fp_gpio),
-      .misc_outs(misc_outs), .leds(leds),
-      .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
-      .pps(pps),
-      .sync_dacs(sync_dacs),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .rb_data(rb_data), .spi_ready(spi_ready),
-      .vita_time(vita_time),
-      .run_rx(run_rx), .run_tx(run_tx));
    
+   wire [2:0] 	  rb_addr;
+   wire [63:0] 	  vita_time_lastpps;
+   wire 	  loopback;
+   
+   localparam SR_DACSYNC   = 8'd5;
+   localparam SR_LOOPBACK  = 8'd6;
+   localparam SR_TEST      = 8'd7;
+   localparam SR_SPI       = 8'd8;
+   localparam SR_GPIO      = 8'd16;
+   localparam SR_MISC_OUTS = 8'd24;
+   localparam SR_READBACK  = 8'd32;
+   localparam SR_TIME      = 8'd128;
+   localparam SR_LEDS      = 8'd196;
+   localparam SR_FP_GPIO   = 8'd200;
+
+   // Radio Readback Mux
+   always @*
+     case(rb_addr)
+       3'd0 : rb_data <= { spi_readback, gpio_readback};
+       3'd1 : rb_data <= vita_time;
+       3'd2 : rb_data <= vita_time_lastpps;
+       3'd3 : rb_data <= {rx, test_readback};
+       3'd4 : rb_data <= {32'h0, fp_gpio_readback};
+       3'd5 : rb_data <= {tx,rx};
+       3'd6 : rb_data <= {32'h0,RADIO_NUM[31:0]};
+       default : rb_data <= 64'd0;
+     endcase // case (rb_addr)
+
+   // Write this register with any value to create DAC sync operation
+   setting_reg #(.my_addr(SR_DACSYNC), .width(1)) sr_dacsync
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(), .changed(sync_dacs));
+
+   // FIXME
+   // Set this register to loop TX data directly to RX data.
+   setting_reg #(.my_addr(SR_LOOPBACK), .width(1)) sr_loopback
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(loopback), .changed());
+
+   // Set this register to put a test value on the readback mux.
+   setting_reg #(.my_addr(SR_TEST), .width(32)) sr_test
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(test_readback), .changed());
+
+   setting_reg #(.my_addr(SR_READBACK), .width(3)) sr_rdback
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(rb_addr), .changed());
+
+   setting_reg #(.my_addr(SR_MISC_OUTS), .width(8), .at_reset(8'h0)) sr_misc
+     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(misc_outs), .changed());
+
+   simple_spi_core #(.BASE(SR_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) radio_spi
+     (.clock(radio_clk), .reset(radio_rst),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .readback(spi_readback), .ready(spi_ready),
+      .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
+      .debug());
+
+   gpio_atr #(.BASE(SR_GPIO), .WIDTH(32)) gpio_atr
+     (.clk(radio_clk),.reset(radio_rst),
+      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+      .rx(run_rx), .tx(run_tx),
+      .gpio(db_gpio), .gpio_readback(gpio_readback) );
+
+   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32)) fp_gpio_atr
+     (.clk(radio_clk),.reset(radio_rst),
+      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+      .rx(run_rx), .tx(run_tx),
+      .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
+
+   gpio_atr #(.BASE(SR_LEDS), .WIDTH(3), .default_ddr(3'b111), .default_idle(3'b000)) gpio_leds
+     (.clk(radio_clk),.reset(radio_rst),
+      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+      .rx(run_rx), .tx(run_tx),
+      .gpio(leds), .gpio_readback() );
+/*
+   timekeeper #(.BASE(SR_TIME)) timekeeper
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps),
+      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+      .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
+
+   */
    // radio_tx
    //   Takes in stream of tx sample packets
    //   Returns stream of tx ack packets, but no longer does its own flow control (noc_shell handles that)
 
-   radio_tx #(.BASE(BASE_TX), .DELETE_DSP(DELETE_DSP_TX)) radio_tx
+   radio_tx #(.BASE(BASE_TX), .DELETE_DSP(DELETE_DSP)) radio_tx
      (.radio_clk(radio_clk), .radio_rst(radio_rst),
       .tx(tx), .run(run_tx),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .rb_data(rb_data_tx),
@@ -76,12 +151,13 @@ module radio_core
    //   Also sends rx error and ack packets back (in line?)
    //   Flow control handled by noc_shell
 
-   radio_rx #(.BASE(BASE_RX), .DELETE_DSP(DELETE_RX_DSP)) radio_rx
+   radio_rx #(.BASE(BASE_RX), .DELETE_DSP(DELETE_DSP)) radio_rx
      (.radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx), .run(run_rx)
+      .rx(rx), .run(run_rx),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .rb_data(rb_data_rx),
       .vita_time(vita_time),
       .rx_tdata(rx_tdata), .rx_tlast(rx_tlast), .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
-      .rx_tuser(rx_tuser));
-   
+      .rx_tuser(rx_tuser),
+      .tx_loopback(tx));
+
 endmodule // radio_core
