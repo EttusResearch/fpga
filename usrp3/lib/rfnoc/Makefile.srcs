@@ -11,6 +11,7 @@ chdr_deframer.v \
 noc_shell.v \
 simple_axi_wrapper.v \
 axi_wrapper.v \
+axi_bit_reduce.v \
 noc_block_axi_fifo_loopback.v \
 noc_block_fir_filter.v \
 noc_block_fft.v \
