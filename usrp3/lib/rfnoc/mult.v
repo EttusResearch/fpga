@@ -10,8 +10,8 @@
 module mult
   #(parameter WIDTH_A=25,
     parameter WIDTH_B=18,
-    parameter WIDTH_P=48,
-    parameter DROP_TOP_P=0,
+    parameter WIDTH_P=48,     // must be 48 if you are cascading
+    parameter DROP_TOP_P=0,   // must be 0 if you are cascading
     parameter LATENCY=3,
     parameter CASCADE_OUT=0)
    (input clk, input reset,

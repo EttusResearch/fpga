@@ -7,8 +7,9 @@ module pfb_stage
     parameter DWIDTH=16,          // Input data width
     parameter CWIDTH=25,          // Coefficient width
     parameter PWIDTH=48,          // Mult-Acc chain width
-    parameter MAX_BINS_LOG2=10)   // How big to make delay lines
-   
+    parameter MAX_BINS_LOG2=10,   // How big to make delay lines
+    parameter CASCADE_IN=0,       // Optional, set to 0 on first stage, allows more efficient routing, PWIDTH must be 48
+    parameter CASCADE_OUT=0)      // Optional, set to 0 on last stage, allows more efficient routing, PWIDTH must be 48
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [MAX_BINS_LOG2-1:0] bins,
@@ -40,7 +41,7 @@ module pfb_stage
       .o2_tdata(n3_tdata), .o2_tlast(n3_tlast), .o2_tvalid(n3_tvalid), .o2_tready(n3_tready),
       .o3_tready(1'b1));
 
-   delay #(.MAX_LEN_LOG2(MAX_BINS_LOG2), .WIDTH(DWIDTH*2)) delayline
+   delay_type3 #(.MAX_LEN_LOG2(MAX_BINS_LOG2), .WIDTH(DWIDTH*2)) delayline
      (.clk(clk), .reset(reset), .clear(clear),
       .len(bins),
       .i_tdata(n1_tdata), .i_tlast(n1_tlast), .i_tvalid(n1_tvalid), .i_tready(n1_tready),
@@ -58,10 +59,11 @@ module pfb_stage
       .i_tdata(n4_tdata), .i_tlast(n4_tlast), .i_tvalid(n4_tvalid), .i_tready(n4_tready),
       .o_tdata(n5_tdata), .o_tlast(n5_tlast), .o_tvalid(n5_tvalid), .o_tready(n5_tready));
    
-   mult_add_rc #(.WIDTH_A(CWIDTH), .WIDTH_B(DWIDTH), .WIDTH_P(PWIDTH), .LATENCY(4)) mult_add_rc
+   mult_add_rc #(.WIDTH_REAL(CWIDTH), .WIDTH_CPLX(DWIDTH), .WIDTH_P(PWIDTH), 
+		 .DROP_TOP_P(0), .LATENCY(4), .CASCADE_IN(CASCADE_IN), .CASCADE_OUT(CASCADE_OUT)) mult_add_rc
      (.clk(clk), .reset(reset),
-      .a_tdata(n5_tdata), .a_tlast(n5_tlast), .a_tvalid(n5_tvalid), .a_tready(n5_tready),
-      .b_tdata(n3_tdata), .b_tlast(n3_tlast), .b_tvalid(n3_tvalid), .b_tready(n3_tready),
+      .real_tdata(n5_tdata), .real_tlast(n5_tlast), .real_tvalid(n5_tvalid), .real_tready(n5_tready),
+      .cplx_tdata(n3_tdata), .cplx_tlast(n3_tlast), .cplx_tvalid(n3_tvalid), .cplx_tready(n3_tready),
       .c_tdata(c_tdata), .c_tlast(c_tlast), .c_tvalid(c_tvalid), .c_tready(c_tready),
       .p_tdata(p_tdata), .p_tlast(p_tlast), .p_tvalid(p_tvalid), .p_tready(p_tready));
    

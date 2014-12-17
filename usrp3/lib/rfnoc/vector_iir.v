@@ -22,10 +22,11 @@ module vector_iir
 
    wire [BETAWIDTH-1:0]   beta_tdata;
    wire [ALPHAWIDTH-1:0]  alpha_tdata;
-   wire [PWIDTH*2-1:0]    n1_tdata, n2_tdata, n3_tdata, n4_tdata, n6_tdata;
-   wire                   beta_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, alpha_tlast, n6_tlast;
-   wire                   beta_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, alpha_tvalid, n6_tvalid;
-   wire                   beta_tready, n1_tready, n2_tready, n3_tready, n4_tready, alpha_tready, n6_tready;
+   wire [95:0] 		  n1_tdata, n2_tdata;
+   wire [PWIDTH*2-1:0] 	  n3_tdata, n4_tdata, n6_tdata, n7_tdata;
+   wire                   beta_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, alpha_tlast, n6_tlast, n7_tlast;
+   wire                   beta_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, alpha_tvalid, n6_tvalid, n7_tvalid;
+   wire                   beta_tready, n1_tready, n2_tready, n3_tready, n4_tready, alpha_tready, n6_tready, n7_tready;
 
    wire [MAX_LOG2_OF_SIZE-1:0] vector_len;
 
@@ -40,13 +41,13 @@ module vector_iir
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(alpha_tdata), .o_tlast(alpha_tlast), .o_tvalid(alpha_tvalid), .o_tready(alpha_tready));
 
-   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
+   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(48), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
      (.clk(clk), .reset(reset),
       .real_tdata(beta_tdata), .real_tlast(beta_tlast), .real_tvalid(beta_tvalid), .real_tready(beta_tready),
       .cplx_tdata(i_tdata), .cplx_tlast(i_tlast), .cplx_tvalid(i_tvalid), .cplx_tready(i_tready),
       .p_tdata(n1_tdata), .p_tlast(n1_tlast), .p_tvalid(n1_tvalid), .p_tready(n1_tready));
 
-   mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(PWIDTH), .DROP_TOP_P(DROP_TOP_P), .LATENCY(4),
+   mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(48), .LATENCY(4),
                  .CASCADE_IN(1), .CASCADE_OUT(0)) mul_add_c2
      (.clk(clk), .reset(reset),
       .real_tdata(alpha_tdata), .real_tlast(alpha_tlast), .real_tvalid(alpha_tvalid), .real_tready(alpha_tready),
@@ -54,9 +55,13 @@ module vector_iir
       .c_tdata(n1_tdata), .c_tlast(n1_tlast), .c_tvalid(n1_tvalid), .c_tready(n1_tready),
       .p_tdata(n2_tdata), .p_tlast(n2_tlast), .p_tvalid(n2_tvalid), .p_tready(n2_tready));
 
+   axi_bit_reduce #(.WIDTH_IN(48), .WIDTH_OUT(PWIDTH), .DROP_TOP(DROP_TOP_P), .VECTOR_WIDTH(2)) drop_p_bits
+     (.i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
+      .o_tdata(n7_tdata), .o_tlast(n7_tlast), .o_tvalid(n7_tvalid), .o_tready(n7_tready));
+
    split_stream_fifo #(.WIDTH(PWIDTH*2), .ACTIVE_MASK(4'b0011)) split_output
      (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
+      .i_tdata(n7_tdata), .i_tlast(n7_tlast), .i_tvalid(n7_tvalid), .i_tready(n7_tready),
       .o0_tdata(n3_tdata), .o0_tlast(n3_tlast), .o0_tvalid(n3_tvalid), .o0_tready(n3_tready),
       .o1_tdata(n6_tdata), .o1_tlast(n6_tlast), .o1_tvalid(n6_tvalid), .o1_tready(n6_tready),
       .o2_tready(1'b0), .o3_tready(1'b0));
