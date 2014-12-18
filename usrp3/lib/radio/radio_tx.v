@@ -11,7 +11,7 @@
 
 module radio_tx
   #(parameter BASE = 0,
-    parameter DELETE_DSP = 0)
+    parameter DELETE_DSP = 1)
    (input radio_clk, input radio_rst,
     // Interface to the physical radio (ADC, DAC, controls)
     output [31:0] tx, output run,
@@ -20,7 +20,7 @@ module radio_tx
     input set_stb, input [7:0] set_addr, input [31:0] set_data, output reg [63:0] rb_data,
     input [63:0] vita_time,
     
-    input [63:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
+    input [31:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
     input [127:0] tx_tuser);
 
    // /////////////////////////////////////////////////////////////////////////////////////
@@ -67,22 +67,15 @@ module radio_tx
    wire [31:0] 	sid;
    wire [23:0] 	tx_fe_i, tx_fe_q;
 
-   new_tx_deframer tx_deframer
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
-      .i_tdata(tx_tdata), .i_tlast(tx_tlast), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
-      .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready));
-
-   new_tx_control #(.BASE(SR_TX_CTRL)) tx_control
+   tx_control_gen3 #(.BASE(SR_TX_CTRL)) tx_control_gen3
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
-      .seqnum(seqnum), .error_code(error_code), .sid(sid),
-      .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready),
-      .sample(sample_tx), .run(run), .strobe(strobe_tx),
-      .debug());
+      .tx_tdata(tx_tdata), .tx_tuser(tx_tuser), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
+      .error(tx_error), .seqnum(seqnum), .error_code(error_code), .sid(sid),
+      .run(run), .sample(sample_tx), .strobe(strobe_tx));
 
-   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
+   tx_responder tx_responder
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
