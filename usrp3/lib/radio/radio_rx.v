@@ -11,7 +11,7 @@
 module radio_rx
   #(parameter BASE = 0,
     parameter DELETE_DSP = 1)
-   (input radio_clk, input radio_rst,
+   (input clk, input reset,
     // Interface to the physical radio (ADC, DAC, controls)
     input [31:0] rx, output run,
     
@@ -48,7 +48,7 @@ module radio_rx
    
    // Set this register to loop TX data directly to RX data.
    setting_reg #(.my_addr(SR_LOOPBACK), .awidth(8), .width(1)) sr_loopback
-     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(loopback), .changed());
 
    // /////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ module radio_rx
    wire [31:0] 	sample_rx;
 
    rx_control_gen3 #(.BASE(SR_RX_CTRL)) rx_control_gen3
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
       .strobe(strobe_rx), .sample(sample_rx), .run(run),
@@ -73,7 +73,7 @@ module radio_rx
       if (DELETE_DSP==0)
 	begin:	rx_dsp
 	   rx_frontend #(.BASE(SR_RX_FRONT)) rx_frontend
-	     (.clk(radio_clk),.rst(radio_rst),
+	     (.clk(clk),.rst(reset),
 	      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .adc_a(rx_fe[31:16]),.adc_ovf_a(1'b0),
 	      .adc_b(rx_fe[15:0]),.adc_ovf_b(1'b0),
@@ -81,7 +81,7 @@ module radio_rx
 	      .run(run), .debug());
 
 	   ddc_chain_x300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
-	     (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
+	     (.clk(clk), .rst(reset), .clr(1'b0),
 	      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .rx_fe_i(rx_corr_i),.rx_fe_q(rx_corr_q),
 	      .sample(sample_rx), .run(run), .strobe(strobe_rx),

@@ -12,7 +12,7 @@
 module radio_tx
   #(parameter BASE = 0,
     parameter DELETE_DSP = 1)
-   (input radio_clk, input radio_rst,
+   (input clk, input reset,
     // Interface to the physical radio (ADC, DAC, controls)
     output [31:0] tx, output run,
     
@@ -52,7 +52,7 @@ module radio_tx
    wire [31:0] 	tx_idle;
    
    setting_reg #(.my_addr(SR_CODEC_IDLE), .awidth(8), .width(32)) sr_codec_idle
-     (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
+     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(tx_idle), .changed());
 
    // /////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +68,7 @@ module radio_tx
    wire [23:0] 	tx_fe_i, tx_fe_q;
 
    tx_control_gen3 #(.BASE(SR_TX_CTRL)) tx_control_gen3
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
       .tx_tdata(tx_tdata), .tx_tuser(tx_tuser), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
@@ -76,7 +76,7 @@ module radio_tx
       .run(run), .sample(sample_tx), .strobe(strobe_tx));
 
    tx_responder tx_responder
-     (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
@@ -88,20 +88,26 @@ module radio_tx
    generate
       if (DELETE_DSP==0) begin:	tx_dsp
 	 duc_chain #(.BASE(SR_TX_DSP), .DSPNO(0), .WIDTH(24)) duc_chain
-	   (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
+	   (.clk(clk), .rst(reset), .clr(1'b0),
 	    .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	    .tx_fe_i(tx_fe_i),.tx_fe_q(tx_fe_q),
 	    .sample(sample_tx), .run(run), .strobe(strobe_tx),
 	    .debug() );
 	 tx_frontend #(.BASE(SR_TX_FRONT), .WIDTH_OUT(16), .IQCOMP_EN(1)) tx_frontend
-	   (.clk(radio_clk), .rst(radio_rst),
+	   (.clk(clk), .rst(reset),
 	    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
 	    .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run),
 	    .dac_a(tx_i_running), .dac_b(tx_q_running));
       end
+      else
+	begin
+	   assign strobe_tx = run;
+	   assign tx_i_running = sample_tx[31:16];
+	   assign tx_q_running = sample_tx[15:0];
+	end
    endgenerate
 
    assign tx[31:16] = run ? tx_i_running : tx_idle[31:16];
    assign tx[15:0]  = run ? tx_q_running : tx_idle[15:0];
-
+   
 endmodule // radio_tx

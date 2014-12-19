@@ -6,5 +6,10 @@
 # radio library
 ##################################################
 RADIO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
-./radio.v \
+radio_core.v \
+radio_rx.v \
+radio_tx.v \
+rx_control_gen3.v \
+tx_control_gen3.v \
+noc_block_radio_core.v \
 ))
