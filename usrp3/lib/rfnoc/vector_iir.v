@@ -41,14 +41,14 @@ module vector_iir
      (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .o_tdata(alpha_tdata), .o_tlast(alpha_tlast), .o_tvalid(alpha_tvalid), .o_tready(alpha_tready));
 
-   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(48), .LATENCY(4), .CASCADE_OUT(1)) mul_c1
+   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(48), .LATENCY(4), .CASCADE_OUT(0)) mul_c1
      (.clk(clk), .reset(reset),
       .real_tdata(beta_tdata), .real_tlast(beta_tlast), .real_tvalid(beta_tvalid), .real_tready(beta_tready),
       .cplx_tdata(i_tdata), .cplx_tlast(i_tlast), .cplx_tvalid(i_tvalid), .cplx_tready(i_tready),
       .p_tdata(n1_tdata), .p_tlast(n1_tlast), .p_tvalid(n1_tvalid), .p_tready(n1_tready));
 
    mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(48), .LATENCY(4),
-                 .CASCADE_IN(1), .CASCADE_OUT(0)) mul_add_c2
+                 .CASCADE_IN(0), .CASCADE_OUT(0)) mul_add_c2
      (.clk(clk), .reset(reset),
       .real_tdata(alpha_tdata), .real_tlast(alpha_tlast), .real_tvalid(alpha_tvalid), .real_tready(alpha_tready),
       .cplx_tdata(n4_tdata), .cplx_tlast(n4_tlast), .cplx_tvalid(n4_tvalid), .cplx_tready(n4_tready),
