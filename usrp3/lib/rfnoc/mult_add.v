@@ -24,7 +24,7 @@ module mult_add
 
    wire [47:0] 		 c_tdata_int = { {DROP_TOP_P{c_tdata[WIDTH_P-1]}}, c_tdata, {(48-WIDTH_P-DROP_TOP_P){1'b0}} };
    
-   wire [47:0] 		 CIN  = CASCADE_IN ? 48'hFFFF_FFFF_FFFF : c_tdata_int;
+   wire [47:0] 		 CIN  = CASCADE_IN ? 48'h0000_0000_0000 : c_tdata_int;
    wire [47:0] 		 PCIN = CASCADE_IN ? c_tdata_int : 48'h0000_0000_0000;
 
    localparam MREG_IN = 1;    // Always have this reg
