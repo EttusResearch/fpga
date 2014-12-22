@@ -24,6 +24,8 @@
 // 61/64, 3/8         0.002043 -32.5 -24.3
 // 61/64, 13/32       0.009611 -31.8 -26.6
 // =========================================
+//
+// Input: Complex, Output: Unsigned Int
 
 `define LOG2(N) (\
                  N < 2 ? 0 : \
@@ -48,15 +50,14 @@ module complex_to_mag_approx #(
 (
   input clk, input reset, input clear,
   input [2*SAMP_WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-  output [SAMP_WIDTH:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
+  output [SAMP_WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
 
   wire [2*SAMP_WIDTH-1:0] pipeline_i_tdata[0:2], pipeline_o_tdata[0:2];
   wire [2:0] pipeline_i_tvalid, pipeline_i_tlast, pipeline_i_tready;
   wire [2:0] pipeline_o_tvalid, pipeline_o_tlast, pipeline_o_tready;
   wire signed [SAMP_WIDTH-1:0] i, q, max, max_int, min, min_int;
-  wire [SAMP_WIDTH-1:0] i_abs, q_abs, i_abs_int, q_abs_int;
-  wire [SAMP_WIDTH:0] mag;
+  wire [SAMP_WIDTH-1:0] i_abs, q_abs, i_abs_int, q_abs_int, mag;
 
 
   // Absolute value
@@ -107,20 +108,20 @@ module complex_to_mag_approx #(
 
 
   // Third stage pipeline
-  assign pipeline_i_tdata[2][SAMP_WIDTH:0] = mag;
-  assign pipeline_i_tdata[2][2*SAMP_WIDTH-1:SAMP_WIDTH+1] = {(SAMP_WIDTH-1){1'b0}};
+  assign pipeline_i_tdata[2][SAMP_WIDTH-1:0] = mag;
   assign pipeline_i_tlast[2]  = (LATENCY == 1) ? i_tlast  : pipeline_o_tlast[1];
   assign pipeline_i_tvalid[2] = (LATENCY == 1) ? i_tvalid : pipeline_o_tvalid[1];
   assign pipeline_o_tready[2] = o_tready;
 
-  axi_fifo_flop #(.WIDTH(SAMP_WIDTH+2))
+  axi_fifo_flop #(.WIDTH(SAMP_WIDTH+1))
   pipeline2_axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({pipeline_i_tlast[2],pipeline_i_tdata[2][SAMP_WIDTH:0]}), .i_tvalid(pipeline_i_tvalid[2]), .i_tready(pipeline_i_tready[2]),
-    .o_tdata({pipeline_o_tlast[2],pipeline_o_tdata[2][SAMP_WIDTH:0]}), .o_tvalid(pipeline_o_tvalid[2]), .o_tready(pipeline_o_tready[2]));
+    .i_tdata({pipeline_i_tlast[2],pipeline_i_tdata[2][SAMP_WIDTH-1:0]}), .i_tvalid(pipeline_i_tvalid[2]), .i_tready(pipeline_i_tready[2]),
+    .o_tdata({pipeline_o_tlast[2],pipeline_o_tdata[2][SAMP_WIDTH-1:0]}), .o_tvalid(pipeline_o_tvalid[2]), .o_tready(pipeline_o_tready[2]));
+
 
   // Output based on LATENCY mux
-  assign o_tdata  = (LATENCY == 0) ? mag      : pipeline_o_tdata[2][SAMP_WIDTH:0];
+  assign o_tdata  = (LATENCY == 0) ? mag      : pipeline_o_tdata[2][SAMP_WIDTH-1:0];
   assign o_tlast  = (LATENCY == 0) ? i_tlast  : pipeline_o_tlast[2];
   assign o_tvalid = (LATENCY == 0) ? i_tvalid : pipeline_o_tvalid[2];
   assign i_tready = (LATENCY == 0) ? o_tready : 
