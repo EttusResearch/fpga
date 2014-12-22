@@ -108,7 +108,7 @@ module fft_shift #(
           // i.e. pong_rd_addr == fft_size-1, more efficient to use tlast
           if (pong_tlast) begin
             // Special case: ping RAM loaded before pong RAM emptied
-            if (ping_loaded) begin
+            if (ping_loaded | (i_tvalid & i_tready & i_tlast)) begin
               ping_pong <= ~ping_pong;
             end
             pong_tlast <= 1'b0;
@@ -126,20 +126,20 @@ module fft_shift #(
           // Value at addr 0 already loaded (see first word fall through and avoiding a bubble state comment above)
           ping_rd_addr <= 1;
           ping_loaded <= 1'b1;
-          // We can switch to the pong RAM only if it is empty
+          // We can switch to the pong RAM only if it is empty (or about to be empty)
           if (~pong_loaded) begin
             ping_pong <= ~ping_pong;
           end
         end
         // Special case: Ping and pong RAM loaded, wait until pong RAM unloaded.
-        if (ping_loaded & ~pong_loaded) begin
+        if (ping_loaded & (pong_loaded & o_tvalid & o_tlast)) begin
           ping_pong <= ~ping_pong;
         end
       // Same as above, just ping / pong switched
       end else begin
         if (ping_loaded & o_tready & o_tvalid) begin
           if (ping_tlast) begin
-            if (pong_loaded) begin
+            if (pong_loaded | (i_tvalid & i_tready & i_tlast)) begin
               ping_pong <= ~ping_pong;
             end
             ping_tlast <= 1'b0;
@@ -155,11 +155,11 @@ module fft_shift #(
         if (i_tvalid & i_tready & i_tlast) begin
           pong_rd_addr <= 1;
           pong_loaded <= 1'b1;
-          if (~ping_loaded) begin
+          if (~ping_loaded | (ping_loaded & o_tvalid & o_tlast)) begin
             ping_pong <= ~ping_pong;
           end
         end
-        if (~ping_loaded & pong_loaded) begin
+        if (pong_loaded & (ping_loaded & o_tvalid & o_tlast)) begin
           ping_pong <= ~ping_pong;
         end
       end
