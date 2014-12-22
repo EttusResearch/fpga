@@ -3,7 +3,10 @@
 //
 
 module noc_block_fft #(
-  parameter ENABLE_MAGNITUDE_OUT = 1,
+  parameter EN_MAGNITUDE_OUT = 1,        // CORDIC based magnitude calculation
+  parameter EN_MAGNITUDE_APPROX_OUT = 0, // Multiplier-less, lower resource usage
+  parameter EN_MAGNITUDE_SQ_OUT = 1,     // Magnitude squared
+  parameter EN_FFT_SHIFT = 1,            // Center zero frequency bin
   parameter NOC_ID = 64'hFF70_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
 (
@@ -14,14 +17,17 @@ module noc_block_fft #(
   output [63:0] debug
 );
 
-  /////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   //
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
+  localparam SR_READBACK = 255;
+
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
+  reg  [63:0] rb_data;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -117,7 +123,12 @@ module noc_block_fft #(
   localparam [7:0] SR_FFT_SIZE_LOG2 = 132;
   localparam [7:0] SR_MAGNITUDE_OUT = 133;
   localparam MAX_FFT_SIZE_LOG2      = 11;
-  
+
+  localparam [1:0] COMPLEX_OUT = 0;
+  localparam [1:0] MAG_OUT     = 1;
+  localparam [1:0] MAG_SQ_OUT  = 2;
+
+  wire [1:0]  magnitude_out;
   wire [31:0] fft_data_o_tdata;
   wire        fft_data_o_tlast;
   wire        fft_data_o_tvalid;
@@ -127,18 +138,25 @@ module noc_block_fft #(
   wire        fft_shift_o_tlast;
   wire        fft_shift_o_tvalid;
   wire        fft_shift_o_tready;
-  wire        fft_mag_i_tready;
-  wire [31:0] fft_mag_o_tdata;
-  wire        fft_mag_o_tlast;
-  wire        fft_mag_o_tvalid;
-  wire        fft_mag_o_tready;
+  wire [31:0] fft_mag_i_tdata, fft_mag_o_tdata, fft_mag_o_tdata_int;
+  wire        fft_mag_i_tlast, fft_mag_o_tlast;
+  wire        fft_mag_i_tvalid, fft_mag_o_tvalid;
+  wire        fft_mag_i_tready, fft_mag_o_tready;
+  wire [31:0] fft_mag_sq_i_tdata, fft_mag_sq_o_tdata;
+  wire        fft_mag_sq_i_tlast, fft_mag_sq_o_tlast;
+  wire        fft_mag_sq_i_tvalid, fft_mag_sq_o_tvalid;
+  wire        fft_mag_sq_i_tready, fft_mag_sq_o_tready;
+  wire [31:0] fft_mag_round_i_tdata, fft_mag_round_o_tdata;
+  wire        fft_mag_round_i_tlast, fft_mag_round_o_tlast;
+  wire        fft_mag_round_i_tvalid, fft_mag_round_o_tvalid;
+  wire        fft_mag_round_i_tready, fft_mag_round_o_tready;
 
-  wire fft_reset_trigger;
+  wire fft_reset;
   setting_reg #(
-    .my_addr(SR_FFT_RESET), .awidth(8), .width(8))
+    .my_addr(SR_FFT_RESET), .awidth(8), .width(1))
   sr_fft_reset (
     .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(), .changed(fft_reset_trigger));
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(fft_reset), .changed());
 
   wire [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata;
   axi_setting_reg #(
@@ -148,22 +166,8 @@ module noc_block_fft #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(fft_size_log2_tdata), .o_tlast(), .o_tvalid(fft_size_log2_tvalid), .o_tready(fft_size_log2_tready));
 
-  // FFT core requires minimum reset pulse width of 2 clock cycles
-  reg [1:0] fft_reset;
-  always @(posedge ce_clk) begin
-    if (fft_reset_trigger) begin
-      fft_reset = 2'b11;
-    end
-    else begin
-      fft_reset[0] = 1'b0;
-      fft_reset[1] = fft_reset[0];
-    end
-  end
-
-  wire reset = ce_rst | fft_reset[1];
-
   streaming_fft inst_streaming_fft (
-    .aclk(ce_clk), .aresetn(~reset),
+    .aclk(ce_clk), .aresetn(~(ce_rst | fft_reset)),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tlast(m_axis_data_tlast),
@@ -177,55 +181,158 @@ module noc_block_fft #(
     .s_axis_config_tvalid(m_axis_config_tvalid),
     .s_axis_config_tready(m_axis_config_tready));
 
-  fft_shift #(
-    .MAX_FFT_SIZE_LOG2(MAX_FFT_SIZE_LOG2),
-    .WIDTH(32))
-  inst_fft_shift (
-    .clk(ce_clk), .reset(reset),
-    .fft_size_log2_tdata(fft_size_log2_tdata),
-    .fft_size_log2_tvalid(fft_size_log2_tvalid),
-    .fft_size_log2_tready(fft_size_log2_tready),
-    .i_tdata(fft_data_o_tdata),
-    .i_tlast(fft_data_o_tlast),
-    .i_tvalid(fft_data_o_tvalid),
-    .i_tready(fft_data_o_tready),
-    .i_tuser(fft_data_o_tuser[MAX_FFT_SIZE_LOG2-1:0]),
-    .o_tdata(fft_shift_o_tdata),
-    .o_tlast(fft_shift_o_tlast),
-    .o_tvalid(fft_shift_o_tvalid),
-    .o_tready(fft_shift_o_tready));
+  // Mux control signals
+  assign fft_shift_o_tready     = (magnitude_out == MAG_OUT)    ? fft_mag_i_tready         :
+                                  (magnitude_out == MAG_SQ_OUT) ? fft_mag_sq_i_tready      : s_axis_data_tready;
+  assign fft_mag_i_tvalid       = (magnitude_out == MAG_OUT)    ? fft_shift_o_tvalid       : 1'b0;
+  assign fft_mag_i_tlast        = (magnitude_out == MAG_OUT)    ? fft_shift_o_tlast        : 1'b0;
+  assign fft_mag_i_tdata        = fft_shift_o_tdata;
+  assign fft_mag_o_tready       = (magnitude_out == MAG_OUT)    ? fft_mag_round_i_tready   : 1'b0;
+  assign fft_mag_sq_i_tvalid    = (magnitude_out == MAG_SQ_OUT) ? fft_shift_o_tvalid       : 1'b0;
+  assign fft_mag_sq_i_tlast     = (magnitude_out == MAG_SQ_OUT) ? fft_shift_o_tlast        : 1'b0;
+  assign fft_mag_sq_i_tdata     = fft_shift_o_tdata;
+  assign fft_mag_sq_o_tready    = (magnitude_out == MAG_SQ_OUT) ? fft_mag_round_i_tready   : 1'b0;
+  assign fft_mag_round_i_tvalid = (magnitude_out == MAG_OUT)    ? fft_mag_o_tvalid         :
+                                  (magnitude_out == MAG_SQ_OUT) ? fft_mag_sq_o_tvalid      : 1'b0;
+  assign fft_mag_round_i_tlast  = (magnitude_out == MAG_OUT)    ? fft_mag_o_tlast          :
+                                  (magnitude_out == MAG_SQ_OUT) ? fft_mag_sq_o_tlast       : 1'b0;
+  assign fft_mag_round_i_tdata  = (magnitude_out == MAG_OUT)    ? fft_mag_o_tdata          : fft_mag_sq_o_tdata;
+  assign fft_mag_round_o_tready = s_axis_data_tready;
+  assign s_axis_data_tvalid     = (magnitude_out == MAG_OUT | magnitude_out == MAG_SQ_OUT) ? fft_mag_round_o_tvalid : fft_shift_o_tvalid;
+  assign s_axis_data_tlast      = (magnitude_out == MAG_OUT | magnitude_out == MAG_SQ_OUT) ? fft_mag_round_o_tlast  : fft_shift_o_tlast;
+  assign s_axis_data_tdata      = (magnitude_out == MAG_OUT | magnitude_out == MAG_SQ_OUT) ? fft_mag_round_o_tdata  : fft_shift_o_tdata;
 
-  wire magnitude_out;
-  assign fft_shift_o_tready = magnitude_out ? fft_mag_i_tready                          : s_axis_data_tready;
-  assign fft_mag_o_tready   = magnitude_out ? s_axis_data_tready                        : 1'b0;
-  assign s_axis_data_tvalid = magnitude_out ? fft_mag_o_tvalid                          : fft_shift_o_tvalid;
-  assign s_axis_data_tlast  = magnitude_out ? fft_mag_o_tlast                           : fft_shift_o_tlast;
-  // Put 15-bit magnitude into real part of complex short output. Zero out complex part.
-  assign s_axis_data_tdata  = magnitude_out ? {1'b0, fft_mag_o_tdata[14:0],{16{1'b0}}}  : fft_shift_o_tdata;
-
+  // Conditionally synth magnitude / magnitude^2 logic
   generate
-    if (ENABLE_MAGNITUDE_OUT) begin
+    if (EN_MAGNITUDE_OUT | EN_MAGNITUDE_APPROX_OUT | EN_MAGNITUDE_SQ_OUT) begin
       setting_reg #(
-        .my_addr(SR_MAGNITUDE_OUT), .awidth(8), .width(1))
+        .my_addr(SR_MAGNITUDE_OUT), .awidth(8), .width(2))
       sr_magnitude_out (
         .clk(ce_clk), .rst(ce_rst),
         .strobe(set_stb), .addr(set_addr), .in(set_data), .out(magnitude_out), .changed());
+    end else begin
+      // Magnitude calculation logic not included, so always bypass
+      assign magnitude_out = 2'd0;
+    end
 
-      complex_to_magphase 
+    if (EN_FFT_SHIFT) begin
+      fft_shift #(
+        .MAX_FFT_SIZE_LOG2(MAX_FFT_SIZE_LOG2),
+        .WIDTH(32))
+      inst_fft_shift (
+        .clk(ce_clk), .reset(ce_rst | fft_reset),
+        .fft_size_log2_tdata(fft_size_log2_tdata),
+        .fft_size_log2_tvalid(fft_size_log2_tvalid),
+        .fft_size_log2_tready(fft_size_log2_tready),
+        .i_tdata(fft_data_o_tdata),
+        .i_tlast(fft_data_o_tlast),
+        .i_tvalid(fft_data_o_tvalid),
+        .i_tready(fft_data_o_tready),
+        .i_tuser(fft_data_o_tuser[MAX_FFT_SIZE_LOG2-1:0]),
+        .o_tdata(fft_shift_o_tdata),
+        .o_tlast(fft_shift_o_tlast),
+        .o_tvalid(fft_shift_o_tvalid),
+        .o_tready(fft_shift_o_tready));
+    end else begin
+      assign fft_shift_o_tdata = fft_data_o_tdata;
+      assign fft_shift_o_tlast = fft_data_o_tlast;
+      assign fft_shift_o_tvalid = fft_data_o_tvalid;
+      assign fft_data_o_tready = fft_shift_o_tready;
+    end
+
+    // More accurate magnitude calculation takes precedence if enabled
+    if (EN_MAGNITUDE_OUT) begin
+      complex_to_magphase
       inst_complex_to_magphase (
-        .aclk(ce_clk), .aresetn(~reset),
-        .s_axis_cartesian_tvalid(fft_shift_o_tvalid),
-        .s_axis_cartesian_tlast(fft_shift_o_tlast),
+        .aclk(ce_clk), .aresetn(~(ce_rst | fft_reset)),
+        .s_axis_cartesian_tvalid(fft_mag_i_tvalid),
+        .s_axis_cartesian_tlast(fft_mag_i_tlast),
         .s_axis_cartesian_tready(fft_mag_i_tready),
-        .s_axis_cartesian_tdata(fft_shift_o_tdata),
+        .s_axis_cartesian_tdata(fft_mag_i_tdata),
         .m_axis_dout_tvalid(fft_mag_o_tvalid),
         .m_axis_dout_tlast(fft_mag_o_tlast),
-        .m_axis_dout_tready(fft_mag_o_tready),
-        .m_axis_dout_tdata(fft_mag_o_tdata));
-    // Magnitude calculation logic not included, so always bypass
+        .m_axis_dout_tdata(fft_mag_o_tdata_int),
+        .m_axis_dout_tready(fft_mag_o_tready));
+      assign fft_mag_o_tdata = {1'b0, fft_mag_o_tdata_int[15:0], 15'd0};
+    end else if (EN_MAGNITUDE_APPROX_OUT) begin
+      complex_to_mag_approx
+      inst_complex_to_mag_approx (
+        .clk(ce_clk), .reset(ce_rst | fft_reset), .clear(1'b0),
+        .i_tvalid(fft_mag_i_tvalid),
+        .i_tlast(fft_mag_i_tlast),
+        .i_tready(fft_mag_i_tready),
+        .i_tdata(fft_mag_i_tdata),
+        .o_tvalid(fft_mag_o_tvalid),
+        .o_tlast(fft_mag_o_tlast),
+        .o_tready(fft_mag_o_tready),
+        .o_tdata(fft_mag_o_tdata_int[15:0]));
+      assign fft_mag_o_tdata = {1'b0, fft_mag_o_tdata_int[15:0], 15'd0};
     end else begin
-      assign magnitude_out = 1'b0;
+      assign fft_mag_o_tdata = fft_mag_i_tdata;
+      assign fft_mag_o_tlast = fft_mag_i_tlast;
+      assign fft_mag_o_tvalid = fft_mag_i_tvalid;
+      assign fft_mag_i_tready = fft_mag_o_tready;
+    end
+
+    if (EN_MAGNITUDE_SQ_OUT) begin
+      complex_to_magsq
+      inst_complex_to_magsq (
+        .clk(ce_clk), .reset(ce_rst | fft_reset), .clear(1'b0),
+        .i_tvalid(fft_mag_sq_i_tvalid),
+        .i_tlast(fft_mag_sq_i_tlast),
+        .i_tready(fft_mag_sq_i_tready),
+        .i_tdata(fft_mag_sq_i_tdata),
+        .o_tvalid(fft_mag_sq_o_tvalid),
+        .o_tlast(fft_mag_sq_o_tlast),
+        .o_tready(fft_mag_sq_o_tready),
+        .o_tdata(fft_mag_sq_o_tdata));
+    end else begin
+      assign fft_mag_sq_o_tdata = fft_mag_sq_i_tdata;
+      assign fft_mag_sq_o_tlast = fft_mag_sq_i_tlast;
+      assign fft_mag_sq_o_tvalid = fft_mag_sq_i_tvalid;
+      assign fft_mag_sq_i_tready = fft_mag_sq_o_tready;
+    end
+
+    // Convert to SC16
+    if (EN_MAGNITUDE_OUT | EN_MAGNITUDE_APPROX_OUT | EN_MAGNITUDE_SQ_OUT) begin
+      axi_round_and_clip #(
+        .WIDTH_IN(32),
+        .WIDTH_OUT(16),
+        .CLIP_BITS(1))
+      inst_axi_round_and_clip (
+        .clk(ce_clk), .reset(ce_rst | fft_reset),
+        .i_tdata(fft_mag_round_i_tdata),
+        .i_tlast(fft_mag_round_i_tlast),
+        .i_tvalid(fft_mag_round_i_tvalid),
+        .i_tready(fft_mag_round_i_tready),
+        .o_tdata(fft_mag_round_o_tdata[31:16]),
+        .o_tlast(fft_mag_round_o_tlast),
+        .o_tvalid(fft_mag_round_o_tvalid),
+        .o_tready(fft_mag_round_o_tready));
+      assign fft_mag_round_o_tdata[15:0] = {16{16'd0}};
+    end else begin
+      assign fft_mag_round_o_tdata = fft_mag_round_i_tdata;
+      assign fft_mag_round_o_tlast = fft_mag_round_i_tlast;
+      assign fft_mag_round_o_tvalid = fft_mag_round_i_tvalid;
+      assign fft_mag_round_i_tready = fft_mag_round_o_tready;
     end
   endgenerate
+
+  // Readback registers
+  localparam RB_ADDR_WIDTH = 1;
+  wire [RB_ADDR_WIDTH-1:0] rb_addr;
+
+  setting_reg #(
+    .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH)) 
+  sr_rdback (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(rb_addr), .changed());
+
+  always @*
+    case(rb_addr)
+      2'd0    : rb_data <= {63'd0, fft_reset};
+      2'd1    : rb_data <= {62'd0, magnitude_out};
+      default : rb_data <= 64'h0BADC0DE0BADC0DE;
+  endcase
 
 endmodule
