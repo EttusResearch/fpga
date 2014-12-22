@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.7
-# Date: Sat Dec 13 00:02:12 2014
+# Date: Fri Dec 19 01:18:02 2014
 #
 ##############################################################
 #
@@ -56,7 +56,7 @@ CSET iterations=0
 CSET optimize_goal=Performance
 CSET out_tlast_behv=Pass_Cartesian_TLAST
 CSET out_tready=true
-CSET output_width=15
+CSET output_width=16
 CSET phase_format=Scaled_Radians
 CSET phase_has_tlast=false
 CSET phase_has_tuser=false
@@ -69,4 +69,4 @@ CSET round_mode=Round_Pos_Neg_Inf
 MISC pkg_timestamp=2013-07-22T10:47:11Z
 # END Extra information
 GENERATE
-# CRC:  f364cc1
+# CRC: dcc1ac4f
