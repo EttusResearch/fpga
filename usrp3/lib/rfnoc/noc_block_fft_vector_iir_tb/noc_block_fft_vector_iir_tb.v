@@ -28,7 +28,10 @@ module noc_block_fft_vector_iir_tb();
   wire vector_iir_o_tready, fft_o_tready, keep_one_in_n_o_tready;
 
   noc_block_fft #(
-    .ENABLE_MAGNITUDE_OUT(1))
+    .EN_MAGNITUDE_OUT(1),         // CORDIC based magnitude calculation
+    .EN_MAGNITUDE_APPROX_OUT(0),  // Multiplier-less, lower resource usage
+    .EN_MAGNITUDE_SQ_OUT(1),      // Magnitude squared
+    .EN_FFT_SHIFT(1))             // Center zero frequency bin
   inst_noc_block_fft (
     .bus_clk(clk), .bus_rst(rst),
     .ce_clk(clk), .ce_rst(rst),
@@ -94,8 +97,8 @@ module noc_block_fft_vector_iir_tb();
   wire [20:0] fft_ctrl_word = {fft_scale, fft_direction, fft_size_log2};
   integer i;
 
-  localparam [31:0] ALPHA = $floor(0.9*2**31);
-  localparam [31:0] BETA = $floor(0.1*2**31);
+  wire signed [31:0] ALPHA = $floor(0.9*(2**31-1));
+  wire signed [31:0] BETA = $floor(0.1*(2**31-1));
 
   initial begin
     @(negedge rst);
@@ -150,7 +153,7 @@ module noc_block_fft_vector_iir_tb();
     SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_NEXT_DST_BASE, {16'd0, VECTOR_IIR_SID}});                      // Set next destination
     SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word}});                     // Configure FFT core
     SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, inst_noc_block_fft.SR_FFT_SIZE_LOG2, {24'd0, fft_size_log2}});    // Set FFT size register
-    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, inst_noc_block_fft.SR_MAGNITUDE_OUT, {31'd0, 1'b1}});             // Enable magnitude out
+    SendCtrlPacket(12'd0, {SRC_SID,FFT_SID}, {24'd0, inst_noc_block_fft.SR_MAGNITUDE_OUT, {30'd0, inst_noc_block_fft.MAG_OUT}});  // Enable magnitude out
     #1000;
 
     // Setup Vector IIR
