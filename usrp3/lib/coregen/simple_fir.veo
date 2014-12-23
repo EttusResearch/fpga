@@ -79,7 +79,7 @@ simple_fir your_instance_name (
   .m_axis_data_tready(m_axis_data_tready), // input m_axis_data_tready
   .m_axis_data_tlast(m_axis_data_tlast), // output m_axis_data_tlast
   .m_axis_data_tuser(m_axis_data_tuser), // output [0 : 0] m_axis_data_tuser
-  .m_axis_data_tdata(m_axis_data_tdata), // output [31 : 0] m_axis_data_tdata
+  .m_axis_data_tdata(m_axis_data_tdata), // output [95 : 0] m_axis_data_tdata
   .event_s_reload_tlast_missing(event_s_reload_tlast_missing), // output event_s_reload_tlast_missing
   .event_s_reload_tlast_unexpected(event_s_reload_tlast_unexpected) // output event_s_reload_tlast_unexpected
 );

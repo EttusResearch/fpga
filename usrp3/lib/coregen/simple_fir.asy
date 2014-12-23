@@ -72,7 +72,7 @@ PINATTR PinName m_axis_data_tuser[0:0]
 PINATTR Polarity OUT
 LINE Wide 1056 208 1024 208
 PIN 1056 208 RIGHT 36
-PINATTR PinName m_axis_data_tdata[31:0]
+PINATTR PinName m_axis_data_tdata[95:0]
 PINATTR Polarity OUT
 LINE Normal 1056 400 1024 400
 PIN 1056 400 RIGHT 36

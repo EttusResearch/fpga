@@ -72,6 +72,11 @@ module noc_block_fir_filter #(
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
 
+  wire [95:0] s_axis_fir_tdata;
+  wire        s_axis_fir_tlast;
+  wire        s_axis_fir_tvalid;
+  wire        s_axis_fir_tready;
+
   
   wire [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata;
   wire [31:0] m_axis_config_tdata_array[0:NUM_AXI_CONFIG_BUS-1];
@@ -163,10 +168,10 @@ module noc_block_fir_filter #(
     .s_axis_data_tlast(m_axis_data_tlast),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
-    .m_axis_data_tdata(s_axis_data_tdata),
-    .m_axis_data_tlast(s_axis_data_tlast),
-    .m_axis_data_tvalid(s_axis_data_tvalid),
-    .m_axis_data_tready(s_axis_data_tready),
+    .m_axis_data_tdata(s_axis_fir_tdata),
+    .m_axis_data_tlast(s_axis_fir_tlast),
+    .m_axis_data_tvalid(s_axis_fir_tvalid),
+    .m_axis_data_tready(s_axis_fir_tready),
     .s_axis_config_tdata(m_axis_fir_config_tdata),
     .s_axis_config_tvalid(m_axis_fir_config_tvalid),
     .s_axis_config_tready(m_axis_fir_config_tready),
@@ -174,5 +179,20 @@ module noc_block_fir_filter #(
     .s_axis_reload_tvalid(m_axis_fir_reload_tvalid),
     .s_axis_reload_tready(m_axis_fir_reload_tready),
     .s_axis_reload_tlast(m_axis_fir_reload_tlast));
+
+  axi_round_and_clip_complex #(
+    .WIDTH_IN(46),
+    .WIDTH_OUT(16),
+    .CLIP_BITS(7))
+  inst_axi_round_and_clip (
+    .clk(ce_clk), .reset(ce_rst | fft_reset),
+    .i_tdata({s_axis_fir_tdata[93:48],s_axis_fir_tdata[45:0]}),
+    .i_tlast(s_axis_fir_tlast),
+    .i_tvalid(s_axis_fir_tvalid),
+    .i_tready(s_axis_fir_tready),
+    .o_tdata(s_axis_data_tdata),
+    .o_tlast(s_axis_data_tlast),
+    .o_tvalid(s_axis_data_tvalid),
+    .o_tready(s_axis_data_tready));
 
 endmodule
