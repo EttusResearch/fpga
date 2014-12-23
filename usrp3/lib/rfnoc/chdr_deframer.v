@@ -14,8 +14,6 @@ module chdr_deframer
    
    reg [1:0] 	 chdr_state;
    reg 		 odd_length;
-   reg 		 even_phase;
-   
 
    wire [127:0]  hdr_i_tuser, hdr_o_tuser;
    wire 	 hdr_i_tvalid, hdr_i_tready;
