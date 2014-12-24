@@ -26,8 +26,8 @@ module complex_to_magsq #(
    .WIDTH_A(WIDTH),
    .WIDTH_B(WIDTH),
    .WIDTH_P(2*WIDTH),
-   .DROP_TOP_P(6),
-   .LATENCY(3),
+   .DROP_TOP_P(5),
+   .LATENCY(2),       // NOTE: If using CASCADE_OUT, set to 3
    .CASCADE_OUT(0))   // FIXME can use cascade once we get ISE to accept it
   i_sq_mult (
     .clk(clk), .reset(reset),
@@ -40,7 +40,7 @@ module complex_to_magsq #(
    .WIDTH_A(WIDTH),
    .WIDTH_B(WIDTH),
    .WIDTH_P(2*WIDTH),
-   .DROP_TOP_P(6),
+   .DROP_TOP_P(5),
    .LATENCY(4),
    .CASCADE_IN(0),   // FIXME this can be 1 once we get ISE to accept cascading
    .CASCADE_OUT(0))
