@@ -32,6 +32,7 @@ include ../../lib/xge_interface/Makefile.srcs
 include ../../lib/dsp/Makefile.srcs
 include ../../lib/io_port2/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
+include ../../lib/radio/Makefile.srcs
 
 promgen: $(BIT_FILE)
 	promgen -w -p bin -o $(BIN_FILE) -u 0 $<
@@ -63,7 +64,6 @@ soft_ctrl.v \
 dbuf_bootram.v \
 capture_ddrlvds.v \
 gen_ddrlvds.v \
-radio.v \
 bus_int.v \
 x300.ucf \
 stc3.ucf \
@@ -132,7 +132,8 @@ $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
 $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(ETH_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
-$(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) $(AXI_SRCS)
+$(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
+$(AXI_SRCS) $(RADIO_SRCS)
 
 
 ##################################################

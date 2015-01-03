@@ -15,7 +15,7 @@
 module zynq_fifo_top
 #(
     parameter CONFIG_BASE = 32'h40000000,
-    parameter PAGE_WIDTH = 16, //in bytes, must fit widths below
+    parameter PAGE_WIDTH = 10, //in bytes, must fit widths below
     parameter H2S_STREAMS_WIDTH = 2,
     parameter H2S_CMDFIFO_DEPTH = 4,
     parameter S2H_STREAMS_WIDTH = 2,
@@ -104,6 +104,24 @@ module zynq_fifo_top
 
     output event_irq,
 
+    //------------------------------------------------------------------
+    // Settings bus interface that will got to e300 core
+    //------------------------------------------------------------------
+    output [31:0] core_set_data,
+    output [31:0] core_set_addr,
+    output        core_set_stb,
+    input [31:0]  core_rb_data,
+    
+    //------------------------------------------------------------------
+    // Settings bus interface for crossbar (in e300 core)
+    //------------------------------------------------------------------
+    output [31:0] xbar_set_data,
+    output [31:0] xbar_set_addr,
+    output        xbar_set_stb,
+    input [31:0]  xbar_rb_data,
+    output [31:0] xbar_rb_addr,
+    output        xbar_rb_stb,
+
     output [31:0] debug
 );
 
@@ -118,19 +136,37 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s;
+    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
-    wire [1:0] set_page = set_addr[PAGE_WIDTH+1:PAGE_WIDTH];
-    wire [1:0] rb_page = rb_addr[PAGE_WIDTH+1:PAGE_WIDTH];
+    wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
+    wire [2:0] rb_page = rb_addr[PAGE_WIDTH+2:PAGE_WIDTH];
 
-    //each arbiter gets 1 page
-    assign set_stb_s2h = set_stb && (set_page == 2'h0);
-    assign set_stb_h2s = set_stb && (set_page == 2'h1);
-    assign rb_stb_s2h = rb_stb && (rb_page == 2'h0);
-    assign rb_stb_h2s = rb_stb && (rb_page == 2'h1);
-    assign rb_data = (rb_page == 2'h0)? rb_data_s2h : rb_data_h2s;
+    // each arbiter gets 1 page, e300_core the next, 
+    // destination lookup, and xbar gets two pages
+    assign set_stb_s2h         = set_stb && (set_page == 3'h0);
+    assign set_stb_h2s         = set_stb && (set_page == 3'h1);
+    assign core_set_stb        = set_stb && (set_page == 3'h2);
+    assign dest_lookup_set_stb = set_stb && (set_page == 3'h3);
+    assign xbar_set_stb        = set_stb && (set_page == 3'h4 || set_page == 3'h5);
 
+    assign rb_stb_s2h = rb_stb && (rb_page == 3'h0);
+    assign rb_stb_h2s = rb_stb && (rb_page == 3'h1);
+    assign xbar_rb_stb = rb_stb && (rb_page == 3'h4);
+    assign rb_data = (rb_page == 3'h0)? rb_data_s2h :
+                     (rb_page == 3'h1)? rb_data_h2s :
+                     (rb_page == 3'h2)? core_rb_data:
+                     // no readback for dest_lookup
+                     (rb_page == 3'h4)? xbar_rb_data:
+                     32'hdeadbeef;
+
+    assign core_set_addr = set_addr[7:0];
+    assign core_set_data = set_data;
+
+    assign xbar_rb_addr = rb_addr;
+    assign xbar_set_data = set_data;
+    assign xbar_set_addr = set_addr;
+    
     //------------------------------------------------------------------
     // configuration slaves
     //------------------------------------------------------------------
@@ -182,7 +218,7 @@ module zynq_fifo_top
     cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
         .clk(clk), .rst(rst),
-        .set_stb(set_stb && (set_page == 2'h2)), .set_addr(set_addr[9:2]), .set_data(set_data),
+        .set_stb(dest_lookup_set_stb), .set_addr(set_addr[9:2]), .set_data(set_data),
         .i_tdata(s2h_tdata), .i_tlast(s2h_tlast), .i_tvalid(s2h_tvalid), .i_tready(s2h_tready),
         .o_tdata(s2h_tdata_i0), .o_tlast(s2h_tlast_i0), .o_tvalid(s2h_tvalid_i0), .o_tready(s2h_tready_i0),
         .o_tdest(which_stream_s2h)
@@ -374,7 +410,7 @@ module zynq_fifo_top
     //------------------------------------------------------------------
     // chipscope debugs
     //------------------------------------------------------------------
-    wire [35:0] CONTROL;
+/*  wire [35:0] CONTROL;
     wire [255:0] DATA;
     wire [7:0] TRIG;
 
@@ -397,5 +433,5 @@ module zynq_fifo_top
         set_stb, s2h_tlast_i0, s2h_tvalid_i0, s2h_tready_i0,
         (set_stb && (set_page == 2'h2)), s2h_tlast_i1, s2h_tvalid_i1, s2h_tready_i1
     };
-
+*/
 endmodule //zynq_fifo_top

@@ -18,10 +18,11 @@
 
 module axi_crossbar
   #(
-    parameter FIFO_WIDTH = 64,   // AXI4-STREAM data bus width
-    parameter DST_WIDTH = 16,    // Width of DST field we are routing on.
-    parameter NUM_INPUTS = 2,    // number of input AXI4-STREAM buses
-    parameter NUM_OUTPUTS = 2    // number of output AXI4-STREAM buses
+    parameter BASE        = 0,  // settings bus base address
+    parameter FIFO_WIDTH  = 64, // AXI4-STREAM data bus width
+    parameter DST_WIDTH   = 16, // Width of DST field we are routing on.
+    parameter NUM_INPUTS  = 2,  // number of input AXI4-STREAM buses
+    parameter NUM_OUTPUTS = 2   // number of output AXI4-STREAM buses
     )
     (
      input 				   clk,
@@ -130,7 +131,7 @@ module axi_crossbar
       for (m = 0; m < NUM_INPUTS; m = m + 1) begin: instantiate_cam
 	 axi_forwarding_cam 
 	   #(
-	     .BASE(0),
+	     .BASE(BASE),
 	     .WIDTH(FIFO_WIDTH),  // Bit width of FIFO word.
 	     .NUM_OUTPUTS(NUM_OUTPUTS)
 	     ) axi_forwarding_cam_i
@@ -154,7 +155,7 @@ module axi_crossbar
 	      .forward_valid(forward_valid_out[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]), 
 	      .forward_ack(forward_ack_in[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]),
 	      // Readback bus
-	      .rb_rd_stb(rb_rd_strobe && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)-1:`LOG2(NUM_OUTPUTS)] == m)),
+	      .rb_rd_stb(rb_rd_stb && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS)-1:`LOG2(NUM_OUTPUTS)] == m)),
 	      .rb_addr(rb_addr[`LOG2(NUM_OUTPUTS)-1:0]),
 	      .rb_data(rb_data_mux[m])
 	      );

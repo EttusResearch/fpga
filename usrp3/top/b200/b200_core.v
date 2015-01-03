@@ -64,6 +64,12 @@ module b200_core
     ////////////////////////////////////////////////////////////////////
     inout 	  debug_txd, inout debug_rxd,
     input 	  debug_scl, input debug_sda,
+
+    ////////////////////////////////////////////////////////////////////
+    // fe lock signals
+    ////////////////////////////////////////////////////////////////////
+    input [1:0] lock_signals,
+
     ////////////////////////////////////////////////////////////////////
     // debug signals
     ////////////////////////////////////////////////////////////////////
@@ -78,6 +84,16 @@ module b200_core
 
     localparam COMPAT_MAJOR      = 16'h0004;
     localparam COMPAT_MINOR      = 16'h0000;
+
+    reg [1:0] lock_state;
+    reg [1:0] lock_state_r;
+
+    always @(posedge bus_clk)
+      if (bus_rst)
+        {lock_state_r, lock_state} <= 4'h0;
+      else
+        {lock_state_r, lock_state} <= {lock_state, lock_signals};
+
 
     /*******************************************************************
      * PPS Timing stuff
@@ -222,6 +238,7 @@ module b200_core
        2'd0 : rb_data <= { 32'hACE0BA5E, COMPAT_MAJOR, COMPAT_MINOR };
        2'd1 : rb_data <= { 32'b0, spi_readback };
        2'd2 : rb_data <= { 16'b0, radio_st, gpsdo_st, rb_misc };
+       2'd3 : rb_data <= { 30'h0, lock_state_r };
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 

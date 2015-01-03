@@ -23,6 +23,8 @@ include ../../lib/timing/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
+include ../../lib/io_cap_gen/Makefile.srcs
+
 
 B200_COREGEN_SRCS = \
 coregen/b200_clk_gen.v \
@@ -61,9 +63,6 @@ TOP_SRCS = \
 b200.v \
 b200_core.v \
 radio_b200.v \
-catcap_ddr_cmos.v \
-catgen_ddr_cmos.v \
-catcodec_ddr_cmos.v \
 b200.ucf \
 timing.ucf \
 S6CLK2PIN.v \
@@ -82,7 +81,8 @@ $(WISHBONE_SRCS) \
 $(TIMING_SRCS) \
 $(DSP_SRCS) \
 $(VITA_SRCS) \
-$(AXI_SRCS)
+$(AXI_SRCS) \
+$(CAT_CAP_GEN_SRCS)
 
 ##################################################
 # Process Properties
