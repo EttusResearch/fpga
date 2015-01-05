@@ -32,6 +32,11 @@ module mult_add
    localparam A2REG_IN = (LATENCY >= 2) ? 1 : 0;
    localparam A1REG_IN = (LATENCY == 4) ? 1 : 0;
    localparam AREG_IN = A1REG_IN + A2REG_IN;
+   // See OPMODE Control Bits Settings, Table 2-7,2-8,2-9
+   localparam ZMUX_PCIN = 3'b001;
+   localparam ZMUX_C = 3'b011;
+   localparam XMUX_M = 2'b01;
+   localparam YMUX_M = 2'b01;
    
    wire [A1REG_IN:0] 	 enables_a, enables_b;
    wire 		 enable_c, enable_m;
@@ -100,7 +105,7 @@ module mult_add
                .D(25'b0),
                .INMODE(5'b0),    ///////////////////////
                .MULTSIGNIN(1'b0), 
-               .OPMODE({(CASCADE_IN ? 2'b00 : 2'b01), LOAD, 4'b0101}), // ////////////////////
+               .OPMODE({(CASCADE_IN ? ZMUX_PCIN : ZMUX_C), YMUX_M, XMUX_M}), // ////////////////////
                .PCIN(PCIN),      //////////////////////
                .RSTA(reset),     
                .RSTALLCARRYIN(reset), 
