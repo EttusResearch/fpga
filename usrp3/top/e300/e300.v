@@ -187,6 +187,29 @@ module e300
   wire        s2h_tready;
   wire        s2h_tlast;
 
+  // register the debounced onswitch signal to detect edges,
+  // Note: ONSWITCH_DB is low active
+  reg [1:0] onswitch_edge;
+  always @ (posedge bus_clk)
+    onswitch_edge <= bus_rst ? 2'b00 : {onswitch_edge[0], ONSWITCH_DB};
+
+  wire button_press = ~ONSWITCH_DB & onswitch_edge[0] & onswitch_edge[1];
+  wire button_release = ONSWITCH_DB & ~onswitch_edge[0] & ~onswitch_edge[1];
+
+  // stretch the pulse so IRQs don't get lost
+  reg [7:0] button_press_reg, button_release_reg;
+  always @ (posedge bus_clk)
+    if (bus_rst) begin
+      button_press_reg <= 8'h00;
+      button_release_reg <= 8'h00;
+    end else begin
+      button_press_reg <= {button_press_reg[6:0], button_press};
+      button_release_reg <= {button_release_reg[6:0], button_release};
+    end
+
+  wire button_press_irq = |button_press_reg;
+  wire button_release_irq = |button_release_reg;
+
    // First, make all connections to the PS (ARM+buses)
   e300_ps e300_ps_instance
   (  // Outward connections to the pins
@@ -233,7 +256,7 @@ module e300
     .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_pin),
 
     //    Misc interrupts, GPIO, clk
-    .processing_system7_0_IRQ_F2P_pin({15'h0, stream_irq}),
+    .processing_system7_0_IRQ_F2P_pin({13'h0, button_release_irq, button_press_irq, stream_irq}),
     .processing_system7_0_GPIO_I_pin(ps_gpio_in),
     .processing_system7_0_GPIO_O_pin(ps_gpio_out),
     .processing_system7_0_FCLK_CLK0_pin(bus_clk_pin),
