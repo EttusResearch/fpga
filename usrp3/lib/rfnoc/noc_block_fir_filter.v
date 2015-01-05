@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2014-2015 Ettus Research LLC
 //
 
 module noc_block_fir_filter #(
@@ -61,12 +61,12 @@ module noc_block_fir_filter #(
   //
   ////////////////////////////////////////////////////////////
   localparam NUM_AXI_CONFIG_BUS = 2;
-  
+
   wire [31:0] m_axis_data_tdata;
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
   wire        m_axis_data_tready;
-  
+
   wire [31:0] s_axis_data_tdata;
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
@@ -77,13 +77,12 @@ module noc_block_fir_filter #(
   wire        s_axis_fir_tvalid;
   wire        s_axis_fir_tready;
 
-  
   wire [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata;
   wire [31:0] m_axis_config_tdata_array[0:NUM_AXI_CONFIG_BUS-1];
   wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast;
   wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tvalid;
   wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tready;
-  
+
   // Create an array of configuration busses
   genvar k;
   generate
@@ -91,19 +90,27 @@ module noc_block_fir_filter #(
         assign m_axis_config_tdata_array[k] = m_axis_config_tdata[k*32+31:k*32];
     end
   endgenerate
-  
+
   localparam AXI_WRAPPER_BASE    = 128;
   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
   localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
+  // Set next destination in chain
+  wire [15:0] next_dst;
+  setting_reg #(
+    .my_addr(SR_NEXT_DST), .width(16))
+  sr_next_dst(
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
+
   axi_wrapper #(
-    .SR_NEXT_DST(SR_NEXT_DST),
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
     .CONFIG_BUS_FIFO_DEPTH(7)) // Need deeper FIFO to prevent overflow when configuring coefficients
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
+    .next_dst(next_dst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
@@ -119,36 +126,36 @@ module noc_block_fir_filter #(
     .m_axis_config_tlast(m_axis_config_tlast),
     .m_axis_config_tvalid(m_axis_config_tvalid), 
     .m_axis_config_tready(m_axis_config_tready));
-  
+
   ////////////////////////////////////////////////////////////
   //
   // User code
   //
   ////////////////////////////////////////////////////////////
-  
+
   // Control Source Unused
   assign cmdout_tdata = 64'd0;
   assign cmdout_tlast = 1'b0;
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
-  
+
   localparam NUM_TAPS = 41;
   localparam RB_ADDR_WIDTH = 3;
-  
+
   wire [RB_ADDR_WIDTH-1:0] rb_addr;
   setting_reg #(
     .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH)) 
   sr_rdback (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(rb_addr), .changed());
-  
+
   // Readback register for number of FIR filter taps
   always @*
     case(rb_addr)
       3'd0    : rb_data <= {NUM_TAPS};
       default : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
-  
+
   // AXI configuration bus 0
   wire [31:0] m_axis_fir_reload_tdata  = m_axis_config_tdata_array[0];
   wire        m_axis_fir_reload_tvalid = m_axis_config_tvalid[0];

@@ -7,18 +7,25 @@
 // simple_mode=0 user controls all chdr info, must control s_axis_data_tuser
 
 // _tuser bit definitions
-//   [127:64] == CHDR header
-//   [63:0] == timestamp
+//  [127:64] == CHDR header
+//    [127:126] == Packet type -- 00 for data, 01 for flow control, 10 for command, 11 for response
+//    [125]     == Has time? (0 for no, 1 for time field on next line)
+//    [124]     == EOB (end of burst indicator)
+//    [123:112] == 12-bit sequence number
+//    [111: 96] == 16-bit length in bytes
+//    [ 95: 80] == SRC SID (stream ID)
+//    [ 79: 64] == DST SID
+//  [ 63: 0] == timestamp
 
 module axi_wrapper
-  #(parameter SR_NEXT_DST=128,          // Next destination
-    parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
+  #(parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
     parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1)            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
    (input clk, input reset,
 
     input clear_tx_seqnum,
+    input [15:0] next_dst,
 
     // To NoC Shell
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -30,9 +37,9 @@ module axi_wrapper
     input [31:0] s_axis_data_tdata, input [127:0] s_axis_data_tuser, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready,
     
     // Variable number of AXI configuration busses
-    output [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata, 
-    output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast, 
-    output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tvalid, 
+    output [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata,
+    output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast,
+    output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tvalid,
     input [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tready
     );
 
@@ -46,10 +53,9 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Insert time and burst handling here.  A simple FIFO works only if packets are produced 1-for-1 (they may be of different sizes, though)
-   wire [15:0]  next_destination;
    wire [127:0] s_axis_data_tuser_int;
    reg          sof_in = 1'b1;
-   wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_destination,m_axis_data_tuser[63:0]};
+   wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
    // Only store header once per packet
@@ -65,20 +71,16 @@ module axi_wrapper
    
    generate
       if(SIMPLE_MODE)
-	begin
-	   // Set next destination in chain
-	   setting_reg #(.my_addr(SR_NEXT_DST), .width(16)) new_destination
-	     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-	      .out(next_destination[15:0]));
-	   // FIFO for 
-	   axi_fifo_short #(.WIDTH(128)) header_fifo
-	     (.clk(clk), .reset(reset), .clear(1'b0),
-	      .i_tdata(header_fifo_i_tdata),
-	      .i_tvalid(header_fifo_i_tvalid), .i_tready(),
-	      .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast&s_axis_data_tvalid&s_axis_data_tready));
-	end // if (SIMPLE_MODE)
+         begin
+            // FIFO 
+            axi_fifo_short #(.WIDTH(128)) header_fifo
+            (.clk(clk), .reset(reset), .clear(1'b0),
+             .i_tdata(header_fifo_i_tdata),
+             .i_tvalid(header_fifo_i_tvalid), .i_tready(),
+            .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast&s_axis_data_tvalid&s_axis_data_tready));
+         end // if (SIMPLE_MODE)
       else
-	assign s_axis_data_tuser_int = s_axis_data_tuser;
+      assign s_axis_data_tuser_int = s_axis_data_tuser;
    endgenerate
    
    // /////////////////////////////////////////////////////////

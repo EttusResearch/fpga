@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2014-2015 Ettus Research LLC
 //
 
 module noc_block_pfb
@@ -67,9 +67,25 @@ module noc_block_pfb
    wire 	  m_axis_config_tvalid;
    wire 	  m_axis_config_tready;
    
-   axi_wrapper #(.BASE(8), .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS)) inst_axi_wrapper
-     (.clk(ce_clk), .reset(ce_rst),
-      .clear_tx_seqnum(1'b0),
+   localparam AXI_WRAPPER_BASE    = 128;
+   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
+   localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
+
+   // Set next destination in chain
+   wire [15:0] next_dst;
+   setting_reg #(
+     .my_addr(SR_NEXT_DST), .width(16))
+   sr_next_dst(
+     .clk(ce_clk), .rst(ce_rst),
+     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
+
+   axi_wrapper #(
+      .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
+      .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
+   inst_axi_wrapper (
+      .clk(ce_clk), .reset(ce_rst),
+      .clear_tx_seqnum(clear_tx_seqnum),
+      .next_dst(next_dst),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
       .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
