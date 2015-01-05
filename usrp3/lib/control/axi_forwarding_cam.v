@@ -1,20 +1,18 @@
 //
 // Copyright 2013 Ettus Research LLC
 //
-
-
+// This module implements a highly customized content-addressable memory (CAM)
+// that enables forwarding decisions to be made on a 16 bit field from a stream ID (SID) field.
+// The forwarding is generic in the sense that a SID's host destination can map to any endpoint / crossbar port.
+// 
+// The 16 bits are allocated by convention as 8 bits of Network address (addresses USRP's / AXI crossbars) and 
+// 8 bits of Host address (addresses endpoints / crossbar ports in a USRP).
 //
-// This module implements a highly customized TCAM that enbales forwarding
-// decisions to be made on a 16bit field from a VITA SID field.
-// The 16bits are allocated by convention as 8 bits of Network address
-// (Addresses USRP's etc) and 8 bits of Host address (adresses endpoints in
-// a USRP). By definition if the DEST field in the SID addresses a different
-// USRP than this one then we don't care about the Host field, only the Network Field.
-// We only look at the Host Field when the Network field addresses us.
-// Thus Need TCAM of 256+256 entries with Log2(N) bits, where N is the number of
+// By definition if the destination field in the SID addresses a different
+// USRP / crossbar than this one then we don't care about the Host field, only the Network field.
+// We only look at the Host field when the Network field addresses us.
+// Thus we need a CAM of 256+256 entries with Log2(N) bits, where N is the number of
 // slave(output) ports on the crossbar switch.
-//
-//
 //
 // SID format:
 //
@@ -147,11 +145,30 @@ module axi_forwarding_cam
    //
    assign read_addr = {local_dst,(local_dst ? dst[7:0] : dst[15:8])};
 
-   //
-   // Imply a block RAM here, 512xCeil(Log2(NUM_OUTPUTS))
+   // 
+   // Implement CAM as block RAM here, 512xCeil(Log2(NUM_OUTPUTS))
    //
    //synthesis attribute ram_style of mem is block
    reg [(`LOG2(NUM_OUTPUTS)) : 0] mem [0:511];
+
+   // Initialize the CAM's local address forwarding decisions with sensible defaults by
+   // assuming dst[7:4] = crossbar port, dst[3:0] = block port. Setup a one-to-one mapping
+   // for crossbar ports and always map same crossbar port regardless of block port.
+   // i.e.
+   //   dst 8'h00 => forward to crossbar port 0
+   //   dst 8'h01 => forward to crossbar port 0
+   //   dst 8'h10 => forward to crossbar port 1
+   // etc.
+   integer xbar_port;
+   integer block_port;
+   initial begin
+     for (xbar_port = 0; xbar_port < NUM_OUTPUTS; xbar_port = xbar_port + 1) begin
+       for (block_port = 0; block_port < 16; block_port = block_port + 1) begin
+         mem[256+(xbar_port << 4)+block_port] = xbar_port;
+       end
+     end
+   end
+   
    reg [8:0] 			   read_addr_reg;
    wire 			   write;
    wire [`LOG2(NUM_OUTPUTS):0] 	   read_data;
