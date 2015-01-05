@@ -18,6 +18,12 @@ else
 MODELSIM_LOCAL_INI = $(PWD)/modelsim.ini
 endif
 
+# Filter out non-Verilog srcs
+VERILOG_SRCS_PRUNED = $(filter %.v %.sv,$(VERILOG_SRCS))
+
+# For each include file, grab path and prepend include dir flag
+VLOG_INC_DIR = $(addprefix +incdir+, $(dir $(VERILOG_INC)))
+
 ##################################################
 # Targets
 ##################################################
@@ -55,13 +61,13 @@ $(LIB_WORK):
 	vmap -modelsimini $(MODELSIM_LOCAL_INI) work $@ | tee $(MODELSIM_DEP)
 
 # Compile Verilog sources if they exist
-$(VERILOG_DEP): $(VERILOG_SRCS)
+$(VERILOG_DEP): $(VERILOG_SRCS_PRUNED) $(VERILOG_INC) $(MAKEFILE_SRCS)
 ifdef VERILOG_SRCS
-	vlog -l $(VERILOG_DEP) $(VLOG_FLAGS) +incdir+$(VERILOG_INC) $(VERILOG_SRCS)
+	vlog -l $(VERILOG_DEP) $(VLOG_FLAGS) $(VLOG_INC_DIR) $(VERILOG_SRCS_PRUNED)
 endif
 
 # Compile VHDL sources if they exist
-$(VHDL_DEP): $(VHDL_SRCS)
+$(VHDL_DEP): $(VHDL_SRCS) $(MAKEFILE_SRCS)
 ifdef VHDL_SRCS
 	vcom -l $(VHDL_DEP) $(VCOM_FLAGS) $(VHDL_SRCS)
 endif
