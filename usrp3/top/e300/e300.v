@@ -107,6 +107,12 @@ module e300
   input         GPS_PPS,
   input         PPS_EXT_IN,
 
+  // VTCXO and the DAC that feeds it
+  output TCXO_DAC_SYNCn,
+  output TCXO_DAC_SCLK,
+  output TCXO_DAC_SDIN,
+  input TCXO_CLK,
+
   // gpios, change to inout somehow
   inout [5:0]   PL_GPIO
 );
@@ -454,28 +460,32 @@ module e300
     .event_irq(stream_irq)
   );
 
-  // Generate an internal PPS signal with a 25% duty cycle
-  // Note: This is based on a 50Mhz clk assumption
-  reg [31:0] pps_count;
-  wire int_pps = (pps_count < 32'd12500000);
-  always @(posedge bus_clk)
-    if (pps_count >= 32'd49999999)
-      pps_count <= 32'b0;
-    else
-      pps_count <= pps_count + 1'b1;
+  // resync pps to bus_clk >>> TODO: check this makes sense
+  reg [1:0] ppsync;
+  wire pps = ppsync[1];
+  wire lpps;
+  always @(posedge bus_clk) 
+    ppsync <= { ppsync[0], lpps };
 
-  // pps mux - selects internal, external, or gpsdo PPS
-  reg pps;
+  wire clk_tcxo = TCXO_CLK; // 40 MHz
+
   wire [1:0] pps_select;
-  always @(*) begin
-    case(pps_select)
-      2'b00  :   pps = GPS_PPS;
-      2'b01  :   pps = 1'b0;
-      2'b10  :   pps = int_pps;
-      2'b11  :   pps = PPS_EXT_IN;
-      default:   pps = 1'b0;
-    endcase
-  end
+
+  /* A local pps signal is derived from the tcxo clock. If a reference 
+   * at an appropriate rate (1 pps or 10 MHz) is present and selected, 
+   * a digital control loop will be invoked to tune the vcxo and lock to 
+   * the reference.
+   */
+
+  wire [2:0] dbg;
+   wire is10meg, ispps, reflck; // reference status bits
+   ppsloop ppslp(.reset(1'b0), 
+      .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
+      .refsel(pps_select),  
+      .lpps(lpps),   
+      .is10meg(is10meg), .ispps(ispps), .reflck(reflck),
+      .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
+   );
 
   // E300 Core logic
 
