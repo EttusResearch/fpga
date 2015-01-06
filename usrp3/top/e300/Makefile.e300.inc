@@ -56,6 +56,7 @@ simulator "ISim (VHDL/Verilog)" \
 ##################################################
 # Sources
 ##################################################
+ifeq (,$(findstring IDLE, $(EXTRA_DEFS)))
 TOP_SRCS = \
 	e300.v \
 	e300_core.v \
@@ -76,6 +77,7 @@ TOP_SRCS = \
 	timing.ucf \
 	rf_board.ucf
 
+
 CHIPSCOPE_SRCS = \
 	chipscope/chipscope_icon.v \
 	chipscope/chipscope_icon.xco \
@@ -94,6 +96,17 @@ SOURCES = \
 	$(CONTROL_LIB_SRCS) \
 	$(RADIO_SRCS) \
 	$(CAT_CAP_GEN_SRCS)
+else
+TOP_SRCS = \
+	e300_idle.v \
+	e300.ucf \
+	rf_board.ucf
+
+SOURCES = \
+	$(abspath $(TOP_SRCS)) \
+	$(ZYNQ_PS_SRCS) \
+	$(CONTROL_LIB_SRCS)
+endif
 
 ##################################################
 # Process Properties
