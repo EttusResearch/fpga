@@ -107,7 +107,7 @@ SYNTHESIZE_PROPERTIES = \
 "Use Clock Enable" Auto \
 "Use Synchronous Reset" Auto \
 "Use Synchronous Set" Auto \
-"Verilog Macros" "GIT_HASH=$(SHORT_HASH)"
+"Verilog Macros" "GIT_HASH=$(SHORT_HASH) $(EXTRA_DEFS) $(CUSTOM_DEFS)"
 
 TRANSLATE_PROPERTIES = \
 "Macro Search Path" "$(shell pwd)/coregen/"
