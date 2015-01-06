@@ -31,11 +31,6 @@ module e300
   inout         DDR_VRP,
   inout         DDR_VRN,
 
-  // Control connections for FPGA
-  //input wire SYSCLK_P;
-  //input wire SYSCLK_N;
-  //input wire PS_SRST_B;
-
   //AVR SPI IO
   output        AVR_CS_R,
   input         AVR_IRQ,
