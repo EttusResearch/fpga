@@ -95,7 +95,7 @@ module noc_block_fft_vector_iir_tb();
     tb_next_dst = FFT_SID;
     @(posedge ce_clk);
     forever begin
-      for (i = 0; i < (FFT_SIZE/RFNOC_CHDR_NUM_SC16_PER_LINE/4); i = i + 1) begin
+      for (i = 0; i < (FFT_SIZE/8); i = i + 1) begin
         SendAxi({ 16'd32767,     16'd0},0);
         SendAxi({ 16'd23170, 16'd23170},0);
         SendAxi({     16'd0, 16'd32767},0);
@@ -103,17 +103,18 @@ module noc_block_fft_vector_iir_tb();
         SendAxi({-16'd32767,     16'd0},0);
         SendAxi({-16'd23170,-16'd23170},0);
         SendAxi({     16'd0,-16'd32767},0);
-        SendAxi({ 16'd23170,-16'd23170},(i == (FFT_SIZE/RFNOC_CHDR_NUM_SC16_PER_LINE/4)-1)); // Assert tlast on final word
+        SendAxi({ 16'd23170,-16'd23170},(i == (FFT_SIZE/8)-1)); // Assert tlast on final word
       end
     end
   end
 
   // Assertions
-  integer k;
+  integer k, l;
   reg [15:0] real_val;
   reg [15:0] cplx_val;
   reg [15:0] real_val_prev = 15'd0;
   reg last;
+  localparam NUM_PASSES = 20;
   localparam FFT_BIN = FFT_SIZE/8 + FFT_SIZE/2;
   initial begin
     @(negedge ce_rst);
@@ -121,30 +122,32 @@ module noc_block_fft_vector_iir_tb();
     $display("*****************************************************");
     $display("**              Begin Assertion Tests              **");
     $display("*****************************************************");
-    forever begin
+    for (l = 0; l < NUM_PASSES; l = l + 1) begin
       for (k = 0; k < FFT_SIZE; k = k + 1) begin
         RecvAxi({real_val,cplx_val},last);
         if (k == FFT_BIN) begin
           // Assert that for the special case of a 1/8th sample rate sine wave input, 
           // the real part of the corresponding 1/8th sample rate FFT bin should always be greater than 0 and 
           // be monotonically increasing. The complex part should always be 0.
-          assert(real_val > 32'd0) else begin $error("FFT bin %d real part is not greater than 0!",k); $stop();
-          assert(real_val >= real_val_prev) else begin $error("FFT bin %d real part is not monotonically increasing!",k); $stop();
-          assert(cplx_val == 32'd0) else begin $error("FFT bin %d complex part is not 0!",k); $stop();
+          assert(real_val > 32'd0) else begin $error("FFT bin %d real part is not greater than 0!",k); $stop(); end
+          assert(real_val >= real_val_prev) else begin $error("FFT bin %d real part is not monotonically increasing!",k); $stop(); end
+          assert(cplx_val == 32'd0) else begin $error("FFT bin %d complex part is not 0!",k); $stop(); end
           real_val_prev = tb_str_sink_tdata[63:32];
         end else begin
           // Assert all other FFT bins should be 0 for both complex and real parts
-          assert(real_val == 32'd0) else begin $error("FFT bin %d real part is not 0!",k); $stop();
-          assert(cplx_val == 32'd0) else begin $error("FFT bin %d complex part is not 0!",k); $stop();
+          assert(real_val == 32'd0) else begin $error("FFT bin %d real part is not 0!",k); $stop(); end
+          assert(cplx_val == 32'd0) else begin $error("FFT bin %d complex part is not 0!",k); $stop(); end
         end
         // Check packet size via tlast assertion
         if (k == FFT_SIZE-1) begin
-          assert(last == 1'b1) else begin $error("Detected late tlast!"); $stop();
+          assert(last == 1'b1) else begin $error("Detected late tlast!"); $stop(); end
         end else begin
-          assert(last == 1'b0) else begin $error("Detected early tlast!"); $stop();
+          assert(last == 1'b0) else begin $error("Detected early tlast!"); $stop(); end
         end
       end
+      $display("Test loop %d PASSED!",l);
     end
+    $display("All tests PASSED!");
   end
 
 endmodule
