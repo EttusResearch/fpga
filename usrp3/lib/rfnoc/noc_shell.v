@@ -175,11 +175,11 @@ module noc_shell
 		  .str_src_tdata(str_src_tdata[64*i+63:64*i]), .str_src_tlast(str_src_tlast[i]),
 		  .str_src_tvalid(str_src_tvalid[i]), .str_src_tready(str_src_tready[i]));
 	   axi_mux #(.PRIO(0), .WIDTH(64), .BUFFER(0), .SIZE(OUTPUT_PORTS)) mux_dataout
-	     (.clk(clk), .reset(reset), .clear(0),
+	     (.clk(clk), .reset(reset), .clear(1'b0),
 	      .i_tdata(dataout_ports_tdata), .i_tlast(dataout_ports_tlast), .i_tvalid(dataout_ports_tvalid), .i_tready(dataout_ports_tready),
 	      .o_tdata(dataout_tdata), .o_tlast(dataout_tlast), .o_tvalid(dataout_tvalid), .o_tready(dataout_tready));
 	   axi_demux #(.WIDTH(64), .SIZE(OUTPUT_PORTS)) demux_fcin
-	     (.clk(clk), .reset(reset), .clear(0),
+	     (.clk(clk), .reset(reset), .clear(1'b0),
 	      .header(header_fcin), .dest(header_fcin[3:0]),
 	      .i_tdata(fcin_tdata), .i_tlast(fcin_tlast), .i_tvalid(fcin_tvalid), .i_tready(fcin_tready),
 	      .o_tdata(fcin_ports_tdata), .o_tlast(fcin_ports_tlast), .o_tvalid(fcin_ports_tvalid), .o_tready(fcin_ports_tready));
@@ -238,12 +238,12 @@ module noc_shell
 		  .str_sink_tdata(str_sink_tdata[64*j+63:64*j]), .str_sink_tlast(str_sink_tlast[j]),
 		  .str_sink_tvalid(str_sink_tvalid[j]), .str_sink_tready(str_sink_tready[j]));
 	   axi_demux #(.WIDTH(64), .SIZE(INPUT_PORTS)) demux_datain
-	     (.clk(clk), .reset(reset), .clear(0),
+	     (.clk(clk), .reset(reset), .clear(1'b0),
 	      .header(header_datain), .dest(header_datain[3:0]),
 	      .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
 	      .o_tdata(datain_ports_tdata), .o_tlast(datain_ports_tlast), .o_tvalid(datain_ports_tvalid), .o_tready(datain_ports_tready));
 	   axi_mux #(.PRIO(0), .WIDTH(64), .BUFFER(0), .SIZE(INPUT_PORTS)) mux_fcout
-	     (.clk(clk), .reset(reset), .clear(0),
+	     (.clk(clk), .reset(reset), .clear(1'b0),
 	      .i_tdata(fcout_ports_tdata), .i_tlast(fcout_ports_tlast), .i_tvalid(fcout_ports_tvalid), .i_tready(fcout_ports_tready),
 	      .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
 	   
