@@ -1,0 +1,60 @@
+# Define only one toplevel module
+TOPLEVEL_MOD = noc_block_addsub_tb
+
+##################################################
+# Verilog Sources
+##################################################
+VERILOG_SRCS = $(abspath \
+$(TOPLEVEL_MOD).sv)
+
+# If using Ettus sources, setup path to the usrp3 directory
+BASE_DIR = $(abspath ../..)
+
+# Ettus sources
+MAKEFILE_SRCS = $(abspath \
+../../rfnoc/Makefile.srcs \
+../../fifo/Makefile.srcs \
+../../vita/Makefile.srcs \
+../../control/Makefile.srcs \
+../../timing/Makefile.srcs \
+../../packet_proc/Makefile.srcs \
+../../coregen/Makefile.srcs)
+
+include $(MAKEFILE_SRCS)
+
+# X300 architecture specific coregen files
+X300_COREGEN_SRCS = $(abspath \
+../../../top/x300/coregen/fifo_short_2clk.v \
+../../../top/x300/coregen/fifo_4k_2clk.v)
+
+# Variables defined in included Makefile.srcs
+VERILOG_SRCS += \
+$(FIFO_SRCS) \
+$(RFNOC_SRCS) \
+$(VITA_SRCS) \
+$(CONTROL_LIB_SRCS) \
+$(TIMING_SRCS) \
+$(PACKET_PROC_SRCS) \
+$(X300_COREGEN_SRCS) \
+$(LIBCOREGEN_SRCS)
+
+# Include files
+VERILOG_INC = $(abspath ../rfnoc_sim_lib.v)
+
+##################################################
+# VHDL Sources
+##################################################
+VHDL_SRCS =
+
+##################################################
+# Simulator Flags
+##################################################
+# Xilinx libraries
+VSIM_LIBS = -L unisims_ver -L xilinxcorelib_ver work.glbl
+
+# Set time scale to 1 ps & full debug visability
+VSIM_FLAGS = -t ps -voptargs=+acc
+
+VLOG_FLAGS = 
+
+VCOM_FLAGS = 
