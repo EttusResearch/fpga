@@ -47,6 +47,9 @@
   localparam RFNOC_BUS_WIDTH                      = 64;
   localparam RFNOC_CHDR_NUM_BYTES_PER_LINE        = RFNOC_BUS_WIDTH/8;
   localparam RFNOC_CHDR_NUM_SC16_PER_LINE         = RFNOC_CHDR_NUM_BYTES_PER_LINE/SC16_NUM_BYTES;
+  localparam RFNOC_AXI_WIDTH                      = 32;
+  localparam RFNOC_AXI_NUM_BYTES_PER_LINE         = RFNOC_AXI_WIDTH/8;
+  localparam RFNOC_AXI_NUM_SC16_PER_LINE          = RFNOC_AXI_NUM_BYTES_PER_LINE/SC16_NUM_BYTES;
 
 
   /*********************************************
@@ -57,6 +60,7 @@
   localparam [1:0] CHDR_DATA_PKT_TYPE             = 0;
   localparam [1:0] CHDR_FC_PKT_TYPE               = 1;
   localparam [1:0] CHDR_CTRL_PKT_TYPE             = 2;
+  localparam [1:0] CHDR_NO_FLAGS                  = 0;
   localparam [1:0] CHDR_EOB                       = 1 << 0;
   localparam [1:0] CHDR_HAS_TIME                  = 1 << 1;
 
@@ -220,7 +224,7 @@
     reg          tb_m_axis_data_tready = 1'b0;
     reg  [31:0]  tb_s_axis_data_tdata  = 32'd0;
     // Sane tuser (CHDR) defaults (only valid if SIMPLE_MODE = 0):
-    //   {Data packet, no EOB, no time, Seq num DC, Pkt length DC, SRC SID: Testbench, DSR SID: CE0 Block Port 0, Time DC}
+    //   {Data packet, no EOB, no time, Seq num DC, Pkt length DC, SRC SID: Testbench, DST SID: CE0 Block Port 0, Time DC}
     // DC = Don't care, Seq num & Pkt length handled by AXI Wrapper automatically
     reg  [127:0] tb_s_axis_data_tuser  = {2'b00,1'b0,1'b0,12'd0,16'd0,TESTBENCH_SID,{XBAR_ADDR,4'd0,4'd0},64'd0};
     reg          tb_s_axis_data_tlast  = 1'b0;
@@ -369,6 +373,9 @@
       input [31:0] data;
       input last;
     begin
+      if (`SIMPLE_MODE == 0) begin
+        tb_s_axis_data_tuser  = {CHDR_DATA_PKT_TYPE,CHDR_NO_FLAGS,12'd0,16'd0,TESTBENCH_SID,tb_next_dst,64'd0};
+      end
       tb_s_axis_data_tvalid = 1'b1;
       tb_s_axis_data_tdata = data;
       tb_s_axis_data_tlast = last;
