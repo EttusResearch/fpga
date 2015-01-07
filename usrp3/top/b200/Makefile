@@ -73,6 +73,16 @@ B210:  ##Build USRP B210 design.
 	$(call ise_build,XC6SLX150,B210=1)
 	$(call post_build,B210)
 
+B200_UART_IS_GPIO:  ##Build USRP B200 design with UART as GPIO.
+	$(call pre_build,B200)
+	$(call ise_build,XC6SLX75,B200_UART_IS_GPIO=1)
+	$(call post_build,B200)
+
+B210_UART_IS_GPIO:  ##Build USRP B210 design with UART as GPIO.
+	$(call pre_build,B210)
+	$(call ise_build,XC6SLX150,"B210=1 B200_UART_IS_GPIO=1")
+	$(call post_build,B210)
+
 clean: ##Clean up all build output.
 	rm -rf build-*
 	rm -rf build

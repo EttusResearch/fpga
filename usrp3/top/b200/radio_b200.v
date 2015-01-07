@@ -24,7 +24,7 @@ module radio_b200
 
    output [63:0] debug
    );
-   
+
 
    // ///////////////////////////////////////////////////////////////////////////////
    // FIFO Interfacing to the bus clk domain
@@ -32,15 +32,15 @@ module radio_b200
    // rx_tdata and resp_tdata get muxed to out_tdata
    // Everything except rx flow control must cross in to radio_clk domain before further use
    // _b signifies bus_clk domain, _r signifies radio_clk domain
-  
+
    wire [63:0] 	 ctrl_tdata_r;
    wire 	 ctrl_tready_r, ctrl_tvalid_r;
    wire 	 ctrl_tlast_r;
-   
+
    wire [63:0] 	 resp_tdata_r;
    wire 	 resp_tready_r, resp_tvalid_r;
    wire 	 resp_tlast_r;
-   
+
    wire [63:0] 	 rx_tdata_r;
    wire 	 rx_tready_r, rx_tvalid_r;
    wire 	 rx_tlast_r;
@@ -70,34 +70,34 @@ module radio_b200
 
    axi_fifo_2clk #(.WIDTH(65), .SIZE(0/*minimal*/)) ctrl_fifo
      (.reset(bus_rst),
-      .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid), .i_tready(ctrl_tready), .i_tdata({ctrl_tlast, ctrl_tdata}), 
+      .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid), .i_tready(ctrl_tready), .i_tdata({ctrl_tlast, ctrl_tdata}),
       .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r), .o_tdata({ctrl_tlast_r, ctrl_tdata_r}));
-   
+
    axi_fifo_2clk #(.WIDTH(65), .SIZE(RADIO_FIFO_SIZE)) tx_fifo
      (.reset(bus_rst),
-      .i_aclk(bus_clk), .i_tvalid(tx_tvalid), .i_tready(tx_tready), .i_tdata({tx_tlast, tx_tdata}), 
+      .i_aclk(bus_clk), .i_tvalid(tx_tvalid), .i_tready(tx_tready), .i_tdata({tx_tlast, tx_tdata}),
       .o_aclk(radio_clk), .o_tvalid(tx_tvalid_r), .o_tready(tx_tready_r), .o_tdata({tx_tlast_r, tx_tdata_r}));
-   
+
    axi_fifo_2clk #(.WIDTH(65), .SIZE(0/*minimal*/)) resp_fifo
      (.reset(radio_rst),
-      .i_aclk(radio_clk), .i_tvalid(rmux_tvalid_r), .i_tready(rmux_tready_r), .i_tdata({rmux_tlast_r, rmux_tdata_r}), 
+      .i_aclk(radio_clk), .i_tvalid(rmux_tvalid_r), .i_tready(rmux_tready_r), .i_tdata({rmux_tlast_r, rmux_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(resp_tvalid), .o_tready(resp_tready), .o_tdata({resp_tlast, resp_tdata}));
-   
+
    axi_fifo_2clk #(.WIDTH(65), .SIZE(0)) rx_fifo
      (.reset(radio_rst),
       .i_aclk(radio_clk), .i_tvalid(rx_mux_tvalid_r), .i_tready(rx_mux_tready_r), .i_tdata({rx_mux_tlast_r, rx_mux_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(rx_tvalid_int), .o_tready(rx_tready_int), .o_tdata({rx_tlast_int, rx_tdata_int}));
-   
+
    axi_packet_gate #(.WIDTH(64), .SIZE(RADIO_FIFO_SIZE)) buffer_whole_pkt
      (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata(rx_tdata_int), .i_tlast(rx_tlast_int), .i_terror(1'b0), .i_tvalid(rx_tvalid_int), .i_tready(rx_tready_int),
       .o_tdata(rx_tdata), .o_tlast(rx_tlast), .o_tvalid(rx_tvalid), .o_tready(rx_tready)
       );
-   
+
    // /////////////////////////////////////////////////////////////////////////////////////
    // Setting bus and controls
-   
+
    localparam SR_SPI       = 8'd8;
    localparam SR_ATR       = 8'd12;
    localparam SR_TEST      = 8'd21;
@@ -143,8 +143,8 @@ module radio_b200
        3'd1 : rb_data <= vita_time;
        3'd2 : rb_data <= vita_time_lastpps;
        3'd3 : rb_data <= {tx, rx};
-       3'd6 : rb_data <= {54'h0,fp_gpio_readback};
-       
+       3'd4 : rb_data <= {54'h0,fp_gpio_readback};
+
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 
@@ -169,15 +169,15 @@ module radio_b200
 
    generate
       if (FP_GPIO != 0) begin: add_fp_gpio
-   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(10)) fp_gpio_atr
-     (.clk(radio_clk),.reset(radio_rst),
-      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .rx(run_rx), .tx(run_tx),
-      .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
+         gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(10)) fp_gpio_atr
+            (.clk(radio_clk),.reset(radio_rst),
+            .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+            .rx(run_rx), .tx(run_tx),
+            .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
       end
    endgenerate
-   
-      
+
+
    // /////////////////////////////////////////////////////////////////////////////////
    //  TX Chain
 
@@ -191,7 +191,7 @@ module radio_b200
    wire [23:0] tx_fe_i, tx_fe_q;
 
    wire [31:0] debug_tx_control;
-   
+
    assign tx[31:16] = (run_tx)? tx_fe_i[23:8] : tx_idle[31:16];
    assign tx[15:0]  = (run_tx)? tx_fe_q[23:8] : tx_idle[15:0];
 
@@ -242,7 +242,7 @@ module radio_b200
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
    wire [63:0] rx_tdata_i; wire rx_tlast_i, rx_tvalid_i, rx_tready_i;
-   
+
    new_rx_framer #(.BASE(SR_RX_CTRL+4),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE)) new_rx_framer
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -298,9 +298,9 @@ module radio_b200
 
    // DEBUG LOGIC - NOT FOR PRODUCTION
 
-   
+
    assign debug = 0;
 
-   
-   
+
+
 endmodule // radio_b200

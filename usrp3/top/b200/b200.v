@@ -29,7 +29,7 @@ module b200 (
   // input 	 FPGA_RXD0, // These pins goto 3 pin 0.1" header on B2x0 and
   // output 	 FPGA_TXD0, // carry FX3 UART.
    inout 	 FPGA_RXD0, // These pins goto 3 pin 0.1" header J400 on B2x0 and
-   inout 	 FPGA_TXD0, // carry FX3 UART. 
+   inout 	 FPGA_TXD0, // carry FX3 UART.
 
    // Catalina Controls
    output 	 codec_enable,
@@ -126,12 +126,6 @@ module b200 (
 
     wire reset_global = GPIF_CTL9;
 
-  `ifndef FP_GPIO
-   `ifdef B210
-   assign fp_gpi0 = 8'h0;
-   `endif
-  `endif
-   
     ///////////////////////////////////////////////////////////////////////
     // generate clocks from always on codec main clk
     ///////////////////////////////////////////////////////////////////////
@@ -146,7 +140,7 @@ module b200 (
 
    // Bus Clock and GPIF Clock both same 100MHz clock.
    assign bus_clk = gpif_clk;
-   
+
 
     //hold-off logic for clocks ready
     reg [15:0] clocks_ready_count;
@@ -170,7 +164,7 @@ module b200 (
     //S6CLK2PIN S6CLK2PIN_dbg1 (.I(debug_clk_int[1]), .O(debug_clk[1]));
     assign      debug_clk[1:0] = 2'b0;
     S6CLK2PIN S6CLK2PIN_gpif (.I(gpif_clk), .O(IFCLK));
-   
+
     ///////////////////////////////////////////////////////////////////////
     // Create sync reset signals
     ///////////////////////////////////////////////////////////////////////
@@ -201,9 +195,9 @@ module b200 (
    ///////////////////////////////////////////////////////////////////////
    // SPI connections
    ///////////////////////////////////////////////////////////////////////
-   wire mosi,  miso, sclk; 
+   wire mosi,  miso, sclk;
    wire [7:0]  sen;
-   
+
    //AD9361 Slave
    assign cat_ce   = sen[0];
    assign cat_mosi = ~sen[0] & mosi;
@@ -252,7 +246,7 @@ module b200 (
     ///////////////////////////////////////////////////////////////////////
     // b200 core
     ///////////////////////////////////////////////////////////////////////
-   
+
    b200_core #(.EXTRA_BUFF_SIZE(12)) b200_core
     (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -265,9 +259,9 @@ module b200 (
         .rx0(rx_data2), .rx1(rx_data1),
         .tx0(tx_data2), .tx1(tx_data1),
         .fe_atr0(fe_atr2), .fe_atr1(fe_atr1),
-        `ifdef FP_GPIO
+`ifdef B210
         .fp_gpio(fp_gpio),
-	`endif
+`endif
         .pps_int(PPS_IN_INT), .pps_ext(PPS_IN_EXT),
 
         .rxd(gps_txd), .txd(gps_rxd),
@@ -282,12 +276,12 @@ module b200 (
         .debug()
     );
 
-   
+
 
     ///////////////////////////////////////////////////////////////////////
     // GPIF2
     ///////////////////////////////////////////////////////////////////////
-  
+
    gpif2_slave_fifo32 #(.DATA_RX_FIFO_SIZE(14), .DATA_TX_FIFO_SIZE(14)) slave_fifo32
     (
         .gpif_clk(gpif_clk), .gpif_rst(gpif_rst), .gpif_enb(1'b1),
@@ -308,5 +302,5 @@ module b200 (
    // Debug port
    ///////////////////////////////////////////////////////////////////////
    assign debug = 0;
-  
+
 endmodule // B200
