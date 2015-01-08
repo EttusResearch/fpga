@@ -171,7 +171,7 @@ module e300_core
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {30'd0, pps_select};
-      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'h4, 8'h0};
+      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'h5, 8'h0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
       RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE};
