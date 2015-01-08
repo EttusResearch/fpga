@@ -123,7 +123,7 @@ module noc_block_window #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready = 1'b1;
 
-  localparam MAX_WINDOW_SIZE = 2048;
+  localparam MAX_WINDOW_SIZE = 4096;
   localparam SR_WINDOW_SIZE  = 131;   // Note: AXI config bus in AXI wrapper uses 129 & 130
   localparam RB_ADDR_WIDTH   = 3;
 

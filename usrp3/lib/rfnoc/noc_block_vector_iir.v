@@ -123,7 +123,7 @@ module noc_block_vector_iir #(
   localparam [7:0] SR_VECTOR_LEN = 129;
   localparam [7:0] SR_ALPHA      = 130;
   localparam [7:0] SR_BETA       = 131;
-  localparam MAX_LOG2_OF_SIZE    = 11;
+  localparam MAX_LOG2_OF_SIZE    = 12;
 
   vector_iir #(
     .SR_VECTOR_LEN(SR_VECTOR_LEN),
