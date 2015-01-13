@@ -174,9 +174,6 @@ module ppsloop(
       end
     end
 
-assign { db0, db1} = { ispps, is10meg };
-
-
 
     reg signed [27:0] coarse;
     reg [15:0] dacv = 16'd32767; // power-on default mid-scale
@@ -193,8 +190,8 @@ assign { db0, db1} = { ispps, is10meg };
     /* The xo can be on-frequency while the rising edges are still 
      * out-of-phase, so a phase detector is also required. The
      * counter "llcnt" accumulates how many ticks local pps leads
-     * or lags the reference pps (when in pps mode). The range of this 
-     * counter need not be as large as "rcnt". The count increments
+     * or lags the reference pps . The range of this counter
+     * need not be as large as "rcnt". The count increments
      * or decrements based upon which signal has a rising edge first,
      * and the count is halted when the other rising edge occurs.
      * Both signals are required to transition back to the low state
@@ -225,6 +222,10 @@ assign { db0, db1} = { ispps, is10meg };
       if (ple[2]) begin
         // if rdiff is (+), the xo is fast
         // include a bit of gain for quick adjustment
+        // an approximate gain was initially determined by 'theory' using
+        // the xo tuning sensitivity, and was find-tuned 'by hand' 
+        // by observing the loop behaviour (with rdiff instrumented and 
+        // pps signals connected out to an oscilloscope).
         coarse <= sdacv - (rdiff <<< 3); 
       end
 
@@ -336,7 +337,6 @@ assign { db0, db1} = { ispps, is10meg };
 
 
     reg[15:0] daco;
-    reg erng;
 
     reg [1:0] enchain=2'b00;
     always @(posedge clk) enchain <= { enchain[1:0], ppsfltena & (enchain==2'b00) };
@@ -347,7 +347,15 @@ assign { db0, db1} = { ispps, is10meg };
     wire signed [23:0] nxt_prop = (llcnt <<< 7); 
     wire signed [23:0] eff = integ + prop;
     wire urng = eff[23], orng = eff[23:22]==2'b01;
-    wire [15:0] nxt_dac = urng ? 16'b0 : orng ? 16'hffff : eff[21:6];
+    reg erng;
+   /* The values for proportional and integral gain terms were originally 
+    * estimated using a model that accounted for the xo tuning sensitivity.
+    * When implemented, the loop dynamics observed differed significantly 
+    * from model results, probably as a result of the Xilinx PLL 
+    * (which was not modelled) being present in the loop. The gain values
+    * were find-tuned 'by hand' by observing the loop behaviour (with llcnt
+    * instrumented) and pps signals connected out to an oscilloscope).
+    */
 
     always @(posedge clk) begin
       if (pr) begin
