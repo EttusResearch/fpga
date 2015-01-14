@@ -4,7 +4,10 @@
 
 module noc_block_radio_core
   #(parameter NOC_ID = 64'h1112_0000_0000_0000,
-    parameter STR_SINK_FIFOSIZE = 11)
+    parameter STR_SINK_FIFOSIZE = 11,
+    parameter RADIO_NUM = 0,
+    parameter USE_TX_CORR = 0,
+    parameter USE_RX_CORR = 0)
    (input bus_clk, input bus_rst,
     input ce_clk, input ce_rst,
     input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
@@ -115,10 +118,7 @@ module noc_block_radio_core
    //
    ////////////////////////////////////////////////////////////
    
-   // Control Source Unused
-   assign cmdout_tdata  = 64'd0;
-   assign cmdout_tlast  = 1'b0;
-   assign cmdout_tvalid = 1'b0;
+   // Control Source connected to radio tx responder
    assign ackin_tready  = 1'b1;
    
    localparam [7:0] SR_VECTOR_LEN = 129;
@@ -126,7 +126,7 @@ module noc_block_radio_core
    localparam [7:0] SR_BETA       = 131;
    localparam MAX_LOG2_OF_SIZE    = 11;
 
-   radio_core #(.BASE(128), .RADIO_NUM(0)) radio_core
+   radio_core #(.BASE(128), .RADIO_NUM(0), .USE_TX_CORR(USE_TX_CORR), .USE_RX_CORR(USE_RX_CORR)) radio_core
      (.clk(ce_clk), .reset(ce_rst),
       .rx(rx), .tx(tx),
       .db_gpio(db_gpio), .fp_gpio(fp_gpio),
@@ -138,6 +138,7 @@ module noc_block_radio_core
       .tx_tdata(m_axis_data_tdata), .tx_tlast(m_axis_data_tlast), 
       .tx_tvalid(m_axis_data_tvalid), .tx_tready(m_axis_data_tready), .tx_tuser(m_axis_data_tuser),
       .rx_tdata(s_axis_data_tdata), .rx_tlast(s_axis_data_tlast), 
-      .rx_tvalid(s_axis_data_tvalid), .rx_tready(s_axis_data_tready), .rx_tuser(s_axis_data_tuser));
+      .rx_tvalid(s_axis_data_tvalid), .rx_tready(s_axis_data_tready), .rx_tuser(s_axis_data_tuser),
+      .txresp_tdata(cmdout_tdata), .txresp_tlast(cmdout_tlast), .txresp_tvalid(cmdout_tvalid), .txresp_tready(cmdout_tready));
             
 endmodule // noc_block_radio_core

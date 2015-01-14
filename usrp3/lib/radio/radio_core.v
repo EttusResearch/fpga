@@ -13,7 +13,9 @@
 
 module radio_core
   #(parameter BASE = 0,
-    parameter RADIO_NUM = 0)
+    parameter RADIO_NUM = 0,
+    parameter USE_TX_CORR = 1,
+    parameter USE_RX_CORR = 1)
    (input clk, input reset,
     // Interface to the physical radio (ADC, DAC, controls)
     input [31:0] rx, output [31:0] tx,
@@ -32,12 +34,11 @@ module radio_core
     input [127:0] tx_tuser,
     
     output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-    output [127:0] rx_tuser
+    output [127:0] rx_tuser,
+
+    output [63:0] txresp_tdata, output txresp_tlast, output txresp_tvalid, input txresp_tready
     );
 
-   localparam BASE_RX = BASE + 32;
-   localparam BASE_TX = BASE + 64;
-   
    // Control Section
    //   most misc settings here, keeps time, etc.
    //   FIXME -- how do we handle conflict of this vs. toplevel noc_shell handling of settings bus?
@@ -53,6 +54,9 @@ module radio_core
    wire [63:0] 	  vita_time_lastpps;
    wire 	  loopback;
    
+   localparam BASE_RX = BASE + 32;
+   localparam BASE_TX = BASE + 64;
+   
    localparam SR_DACSYNC   = BASE + 8'd0;
    localparam SR_LOOPBACK  = BASE + 8'd1;
    localparam SR_TEST      = BASE + 8'd2;
@@ -63,6 +67,11 @@ module radio_core
    localparam SR_LEDS      = BASE + 8'd13;
    localparam SR_FP_GPIO   = BASE + 8'd18;
    localparam SR_TIME      = BASE + 8'd23;
+   localparam SR_TX_CTRL   = 8'd64;
+   localparam SR_RX_CTRL   = 8'd96;
+   localparam SR_RX_FRONT  = 8'd208;
+   localparam SR_TX_FRONT  = 8'd216;
+   localparam SR_CODEC_IDLE = 8'd100;
 
    // Radio Readback Mux
    always @*
@@ -82,7 +91,6 @@ module radio_core
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(), .changed(sync_dacs));
 
-   // FIXME
    // Set this register to loop TX data directly to RX data.
    setting_reg #(.my_addr(SR_LOOPBACK), .width(1)) sr_loopback
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -125,45 +133,83 @@ module radio_core
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
       .gpio(leds), .gpio_readback() );
-/*
+
    timekeeper #(.BASE(SR_TIME)) timekeeper
      (.clk(clk), .reset(reset), .pps(pps),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
-   */
+
+   // //////////////////////////////////////////////////////////////////////////////////////////////
    // radio_tx
    //   Takes in stream of tx sample packets
    //   Returns stream of tx ack packets, but no longer does its own flow control (noc_shell handles that)
 
-   radio_tx #(.BASE(BASE_TX) radio_tx
-     (.clk(clk), .reset(reset),
-      .tx(tx), .run(run_tx),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .rb_data(rb_data_tx),
-      .vita_time(vita_time),
-      .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
-      .tx_tuser(tx_tuser));
+   wire 	strobe_tx;
+   wire [31:0] 	tx_idle;
    
-   // radio_rx
-   //   Returns stream of rx sample packets
-   //   Also sends rx error and ack packets back (in line?)
-   //   Flow control handled by noc_shell
-
-   wire 	loopback;
-   
-   // Set this register to loop TX data directly to RX data.
-   setting_reg #(.my_addr(BASE + SR_LOOPBACK), .awidth(8), .width(1)) sr_loopback
+   setting_reg #(.my_addr(SR_CODEC_IDLE), .awidth(8), .width(32)) sr_codec_idle
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(loopback), .changed());
+      .out(tx_idle), .changed());
 
+   // /////////////////////////////////////////////////////////////////////////////////
+   //  TX Chain
+
+   wire [175:0] txsample_tdata;
+   wire 	txsample_tvalid, txsample_tready;
+   wire [31:0] 	sample_tx;
+   wire 	tx_ack, tx_error, packet_consumed;
+   wire [11:0] 	seqnum;
+   wire [63:0] 	error_code;
+   wire [31:0] 	sid;
+   wire [23:0] 	tx_fe_i, tx_fe_q;
+
+   tx_control_gen3 #(.BASE(SR_TX_CTRL)) tx_control_gen3
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .vita_time(vita_time),
+      .tx_tdata(tx_tdata), .tx_tuser(tx_tuser), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
+      .error(tx_error), .seqnum(seqnum), .error_code(error_code), .sid(sid),
+      .run(run_tx), .sample(sample_tx), .strobe(strobe_tx));
+
+   tx_responder tx_responder
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .seqnum(seqnum), .error_code(error_code), .sid(sid),
+      .vita_time(vita_time),
+      .o_tdata(txresp_tdata), .o_tlast(txresp_tlast), .o_tvalid(txresp_tvalid), .o_tready(txresp_tready));
+
+   wire [15:0] 	tx_i_running, tx_q_running;
+   
+   generate
+      if (USE_TX_CORR) 
+	begin
+	   tx_frontend #(.BASE(SR_TX_FRONT), .WIDTH_OUT(16), .IQCOMP_EN(1)) tx_frontend
+	     (.clk(clk), .rst(reset),
+	      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+	      .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run_tx),
+	      .dac_a(tx_i_running), .dac_b(tx_q_running));
+	end
+      else
+	begin
+	   assign strobe_tx = run_tx;
+	   assign tx_i_running = sample_tx[31:16];
+	   assign tx_q_running = sample_tx[15:0];
+	end
+   endgenerate
+
+   assign tx[31:16] = run_tx ? tx_i_running : tx_idle[31:16];
+   assign tx[15:0]  = run_tx ? tx_q_running : tx_idle[15:0];
+   
    // /////////////////////////////////////////////////////////////////////////////////
    //  RX Chain
 
    wire 	strobe_rx;
-   wire [31:0] 	sample_rx;
    wire [31:0] 	rx_corr;
    wire [23:0] 	corr_i, corr_q;
-   wire [31:0] 	sample_rx = loopback ? tx_loopback : rx_corr;    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend)
+   wire [31:0] 	sample_rx = loopback ? tx : rx_corr;    // Digital Loopback TX -> RX (Pipeline immediately inside rx_frontend)
+   
    assign strobe_rx = run_rx;
    
    rx_control_gen3 #(.BASE(BASE + SR_RX_CTRL)) rx_control_gen3
