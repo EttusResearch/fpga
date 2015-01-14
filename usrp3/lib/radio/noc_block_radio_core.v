@@ -126,7 +126,7 @@ module noc_block_radio_core
    localparam [7:0] SR_BETA       = 131;
    localparam MAX_LOG2_OF_SIZE    = 11;
 
-   radio_core #(.BASE(0), .DELETE_DSP(1), .RADIO_NUM(0)) radio_core
+   radio_core #(.BASE(128), .RADIO_NUM(0)) radio_core
      (.clk(ce_clk), .reset(ce_rst),
       .rx(rx), .tx(tx),
       .db_gpio(db_gpio), .fp_gpio(fp_gpio),

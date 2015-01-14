@@ -18,7 +18,7 @@ module radio_tb();
   /*********************************************
   ** DUT
   *********************************************/
-  noc_block_radio_core inst_noc_block_vector_iir 
+  noc_block_radio_core inst_noc_block_radio_core
     (.bus_clk(clk), .bus_rst(rst),
      .ce_clk(clk), .ce_rst(rst),
      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -34,21 +34,30 @@ module radio_tb();
   reg [63:0] payload = 64'd0;
 
    localparam FFT_SIZE=256;
+
+   localparam SR_RX_BASE = 128+32;
    
   initial begin
     @(negedge rst);
     @(posedge clk);
     
-    // Setup Vector IIR
+    // Setup
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});               // Command packet to set up flow control
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});                // Command packet to set up source control window size
     SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                  // Command packet to set up source control window enable
-    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_NEXT_DST_BASE, {16'd0,32'h0000_0001}});                     // Set next destination
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd129, 16'd0, FFT_SIZE});  // Set Vector length register
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd130, 32'h7FFF_FFFF});    // Alpha = 1 (as close as we can get)
-    SendCtrlPacket(12'd0, 32'h0003_0000, {32'd131, 32'h4000_0000});     // 1 - Alpha = 0.5
-    #1000;
+    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_NEXT_DST_BASE, 32'h0000_0001});                     // Set next destination
 
+    #1000;
+    // Commands to receive
+    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 4, 32'h0000_0020});   // Maxlen
+    //SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 5, 32'h0000_0001});   // SID -- do we need this?
+
+    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 0, 32'h8000_0100});   // Command -- immediate, do 256 samples
+    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 1, 32'h0000_0000});   // time[63:32]
+    SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 2, 32'h0000_0000});   // time[31:0], execute command
+
+    //SendCtrlPacket(12'd0, 32'h0003_0000, {24'd0, SR_RX_BASE + 3, 32'h0000_0001});   // halt
+     
     // Send 1/8th sample rate sine wave
     @(posedge clk);
     forever begin
