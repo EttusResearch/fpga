@@ -16,11 +16,11 @@ module timekeeper
    wire set_time_pps, set_time_now;
    wire cmd_trigger;
 
-   setting_reg #(.my_addr(BASE), .width()) sr_time_hi
+   setting_reg #(.my_addr(BASE), .width(32)) sr_time_hi
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[63:32]), .changed());
 
-   setting_reg #(.my_addr(BASE+1), .width()) sr_time_lo
+   setting_reg #(.my_addr(BASE+1), .width(32)) sr_time_lo
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[31:0]), .changed());
 

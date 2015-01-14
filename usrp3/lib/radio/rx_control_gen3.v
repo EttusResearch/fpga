@@ -215,7 +215,8 @@ module rx_control_gen3
    assign rx_tlast = error_state ? (ibs_state == IBS_ERR_END) : (eob | (lines_left_pkt == 1));
    
    assign rx_tvalid = error_state ? 1'b1 : (run & strobe);
-   
+
+   // FIXME add capability to send error packets to a different SID
    assign rx_tuser = error_state ? { 4'b1111 /*Error w/Time*/, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, err_time } :
 		     { 3'b001 /*Data w/Time*/, eob, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, start_time };
    
