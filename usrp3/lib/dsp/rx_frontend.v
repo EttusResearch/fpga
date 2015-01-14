@@ -51,10 +51,10 @@ module rx_frontend
       if(IQCOMP_EN == 1)
 	begin
 	   MULT18X18S mult_mag_corr
-	     (.P(corr_i), .A(adc_i_ofs[23:6]), .B(mag_corr), .C(clk), .CE(1), .R(rst) ); 
+	     (.P(corr_i), .A(adc_i_ofs[23:6]), .B(mag_corr), .C(clk), .CE(1'b1), .R(rst) ); 
 	   
 	   MULT18X18S mult_phase_corr
-	     (.P(corr_q), .A(adc_i_ofs[23:6]), .B(phase_corr), .C(clk), .CE(1), .R(rst) );
+	     (.P(corr_q), .A(adc_i_ofs[23:6]), .B(phase_corr), .C(clk), .CE(1'b1), .R(rst) );
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_i
 	     (.clk(clk), .rst(rst), 

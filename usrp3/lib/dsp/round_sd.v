@@ -20,7 +20,7 @@ module round_sd
    sign_extend #(.bits_in(ERR_WIDTH),.bits_out(WIDTH_IN)) ext_err (.in(err), .out(err_ext));
    
    add2_and_clip_reg #(.WIDTH(WIDTH_IN)) add2_and_clip_reg
-     (.clk(clk), .rst(reset), .in1(in), .in2((DISABLE_SD == 0) ? err_ext : 0), .strobe_in(strobe_in), .sum(sum), .strobe_out(strobe_pre));
+     (.clk(clk), .rst(reset), .in1(in), .in2((DISABLE_SD == 0) ? err_ext : {WIDTH_IN{1'b0}}), .strobe_in(strobe_in), .sum(sum), .strobe_out(strobe_pre));
    
    round #(.bits_in(WIDTH_IN),.bits_out(WIDTH_OUT)) round_sum (.in(sum), .out(out_pre), .err(err));
 
