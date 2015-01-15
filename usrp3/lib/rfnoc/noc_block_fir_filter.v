@@ -188,12 +188,12 @@ module noc_block_fir_filter #(
     .s_axis_reload_tlast(m_axis_fir_reload_tlast));
 
   axi_round_and_clip_complex #(
-    .WIDTH_IN(46),
+    .WIDTH_IN(48),
     .WIDTH_OUT(16),
     .CLIP_BITS(7))
   inst_axi_round_and_clip (
-    .clk(ce_clk), .reset(ce_rst | fft_reset),
-    .i_tdata({s_axis_fir_tdata[93:48],s_axis_fir_tdata[45:0]}),
+    .clk(ce_clk), .reset(ce_rst),
+    .i_tdata({s_axis_fir_tdata[95:48],s_axis_fir_tdata[47:0]}),
     .i_tlast(s_axis_fir_tlast),
     .i_tvalid(s_axis_fir_tvalid),
     .i_tready(s_axis_fir_tready),
