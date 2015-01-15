@@ -386,10 +386,13 @@ module x300_core
   //////////////////////////////////////////////////////////////////////////////////////////////
   // RFNoC
   //////////////////////////////////////////////////////////////////////////////////////////////
-    
-  // Automatically instantiated CEs source file created by RFNoC mod tool
-  `include "rfnoc_ce_auto_inst.v"
-  
+
+  // Included automatically instantiated CEs sources file created by RFNoC mod tool
+  `ifdef RFNOC_X300
+    `include "rfnoc_ce_auto_inst_x300.v"
+  `else
+    `include "rfnoc_ce_auto_inst_x310.v"
+  `endif
 
   /////////////////////////////////////////////////////////////////////////////////
   // Bus Int containing soft CPU control and crossbar for RFNoC

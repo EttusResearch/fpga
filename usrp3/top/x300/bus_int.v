@@ -2,18 +2,19 @@
 // Copyright 2013 Ettus Research LLC
 //
 
+`ifndef LOG2
 `define LOG2(N) (\
-                 N < 2 ? 0 : \
-                 N < 4 ? 1 : \
-                 N < 8 ? 2 : \
-                 N < 16 ? 3 : \
-                 N < 32 ? 4 : \
-                 N < 64 ? 5 : \
-		 N < 128 ? 6 : \
-		 N < 256 ? 7 : \
-		 N < 512 ? 8 : \
-		 N < 1024 ? 9 : \
-                 10)
+                 N < 2    ? 0 : \
+                 N < 4    ? 1 : \
+                 N < 8    ? 2 : \
+                 N < 16   ? 3 : \
+                 N < 32   ? 4 : \
+                 N < 64   ? 5 : \
+                 N < 128  ? 6 : \
+                 N < 256  ? 7 : \
+                 N < 512  ? 8 : \
+                 N < 1024 ? 9 : 10)
+`endif
 
 module bus_int
   #(
@@ -530,23 +531,45 @@ module bus_int
       .in(set_data),.out(rb_addr_xbar),.changed());
   
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-   axi_crossbar #(
-      .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
-   inst_axi_crossbar (
-      .clk(clk), .reset(reset), .clear(0),
-      .local_addr(local_addr),
-      .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
-      .i_tdata({ce_i_tdata,r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
-      .i_tlast({ce_i_tlast,r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
-      .i_tvalid({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .i_tready({ce_i_tready,r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
-      .o_tdata({ce_o_tdata,r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
-      .o_tlast({ce_o_tlast,r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
-      .o_tvalid({ce_o_tvalid,r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
-      .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
-      .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
-      .rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar));
+   generate
+   if (NUM_CE > 0) begin
+     axi_crossbar #(
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
+     inst_axi_crossbar (
+        .clk(clk), .reset(reset), .clear(0),
+        .local_addr(local_addr),
+        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
+        .i_tdata({ce_i_tdata,r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
+        .i_tlast({ce_i_tlast,r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
+        .i_tvalid({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .i_tready({ce_i_tready,r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
+        .o_tdata({ce_o_tdata,r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
+        .o_tlast({ce_o_tlast,r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
+        .o_tvalid({ce_o_tvalid,r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
+        .o_tready({ce_o_tready,r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
+        .pkt_present({ce_i_tvalid,r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
+        .rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar));
+   end else begin
+     axi_crossbar #(
+        .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
+     inst_axi_crossbar (
+        .clk(clk), .reset(reset), .clear(0),
+        .local_addr(local_addr),
+        .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
+        .i_tdata({r1i_tdata,r0i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
+        .i_tlast({r1i_tlast,r0i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
+        .i_tvalid({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .i_tready({r1i_tready,r0i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
+        .o_tdata({r1o_tdata,r0o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
+        .o_tlast({r1o_tlast,r0o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
+        .o_tvalid({r1o_tvalid,r0o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
+        .o_tready({r1o_tready,r0o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
+        .pkt_present({r1i_tvalid,r0i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
+        .rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
+        .rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar));
+   end
+   endgenerate
 
 /*
 assign debug2 = {

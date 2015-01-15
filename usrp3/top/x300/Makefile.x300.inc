@@ -93,9 +93,14 @@ ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gt_usrclk_source.v \
 ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser_gt.v \
 ten_gige_phy/gtx/ten_gig_eth_pcs_pma_gtwizard_10gbaser.v \
 
-ifdef RFNOC
-  TOPSRCS+=rfnoc_ce_auto_inst.v
-  CUSTOM_DEFS+=RFNOC=1
+# RFNoC
+ifeq ($(DEVICE), XC7K325T)
+  CUSTOM_DEFS+=RFNOC_X300=1
+  RFNOC_SRCS+=$(abspath rfnoc_ce_auto_inst_x300.v)
+endif
+ifeq ($(DEVICE), XC7K410T)
+  CUSTOM_DEFS+=RFNOC_X310=1
+  RFNOC_SRCS+=$(abspath rfnoc_ce_auto_inst_x310.v)
 endif
 
 ifeq ($(FLOORPLAN), 1)
