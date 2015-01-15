@@ -58,6 +58,7 @@ simulator "ISim (VHDL/Verilog)" \
 ##################################################
 # Sources
 ##################################################
+ifeq (,$(findstring IDLE, $(EXTRA_DEFS)))
 TOP_SRCS = \
 	e300.v \
 	e300_core.v \
@@ -96,6 +97,17 @@ SOURCES = \
 	$(CAT_CAP_GEN_SRCS) \
 	$(RFNOC_SRCS) \
 	$(LIBCOREGEN_SRCS)
+else
+TOP_SRCS = \
+	e300_idle.v \
+	e300.ucf \
+	rf_board.ucf
+
+SOURCES = \
+	$(abspath $(TOP_SRCS)) \
+	$(ZYNQ_PS_SRCS) \
+	$(CONTROL_LIB_SRCS)
+endif
 
 ##################################################
 # Process Properties
@@ -109,7 +121,7 @@ SYNTHESIZE_PROPERTIES = \
 "Use Clock Enable" Auto \
 "Use Synchronous Reset" Auto \
 "Use Synchronous Set" Auto \
-"Verilog Macros" "GIT_HASH=$(SHORT_HASH)"
+"Verilog Macros" "GIT_HASH=$(SHORT_HASH) $(EXTRA_DEFS) $(CUSTOM_DEFS)"
 
 TRANSLATE_PROPERTIES = \
 "Macro Search Path" "$(shell pwd)/coregen/"
