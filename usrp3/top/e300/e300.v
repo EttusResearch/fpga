@@ -489,6 +489,8 @@ module e300
     .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
   );
 
+  wire [2:0] tcxo_status = {is_10meg, is_pps, reflck};
+
   // E300 Core logic
 
   e300_core e300_core0
@@ -536,6 +538,7 @@ module e300
 
     .pps_select(pps_select),
     .pps(pps),
+    .tcxo_status(tcxo_status),
 
     .lock_signals(CAT_CTRL_OUT[7:6]),
     .mimo(mimo),
