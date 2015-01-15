@@ -16,7 +16,7 @@ module AD5662_AutoSPI(
   reg [15:0] ldat = 16'd32767;
   wire upd = (dat != ldat); // new data present, need to update hw
 
-  reg [23:0] shft=24'b0; 
+  reg [23:0] shft=24'b0;
   wire [23:0] nxt_shft;
 
   // clock cycle counter to throttle generated spi cycles
@@ -29,7 +29,7 @@ module AD5662_AutoSPI(
   wire full = ccnt==4'b1111;
   reg sena, hena;
   wire cena;
-  always @(posedge clk) if (cena) ccnt <= nxt_ccnt; 
+  always @(posedge clk) if (cena) ccnt <= nxt_ccnt;
   always @(posedge clk) sena <= full; // state updates and rising sclk
   always @(posedge clk) hena <= half; // for falling sclk 
 
@@ -58,7 +58,7 @@ module AD5662_AutoSPI(
 
   always @(scnt or upd)
   begin
-    case (scnt) 
+    case (scnt)
     READY:
       nxt_scnt = upd ? DCAPT : READY;
     SYNCH:

@@ -4,9 +4,9 @@
 module ppsloop(
     input reset,
     input xoclk, // 40 MHz from VCTCXO
-    input ppsgps, 
+    input ppsgps,
     input ppsext,
-    input [1:0] refsel, 
+    input [1:0] refsel,
     output reg lpps,
     output reg is10meg, ispps, reflck, // status of things
     output sclk, output mosi, output sync_n
@@ -22,14 +22,14 @@ module ppsloop(
 
   PLLE2_ADV #(.BANDWIDTH("OPTIMIZED"), .COMPENSATION("INTERNAL"),
      .DIVCLK_DIVIDE(1),
-     .CLKFBOUT_MULT(30), 
+     .CLKFBOUT_MULT(30),
      .CLKOUT0_DIVIDE(6),
      .CLKOUT1_DIVIDE(30),
      .CLKIN1_PERIOD(25.0)
    )
    clkgen (
       .PWRDWN(1'b0), .RST(1'b0),
-      .CLKIN1(xoclk), 
+      .CLKIN1(xoclk),
       .CLKOUT0(clk_200M_o),
       .CLKOUT1(clk_40M),
       .LOCKED()
@@ -51,9 +51,9 @@ module ppsloop(
     localparam WAIT=2'b10;
 
     /* Counter generating a local pps for the xo derived clock domains.
-       nxt_lcnt is manipulated by a state machine (sstate) to allow 
-       quick re-alignment of the local pps rising edge with that of 
-       the reference. 
+       nxt_lcnt is manipulated by a state machine (sstate) to allow
+       quick re-alignment of the local pps rising edge with that of
+       the reference.
      */
     reg [27:0] lcnt, nxt_lcnt;
     wire recycle = (28'd199_999_999==lcnt); // sets the period, 1 sec
@@ -66,30 +66,30 @@ module ppsloop(
 
     /* Reference signal detection:
      * Count the time interval between rising edges on the reference
-     * signal. The interval counter "rcnt" is restarted at rising edges 
+     * signal. The interval counter "rcnt" is restarted at rising edges
      * of ppsref. "ppsref" could be either a pps signal, or a 10 MHz clock.
      * Register "rlst" captures the value of rcnt at each rising edge.
      * From this count value, we know the reference frequency.
      */
-    reg [27:0] rcnt, rlst; 
-    reg signed [28:0] rdiff; 
+    reg [27:0] rcnt, rlst;
+    reg signed [28:0] rdiff;
     wire signed [28:0] srlst = { 1'b0, rlst }; // sign extended version of rlst
-    wire [27:0] nxt_rcnt; 
+    wire [27:0] nxt_rcnt;
     reg rcnt_ovfl;
     reg [3:0] ple; // pipeline from reference rising edge det.
     wire valid_ref = is10meg | ispps;
 
 
-    /* If the reference is at 10 MHz, derive a reference pps using a counter 
-     * to feed the frequency control logic. To detect a 0.5 ppm deviation 
-     * on a 10 MHz signal using counters requires the better part of a second 
+    /* If the reference is at 10 MHz, derive a reference pps using a counter
+     * to feed the frequency control logic. To detect a 0.5 ppm deviation
+     * on a 10 MHz signal using counters requires the better part of a second
      * anyway, so samples at a 1 Hz rate are appropriate. This allows much of
      * the same logic to be used for pps or 10 Mhz references.
     */
      reg [23:0] tcnt;
      reg tpps;
      wire [23:0] nxt_tcnt = (~is10meg | tcnt==24'd9999999) ? 24'b0 : tcnt+1'b1;
-     always @(posedge ppsref) begin 
+     always @(posedge ppsref) begin
        /* note this is clocked by the reference signal and is not useful when
         * the reference is a pps.
         */
@@ -97,22 +97,22 @@ module ppsloop(
        tpps <= (tcnt>24'd7499999);
      end
 
-    /* The reference needs to be synchronized into the local clock domain, 
+    /* The reference needs to be synchronized into the local clock domain,
      * and while the local 'pps' is generated synchronously within this
-     * domain, it gets passed through identical stages to maintain 
+     * domain, it gets passed through identical stages to maintain
      * the time relationship between detected rising edges.
      */
-    reg [2:0] refsmp; 
-    reg [2:0] tsmp; 
+    reg [2:0] refsmp;
+    reg [2:0] tsmp;
     reg [2:0] xosmp;
     always @(posedge clk) begin
       // apply same sync delay to all pps flavors
       refsmp <= { refsmp[1:0], ppsref};
       tsmp <= { tsmp[1:0], tpps};
-      xosmp <= { xosmp[1:0], lpps }; 
+      xosmp <= { xosmp[1:0], lpps };
     end
 
-    
+
     wire rising_r = (refsmp[2:1]==2'b01);
     wire rising_t = (tsmp[2:1]==2'b01);
     wire rising_ref = is10meg ? rising_t : rising_r;
@@ -137,8 +137,8 @@ module ppsloop(
           pcnt_ovfl <= 1'b1;
           is10meg <= 1'b0;
         end
-        else if (rising_r) begin 
-          is10meg <=  (pcnt > 6'd16) & (pcnt < 6'd24); 
+        else if (rising_r) begin
+          is10meg <=  (pcnt > 6'd16) & (pcnt < 6'd24);
           pcnt_ovfl <= 1'b0;
         end
     end
@@ -147,16 +147,16 @@ module ppsloop(
     assign nxt_rcnt = rr ? 28'b0 : rcnt+1'b1;
     always @(posedge clk) begin
       rr <= rising_ref;
-      ple[3:0] <= {ple[2:0],rising_ref & valid_ref}; 
+      ple[3:0] <= {ple[2:0],rising_ref & valid_ref};
 
       rcnt <= nxt_rcnt;
 
-      // set the overflow flag if no reference edge is detected and 
+      // set the overflow flag if no reference edge is detected and
       // hold it asserted until an edge does arrive. This allows clearing of
       // the other flags, even if there is no reference.
       if (rcnt==28'b1111111111111111111111111111)
         rcnt_ovfl <= 1'b1;
-      else if (rr) 
+      else if (rr)
         rcnt_ovfl <= 1'b0;
 
       if (rr) begin
@@ -181,13 +181,13 @@ module ppsloop(
     /* to exit coarse adjustment, the frequency error shall be small for
      * several cycles
      */
-    reg esmall; 
+    reg esmall;
     reg [2:0] es;
 
-    reg pr; 
+    reg pr;
 
 
-    /* The xo can be on-frequency while the rising edges are still 
+    /* The xo can be on-frequency while the rising edges are still
      * out-of-phase, so a phase detector is also required. The
      * counter "llcnt" accumulates how many ticks local pps leads
      * or lags the reference pps . The range of this counter
@@ -197,14 +197,14 @@ module ppsloop(
      * Both signals are required to transition back to the low state
      * to re-arm the detection state machine.
     */
-    reg llcntena; 
+    reg llcntena;
     reg lead_lagn;
-    reg signed [11:0] llcnt, nxt_llcnt; 
+    reg signed [11:0] llcnt, nxt_llcnt;
     wire signed [11:0] incr = lead_lagn ? -12'sd1 : 12'sd1; // -1 lead, +1 lag
     reg [3:0] llsmall;
     reg llovfl;
 
-    reg [2:0] refs1, refs0; 
+    reg [2:0] refs1, refs0;
     reg refchanged;
     reg refinternal;
     always @(posedge clk) begin
@@ -215,7 +215,7 @@ module ppsloop(
 
       // compute how far off the expected period we are
       if (ple[1]) begin
-        rdiff <= srlst-29'd199999999; 
+        rdiff <= srlst-29'd199999999;
       end
 
       // compute an adjustment for the dac
@@ -223,15 +223,15 @@ module ppsloop(
         // if rdiff is (+), the xo is fast
         // include a bit of gain for quick adjustment
         // an approximate gain was initially determined by 'theory' using
-        // the xo tuning sensitivity, and was find-tuned 'by hand' 
-        // by observing the loop behaviour (with rdiff instrumented and 
+        // the xo tuning sensitivity, and was find-tuned 'by hand'
+        // by observing the loop behaviour (with rdiff instrumented and
         // pps signals connected out to an oscilloscope).
-        coarse <= sdacv - (rdiff <<< 3); 
+        coarse <= sdacv - (rdiff <<< 3);
       end
 
       // determine when the period error is small
       if (ple[2] | rcnt_ovfl) begin
-        es <= { es[1:0], (rdiff<29'sd8 && rdiff>-29'sd8) }; 
+        es <= { es[1:0], (rdiff<29'sd8 && rdiff>-29'sd8) };
         esmall <= valid_ref & ~rcnt_ovfl & (es[2:0] == 3'b111);
       end
       else if (sstate==REFDET) begin
@@ -242,35 +242,34 @@ module ppsloop(
       // assign the dac value when doing coarse-adjustment
       // in the fine-adjust phaase, the PI control filtering takes over
       if (ple[3] & (sstate==CFADJ)) begin
-        dacv <= coarse[15:0]; 
+        dacv <= coarse[15:0];
       end
       else if (sstate==REFDET) begin
-        dacv <= 16'd32767; // center the DAC 
+        dacv <= 16'd32767; // center the DAC
       end
     end
 
-  
 
     always @(sstate, valid_ref, esmall, rcnt_ovfl, recycle, rhigh, lcnt,
              llsmall, llovfl, refchanged, refinternal)
     begin
       nxt_sstate=sstate;
       pr = 1'b0;
-      nxt_lcnt = recycle ? 26'd0 : lcnt + 1'b1; 
+      nxt_lcnt = recycle ? 26'd0 : lcnt + 1'b1;
       case (sstate)
       REFDET: begin // determine reference type
-        if (valid_ref) nxt_sstate = CFADJ; 
+        if (valid_ref) nxt_sstate = CFADJ;
       end
       CFADJ: begin // coarse freqency adjustment
         pr = 1'b1;
-        if (esmall) nxt_sstate = SLEDGEA; 
+        if (esmall) nxt_sstate = SLEDGEA;
       end
       SLEDGEA: begin // ensure local pps is low and wait for a ref edge
         pr = 1'b1; // preload the integrator
         if (rhigh) nxt_sstate = SLEDGEB;
       end
       SLEDGEB: begin // force local pps rising edge to match reference
-        nxt_lcnt = 26'd0; 
+        nxt_lcnt = 26'd0;
         pr = 1'b1; // preload the integrator
         if(rhigh) begin
           nxt_lcnt = 28'd149_999_998; // force rising edge in a couple cycles
@@ -290,12 +289,12 @@ module ppsloop(
       llstate <= nxt_llstate;
       if (llcntena) llcnt <= nxt_llcnt;
       if (llstate==READY) lead_lagn <= lead;
-      if (llsena) llsmall <= { (llsmall[2:0] == 3'b111), llsmall[1:0], 
+      if (llsena) llsmall <= { (llsmall[2:0] == 3'b111), llsmall[1:0],
                                           (llcnt < 12'sd3)&(llcnt > -12'sd3)};
       if (llcntena)  llovfl <= (llcnt>12'sd1800) | (llcnt< -12'sd1800);
     end
-   
-    reg ppsfltena; 
+
+    reg ppsfltena;
     always @(llstate, llcnt, trig, dtrig, untrig, incr, llrdy) begin
       // values to hold by default:
       nxt_llstate = llstate;
@@ -309,7 +308,7 @@ module ppsloop(
         nxt_llcnt=12'b0;
         if (trig | dtrig) begin
           nxt_llstate = trig ? COUNT : DONE;
-          llcntena=1'b1; 
+          llcntena=1'b1;
           // even if dtrig, set llcnt to 0 to feed the filter pipe
         end
       end
@@ -322,7 +321,7 @@ module ppsloop(
           nxt_llcnt=llcnt+incr;
         end
       end
-      DONE: begin 
+      DONE: begin
         nxt_llstate = WAIT;
         ppsfltena = 1'b1;
       end
@@ -343,15 +342,15 @@ module ppsloop(
    
     reg signed [23:0] integ;
     reg signed [23:0] prop;
-    wire signed [23:0] nxt_integ = integ + (llcnt <<< 6); 
-    wire signed [23:0] nxt_prop = (llcnt <<< 7); 
+    wire signed [23:0] nxt_integ = integ + (llcnt <<< 6);
+    wire signed [23:0] nxt_prop = (llcnt <<< 7);
     wire signed [23:0] eff = integ + prop;
     wire urng = eff[23], orng = eff[23:22]==2'b01;
     reg erng;
-   /* The values for proportional and integral gain terms were originally 
+   /* The values for proportional and integral gain terms were originally
     * estimated using a model that accounted for the xo tuning sensitivity.
-    * When implemented, the loop dynamics observed differed significantly 
-    * from model results, probably as a result of the Xilinx PLL 
+    * When implemented, the loop dynamics observed differed significantly
+    * from model results, probably as a result of the Xilinx PLL
     * (which was not modelled) being present in the loop. The gain values
     * were find-tuned 'by hand' by observing the loop behaviour (with llcnt
     * instrumented) and pps signals connected out to an oscilloscope).
@@ -360,13 +359,13 @@ module ppsloop(
     always @(posedge clk) begin
       if (pr) begin
         integ <= { 2'b00, dacv, 6'b0 }; // precharge the accumulator
-        daco <= dacv; 
+        daco <= dacv;
       end
       else begin
         if (enchain[0]) begin
           integ <= nxt_integ;
           prop <= nxt_prop;
-        end   
+        end
         if (enchain[1]) begin
           daco <= eff[21:6];
           erng <= urng | orng;
@@ -380,6 +379,6 @@ module ppsloop(
   end
     
   AD5662_AutoSPI dac(.clk(clk), .dat(daco), .sclk(sclk), .mosi(mosi), .sync_n(sync_n));
-    
+
     
 endmodule
