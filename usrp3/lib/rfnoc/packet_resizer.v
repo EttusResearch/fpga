@@ -46,7 +46,7 @@ module packet_resizer
 
    // Pass nearly everything through unchanged
    assign o_tdata = i_tdata;
-   assign o_tlast = ((count+4) == pkt_size) | EOB_out;   
+   assign o_tlast = (count == pkt_size) | EOB_out;   
    assign o_tuser = { TYPE_out, TSI_out, EOB_out, SEQ_out, LEN_out, SRC_out, DST_out, TIME_out };
 
    assign o_tvalid = i_tvalid;
@@ -54,11 +54,11 @@ module packet_resizer
 
    always @(posedge clk)
      if(reset)
-       count <= 16'd0;
+       count <= 16'd4;
      else
        if(o_tvalid & o_tready)
 	 if(o_tlast)
-	   count <= 16'd0;
+	   count <= 16'd4;
 	 else
 	   count <= count + 16'd4;
 
