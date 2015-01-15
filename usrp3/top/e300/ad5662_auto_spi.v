@@ -6,7 +6,8 @@
    serial stream if ever the input word (dat) changes. It will ignore 
    changes to (dat) while it is busy with a serial update.
  */
-module AD5662_AutoSPI(
+module ad5662_auto_spi
+(
   input clk,
   input [15:0] dat,
   output reg sclk,

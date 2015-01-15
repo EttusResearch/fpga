@@ -339,7 +339,7 @@ module ppsloop(
 
     reg [1:0] enchain=2'b00;
     always @(posedge clk) enchain <= { enchain[1:0], ppsfltena & (enchain==2'b00) };
-   
+
     reg signed [23:0] integ;
     reg signed [23:0] prop;
     wire signed [23:0] nxt_integ = integ + (llcnt <<< 6);
@@ -377,8 +377,14 @@ module ppsloop(
   always @(posedge clk) begin
     reflck <= refinternal | fadj;
   end
-    
-  AD5662_AutoSPI dac(.clk(clk), .dat(daco), .sclk(sclk), .mosi(mosi), .sync_n(sync_n));
 
-    
+  ad5662_auto_spi dac
+  (
+    .clk(clk),
+    .dat(daco),
+    .sclk(sclk),
+    .mosi(mosi),
+    .sync_n(sync_n)
+  );
+
 endmodule

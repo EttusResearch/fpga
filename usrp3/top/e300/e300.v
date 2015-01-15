@@ -471,21 +471,23 @@ module e300
 
   wire [1:0] pps_select;
 
-  /* A local pps signal is derived from the tcxo clock. If a referenc 
-   * at an appropriate rate (1 pps or 10 MHz) is present and selected 
-   * a digital control loop will be invoked to tune the vcxo and lock t 
+  /* A local pps signal is derived from the tcxo clock. If a referenc
+   * at an appropriate rate (1 pps or 10 MHz) is present and selected
+   * a digital control loop will be invoked to tune the vcxo and lock t
    * the reference.
    */
 
   wire [2:0] dbg;
-   wire is10meg, ispps, reflck; // reference status bits
-   ppsloop ppslp(.reset(1'b0),
-      .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
-      .refsel(pps_select),
-      .lpps(lpps),
-      .is10meg(is10meg), .ispps(ispps), .reflck(reflck),
-      .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
-   );
+  wire is_10meg, is_pps, reflck; // reference status bits
+  ppsloop ppslp
+  (
+    .reset(1'b0),
+    .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
+    .refsel(pps_select),
+    .lpps(lpps),
+    .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck),
+    .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
+  );
 
   // E300 Core logic
 
