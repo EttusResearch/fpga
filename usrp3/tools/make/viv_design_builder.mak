@@ -26,6 +26,7 @@ BUILD_VIVADO_DESIGN = \
 	export VIV_OUTPUT_DIR=$(BUILD_DIR); \
 	export VIV_TOP_MODULE=$(2); \
 	export VIV_PART_NAME=$(subst /,,$(3)); \
+	export VIV_MODE=$(VIVADO_MODE); \
 	cd $(BUILD_DIR); \
 	vivado -mode $(VIVADO_MODE) -source $(1) -log build.log -journal $(2).jou
 

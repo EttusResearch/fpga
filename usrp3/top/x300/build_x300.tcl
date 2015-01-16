@@ -36,4 +36,4 @@ vivado_utils::generate_post_route_reports
 # -------------------------------------------------
 vivado_utils::write_implementation_outputs
 
-close_project
+vivado_utils::close_batch_project

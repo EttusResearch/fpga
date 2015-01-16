@@ -15,13 +15,15 @@ namespace eval ::vivado_utils {
         generate_post_route_reports \
         write_implementation_outputs \
         get_top_module \
-        get_part_name
+        get_part_name \
+        get_vivado_mode
 
     # Required environment variables
     variable g_top_module   $::env(VIV_TOP_MODULE)
     variable g_part_name    $::env(VIV_PART_NAME)
     variable g_output_dir   $::env(VIV_OUTPUT_DIR)
     variable g_source_files $::env(VIV_SOURCE_FILES)
+    variable g_vivado_mode  $::env(VIV_MODE)
 
     # Optional environment variables
     variable g_verilog_defs ""
@@ -167,6 +169,20 @@ proc ::vivado_utils::write_implementation_outputs {} {
 }
 
 # ---------------------------------------------------
+# Close project
+# ---------------------------------------------------
+proc ::vivado_utils::close_batch_project {} {
+    variable g_vivado_mode
+    
+    if [string equal $g_vivado_mode "batch"] {
+        puts "BUILDER: Closing project"
+        close_project
+    } else {
+        puts "BUILDER: In GUI mode. Leaving project open."
+    }
+}
+
+# ---------------------------------------------------
 # Get state variables
 # ---------------------------------------------------
 proc ::vivado_utils::get_top_module {} {
@@ -177,4 +193,9 @@ proc ::vivado_utils::get_top_module {} {
 proc ::vivado_utils::get_part_name {} {
     variable g_part_name
     return $g_part_name
+}
+
+proc ::vivado_utils::get_vivado_mode {} {
+    variable g_vivado_mode
+    return $g_vivado_mode
 }
