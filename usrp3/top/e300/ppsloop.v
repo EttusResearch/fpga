@@ -1,3 +1,7 @@
+//
+// Copyright 2015 Ettus Research
+//
+
 `timescale 1ns / 1ps
 
 

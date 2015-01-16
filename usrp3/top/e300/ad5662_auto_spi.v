@@ -1,11 +1,12 @@
-
- /*
-   The AD5662 DAC serial interface uses 24-bit transfers to encode 16-bits
-   of actual data, two bits for power-down mode, and six pad bits. This 
-   module stores a copy of the last-programmed value, and will generate a 
-   serial stream if ever the input word (dat) changes. It will ignore 
-   changes to (dat) while it is busy with a serial update.
- */
+//
+// Copyright 2015 Ettus Research
+//
+// The AD5662 DAC serial interface uses 24-bit transfers to encode 16-bits
+// of actual data, two bits for power-down mode, and six pad bits. This
+// module stores a copy of the last-programmed value, and will generate a
+// serial stream if ever the input word (dat) changes. It will ignore
+// changes to (dat) while it is busy with a serial update.
+//
 module ad5662_auto_spi
 (
   input clk,
@@ -32,7 +33,7 @@ module ad5662_auto_spi
   wire cena;
   always @(posedge clk) if (cena) ccnt <= nxt_ccnt;
   always @(posedge clk) sena <= full; // state updates and rising sclk
-  always @(posedge clk) hena <= half; // for falling sclk 
+  always @(posedge clk) hena <= half; // for falling sclk
 
   // transfer state counter
   reg [4:0] scnt = 5'b0;
