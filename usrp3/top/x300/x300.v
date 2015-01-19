@@ -872,7 +872,7 @@ module x300
       .mdio_o(mdio_out0),              // Management Data Out
       .mdio_t(mdio_tri0),              // Management Data Tristate
       .configuration_vector(5'd0),     // Alternative to MDIO interface.
-      .configuration_valid(1'b0),      // Validation signal for Config vector
+      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
       // General IO's
       .status_vector(gmii_status0),    // Core status.
       .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
@@ -977,7 +977,7 @@ module x300
       .mdio_o(mdio_out1),              // Management Data Out
       .mdio_t(mdio_tri1),              // Management Data Tristate
       .configuration_vector(5'd0),     // Alternative to MDIO interface.
-      .configuration_valid(1'b0),      // Validation signal for Config vector
+      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
       // General IO's
       .status_vector(gmii_status1),    // Core status.
       .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
