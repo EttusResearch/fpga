@@ -61,12 +61,17 @@ endif
 ##Supported Targets
 ##-----------------
 
-all:   E310 ##(Default target)
+all: E310 E310_idle ##(Default target)
 
 E310:  ##Build USRP E310 design.
 	$(call pre_build,E310)
 	$(call ise_build,XC7Z020,)
 	$(call post_build,E310)
+
+E310_idle: ##Build USRP E310 idle design.
+	$(call pre_build,E310_idle)
+	$(call ise_build,XC7Z020,IDLE)
+	$(call post_build,E310_idle)
 
 clean: ##Clean up all build output.
 	rm -rf build-*
