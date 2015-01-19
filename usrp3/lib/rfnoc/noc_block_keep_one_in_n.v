@@ -58,15 +58,17 @@ module noc_block_keep_one_in_n #(
   // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-  wire [31:0] m_axis_data_tdata;
-  wire        m_axis_data_tlast;
-  wire        m_axis_data_tvalid;
-  wire        m_axis_data_tready;
+  wire [31:0]  m_axis_data_tdata;
+  wire         m_axis_data_tlast;
+  wire         m_axis_data_tvalid;
+  wire         m_axis_data_tready;
+  wire [127:0] m_axis_data_tuser;
 
-  wire [31:0] s_axis_data_tdata;
-  wire        s_axis_data_tlast;
-  wire        s_axis_data_tvalid;
-  wire        s_axis_data_tready;
+  wire [31:0]  s_axis_data_tdata;
+  wire         s_axis_data_tlast;
+  wire         s_axis_data_tvalid;
+  wire         s_axis_data_tready;
+  wire [127:0] s_axis_data_tuser;
 
   localparam AXI_WRAPPER_BASE    = 128;
   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
@@ -79,7 +81,8 @@ module noc_block_keep_one_in_n #(
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
 
-  axi_wrapper
+  axi_wrapper #(
+    .SIMPLE_MODE(0))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
@@ -91,13 +94,15 @@ module noc_block_keep_one_in_n #(
     .m_axis_data_tlast(m_axis_data_tlast),
     .m_axis_data_tvalid(m_axis_data_tvalid),
     .m_axis_data_tready(m_axis_data_tready),
+    .m_axis_data_tuser(m_axis_data_tuser),
     .s_axis_data_tdata(s_axis_data_tdata),
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
+    .s_axis_data_tuser(s_axis_data_tuser),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
-    .m_axis_config_tvalid(), 
+    .m_axis_config_tvalid(),
     .m_axis_config_tready());
 
   ////////////////////////////////////////////////////////////
@@ -121,6 +126,9 @@ module noc_block_keep_one_in_n #(
   sr_n (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(n), .changed());
+
+  // Output CHDR packet header data, same as input except SRC / DST SID fields.
+  assign s_axis_data_tuser = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
 
   generate
     if (VECTOR) begin
