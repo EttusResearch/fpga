@@ -7,8 +7,7 @@ source $::env(VIV_TOOLS_DIR)/scripts/viv_utils.tcl
 # -------------------------------------------------
 # STEP#1: Create project, add sources, refresh IP
 # -------------------------------------------------
-set save_to_disk $::env(VIV_SAVE_PROJ)
-vivado_utils::initialize_project $save_to_disk
+vivado_utils::initialize_project
 
 # -------------------------------------------------
 # STEP#2: Run synthesis 

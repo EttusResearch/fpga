@@ -87,7 +87,6 @@ $(AXI_SRCS) $(RADIO_SRCS) $(IP_XCI_SRCS)
 
 export VIV_SOURCE_FILES=$(SOURCES)
 export VIV_VERILOG_DEFS=$(EXTRA_DEFS)
-export VIV_SAVE_PROJ=$(SAVE_PROJECT)
 
 bin: prereqs $$(SOURCES) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))

@@ -13,8 +13,6 @@
 ## build/usrp_<product>_fpga_<image_type>.bit:    Configuration bitstream with header
 ## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga_<image_type>.lvbitx: Configuration bitstream for PCIe (NI-RIO)
-## build/usrp_<product>_fpga_<image_type>.syr:    Xilinx system report
-## build/usrp_<product>_fpga_<image_type>.twr:    Xilinx timing report
 
 # Debug Options
 # Uncomment the following lines to build radio's with no DSP's
@@ -107,8 +105,6 @@ help:     ##Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##SAVE_PROJECT=1   Save the Vivado project used for the build to disk. 
-##                 (Build must finish for project to be valid).
-##GUI=1            Launch the build in the Vivado GUI. 
+##GUI=1     Launch the build in the Vivado GUI. 
 
 .PHONY: all clean X300 X310 help
