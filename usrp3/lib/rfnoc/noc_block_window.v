@@ -124,6 +124,7 @@ module noc_block_window #(
   assign ackin_tready = 1'b1;
 
   localparam MAX_WINDOW_SIZE = 4096;
+  localparam COEFF_WIDTH     = 16;
   localparam SR_WINDOW_SIZE  = 131;   // Note: AXI config bus in AXI wrapper uses 129 & 130
   localparam RB_ADDR_WIDTH   = 3;
 
@@ -143,14 +144,15 @@ module noc_block_window #(
 
   window #(
     .SR_WINDOW_SIZE(SR_WINDOW_SIZE),
-    .MAX_LOG2_OF_WINDOW_SIZE($clog2(MAX_WINDOW_SIZE)))
+    .MAX_LOG2_OF_WINDOW_SIZE($clog2(MAX_WINDOW_SIZE)),
+    .COEFF_WIDTH(COEFF_WIDTH))
   inst_window (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .m_axis_config_tdata(m_axis_config_tdata),
-    .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid),
-    .m_axis_config_tready(m_axis_config_tready),
+    .m_axis_coeff_tdata(m_axis_config_tdata[COEFF_WIDTH-1:0]),
+    .m_axis_coeff_tlast(m_axis_config_tlast),
+    .m_axis_coeff_tvalid(m_axis_config_tvalid),
+    .m_axis_coeff_tready(m_axis_config_tready),
     .i_tdata(m_axis_data_tdata),
     .i_tlast(m_axis_data_tlast),
     .i_tvalid(m_axis_data_tvalid),
