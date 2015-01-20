@@ -227,16 +227,6 @@ NET "rx_bandsel_a"  LOC = "C9" | IOSTANDARD = LVCMOS33 ;
 NET "rx_bandsel_b"  LOC = "A13" | IOSTANDARD = LVCMOS33 ;
 NET "rx_bandsel_c"  LOC = "E16" | IOSTANDARD = LVCMOS33 ;
 
-## GPIO bus - These pins are N/C on the LX75
-#NET "fp_gpio<0>" LOC = "F8" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<1>" LOC = "E8" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<2>" LOC = "F9" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<3>" LOC = "G8" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<4>" LOC = "H10" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<5>" LOC = "G9" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<6>" LOC = "F10" | IOSTANDARD = LVCMOS33 | PULLUP ;
-#NET "fp_gpio<7>" LOC = "E10" | IOSTANDARD = LVCMOS33 | PULLUP ;
-
 ## FPGA Config Pins
 
 #NET "FPGA_CFG_INIT_B"  LOC = "T6" | IOSTANDARD = LVCMOS18 ;

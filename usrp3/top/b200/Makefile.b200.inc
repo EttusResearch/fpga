@@ -37,7 +37,7 @@ coregen/chipscope_ila_32.xco \
 coregen/chipscope_ila_128.v \
 coregen/chipscope_ila_128.xco \
 coregen/chipscope_ila_256.v \
-coregen/chipscope_ila_256.xco 
+coregen/chipscope_ila_256.xco
 
 
 
@@ -54,7 +54,7 @@ synthesis_tool "XST (VHDL/Verilog)" \
 simulator "ISE Simulator (VHDL/Verilog)" \
 "Preferred Language" "Verilog" \
 "Enable Message Filtering" FALSE \
-"Display Incremental Messages" FALSE 
+"Display Incremental Messages" FALSE
 
 ##################################################
 # Sources
@@ -68,6 +68,8 @@ timing.ucf \
 S6CLK2PIN.v \
 $(B200_COREGEN_SRCS)
 
+# GPIO only available for B210
+# The LX75 on the B200 is missing the connection from the balls to the internal fabric
 ifeq ($(NAME),B210)
 TOP_SRCS+=gpio.ucf
 endif
@@ -115,7 +117,7 @@ MAP_PROPERTIES = \
 "Register Duplication" TRUE
 
 PLACE_ROUTE_PROPERTIES = \
-"Place & Route Effort Level (Overall)" High 
+"Place & Route Effort Level (Overall)" High
 
 STATIC_TIMING_PROPERTIES = \
 "Number of Paths in Error/Verbose Report" 10 \
