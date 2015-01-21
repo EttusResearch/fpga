@@ -14,6 +14,7 @@ axi_mux.v \
 axi_demux.v \
 axi_fifo_short.v \
 axi_fifo_flop.v \
+axi_fifo_flop2.v \
 axi_fifo_bram.v \
 axi_packet_gate.v \
 axi_fifo.v \
