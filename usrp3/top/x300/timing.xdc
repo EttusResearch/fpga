@@ -103,6 +103,9 @@ set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_dela
 #*******************************************************************************
 ## IoPort2
 
+# Constrain the location of the IDELAYCTERL associated with the interface trainer IDELAYs
+set_property LOC IDELAYCTRL_X1Y0 [get_cells lvfpga_chinch_inst/IDELAYCTRLx]
+
 # RX Pad Input constraints
 set_input_delay -clock [get_clocks IoRxClock] -max 2.580                        [get_ports {irIoRx*}]
 set_input_delay -clock [get_clocks IoRxClock] -min 2.280                        [get_ports {irIoRx*}]
