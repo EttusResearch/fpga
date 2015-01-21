@@ -1,0 +1,16 @@
+99a100
+>    parameter CLKOUT5_DIVIDE   = 5,       // VCO output divisor for PLL clkout5
+136a138
+>    output clk_ref_i,          // Refclk for IDELAY
+184a187
+>   localparam CLKOUT5_PERIOD = VCO_PERIOD * CLKOUT5_DIVIDE;
+208a212
+>     $display("CLKOUT5_PERIOD   = %7d",   CLKOUT5_PERIOD  );
+280c284
+<      .CLKOUT5_DIVIDE     (),
+---
+>      .CLKOUT5_DIVIDE     (CLKOUT5_DIVIDE),
+309c313
+<        .CLKOUT5  (),
+---
+>        .CLKOUT5  (clk_ref_i),

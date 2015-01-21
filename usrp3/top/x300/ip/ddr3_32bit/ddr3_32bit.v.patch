@@ -1,0 +1,5 @@
+90,91d89
+<   // Single-ended iodelayctrl clk (reference clock)
+<   input             clk_ref_i,
+226d223
+<     .clk_ref_i                      (clk_ref_i),

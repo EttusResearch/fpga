@@ -77,6 +77,7 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
 
     puts "BUILDER: Refreshing IP"
     generate_target all [get_ips *]
+    synth_ip [get_ips *]
 
     puts "BUILDER: Setting $g_top_module as the top module"
     set_property top $g_top_module [current_fileset]

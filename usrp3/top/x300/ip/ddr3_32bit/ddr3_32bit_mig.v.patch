@@ -1,0 +1,24 @@
+244a245,246
+>    parameter CLKOUT5_DIVIDE        = 5,
+>                                      // VCO output divisor for PLL output clock (CLKOUT5)
+584,585d585
+<    // Single-ended iodelayctrl clk (reference clock)
+<    input                                        clk_ref_i,
+689a690,691
+>   wire                              clk_ref_i;
+>   wire                              clk_ref_i_buf;
+838c840
+<       assign clk_ref_in = clk_ref_i;
+---
+>       assign clk_ref_in = clk_ref_i_buf;
+917a920
+>      .CLKOUT5_DIVIDE     (CLKOUT5_DIVIDE),
+933a937
+>        .clk_ref_i        (clk_ref_i),
+954c958,961
+<       
+---
+> 
+>   BUFG idelay_refclk_bufg
+>     (.O (clk_ref_i_buf),
+>      .I (clk_ref_i));

@@ -118,7 +118,7 @@
             <Pin VCCAUX_IO="NORMAL" IOSTANDARD="SSTL15" PADName="AD12" SLEW="" name="ddr3_we_n" IN_TERM="" />
         </PinSelection>
         <System_Clock>
-            <Pin PADName="AD17(SRCC_P)" Bank="32" name="sys_clk_i" />
+            <Pin PADName="AE10(SRCC_P)" IOSTANDARD="LVCMOS15" Bank="32" name="sys_clk_i" />
         </System_Clock>
         <System_Control>
             <Pin PADName="No connect" Bank="Select Bank" name="sys_rst" />

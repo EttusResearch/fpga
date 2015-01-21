@@ -15,3 +15,7 @@ $(IP_DDR3_32BIT_SRCS) $(IP_DDR3_32BIT_OUTS) : $(IP_DIR)/ddr3_32bit/ddr3_32bit.xc
 	mkdir -p $(IP_BUILD_DIR)/ddr3_32bit
 	ln -fs mig_$(subst /,,$(PART_ID)).prj $(IP_BUILD_DIR)/ddr3_32bit/mig_a.prj
 	$(call BUILD_VIVADO_IP,ddr3_32bit,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/clocking/mig_7series_v2_3_iodelay_ctrl.v $(IP_DIR)/ddr3_32bit/mig_7series_v2_3_iodelay_ctrl.v.patch
+	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/clocking/mig_7series_v2_3_infrastructure.v $(IP_DIR)/ddr3_32bit/mig_7series_v2_3_infrastructure.v.patch
+	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit_mig.v $(IP_DIR)/ddr3_32bit/ddr3_32bit_mig.v.patch
+	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit.v $(IP_DIR)/ddr3_32bit/ddr3_32bit.v.patch

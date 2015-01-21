@@ -65,7 +65,7 @@ ETH_SRCS += $(abspath x300_10ge_port1.xdc)
 endif
 
 ifndef NO_DRAM_FIFOS
-DRAM_SRCS = $(abspath ddr3.xdc) $(IP_DRAM_XCI_SRCS)
+DRAM_SRCS = $(IP_DRAM_XCI_SRCS)
 else
 DRAM_SRCS =
 endif
