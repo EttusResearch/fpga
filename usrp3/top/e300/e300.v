@@ -477,19 +477,24 @@ module e300
    * the reference.
    */
 
-  wire [2:0] dbg;
-  wire is_10meg, is_pps, reflck; // reference status bits
+  wire is_10meg, is_pps, reflck, plllck; // reference status bits
   ppsloop ppslp
   (
     .reset(1'b0),
     .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
     .refsel(pps_select),
     .lpps(lpps),
-    .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck),
+    .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
     .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
   );
-
-  wire [2:0] tcxo_status = {is_10meg, is_pps, reflck};
+  reg [3:0] tcxo_status, st_rsync;
+  always @(posedge bus_clk) begin
+    /* status signals originate from other than the bus_clk domain so re-sync
+       before passing to e300_core
+     */
+    st_rsync <= {plllck, is_10meg, is_pps, reflck};
+    tcxo_status <= st_rsync;
+  end
 
   // E300 Core logic
 

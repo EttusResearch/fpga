@@ -6,7 +6,9 @@ NET "CAT_DATA_CLK" TNM_NET = "CAT_DATA_CLK";
 TIMESPEC "TS_CAT_DATA_CLK" = PERIOD "CAT_DATA_CLK" 16276 ps HIGH 50 %;
 
 NET "TCXO_CLK" TNM_NET = FFS "TCXO_CLK";
-TIMESPEC "TS_TCXO_CLK" = PERIOD "TCXO_CLK" 25000 ps HIGH 50%;
+TIMESPEC "TS_TCXO_CLK" = PERIOD "TCXO_CLK" 25000 ps HIGH 50% INPUT_JITTER 100 ps;
+# actual VCTCXO jitter should be >10x smaller than 100 ps, so this allows
+# extra guardband getting the clock into the fpga.
 
 NET "*rx_clk_bufr" TNM_NET = FFS "rx_clk_bufr_ffs";
 TIMESPEC "TS_rx_clk_bufr" = PERIOD "rx_clk_bufr" 16276 ps HIGH 50%;

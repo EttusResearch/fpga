@@ -49,7 +49,7 @@ module e300_core
   // pps signals -- muxing happens toplevel
   output [1:0]      pps_select,
   input             pps,
-  input  [2:0]      tcxo_status,
+  input  [3:0]      tcxo_status,
 
   // mimo
   output            mimo,
@@ -165,7 +165,7 @@ module e300_core
   always @(*)
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
-      RB32_CORE_MISC    : rb_data <= {27'd0, tcxo_status, pps_select};
+      RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
       RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'h5, 8'h0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
