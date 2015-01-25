@@ -19,21 +19,23 @@ module axi_fifo_short
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
     output i_tready,
-    output [WIDTH-1:0] o_tdata,
-    output o_tvalid,
+    output reg [WIDTH-1:0] o_tdata,
+    output reg o_tvalid,
     input o_tready,
     
     output reg [5:0] space,
     output reg [5:0] occupied
     );
 
+   wire [WIDTH-1:0] int_tdata;
+   wire int_tready;
+
    reg full, empty;
    wire write 	     = i_tvalid & i_tready;
-   wire read 	     = o_tready & o_tvalid;
+   wire read 	     = ~empty & int_tready;
 
    assign i_tready  = ~full;
-   assign o_tvalid  = ~empty;
-   
+
    reg [4:0] 	  a;
    genvar 	  i; 
    
@@ -41,7 +43,7 @@ module axi_fifo_short
       for (i=0;i<WIDTH;i=i+1)
 	begin : gen_srlc32e
 	   SRLC32E
-	     srlc32e(.Q(o_tdata[i]), .Q31(),
+	     srlc32e(.Q(int_tdata[i]), .Q31(),
 		     .A(a), //.A0(a[0]),.A1(a[1]),.A2(a[2]),.A3(a[3]),.A4(a[4]),
 		    .CE(write),.CLK(clk),.D(i_tdata[i]));
 	end
@@ -76,6 +78,22 @@ module axi_fifo_short
 	  if(a == 30)
 	    full <= 1;
        end
+
+   // Output registred stage
+   always @(posedge clk)
+   begin
+      // Valid flag
+      if (reset | clear)
+         o_tvalid <= 1'b0;
+      else if (int_tready)
+         o_tvalid <= ~empty;
+
+      // Data
+      if (int_tready)
+         o_tdata <= int_tdata;
+   end
+
+   assign int_tready = o_tready | ~o_tvalid;
 
    // NOTE will fail if you write into a full fifo or read from an empty one
 

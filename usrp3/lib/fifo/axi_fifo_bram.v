@@ -13,20 +13,22 @@ module axi_fifo_bram
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
     output i_tready,
-    output [WIDTH-1:0] o_tdata,
-    output o_tvalid,
+    output reg [WIDTH-1:0] o_tdata,
+    output reg o_tvalid,
     input o_tready,
     
     output reg [15:0] space,
     output reg [15:0] occupied);
 
    wire 	      write 	     = i_tvalid & i_tready;
-   wire 	      read 	     = o_tvalid & o_tready;
+   wire 	      read 	     = ~empty & int_tready;
    wire 	      full, empty;
    
+   wire [WIDTH-1:0] int_tdata;
+   wire int_tready;
+
    assign i_tready  = ~full;
-   assign o_tvalid  = ~empty;
-   
+
    // Read side states
    localparam 	  EMPTY = 0;
    localparam 	  PRE_READ = 1;
@@ -57,7 +59,7 @@ module axi_fifo_bram
 	  .web(1'b0),
 	  .addrb(rd_addr),
 	  .dib({WIDTH{1'b1}}),
-	  .dob(o_tdata));
+	  .dob(int_tdata));
 
    always @(posedge clk)
      if(reset)
@@ -121,6 +123,22 @@ module axi_fifo_bram
 
    // assign full = ((rd_addr - 1) == wr_addr);
    assign full = full_reg;
+
+   // Output registred stage
+   always @(posedge clk)
+   begin
+      // Valid flag
+      if (reset | clear)
+         o_tvalid <= 1'b0;
+      else if (int_tready)
+         o_tvalid <= ~empty;
+
+      // Data
+      if (int_tready)
+         o_tdata <= int_tdata;
+   end
+
+   assign int_tready = o_tready | ~o_tvalid;
 
    //////////////////////////////////////////////
    // space and occupied are for diagnostics only
