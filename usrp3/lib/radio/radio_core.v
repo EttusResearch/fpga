@@ -14,8 +14,8 @@
 module radio_core
   #(parameter BASE = 0,
     parameter RADIO_NUM = 0,
-    parameter USE_TX_CORR = 1,
-    parameter USE_RX_CORR = 1)
+    parameter USE_TX_CORR = 0,
+    parameter USE_RX_CORR = 0)
    (input clk, input reset,
     // Interface to the physical radio (ADC, DAC, controls)
     input [31:0] rx, output [31:0] tx,
@@ -158,11 +158,10 @@ module radio_core
    wire [175:0] txsample_tdata;
    wire 	txsample_tvalid, txsample_tready;
    wire [31:0] 	sample_tx;
-   wire 	tx_ack, tx_error, packet_consumed;
+   wire 	tx_ack, tx_error;
    wire [11:0] 	seqnum;
    wire [63:0] 	error_code;
    wire [31:0] 	sid;
-   wire [23:0] 	tx_fe_i, tx_fe_q;
 
    tx_control_gen3 #(.BASE(SR_TX_CTRL)) tx_control_gen3
      (.clk(clk), .reset(reset), .clear(1'b0),
@@ -175,7 +174,7 @@ module radio_core
    tx_responder tx_responder
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .ack(tx_ack), .error(tx_error), .packet_consumed(1'b0),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .vita_time(vita_time),
       .o_tdata(txresp_tdata), .o_tlast(txresp_tlast), .o_tvalid(txresp_tvalid), .o_tready(txresp_tready));
@@ -188,19 +187,18 @@ module radio_core
 	   tx_frontend #(.BASE(SR_TX_FRONT), .WIDTH_OUT(16), .IQCOMP_EN(1)) tx_frontend
 	     (.clk(clk), .rst(reset),
 	      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-	      .tx_i(tx_fe_i), .tx_q(tx_fe_q), .run(run_tx),
+	      .tx_i({sample_tx[31:16],8'h0}), .tx_q({sample_tx[15:0],8'h0}), .run(run_tx),
 	      .dac_a(tx_i_running), .dac_b(tx_q_running));
 	end
       else
 	begin
-	   assign strobe_tx = run_tx;
 	   assign tx_i_running = sample_tx[31:16];
 	   assign tx_q_running = sample_tx[15:0];
 	end
    endgenerate
 
-   assign tx[31:16] = run_tx ? tx_i_running : tx_idle[31:16];
-   assign tx[15:0]  = run_tx ? tx_q_running : tx_idle[15:0];
+   assign strobe_tx = run_tx;
+   assign tx = run_tx ? {tx_i_running,tx_q_running} : tx_idle;
    
    // /////////////////////////////////////////////////////////////////////////////////
    //  RX Chain
