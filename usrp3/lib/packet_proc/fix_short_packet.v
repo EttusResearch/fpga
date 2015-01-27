@@ -48,7 +48,7 @@ module fix_short_packet
 	 endcase // case (state)
    
    assign o_tdata = i_tdata;
-   assign o_tlast = i_tlast | lastline;
+   assign o_tlast = i_tlast | ((state == ST_CHDR) & (packet_length == 1)) | ((state == ST_PACKET) & lastline);
    assign o_tvalid = i_tvalid & (state != ST_DUMP);
 
    assign i_tready = o_tready | (state == ST_DUMP);
