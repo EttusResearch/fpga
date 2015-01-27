@@ -14,7 +14,8 @@ module fix_short_packet
    localparam ST_DUMP =   2'd2;
    
    wire 	 lastline = (lines_left == 0);
-
+   wire [12:0] 	 packet_length = i_tdata[47:35] + (|i_tdata[34:32]);
+   
    always @(posedge clk)
      if(reset | clear)
        begin
@@ -25,11 +26,11 @@ module fix_short_packet
        if(i_tvalid & i_tready)
 	 case(state)
 	   ST_CHDR :
-	     if((i_tdata[47:35] == 13'd0) && ~i_tlast)  // First line is valid, dump rest
+	     if((packet_length == 1) && ~i_tlast)  // First line is valid, dump rest
 	       state <= ST_DUMP;
 	     else
 	       begin
-		  lines_left <= i_tdata[47:35] + (|i_tdata[34:32]) - 1;
+		  lines_left <= packet_length - 2;
 		  state <= ST_PACKET;
 	       end
 	   
