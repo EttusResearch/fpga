@@ -33,7 +33,7 @@ module pfb_stage
    wire [CWIDTH-1:0] 	     n5_tdata;  // coefficients from RAM -> multiplier
    wire 		     n5_tlast, n5_tvalid, n5_tready;
 
-   split_stream #(.WIDTH(DWIDTH*2), .ACTIVE_MASK(4'b0111)) splitter
+   split_stream_fifo #(.WIDTH(DWIDTH*2), .ACTIVE_MASK(4'b0111)) splitter
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o0_tdata(n1_tdata), .o0_tlast(n1_tlast), .o0_tvalid(n1_tvalid), .o0_tready(n1_tready),

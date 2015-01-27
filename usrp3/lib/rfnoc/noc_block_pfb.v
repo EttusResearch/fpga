@@ -81,7 +81,7 @@ module noc_block_pfb
 
    axi_wrapper #(
       .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-      .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
+      .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
    inst_axi_wrapper (
       .clk(ce_clk), .reset(ce_rst),
       .clear_tx_seqnum(clear_tx_seqnum),
