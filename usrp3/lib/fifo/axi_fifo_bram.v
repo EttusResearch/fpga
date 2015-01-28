@@ -20,17 +20,17 @@ module axi_fifo_bram
     output reg [15:0] space,
     output reg [15:0] occupied);
 
+   wire [WIDTH-1:0]   int_tdata;
+   wire 	      int_tready;
+
+   wire 	      full, empty;
    wire 	      write 	     = i_tvalid & i_tready;
    wire 	      read 	     = ~empty & int_tready;
-   wire 	      full, empty;
    
-   wire [WIDTH-1:0] int_tdata;
-   wire int_tready;
-
    assign i_tready  = ~full;
 
    // Read side states
-   localparam 	  EMPTY = 0;
+   localparam 	  ST_EMPTY = 0;
    localparam 	  PRE_READ = 1;
    localparam 	  READING = 2;
 
@@ -64,20 +64,20 @@ module axi_fifo_bram
    always @(posedge clk)
      if(reset)
        begin
-	  read_state <= EMPTY;
+	  read_state <= ST_EMPTY;
 	  rd_addr <= 0;
 	  empty_reg <= 1;
        end
      else
        if(clear)
 	 begin
-	    read_state <= EMPTY;
+	    read_state <= ST_EMPTY;
 	    rd_addr <= 0;
 	    empty_reg <= 1;
 	 end
        else 
 	 case(read_state)
-	   EMPTY :
+	   ST_EMPTY :
 	     if(write)
 	       begin
 		  //rd_addr <= wr_addr;
@@ -98,7 +98,7 @@ module axi_fifo_bram
 		    if(write)
 		      read_state <= PRE_READ;
 		    else
-		      read_state <= EMPTY;
+		      read_state <= ST_EMPTY;
 		 end
 	       else
 		 rd_addr <= rd_addr + 1;
