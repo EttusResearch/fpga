@@ -3,9 +3,6 @@
 //
 
 module e300_core
-#(
-  parameter NUM_CE = 3
-)
 (
   // bus interfaces
   input             bus_clk,
@@ -178,6 +175,12 @@ module e300_core
       default           : rb_data <= 64'hdeadbeef;
     endcase
 
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  // RFNoC
+  //////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Included automatically instantiated CEs sources file created by RFNoC mod tool
+  `include "rfnoc_ce_auto_inst_e310.v"
 
   ////////////////////////////////////////////////////////////////////
   // routing logic, aka crossbar
@@ -193,58 +196,36 @@ module e300_core
   wire                 ri_tvalid [1:0];
   wire                 ri_tready [1:0];
 
-  wire [NUM_CE*64-1:0] ce_flat_o_tdata;
-  wire [63:0]          ce_o_tdata[NUM_CE-1:0];
-  wire [NUM_CE-1:0]    ce_o_tlast;
-  wire [NUM_CE-1:0]    ce_o_tvalid;
-  wire [NUM_CE-1:0]    ce_o_tready;
+  localparam XBAR_FIXED_PORTS = 3;
+  localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
 
-  wire [NUM_CE*64-1:0] ce_flat_i_tdata;
-  wire [63:0]          ce_i_tdata[NUM_CE-1:0];
-  wire [NUM_CE-1:0]    ce_i_tlast;
-  wire [NUM_CE-1:0]    ce_i_tvalid;
-  wire [NUM_CE-1:0]    ce_i_tready;
-
-  // Flattern CE tdata arrays
-  genvar k;
-  generate
-  for (k = 0; k < NUM_CE; k = k + 1) begin
-    assign ce_o_tdata[k] = ce_flat_o_tdata[k*64+63:k*64];
-    assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
-  end
-  endgenerate
-
-  localparam CROSSBAR_IN = 3 + NUM_CE;
-  localparam CROSSBAR_OUT = 3 + NUM_CE;
-
+  `ifndef LOG2
   `define LOG2(N) (\
-                 N < 2 ? 0 : \
-                 N < 4 ? 1 : \
-                 N < 8 ? 2 : \
-                 N < 16 ? 3 : \
-                 N < 32 ? 4 : \
-                 N < 64 ? 5 : \
-                 N < 128 ? 6 : \
-                 N < 256 ? 7 : \
-                 N < 512 ? 8 : \
-                 N < 1024 ? 9 : \
-                 10)
+                 N < 2    ? 0 : \
+                 N < 4    ? 1 : \
+                 N < 8    ? 2 : \
+                 N < 16   ? 3 : \
+                 N < 32   ? 4 : \
+                 N < 64   ? 5 : \
+                 N < 128  ? 6 : \
+                 N < 256  ? 7 : \
+                 N < 512  ? 8 : \
+                 N < 1024 ? 9 : 10)
+  `endif
 
   // axi crossbar ports
-  // 0 - Host
-  // 1 - Radio0
-  // 2 - Radio1
-  // 3 - CE0
-  // 4 - CE1
-  // 5 - CE2
+  // 0    - Host
+  // 1    - Radio0
+  // 2    - Radio1
+  // 3-15 - CEs
 
   axi_crossbar
   #(
-    .BASE(0), // TODO: Set to 0 as logic for other values has not been tested
+    .BASE(0),
     .FIFO_WIDTH(64),
     .DST_WIDTH(16),
-    .NUM_INPUTS(CROSSBAR_IN),
-    .NUM_OUTPUTS(CROSSBAR_OUT)
+    .NUM_INPUTS(XBAR_NUM_PORTS),
+    .NUM_OUTPUTS(XBAR_NUM_PORTS)
   ) axi_crossbar
   (
     .clk(bus_clk),
@@ -258,7 +239,7 @@ module e300_core
                                             // Also, upper bits are masked to 0 as BASE address is set to 0.
     .set_data(xbar_set_data),
     .rb_rd_stb(xbar_rb_stb),
-    .rb_addr(xbar_rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1+2:2]), // Also word aligned
+    .rb_addr(xbar_rb_addr[2*(`LOG2(XBAR_NUM_PORTS))-1+2:2]), // Also word aligned
     .rb_data(xbar_rb_data),
 
     // inputs, real men flatten busses
@@ -274,36 +255,6 @@ module e300_core
     .o_tready({ce_o_tready, ro_tready[1], ro_tready[0], s2h_tready}),
     .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
   );
-
-  noc_block_axi_fifo_loopback #(
-    .NOC_ID(64'hF1F0_0000_0000_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_axi_fifo_loopback0 (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-    .debug());
-
-  noc_block_fir_filter #(
-    .NOC_ID(64'hF112_0000_0000_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_fir_filter (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
-    .o_tdata(ce_i_tdata[1]), .o_tlast(ce_i_tlast[1]), .o_tvalid(ce_i_tvalid[1]), .o_tready(ce_i_tready[1]),
-    .debug());
-
-  noc_block_fft #(
-    .NOC_ID(64'hFF70_0000_0000_0000),
-    .STR_SINK_FIFOSIZE(11))
-  inst_noc_block_fft (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(bus_clk), .ce_rst(bus_rst),
-    .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
-    .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
-    .debug());
 
   ////////////////////////////////////////////////////////////////////
   // radio instantiation
