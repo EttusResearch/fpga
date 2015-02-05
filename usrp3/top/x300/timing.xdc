@@ -12,6 +12,8 @@ create_clock -name FPGA_125MHz_CLK     -period   8.000 -waveform {0.000 4.000}  
 create_clock -name DB0_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}   [get_ports DB0_ADC_DCLK_P]
 create_clock -name DB1_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}   [get_ports DB1_ADC_DCLK_P]
 create_clock -name IoRxClock           -period   4.000 -waveform {0.000 2.000}   [get_ports IoRxClock]
+# Create virtual clock aligned with FPGA_CLK that is twice the frequency for DAC IO Timing. 
+#create_clock -name VIRT_DAC_CLK        -period   2.500 -waveform {0.000 1.250}
 
 # Set clock properties
 set_input_jitter [get_clocks FPGA_CLK] 0.05
@@ -72,30 +74,65 @@ set_clock_groups -asynchronous -group [get_clocks radio_clk]   -group [get_clock
 #*******************************************************************************
 ## ADC Interface
 
-#set adc_in_delay_max [expr 1.25 - 1.34 + 0.55]  ;# 1.25: Data-edge relative to clk, -1.34: Clk delay in ADC; 0.55: Min setup time 
-#set adc_in_delay_min [expr 1.25 - 1.34 - 0.55]  ;# 1.25: Data-edge relative to clk, -1.34: Clk delay in ADC; 0.55: Min hold time
+# At 200 MHz, static timing cannot be closed!
+# These constraints are simply here to "trick" the tools into
+# thinking that STA is met as well as force the receiving IDDRs into the optimal routing
+# and placement locations for our dynamic algorithm.
+# TODO: Review this for every Vivado version upgrade
 
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME =~ *gen_lvds_pins[*].iddr}] 0.840
+set adc_in_before    0.100
+set adc_valid_win    2.450
 
-#set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB0_ADC_DA*}]
-#set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB0_ADC_DA*}]
-#set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB0_ADC_DA*}]
-#set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB0_ADC_DA*}]
+set adc_in_delay_min [expr $adc_valid_win - $adc_in_before + 2.500]
+set adc_in_delay_max [expr 2.500 - $adc_in_before - 2.500]
 
-#set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB0_ADC_DB*}]
-#set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB0_ADC_DB*}]
-#set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB0_ADC_DB*}]
-#set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB0_ADC_DB*}]
+set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB0_ADC_DA*}]
+set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB0_ADC_DA*}]
+set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB0_ADC_DA*}]
+set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB0_ADC_DA*}]
 
-#set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB1_ADC_DA*}]
-#set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB1_ADC_DA*}]
-#set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB1_ADC_DA*}]
-#set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB1_ADC_DA*}]
+set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB0_ADC_DB*}]
+set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB0_ADC_DB*}]
+set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB0_ADC_DB*}]
+set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB0_ADC_DB*}]
 
-#set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB1_ADC_DB*}]
-#set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB1_ADC_DB*}]
-#set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB1_ADC_DB*}]
-#set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB1_ADC_DB*}]
+set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB1_ADC_DA*}]
+set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB1_ADC_DA*}]
+set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB1_ADC_DA*}]
+set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB1_ADC_DA*}]
+
+set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB1_ADC_DB*}]
+set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB1_ADC_DB*}]
+set_input_delay -clock DB1_ADC_DCLK -max $adc_in_delay_max -clock_fall -add_delay  [get_ports {DB1_ADC_DB*}]
+set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_delay  [get_ports {DB1_ADC_DB*}]
+
+# We use a simple synchronizer to cross ADC data over from the ADC_CLK domain to the radio_clk domain
+# Use max delay constraints to ensure that the transition happens safely
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME =~ *gen_lvds_pins[*].iddr}] 0.890
+
+
+#*******************************************************************************
+## DAC Interface
+
+# The DCI clock driven to the DACs must obey setup and hold timing with respect to
+# the reference clock driven to the DACs (same as the FpgaClk, driven by the LMK).
+# Define the minimum and maximum clock propagation delays through the FPGA in order to
+# meet this system-wide timing.
+set dac_clk_offset_max  1.350
+set dac_clk_offset_min  0.225
+
+#set_output_delay -clock VIRT_DAC_CLK -min [expr -$dac_clk_offset_min]                               [get_ports {DB*_DAC_DCI_*}]
+#set_output_delay -clock VIRT_DAC_CLK -min [expr -$dac_clk_offset_min]        -clock_fall -add_delay [get_ports {DB*_DAC_DCI_*}]
+#set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max]                        [get_ports {DB*_DAC_DCI_*}]
+#set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max] -clock_fall -add_delay [get_ports {DB*_DAC_DCI_*}]
+
+set dac_data_offset_max   0.710
+set dac_data_offset_min  -0.490
+
+#set_output_delay -clock DacVirtualClock -max [expr -$dac_data_offset_max]                                [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}]
+#set_output_delay -clock DacVirtualClock -min [expr -$dac_data_offset_min - 1.250]                        [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}]
+#set_output_delay -clock DacVirtualClock -max [expr -$dac_data_offset_max]         -clock_fall -add_delay [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}] 
+#set_output_delay -clock DacVirtualClock -min [expr -$dac_data_offset_min - 1.250] -clock_fall -add_delay [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}] 
 
 
 #*******************************************************************************
