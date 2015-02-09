@@ -176,6 +176,7 @@ module axi_forwarding_cam
    //
     always @(posedge clk)
      if (reset | clear) begin
+        forward_valid <= {NUM_OUTPUTS{1'b0}};
         demux_state <= IDLE;
      end else
        case(demux_state)
@@ -183,14 +184,14 @@ module axi_forwarding_cam
 	 // Wait for Valid DST which indicates a new packet lookup in the CAM.
 	 IDLE: begin
 	    if (dst_valid_reg == 1) begin
-	       forward_valid <= 1 << read_data;
+	       forward_valid <= 1'b1 << read_data;
 	       demux_state <= FORWARD;
 	    end
 	 end
 	 // When Slave/Output thats forwarding ACK's the forward flag, clear request and wait for packet to be transfered
 	 FORWARD: begin
 	    if ((forward_ack & forward_valid) != 0) begin
-	       forward_valid <= 0;
+	       forward_valid <= {NUM_OUTPUTS{1'b0}};
 	       demux_state <= WAIT;
 	    end
 	 end
