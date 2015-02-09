@@ -138,7 +138,7 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
+    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_lookup;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
     wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
@@ -149,7 +149,7 @@ module zynq_fifo_top
     assign set_stb_s2h         = set_stb && (set_page == 3'h0);
     assign set_stb_h2s         = set_stb && (set_page == 3'h1);
     assign core_set_stb        = set_stb && (set_page == 3'h2);
-    assign dest_lookup_set_stb = set_stb && (set_page == 3'h3);
+    assign set_stb_dest_lookup = set_stb && (set_page == 3'h3);
     assign xbar_set_stb        = set_stb && (set_page == 3'h4 || set_page == 3'h5);
 
     assign rb_stb_s2h = rb_stb && (rb_page == 3'h0);
@@ -220,7 +220,7 @@ module zynq_fifo_top
     cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
         .clk(clk), .rst(rst),
-        .set_stb(dest_lookup_set_stb), .set_addr(set_addr[9:2]), .set_data(set_data),
+        .set_stb(set_stb_dest_lookup), .set_addr(set_addr[9:2]), .set_data(set_data),
         .i_tdata(s2h_tdata), .i_tlast(s2h_tlast), .i_tvalid(s2h_tvalid), .i_tready(s2h_tready),
         .o_tdata(s2h_tdata_i0), .o_tlast(s2h_tlast_i0), .o_tvalid(s2h_tvalid_i0), .o_tready(s2h_tready_i0),
         .o_tdest(which_stream_s2h)
