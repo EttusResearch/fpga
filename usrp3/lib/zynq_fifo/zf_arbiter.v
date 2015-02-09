@@ -156,7 +156,7 @@ module zf_arbiter
         assign cmd_data_i[i][31] = 1'b0; //DRE ReAlignment Request
         assign cmd_data_i[i][30] = 1'b1; //always EOF for tlast stream
         assign cmd_data_i[i][29:24] = 6'b0; //DRE Stream Alignment
-        assign cmd_data_i[i][23] = 1'b0; //reserved - 0?
+        assign cmd_data_i[i][23] = 1'b1; // Transfer type, 0 = No addr incr / FIFO mode, 1 = incr addr
         assign cmd_data_i[i][22:0] = cmd_size[22:0];
 
         axi_fifo #(.WIDTH(32), .SIZE(CMDFIFO_DEPTH)) crl_addr_fifo
