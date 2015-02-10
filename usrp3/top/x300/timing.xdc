@@ -126,13 +126,29 @@ set dac_clk_offset_min  0.225
 #set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max]                        [get_ports {DB*_DAC_DCI_*}]
 #set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max] -clock_fall -add_delay [get_ports {DB*_DAC_DCI_*}]
 
-set dac_data_offset_max   0.710
-set dac_data_offset_min  -0.490
+set dac_setup_time    -0.200
+set dac_hold_time      1.030
+set dac0_clk_dly       0.950
+set dac0_data_dly_min  0.900
+set dac0_data_dly_max  0.980
+set dac1_clk_dly       0.900
+set dac1_data_dly_min  0.840
+set dac1_data_dly_max  0.890
 
-#set_output_delay -clock DacVirtualClock -max [expr -$dac_data_offset_max]                                [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}]
-#set_output_delay -clock DacVirtualClock -min [expr -$dac_data_offset_min - 1.250]                        [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}]
-#set_output_delay -clock DacVirtualClock -max [expr -$dac_data_offset_max]         -clock_fall -add_delay [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}] 
-#set_output_delay -clock DacVirtualClock -min [expr -$dac_data_offset_min - 1.250] -clock_fall -add_delay [get_ports {DB*_DAC_D*_* DB*_DAC_FRAME_*}] 
+set dac0_out_dly_min [expr $dac0_data_dly_min - $dac0_clk_dly - $dac_hold_time]
+set dac0_out_dly_max [expr $dac0_data_dly_max - $dac0_clk_dly + $dac_setup_time]
+set dac1_out_dly_min [expr $dac1_data_dly_min - $dac1_clk_dly - $dac_hold_time]
+set dac1_out_dly_max [expr $dac1_data_dly_max - $dac1_clk_dly + $dac_setup_time]
+
+set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -min $dac0_out_dly_min                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -max $dac0_out_dly_max                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -min $dac0_out_dly_min -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -max $dac0_out_dly_max -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+
+set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -min $dac1_out_dly_min                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -max $dac1_out_dly_max                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -min $dac1_out_dly_min -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -max $dac1_out_dly_max -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
 
 
 #*******************************************************************************
