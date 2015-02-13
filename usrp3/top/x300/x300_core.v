@@ -61,9 +61,11 @@ module x300_core
    output mdc0,
    output mdio_in0,
    input mdio_out0,
+   input [15:0] eth0_phy_status,
    output mdc1,
    output mdio_in1,
    input mdio_out1,
+   input [15:0] eth1_phy_status,
 
 `ifdef ETH10G_PORT0
    // XGMII
@@ -456,6 +458,9 @@ module x300_core
       .s5_cyc(s5_cyc),
       .s5_we(s5_we),
       .s5_int(s5_int),
+      //Status signals
+      .eth0_phy_status(eth0_phy_status),
+      .eth1_phy_status(eth1_phy_status),
 
       // AXI_DRAM_FIFO BIST. Not for production.
       .bist_start(bist_start),

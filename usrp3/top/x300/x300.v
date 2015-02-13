@@ -782,8 +782,9 @@ module x300
    // Configure Ethernet PHY implemented for PORT0
    //
    //////////////////////////////////////////////////////////////////////
-   wire       mdc0, mdio_in0, mdio_out0, mdio_tri0;
-   wire [4:0] prtad0 = 5'b00100;  // MDIO address is 4
+   wire        mdc0, mdio_in0, mdio_out0, mdio_tri0;
+   wire [4:0]  prtad0 = 5'b00100;  // MDIO address is 4
+   wire [15:0] eth0_phy_status;
 
 `ifdef ETH10G_PORT0
    //////////////////////////////////////////////////////////////////////
@@ -825,14 +826,15 @@ module x300
       .mdio_tri(mdio_tri0),            // Management Data Tristate
       .prtad(prtad0),
       // General IO's
-      .core_status(xgmii_status0),     // Core status. (Ignored for now)
+      .core_status(xgmii_status0),     // Core status
       .resetdone(xge_phy_resetdone0),
       .signal_detect(~SFPP0_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
       .tx_fault(SFPP0_TxFault),
       .tx_disable(SFPP0_TxDisable)
    );
    
-   assign xgmii_clk0 = xgige_clk156;
+   assign xgmii_clk0       = xgige_clk156;
+   assign eth0_phy_status  = {8'h00, xgmii_status0};
 
 `else
 
@@ -878,6 +880,8 @@ module x300
       .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
    );
 
+   assign eth0_phy_status  = gmii_status0;
+
 `endif // `ifdef ETH10G_PORT0
 
    //////////////////////////////////////////////////////////////////////
@@ -887,6 +891,7 @@ module x300
    //////////////////////////////////////////////////////////////////////
    wire        mdc1, mdio_in1, mdio_out1, mdio_tri1;
    wire [4:0]  prtad1 = 5'b00100;  // MDIO address is 4
+   wire [15:0] eth1_phy_status;
 
 `ifdef ETH10G_PORT1
    //////////////////////////////////////////////////////////////////////
@@ -928,14 +933,15 @@ module x300
       .mdio_tri(mdio_tri1),            // Management Data Tristate
       .prtad(prtad0),
       // General IO's
-      .core_status(xgmii_status1),     // Core status. (Ignored for now)
+      .core_status(xgmii_status1),     // Core status
       .resetdone(xge_phy_resetdone1),
       .signal_detect(~SFPP1_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
       .tx_fault(SFPP1_TxFault),
       .tx_disable(SFPP1_TxDisable)
    );
 
-   assign xgmii_clk1 = xgige_clk156;
+   assign xgmii_clk1       = xgige_clk156;
+   assign eth1_phy_status  = {8'h00, xgmii_status1};
 
 `else
 
@@ -982,6 +988,8 @@ module x300
       .status_vector(gmii_status1),    // Core status.
       .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
    );
+
+   assign eth1_phy_status  = gmii_status1;
 
 `endif // `ifdef ETH10G_PORT1
 
@@ -1846,6 +1854,7 @@ module x300
       .mdc0(mdc0),
       .mdio_in0(mdio_in0),
       .mdio_out0(mdio_out0),
+      .eth0_phy_status(eth0_phy_status),
       // SFP+ 0 packet interface
 `ifdef ETH10G_PORT0
       .xgmii_clk0(xgmii_clk0),
@@ -1863,6 +1872,7 @@ module x300
       .mdc1(mdc1),
       .mdio_in1(mdio_in1),
       .mdio_out1(mdio_out1),
+      .eth1_phy_status(eth1_phy_status),
       // SFP+ 1 packet interface
 `ifdef ETH10G_PORT1
       .xgmii_clk1(xgmii_clk1),
