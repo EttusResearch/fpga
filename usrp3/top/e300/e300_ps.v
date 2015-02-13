@@ -214,16 +214,13 @@ module e300_processing_system (
   wire              axi4_fifo_S_AXI_HP0_RVALID;
   wire              axi4_fifo_S_AXI_HP0_RREADY;
 
-  BUFG BUFG_fclk0 (
-    .I(processing_system7_FCLK_CLK0),
-    .O(FCLK_CLK0));
-
-  reset_sync radio_rst_sync
-  (
-    .clk(FCLK_CLK0),
-    .reset_in(~processing_system7_FCLK_RESET0_N),
-    .reset_out(FCLK_RESET0)
-  );
+  wire FCLK_RESET0_N;
+  assign FCLK_RESET0 = ~FCLK_RESET0_N;
+  e300_ps_fclk0_mmcm inst_e300_ps_fclk0_mmcm (
+    .clk_50MHz_in(processing_system7_FCLK_CLK0),
+    .clk_50MHz_out(FCLK_CLK0),
+    .reset(~processing_system7_FCLK_RESET0_N),
+    .locked(FCLK_RESET0_N));
 
   processing_system7_0 inst_processing_system7_0 (
     .ENET0_PTP_DELAY_REQ_RX(),
@@ -383,7 +380,7 @@ module e300_processing_system (
 
   axi4_fifo_512x64 inst_axi4_fifo_512x64 (
     .aclk(FCLK_CLK0),
-    .aresetn(~FCLK_RESET0),
+    .aresetn(FCLK_RESET0_N),
     .s_axi_awid(S_AXI_HP0_AWID),
     .s_axi_awaddr(S_AXI_HP0_AWADDR),
     .s_axi_awlen(S_AXI_HP0_AWLEN),
@@ -466,7 +463,7 @@ module e300_processing_system (
   // Convert Zynq AXI4 bus to AXI3
   axi4_to_axi3_protocol_converter inst_axi4_to_axi3_protocol_converter (
     .aclk(FCLK_CLK0),
-    .aresetn(~FCLK_RESET0),
+    .aresetn(FCLK_RESET0_N),
     .s_axi_awid(axi4_fifo_S_AXI_HP0_AWID),
     .s_axi_awaddr(axi4_fifo_S_AXI_HP0_AWADDR),
     .s_axi_awlen(axi4_fifo_S_AXI_HP0_AWLEN),
@@ -546,7 +543,7 @@ module e300_processing_system (
   // Convert Zynq AXI3 bus to AXI4-lite
   axi3_to_axi4lite_protocol_converter inst_axi3_to_axi4lite_protocol_converter (
     .aclk(FCLK_CLK0),
-    .aresetn(~FCLK_RESET0),
+    .aresetn(FCLK_RESET0_N),
     .s_axi_awid(processing_system7_M_AXI_GP0_AWID),
     .s_axi_awaddr(processing_system7_M_AXI_GP0_AWADDR),
     .s_axi_awlen(processing_system7_M_AXI_GP0_AWLEN),

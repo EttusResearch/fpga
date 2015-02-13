@@ -169,7 +169,7 @@ module e300
   wire [2:0]  HP0_S_AXI_ARSIZE;
 
   wire        fclk_clk0;
-  wire        fclk_reset0_n;
+  wire        fclk_reset0;
 
   wire        bus_clk, radio_clk;
   wire        bus_rst, radio_rst;
@@ -261,7 +261,7 @@ module e300
     .GPIO_I(ps_gpio_in),
     .GPIO_O(ps_gpio_out),
     .FCLK_CLK0(fclk_clk0),
-    .FCLK_RESET0_N(fclk_reset0_n),
+    .FCLK_RESET0(fclk_reset0),
 
     //    HP0  --  High Performance Master 0
     .S_AXI_HP0_AWID(HP0_S_AXI_AWID),
@@ -320,12 +320,12 @@ module e300
   reset_sync radio_rst_sync
   (
     .clk(radio_clk),
-    .reset_in(bus_rst),
+    .reset_in(bus_rst | codec_arst),
     .reset_out(radio_rst)
   );
 
   assign bus_clk = fclk_clk0;
-  assign bus_rst = ~fclk_reset0_n;
+  assign bus_rst = fclk_reset0;
 
   //------------------------------------------------------------------
   // CODEC capture/gen
