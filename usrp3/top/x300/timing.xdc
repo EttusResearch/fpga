@@ -108,7 +108,7 @@ set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_dela
 
 # We use a simple synchronizer to cross ADC data over from the ADC_CLK domain to the radio_clk domain
 # Use max delay constraints to ensure that the transition happens safely
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME =~ *gen_lvds_pins[*].iddr}] 0.850
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME =~ *gen_lvds_pins[*].iddr}] 0.890
 
 # We also need to location constrain the first flops in the synchronizer to help the tools
 # meet timing reliably
