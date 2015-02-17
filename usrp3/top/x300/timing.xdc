@@ -380,11 +380,14 @@ set_max_delay 25.0 -from   [get_ports {GPS_LOCK_OK}]
 set_max_delay 25.0 -from   [get_ports {GPS_PPS_OUT}]
 set_max_delay 25.0 -to     [get_ports {EXT_PPS_OUT}]
 
+# Reset paths
+# All asynchronous resets must be held for at least 24ns
+# which is 5+2 radio_clk cycles @200MHz or 4+2 bus_clk cycles @166MHz
+set_max_delay -to [get_pins {int_reset_sync/reset_int*/D}] 24.000
 
 #*******************************************************************************
 ## Asynchronous paths
 
-set_false_path -from [get_pins -hierarchical -filter {NAME =~ "x300_core/bus_int/set_sw_rst/out_reg[*]*/C"}]
 set_false_path -from [get_cells -hier -filter {NAME =~ lvfpga_chinch_inst/*StartupFsmx/aResetLcl*}]
 set_false_path -to   [get_ports {LED_*}]
 
