@@ -995,9 +995,25 @@ module x300
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
-   // Debug bus for logic analyzer use.
+   // Synchronize misc asynchronous signals
    //
    ///////////////////////////////////////////////////////////////////////////////////
+   wire LMK_Holdover_sync, LMK_Lock_sync, LMK_Sync_sync;
+   wire LMK_Status0_sync, LMK_Status1_sync;
+
+   //Sync all LMK_* signals to bus_clk
+   synchronizer #(.INITIAL_VAL(1'b0)) LMK_Holdover_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Holdover), .out(LMK_Holdover_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) LMK_Lock_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Lock), .out(LMK_Lock_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) LMK_Sync_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Sync), .out(LMK_Sync_sync));
+   //The status bits (although in a bus) are really independent
+   synchronizer #(.INITIAL_VAL(1'b0)) LMK_Status0_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Status[0]), .out(LMK_Status0_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) LMK_Status1_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Status[1]), .out(LMK_Status1_sync));
+
 
 `ifndef NO_DRAM_FIFOS
 
@@ -1832,7 +1848,7 @@ module x300
       .ext_ref_clk(ref_clk_10mhz),
       .clock_ref_sel(ClockRefSelect),
       .clock_misc_opt({GPSDO_PWR_ENA, TCXO_ENA}),
-      .LMK_Status(LMK_Status[1:0]), .LMK_Holdover(LMK_Holdover), .LMK_Lock(LMK_Lock), .LMK_Sync(LMK_Sync),
+      .LMK_Status({LMK_Status1_sync, LMK_Status0_sync}), .LMK_Holdover(LMK_Holdover_sync), .LMK_Lock(LMK_Lock_sync), .LMK_Sync(LMK_Sync_sync),
       .LMK_SEN(LMK_SEN), .LMK_SCLK(LMK_SCLK), .LMK_MOSI(LMK_MOSI),
       // SFP+ 0 flags
       .SFPP0_SCL(SFPP0_SCL),

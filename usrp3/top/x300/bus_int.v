@@ -188,6 +188,7 @@ module bus_int
    reg   SFPP1_ModAbs_reg,  SFPP1_TxFault_reg,  SFPP1_RxLOS_reg;
    reg   SFPP1_ModAbs_chgd, SFPP1_TxFault_chgd, SFPP1_RxLOS_chgd;
 
+   wire [15:0]  eth0_phy_status_sync, eth1_phy_status_sync;
 
    ////////////////////////////////////////////////////////////////////
    // Soft CPU - drives network setup, soft reset, ICMP, ...
@@ -347,11 +348,11 @@ module bus_int
        RB_CLK_STATUS: rb_data = {27'b0, clock_status};
        // SFPP Interface pins.
        RB_SFPP_STATUS0: rb_data = {
-            eth0_phy_status, 10'b0,
+            eth0_phy_status_sync, 10'b0,
             SFPP0_ModAbs_chgd, SFPP0_TxFault_chgd, SFPP0_RxLOS_chgd,
             SFPP0_ModAbs_sync, SFPP0_TxFault_sync, SFPP0_RxLOS_sync};
        RB_SFPP_STATUS1: rb_data = {
-            eth1_phy_status, 10'b0,
+            eth1_phy_status_sync, 10'b0,
             SFPP1_ModAbs_chgd, SFPP1_TxFault_chgd, SFPP1_RxLOS_chgd,
             SFPP1_ModAbs_sync, SFPP1_TxFault_sync, SFPP1_RxLOS_sync};
        // Allow readback of configured ethernet interfaces.
@@ -383,23 +384,17 @@ module bus_int
       .out({bist_start,bist_control}));
 
    // Latch state changes to SFP0+ pins.
-   synchronizer #(.RESET_VAL(1'b0)) sfpp0_modabs_sync (
-      .clk(clk), .rst(reset), .in(SFPP0_ModAbs), .out(SFPP0_ModAbs_sync));
-   synchronizer #(.RESET_VAL(1'b0)) sfpp0_txfault_sync (
-      .clk(clk), .rst(reset), .in(SFPP0_TxFault), .out(SFPP0_TxFault_sync));
-   synchronizer #(.RESET_VAL(1'b0)) sfpp0_rxlos_sync (
-      .clk(clk), .rst(reset), .in(SFPP0_RxLOS), .out(SFPP0_RxLOS_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_modabs_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP0_ModAbs), .out(SFPP0_ModAbs_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_txfault_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP0_TxFault), .out(SFPP0_TxFault_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_rxlos_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP0_RxLOS), .out(SFPP0_RxLOS_sync));
 
    always @(posedge clk) begin
-      if (reset) begin
-         SFPP0_ModAbs_reg  <= 1'b0;
-         SFPP0_TxFault_reg <= 1'b0;
-         SFPP0_RxLOS_reg   <= 1'b0;
-      end else begin
-         SFPP0_ModAbs_reg  <= SFPP0_ModAbs_sync;
-         SFPP0_TxFault_reg <= SFPP0_TxFault_sync;
-         SFPP0_RxLOS_reg   <= SFPP0_RxLOS_sync;
-      end
+      SFPP0_ModAbs_reg  <= SFPP0_ModAbs_sync;
+      SFPP0_TxFault_reg <= SFPP0_TxFault_sync;
+      SFPP0_RxLOS_reg   <= SFPP0_RxLOS_sync;
    end
 
    always @(posedge clk) begin
@@ -418,23 +413,17 @@ module bus_int
    end
 
    // Latch state changes to SFP1+ pins.
-   synchronizer #(.RESET_VAL(1'b0)) sfpp1_modabs_sync (
-      .clk(clk), .rst(reset), .in(SFPP1_ModAbs), .out(SFPP1_ModAbs_sync));
-   synchronizer #(.RESET_VAL(1'b0)) sfpp1_txfault_sync (
-      .clk(clk), .rst(reset), .in(SFPP1_TxFault), .out(SFPP1_TxFault_sync));
-   synchronizer #(.RESET_VAL(1'b0)) sfpp1_rxlos_sync (
-      .clk(clk), .rst(reset), .in(SFPP1_RxLOS), .out(SFPP1_RxLOS_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp1_modabs_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP1_ModAbs), .out(SFPP1_ModAbs_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp1_txfault_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP1_TxFault), .out(SFPP1_TxFault_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) sfpp1_rxlos_sync (
+      .clk(clk), .rst(1'b0 /* no reset */), .in(SFPP1_RxLOS), .out(SFPP1_RxLOS_sync));
 
    always @(posedge clk) begin
-      if (reset) begin
-         SFPP1_ModAbs_reg  <= 1'b0;
-         SFPP1_TxFault_reg <= 1'b0;
-         SFPP1_RxLOS_reg   <= 1'b0;
-      end else begin
-         SFPP1_ModAbs_reg  <= SFPP1_ModAbs_sync;
-         SFPP1_TxFault_reg <= SFPP1_TxFault_sync;
-         SFPP1_RxLOS_reg   <= SFPP1_RxLOS_sync;
-      end
+      SFPP1_ModAbs_reg  <= SFPP1_ModAbs_sync;
+      SFPP1_TxFault_reg <= SFPP1_TxFault_sync;
+      SFPP1_RxLOS_reg   <= SFPP1_RxLOS_sync;
    end
 
    always @(posedge clk) begin
@@ -451,6 +440,18 @@ module bus_int
             SFPP1_RxLOS_chgd <= 1'b1;
       end
    end
+
+   //Synchronize ethernet PHY status bits to bus_clk
+   //All bits in the bus can be treated as asynchronous
+   genvar i;
+   generate
+   for (i=0; i<16; i=i+1) begin: eth_status_synchronizer_gen
+      synchronizer #(.INITIAL_VAL(1'b0)) eth0_status (
+         .clk(clk), .rst(1'b0 /* no reset */), .in(eth0_phy_status[i]), .out(eth0_phy_status_sync[i]));
+      synchronizer #(.INITIAL_VAL(1'b0)) eth1_status (
+         .clk(clk), .rst(1'b0 /* no reset */), .in(eth1_phy_status[i]), .out(eth1_phy_status_sync[i]));
+   end
+   endgenerate
 
 
    wire [1:0] 	  sfpp0_ctrl;
