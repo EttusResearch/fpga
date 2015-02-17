@@ -10,12 +10,9 @@ module reset_sync
    input reset_in,
    output  reset_out);
 
-   reg 	   reset_int;
+   (* ASYNC_REG = "TRUE" *) reg reset_int;
+   (* ASYNC_REG = "TRUE" *) reg reset_out_tmp;
 
-   reg 	   reset_out_tmp;
-
-   //synthesis attribute async_reg of reset_out_tmp is "true";
-   //synthesis attribute async_reg of reset_int is "true";
    always @(posedge clk or posedge reset_in)
      if(reset_in)
        {reset_out_tmp,reset_int} <= 2'b11;
