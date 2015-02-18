@@ -313,8 +313,11 @@ set_max_delay  8.0 -from   [get_ports {aIoReadyIn}]
 set_max_delay  8.0 -to     [get_ports {aIoReadyOut}]
 
 # FPGA feedback to STC3 through GPIO
-set_output_delay 1.500 -clock [get_clocks FPGA_125MHz_CLK] [get_ports {aIoPort2Restart}]
-#set_input_delay  1.500 -clock [get_clocks FPGA_125MHz_CLK] [get_ports {aStc3Gpio7}]
+set_output_delay -clock [get_clocks FPGA_125MHz_CLK] 1.500 [get_ports aIoPort2Restart]
+set_false_path -from [get_ports aStc3Gpio7]
+
+# Async reset
+set_false_path -from [get_cells -hier -filter {NAME =~ lvfpga_chinch_inst/*StartupFsmx/aResetLcl*}]
 
 # Double Sync
 set_max_delay -from [get_cells -hier -filter {NAME =~ *IoPort2Wrapperx/tIoResetSync/DoubleSyncBasex/iDlySig*}]                            \
@@ -473,47 +476,49 @@ set_max_delay -from [get_cells -hier -filter {NAME =~ *IoPort2Basex/DoubleSyncWi
 ## Miscellaneous Interfaces
 
 # Low speed dboard interfaces 
-# Board routing delay is less than 1.5ns so should be safe to
-# sample these with a client generated 50MHz clock with 3.5ns of slack
-set_max_delay 15.0 -to     [get_ports {DB*_*X_IO*}]
-set_max_delay 15.0 -from   [get_ports {DB*_*X_IO*}]
-set_max_delay 15.0 -to     [get_ports {DB*_*X*SEN*}]
-set_max_delay 15.0 -from   [get_ports {DB*_*X*MISO*}]
+# Board routing delay around 1ns so it should be safe to
+# sample these with a client generated 100MHz clock with ~1ns of slack
+set_max_delay -to     [get_ports {DB*_*X_IO*}]      8.000
+set_max_delay -from   [get_ports {DB*_*X_IO*}]      8.000
+set_max_delay -to     [get_ports {DB*_*X*SEN*}]     8.000
+set_max_delay -from   [get_ports {DB*_*X*MISO*}]    8.000
 
-set_max_delay 15.0 -to     [get_ports {DB_DAC_SCLK DB_ADC_RESET DB_DAC_RESET}]
-set_max_delay 15.0 -from   [get_ports {DB_DAC_MOSI DB_SCL DB_SDA}]
+set_max_delay -to     [get_ports {DB_DAC_SCLK DB_ADC_RESET DB_DAC_RESET}]   15.000 
+set_max_delay -from   [get_ports {DB_DAC_MOSI DB_SCL DB_SDA}]               15.000
 
 # Front-panel GPIO
 # Board routing delay is less than 1.5ns so should be safe to
 # sample these with a client generated 50MHz clock with 3.5ns of slack
-set_max_delay 15.0 -to     [get_ports {FrontPanelGpio[*]}]
-set_max_delay 15.0 -from   [get_ports {FrontPanelGpio[*]}]
+set_max_delay -to     [get_ports {FrontPanelGpio[*]}]  15.000
+set_max_delay -from   [get_ports {FrontPanelGpio[*]}]  15.000
 
 # Clock distribution chip control
 # Board routing delay is less than 1ns
-set_max_delay 10.0 -from   [get_ports {LMK_Status[1] LMK_Status[0] LMK_Holdover LMK_Lock LMK_Sync}]
-set_max_delay 10.0 -to     [get_ports {LMK_SEN LMK_MOSI LMK_SCLK}]
-set_max_delay 10.0 -to     [get_ports {ClockRefSelect*}]
-set_max_delay 10.0 -to     [get_ports {TCXO_ENA}]
+set_max_delay -from   [get_ports {LMK_Status[*] LMK_Holdover LMK_Lock LMK_Sync}] 10.000
+set_max_delay -to     [get_ports {LMK_SEN LMK_MOSI LMK_SCLK}]                    10.000
+set_max_delay -to     [get_ports {ClockRefSelect*}]                              10.000
+set_max_delay -to     [get_ports {TCXO_ENA}]                                     10.000
 
 # GPS UART
-set_max_delay  6.0 -from   [get_ports {GPS_SER_OUT}]
-set_max_delay  6.0 -to     [get_ports {GPS_SER_IN}]
+set_max_delay -from   [get_ports {GPS_SER_OUT}] 6.000
+set_max_delay -to     [get_ports {GPS_SER_IN}]  6.000
 
 # PPS and GPS Signals are assumed to be sampled by a 10MHz clock
-set_max_delay 25.0 -from   [get_ports {EXT_PPS_IN}]
-set_max_delay 25.0 -from   [get_ports {GPS_LOCK_OK}]
-set_max_delay 25.0 -from   [get_ports {GPS_PPS_OUT}]
-set_max_delay 25.0 -to     [get_ports {EXT_PPS_OUT}]
+set_max_delay -from   [get_ports {EXT_PPS_IN}]  25.000
+set_max_delay -from   [get_ports {GPS_LOCK_OK}] 25.000
+set_max_delay -from   [get_ports {GPS_PPS_OUT}] 25.000
+set_max_delay -to     [get_ports {EXT_PPS_OUT}] 25.000
 
 # Reset paths
-# All asynchronous resets must be held for at least 24ns
-# which is 5+2 radio_clk cycles @200MHz or 4+2 bus_clk cycles @166MHz
-set_max_delay -to [get_pins {int_reset_sync/reset_int*/D}] 24.000
+# All asynchronous resets must be held for at least 20ns
+# which is 2+2 radio_clk cycles @200MHz or 2+2 bus_clk cycles @166MHz
+set_max_delay -to [get_pins {int_reset_sync/reset_int*/PRE}]   12.000
+set_max_delay -to [get_pins {radio_reset_sync/reset_int*/PRE}] 10.000
 
 #*******************************************************************************
 ## Asynchronous paths
 
-set_false_path -from [get_cells -hier -filter {NAME =~ lvfpga_chinch_inst/*StartupFsmx/aResetLcl*}]
-set_false_path -to   [get_ports {LED_*}]
-
+set_false_path -to   [get_ports LED_*]
+set_false_path -to   [get_ports {SFPP*_RS0 SFPP*_RS1 SFPP*_SCL SFPP*_SDA SFPP*_TxDisable}]
+set_false_path -from [get_ports {SFPP*_ModAbs SFPP*_RxLOS SFPP*_SCL SFPP*_SDA SFPP*_TxFault}]
+set_false_path -to   [get_ports GPSDO_PWR_ENA]
