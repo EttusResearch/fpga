@@ -45,6 +45,8 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
     variable g_output_dir
     variable g_source_files
 
+    file delete -force $g_output_dir/build.rpt
+
     if {$save_to_disk == 1} {
         puts "BUILDER: Creating Vivado project ${g_top_module}_project.xpr for part $g_part_name"
         create_project -part $g_part_name ${g_top_module}_project
@@ -167,6 +169,9 @@ proc ::vivado_utils::write_implementation_outputs {} {
     write_bitstream -force -bin_file $g_output_dir/${g_top_module}.bit 
     puts "BUILDER: Writing debug probes"
     write_debug_probes -force $g_output_dir/${g_top_module}.ltx
+    puts "BUILDER: Writing export report"
+    report_utilization -omit_locs -file $g_output_dir/build.rpt
+    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
 }
 
 # ---------------------------------------------------

@@ -13,9 +13,10 @@
 ## build/usrp_<product>_fpga_<image_type>.bit:    Configuration bitstream with header
 ## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga_<image_type>.lvbitx: Configuration bitstream for PCIe (NI-RIO)
+## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
 # Debug Options
-# Uncomment the following lines to build radio's with no DSP's
+# Uncomment the following lines to build radio's with no DSP's (experimental!)
 #OPTIONS += DELETE_DSP0=1
 #OPTIONS += DELETE_DSP1=1
 # Uncomment the following line to add a debug UART on GPIO 10 & 11
@@ -40,6 +41,8 @@ post_build = @\
 	echo "Generating LVBITX..."; \
 	$(CREATE_LVBITX) --input-bin=build-$(1)_$(2)/x300.bin --output-lvbitx=build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).lvbitx --device="USRP $(1)" x3x0_base.lvbitx; \
 	cp -f x3x0_base.lvbitx build/`echo $(1) | tr A-Z a-z`.lvbitx_base; \
+	echo "Exporting build report..."; \
+	cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
 	echo "Build DONE ... $(1)_$(2)";
 
 ##
