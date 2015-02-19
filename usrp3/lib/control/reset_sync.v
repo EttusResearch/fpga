@@ -10,8 +10,8 @@ module reset_sync
    input reset_in,
    output  reset_out);
 
-   (* ASYNC_REG = "TRUE" *) reg reset_int;
-   (* ASYNC_REG = "TRUE" *) reg reset_out_tmp;
+   (* ASYNC_REG = "TRUE" *) reg reset_int = 1'b1;
+   (* ASYNC_REG = "TRUE" *) reg reset_out_tmp = 1'b1;
 
    always @(posedge clk or posedge reset_in)
      if(reset_in)
