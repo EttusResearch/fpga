@@ -13,22 +13,21 @@ set_input_jitter TCXO_CLK 0.100
 create_clock -period 100.000 -name PPS_EXT_IN [get_nets PPS_EXT_IN]
 create_clock -period 100.000 -name GPS_PPS [get_nets GPS_PPS]
 
-# codec_clk and half_clk are created via a MMCM whose input is CAT_DATA_CLK.
-# In CMOS DDR 1R1T (Non-MIMO) mode, codec_clk is used as radio_clk.
-# In CMOS DDR 2R2T (MIMO) mode, half_clk is used as radio_clk and is half the rate of CAT_DATA_CLK.
-# The source for radio_clk is selected via a BUFGMUX. Tell the timing analyzer to only check the faster clock.
-set_case_analysis 1 [get_pins -hier -filter name=~*/BUFGMUX_radio_clk/S0]
-set_case_analysis 0 [get_pins -hier -filter name=~*/BUFGMUX_radio_clk/S1]
-set_case_analysis 1 [get_pins -hier -filter name=~*/BUFGMUX_radio_clk/CE0]
-set_case_analysis 0 [get_pins -hier -filter name=~*/BUFGMUX_radio_clk/CE1]
-
 # Asynchronous clock domains
 set_clock_groups -asynchronous \
   -group [get_clocks -include_generated_clocks CAT_DATA_CLK] \
   -group [get_clocks -include_generated_clocks clk_fpga_0] \
+  -group [get_clocks -include_generated_clocks *clk_50MHz_in] \
   -group [get_clocks -include_generated_clocks TCXO_CLK] \
   -group [get_clocks -include_generated_clocks PPS_EXT_IN] \
   -group [get_clocks -include_generated_clocks GPS_PPS]
+
+# Setup ADC interface constraints.
+# AD9361 configured to delay RX data by 4.5 ns.
+set_input_delay -clock [get_clocks CAT_DATA_CLK] -max 4.500 [get_ports {CAT_P0_D* CAT_RX_FRAME}]
+set_input_delay -clock [get_clocks CAT_DATA_CLK] -min 4.500 [get_ports {CAT_P0_D* CAT_RX_FRAME}]
+set_input_delay -clock [get_clocks CAT_DATA_CLK] -clock_fall -max -add_delay 4.500 [get_ports {CAT_P0_D* CAT_RX_FRAME}]
+set_input_delay -clock [get_clocks CAT_DATA_CLK] -clock_fall -min -add_delay 4.500 [get_ports {CAT_P0_D* CAT_RX_FRAME}]
 
 ###############################################################################
 # Pin mapping
@@ -530,13 +529,3 @@ set_property PACKAGE_PIN D15 [get_ports {PL_GPIO[4]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {PL_GPIO[4]}]
 set_property PACKAGE_PIN E15 [get_ports {PL_GPIO[5]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {PL_GPIO[5]}]
-
-
-
-
-
-
-
-
-
-

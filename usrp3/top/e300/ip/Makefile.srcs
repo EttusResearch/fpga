@@ -12,6 +12,7 @@ axi_datamover_0 \
 fifo_short_2clk \
 fifo_4k_2clk \
 catcodec_mmcm \
+e300_ps_fclk0_mmcm \
 axi4_to_axi3_protocol_converter \
 axi3_to_axi4lite_protocol_converter \
 axi4_fifo_512x64
