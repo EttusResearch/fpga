@@ -222,7 +222,7 @@ module e300_processing_system (
     .reset(~processing_system7_FCLK_RESET0_N),
     .locked(FCLK_RESET0_N));
 
-  processing_system7_0 inst_processing_system7_0 (
+  processing_system7 inst_processing_system7 (
     .ENET0_PTP_DELAY_REQ_RX(),
     .ENET0_PTP_DELAY_REQ_TX(),
     .ENET0_PTP_PDELAY_REQ_RX(),
