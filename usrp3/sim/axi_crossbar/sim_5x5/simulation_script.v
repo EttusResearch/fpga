@@ -1,12 +1,12 @@
-// Simulate a 4x4 switch configuration
-localparam NUM_INPUTS = 4;
-localparam NUM_OUTPUTS = 4;
+// Simulate a 5x5 switch configuration
+localparam NUM_INPUTS = 5;
+localparam NUM_OUTPUTS = 5;
 
 //initial $dumpfile("axi_crossbar_tb.vcd");
 //initial $dumpvars(0,axi_crossbar_tb);
 
 reg [15:0] x;
-reg [31:0] seq_i0, seq_i1, seq_i2, seq_i3, seq_o0, seq_o1, seq_o2, seq_o3;
+reg [31:0] seq_i0, seq_i1, seq_i2, seq_i3, seq_o0, seq_o1, seq_o2, seq_o3, seq_i4, seq_o4;
 reg sync_flag0, sync_flag1;
 
 
@@ -43,6 +43,8 @@ initial
      write_setting_bus(258,2); // 2.2 goes to Port 2
      // ...Host Addr 3 goes to Slave 3...
      write_setting_bus(259,3); // 2.3 goes to Port 3
+     // ...Host Addr 4 goes to Slave 4...
+     write_setting_bus(260,4); // 2.4 goes to Port 4
 
      //
      @(posedge clk);
@@ -59,8 +61,8 @@ initial
 
 	   //
 	   // addr 2.0 to Slave0
-	   for (seq_i0 = 30; seq_i0 < 40; seq_i0=seq_i0 + 1)
-	     enqueue_chdr_pkt_count(0,seq_i0,32+seq_i0,1,'h45678901+seq_i0*100,0,0,`SID(0,0,2,0));
+//	   for (seq_i0 = 30; seq_i0 < 40; seq_i0=seq_i0 + 1)
+//	     enqueue_chdr_pkt_count(0,seq_i0,32+seq_i0,1,'h45678901+seq_i0*100,0,0,`SID(0,0,2,0));
 
 	end
 	begin
@@ -94,14 +96,26 @@ initial
 	begin
 	   // Master3 Sender Thread.
 	   //
-	   // addr 2.0 to Slave0
+	   // addr 2.4 to Slave4
 	   for (seq_i3 = 30; seq_i3 < 40; seq_i3=seq_i3 + 1)
-	     enqueue_chdr_pkt_count(3,seq_i3,32+seq_i3,1,'h45678901+seq_i3*100,0,0,`SID(0,0,2,0));
+	     enqueue_chdr_pkt_count(3,seq_i3,32+seq_i3,1,'h56789012+seq_i3*100,0,0,`SID(0,0,2,4));
 
 	   //
 	   // addr 2.3 to Slave3
 	   for (seq_i3 = 0; seq_i3 < 10; seq_i3=seq_i3 + 1)
 	     enqueue_chdr_pkt_count(3,seq_i3,32+seq_i3,1,'h12345678+seq_i3*100,0,0,`SID(0,0,2,3));
+	end
+	begin
+	   // Master4 Sender Thread.
+	   //
+	   // addr 2.0 to Slave0
+//	   for (seq_i4 = 30; seq_i4 < 40; seq_i4=seq_i4 + 1)
+//	     enqueue_chdr_pkt_count(4,seq_i4,32+seq_i4,1,'h45678901+seq_i4*100,0,0,`SID(0,0,2,0));
+
+	   //
+	   // addr 2.4 to Slave4
+//	   for (seq_i4 = 0; seq_i4 < 10; seq_i4=seq_i4 + 1)
+//	     enqueue_chdr_pkt_count(4,seq_i4,32+seq_i4,1,'h5678912+seq_i4*100,0,0,`SID(0,0,2,4));
 	end
 
      join
@@ -179,7 +193,20 @@ initial
 	      // addr 2.3 to Slave3
 	      for (seq_o3 = 0; seq_o3 < 10; seq_o3=seq_o3 + 1)
 		dequeue_chdr_pkt_count(3,seq_o3,32+seq_o3,1,'h12345678+seq_o3*100,0,0,`SID(0,0,2,3));
+	   end // fork branch
+	   
+	   begin
+	      // Slave4 Recevier thread.
+	      //
+	      // addr 2.4 to Slave4
+	      for (seq_o4 = 30; seq_o4 < 40; seq_o4=seq_o4 + 1)
+		dequeue_chdr_pkt_count(4,seq_o4,32+seq_o4,1,'h56789012+seq_o4*100,0,0,`SID(0,0,2,4));
+	      //
+	      // addr 2.4 to Slave4
+	      for (seq_o4 = 0; seq_o4 < 10; seq_o4=seq_o4 + 1)
+		dequeue_chdr_pkt_count(4,seq_o4,32+seq_o4,1,'h56789012+seq_o4*100,0,0,`SID(0,0,2,4));
 	   end
+
 
 	join
 

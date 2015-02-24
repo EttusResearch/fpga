@@ -12,4 +12,4 @@ vlogcomp -work work ../../../lib/fifo/axi_fifo_short.v
 fuse work.axi_crossbar_tb work.glbl -L unisims_ver -L xilinxcorelib_ver -o axi_crossbar_tb.exe
 
 # run the simulation scrip
-./axi_crossbar_tb.exe -gui #-tclbatch simcmds.tcl
+./axi_crossbar_tb.exe # -gui #-tclbatch simcmds.tcl
