@@ -26,6 +26,7 @@ PART_NAME=$(subst /,,$(PART_ID))
 sim:
 	@ \
 	export VIV_SIM_TOP=$(SIM_TOP); \
+	export VIV_SIM_RUNTIME=$(SIM_RUNTIME_NS); \
 	export VIV_PART_NAME=$(PART_NAME); \
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_DESIGN_SRCS="$(DESIGN_SRCS)"; \

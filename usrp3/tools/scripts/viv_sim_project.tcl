@@ -8,6 +8,7 @@
 set design_srcs $::env(VIV_DESIGN_SRCS)
 set sim_srcs    $::env(VIV_SIM_SRCS)
 set sim_top     $::env(VIV_SIM_TOP)
+set sim_runtime $::env(VIV_SIM_RUNTIME)
 set part_name   $::env(VIV_PART_NAME)
 set vivado_mode $::env(VIV_MODE)
 
@@ -51,6 +52,9 @@ foreach sim_src $sim_srcs {
 
 set_property target_simulator XSim [current_project]
 set_property top $sim_top [get_filesets $sim_fileset]
+set_property -name {xsim.simulate.runtime} -value "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
+set_property -name {xsim.elaborate.debug_level} -value {all} -objects [get_filesets $sim_fileset]
+set_property verilog_define "SIM_RUNTIME_NS=$sim_runtime" [get_filesets $sim_fileset]
 
 launch_simulation
 
