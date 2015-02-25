@@ -40,6 +40,7 @@
     $display(" - Tests Passed:   %0d", tc_pass_count); \
     $display("Result: %s", ((tc_run_count>=min_tc_run_count)&&(tc_run_count==tc_pass_count)?"PASSED   ":"FAILED!!!")); \
     $display("========================================================"); \
+    $finish; \
   end
 
 // Indicates the start of a test case
