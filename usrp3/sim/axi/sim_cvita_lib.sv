@@ -2,9 +2,11 @@
 // Copyright 2015 Ettus Research LLC
 //
 
-//typedef enum logic [1:0] {
-//  DATA=2'b00, FC=2'b01, CMD=2'b10, RESP=2'b11
-//} cvita_pkt_t;
+`include "sim_axis_lib.sv"
+
+typedef enum logic [1:0] {
+  DATA=2'b00, FC=2'b01, CMD=2'b10, RESP=2'b11
+} cvita_pkt_t;
   
 typedef struct packed {
   logic [31:0]  sid;
@@ -12,7 +14,7 @@ typedef struct packed {
   logic [11:0]  seqno;
   logic         eob;
   logic         has_time;
-  logic [1:0]   pkt_type;
+  cvita_pkt_t   pkt_type;
 } cvita_hdr_t;
 
 function logic[63:0] flatten_cvita_hdr(input cvita_hdr_t hdr);

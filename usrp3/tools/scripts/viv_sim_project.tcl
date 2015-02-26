@@ -18,8 +18,7 @@ set sim_fileset "sim_1"
 # Vivado Commands
 # ---------------------------------------
 puts "BUILDER: Creating Vivado simulation project part $part_name"
-create_project -part $part_name -force sim_proj/sim_proj
-#open_project sim_project/sim_project.xpr
+create_project -part $part_name -force xsim_proj/xsim_proj
 
 foreach src_file $design_srcs {
     set src_ext [file extension $src_file ]
@@ -47,6 +46,7 @@ foreach src_file $design_srcs {
 }
 
 foreach sim_src $sim_srcs {
+    puts "BUILDER: Adding Sim Src : $sim_src"
     add_files -fileset $sim_fileset -norecurse $sim_src
 }
 

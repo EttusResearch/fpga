@@ -23,7 +23,7 @@ PART_NAME=$(subst /,,$(PART_ID))
 
 .SECONDEXPANSION:
 
-sim:
+xsim:
 	@ \
 	export VIV_SIM_TOP=$(SIM_TOP); \
 	export VIV_SIM_RUNTIME=$(SIM_RUNTIME_NS); \
@@ -31,10 +31,18 @@ sim:
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_DESIGN_SRCS="$(DESIGN_SRCS)"; \
 	export VIV_SIM_SRCS="$(SIM_SRCS)"; \
-	vivado -mode $(VIVADO_MODE) -source $(BASE_DIR)/../tools/scripts/viv_sim_project.tcl -log sim.log -nojournal
+	vivado -mode $(VIVADO_MODE) -source $(BASE_DIR)/../tools/scripts/viv_sim_project.tcl -log xsim.log -nojournal
 
-clean:
-	@rm -f sim*.log
-	@rm -rf sim_proj
+xclean:
+	@rm -f xsim*.log
+	@rm -rf xsim_proj
+	@rm -f xvhdl.log
+	@rm -f xvhdl.pb
+	@rm -f xvlog.log
+	@rm -f xvlog.pb
+	@rm -f vivado_pid*.str
+
+# Use clean with :: to support allow "make clean" to work with multiple makefiles
+clean:: xclean
 
 .PHONY: sim clean
