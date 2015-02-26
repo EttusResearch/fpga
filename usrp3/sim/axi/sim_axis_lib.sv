@@ -9,11 +9,11 @@ interface axis_t #(parameter DWIDTH = 64)
   logic               tlast;
   logic               tready;
 
-  // Push a word on the AXI-Stream bus and wait for it to transfer
+  // Push a word onto the AXI-Stream bus and wait for it to transfer
   // Args:
   // - word: The data to push onto the bus
   // - eop (optional): End of packet (asserts tlast)
-  task push_word;
+  task automatic push_word;
     input logic [DWIDTH-1:0] word;
     input logic eop = 0;
     begin
@@ -25,8 +25,8 @@ interface axis_t #(parameter DWIDTH = 64)
     end
   endtask
 
-  // Push a bubble cycle on the AXI-Stream bus
-  task push_bubble;
+  // Push a bubble cycle onto the AXI-Stream bus
+  task automatic push_bubble;
     begin
       tvalid = 0;
       @(posedge clk);
@@ -38,7 +38,7 @@ interface axis_t #(parameter DWIDTH = 64)
   // Args:
   // - word: The data pulled from the bus
   // - eop: End of packet (tlast)
-  task pull_word;
+  task automatic pull_word;
     output logic [DWIDTH-1:0] word;
     output logic eop;
     begin
@@ -50,7 +50,7 @@ interface axis_t #(parameter DWIDTH = 64)
   endtask
 
   // Wait for a bubble cycle on the AXI Stream bus
-  task wait_for_bubble;
+  task automatic wait_for_bubble;
     begin
       while(tready&tvalid) @(posedge clk);
       @(posedge clk);
@@ -58,24 +58,24 @@ interface axis_t #(parameter DWIDTH = 64)
   endtask
 
   // Wait for a packet to show up on the bus
-  task wait_for_pkt_start;
+  task automatic wait_for_pkt_start;
     begin
       while(~(tready&tvalid)) @(posedge clk);
     end
   endtask
 
   // Wait for a packet to finish on the bus
-  task wait_for_pkt_end;
+  task automatic wait_for_pkt_end;
     begin
       while(~(tready&tvalid&tlast)) @(posedge clk);
       @(posedge clk);
     end
   endtask
 
-  // Push a packet with random on to the AXI Stream bus
+  // Push a packet with random data onto to the AXI Stream bus
   // Args:
   // - num_samps: Packet size.
-  task push_rand_pkt;
+  task automatic push_rand_pkt;
     input integer num_samps;
     begin
       repeat(num_samps-1) begin
@@ -92,7 +92,7 @@ interface axis_t #(parameter DWIDTH = 64)
   // - num_samps: Packet size.
   // - ramp_start: Start value for the ramp
   // - ramp_inc: Increment per clock cycle
-  task push_ramp_pkt;
+  task automatic push_ramp_pkt;
     input integer num_samps;
     input [DWIDTH-1:0] ramp_start;
     input [DWIDTH-1:0] ramp_inc;
