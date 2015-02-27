@@ -3,22 +3,20 @@
 //
 
 
-`timescale 100ps/1ps
-`define CHECK_TRUE(condition, report) \
-        if (condition) \
-            $display("[TEST%d]: %s...Passed",test_num,report); \
-        else \
-            $display("[TEST%d]: %s...FAILED!!!",test_num,report); \
-        result <= result & (condition === 1'b1); \
-        @(posedge clk); \
+`timescale 1ns/1ps
+`define NS_PER_TICK 1
+`define NUM_TEST_CASES 23
+
+`include "sim_clks_rsts.vh"
+`include "sim_exec_report.vh"
 
 module x300_pcie_int_tb();
-    reg clk    = 0;
-    reg reset  = 1;
+    `DEFINE_CLK(clk, 8.000, 50)
+    `DEFINE_RESET(reset, 0, 10)
+
+    `TEST_BENCH_INIT("x300_pcie_int_tb",`NUM_TEST_CASES,`NS_PER_TICK)
 
     reg temp_pass       = 0;
-    reg result          = 1;
-    reg [7:0] test_num  = 0;
     reg pkt_swap        = 0;
     reg [15:0] it       = 0;
     reg [15:0] tx_ch, rx_ch = 0;
@@ -51,17 +49,6 @@ module x300_pcie_int_tb();
     reg             i_tvalid, i_tready, o_tvalid, o_tready;
     reg [63:0]      i_tdata, o_tdata;
 
-    always #2 clk = ~clk;
-
-    initial begin
-        #10 reset = 0;
-        #9900;
-        `CHECK_TRUE((test_num == 23), "All tests run");
-        $display("----------------------------");
-        $display("TESTBENCH %s",result?"PASSED":"FAILED");
-        $display("----------------------------");
-    end
-   
     localparam READ     = 2'b01;
     localparam WRITE    = 2'b10;
    
@@ -188,12 +175,6 @@ module x300_pcie_int_tb();
     end
     endtask // wait_for_pkt_loopback
 
-    task TEST_CASE;
-    begin
-        test_num <= test_num + 1;    
-    end
-    endtask // usr_regport_response
-
     wire [63:0]     dma_loop_tdata;
     wire            dma_loop_tvalid, dma_loop_tlast, dma_loop_tready;
 
@@ -207,133 +188,133 @@ module x300_pcie_int_tb();
         chinch_reg_rdy <= 1'b1;
         chinch_reg_rc <= 1'b0;
 
-        TEST_CASE();
-        usr_regport_request(READ, 20'h0, 32'h0);
+        `TEST_CASE_START("Verify signature register");
+        usr_regport_request(READ, 20'h40000, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == "X300"), "Verify signature register");
+        `TEST_CASE_DONE((pcie_usr_data == "X300"))
 
-        TEST_CASE();
-        usr_regport_request(READ, 20'hC, 32'h0);
+        `TEST_CASE_START("Verify counter frequency register");
+        usr_regport_request(READ, 20'h4000C, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 166666667), "Verify counter frequency register");
+        `TEST_CASE_DONE((pcie_usr_data == 166666667));
 
-        TEST_CASE();
-        usr_regport_request(WRITE, 20'h10, 32'hDEAD);
-        usr_regport_request(WRITE, 20'h14, 32'hBEEF);
-        usr_regport_request(READ, 20'h14, 32'h0);
+        `TEST_CASE_START("Verify scratch registers");
+        usr_regport_request(WRITE, 20'h40010, 32'hDEAD);
+        usr_regport_request(WRITE, 20'h40014, 32'hBEEF);
+        usr_regport_request(READ, 20'h40014, 32'h0);
         usr_regport_response();
         temp_pass <= (pcie_usr_data == 32'hBEEF);
-        usr_regport_request(READ, 20'h10, 32'h0);
+        usr_regport_request(READ, 20'h40010, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32'hDEAD) & temp_pass, "Verify scratch registers");
+        `TEST_CASE_DONE((pcie_usr_data == 32'hDEAD) & temp_pass);
 
-        TEST_CASE();
-        usr_regport_request(WRITE, 20'h40000, 32'h12345678);
-        chinch_regport_request(WRITE, 20'h40000, 32'h12345678);
-        `CHECK_TRUE(1, "Client register port write 1");
+        `TEST_CASE_START("Client register port write 1");
+        usr_regport_request(WRITE, 20'h60000, 32'h12345678);
+        chinch_regport_request(WRITE, 20'h60000, 32'h12345678);
 
         usr_regport_request(WRITE, 20'h7FFFC, 32'h1357);
         chinch_regport_request(WRITE, 20'h7FFFC, 32'h1357);
-        `CHECK_TRUE(1, "Client register port write 2");
 
-        usr_regport_request(WRITE, 20'h60000, 32'h2468);
-        chinch_regport_request(WRITE, 20'h60000, 32'h2468);
-        `CHECK_TRUE(1, "Client register port write 3");
+        usr_regport_request(WRITE, 20'h70000, 32'h2468);
+        chinch_regport_request(WRITE, 20'h70000, 32'h2468);
+        `TEST_CASE_DONE(1);
 
-        TEST_CASE();
-        usr_regport_request(READ, 20'h40000, 32'h0);
-        chinch_regport_request(READ, 20'h40000, 32'h0);
+        `TEST_CASE_START("Client register port read 1");
+        usr_regport_request(READ, 20'h60000, 32'h0);
+        chinch_regport_request(READ, 20'h60000, 32'h0);
         chinch_regport_response(32'hACE0BA51);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32'hACE0BA51), "Client register port read 1");
+        `ASSERT_ERROR((pcie_usr_data == 32'hACE0BA51),"");
 
         usr_regport_request(READ, 20'h7FFFC, 32'h0);
         chinch_regport_request(READ, 20'h7FFFC, 32'h0);
         chinch_regport_response(32'hACE0BA52);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32'hACE0BA52), "Client register port read 2");
+        `ASSERT_ERROR((pcie_usr_data == 32'hACE0BA52),"");
 
-        usr_regport_request(READ, 20'h60000, 32'h0);
-        chinch_regport_request(READ, 20'h60000, 32'h0);
+        usr_regport_request(READ, 20'h70000, 32'h0);
+        chinch_regport_request(READ, 20'h70000, 32'h0);
         chinch_regport_response(32'hACE0BA53);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32'hACE0BA53), "Client register port read 3");
-        
-        TEST_CASE();
-        usr_regport_request(WRITE, 20'h500, 32'h0000_0000);
-        usr_regport_request(WRITE, 20'h500, 32'h0001_0001);
-        usr_regport_request(WRITE, 20'h500, 32'h0002_0002);
-        usr_regport_request(WRITE, 20'h500, 32'h0003_0003);
-        usr_regport_request(WRITE, 20'h500, 32'h00D3_0000);
-        usr_regport_request(WRITE, 20'h500, 32'h00D2_0001);
-        usr_regport_request(WRITE, 20'h500, 32'h00D1_0002);
-        usr_regport_request(WRITE, 20'h500, 32'h00D0_0003);
-        `CHECK_TRUE(1, "Configure RX DMA routing table.");
+        `TEST_CASE_DONE((pcie_usr_data == 32'hACE0BA53));
 
-        TEST_CASE();
-        usr_regport_request(READ, 20'h204, 32'h0);
+        `TEST_CASE_START("Configure RX DMA routing table");
+        usr_regport_request(WRITE, 20'h40500, 32'h0000_0000);
+        usr_regport_request(WRITE, 20'h40500, 32'h0001_0001);
+        usr_regport_request(WRITE, 20'h40500, 32'h0002_0002);
+        usr_regport_request(WRITE, 20'h40500, 32'h0003_0003);
+        usr_regport_request(WRITE, 20'h40500, 32'h00D3_0000);
+        usr_regport_request(WRITE, 20'h40500, 32'h00D2_0001);
+        usr_regport_request(WRITE, 20'h40500, 32'h00D1_0002);
+        usr_regport_request(WRITE, 20'h40500, 32'h00D0_0003);
+        `TEST_CASE_DONE(1);
+
+        `TEST_CASE_START("Frame size register read");
+        usr_regport_request(READ, 20'h40204, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32), "Frame size register read (Default) [TX0].");
-        usr_regport_request(READ, 20'h214, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 32), "Frame size register read (Default) [TX0].");
+        usr_regport_request(READ, 20'h40214, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32), "Frame size register read (Default) [TX1].");
-        usr_regport_request(READ, 20'h404, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 32), "Frame size register read (Default) [TX1].");
+        usr_regport_request(READ, 20'h40404, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32), "Frame size register read (Default) [RX0].");
-        usr_regport_request(READ, 20'h414, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 32), "Frame size register read (Default) [RX0].");
+        usr_regport_request(READ, 20'h40414, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 32), "Frame size register read (Default) [RX1].");
+        `ASSERT_ERROR((pcie_usr_data == 32), "Frame size register read (Default) [RX1].");
+        `TEST_CASE_DONE(1);
 
         o_tready <= 1'b1;
 
-        TEST_CASE();
+        `TEST_CASE_START("Loopback packet");
         reset_dma_counts();
         select_channels(0,1);
         send_packet(16'h00D2, 80, 32);
         wait_for_pkt_loopback();
-        `CHECK_TRUE((dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[1]==32), "Loopback packet [0,1] (Default frame size).");
+        `TEST_CASE_DONE((dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[1]==32));
 
         reset_dma_counts();
         select_channels(1,0);
         send_packet(16'h00D3, 80, 32);
         wait_for_pkt_loopback();
-        `CHECK_TRUE(dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[0]==32, "Loopback packet [1,0] (Default frame size).");
+        `TEST_CASE_DONE(dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[0]==32);
 
-        TEST_CASE();
-        usr_regport_request(WRITE, 20'h224, 32'd16);
-        usr_regport_request(WRITE, 20'h234, 32'd16);
-        usr_regport_request(WRITE, 20'h424, 32'd16);
-        usr_regport_request(WRITE, 20'h434, 32'd16);
-        `CHECK_TRUE(1, "Frame size register write.");
+        `TEST_CASE_START("Frame size register write.");
+        usr_regport_request(WRITE, 20'h40224, 32'd16);
+        usr_regport_request(WRITE, 20'h40234, 32'd16);
+        usr_regport_request(WRITE, 20'h40424, 32'd16);
+        usr_regport_request(WRITE, 20'h40434, 32'd16);
+        `TEST_CASE_DONE(1);
 
-        TEST_CASE();
-        usr_regport_request(READ, 20'h224, 32'h0);
+        `TEST_CASE_START("Frame size register read");
+        usr_regport_request(READ, 20'h40224, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 16), "Frame size register read [TX2].");
-        usr_regport_request(READ, 20'h234, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 16), "Frame size register read [TX2].");
+        usr_regport_request(READ, 20'h40234, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 16), "Frame size register read [TX3].");
-        usr_regport_request(READ, 20'h424, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 16), "Frame size register read [TX3].");
+        usr_regport_request(READ, 20'h40424, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 16), "Frame size register read [RX2].");
-        usr_regport_request(READ, 20'h434, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 16), "Frame size register read [RX2].");
+        usr_regport_request(READ, 20'h40434, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 16), "Frame size register read [RX3].");
+        `ASSERT_ERROR((pcie_usr_data == 16), "Frame size register read [RX3].");
+        `TEST_CASE_DONE(1);
 
-        TEST_CASE();
+        `TEST_CASE_START("Loopback packet");
         reset_dma_counts();
         select_channels(2,2);
         send_packet(16'h0002, 32, 16);
         wait_for_pkt_loopback();
-        `CHECK_TRUE(dma_sample_cnt==4 && dma_packet_cnt==1 && dma_out_sample_cnt[2]==16, "Loopback packet [2,2] (Chunk size == 16).");
+        `TEST_CASE_DONE(dma_sample_cnt==4 && dma_packet_cnt==1 && dma_out_sample_cnt[2]==16);
 
         reset_dma_counts();
         select_channels(3,3);
         send_packet(16'h0003, 32, 16);
         wait_for_pkt_loopback();
-        `CHECK_TRUE((dma_sample_cnt==4 && dma_packet_cnt==1 && dma_out_sample_cnt[3]==16), "Loopback packet [3,3] (Chunk size == 16).");
+        `TEST_CASE_DONE((dma_sample_cnt==4 && dma_packet_cnt==1 && dma_out_sample_cnt[3]==16));
 
-        TEST_CASE();
+        `TEST_CASE_START("Loopback multiple packets");
         reset_dma_counts();
         select_channels(3,2);
         send_packet(16'h0002, 128, 16);
@@ -342,126 +323,128 @@ module x300_pcie_int_tb();
         send_packet(16'h0002, 128, 16);
         wait_for_pkt_loopback();
         repeat(64) @(posedge clk);
-        `CHECK_TRUE(dma_sample_cnt==64 && dma_packet_cnt==4 && dma_out_sample_cnt[2]==64 && o_tdata==64'h0000009e00000020, 
-            "Loopback multiple packets (Chunk size == Pkt size).");
+        `TEST_CASE_DONE(dma_sample_cnt==64 && dma_packet_cnt==4 && dma_out_sample_cnt[2]==64 && o_tdata==64'h0000009e00000020);
 
-        TEST_CASE();
+        `TEST_CASE_START("Loopback multiple packets (RX Swapped)");
         reset_dma_counts();
         select_channels(3,2);
 
-        usr_regport_request(WRITE, 20'h230, 32'h10);
-        usr_regport_request(WRITE, 20'h420, 32'h00);
+        usr_regport_request(WRITE, 20'h40230, 32'h10);
+        usr_regport_request(WRITE, 20'h40420, 32'h00);
         repeat(16) @(posedge clk);
 
         send_packet(16'h0002, 128, 16);
         send_packet(16'h0002, 128, 16);
         wait_for_pkt_loopback();
         repeat(64) @(posedge clk);
-        `CHECK_TRUE(dma_sample_cnt==32 && dma_packet_cnt==2 && dma_out_sample_cnt[2]==32 && o_tdata==64'h000000200000009e, 
-            "Loopback multiple packets (RX Swapped).");
+        `TEST_CASE_DONE(dma_sample_cnt==32 && dma_packet_cnt==2 && dma_out_sample_cnt[2]==32 && o_tdata==64'h000000200000009e);
 
         /* @TODO: Need to implement data swapping in TB
-        TEST_CASE();
+        `TEST_CASE_START();
         reset_dma_counts();
         select_channels(3,2);
 
-        usr_regport_request(WRITE, 20'h230, 32'h00);
-        usr_regport_request(WRITE, 20'h420, 32'h10);
+        usr_regport_request(WRITE, 20'h40230, 32'h00);
+        usr_regport_request(WRITE, 20'h40420, 32'h10);
         repeat(16) @(posedge clk);
 
         send_packet(16'h0002, 128, 16);
         send_packet(16'h0002, 128, 16);
         wait_for_pkt_loopback();
         repeat(64) @(posedge clk);
-        `CHECK_TRUE(dma_sample_cnt==32 && dma_packet_cnt==2 && dma_out_sample_cnt[2]==32 && o_tdata[7:0]==32, 
+        `TEST_CASE_DONE(dma_sample_cnt==32 && dma_packet_cnt==2 && dma_out_sample_cnt[2]==32 && o_tdata[7:0]==32, 
             "Loopback multiple packets (TX Swapped).");
         */
 
-        TEST_CASE();
+        `TEST_CASE_START("Good DMA status.");
         reset_dma_counts();
         select_channels(3,2);
-        usr_regport_request(READ, 20'h230, 32'h0);
+        usr_regport_request(READ, 20'h40230, 32'h0);
         usr_regport_response();
         temp_pass <= (pcie_usr_data == 32'h0);
-        usr_regport_request(READ, 20'h420, 32'h0);
+        usr_regport_request(READ, 20'h40420, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE(temp_pass && (pcie_usr_data == 32'h0), "Good DMA status.");
+        `TEST_CASE_DONE(temp_pass && (pcie_usr_data == 32'h0));
 
-        TEST_CASE();
+        `TEST_CASE_START("Bad DMA status.");
         send_packet(16'h0002, 160, 20);
         repeat(64) @(posedge clk);
-        usr_regport_request(READ, 20'h230, 32'h0);
+        usr_regport_request(READ, 20'h40230, 32'h0);
         usr_regport_response();
         temp_pass <= (pcie_usr_data == 32'h1);
-        usr_regport_request(READ, 20'h420, 32'h0);
+        usr_regport_request(READ, 20'h40420, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE(temp_pass || (pcie_usr_data == 32'h1), "Bad DMA status.");
+        `TEST_CASE_DONE(temp_pass || (pcie_usr_data == 32'h1));
 
-        TEST_CASE();
-        usr_regport_request(WRITE, 20'h230, 32'h1);
-        usr_regport_request(READ, 20'h230, 32'h0);
+        `TEST_CASE_START("DMA Status reset.");
+        usr_regport_request(WRITE, 20'h40230, 32'h1);
+        usr_regport_request(READ, 20'h40230, 32'h0);
         usr_regport_response();
         temp_pass <= (pcie_usr_data == 32'h0);
-        usr_regport_request(WRITE, 20'h420, 32'h1);
-        usr_regport_request(READ, 20'h420, 32'h0);
+        usr_regport_request(WRITE, 20'h40420, 32'h1);
+        usr_regport_request(READ, 20'h40420, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE(temp_pass && (pcie_usr_data == 32'h0), "DMA Status reset.");
+        `TEST_CASE_DONE(temp_pass && (pcie_usr_data == 32'h0));
 
-        TEST_CASE();
+        `TEST_CASE_START("Packet count register reset");
         select_channels(2,1);
         reset_dma_counts();
-        usr_regport_request(WRITE, 20'h22C, 32'h0);
-        usr_regport_request(READ, 20'h22C, 32'h0);
+        usr_regport_request(WRITE, 20'h4022C, 32'h0);
+        usr_regport_request(READ, 20'h4022C, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 0), "TX Packet count register reset.");
-        usr_regport_request(WRITE, 20'h41C, 32'h0);
-        usr_regport_request(READ, 20'h41C, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 0), "TX Packet count register reset.");
+        usr_regport_request(WRITE, 20'h4041C, 32'h0);
+        usr_regport_request(READ, 20'h4041C, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 0), "RX Packet count register reset.");
+        `ASSERT_ERROR((pcie_usr_data == 0), "RX Packet count register reset.");
+        `TEST_CASE_DONE(1);
 
-        TEST_CASE();
+        `TEST_CASE_START("TX Packet count register read");
         send_packet(16'h0001, 80, 16);
         send_packet(16'h0001, 24, 16);
         send_packet(16'h0001, 48, 16);
         repeat(64) @(posedge clk);
-        usr_regport_request(READ, 20'h22C, 32'h0);
+        usr_regport_request(READ, 20'h4022C, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 3), "TX Packet count register read.");
-        usr_regport_request(READ, 20'h41C, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 3), "TX Packet count register read.");
+        usr_regport_request(READ, 20'h4041C, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 3), "RX Packet count register read.");
+        `ASSERT_ERROR((pcie_usr_data == 3), "RX Packet count register read.");
+        `TEST_CASE_DONE(1);
 
-        TEST_CASE();
+        `TEST_CASE_START("TX Sample count register reset");
         select_channels(1,2);
         reset_dma_counts();
-        usr_regport_request(WRITE, 20'h218, 32'h0);
-        usr_regport_request(READ, 20'h218, 32'h0);
+        usr_regport_request(WRITE, 20'h40218, 32'h0);
+        usr_regport_request(READ, 20'h40218, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 0), "TX Sample count register reset.");
-        usr_regport_request(WRITE, 20'h428, 32'h0);
-        usr_regport_request(READ, 20'h428, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 0), "TX Sample count register reset.");
+        usr_regport_request(WRITE, 20'h40428, 32'h0);
+        usr_regport_request(READ, 20'h40428, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 0), "RX Sample count register reset.");
+        `ASSERT_ERROR((pcie_usr_data == 0), "RX Sample count register reset.");
+        `TEST_CASE_DONE(1'b1);
 
-        TEST_CASE();
+        `TEST_CASE_START("TX Sample count register read");
         send_packet(16'h0002, 28, 16);
         wait_for_pkt_loopback();
-        usr_regport_request(READ, 20'h218, 32'h0);
+        usr_regport_request(READ, 20'h40218, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 4), "TX Sample count register read.");
-        usr_regport_request(READ, 20'h428, 32'h0);
+        `ASSERT_ERROR((pcie_usr_data == 4), "TX Sample count register read.");
+        usr_regport_request(READ, 20'h40428, 32'h0);
         usr_regport_response();
-        `CHECK_TRUE((pcie_usr_data == 4), "RX Sample count register read.");
+        `ASSERT_ERROR((pcie_usr_data == 4), "RX Sample count register read.");
+        `TEST_CASE_DONE(1'b1);
         
-        TEST_CASE();
+        `TEST_CASE_START("Setup for NxN DMA test");
         for (it = 0; it < 16'd6; it = it + 16'd1) begin
-            usr_regport_request(WRITE, 20'h204 + (it * 16), 32'h4);
-            usr_regport_request(WRITE, 20'h404 + (it * 16), 32'h4);
-            usr_regport_request(WRITE, 20'h500, {it, it});
+            usr_regport_request(WRITE, 20'h40204 + (it * 16), 32'h4);
+            usr_regport_request(WRITE, 20'h40404 + (it * 16), 32'h4);
+            usr_regport_request(WRITE, 20'h40500, {it, it});
         end
-        `CHECK_TRUE(1'b1, "Setup for NxN DMA test.");
+        `TEST_CASE_DONE(1'b1);
 
-        TEST_CASE();
+        `TEST_CASE_START("Setup for NxN DMA test");
         for (tx_ch = 0; tx_ch < 6; tx_ch = tx_ch + 16'd2) begin
             for (rx_ch = 1; rx_ch < 6; rx_ch = rx_ch + 16'd1) begin
                 select_channels(tx_ch,rx_ch);
@@ -470,16 +453,14 @@ module x300_pcie_int_tb();
                 send_packet(rx_ch, 16, 4);
                 wait_for_pkt_loopback();
                 if (dma_sample_cnt==2 && dma_packet_cnt==1 && dma_out_sample_cnt[rx_ch]==4) begin
-                    $display("[TEST%d]: NxN DMA Test [TX=%d, RX=%d]...Passed",test_num,tx_ch[3:0],rx_ch[3:0]);
+                    $display("[TEST%d]: NxN DMA Test [TX=%d, RX=%d]...Passed",tc_run_count,tx_ch[3:0],rx_ch[3:0]);
                 end else begin
-                    $display("[TEST%d]: NxN DMA Test [TX=%d, RX=%d]...FAILED!!!",test_num,tx_ch[3:0],rx_ch[3:0]);
-                    result <= 1'b0;
+                    $display("[TEST%d]: NxN DMA Test [TX=%d, RX=%d]...FAILED!!!",tc_run_count,tx_ch[3:0],rx_ch[3:0]);
                 end
                 @(posedge clk);
             end
         end
-
-        TEST_CASE();
+        `TEST_CASE_DONE(1'b1);
     end // initial begin
     
 
