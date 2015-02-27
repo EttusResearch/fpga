@@ -250,14 +250,14 @@ function real atan;
     x1 = x;
     if (x1 < 0.0)
       begin
-	x1 = -x1;
-	sign = -1.0;
+        x1 = -x1;
+        sign = -1.0;
       end
     if (x1 > 1.0)
       begin
-	x1 = 1.0/x1;
-	bias = sign*3.14159265/2.0;
-	sign = -1.0*sign;
+        x1 = 1.0/x1;
+        bias = sign*3.14159265/2.0;
+        sign = -1.0*sign;
       end
     x2 = x1*x1;
     d3 = x2 + 1.44863154;

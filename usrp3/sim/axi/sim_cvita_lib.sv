@@ -101,8 +101,6 @@ interface cvita_stream_t (input clk);
         axis.push_word({$random,$random}, 0);
       end
       axis.push_word({$random,$random}, 1);
-      axis.tvalid  = 0;
-      axis.tlast   = 0;
     end
   endtask
 
@@ -132,8 +130,6 @@ interface cvita_stream_t (input clk);
         counter = counter + 1;
       end
       axis.push_word(ramp_start+(counter*ramp_inc), 1);
-      axis.tvalid  = 0;
-      axis.tlast   = 0;
     end
   endtask
 

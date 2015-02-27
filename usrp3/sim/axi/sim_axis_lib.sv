@@ -22,6 +22,8 @@ interface axis_t #(parameter DWIDTH = 64)
       tdata  = word;
       @(posedge clk);                 //Put sample on data bus
       while(~tready) @(posedge clk);  //Wait until reciever ready
+      tvalid = 0;
+      tlast  = 0;
     end
   endtask
 
@@ -82,8 +84,6 @@ interface axis_t #(parameter DWIDTH = 64)
         push_word({(((DWIDTH-1)/32)+1){$random}}, 0);
       end
       push_word({(((DWIDTH-1)/32)+1){$random}}, 1);
-      tvalid  = 0;
-      tlast   = 0;
     end
   endtask
 
@@ -103,8 +103,6 @@ interface axis_t #(parameter DWIDTH = 64)
         counter = counter + 1;
       end
       push_word(ramp_start+(counter*ramp_inc), 1);
-      tvalid  = 0;
-      tlast   = 0;
     end
   endtask
 
