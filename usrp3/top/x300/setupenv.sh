@@ -25,7 +25,7 @@ EOHELP
 VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
 MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 VIVADO_VER=2014.4
-
+MODELSIM_REQUESTED=0
 # Go through cmd line options
 for i in "$@"
 do
@@ -39,6 +39,7 @@ case $i in
     ;;
     --modelsim-path=*)
     MODELSIM_BASE_PATH="${i#*=}"
+    MODELSIM_REQUESTED=1
     ;;
     *)
         echo Unrecognized option: $i
@@ -50,19 +51,12 @@ case $i in
 esac
 done
 
-
-echo "---------------------------------------------"
-echo "       Copyright 2015 Ettus Research"
-echo "---------------------------------------------"
-echo -n "Setting up X3x0 FPGA build environment..."
+echo "Setting up X3x0 FPGA build environment..."
 
 # Vivado environment setup
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
 
-export PATH=$(echo ${PATH} | tr ':' '\n' | awk '$0 !~ "/Vivado/"' | paste -sd:)
-export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$MODELSIM_PATH
 $VIVADO_PATH/settings64.sh
-
 $VIVADO_PATH/.settings64-Vivado.sh
 ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings64-Vivado_High_Level_Synthesis.sh
 /opt/Xilinx/DocNav/.settings64-DocNav.sh
@@ -81,6 +75,29 @@ function build_simlibs {
     popd
 }
 
+# Update PATH
+export PATH=$(echo ${PATH} | tr ':' '\n' | awk '$0 !~ "/Vivado/"' | paste -sd:)
+export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$MODELSIM_PATH
 
-echo "DONE"
+# Sanity checks
+if [ -d "$VIVADO_PATH/bin" ]; then
+    echo "- Vivado: Found ($VIVADO_PATH/bin)"
+else
+    echo "- Vivado: Not found! (ERROR.. Builds and simulations will not work)"
+    return 1
+fi
+if [ -d "$MODELSIM_PATH" ]; then
+    echo "- Modelsim: Found ($MODELSIM_PATH)"
+    if [ -e "$VIVADO_PATH/modelsim/modelsim.ini" ]; then
+        echo "- Modelsim Compiled Libs: Found ($VIVADO_PATH/modelsim)"
+    else
+        echo "- Modelsim Compiled Libs: Not found! (Run build_simlibs to generate them.)"
+    fi
+else
+    if [ "$MODELSIM_REQUESTED" -eq 1 ]; then
+        echo "- Modelsim: Not found! (WARNING.. Simulations with vsim will not work)"
+    fi
+fi
 
+echo "Environment successfully initialized."
+return 0
