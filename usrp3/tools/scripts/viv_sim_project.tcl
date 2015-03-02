@@ -70,13 +70,13 @@ set_property top $sim_top [get_filesets $sim_fileset]
 
 # Vivado quirk when passing options to external simulators
 if [expr [string equal $simulator "XSim"] == 1] {
-    set_property verilog_define "SIM_RUNTIME_NS=$sim_runtime WORKING_DIR=\"$working_dir\"" [get_filesets $sim_fileset]
+    set_property verilog_define "SIM_RUNTIME_US=$sim_runtime WORKING_DIR=\"$working_dir\"" [get_filesets $sim_fileset]
 } else {
-    set_property verilog_define "SIM_RUNTIME_NS=$sim_runtime WORKING_DIR=$working_dir" [get_filesets $sim_fileset]
+    set_property verilog_define "SIM_RUNTIME_US=$sim_runtime WORKING_DIR=$working_dir" [get_filesets $sim_fileset]
 }
 
 # XSim specific settings
-set_property xsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
+set_property xsim.simulate.runtime "${sim_runtime}us" -objects [get_filesets $sim_fileset]
 set_property xsim.elaborate.debug_level "all" -objects [get_filesets $sim_fileset]
 set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
 

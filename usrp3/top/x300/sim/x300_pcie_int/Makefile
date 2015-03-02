@@ -33,7 +33,7 @@ DESIGN_SRCS += $(abspath \
 #-------------------------------------------------
 # Define only one toplevel module
 SIM_TOP = x300_pcie_int_tb
-SIM_RUNTIME_NS = 20000
+SIM_RUNTIME_US = 20
 
 SIM_SRCS = \
 $(abspath x300_pcie_int_tb.sv) \

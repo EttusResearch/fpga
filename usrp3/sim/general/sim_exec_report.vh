@@ -9,7 +9,7 @@
 // - Logging to console
 // - Test execution tracking
 // - Gathering test results
-// - Bounding execution time based on the SIM_RUNTIME_NS vdef
+// - Bounding execution time based on the SIM_RUNTIME_US vdef
 //
 // Usage: `TEST_BENCH_INIT(test_name,min_tc_run_count,ns_per_tick)
 // where
@@ -23,7 +23,7 @@
   integer tc_run_count = 0; \
   integer tc_pass_count = 0; \
   \
-  initial begin \
+  initial begin : tb_timekeeper \
     $display("========================================================"); \
     $display("TESTBENCH STARTED: %s", tb_name); \
     $display("========================================================"); \
@@ -31,10 +31,10 @@
     tc_failed = 0; \
     tc_run_count = 0; \
     tc_pass_count = 0; \
-    #((1.0*`SIM_RUNTIME_NS)/ns_per_tick); \
+    #((1000.0*`SIM_RUNTIME_US)/ns_per_tick); \
     $display("========================================================"); \
     $display("TESTBENCH FINISHED: %s", tb_name); \
-    $display(" - Time elapsed:   %0d ticks", (1.0*`SIM_RUNTIME_NS)/ns_per_tick); \
+    $display(" - Time elapsed:   %0d ticks (%0dns/tick)", (1000.0*`SIM_RUNTIME_US)/ns_per_tick, ns_per_tick); \
     $display(" - Tests Expected: %0d", min_tc_run_count); \
     $display(" - Tests Run:      %0d", tc_run_count); \
     $display(" - Tests Passed:   %0d", tc_pass_count); \

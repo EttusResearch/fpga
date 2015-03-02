@@ -182,7 +182,7 @@ module x300_pcie_int_tb();
     wire            iop2_msg_tvalid, iop2_msg_tlast, iop2_msg_tready;
 
    
-    initial begin
+    initial begin : tb_main
         while (reset) @(posedge clk);
     
         chinch_reg_rdy <= 1'b1;
