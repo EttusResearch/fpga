@@ -8,6 +8,7 @@
 BASE_DIR = $(abspath ..)
 IP_DIR = $(abspath ./ip)
 TOOLS_DIR = $(BASE_DIR)/../tools
+SIMULATION = 0
 
 BUILD_DIR = $(abspath ./build-$(NAME))
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
