@@ -1,19 +1,31 @@
 #
-# Copyright 2014 Ettus Research LLC
+# Copyright 2015 Ettus Research LLC
 #
 
+#-------------------------------------------------
+# Boilerplate
+#-------------------------------------------------
+# Define BASE_DIR to point to the "top" dir
 BASE_DIR = $(abspath ../../..)
-include $(BASE_DIR)/../tools/make/viv_simulator.mak
+# Include viv_sim_preample after defining BASE_DIR
+include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 
+# If simulation contains IP, define the IP_DIR and point
+# it to the base level IP directory
+IP_DIR = ../../ip
+
+#-------------------------------------------------
+# Design Specific
+#-------------------------------------------------
+# Define part using PART_ID (<device>/<package>/<speedgrade>)
 PART_ID = xc7k410t/ffg900/-2
 
-#-------------------------------------------------
-# Design Sources
-#-------------------------------------------------
 include $(BASE_DIR)/../lib/control/Makefile.srcs
 include $(BASE_DIR)/../lib/packet_proc/Makefile.srcs
 include $(BASE_DIR)/../lib/fifo/Makefile.srcs
 include $(BASE_DIR)/../lib/io_port2/Makefile.srcs
+include $(IP_DIR)/fifo_short_2clk/Makefile.inc
+include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(FIFO_SRCS) \
@@ -24,18 +36,29 @@ $(IOPORT2_SRCS) \
 )
 
 DESIGN_SRCS += $(abspath \
-../../ip/fifo_short_2clk/fifo_short_2clk.xci \
-../../ip/fifo_4k_2clk/fifo_4k_2clk.xci \
+$(IP_FIFO_4K_2CLK_SRCS) \
+$(IP_FIFO_SHORT_2CLK_SRCS) \
 )
 
 #-------------------------------------------------
-# Testbench Sources
+# Testbench Specific
 #-------------------------------------------------
-# Define only one toplevel module
-SIM_TOP = x300_pcie_int_tb
-SIM_RUNTIME_US = 20
+include $(BASE_DIR)/../sim/general/Makefile.srcs
+include $(BASE_DIR)/../sim/axi/Makefile.srcs
+
+SIM_TOP = x300_pcie_int_tb	# Define only one toplevel module
+SIM_RUNTIME_US = 20					# Simulation runtime in microseconds
 
 SIM_SRCS = \
 $(abspath x300_pcie_int_tb.sv) \
-$(SIMLIB_DIR)/general/sim_clks_rsts.vh \
-$(SIMLIB_DIR)/general/sim_exec_report.vh
+$(SIM_GENERAL_SRCS) \
+$(SIM_AXI_SRCS)
+
+#-------------------------------------------------
+# Include simulator specific makefile(s)
+#-------------------------------------------------
+# Include all the simulator specific makefiles
+# Each should define a unique target to simulate
+# and a common "clean" target to clean
+# NOTE: This must be at the bottom of the makefile
+include $(BASE_DIR)/../tools/make/viv_simulator.mak
