@@ -53,7 +53,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 
 .SECONDEXPANSION:
 
-xsim:
+xsim: $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
 xclean:
@@ -65,7 +65,7 @@ xclean:
 	@rm -f xvlog.pb
 	@rm -f vivado_pid*.str
 
-vsim: $(COMPLIBDIR)
+vsim: $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,Modelsim)
 
 vclean:
