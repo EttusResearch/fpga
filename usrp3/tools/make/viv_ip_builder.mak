@@ -2,6 +2,12 @@
 # Copyright 2014 Ettus Research
 #
 
+ifeq ($(SIMULATION),1)
+SYNTH_IP=0
+else
+SYNTH_IP=1
+endif
+
 # -------------------------------------------------------------------
 # Usage: BUILD_VIVADO_IP
 # Args: $1 = IP_NAME (IP name)
@@ -20,6 +26,7 @@ BUILD_VIVADO_IP = \
 	export XCI_FILE=$(4)/$(1)/$(1).xci; \
 	export PART_NAME=$(subst /,,$(2)); \
 	export GEN_EXAMPLE=$(5); \
+	export SYNTH_IP=$(SYNTH_IP); \
 	echo "Staging IP in build directory..."; \
 	mkdir -p $(4)/$(1); \
 	cp -rf $(3)/$(1)/* $(4)/$(1); \
