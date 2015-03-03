@@ -7,8 +7,8 @@ IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
 SIMULATION = 1
 
 ipclean:
-	@rm -rf $(IP_BUILD_DIR)
+	@rm -rf $(abspath ./build-ip)
 
 cleanall: ipclean clean
 
-.PHONY: ipclean
+.PHONY: ipclean cleanall
