@@ -52,7 +52,7 @@
 //  - reset_duration: Duration of reset assertion
 //
 `define DEFINE_RESET(reset_name, reset_time, reset_duration) \
-    reg reset_name = 0; \
+    reg reset_name = (reset_time==0); \
     initial begin \
         #(reset_time) reset_name = 1; \
         #(reset_time+reset_duration) reset_name = 0; \
@@ -67,7 +67,7 @@
 //  - reset_duration: Duration of reset assertion
 //
 `define DEFINE_RESET_N(reset_name, reset_time, reset_duration) \
-    reg reset_name = 1; \
+    reg reset_name = (reset_time!=0); \
     initial begin \
         #(reset_time) reset_name = 0; \
         #(reset_time+reset_duration) reset_name = 1; \
