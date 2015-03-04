@@ -54,7 +54,7 @@
   tc_running = 1; \
   tc_failed = 0; \
   tc_run_count = tc_run_count + 1; \
-  $display("[TEST CASE %3d] Starting %s...", tc_run_count, test_name);
+  $display("[TEST CASE %3d] (t=%09d) Starting %s...", tc_run_count, $time, test_name);
 
 // Indicates the end of a test case
 // This macro *must be* called inside the primary initial block
@@ -68,7 +68,7 @@
 //
 `define TEST_CASE_DONE(result) \
   tc_running = 0; \
-  $display("[TEST CASE %3d] Done... %s", tc_run_count, (((result===1)&~tc_failed)?"Passed":"FAILED")); \
+  $display("[TEST CASE %3d] (t=%09d) Done... %s", tc_run_count, $time, (((result===1)&~tc_failed)?"Passed":"FAILED")); \
   if ((result===1)&~tc_failed) tc_pass_count = tc_pass_count + 1;
 
 // Wrapper around a an assert.

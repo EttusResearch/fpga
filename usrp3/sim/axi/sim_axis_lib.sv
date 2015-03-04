@@ -9,6 +9,9 @@ interface axis_t #(parameter DWIDTH = 64)
   logic               tlast;
   logic               tready;
 
+  modport master (output tdata, output tvalid, output tlast, input tready);
+  modport slave (input tdata, input tvalid, input tlast, output tready);
+
   // Push a word onto the AXI-Stream bus and wait for it to transfer
   // Args:
   // - word: The data to push onto the bus
