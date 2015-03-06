@@ -53,9 +53,11 @@ SETUP_AND_LAUNCH_SIMULATION = \
 
 .SECONDEXPANSION:
 
+##xsim:       Run the simulation using the Xilinx Vivado Simulator
 xsim: $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
+##xclean:     Cleanup Xilinx Vivado Simulator intermediate files
 xclean:
 	@rm -f xsim*.log
 	@rm -rf xsim_proj
@@ -65,9 +67,11 @@ xclean:
 	@rm -f xvlog.pb
 	@rm -f vivado_pid*.str
 
+##vsim:       Run the simulation using Modelsim
 vsim: $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,Modelsim)
 
+##vclean:     Cleanup Modelsim intermediate files
 vclean:
 	@rm -f modelsim*.log
 	@rm -rf modelsim_proj
@@ -76,4 +80,7 @@ vclean:
 # Use clean with :: to support allow "make clean" to work with multiple makefiles
 clean:: xclean vclean
 
-.PHONY: sim clean
+help::
+	@grep -h "##" $(abspath $(lastword $(MAKEFILE_LIST))) | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
+
+.PHONY: xsim xclean vsim vclean clean help
