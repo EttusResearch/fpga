@@ -1077,744 +1077,91 @@ module x300
    always @(posedge ddr3_axi_clk)
      ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
+   // Instantiate the DDR3 MIG core
+   //
+   // The top-level IP block has no parameters defined for some reason.
+   // Most of configurable parameters are hard-coded in the mig so get 
+   // some additional knobs we pull those out into verilog headers.
+   //
+   // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
+   // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
 
-/* -----\/----- EXCLUDED -----\/-----
-   //-***************************************************************************
-   // Traffic Gen related localparams
-   //-***************************************************************************
-   localparam BL_WIDTH              = 10;
-   localparam PORT_MODE             = "BI_MODE";
-   localparam DATA_MODE             = 4'b0010;
-   localparam ADDR_MODE             = 4'b0011;
-   localparam TST_MEM_INSTR_MODE    = "R_W_INSTR_MODE";
-   localparam EYE_TEST              = "FALSE";
-                                     // set EYE_TEST = "TRUE" to probe memory
-                                     // signals. Traffic Generator will only
-                                     // write to one single location and no
-                                     // read transactions will be generated.
-   localparam DATA_PATTERN          = "DGEN_ALL";
-                                      // For small devices, choose one only.
-                                      // For large device, choose "DGEN_ALL"
-                                      // "DGEN_HAMMER", "DGEN_WALKING1",
-                                      // "DGEN_WALKING0","DGEN_ADDR","
-                                      // "DGEN_NEIGHBOR","DGEN_PRBS","DGEN_ALL"
-   localparam CMD_PATTERN           = "CGEN_ALL";
-                                      // "CGEN_PRBS","CGEN_FIXED","CGEN_BRAM",
-                                      // "CGEN_SEQUENTIAL", "CGEN_ALL"
-   localparam BEGIN_ADDRESS         = 32'h00000000;
-   localparam END_ADDRESS           = 32'h00ffffff;
-   localparam PRBS_EADDR_MASK_POS   = 32'hff000000;
-   localparam CMD_WDT               = 'h3FF;
-   localparam WR_WDT                = 'h1FFF;
-   localparam RD_WDT                = 'h3FF;
-   localparam SEL_VICTIM_LINE       = 0;
-   localparam ENFORCE_RD_WR         = 0;
-   localparam ENFORCE_RD_WR_CMD     = 8'h11;
-   localparam ENFORCE_RD_WR_PATTERN = 3'b000;
-   localparam C_EN_WRAP_TRANS       = 0;
-   localparam C_AXI_NBURST_TEST     = 0;
+   ddr3_32bit u_ddr3_32bit (
+      // Memory interface ports
+      .ddr3_addr                      (ddr3_addr),
+      .ddr3_ba                        (ddr3_ba),
+      .ddr3_cas_n                     (ddr3_cas_n),
+      .ddr3_ck_n                      (ddr3_ck_n),
+      .ddr3_ck_p                      (ddr3_ck_p),
+      .ddr3_cke                       (ddr3_cke),
+      .ddr3_ras_n                     (ddr3_ras_n),
+      .ddr3_reset_n                   (ddr3_reset_n),
+      .ddr3_we_n                      (ddr3_we_n),
+      .ddr3_dq                        (ddr3_dq),
+      .ddr3_dqs_n                     (ddr3_dqs_n),
+      .ddr3_dqs_p                     (ddr3_dqs_p),
+      .init_calib_complete            (ddr3_running),
 
-   //-***************************************************************************
-   // The following localparams refer to width of various ports
-   //-***************************************************************************
-   localparam BANK_WIDTH            = 3;
-                                     // # of memory Bank Address bits.
-   localparam CK_WIDTH              = 1;
-                                     // # of CK/CK# outputs to memory.
-   localparam COL_WIDTH             = 10;
-                                     // # of memory Column Address bits.
-   localparam CS_WIDTH              = 1;
-                                     // # of unique CS outputs to memory.
-   localparam nCS_PER_RANK          = 1;
-                                     // # of unique CS outputs per rank for phy
-   localparam CKE_WIDTH             = 1;
-                                     // # of CKE outputs to memory.
-   localparam DATA_BUF_ADDR_WIDTH   = 5;
-   localparam DQ_CNT_WIDTH          = 5;
-                                     // = ceil(log2(DQ_WIDTH))
-   localparam DQ_PER_DM             = 8;
-   localparam DM_WIDTH              = 4;
-                                     // # of DM (data mask)
-   localparam DQ_WIDTH              = 32;
-                                     // # of DQ (data)
-   localparam DQS_WIDTH             = 4;
-   localparam DQS_CNT_WIDTH         = 2;
-                                     // = ceil(log2(DQS_WIDTH))
-   localparam DRAM_WIDTH            = 8;
-                                     // # of DQ per DQS
-   localparam ECC                   = "OFF";
-   localparam nBANK_MACHS           = 4;
-   localparam RANKS                 = 1;
-                                     // # of Ranks.
-   localparam ODT_WIDTH             = 1;
-                                     // # of ODT outputs to memory.
-   localparam ROW_WIDTH             = 15;
-                                     // # of memory Row Address bits.
-   localparam ADDR_WIDTH            = 29;
-                                     // # = RANK_WIDTH + BANK_WIDTH
-                                     //     + ROW_WIDTH + COL_WIDTH;
-                                     // Chip Select is always tied to low for
-                                     // single rank devices
-   localparam USE_CS_PORT          = 1;
-                                     // # = 1, When Chip Select (CS#) output is enabled
-                                     //   = 0, When Chip Select (CS#) output is disabled
-                                     // If CS_N disabled, user must connect
-                                     // DRAM CS_N input(s) to ground
-   localparam USE_DM_PORT           = 1;
-                                     // # = 1, When Data Mask option is enabled
-                                     //   = 0, When Data Mask option is disbaled
-                                     // When Data Mask option is disabled in
-                                     // MIG Controller Options page, the logic
-                                     // related to Data Mask should not get
-                                     // synthesized
-   localparam USE_ODT_PORT          = 1;
-                                     // # = 1, When ODT output is enabled
-                                     //   = 0, When ODT output is disabled
-   localparam PHY_CONTROL_MASTER_BANK = 1;
-                                     // The bank index where master PHY_CONTROL resides;
-                                     // equal to the PLL residing bank
-   localparam MEM_DENSITY           = "4Gb";
-                                     // Indicates the density of the Memory part
-                                     // Added for the sake of Vivado simulations
-   localparam MEM_SPEEDGRADE        = "125";
-                                     // Indicates the Speed grade of Memory Part
-                                     // Added for the sake of Vivado simulations
-   localparam MEM_DEVICE_WIDTH      = 16;
-                                     // Indicates the device width of the Memory Part
-                                     // Added for the sake of Vivado simulations
+      .ddr3_cs_n                      (ddr3_cs_n),
+      .ddr3_dm                        (ddr3_dm),
+      .ddr3_odt                       (ddr3_odt),
+      // Application interface ports
+      .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
+      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
+      .aresetn                        (ddr3_axi_rst_reg_n),
+      .app_sr_req                     (1'b0),
+      .app_sr_active                  (app_sr_active),
+      .app_ref_req                    (1'b0),
+      .app_ref_ack                    (app_ref_ack),
+      .app_zq_req                     (1'b0),
+      .app_zq_ack                     (app_zq_ack),
 
-   //-***************************************************************************
-   // The following localparams are mode register settings
-   //-***************************************************************************
-   localparam AL                    = "0";
-                                     // DDR3 SDRAM:
-                                     // Additive Latency (Mode Register 1).
-                                     // # = "0", "CL-1", "CL-2".
-                                     // DDR2 SDRAM:
-                                     // Additive Latency (Extended Mode Register).
-   localparam nAL                   = 0;
-                                     // # Additive Latency in number of clock
-                                     // cycles.
-   localparam BURST_MODE            = "8";
-                                     // DDR3 SDRAM:
-                                     // Burst Length (Mode Register 0).
-                                     // # = "8", "4", "OTF".
-                                     // DDR2 SDRAM:
-                                     // Burst Length (Mode Register).
-                                     // # = "8", "4".
-   localparam BURST_TYPE            = "SEQ";
-                                     // DDR3 SDRAM: Burst Type (Mode Register 0).
-                                     // DDR2 SDRAM: Burst Type (Mode Register).
-                                     // # = "SEQ" - (Sequential),
-                                     //   = "INT" - (Interleaved).
-   localparam CL                    = 7;
-                                     // in number of clock cycles
-                                     // DDR3 SDRAM: CAS Latency (Mode Register 0).
-                                     // DDR2 SDRAM: CAS Latency (Mode Register).
-   localparam CWL                   = 6;
-                                     // in number of clock cycles
-                                     // DDR3 SDRAM: CAS Write Latency (Mode Register 2).
-                                     // DDR2 SDRAM: Can be ignored
-   localparam OUTPUT_DRV            = "HIGH";
-                                     // Output Driver Impedance Control (Mode Register 1).
-                                     // # = "HIGH" - RZQ/7,
-                                     //   = "LOW" - RZQ/6.
-   localparam RTT_NOM               = "60";
-                                     // RTT_NOM (ODT) (Mode Register 1).
-                                     //   = "120" - RZQ/2,
-                                     //   = "60"  - RZQ/4,
-                                     //   = "40"  - RZQ/6.
-   localparam RTT_WR                = "OFF";
-                                     // RTT_WR (ODT) (Mode Register 2).
-                                     // # = "OFF" - Dynamic ODT off,
-                                     //   = "120" - RZQ/2,
-                                     //   = "60"  - RZQ/4,
-   localparam ADDR_CMD_MODE         = "1T" ;
-                                     // # = "1T", "2T".
-   localparam REG_CTRL              = "OFF";
-                                     // # = "ON" - RDIMMs,
-                                     //   = "OFF" - Components, SODIMMs, UDIMMs.
-   localparam CA_MIRROR             = "OFF";
-                                     // C/A mirror opt for DDR3 dual rank
-
-   //-***************************************************************************
-   // The following localparams are multiplier and divisor factors for PLLE2.
-    // Based on the selected design frequency these localparams vary.
-   //-***************************************************************************
-   localparam CLKIN_PERIOD          = 10000;
-                                     // Input Clock Period
-   localparam CLKFBOUT_MULT         = 10;
-                                     // write PLL VCO multiplier
-   localparam DIVCLK_DIVIDE         = 1;
-                                     // write PLL VCO divisor
-   localparam CLKOUT0_PHASE         = 337.5;
-                                     // Phase for PLL output clock (CLKOUT0)
-   localparam CLKOUT0_DIVIDE        = 2;
-                                     // VCO output divisor for PLL output clock (CLKOUT0)
-   localparam CLKOUT1_DIVIDE        = 2;
-                                     // VCO output divisor for PLL output clock (CLKOUT1)
-   localparam CLKOUT2_DIVIDE        = 32;
-                                     // VCO output divisor for PLL output clock (CLKOUT2)
-   localparam CLKOUT3_DIVIDE        = 8;
-                                     // VCO output divisor for PLL output clock (CLKOUT3)
-
-   //-***************************************************************************
-   // Memory Timing Localparams. These localparams varies based on the selected
-   // memory part.
-   //-***************************************************************************
-   localparam tCKE                  = 5000;
-                                     // memory tCKE paramter in pS
-   localparam tFAW                  = 30000;
-                                     // memory tRAW paramter in pS.
-   localparam tRAS                  = 35000;
-                                     // memory tRAS paramter in pS.
-   localparam tRCD                  = 13750;
-                                     // memory tRCD paramter in pS.
-   localparam tREFI                 = 7800000;
-                                     // memory tREFI paramter in pS.
-   localparam tRFC                  = 300000;
-                                     // memory tRFC paramter in pS.
-   localparam tRP                   = 13750;
-                                     // memory tRP paramter in pS.
-   localparam tRRD                  = 6000;
-                                     // memory tRRD paramter in pS.
-   localparam tRTP                  = 7500;
-                                     // memory tRTP paramter in pS.
-   localparam tWTR                  = 7500;
-                                     // memory tWTR paramter in pS.
-   localparam tZQI                  = 128_000_000;
-                                     // memory tZQI paramter in nS.
-   localparam tZQCS                 = 64;
-                                     // memory tZQCS paramter in clock cycles.
-
-   //-***************************************************************************
-   // Simulation localparams
-   //-***************************************************************************
-   localparam SIM_BYPASS_INIT_CAL   = "OFF";
-                                     // # = "OFF" -  Complete memory init &
-                                     //              calibration sequence
-                                     // # = "SKIP" - Not supported
-                                     // # = "FAST" - Complete memory init & use
-                                     //              abbreviated calib sequence
-
-   localparam SIMULATION            = "FALSE";
-                                     // Should be TRUE during design simulations and
-                                     // FALSE during implementations
-
-   //-***************************************************************************
-   // The following localparams varies based on the pin out entered in MIG GUI.
-   // Do not change any of these localparams directly by editing the RTL.
-   // Any changes required should be done through GUI and the design regenerated.
-   //-***************************************************************************
-   localparam BYTE_LANES_B0         = 4'b1111;
-                                     // Byte lanes used in an IO column.
-   localparam BYTE_LANES_B1         = 4'b1110;
-                                     // Byte lanes used in an IO column.
-   localparam BYTE_LANES_B2         = 4'b0000;
-                                     // Byte lanes used in an IO column.
-   localparam BYTE_LANES_B3         = 4'b0000;
-                                     // Byte lanes used in an IO column.
-   localparam BYTE_LANES_B4         = 4'b0000;
-                                     // Byte lanes used in an IO column.
-   localparam DATA_CTL_B0           = 4'b1111;
-                                     // Indicates Byte lane is data byte lane
-                                     // or control Byte lane. '1' in a bit
-                                     // position indicates a data byte lane and
-                                     // a '0' indicates a control byte lane
-   localparam DATA_CTL_B1           = 4'b0000;
-                                     // Indicates Byte lane is data byte lane
-                                     // or control Byte lane. '1' in a bit
-                                     // position indicates a data byte lane and
-                                     // a '0' indicates a control byte lane
-   localparam DATA_CTL_B2           = 4'b0000;
-                                     // Indicates Byte lane is data byte lane
-                                     // or control Byte lane. '1' in a bit
-                                     // position indicates a data byte lane and
-                                     // a '0' indicates a control byte lane
-   localparam DATA_CTL_B3           = 4'b0000;
-                                     // Indicates Byte lane is data byte lane
-                                     // or control Byte lane. '1' in a bit
-                                     // position indicates a data byte lane and
-                                     // a '0' indicates a control byte lane
-   localparam DATA_CTL_B4           = 4'b0000;
-                                     // Indicates Byte lane is data byte lane
-                                     // or control Byte lane. '1' in a bit
-                                     // position indicates a data byte lane and
-                                     // a '0' indicates a control byte lane
-   localparam PHY_0_BITLANES        = 48'h3FE_3FE_3FE_2FF;
-   localparam PHY_1_BITLANES        = 48'h3FF_FFF_C00_000;
-   localparam PHY_2_BITLANES        = 48'h000_000_000_000;
-
-   // control/address/data pin mapping localparams
-   localparam CK_BYTE_MAP
-     = 144'h00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_13;
-   localparam ADDR_MAP
-     = 192'h000_139_138_137_136_135_134_133_132_131_130_129_128_127_126_12B;
-   localparam BANK_MAP   = 36'h12A_125_124;
-   localparam CAS_MAP    = 12'h122;
-   localparam CKE_ODT_BYTE_MAP = 8'h00;
-   localparam CKE_MAP    = 96'h000_000_000_000_000_000_000_11B;
-   localparam ODT_MAP    = 96'h000_000_000_000_000_000_000_11A;
-   localparam CS_MAP     = 120'h000_000_000_000_000_000_000_000_000_120;
-   localparam PARITY_MAP = 12'h000;
-   localparam RAS_MAP    = 12'h123;
-   localparam WE_MAP     = 12'h121;
-   localparam DQS_BYTE_MAP
-     = 144'h00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_01_02_03;
-   localparam DATA0_MAP  = 96'h031_032_033_034_035_036_037_038;
-   localparam DATA1_MAP  = 96'h021_022_023_024_025_026_027_028;
-   localparam DATA2_MAP  = 96'h011_012_013_014_015_016_017_018;
-   localparam DATA3_MAP  = 96'h000_001_002_003_004_005_006_007;
-   localparam DATA4_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA5_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA6_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA7_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA8_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA9_MAP  = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA10_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA11_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA12_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA13_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA14_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA15_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA16_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam DATA17_MAP = 96'h000_000_000_000_000_000_000_000;
-   localparam MASK0_MAP  = 108'h000_000_000_000_000_009_019_029_039;
-   localparam MASK1_MAP  = 108'h000_000_000_000_000_000_000_000_000;
-
-   localparam SLOT_0_CONFIG         = 8'b0000_0001;
-                                     // Mapping of Ranks.
-   localparam SLOT_1_CONFIG         = 8'b0000_0000;
-                                     // Mapping of Ranks.
-   localparam MEM_ADDR_ORDER
-     = "BANK_ROW_COLUMN";
-
-   //-***************************************************************************
-   // IODELAY and PHY related localparams
-   //-***************************************************************************
-   localparam IODELAY_HP_MODE       = "ON";
-                                     // to phy_top
-   localparam IBUF_LPWR_MODE        = "OFF";
-                                     // to phy_top
-   localparam DATA_IO_IDLE_PWRDWN   = "ON";
-                                     // # = "ON", "OFF"
-   localparam BANK_TYPE             = "HP_IO";
-                                     // # = "HP_IO", "HPL_IO", "HR_IO", "HRL_IO"
-   localparam DATA_IO_PRIM_TYPE     = "HP_LP";
-                                     // # = "HP_LP", "HR_LP", "DEFAULT"
-   localparam CKE_ODT_AUX           = "FALSE";
-   localparam USER_REFRESH          = "OFF";
-   localparam WRLVL                 = "ON";
-                                     // # = "ON" - DDR3 SDRAM
-                                     //   = "OFF" - DDR2 SDRAM.
-   localparam ORDERING              = "NORM";
-                                     // # = "NORM", "STRICT", "RELAXED".
-   localparam CALIB_ROW_ADD         = 16'h0000;
-                                     // Calibration row address will be used for
-                                     // calibration read and write operations
-   localparam CALIB_COL_ADD         = 12'h000;
-                                     // Calibration column address will be used for
-                                     // calibration read and write operations
-   localparam CALIB_BA_ADD          = 3'h0;
-                                     // Calibration bank address will be used for
-                                     // calibration read and write operations
-   localparam TCQ                   = 100;
-   localparam IODELAY_GRP           = "IODELAY_MIG";
-                                     // It is associated to a set of IODELAYs with
-                                     // an IDELAYCTRL that have same IODELAY CONTROLLER
-                                     // clock frequency.
-   localparam SYSCLK_TYPE           = "SINGLE_ENDED";
-                                     // System clock type DIFFERENTIAL, SINGLE_ENDED,
-                                     // NO_BUFFER
-   localparam REFCLK_TYPE           = "NO_BUFFER";
-                                     // Reference clock type DIFFERENTIAL, SINGLE_ENDED,
-                                     // NO_BUFFER, USE_SYSTEM_CLOCK
-
-   localparam DRAM_TYPE             = "DDR3";
-   localparam CAL_WIDTH             = "HALF";
-   localparam STARVE_LIMIT          = 2;
-                                     // # = 2,3,4.
-
-   //-***************************************************************************
-   // Referece clock frequency localparams
-   //-***************************************************************************
-   localparam REFCLK_FREQ           = 200.0;
-                                     // IODELAYCTRL reference clock frequency
-   localparam DIFF_TERM_REFCLK      = "TRUE";
-                                     // Differential Termination for idelay
-                                     // reference clock input pins
-   //-***************************************************************************
-   // System clock frequency localparams
-   //-***************************************************************************
-   localparam tCK                   = 2000;
-                                     // memory tCK paramter.
-                                     // # = Clock Period in pS.
-   localparam nCK_PER_CLK           = 4;
-                                     // # of memory CKs per fabric CLK
-   localparam DIFF_TERM_SYSCLK      = "TRUE";
-                                     // Differential Termination for System
-                                     // clock input pins
-
-
-   //-***************************************************************************
-   // AXI4 Shim localparams
-   //-***************************************************************************
-   localparam C_S_AXI_ID_WIDTH              = 4;
-                                             // Width of all master and slave ID signals.
-                                             // # = >= 1.
-   localparam C_S_AXI_MEM_SIZE              = "2147483648";
-                                     // Address Space required for this component
-   localparam C_S_AXI_ADDR_WIDTH            = 32;
-                                             // Width of S_AXI_AWADDR; S_AXI_ARADDR, M_AXI_AWADDR and
-                                             // M_AXI_ARADDR for all SI/MI slots.
-                                             // # = 32.
-   localparam C_S_AXI_DATA_WIDTH            = 128;
-                                             // Width of WDATA and RDATA on SI slot.
-                                             // Must be <= APP_DATA_WIDTH.
-                                             // # = 32, 64, 128, 256.
-   localparam C_MC_nCK_PER_CLK              = 4;
-                                             // Indicates whether to instatiate upsizer
-                                             // Range: 0, 1
-   localparam C_S_AXI_SUPPORTS_NARROW_BURST = 1;
-                                             // Indicates whether to instatiate upsizer
-                                             // Range: 0, 1
-   localparam C_RD_WR_ARB_ALGORITHM          = "ROUND_ROBIN";
-                                             // Indicates the Arbitration
-                                             // Allowed values - "TDM", "ROUND_ROBIN",
-                                             // "RD_PRI_REG", "RD_PRI_REG_STARVE_LIMIT"
-                                             // "WRITE_PRIORITY", "WRITE_PRIORITY_REG"
-   localparam C_S_AXI_REG_EN0               = 20'h00000;
-                                             // C_S_AXI_REG_EN0[00] = Reserved
-                                             // C_S_AXI_REG_EN0[04] = AW CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[05] =  W CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[06] =  B CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[07] =  R CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[08] = AW CHANNEL UPSIZER REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[09] =  W CHANNEL UPSIZER REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[10] = AR CHANNEL UPSIZER REGISTER SLICE
-                                             // C_S_AXI_REG_EN0[11] =  R CHANNEL UPSIZER REGISTER SLICE
-   localparam C_S_AXI_REG_EN1               = 20'h00000;
-                                             // Instatiates register slices after the upsizer.
-                                             // The type of register is specified for each channel
-                                             // in a vector. 4 bits per channel are used.
-                                             // C_S_AXI_REG_EN1[03:00] = AW CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN1[07:04] =  W CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN1[11:08] =  B CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN1[15:12] = AR CHANNEL REGISTER SLICE
-                                             // C_S_AXI_REG_EN1[20:16] =  R CHANNEL REGISTER SLICE
-                                             // Possible values for each channel are:
-                                             //
-                                             //   0 => BYPASS    = The channel is just wired through the
-                                             //                    module.
-                                             //   1 => FWD       = The master VALID and payload signals
-                                             //                    are registrated.
-                                             //   2 => REV       = The slave ready signal is registrated
-                                             //   3 => FWD_REV   = Both FWD and REV
-                                             //   4 => SLAVE_FWD = All slave side signals and master
-                                             //                    VALID and payload are registrated.
-                                             //   5 => SLAVE_RDY = All slave side signals and master
-                                             //                    READY are registrated.
-                                             //   6 => INPUTS    = Slave and Master side inputs are
-                                             //                    registrated.
-                                             //   7 => ADDRESS   = Optimized for address channel
-   localparam C_S_AXI_CTRL_ADDR_WIDTH       = 32;
-                                             // Width of AXI-4-Lite address bus
-   localparam C_S_AXI_CTRL_DATA_WIDTH       = 32;
-                                             // Width of AXI-4-Lite data buses
-   localparam C_S_AXI_BASEADDR              = 32'h0000_0000;
-                                             // Base address of AXI4 Memory Mapped bus.
-   localparam C_ECC_ONOFF_RESET_VALUE       = 1;
-                                             // Controls ECC on/off value at startup/reset
-   localparam C_ECC_CE_COUNTER_WIDTH        = 8;
-                                             // The external memory to controller clock ratio.
-
-   //-***************************************************************************
-   // Debug localparams
-   //-***************************************************************************
-   localparam DEBUG_PORT            = "OFF";
-                                     // # = "ON" Enable debug signals/controls.
-                                     //   = "OFF" Disable debug signals/controls.
-
-   //-***************************************************************************
-   // Temparature monitor localparam
-   //-***************************************************************************
-   localparam TEMP_MON_CONTROL                          = "INTERNAL";
-                                     // # = "INTERNAL", "EXTERNAL"
-
-   localparam RST_ACT_LOW           = 1;
-                                     // =1 for active low reset,
-                                     // =0 for active high.
-   //-*******************
-
-  localparam CMD_PIPE_PLUS1        = "ON";
-                                     // add pipeline stage between MC and PHY
-  localparam DATA_WIDTH            = 32;
-  localparam ECC_WIDTH = (ECC == "OFF")?
-                           0 : (DATA_WIDTH <= 4)?
-                            4 : (DATA_WIDTH <= 10)?
-                             5 : (DATA_WIDTH <= 26)?
-                              6 : (DATA_WIDTH <= 57)?
-                               7 : (DATA_WIDTH <= 120)?
-                                8 : (DATA_WIDTH <= 247)?
-                                 9 : 10;
-  localparam ECC_TEST              = "OFF";
-  localparam RANK_WIDTH = clogb2(RANKS);
-  localparam DATA_BUF_OFFSET_WIDTH = 1;
-  localparam MC_ERR_ADDR_WIDTH = ((CS_WIDTH == 1) ? 0 : RANK_WIDTH)
-                                 + BANK_WIDTH + ROW_WIDTH + COL_WIDTH
-                                 + DATA_BUF_OFFSET_WIDTH;
-  localparam tPRDI                 = 1_000_000;
-                                     // memory tPRDI paramter in pS.
-  localparam PAYLOAD_WIDTH         = (ECC_TEST == "OFF") ? DATA_WIDTH : DQ_WIDTH;
-  //localparam BURST_LENGTH          = STR_TO_INT(BURST_MODE);
-  localparam APP_DATA_WIDTH        = 2 * nCK_PER_CLK * PAYLOAD_WIDTH;
-  localparam APP_MASK_WIDTH        = APP_DATA_WIDTH / 8;
- -----/\----- EXCLUDED -----/\----- */
-
-
-   ddr3_32bit
-     /* -----\/----- EXCLUDED -----\/-----
-      #(
-      .TCQ                              (TCQ),
-     .ADDR_CMD_MODE                    (ADDR_CMD_MODE),
-     .AL                               (AL),
-     .PAYLOAD_WIDTH                    (PAYLOAD_WIDTH),
-     .BANK_WIDTH                       (BANK_WIDTH),
-     .BURST_MODE                       (BURST_MODE),
-     .BURST_TYPE                       (BURST_TYPE),
-     .CA_MIRROR                        (CA_MIRROR),
-     .CK_WIDTH                         (CK_WIDTH),
-     .COL_WIDTH                        (COL_WIDTH),
-     .CMD_PIPE_PLUS1                   (CMD_PIPE_PLUS1),
-     .CS_WIDTH                         (CS_WIDTH),
-     .nCS_PER_RANK                     (nCS_PER_RANK),
-     .CKE_WIDTH                        (CKE_WIDTH),
-     .DATA_WIDTH                       (DATA_WIDTH),
-     .DATA_BUF_ADDR_WIDTH              (DATA_BUF_ADDR_WIDTH),
-     .DQ_CNT_WIDTH                     (DQ_CNT_WIDTH),
-     .DQ_PER_DM                        (DQ_PER_DM),
-     .DQ_WIDTH                         (DQ_WIDTH),
-     .DQS_CNT_WIDTH                    (DQS_CNT_WIDTH),
-     .DQS_WIDTH                        (DQS_WIDTH),
-     .DRAM_WIDTH                       (DRAM_WIDTH),
-     .ECC                              (ECC),
-     .ECC_WIDTH                        (ECC_WIDTH),
-     .ECC_TEST                         (ECC_TEST),
-     .MC_ERR_ADDR_WIDTH                (MC_ERR_ADDR_WIDTH),
-     .nAL                              (nAL),
-     .nBANK_MACHS                      (nBANK_MACHS),
-     .CKE_ODT_AUX                      (CKE_ODT_AUX),
-     .ORDERING                         (ORDERING),
-     .OUTPUT_DRV                       (OUTPUT_DRV),
-     .IBUF_LPWR_MODE                   (IBUF_LPWR_MODE),
-     .IODELAY_HP_MODE                  (IODELAY_HP_MODE),
-     .DATA_IO_IDLE_PWRDWN              (DATA_IO_IDLE_PWRDWN),
-     .BANK_TYPE                        (BANK_TYPE),
-     .DATA_IO_PRIM_TYPE                (DATA_IO_PRIM_TYPE),
-     .REG_CTRL                         (REG_CTRL),
-     .RTT_NOM                          (RTT_NOM),
-     .RTT_WR                           (RTT_WR),
-     .CL                               (CL),
-     .CWL                              (CWL),
-     .tCKE                             (tCKE),
-     .tFAW                             (tFAW),
-     .tPRDI                            (tPRDI),
-     .tRAS                             (tRAS),
-     .tRCD                             (tRCD),
-     .tREFI                            (tREFI),
-     .tRFC                             (tRFC),
-     .tRP                              (tRP),
-     .tRRD                             (tRRD),
-     .tRTP                             (tRTP),
-     .tWTR                             (tWTR),
-     .tZQI                             (tZQI),
-     .tZQCS                            (tZQCS),
-     .USER_REFRESH                     (USER_REFRESH),
-     .WRLVL                            (WRLVL),
-     .DEBUG_PORT                       (DEBUG_PORT),
-     .RANKS                            (RANKS),
-     .ODT_WIDTH                        (ODT_WIDTH),
-     .ROW_WIDTH                        (ROW_WIDTH),
-     .ADDR_WIDTH                       (ADDR_WIDTH),
-     .SIM_BYPASS_INIT_CAL              (SIM_BYPASS_INIT_CAL),
-     .SIMULATION                       (SIMULATION),
-     .BYTE_LANES_B0                    (BYTE_LANES_B0),
-     .BYTE_LANES_B1                    (BYTE_LANES_B1),
-     .BYTE_LANES_B2                    (BYTE_LANES_B2),
-     .BYTE_LANES_B3                    (BYTE_LANES_B3),
-     .BYTE_LANES_B4                    (BYTE_LANES_B4),
-     .DATA_CTL_B0                      (DATA_CTL_B0),
-     .DATA_CTL_B1                      (DATA_CTL_B1),
-     .DATA_CTL_B2                      (DATA_CTL_B2),
-     .DATA_CTL_B3                      (DATA_CTL_B3),
-     .DATA_CTL_B4                      (DATA_CTL_B4),
-     .PHY_0_BITLANES                   (PHY_0_BITLANES),
-     .PHY_1_BITLANES                   (PHY_1_BITLANES),
-     .PHY_2_BITLANES                   (PHY_2_BITLANES),
-     .CK_BYTE_MAP                      (CK_BYTE_MAP),
-     .ADDR_MAP                         (ADDR_MAP),
-     .BANK_MAP                         (BANK_MAP),
-     .CAS_MAP                          (CAS_MAP),
-     .CKE_ODT_BYTE_MAP                 (CKE_ODT_BYTE_MAP),
-     .CKE_MAP                          (CKE_MAP),
-     .ODT_MAP                          (ODT_MAP),
-     .CS_MAP                           (CS_MAP),
-     .PARITY_MAP                       (PARITY_MAP),
-     .RAS_MAP                          (RAS_MAP),
-     .WE_MAP                           (WE_MAP),
-     .DQS_BYTE_MAP                     (DQS_BYTE_MAP),
-     .DATA0_MAP                        (DATA0_MAP),
-     .DATA1_MAP                        (DATA1_MAP),
-     .DATA2_MAP                        (DATA2_MAP),
-     .DATA3_MAP                        (DATA3_MAP),
-     .DATA4_MAP                        (DATA4_MAP),
-     .DATA5_MAP                        (DATA5_MAP),
-     .DATA6_MAP                        (DATA6_MAP),
-     .DATA7_MAP                        (DATA7_MAP),
-     .DATA8_MAP                        (DATA8_MAP),
-     .DATA9_MAP                        (DATA9_MAP),
-     .DATA10_MAP                       (DATA10_MAP),
-     .DATA11_MAP                       (DATA11_MAP),
-     .DATA12_MAP                       (DATA12_MAP),
-     .DATA13_MAP                       (DATA13_MAP),
-     .DATA14_MAP                       (DATA14_MAP),
-     .DATA15_MAP                       (DATA15_MAP),
-     .DATA16_MAP                       (DATA16_MAP),
-     .DATA17_MAP                       (DATA17_MAP),
-     .MASK0_MAP                        (MASK0_MAP),
-     .MASK1_MAP                        (MASK1_MAP),
-     .CALIB_ROW_ADD                    (CALIB_ROW_ADD),
-     .CALIB_COL_ADD                    (CALIB_COL_ADD),
-     .CALIB_BA_ADD                     (CALIB_BA_ADD),
-     .SLOT_0_CONFIG                    (SLOT_0_CONFIG),
-     .SLOT_1_CONFIG                    (SLOT_1_CONFIG),
-     .MEM_ADDR_ORDER                   (MEM_ADDR_ORDER),
-     .USE_CS_PORT                      (USE_CS_PORT),
-     .USE_DM_PORT                      (USE_DM_PORT),
-     .USE_ODT_PORT                     (USE_ODT_PORT),
-     .PHY_CONTROL_MASTER_BANK          (PHY_CONTROL_MASTER_BANK),
-     .TEMP_MON_CONTROL                 (TEMP_MON_CONTROL),
-
-
-     .DM_WIDTH                         (DM_WIDTH),
-
-     .nCK_PER_CLK                      (nCK_PER_CLK),
-     .tCK                              (tCK),
-     .DIFF_TERM_SYSCLK                 (DIFF_TERM_SYSCLK),
-     .CLKIN_PERIOD                     (CLKIN_PERIOD),
-     .CLKFBOUT_MULT                    (CLKFBOUT_MULT),
-     .DIVCLK_DIVIDE                    (DIVCLK_DIVIDE),
-     .CLKOUT0_PHASE                    (CLKOUT0_PHASE),
-     .CLKOUT0_DIVIDE                   (CLKOUT0_DIVIDE),
-     .CLKOUT1_DIVIDE                   (CLKOUT1_DIVIDE),
-     .CLKOUT2_DIVIDE                   (CLKOUT2_DIVIDE),
-     .CLKOUT3_DIVIDE                   (CLKOUT3_DIVIDE),
-     .C_S_AXI_ID_WIDTH                 (C_S_AXI_ID_WIDTH),
-     .C_S_AXI_ADDR_WIDTH               (C_S_AXI_ADDR_WIDTH),
-     .C_S_AXI_DATA_WIDTH               (C_S_AXI_DATA_WIDTH),
-     .C_MC_nCK_PER_CLK                 (C_MC_nCK_PER_CLK),
-     .C_S_AXI_SUPPORTS_NARROW_BURST    (C_S_AXI_SUPPORTS_NARROW_BURST),
-     .C_RD_WR_ARB_ALGORITHM            (C_RD_WR_ARB_ALGORITHM),
-     .C_S_AXI_REG_EN0                  (C_S_AXI_REG_EN0),
-     .C_S_AXI_REG_EN1                  (C_S_AXI_REG_EN1),
-     .C_S_AXI_CTRL_ADDR_WIDTH          (C_S_AXI_CTRL_ADDR_WIDTH),
-     .C_S_AXI_CTRL_DATA_WIDTH          (C_S_AXI_CTRL_DATA_WIDTH),
-     .C_S_AXI_BASEADDR                 (C_S_AXI_BASEADDR),
-     .C_ECC_ONOFF_RESET_VALUE          (C_ECC_ONOFF_RESET_VALUE),
-     .C_ECC_CE_COUNTER_WIDTH           (C_ECC_CE_COUNTER_WIDTH),
-
-
-     .SYSCLK_TYPE                      (SYSCLK_TYPE),
-     .REFCLK_TYPE                      (REFCLK_TYPE),
-     .REFCLK_FREQ                      (REFCLK_FREQ),
-     .DIFF_TERM_REFCLK                 (DIFF_TERM_REFCLK),
-     .IODELAY_GRP                      (IODELAY_GRP),
-
-     .CAL_WIDTH                        (CAL_WIDTH),
-     .STARVE_LIMIT                     (STARVE_LIMIT),
-     .DRAM_TYPE                        (DRAM_TYPE),
-
-
-     .RST_ACT_LOW                      (RST_ACT_LOW)
-     )
- -----/\----- EXCLUDED -----/\----- */
-     u_ddr3_32bit
-       (
-    // Memory interface ports
-    .ddr3_addr                      (ddr3_addr),
-    .ddr3_ba                        (ddr3_ba),
-    .ddr3_cas_n                     (ddr3_cas_n),
-    .ddr3_ck_n                      (ddr3_ck_n),
-    .ddr3_ck_p                      (ddr3_ck_p),
-    .ddr3_cke                       (ddr3_cke),
-    .ddr3_ras_n                     (ddr3_ras_n),
-    .ddr3_reset_n                   (ddr3_reset_n),
-    .ddr3_we_n                      (ddr3_we_n),
-    .ddr3_dq                        (ddr3_dq),
-    .ddr3_dqs_n                     (ddr3_dqs_n),
-    .ddr3_dqs_p                     (ddr3_dqs_p),
-    .init_calib_complete            (ddr3_running),
-
-    .ddr3_cs_n                      (ddr3_cs_n),
-    .ddr3_dm                        (ddr3_dm),
-    .ddr3_odt                       (ddr3_odt),
-    // Application interface ports
-    .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
-    .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
-    .aresetn                        (ddr3_axi_rst_reg_n),
-    .app_sr_req                     (1'b0),
-    .app_sr_active                  (app_sr_active),
-    .app_ref_req                    (1'b0),
-    .app_ref_ack                    (app_ref_ack),
-    .app_zq_req                     (1'b0),
-    .app_zq_ack                     (app_zq_ack),
-
-    // Slave Interface Write Address Ports
-    .s_axi_awid                     (s_axi_awid),
-    .s_axi_awaddr                   (s_axi_awaddr),
-    .s_axi_awlen                    (s_axi_awlen),
-    .s_axi_awsize                   (s_axi_awsize),
-    .s_axi_awburst                  (s_axi_awburst),
-    .s_axi_awlock                   (s_axi_awlock),
-    .s_axi_awcache                  (s_axi_awcache),
-    .s_axi_awprot                   (s_axi_awprot),
-    .s_axi_awqos                    (s_axi_awqos),
-    .s_axi_awvalid                  (s_axi_awvalid),
-    .s_axi_awready                  (s_axi_awready),
-    // Slave Interface Write Data Ports
-    .s_axi_wdata                    (s_axi_wdata),
-    .s_axi_wstrb                    (s_axi_wstrb),
-    .s_axi_wlast                    (s_axi_wlast),
-    .s_axi_wvalid                   (s_axi_wvalid),
-    .s_axi_wready                   (s_axi_wready),
-    // Slave Interface Write Response Ports
-    .s_axi_bid                      (s_axi_bid),
-    .s_axi_bresp                    (s_axi_bresp),
-    .s_axi_bvalid                   (s_axi_bvalid),
-    .s_axi_bready                   (s_axi_bready),
-    // Slave Interface Read Address Ports
-    .s_axi_arid                     (s_axi_arid),
-    .s_axi_araddr                   (s_axi_araddr),
-    .s_axi_arlen                    (s_axi_arlen),
-    .s_axi_arsize                   (s_axi_arsize),
-    .s_axi_arburst                  (s_axi_arburst),
-    .s_axi_arlock                   (s_axi_arlock),
-    .s_axi_arcache                  (s_axi_arcache),
-    .s_axi_arprot                   (s_axi_arprot),
-    .s_axi_arqos                    (s_axi_arqos),
-    .s_axi_arvalid                  (s_axi_arvalid),
-    .s_axi_arready                  (s_axi_arready),
-    // Slave Interface Read Data Ports
-    .s_axi_rid                      (s_axi_rid),
-    .s_axi_rdata                    (s_axi_rdata),
-    .s_axi_rresp                    (s_axi_rresp),
-    .s_axi_rlast                    (s_axi_rlast),
-    .s_axi_rvalid                   (s_axi_rvalid),
-    .s_axi_rready                   (s_axi_rready),
-    // System Clock Ports
-    .sys_clk_i                      (sys_clk_i),  // From external 100MHz source.
-    .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
-    );
+      // Slave Interface Write Address Ports
+      .s_axi_awid                     (s_axi_awid),
+      .s_axi_awaddr                   (s_axi_awaddr),
+      .s_axi_awlen                    (s_axi_awlen),
+      .s_axi_awsize                   (s_axi_awsize),
+      .s_axi_awburst                  (s_axi_awburst),
+      .s_axi_awlock                   (s_axi_awlock),
+      .s_axi_awcache                  (s_axi_awcache),
+      .s_axi_awprot                   (s_axi_awprot),
+      .s_axi_awqos                    (s_axi_awqos),
+      .s_axi_awvalid                  (s_axi_awvalid),
+      .s_axi_awready                  (s_axi_awready),
+      // Slave Interface Write Data Ports
+      .s_axi_wdata                    (s_axi_wdata),
+      .s_axi_wstrb                    (s_axi_wstrb),
+      .s_axi_wlast                    (s_axi_wlast),
+      .s_axi_wvalid                   (s_axi_wvalid),
+      .s_axi_wready                   (s_axi_wready),
+      // Slave Interface Write Response Ports
+      .s_axi_bid                      (s_axi_bid),
+      .s_axi_bresp                    (s_axi_bresp),
+      .s_axi_bvalid                   (s_axi_bvalid),
+      .s_axi_bready                   (s_axi_bready),
+      // Slave Interface Read Address Ports
+      .s_axi_arid                     (s_axi_arid),
+      .s_axi_araddr                   (s_axi_araddr),
+      .s_axi_arlen                    (s_axi_arlen),
+      .s_axi_arsize                   (s_axi_arsize),
+      .s_axi_arburst                  (s_axi_arburst),
+      .s_axi_arlock                   (s_axi_arlock),
+      .s_axi_arcache                  (s_axi_arcache),
+      .s_axi_arprot                   (s_axi_arprot),
+      .s_axi_arqos                    (s_axi_arqos),
+      .s_axi_arvalid                  (s_axi_arvalid),
+      .s_axi_arready                  (s_axi_arready),
+      // Slave Interface Read Data Ports
+      .s_axi_rid                      (s_axi_rid),
+      .s_axi_rdata                    (s_axi_rdata),
+      .s_axi_rresp                    (s_axi_rresp),
+      .s_axi_rlast                    (s_axi_rlast),
+      .s_axi_rvalid                   (s_axi_rvalid),
+      .s_axi_rready                   (s_axi_rready),
+      // System Clock Ports
+      .sys_clk_i                      (sys_clk_i),  // From external 100MHz source.
+      .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+   );
 
 `endif //  `ifndef NO_DRAM_FIFOS
 

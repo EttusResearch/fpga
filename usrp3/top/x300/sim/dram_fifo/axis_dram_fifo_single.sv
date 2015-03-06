@@ -51,8 +51,9 @@ module axis_dram_fifo_single
   always @(posedge ddr3_axi_clk)
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
-  axi_dram_fifo #(.BASE('h0), .SIZE(24), .TIMEOUT(280)) axi_dram_fifo_i0
-  (
+  axi_dram_fifo #(
+    .BASE('h0), .SIZE(24), .TIMEOUT(280)
+  ) axi_dram_fifo_i0 (
     //
     // Clocks and reset
     .bus_clk                    (bus_clk),

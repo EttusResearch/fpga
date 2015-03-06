@@ -12,7 +12,7 @@
 `include "sim_cvita_lib.sv"
 `include "sim_axi4_lib.sv"
 
-`define USE_SRAM
+//`define USE_SRAM
 
 module dram_fifo_tb();
   `TEST_BENCH_INIT("dram_fifo_tb",`NUM_TEST_CASES,`NS_PER_TICK)

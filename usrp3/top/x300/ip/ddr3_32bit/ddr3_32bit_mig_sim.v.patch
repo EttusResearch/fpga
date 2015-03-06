@@ -211,14 +211,14 @@
 <    //***************************************************************************
 <    // Simulation parameters
 <    //***************************************************************************
-<    parameter SIM_BYPASS_INIT_CAL   = "OFF",
+<    parameter SIM_BYPASS_INIT_CAL   = "FAST",
 <                                      // # = "OFF" -  Complete memory init &
 <                                      //              calibration sequence
 <                                      // # = "SKIP" - Not supported
 <                                      // # = "FAST" - Complete memory init & use
 <                                      //              abbreviated calib sequence
 < 
-<    parameter SIMULATION            = "FALSE",
+<    parameter SIMULATION            = "TRUE",
 <                                      // Should be TRUE during design simulations and
 <                                      // FALSE during implementations
 < 
@@ -489,7 +489,7 @@
 < 
 ---
 > module ddr3_32bit_mig #(
->    `include "../../../ddr3_32bit_mig_parameters.vh"
+>    `include "../../../ddr3_32bit_mig_sim_parameters.vh"
 > ) (
 584,585d98
 <    // Single-ended iodelayctrl clk (reference clock)
