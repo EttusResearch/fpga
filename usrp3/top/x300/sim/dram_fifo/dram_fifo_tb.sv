@@ -5,7 +5,7 @@
 
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 5
+`define NUM_TEST_CASES 6
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
@@ -85,21 +85,38 @@ module dram_fifo_tb();
     while (bus_rst) @(posedge bus_clk);
     while (~sys_rst_n) @(posedge sys_clk);
     `TEST_CASE_DONE((~bus_rst & sys_rst_n));
+    
+    repeat (200) @(posedge sys_clk);
 
-    `TEST_CASE_START("Wait for initial calibration complete");
-    while (~calib_complete) @(posedge bus_clk);
+    `TEST_CASE_START("Wait for initial calibration to complete");
+    while (calib_complete !== 1'b1) @(posedge bus_clk);
     `TEST_CASE_DONE(calib_complete);
 
     header = '{
       pkt_type:DATA, has_time:0, eob:0, seqno:12'h666,
       length:0, sid:$random, timestamp:64'h0};
 
-    `TEST_CASE_START("Fill up empty FIFO then drain");
+    `TEST_CASE_START("Fill up empty FIFO then drain (short packet)");
       chdr_o.axis.tready = 0;
-      chdr_i.push_ramp_pkt(200, 64'd0, 64'd100, header);
+      chdr_i.push_ramp_pkt(16, 64'd0, 64'h100, header);
       chdr_o.axis.tready = 1;
+      chdr_o.wait_for_pkt_start();
       chdr_o.wait_for_pkt_end_get_info(header_out, stats);
-    `TEST_CASE_DONE((stats.count==200) && (header.sid==header_out.sid) && chdr_i.axis.tready);
+      `ASSERT_ERROR(stats.count==16,            "Bad packet: Length mismatch");
+      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      `ASSERT_ERROR(chdr_i.axis.tready,         "Bus not ready");
+    `TEST_CASE_DONE(1);
+
+    `TEST_CASE_START("Fill up empty FIFO then drain (long packet)");
+      chdr_o.axis.tready = 0;
+      chdr_i.push_ramp_pkt(1024, 64'd0, 64'h100, header);
+      chdr_o.axis.tready = 1;
+      chdr_o.wait_for_pkt_start();
+      chdr_o.wait_for_pkt_end_get_info(header_out, stats);
+      `ASSERT_ERROR(stats.count==1024,          "Bad packet: Length mismatch");
+      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      `ASSERT_ERROR(chdr_i.axis.tready,         "Bus not ready");
+    `TEST_CASE_DONE(1);
 
     header = '{
       pkt_type:DATA, has_time:1, eob:0, seqno:12'h666, 
@@ -109,7 +126,7 @@ module dram_fifo_tb();
       chdr_o.axis.tready = 1;
       fork
           begin
-            chdr_i.push_ramp_pkt(100, 64'd0, 64'd100, header);
+            chdr_i.push_ramp_pkt(20, 64'd0, 64'h100, header);
           end
           begin
             chdr_o.wait_for_pkt_start();
@@ -117,21 +134,24 @@ module dram_fifo_tb();
           end
       join
     crc_cache = stats.crc;    //Cache CRC for future test cases
-    `TEST_CASE_DONE((stats.count==100));
+    `ASSERT_ERROR(stats.count==20,      "Bad packet: Length mismatch");
+    `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Concurrent read and write (multiple packets)");
       chdr_o.axis.tready = 1;
       fork
           begin
-            repeat (20) begin
-              chdr_i.push_ramp_pkt(100, 64'd0, 64'd100, header);
+            repeat (10) begin
+              chdr_i.push_ramp_pkt(20, 64'd0, 64'h100, header);
+              repeat (30) @(posedge bus_clk);
             end
           end
           begin
-            repeat (20) begin
+            repeat (10) begin
               chdr_o.wait_for_pkt_start();
               chdr_o.wait_for_pkt_end_get_info(header_out, stats);
-              `ASSERT_ERROR((stats.count==100)&&(crc_cache==stats.crc), "Bad/corrupt packet!");
+              `ASSERT_ERROR(stats.count==20,      "Bad packet: Length mismatch");
+              `ASSERT_ERROR(crc_cache==stats.crc, "Bad packet: Wrong CRC");
             end
           end
       join
