@@ -27,21 +27,19 @@ module gen_ddrlvds
 
    reg [15:0] 	i_reg, q_reg;
    reg [15:0] 	i_2x, q_2x;
-   reg 		phase, phase_2x;
    reg 		rising_edge;
    wire [15:0] 	i_and_q_2x;
    reg 		sync_2x;
-   reg 		sync_dacs_reg;
-   
-   
    
    genvar 	z;
    wire [7:0] 	tx_int;
    wire 	tx_clk_2x_int;
    wire 	tx_frame_int;
-   
-   (* keep = "true", max_fanout = 10 *) wire phase_eq_phase2x = (phase == phase_2x);
 
+   // Keep constraint to ensure these signals are not resource shared which can cause timing failures
+   (* keep = "true" *) reg phase, phase_2x, sync_dacs_reg;
+
+   wire phase_eq_phase2x = (phase == phase_2x);
 
    always @(posedge tx_clk_1x)
      if (reset)

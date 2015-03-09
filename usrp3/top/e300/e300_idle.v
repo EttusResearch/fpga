@@ -1,12 +1,8 @@
 //
-// Copyright 2013-2014 Ettus Research
+// Copyright 2015 Ettus Research
 //
 
 module e300
-#(parameter STREAMS_WIDTH = 4,
-  parameter CMDFIFO_DEPTH = 5,
-  parameter CONFIG_BASE = 32'h4000_0000,
-  parameter PAGE_WIDTH = 10)
 (
   // ARM Connections
   inout [53:0]  MIO,
@@ -102,12 +98,6 @@ module e300
   input         GPS_PPS,
   input         PPS_EXT_IN,
 
-  // VTCXO and the DAC that feeds it
-  output        TCXO_DAC_SYNCn,
-  output        TCXO_DAC_SCLK,
-  output        TCXO_DAC_SDIN,
-  input         TCXO_CLK,
-
   // gpios, change to inout somehow
   inout [5:0]   PL_GPIO
 );
@@ -163,24 +153,12 @@ module e300
 
   wire        bus_clk_pin;
 
-  wire        bus_clk, radio_clk;
-  wire        bus_rst, radio_rst;
+  wire        bus_clk;
+  wire        bus_rst;
   wire        sys_arst, sys_arst_n;
 
   wire [31:0] ps_gpio_out;
   wire [31:0] ps_gpio_in;
-
-  wire        stream_irq;
-
-  wire [63:0] h2s_tdata;
-  wire        h2s_tvalid;
-  wire        h2s_tready;
-  wire        h2s_tlast;
-
-  wire [63:0] s2h_tdata;
-  wire        s2h_tvalid;
-  wire        s2h_tready;
-  wire        s2h_tlast;
 
   // register the debounced onswitch signal to detect edges,
   // Note: ONSWITCH_DB is low active
@@ -251,7 +229,7 @@ module e300
     .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_pin),
 
     //    Misc interrupts, GPIO, clk
-    .processing_system7_0_IRQ_F2P_pin({13'h0, button_release_irq, button_press_irq, stream_irq}),
+    .processing_system7_0_IRQ_F2P_pin({13'h0, button_release_irq, button_press_irq, 1'b0}),
     .processing_system7_0_GPIO_I_pin(ps_gpio_in),
     .processing_system7_0_GPIO_O_pin(ps_gpio_out),
     .processing_system7_0_FCLK_CLK0_pin(bus_clk_pin),
@@ -290,11 +268,11 @@ module e300
 
     //    SPI Core 0 - To AD9361
     .processing_system7_0_SPI0_SS_O_pin(),
-    .processing_system7_0_SPI0_SS1_O_pin(CAT_CS),
+    .processing_system7_0_SPI0_SS1_O_pin(),
     .processing_system7_0_SPI0_SS2_O_pin(),
-    .processing_system7_0_SPI0_SCLK_O_pin(CAT_SCLK),
-    .processing_system7_0_SPI0_MOSI_O_pin(CAT_MOSI),
-    .processing_system7_0_SPI0_MISO_I_pin(CAT_MISO),
+    .processing_system7_0_SPI0_SCLK_O_pin(),
+    .processing_system7_0_SPI0_MOSI_O_pin(),
+    .processing_system7_0_SPI0_MISO_I_pin(),
 
     //    SPI Core 1 - To AVR
     .processing_system7_0_SPI1_SS_O_pin(),
@@ -311,13 +289,6 @@ module e300
 
   assign sys_arst = ~sys_arst_n;
 
-  reset_sync radio_rst_sync
-  (
-    .clk(radio_clk),
-    .reset_in(sys_arst),
-    .reset_out(radio_rst)
-  );
-
   BUFG core_clk_gen
   (
     .I(bus_clk_pin),
@@ -331,271 +302,53 @@ module e300
     .reset_out(bus_rst)
   );
 
-  //------------------------------------------------------------------
-  // CODEC capture/gen
-  //------------------------------------------------------------------
-  wire mimo;
-  wire codec_arst;
-  wire [31:0] rx_data0, rx_data1, tx_data0, tx_data1;
+  //band selects
+  assign TX_BANDSEL   = 3'b000;
+  assign RX1_BANDSEL  = 3'b000;
+  assign RX2_BANDSEL  = 3'b000;
+  assign RX2C_BANDSEL = 2'b00;
+  assign RX1B_BANDSEL = 2'b00;
+  assign RX1C_BANDSEL = 2'b00;
+  assign RX2B_BANDSEL = 2'b00;
 
-  catcodec_ddr_cmos #(
-    .DEVICE("7SERIES"))
-  inst_catcodec_ddr_cmos (
-    .radio_clk(radio_clk),
-    .arst(codec_arst),
-    .mimo(mimo),
-    .rx1(rx_data0),
-    .rx2(rx_data1),
-    .tx1(tx_data0),
-    .tx2(tx_data1),
-    .rx_clk(CAT_DATA_CLK),
-    .rx_frame(CAT_RX_FRAME),
-    .rx_d(CAT_P0_D),
-    .tx_clk(CAT_FB_CLK),
-    .tx_frame(CAT_TX_FRAME),
-    .tx_d(CAT_P1_D));
+  //leds
+  assign LED_TXRX1_TX = 1'b0;
+  assign LED_TXRX1_RX = 1'b0;
+  assign LED_RX1_RX = 1'b0;
+  assign LED_TXRX2_TX = 1'b0;
+  assign LED_TXRX2_RX = 1'b0;
+  assign LED_RX2_RX = 1'b0;
 
-  assign CAT_CTRL_IN = 4'b1;
-  assign CAT_ENAGC = 1'b1;
-  assign CAT_TXNRX = 1'b1;
-  assign CAT_ENABLE = 1'b1;
+  //enables
+  assign TX_ENABLE1A = 1'b0;
+  assign TX_ENABLE2A = 1'b0;
+  assign TX_ENABLE1B = 1'b0;
+  assign TX_ENABLE2B = 1'b0;
 
-  assign CAT_RESET = ~(sys_arst || (CAT_CS & CAT_MOSI));   // Operates active-low, really CAT_RESET_B
-  assign CAT_SYNC = 1'b0;
+  //antenna selects
+  assign VCTXRX1_V1 = 0;
+  assign VCTXRX1_V2 = 0;
+  assign VCTXRX2_V1 = 0;
+  assign VCTXRX2_V2 = 0;
+  assign VCRX1_V1   = 0;
+  assign VCRX1_V2   = 0;
+  assign VCRX2_V1   = 0;
+  assign VCRX2_V2   = 0;
 
-  //------------------------------------------------------------------
-  //-- connect misc stuff to user GPIO
-  //------------------------------------------------------------------
-  assign ps_gpio_in[5] = AVR_IRQ;       //59
-  assign ps_gpio_in[7] = ONSWITCH_DB;   //61
+  assign CAT_CTRL_IN  = 4'b0000;
+  assign CAT_RESET    = 1'b0;
+  assign CAT_CS       = 1'b0;
+  assign CAT_SCLK     = 1'b0;
+  assign CAT_MOSI     = 1'b0;
+  assign CAT_SYNC     = 1'b0;
+  assign CAT_TXNRX    = 1'b0;
+  assign CAT_ENABLE   = 1'b0;
+  assign CAT_P1_D     = 12'b0000_0000_0000;
 
-  //------------------------------------------------------------------
-  //-- radio core from x300 for super fast bring up
-  //------------------------------------------------------------------
+  assign CAT_TX_FRAME = 1'b0;
+  assign CAT_FB_CLK   = 1'b0;
+  assign CAT_ENAGC    = 1'b0;
 
-  wire [31:0] gpio0, gpio1;
-
-  assign { LED_TXRX1_TX, LED_TXRX1_RX, LED_RX1_RX, //3
-           VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
-           TX_ENABLE1B, TX_ENABLE1A //2
-         } = gpio0[18:10];
-
-  assign { LED_TXRX2_TX, LED_TXRX2_RX, LED_RX2_RX, //3
-           VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
-           TX_ENABLE2B, TX_ENABLE2A //2
-         } = gpio1[18:10];
-
-  //------------------------------------------------------------------
-  //-- Zynq system interface, DMA, control channels, etc.
-  //------------------------------------------------------------------
-
-  wire [31:0] core_set_data, core_rb_data, xbar_set_data, xbar_rb_data;
-  wire [31:0] core_set_addr, xbar_set_addr, xbar_rb_addr;
-  wire        core_stb, xbar_set_stb, xbar_rb_stb;
-
-  zynq_fifo_top
-  #(
-    .CONFIG_BASE(CONFIG_BASE),
-    .PAGE_WIDTH(PAGE_WIDTH),
-    .H2S_STREAMS_WIDTH(STREAMS_WIDTH),
-    .H2S_CMDFIFO_DEPTH(CMDFIFO_DEPTH),
-    .S2H_STREAMS_WIDTH(STREAMS_WIDTH),
-    .S2H_CMDFIFO_DEPTH(CMDFIFO_DEPTH)
-  )
-  zynq_fifo_top0
-  (
-    .clk(bus_clk), .rst(bus_rst),
-    .CTL_AXI_AWADDR(GP0_M_AXI_AWADDR_pin),
-    .CTL_AXI_AWVALID(GP0_M_AXI_AWVALID_pin),
-    .CTL_AXI_AWREADY(GP0_M_AXI_AWREADY_pin),
-    .CTL_AXI_WDATA(GP0_M_AXI_WDATA_pin),
-    .CTL_AXI_WSTRB(GP0_M_AXI_WSTRB_pin),
-    .CTL_AXI_WVALID(GP0_M_AXI_WVALID_pin),
-    .CTL_AXI_WREADY(GP0_M_AXI_WREADY_pin),
-    .CTL_AXI_BRESP(GP0_M_AXI_BRESP_pin),
-    .CTL_AXI_BVALID(GP0_M_AXI_BVALID_pin),
-    .CTL_AXI_BREADY(GP0_M_AXI_BREADY_pin),
-    .CTL_AXI_ARADDR(GP0_M_AXI_ARADDR_pin),
-    .CTL_AXI_ARVALID(GP0_M_AXI_ARVALID_pin),
-    .CTL_AXI_ARREADY(GP0_M_AXI_ARREADY_pin),
-    .CTL_AXI_RDATA(GP0_M_AXI_RDATA_pin),
-    .CTL_AXI_RRESP(GP0_M_AXI_RRESP_pin),
-    .CTL_AXI_RVALID(GP0_M_AXI_RVALID_pin),
-    .CTL_AXI_RREADY(GP0_M_AXI_RREADY_pin),
-
-    .DDR_AXI_AWADDR(HP0_S_AXI_AWADDR_pin),
-    .DDR_AXI_AWPROT(HP0_S_AXI_AWPROT_pin),
-    .DDR_AXI_AWVALID(HP0_S_AXI_AWVALID_pin),
-    .DDR_AXI_AWREADY(HP0_S_AXI_AWREADY_pin),
-    .DDR_AXI_WDATA(HP0_S_AXI_WDATA_pin),
-    .DDR_AXI_WSTRB(HP0_S_AXI_WSTRB_pin),
-    .DDR_AXI_WVALID(HP0_S_AXI_WVALID_pin),
-    .DDR_AXI_WREADY(HP0_S_AXI_WREADY_pin),
-    .DDR_AXI_BRESP(HP0_S_AXI_BRESP_pin),
-    .DDR_AXI_BVALID(HP0_S_AXI_BVALID_pin),
-    .DDR_AXI_BREADY(HP0_S_AXI_BREADY_pin),
-    .DDR_AXI_ARADDR(HP0_S_AXI_ARADDR_pin),
-    .DDR_AXI_ARPROT(HP0_S_AXI_ARPROT_pin),
-    .DDR_AXI_ARVALID(HP0_S_AXI_ARVALID_pin),
-    .DDR_AXI_ARREADY(HP0_S_AXI_ARREADY_pin),
-    .DDR_AXI_RDATA(HP0_S_AXI_RDATA_pin),
-    .DDR_AXI_RRESP(HP0_S_AXI_RRESP_pin),
-    .DDR_AXI_RVALID(HP0_S_AXI_RVALID_pin),
-    .DDR_AXI_RREADY(HP0_S_AXI_RREADY_pin),
-    .DDR_AXI_AWLEN(HP0_S_AXI_AWLEN_pin),
-    .DDR_AXI_RLAST(HP0_S_AXI_RLAST_pin),
-    .DDR_AXI_ARCACHE(HP0_S_AXI_ARCACHE_pin),
-    .DDR_AXI_AWSIZE(HP0_S_AXI_AWSIZE_pin),
-    .DDR_AXI_AWBURST(HP0_S_AXI_AWBURST_pin),
-    .DDR_AXI_AWCACHE(HP0_S_AXI_AWCACHE_pin),
-    .DDR_AXI_WLAST(HP0_S_AXI_WLAST_pin),
-    .DDR_AXI_ARLEN(HP0_S_AXI_ARLEN_pin),
-    .DDR_AXI_ARBURST(HP0_S_AXI_ARBURST_pin),
-    .DDR_AXI_ARSIZE(HP0_S_AXI_ARSIZE_pin),
-
-    .h2s_tdata(h2s_tdata),
-    .h2s_tlast(h2s_tlast),
-    .h2s_tvalid(h2s_tvalid),
-    .h2s_tready(h2s_tready),
-
-    .s2h_tdata(s2h_tdata),
-    .s2h_tlast(s2h_tlast),
-    .s2h_tvalid(s2h_tvalid),
-    .s2h_tready(s2h_tready),
-
-    .core_set_data(core_set_data),
-    .core_set_addr(core_set_addr),
-    .core_set_stb(core_set_stb),
-    .core_rb_data(core_rb_data),
-
-    .xbar_set_data(xbar_set_data),
-    .xbar_set_addr(xbar_set_addr),
-    .xbar_set_stb(xbar_set_stb),
-    .xbar_rb_data(xbar_rb_data),
-    .xbar_rb_addr(xbar_rb_addr),
-    .xbar_rb_stb(xbar_rb_stb),
-
-    .event_irq(stream_irq)
-  );
-
-  // resync pps to bus_clk >>> TODO: check this makes sense
-  reg [1:0] ppsync;
-  wire pps = ppsync[1];
-  wire lpps;
-  always @(posedge bus_clk)
-    ppsync <= { ppsync[0], lpps };
-
-  wire clk_tcxo = TCXO_CLK; // 40 MHz
-
-  wire [1:0] pps_select;
-
-  /* A local pps signal is derived from the tcxo clock. If a referenc
-   * at an appropriate rate (1 pps or 10 MHz) is present and selected
-   * a digital control loop will be invoked to tune the vcxo and lock t
-   * the reference.
-   */
-
-  wire is_10meg, is_pps, reflck, plllck; // reference status bits
-  ppsloop ppslp
-  (
-    .reset(1'b0),
-    .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
-    .refsel(pps_select),
-    .lpps(lpps),
-    .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
-    .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
-  );
-  reg [3:0] tcxo_status, st_rsync;
-  always @(posedge bus_clk) begin
-    /* status signals originate from other than the bus_clk domain so re-sync
-       before passing to e300_core
-     */
-    st_rsync <= {plllck, is_10meg, is_pps, reflck};
-    tcxo_status <= st_rsync;
-  end
-
-  // E300 Core logic
-
-  e300_core e300_core0
-  (
-    .bus_clk(bus_clk),
-    .bus_rst(bus_rst),
-
-    .h2s_tdata(h2s_tdata),
-    .h2s_tlast(h2s_tlast),
-    .h2s_tvalid(h2s_tvalid),
-    .h2s_tready(h2s_tready),
-
-    .s2h_tdata(s2h_tdata),
-    .s2h_tlast(s2h_tlast),
-    .s2h_tvalid(s2h_tvalid),
-    .s2h_tready(s2h_tready),
-
-    .radio_clk(radio_clk),
-    .radio_rst(radio_rst),
-    // flip them to match case
-    // this is a hack
-    .rx_data0(rx_data1),
-    .tx_data0(tx_data1),
-    .rx_data1(rx_data0),
-    .tx_data1(tx_data0),
-
-    // flip them, to match
-    // case ... this is a hack
-    .ctrl_out0(gpio1),
-    .ctrl_out1(gpio0),
-
-    .fp_gpio(PL_GPIO),
-
-    .set_data(core_set_data),
-    .set_addr(core_set_addr),
-    .set_stb(core_set_stb),
-    .rb_data(core_rb_data),
-
-    .xbar_set_data(xbar_set_data),
-    .xbar_set_addr(xbar_set_addr),
-    .xbar_set_stb(xbar_set_stb),
-    .xbar_rb_data(xbar_rb_data),
-    .xbar_rb_addr(xbar_rb_addr),
-    .xbar_rb_stb(xbar_rb_stb),
-
-    .pps_select(pps_select),
-    .pps(pps),
-    .tcxo_status(tcxo_status),
-
-    .lock_signals(CAT_CTRL_OUT[7:6]),
-    .mimo(mimo),
-    .codec_arst(codec_arst),
-    .tx_bandsel(TX_BANDSEL),
-    .rx_bandsel_a({RX2_BANDSEL, RX1_BANDSEL}),
-    .rx_bandsel_b({RX2B_BANDSEL, RX1B_BANDSEL}),
-    .rx_bandsel_c({RX2C_BANDSEL, RX1C_BANDSEL}),
-    .debug()
-  );
-
-  //------------------------------------------------------------------
-  //-- chipscope debugs
-  //------------------------------------------------------------------
-  /*
-  wire [35:0] CONTROL;
-  wire [255:0] DATA;
-  wire [7:0] TRIG;
-
-  chipscope_icon chipscope_icon(.CONTROL0(CONTROL));
-  chipscope_ila chipscope_ila
-  (
-      .CONTROL(CONTROL), .CLK(bus_clk),
-      .DATA(DATA), .TRIG0(TRIG)
-  );
-
-  assign DATA[63:0] = h2s_tdata;
-  assign TRIG = {
-      h2s_tlast, h2s_tvalid, h2s_tready, 1'b0,
-      4'b0
-  };
-  assign DATA[64] = h2s_tlast;
-  assign DATA[65] = h2s_tvalid;
-  assign DATA[66] = h2s_tready;
-  */
+  assign PL_GPIO = 6'b00_0000;
 
 endmodule // e300

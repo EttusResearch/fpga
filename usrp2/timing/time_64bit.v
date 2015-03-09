@@ -1,5 +1,5 @@
 //
-// Copyright 2011-2012 Ettus Research LLC
+// Copyright 2011-2014 Ettus Research LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -36,12 +36,7 @@ module time_64bit
    localparam      PPS_POLSRC = 2;
    localparam      PPS_IMM = 3;
    localparam      MIMO_SYNC = 5;
-   
-   reg [63:0] 	   ticks;
 
-   always @(posedge clk)
-     vita_time <= ticks;
-   
    wire [63:0] 	   vita_time_rcvd;
    
    wire [63:0] 	   next_ticks_preset;
@@ -92,10 +87,6 @@ module time_64bit
    assign pps_edge = pps_del[0] & ~pps_del[1];
 
    always @(posedge clk)
-     if(pps_edge)
-       vita_time_pps <= vita_time;
-   
-   always @(posedge clk)
      if(rst)
        set_on_next_pps <= 0;
      else if(set_on_pps_trig)
@@ -103,23 +94,42 @@ module time_64bit
      else if(set_imm | pps_edge)
        set_on_next_pps <= 0;
 
-   wire [63:0] 	   ticks_plus_one = ticks + 1;
-   
    always @(posedge clk)
      if(rst)
        begin
-	  ticks <= 64'd0;
+       vita_time <= 64'd0;
        end
      else if((set_imm | pps_edge) & set_on_next_pps)
        begin
-	  ticks <= next_ticks_preset;
+       vita_time <= next_ticks_preset;
        end
      else if(mimo_sync_now)
        begin
-	  ticks <= mimo_ticks;
+       vita_time <= mimo_ticks;
        end
      else
-       ticks <= ticks_plus_one;
+       vita_time <= vita_time + 1;
+
+   always @(posedge clk)
+     if (rst)
+       begin
+       vita_time_pps <= 64'd0;
+       end
+     else if (pps_edge)
+       begin
+       if (set_on_next_pps)
+         begin
+         vita_time_pps <= next_ticks_preset;
+         end
+       else if(mimo_sync_now)
+         begin
+         vita_time_pps <= mimo_ticks;
+         end
+       else
+         begin
+         vita_time_pps <= vita_time + 1;
+         end
+       end
 
    assign pps_int = pps_edge;
 
