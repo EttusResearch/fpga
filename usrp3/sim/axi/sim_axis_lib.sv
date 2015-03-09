@@ -62,15 +62,8 @@ interface axis_t #(parameter DWIDTH = 64)
     end
   endtask
 
-  // Wait for a packet to show up on the bus
-  task automatic wait_for_pkt_start;
-    begin
-      while(~(tready&tvalid)) @(posedge clk);
-    end
-  endtask
-
   // Wait for a packet to finish on the bus
-  task automatic wait_for_pkt_end;
+  task automatic wait_for_pkt;
     begin
       while(~(tready&tvalid&tlast)) @(posedge clk);
       @(posedge clk);
