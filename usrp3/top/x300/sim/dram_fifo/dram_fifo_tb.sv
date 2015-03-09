@@ -12,7 +12,8 @@
 `include "sim_cvita_lib.sv"
 `include "sim_axi4_lib.sv"
 
-//`define USE_SRAM
+//`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
+//`define USE_SRAM_MIG      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
 
 module dram_fifo_tb();
   `TEST_BENCH_INIT("dram_fifo_tb",`NUM_TEST_CASES,`NS_PER_TICK)
@@ -28,7 +29,7 @@ module dram_fifo_tb();
 
   // Initialize DUT
   wire calib_complete;
-`ifdef USE_SRAM
+`ifdef USE_SRAM_FIFO
 
   axi_fifo #(.WIDTH(65), .SIZE(24)) dut_single (
     .clk(bus_clk),
@@ -50,7 +51,12 @@ module dram_fifo_tb();
 
 `else
 
-  axis_dram_fifo_single dut_single (
+  axis_dram_fifo_single 
+`ifdef USE_SRAM_MIG
+  #(.USE_SRAM_MEMORY(1)) 
+`endif
+  dut_single
+  (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk(sys_clk),
