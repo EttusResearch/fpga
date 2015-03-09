@@ -74,10 +74,10 @@ interface cvita_stream_t (input clk);
   // Push a word onto the AXI-Stream bus and wait for it to transfer
   // Args:
   // - word: The data to push onto the bus
-  // - eop (optional): End of packet (asserts tlast)
+  // - eop: End of packet (asserts tlast)
   task automatic push_data;
     input logic [63:0] word;
-    input logic eop = 0;
+    input logic eop;
     axis.push_word(word, eop);
   endtask
   
@@ -169,7 +169,7 @@ interface cvita_stream_t (input clk);
       cvita_hdr_t tmp_hdr = hdr;
       tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
       push_hdr(tmp_hdr);
-      if (hdr.has_time) push_data(hdr.timestamp, 0);
+      if (hdr.has_time) axis.push_word(hdr.timestamp, 0);
 
       repeat(num_samps-1) begin
         axis.push_word({$random,$random}, 0);
@@ -196,7 +196,7 @@ interface cvita_stream_t (input clk);
       cvita_hdr_t tmp_hdr = hdr;
       tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
       push_hdr(tmp_hdr);
-      if (hdr.has_time) push_data(hdr.timestamp, 0);
+      if (hdr.has_time) axis.push_word(hdr.timestamp, 0);
 
       repeat(num_samps-1) begin
         axis.push_word(ramp_start+(counter*ramp_inc), 0);

@@ -18,7 +18,7 @@ interface axis_t #(parameter DWIDTH = 64)
   // - eop (optional): End of packet (asserts tlast)
   task automatic push_word;
     input logic [DWIDTH-1:0] word;
-    input logic eop = 0;
+    input logic eop;
     begin
       tvalid = 1;
       tlast  = eop;
