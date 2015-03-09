@@ -102,18 +102,20 @@ interface cvita_stream_t (input clk);
     axis.wait_for_bubble();
   endtask
 
-  // Wait for a packet to show up on the bus
-  task automatic wait_for_pkt_start;
-    axis.wait_for_pkt_start();
+  // Wait for a packet to finish on the bus
+  task automatic wait_for_pkt;
+    axis.wait_for_pkt();
   endtask
 
-  // Wait for a packet to finish on the bus
-  task automatic wait_for_pkt_end;
-    axis.wait_for_pkt_end();
-  endtask
+  `define WAIT_FOR_PKT_GET_INFO__UPDATE \
+    stats.count = stats.count + 1; \
+    stats.sum   = stats.sum + axis.tdata; \
+    stats.crc   = stats.crc ^ axis.tdata; \
+    if (axis.tdata < stats.min) stats.min = axis.tdata; \
+    if (axis.tdata > stats.max) stats.max = axis.tdata;
 
   // Wait for a packet to finish on the bus
-  task automatic wait_for_pkt_end_get_info;
+  task automatic wait_for_pkt_get_info;
     output cvita_hdr_t    hdr;
     output cvita_stats_t  stats;
     begin
@@ -124,26 +126,36 @@ interface cvita_stream_t (input clk);
       stats.min   = 64'h7FFFFFFFFFFFFFFF;
       stats.max   = 64'h0;
       stats.crc   = 64'h0;
-      while(~(axis.tready&axis.tvalid&axis.tlast)) begin
+
+      @(negedge clk);
+      //Corner case. We are already looking at the end
+      //of a packet i.e. its just a header
+      if (axis.tready&axis.tvalid&axis.tlast) begin
+        unflatten_chdr_no_ts(axis.tdata, hdr);
         @(posedge clk);
-        if (is_hdr) begin
-          unflatten_chdr_no_ts(axis.tdata, hdr);
-          is_time = hdr.has_time;
-          is_hdr = 0;
-        end else if (is_time) begin
-          hdr.timestamp = axis.tdata;
-          is_time = 0;
-        end else begin
-          stats.count = stats.count + 1;
-          stats.sum   = stats.sum + axis.tdata;
-          stats.crc   = stats.crc ^ axis.tdata;
-          if (axis.tdata < stats.min) stats.min = axis.tdata;
-          if (axis.tdata > stats.max) stats.max = axis.tdata;
+      end else begin
+        while(~(axis.tready&axis.tvalid&axis.tlast)) begin
+          if (axis.tready&axis.tvalid) begin
+            if (is_hdr) begin
+              unflatten_chdr_no_ts(axis.tdata, hdr);
+              is_time = hdr.has_time;
+              is_hdr = 0;
+            end else if (is_time) begin
+              hdr.timestamp = axis.tdata;
+              is_time = 0;
+            end else begin
+              `WAIT_FOR_PKT_GET_INFO__UPDATE
+            end
+          end
+          @(negedge clk);
         end
+        `WAIT_FOR_PKT_GET_INFO__UPDATE
+        @(posedge clk);
       end
-      @(posedge clk);
     end
   endtask
+
+  `undef WAIT_FOR_PKT_GET_INFO__UPDATE
 
   // Push a packet with random data onto to the AXI Stream bus
   // Args:
