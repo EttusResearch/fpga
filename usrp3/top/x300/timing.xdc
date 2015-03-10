@@ -20,15 +20,15 @@ set_input_jitter [get_clocks FPGA_CLK] 0.05
 
 set var_fpga_clk_delay  1.545    ;# LMK_Delay=0.900ns, LMK->FPGA=0.645ns
 set var_fpga_clk_skew   0.100
-#set_clock_latency -source -early [expr $var_fpga_clk_delay - $var_fpga_clk_skew/2] [get_clocks FPGA_CLK]
-#set_clock_latency -source -late  [expr $var_fpga_clk_delay + $var_fpga_clk_skew/2] [get_clocks FPGA_CLK]
+set_clock_latency -source -early [expr $var_fpga_clk_delay - $var_fpga_clk_skew/2] [get_clocks FPGA_CLK]
+set_clock_latency -source -late  [expr $var_fpga_clk_delay + $var_fpga_clk_skew/2] [get_clocks FPGA_CLK]
 
-set var_adc_clk_delay  -1.560    ;# LMK->ADC=1.04ns, ADC->FPGA=0.750ns, ADC=6.65ns (0.69*5ns)+5.7-2.5 
+set var_adc_clk_delay   8.440    ;# LMK->ADC=1.04ns, ADC->FPGA=0.750ns, ADC=6.65ns=(0.69*5ns)+5.7-2.5 
 set var_adc_clk_skew    0.100    ;# The real skew is ~3.5ns with which we will not meet static timing. Just use LMK jitter values.
-#set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
-#set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
-#set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB1_ADC_DCLK]
-#set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2] [get_clocks DB1_ADC_DCLK]
+set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
+set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
+set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB1_ADC_DCLK]
+set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2] [get_clocks DB1_ADC_DCLK]
 
 # FPGA_CLK_p/n is externally phase shifted to allow for crossing from the ADC clock domain
 # to the radio_clk (aka FPGA_CLK_p/n) clock domain. To ensure this timing is consistent,
