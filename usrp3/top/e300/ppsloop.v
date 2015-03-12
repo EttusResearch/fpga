@@ -14,11 +14,15 @@ module ppsloop(
     output reg lpps,
     output reg is10meg, ispps, reflck, 
     output plllck,// status of things
-    output sclk, output mosi, output sync_n
+    output sclk, output mosi, output sync_n,
+    input [15:0] dac_dflt
    );
   wire ppsref = (refsel==2'b00)?ppsgps:
                 (refsel==2'b11)?ppsext:
                                 1'b0;
+  wire n_pps = (refsel==2'b01) | (refsel==2'b10);
+  reg _npps, no_pps;
+  always @(posedge clk) { no_pps, _npps } <= { _npps, n_pps };
 // reference pps to discilpline the VCTX|CXO to, from GPS or EXT in
 
   wire clk_200M_o, clk;
@@ -216,7 +220,7 @@ module ppsloop(
     refs1 <= { refs1[1:0], refsel[1] };
     refs0 <= { refs0[1:0], refsel[0] };
     refchanged <= { refs1[2], refs0[2] } != { refs1[1], refs0[1] };
-    refinternal <=  refs1[2] ^ refs0[1]; // not gps or external
+    refinternal <=  refs1[2] ^ refs0[2]; // not gps or external
 
     // compute how far off the expected period we are
     if (ple[1]) begin
@@ -263,6 +267,7 @@ module ppsloop(
     nxt_lcnt = recycle ? 26'd0 : lcnt + 1'b1;
     case (sstate)
     REFDET: begin // determine reference type
+      pr = 1'b0;
       if (valid_ref) nxt_sstate = CFADJ;
     end
     CFADJ: begin // coarse freqency adjustment
@@ -283,6 +288,9 @@ module ppsloop(
     end
     FINEADJ: begin // wide-ish bandwidth PI control
       if (~valid_ref | llovfl) nxt_sstate = REFDET;
+    end
+    default: begin
+      nxt_sstate = REFDET;
     end
     endcase
     // overriding conditions:
@@ -362,7 +370,10 @@ module ppsloop(
    */
 
   always @(posedge clk) begin
-    if (pr) begin
+    if (no_pps) begin
+     daco <= dac_dflt;
+    end
+    else if (pr) begin
       integ <= { 2'b00, dacv, 6'b0 }; // precharge the accumulator
       daco <= dacv;
     end
