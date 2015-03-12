@@ -242,7 +242,7 @@ module x300
    endfunction // clogb2
 
 
-   wire     radio_clk, radio_clk_2x;
+   wire     radio_clk, radio_clk_2x, dac_dci_clk;
    wire     global_rst, radio_rst, bus_rst;
 
    wire [3:0]   sw_rst;
@@ -349,8 +349,9 @@ module x300
    ////////////////////////////////////////////////////////////////////
    wire        radio_clk_locked;
 
-   radio_clk_gen radio_clk_gen
-     (.CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n), .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x),
+   radio_clk_gen radio_clk_gen (
+      .CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n),
+      .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
       .RESET(sw_rst[2]), .LOCKED(radio_clk_locked));
    
    //TODO: Ashish: Disabled for Vivado
@@ -517,7 +518,7 @@ module x300
       .tx_frame_p(DB0_DAC_FRAME_P), .tx_frame_n(DB0_DAC_FRAME_N),
       .tx_d_p({DB0_DAC_D7_P,DB0_DAC_D6_P,DB0_DAC_D5_P,DB0_DAC_D4_P,DB0_DAC_D3_P,DB0_DAC_D2_P,DB0_DAC_D1_P,DB0_DAC_D0_P}),
       .tx_d_n({DB0_DAC_D7_N,DB0_DAC_D6_N,DB0_DAC_D5_N,DB0_DAC_D4_N,DB0_DAC_D3_N,DB0_DAC_D2_N,DB0_DAC_D1_N,DB0_DAC_D0_N}),
-      .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk),
+      .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk), .tx_dci_clk(dac_dci_clk),
       .i(~tx0[31:16]), .q(~tx0[15:0]), // invert b/c Analog diff pairs are swapped for layout
       .sync_dacs(sync_dacs_radio0|sync_dacs_radio1)
       );
@@ -530,7 +531,7 @@ module x300
       .tx_frame_p(DB1_DAC_FRAME_P), .tx_frame_n(DB1_DAC_FRAME_N),
       .tx_d_p({DB1_DAC_D7_P,DB1_DAC_D6_P,DB1_DAC_D5_P,DB1_DAC_D4_P,DB1_DAC_D3_P,DB1_DAC_D2_P,DB1_DAC_D1_P,DB1_DAC_D0_P}),
       .tx_d_n({DB1_DAC_D7_N,DB1_DAC_D6_N,DB1_DAC_D5_N,DB1_DAC_D4_N,DB1_DAC_D3_N,DB1_DAC_D2_N,DB1_DAC_D1_N,DB1_DAC_D0_N}),
-      .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk),
+      .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk), .tx_dci_clk(dac_dci_clk),
       .i(~tx1[31:16]), .q(~tx1[15:0]), // invert b/c Analog diff pairs are swapped for layout
       .sync_dacs(sync_dacs_radio0|sync_dacs_radio1)
       );

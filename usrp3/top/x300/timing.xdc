@@ -13,7 +13,7 @@ create_clock -name DB0_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}  
 create_clock -name DB1_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}   [get_ports DB1_ADC_DCLK_P]
 create_clock -name IoRxClock           -period   4.000 -waveform {0.000 2.000}   [get_ports IoRxClock]
 # Create virtual clock aligned with FPGA_CLK that is twice the frequency for DAC IO Timing. 
-#create_clock -name VIRT_DAC_CLK        -period   2.500 -waveform {0.000 1.250}
+create_clock -name VIRT_DAC_CLK        -period   2.500 -waveform {0.000 1.250}
 
 # Set clock properties
 set_input_jitter [get_clocks FPGA_CLK] 0.05
@@ -51,7 +51,8 @@ create_generated_clock -name IoTxClock -multiply_by 1                           
 ## Aliases for auto-generated clocks
 
 create_generated_clock -name radio_clk                [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT0"}]
-#create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT1"}]
+create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT1"}]
+#create_generated_clock -name dac_dci_clk              [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT2"}]
 create_generated_clock -name bus_clk                  [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT0"}]
 create_generated_clock -name ioport2_clk              [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT1"}]
 create_generated_clock -name rio40_clk                [get_pins -hierarchical -filter {NAME =~ "*pcie_clk_gen/*/CLKOUT0"}]
@@ -229,53 +230,99 @@ set_property LOC SLICE_X1Y292   [get_cells {cap_db1/out_pre2*[26]}]
 set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[27]}]
 set_property LOC SLICE_X1Y292   [get_cells {cap_db1/out_pre2*[27]}]
 
+
 #*******************************************************************************
 ## DAC Interface
 
-# DAC Setup-Hold requirements for the source synchronous interface
-# This assumes that the DCI signal is delayed by 615ps in the DAC
-set dac_setup_time    -0.200
-set dac_hold_time      1.030
-set dac0_clk_dly       0.950
-set dac0_data_dly_min  0.900
-set dac0_data_dly_max  0.980
-set dac1_clk_dly       0.900
-set dac1_data_dly_min  0.840
-set dac1_data_dly_max  0.890
-
-set dac0_out_dly_min [expr $dac0_data_dly_min - $dac0_clk_dly - $dac_hold_time]
-set dac0_out_dly_max [expr $dac0_data_dly_max - $dac0_clk_dly + $dac_setup_time]
-set dac1_out_dly_min [expr $dac1_data_dly_min - $dac1_clk_dly - $dac_hold_time]
-set dac1_out_dly_max [expr $dac1_data_dly_max - $dac1_clk_dly + $dac_setup_time]
-
-#set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -min $dac0_out_dly_min                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -max $dac0_out_dly_max                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -min $dac0_out_dly_min -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB0_DAC_DCI}] -max $dac0_out_dly_max -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
-
-#set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -min $dac1_out_dly_min                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -max $dac1_out_dly_max                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -min $dac1_out_dly_min -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
-#set_output_delay -clock [get_clocks {DB1_DAC_DCI}] -max $dac1_out_dly_max -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+# DCI System-Sync Timing
 
 # The DCI clock driven to the DACs must obey setup and hold timing with respect to
-# the reference clock driven to the DACs (same as the FpgaClk, driven by the LMK).
-# However it is currently impossible to meet system synchronous timing. So we pick
-# min and max delay assuming that the FIFO in the DAC will be popped one 200MHz cycle
-# before the first word is pushed in. We are basically delaying the DCI by one 5ns
-# cycle but not more. 
-set dac0_clk_offset_max  2.881
-set dac0_clk_offset_min  0.000
-set dac1_clk_offset_max  3.020
-set dac1_clk_offset_min  0.000
+# the reference clock driven to the DACs (same as the FPGA_CLK, driven by the LMK).
+# Define the minimum and maximum clock propagation delays through the FPGA in order to
+# meet this system-wide timing.
+set dac0_clk_offset_out_max  1.350
+set dac0_clk_offset_out_min  0.225
+set dac1_clk_offset_out_max  1.350
+set dac1_clk_offset_out_min  0.225
 
-set dac_clk_offset_max  1.350
-set dac_clk_offset_min  0.225
+# The absolute latest the DCI clock should change is the sum of the maximum delay through
+# the FPGA and the latest the sourcing clock (FPGA_CLK) can arrive at the FPGA. This is an
+# artifact of the set_clock_latency constraints and doing system-wide timing. Typically,
+# these Early/Late delays are automatically compensated for by the analyzer. However this
+# is only the case for signals that start and end in the same PRIMARY clock domain. In
+# our case, VIRT_DAC_CLK and radio_clk are not the same clock domain and
+# therefore we have to manually remove the added Early/Late values from analysis.
+set dac0_dci_out_delay_max [expr $dac0_clk_offset_out_max + $var_fpga_clk_delay + $var_fpga_clk_skew/2]
+set dac0_dci_out_delay_min [expr $dac0_clk_offset_out_min + $var_fpga_clk_delay - $var_fpga_clk_skew/2]
+set dac1_dci_out_delay_max [expr $dac1_clk_offset_out_max + $var_fpga_clk_delay + $var_fpga_clk_skew/2]
+set dac1_dci_out_delay_min [expr $dac1_clk_offset_out_min + $var_fpga_clk_delay - $var_fpga_clk_skew/2]
 
-#set_output_delay -clock VIRT_DAC_CLK -min [expr -$dac_clk_offset_min]                               [get_ports {DB*_DAC_DCI_*}]
-#set_output_delay -clock VIRT_DAC_CLK -min [expr -$dac_clk_offset_min]        -clock_fall -add_delay [get_ports {DB*_DAC_DCI_*}]
-#set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max]                        [get_ports {DB*_DAC_DCI_*}]
-#set_output_delay -clock VIRT_DAC_CLK -max [expr 1.250 - $dac_clk_offset_max] -clock_fall -add_delay [get_ports {DB*_DAC_DCI_*}]
+# The min set_output_delay is the earliest the DCI clock should change BEFORE the current
+# edge of interest. Here it is inverted (negated) because the earliest the clock should
+# change is dac0_dci_out_delay_min AFTER the launch edge of the virtual clock.
+set_output_delay -clock VIRT_DAC_CLK -min [expr - $dac0_dci_out_delay_min]                        [get_ports {DB0_DAC_DCI_*}]
+set_output_delay -clock VIRT_DAC_CLK -min [expr - $dac0_dci_out_delay_min] -clock_fall -add_delay [get_ports {DB0_DAC_DCI_*}] 
+set_output_delay -clock VIRT_DAC_CLK -min [expr - $dac1_dci_out_delay_min]                        [get_ports {DB1_DAC_DCI_*}]
+set_output_delay -clock VIRT_DAC_CLK -min [expr - $dac1_dci_out_delay_min] -clock_fall -add_delay [get_ports {DB1_DAC_DCI_*}] 
+
+# The max set_output_delay is the time the data should be stable before the next
+# edge of interest. Since we are DDR, this is the falling edge. Hence we subtract
+# latest time the data should change, dac0_dci_out_delay_max, from the falling edge
+# time, DacPeriod/2.
+set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac0_dci_out_delay_max]                         [get_ports {DB0_DAC_DCI_*}]
+set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac0_dci_out_delay_max] -clock_fall -add_delay  [get_ports {DB0_DAC_DCI_*}] 
+set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max]                         [get_ports {DB1_DAC_DCI_*}]
+set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max] -clock_fall -add_delay  [get_ports {DB1_DAC_DCI_*}]
+
+
+# Data to DCI Source-Sync Timing
+
+# The data setup and hold values must be... errr... modified in order to pass timing in
+# the FPGA. The correct values are 0.270 and 0.090 for setup and hold, respectively.
+# The interface fails by around 350 ps in both directions, so we subtract the failing
+# amount from the actual amount to get a passing constraint.
+set dac_data_setup      0.270
+set dac_data_hold       0.090
+set dac_setup_adj       0.360
+set dac_hold_adj        0.360
+
+# These are real trace delays from the timing spreadsheet. Note that we are assuming
+# no variability in our clock delay.
+set dac0_data_delay_max 1.036
+set dac0_data_delay_min 0.898
+set dac0_clk_delay_max  0.974
+set dac0_clk_delay_min  0.974
+
+set dac1_data_delay_max 0.941
+set dac1_data_delay_min 0.833
+set dac1_clk_delay_max  0.930
+set dac1_clk_delay_min  0.930
+
+set dac0_out_delay_max [expr $dac0_data_delay_max - $dac0_clk_delay_min + $dac_data_setup - $dac_setup_adj]
+set dac0_out_delay_min [expr $dac0_data_delay_min - $dac0_clk_delay_max - $dac_data_hold  + $dac_hold_adj]
+set dac1_out_delay_max [expr $dac1_data_delay_max - $dac1_clk_delay_min + $dac_data_setup - $dac_setup_adj]
+set dac1_out_delay_min [expr $dac1_data_delay_min - $dac1_clk_delay_max - $dac_data_hold  + $dac_hold_adj]
+
+set_output_delay -clock [get_clocks DB0_DAC_DCI] -max $dac0_out_delay_max                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB0_DAC_DCI] -max $dac0_out_delay_max -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB0_DAC_DCI] -min $dac0_out_delay_min                        [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB0_DAC_DCI] -min $dac0_out_delay_min -clock_fall -add_delay [get_ports -regexp {DB0_DAC_D._. DB0_DAC_FRAME_.}]
+
+set_output_delay -clock [get_clocks DB1_DAC_DCI] -max $dac1_out_delay_max                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB1_DAC_DCI] -max $dac1_out_delay_max -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB1_DAC_DCI] -min $dac1_out_delay_min                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+set_output_delay -clock [get_clocks DB1_DAC_DCI] -min $dac1_out_delay_min -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
+
+# Only analyze setup relationships between the rising-to-rising or falling-to-falling
+# edges of the data and DCI clock. Do not analyze the rising-to-falling or the
+# falling-to-rising path for setup. In a similar manner, we want to analyze the rising
+# to falling and falling to rising paths for hold. Do not analyze the rising-to-rising
+# or falling-to-falling paths. Do this for both clocks.
+set_false_path -setup -rise_from [get_clocks radio_clk_2x] -fall_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
+set_false_path -setup -fall_from [get_clocks radio_clk_2x] -rise_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
+set_false_path -hold  -rise_from [get_clocks radio_clk_2x] -rise_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
+set_false_path -hold  -fall_from [get_clocks radio_clk_2x] -fall_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
+
 
 #*******************************************************************************
 ## IoPort2
