@@ -12,22 +12,26 @@ module ppsloop(
     input ppsext,
     input [1:0] refsel,
     output reg lpps,
-    output reg is10meg, ispps, reflck, 
+    output reg is10meg,
+    output reg ispps,
+    output reg reflck,
     output plllck,// status of things
-    output sclk, output mosi, output sync_n,
+    output sclk,
+    output mosi,
+    output sync_n,
     input [15:0] dac_dflt
    );
   wire ppsref = (refsel==2'b00)?ppsgps:
                 (refsel==2'b11)?ppsext:
-                                1'b0;
-  wire n_pps = (refsel==2'b01) | (refsel==2'b10);
-  reg _npps, no_pps;
-  always @(posedge clk) { no_pps, _npps } <= { _npps, n_pps };
 // reference pps to discilpline the VCTX|CXO to, from GPS or EXT in
-
+                                1'b0;
   wire clk_200M_o, clk;
   BUFG x_clk_gen ( .I(clk_200M_o), .O(clk));
   wire clk_40M;
+
+  wire n_pps = (refsel==2'b01) | (refsel==2'b10);
+  reg _npps, no_pps;
+  always @(posedge clk) { no_pps, _npps } <= { _npps, n_pps };
 
   PLLE2_ADV #(.BANDWIDTH("OPTIMIZED"), .COMPENSATION("INTERNAL"),
      .DIVCLK_DIVIDE(1),
