@@ -78,11 +78,12 @@ set_clock_groups -asynchronous -group [get_clocks radio_clk]   -group [get_clock
 # At 200 MHz, static timing cannot be closed!
 # These constraints are simply here to "trick" the tools into
 # thinking that STA is met as well as force the receiving IDDRs into the optimal routing
-# and placement locations for our dynamic algorithm.
+# and placement locations. The delay values are based on the typical setup and hold specs
+# for the the ADC
 # TODO: Review this for every Vivado version upgrade
 
-set adc_in_before    0.100
-set adc_valid_win    2.450
+set adc_in_before   -1.340      ;# -7/26 * Ts
+set adc_valid_win    1.850
 
 set adc_in_delay_min [expr $adc_valid_win - $adc_in_before + 2.500]
 set adc_in_delay_max [expr 2.500 - $adc_in_before - 2.500]
