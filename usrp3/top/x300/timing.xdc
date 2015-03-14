@@ -552,9 +552,18 @@ set_min_delay  7.500 -to   [all_registers -edge_triggered] \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 
 # SPI Lines
-set_max_delay -from   [get_ports {DB*_*X*MISO*}]                                                          10.000 
-set_max_delay -to     [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}]                                          10.000 
-set_max_delay -to     [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}] 15.000
+set_max_delay 10.000 -datapath_only \
+                     -to   [all_registers -edge_triggered] \
+                     -from [get_ports {DB*_*X*MISO*}] 
+set_max_delay 10.000 -datapath_only \
+                     -to   [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}] \
+                     -from [all_registers -edge_triggered]
+set_max_delay 10.000 -datapath_only \
+                     -to   [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}] \
+                     -from [all_registers -edge_triggered]
+set_max_delay 10.000 -datapath_only \
+                     -to   [all_registers -edge_triggered] \
+                     -from [get_ports {DB_SCL DB_SDA DB_DAC_MOSI}]
 
 # Clock distribution chip control
 set_max_delay -from   [get_ports {LMK_Status[*] LMK_Holdover LMK_Lock LMK_Sync}] 10.000
