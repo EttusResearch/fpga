@@ -2,10 +2,14 @@
 
 module gen_ddrlvds
   (
-   // 2X Radio clock
-   input tx_clk_2x,
    // 1X Radio Clock
    input tx_clk_1x,
+   // 2X Radio clock
+   input tx_clk_2x,
+   // Clk to drive DCI ODDR. This is a phase shifted version of
+   // tx_clk_2x. The phase shift is to center the DCI edge in the
+   // valid window of the data in the DAC.
+   input tx_dci_clk,
    // Reset signal synchronous to radio clock
    input reset,
    // Source synchronous differential clocks to DAC
@@ -95,7 +99,7 @@ module gen_ddrlvds
    // Source synchronous clk
    OBUFDS obufds_clk (.I(tx_clk_2x_int), .O(tx_clk_2x_p), .OB(tx_clk_2x_n));
    ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) oddr_clk
-     (.Q(tx_clk_2x_int), .C(tx_clk_2x),
+     (.Q(tx_clk_2x_int), .C(tx_dci_clk),
       .CE(1'b1), .D1(1'b1), .D2(1'b0), .S(1'b0), .R(1'b0));
 
 endmodule // gen_ddrlvds
