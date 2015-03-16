@@ -263,9 +263,7 @@ module ppsloop(
   end
 
 
-  always @(sstate, valid_ref, esmall, rcnt_ovfl, recycle, rhigh, lcnt,
-           llsmall, llovfl, refchanged, refinternal)
-  begin
+  always @(*) begin
     nxt_sstate=sstate;
     pr = 1'b0;
     nxt_lcnt = recycle ? 26'd0 : lcnt + 1'b1;
@@ -312,7 +310,7 @@ module ppsloop(
   end
 
   reg ppsfltena;
-  always @(llstate, llcnt, trig, dtrig, untrig, incr, llrdy) begin
+  always @(*) begin
     // values to hold by default:
     nxt_llstate = llstate;
     llcntena=1'b0;
