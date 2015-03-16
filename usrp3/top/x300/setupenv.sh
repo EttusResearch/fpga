@@ -2,21 +2,22 @@
 #
 
 function help {
-	cat <<EOHELP
+    cat <<EOHELP
 
 Usage: source setupenv.sh [--help|-h] [--vivado-path=<PATH>] [--modelsim-path=<PATH>]
 
---help -h       - Shows this.
---vivado-path   - Path to the base install directory for Xilinx Vivado
+--vivado-path   : Path to the base install directory for Xilinx Vivado
                   (Default: /opt/Xilinx/Vivado)
---modelsim-path - Path to the base install directory for Modelsim (optional simulation tool)
+--modelsim-path : Path to the base install directory for Modelsim (optional simulation tool)
                   (Default: /opt/mentor/modelsim)
+--help -h       : Shows this message.
 
 This script sets up the environment required to build FPGA images for the Ettus Research
-USRP-X300 and USRP-X310. It will also optionally set up the the environment to run the
+${DEVICE_NAME}. It will also optionally set up the the environment to run the
 Modelsim simulator (although this tool is not required).
 
-Required Xilinx tools: Vivado $VIVADO_VER
+Required tools: Xilinx Vivado $VIVADO_VER (Synthesis and Simulation)
+Optional toold: Mentor Graphics Modelsim (Simulation)
 
 EOHELP
 }
@@ -25,32 +26,38 @@ EOHELP
 VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
 MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 VIVADO_VER=2014.4
-MODELSIM_REQUESTED=0
+DEVICE_NAME="USRP-X300 and USRP-X310"
+
 # Go through cmd line options
+_MODELSIM_REQUESTED=0
 for i in "$@"
 do
 case $i in
     -h|--help)
         help
-        return
+        return 0
         ;;
     --vivado-path=*)
-    VIVADO_BASE_PATH="${i#*=}"
+        VIVADO_BASE_PATH="${i#*=}"
     ;;
     --modelsim-path=*)
-    MODELSIM_BASE_PATH="${i#*=}"
-    MODELSIM_REQUESTED=1
+        MODELSIM_BASE_PATH="${i#*=}"
+        _MODELSIM_REQUESTED=1
     ;;
     *)
-        echo Unrecognized option: $i
-        echo
+        echo "ERROR: Unrecognized option: $i"
         help
-        exit
-        break
-        ;;
+        return 1
+    ;;
 esac
 done
 
+# Ensure that the script is sourced
+if [[ $BASH_SOURCE = $0 ]]; then
+    echo "ERROR: This script must be sourced."
+    help
+    exit 1
+fi
 echo "Setting up X3x0 FPGA build environment..."
 
 # Vivado environment setup
@@ -94,10 +101,11 @@ if [ -d "$MODELSIM_PATH" ]; then
         echo "- Modelsim Compiled Libs: Not found! (Run build_simlibs to generate them.)"
     fi
 else
-    if [ "$MODELSIM_REQUESTED" -eq 1 ]; then
+    if [ "$_MODELSIM_REQUESTED" -eq 1 ]; then
         echo "- Modelsim: Not found! (WARNING.. Simulations with vsim will not work)"
     fi
 fi
 
+echo
 echo "Environment successfully initialized."
 return 0
