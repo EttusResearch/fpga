@@ -12,17 +12,20 @@ module ppsloop(
     input ppsext,
     input [1:0] refsel,
     output reg lpps,
-    output reg is10meg,  
-    output reg ispps,  
-    output reg reflck, 
+    output reg is10meg,
+    output reg ispps,
+    output reg reflck,
     output plllck,// status of things
-    output sclk, output mosi, output sync_n,
+    output sclk,
+    output mosi,
+    output sync_n,
     input [15:0] dac_dflt
    );
   wire ppsref = (refsel==2'b00)?ppsgps:
                 (refsel==2'b11)?ppsext:
-// reference pps to discilpline the VCTX|CXO to, from GPS or EXT in
                                 1'b0;
+  // reference pps to discilpline the VCTX|CXO to, from GPS or EXT in
+
   wire clk_200M_o, clk;
   BUFG x_clk_gen ( .I(clk_200M_o), .O(clk));
   wire clk_40M;
@@ -261,9 +264,7 @@ module ppsloop(
   end
 
 
-  always @(sstate, valid_ref, esmall, rcnt_ovfl, recycle, rhigh, lcnt,
-           llsmall, llovfl, refchanged, refinternal)
-  begin
+  always @(*) begin
     nxt_sstate=sstate;
     pr = 1'b0;
     nxt_lcnt = recycle ? 26'd0 : lcnt + 1'b1;
@@ -310,7 +311,7 @@ module ppsloop(
   end
 
   reg ppsfltena;
-  always @(llstate, llcnt, trig, dtrig, untrig, incr, llrdy) begin
+  always @(*) begin
     // values to hold by default:
     nxt_llstate = llstate;
     llcntena=1'b0;
@@ -347,6 +348,12 @@ module ppsloop(
       end
     end
     endcase
+    if (sstate==REFDET) begin
+      nxt_llstate = READY;
+      llcntena=1'b0;
+      ppsfltena = 1'b0;
+      llsena = 1'b0;
+    end
   end
 
 
