@@ -10,8 +10,9 @@
 ## make <Targets> <Options>
 ##
 ##Output:
-## build/usrp_<product>_fpga_<image_type>.bit:    Configuration bitstream with header
-## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga.bit:    Configuration bitstream with header
+## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga.rpt:    Build report (includes utilization and timing summary)
 
 # vivado_build($1=Device, $2=Definitions)
 vivado_build = make -f Makefile.e300.inc bin NAME=$@ PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
