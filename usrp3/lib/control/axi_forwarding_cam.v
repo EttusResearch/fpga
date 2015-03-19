@@ -66,7 +66,7 @@ module axi_forwarding_cam
      input [NUM_OUTPUTS-1:0] 	  forward_ack,
      // readback bus
      input                        rb_rd_stb,
-     input [`LOG2(NUM_OUTPUTS)-1:0] rb_addr,
+     input [`LOG2(NUM_OUTPUTS):0] rb_addr,
      output [31:0]                rb_data
      );
 
@@ -151,10 +151,10 @@ module axi_forwarding_cam
    // Imply a block RAM here, 512xCeil(Log2(NUM_OUTPUTS))
    //
    //synthesis attribute ram_style of mem is block
-   reg [(`LOG2(NUM_OUTPUTS))-1 : 0] mem [0:511];
+   reg [(`LOG2(NUM_OUTPUTS)) : 0] mem [0:511];
    reg [8:0] 			   read_addr_reg;
    wire 			   write;
-   wire [`LOG2(NUM_OUTPUTS)-1:0] 	   read_data;
+   wire [`LOG2(NUM_OUTPUTS):0] 	   read_data;
    
    assign write = (set_addr[15:9] == (BASE >>9)) && set_stb; // Addr decode.
    
@@ -163,7 +163,7 @@ module axi_forwarding_cam
 	read_addr_reg <= read_addr;
 
 	if (write) begin
-	   mem[set_addr[8:0]] <= set_data[`LOG2(NUM_OUTPUTS)-1:0];
+	   mem[set_addr[8:0]] <= set_data[`LOG2(NUM_OUTPUTS):0];
 	end
 
      end
@@ -176,6 +176,7 @@ module axi_forwarding_cam
    //
     always @(posedge clk)
      if (reset | clear) begin
+        forward_valid <= {NUM_OUTPUTS{1'b0}};
         demux_state <= IDLE;
      end else
        case(demux_state)
@@ -183,14 +184,14 @@ module axi_forwarding_cam
 	 // Wait for Valid DST which indicates a new packet lookup in the CAM.
 	 IDLE: begin
 	    if (dst_valid_reg == 1) begin
-	       forward_valid <= 1 << read_data;
+	       forward_valid <= 1'b1 << read_data;
 	       demux_state <= FORWARD;
 	    end
 	 end
 	 // When Slave/Output thats forwarding ACK's the forward flag, clear request and wait for packet to be transfered
 	 FORWARD: begin
 	    if ((forward_ack & forward_valid) != 0) begin
-	       forward_valid <= 0;
+	       forward_valid <= {NUM_OUTPUTS{1'b0}};
 	       demux_state <= WAIT;
 	    end
 	 end
