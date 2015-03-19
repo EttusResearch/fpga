@@ -27,7 +27,7 @@ module axi_fifo_short
     output reg [5:0] occupied
     );
 
-   reg full, empty;
+   reg full = 1'b0, empty = 1'b1;
    wire write 	     = i_tvalid & i_tready;
    wire read 	     = o_tready & o_tvalid;
 

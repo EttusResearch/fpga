@@ -3,6 +3,7 @@
 // USRP3 Task Libaray
 //
 ///////////////////////////////////////////////////////////////////
+//`define VERBOSE_PASSED
 
 `define SID(a,b,c,d) ((a & 'hff) << 24) | ((b & 'hff) << 16)| ((c & 'hff) << 8) | (d & 'hff)
 
@@ -176,17 +177,20 @@ endtask // close_files
       output last;
       output [63:0] data;
       begin
+	 ready_out[output_port] <= 1;
+	 @(posedge clk);
+	 
 	 while (~valid_out[output_port]) begin
-	    ready_out[output_port] <= 1;
             @(posedge clk);
          end
-
 	 // NOTE: A subtle constraint of Verilog is that non-blocking assignments can not be used
 	 // to an automatically allocated variable. Fall back to blocking assignent
-         data = data_out[output_port];
+      
+	 //@(negedge clk);
+	 data = data_out[output_port];
 	 last = last_out[output_port];
-         ready_out[output_port] <= 1;
-	 @(posedge clk);
+	 //@(posedge clk);
+	 
 	 ready_out[output_port] <= 0;
 
       end
@@ -194,6 +198,9 @@ endtask // close_files
 
 
 ///////////////////////////////////////////////////////////////////
+//
+// These tasks build and queue/dequeue and check entire CHDR packets.
+// The payload is an incrementing count of unsigned 16bit values.
 //
 // CHDR Header format:
 // Word1: FLAGS [63:60], SEQ_ID [59:48], SIZE [47:32], SID [31:0]
@@ -255,18 +262,22 @@ task automatic dequeue_chdr_pkt_count;
       if ({is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid} !== data)
 	$display("FAILED: Output port: %3d  Bad CHDR Header. Got %8x, expected %8x @ time: %d ",
 		 output_port, data, {is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid},$time);
-//      else
-//	$display("PASSED: Output port: %3d  Bad CHDR Header. Got %8x, expected %8x @ time: %d ",
-//		 output_port, data, {is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid},$time);
+`ifdef VERBOSE_PASSED
+      else
+	$display("PASSED: Output port: %3d  Good CHDR Header. Got %8x, expected %8x @ time: %d ",
+		 output_port, data, {is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid},$time);
+`endif
       if (has_time)  // If time flag set add 64bit time as second word.
 	begin
 	   dequeue_line(output_port, last, data);
 	   if (data !== chdr_time)
 	     $display("FAILED: Output port: %3d  Bad CHDR Time. Got %8x, expected %8x @ time: %d ",
 		      output_port, data, chdr_time, $time);
-//	   else
-//	     $display("PASSED: Output port: %3d  Bad CHDR Time. Got %8x, expected %8x @ time: %d ",
-//		      output_port, data, chdr_time, $time);
+`ifdef VERBOSE_PASSED	   
+	   else
+	     $display("PASSED: Output port: %3d  Good CHDR Time. Got %8x, expected %8x @ time: %d ",
+		      output_port, data, chdr_time, $time);
+`endif
 	end
       j = 0;
 
@@ -275,9 +286,11 @@ task automatic dequeue_chdr_pkt_count;
 	 if ({j,j+16'h1,j+16'h2,j+16'h3} !== data)
 	   $display("FAILED: Output port: %3d  Bad CHDR Payload. Got %8x, expected %8x @ time: %d ",
 		    output_port, data,{j,j+16'h1,j+16'h2,j+16'h3} ,$time);
-//	 else
-//	   $display("PASSED: Output port: %3d  Bad CHDR Payload. Got %8x, expected %8x @ time: %d ",
-//		    output_port, data, {is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid},$time);
+`ifdef VERBOSE_PASSED
+	 else
+	   $display("PASSED: Output port: %3d  Good CHDR Payload. Got %8x, expected %8x @ time: %d ",
+		    output_port, data,{j,j+16'h1,j+16'h2,j+16'h3},$time);
+`endif
 	 j = j + 4;
       end
       // Check only bytes included in packet
@@ -286,10 +299,12 @@ task automatic dequeue_chdr_pkt_count;
 	$display("FAILED: Output port: %3d  Bad CHDR Payload. Got %8x, expected %8x @ time: %d ",
 		 output_port, data >> (8-j),
 		 {j,j+16'h1,j+16'h2,j+16'h3} >> (8-j),$time);
-//      else
-//	$display("PASSED: Output port: %3d  Bad CHDR Payload. Got %8x, expected %8x @ time: %d ",
-//		 output_port, data >> (8-j),
-//		 {is_extension,1'b0,has_time,is_eob,seq_id,chdr_size,chdr_sid} >> (8-j),$time);
+`ifdef VERBOSE_PASSED      
+      else
+	$display("PASSED: Output port: %3d  Good CHDR Payload. Got %8x, expected %8x @ time: %d ",
+		 output_port, data >> (8-j),
+		 {j,j+16'h1,j+16'h2,j+16'h3} >> (8-j),$time);
+`endif
 
    end
 

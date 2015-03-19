@@ -54,6 +54,7 @@ module zynq_fifo_top
     // AXI master addressable signals - DDR access
     //------------------------------------------------------------------
     //memory write signals - master
+    output [5:0] DDR_AXI_AWID,
     output [31:0] DDR_AXI_AWADDR,
     output [2:0] DDR_AXI_AWPROT,
     output DDR_AXI_AWVALID,
@@ -72,6 +73,7 @@ module zynq_fifo_top
     output DDR_AXI_WLAST,
 
     //memory read signals - master
+    output [5:0] DDR_AXI_ARID,
     output [31:0] DDR_AXI_ARADDR,
     output [2:0] DDR_AXI_ARPROT,
     output DDR_AXI_ARVALID,
@@ -111,7 +113,7 @@ module zynq_fifo_top
     output [31:0] core_set_addr,
     output        core_set_stb,
     input [31:0]  core_rb_data,
-    
+
     //------------------------------------------------------------------
     // Settings bus interface for crossbar (in e300 core)
     //------------------------------------------------------------------
@@ -136,18 +138,18 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
+    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_lookup;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
     wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
     wire [2:0] rb_page = rb_addr[PAGE_WIDTH+2:PAGE_WIDTH];
 
-    // each arbiter gets 1 page, e300_core the next, 
+    // each arbiter gets 1 page, e300_core the next,
     // destination lookup, and xbar gets two pages
     assign set_stb_s2h         = set_stb && (set_page == 3'h0);
     assign set_stb_h2s         = set_stb && (set_page == 3'h1);
     assign core_set_stb        = set_stb && (set_page == 3'h2);
-    assign dest_lookup_set_stb = set_stb && (set_page == 3'h3);
+    assign set_stb_dest_lookup = set_stb && (set_page == 3'h3);
     assign xbar_set_stb        = set_stb && (set_page == 3'h4 || set_page == 3'h5);
 
     assign rb_stb_s2h = rb_stb && (rb_page == 3'h0);
@@ -166,7 +168,7 @@ module zynq_fifo_top
     assign xbar_rb_addr = rb_addr;
     assign xbar_set_data = set_data;
     assign xbar_set_addr = set_addr;
-    
+
     //------------------------------------------------------------------
     // configuration slaves
     //------------------------------------------------------------------
@@ -218,7 +220,7 @@ module zynq_fifo_top
     cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
         .clk(clk), .rst(rst),
-        .set_stb(dest_lookup_set_stb), .set_addr(set_addr[9:2]), .set_data(set_data),
+        .set_stb(set_stb_dest_lookup), .set_addr(set_addr[9:2]), .set_data(set_data),
         .i_tdata(s2h_tdata), .i_tlast(s2h_tlast), .i_tvalid(s2h_tvalid), .i_tready(s2h_tready),
         .o_tdata(s2h_tdata_i0), .o_tlast(s2h_tlast_i0), .o_tvalid(s2h_tvalid_i0), .o_tready(s2h_tready_i0),
         .o_tdest(which_stream_s2h)
@@ -293,7 +295,7 @@ module zynq_fifo_top
     // axi_datamover
     //------------------------------------------------------------------
     wire reset_dm = rst;
-    axi_datamover_v3_00_a axi_datamover
+    axi_datamover inst_axi_datamover
     (
         //host to stream reset stuff
         .m_axi_mm2s_aclk(clk),
@@ -322,13 +324,14 @@ module zynq_fifo_top
         .mm2s_rd_xfer_cmplt(),
 
         //HP RD connection to DDR
-        .m_axi_mm2s_arid(),
+        .m_axi_mm2s_arid(DDR_AXI_ARID),
         .m_axi_mm2s_araddr(DDR_AXI_ARADDR),
         .m_axi_mm2s_arlen(DDR_AXI_ARLEN),
         .m_axi_mm2s_arsize(DDR_AXI_ARSIZE),
         .m_axi_mm2s_arburst(DDR_AXI_ARBURST),
         .m_axi_mm2s_arprot(DDR_AXI_ARPROT),
         .m_axi_mm2s_arcache(DDR_AXI_ARCACHE),
+        .m_axi_mm2s_aruser(),
         .m_axi_mm2s_arvalid(DDR_AXI_ARVALID),
         .m_axi_mm2s_arready(DDR_AXI_ARREADY),
         .m_axi_mm2s_rdata(DDR_AXI_RDATA),
@@ -377,13 +380,14 @@ module zynq_fifo_top
         .s2mm_wr_len(),
 
         //HP WR connection to DDR
-        .m_axi_s2mm_awid(),
+        .m_axi_s2mm_awid(DDR_AXI_AWID),
         .m_axi_s2mm_awaddr(DDR_AXI_AWADDR),
         .m_axi_s2mm_awlen(DDR_AXI_AWLEN),
         .m_axi_s2mm_awsize(DDR_AXI_AWSIZE),
         .m_axi_s2mm_awburst(DDR_AXI_AWBURST),
         .m_axi_s2mm_awprot(DDR_AXI_AWPROT),
         .m_axi_s2mm_awcache(DDR_AXI_AWCACHE),
+        .m_axi_s2mm_awuser(),
         .m_axi_s2mm_awvalid(DDR_AXI_AWVALID),
         .m_axi_s2mm_awready(DDR_AXI_AWREADY),
         .m_axi_s2mm_wdata(DDR_AXI_WDATA),
