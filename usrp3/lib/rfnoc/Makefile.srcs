@@ -69,4 +69,20 @@ join_complex.v \
 axi_round.v \
 axi_clip.v \
 complex_to_mag_approx.v \
+fosphor/delay.v \
+fosphor/fifo_srl.v \
+fosphor/rng.v \
+fosphor/f15_avg.v \
+fosphor/f15_binmap.v \
+fosphor/f15_core.v \
+fosphor/f15_eoseq.v \
+fosphor/f15_histo_mem.v \
+fosphor/f15_line_mem.v \
+fosphor/f15_logpwr.v \
+fosphor/f15_maxhold.v \
+fosphor/f15_packetizer.v \
+fosphor/f15_rise_decay.v \
+fosphor/axi_logpwr.v \
+noc_block_logpwr.v \
+noc_block_fosphor.v \
 ))
