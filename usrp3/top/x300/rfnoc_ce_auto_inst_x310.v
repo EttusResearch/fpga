@@ -78,7 +78,7 @@
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[8]), .i_tlast(ce_o_tlast[8]), .i_tvalid(ce_o_tvalid[8]), .i_tready(ce_o_tready[8]),
     .o_tdata(ce_i_tdata[8]), .o_tlast(ce_i_tlast[8]), .o_tvalid(ce_i_tvalid[8]), .o_tready(ce_i_tready[8]),
-    .debug(ce_debug[7]));
+    .debug(ce_debug[8]));
 
 
   // Fill remaining crossbar ports with loopback FIFOs
