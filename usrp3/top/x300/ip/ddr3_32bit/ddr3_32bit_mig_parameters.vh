@@ -406,9 +406,9 @@ parameter UI_EXTRA_CLOCKS = "FALSE",
 parameter C_S_AXI_ID_WIDTH              = 4,
                                           // Width of all master and slave ID signals.
                                           // # = >= 1.
-parameter C_S_AXI_MEM_SIZE              = "1073741824",
+parameter C_S_AXI_MEM_SIZE              = "2147483648",
                                   // Address Space required for this component
-parameter C_S_AXI_ADDR_WIDTH            = 30,
+parameter C_S_AXI_ADDR_WIDTH            = 32,
                                           // Width of S_AXI_AWADDR, S_AXI_ARADDR, M_AXI_AWADDR and
                                           // M_AXI_ARADDR for all SI/MI slots.
                                           // # = 32.
