@@ -230,18 +230,6 @@ module x300
 
    );
 
-   //
-   // LOG2 function.
-   //
-   function integer clogb2 (input integer size);
-      begin
-     size = size - 1;
-     for (clogb2=1; size>1; clogb2=clogb2+1)
-           size = size >> 1;
-      end
-   endfunction // clogb2
-
-
    wire     radio_clk, radio_clk_2x, dac_dci_clk;
    wire     global_rst, radio_rst, bus_rst;
 
