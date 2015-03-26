@@ -501,11 +501,13 @@
 <       assign clk_ref_in = clk_ref_i;
 ---
 >       assign clk_ref_in = clk_ref_i_buf;
-917a433
+863a379
+>        .pll_locked       (pll_locked),
+917a434
 >      .CLKOUT5_DIVIDE     (CLKOUT5_DIVIDE),
-933a450
+933a451
 >        .clk_ref_i        (clk_ref_i),
-954c471,474
+954c472,475
 <       
 ---
 > 
