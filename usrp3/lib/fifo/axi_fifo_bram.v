@@ -23,10 +23,13 @@ module axi_fifo_bram
    wire [WIDTH-1:0]   int_tdata;
    wire 	      int_tready;
 
-   wire 	      full, empty;
-   wire 	      write 	     = i_tvalid & i_tready;
-   wire 	      read 	     = ~empty & int_tready;
-   
+   wire full, empty;
+   wire write     = i_tvalid & i_tready;
+   // read_int will assert when either a read occurs or the output register is empty (and there is data in the shift register fifo)
+   wire read_int  = ~empty & int_tready;
+   // read will only assert when an actual 1read request occurs at the interface
+   wire read      = o_tready & o_tvalid;
+
    assign i_tready  = ~full;
 
    // Read side states
@@ -55,7 +58,7 @@ module axi_fifo_bram
 	  .doa(),
 
 	  .clkb(clk),
-	  .enb((read_state==PRE_READ)|read),
+	  .enb((read_state==PRE_READ)|read_int),
 	  .web(1'b0),
 	  .addrb(rd_addr),
 	  .dib({WIDTH{1'b1}}),
@@ -91,7 +94,7 @@ module axi_fifo_bram
 	     end
 	   
 	   READING :
-	     if(read)
+	     if(read_int)
 	       if(rd_addr == wr_addr)
 		 begin
 		    empty_reg <= 1; 
@@ -112,10 +115,10 @@ module axi_fifo_bram
        full_reg <= 0;
      else if(clear)
        full_reg <= 0;
-     else if(read & ~write)
+     else if(read_int & ~write)
        full_reg <= 0;
-     //else if(write & ~read & (wr_addr == (rd_addr-3)))
-     else if(write & ~read & becoming_full)
+     //else if(write & ~read_int & (wr_addr == (rd_addr-3)))
+     else if(write & ~read_int & becoming_full)
        full_reg <= 1;
 
    //assign empty = (read_state != READING);
@@ -124,7 +127,7 @@ module axi_fifo_bram
    // assign full = ((rd_addr - 1) == wr_addr);
    assign full = full_reg;
 
-   // Output registred stage
+   // Output registered stage
    always @(posedge clk)
    begin
       // Valid flag
