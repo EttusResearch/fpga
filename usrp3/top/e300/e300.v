@@ -503,7 +503,8 @@ module e300
     .refsel(pps_select),
     .lpps(lpps),
     .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
-    .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn)
+    .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn),
+    .dac_dflt(16'h7fff)
   );
   reg [3:0] tcxo_status, st_rsync;
   always @(posedge bus_clk) begin
