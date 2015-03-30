@@ -102,6 +102,12 @@ module e300
   input         GPS_PPS,
   input         PPS_EXT_IN,
 
+  // VTCXO and the DAC that feeds it
+  output        TCXO_DAC_SYNCn,
+  output        TCXO_DAC_SCLK,
+  output        TCXO_DAC_SDIN,
+  input         TCXO_CLK,
+
   // gpios, change to inout somehow
   inout [5:0]   PL_GPIO
 );
@@ -473,27 +479,41 @@ module e300
     .event_irq(stream_irq)
   );
 
-  // Generate an internal PPS signal with a 25% duty cycle
-  // Note: This is based on a 50Mhz clk assumption
-  reg [31:0] pps_count;
-  wire int_pps = (pps_count < 32'd12500000);
+  // resync pps to bus_clk >>> TODO: check this makes sense
+  reg [1:0] ppsync;
+  wire pps = ppsync[1];
+  wire lpps;
   always @(posedge bus_clk)
-    if (pps_count >= 32'd49999999)
-      pps_count <= 32'b0;
-    else
-      pps_count <= pps_count + 1'b1;
+    ppsync <= { ppsync[0], lpps };
 
-  // pps mux - selects internal, external, or gpsdo PPS
-  reg pps;
+  wire clk_tcxo = TCXO_CLK; // 40 MHz
+
   wire [1:0] pps_select;
-  always @(*) begin
-    case(pps_select)
-      2'b00  :   pps = GPS_PPS;
-      2'b01  :   pps = 1'b0;
-      2'b10  :   pps = int_pps;
-      2'b11  :   pps = PPS_EXT_IN;
-      default:   pps = 1'b0;
-    endcase
+
+  /* A local pps signal is derived from the tcxo clock. If a referenc
+   * at an appropriate rate (1 pps or 10 MHz) is present and selected
+   * a digital control loop will be invoked to tune the vcxo and lock t
+   * the reference.
+   */
+
+  wire is_10meg, is_pps, reflck, plllck; // reference status bits
+  ppsloop ppslp
+  (
+    .reset(1'b0),
+    .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
+    .refsel(pps_select),
+    .lpps(lpps),
+    .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
+    .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn),
+    .dac_dflt(16'h7fff)
+  );
+  reg [3:0] tcxo_status, st_rsync;
+  always @(posedge bus_clk) begin
+    /* status signals originate from other than the bus_clk domain so re-sync
+       before passing to e300_core
+     */
+    st_rsync <= {plllck, is_10meg, is_pps, reflck};
+    tcxo_status <= st_rsync;
   end
 
   // E300 Core logic
@@ -545,6 +565,7 @@ module e300
 
     .pps_select(pps_select),
     .pps(pps),
+    .tcxo_status(tcxo_status),
 
     .lock_signals(CAT_CTRL_OUT[7:6]),
     .mimo(mimo),

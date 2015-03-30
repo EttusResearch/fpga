@@ -62,6 +62,8 @@ ifeq (,$(findstring IDLE, $(EXTRA_DEFS)))
 TOP_SRCS = \
 	e300.v \
 	e300_core.v \
+	ppsloop.v \
+	ad5662_auto_spi.v \
 	$(CHIPSCOPE_SRCS) \
 	coregen/axi_datamover_v3_00_a.xco \
 	coregen/fifo_4k_2clk.v \
