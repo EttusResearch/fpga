@@ -82,7 +82,7 @@ module b200_core
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_PPS_SEL   = 8'd48;
 
-    localparam COMPAT_MAJOR      = 16'h0004;
+    localparam COMPAT_MAJOR      = 16'h0005;
     localparam COMPAT_MINOR      = 16'h0000;
 
     reg [1:0] lock_state;
@@ -258,7 +258,7 @@ module b200_core
       .o_tdata(rx_tdata_int), .o_tlast(rx_tlast_int), .o_tvalid(rx_tvalid_int), .o_tready(rx_tready_int));
 
     axi_fifo #(.WIDTH(65), .SIZE(EXTRA_BUFF_SIZE)) extra_rx_buff
-     (.clk(bus_clk), .reset(bus_rst),
+     (.clk(bus_clk), .reset(bus_rst),.clear(1'b0),
       .i_tdata({rx_tlast_int, rx_tdata_int}), .i_tvalid(rx_tvalid_int), .i_tready(rx_tready_int),
       .o_tdata({rx_tlast, rx_tdata}), .o_tvalid(rx_tvalid), .o_tready(rx_tready));
 
@@ -270,7 +270,7 @@ module b200_core
     wire [63:0] tx_tdata_int; wire tx_tlast_int, tx_tvalid_int, tx_tready_int;
 
     axi_fifo #(.WIDTH(65), .SIZE(EXTRA_BUFF_SIZE)) extra_tx_buff
-     (.clk(bus_clk), .reset(bus_rst),
+     (.clk(bus_clk), .reset(bus_rst),.clear(1'b0),
       .i_tdata({tx_tlast, tx_tdata}), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
       .o_tdata({tx_tlast_int, tx_tdata_int}), .o_tvalid(tx_tvalid_int), .o_tready(tx_tready_int));
 
@@ -301,10 +301,18 @@ module b200_core
    wire        discard1, discard2;
 `endif
 
-   radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),.FP_GPIO(1)) radio_0
-    (
-        .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps),
+   radio_b200 #( 
+      .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
+      .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
+      .FP_GPIO(1),
+      .NEW_HB_INTERP(1),
+      .NEW_HB_DECIM(1),
+      .SOURCE_FLOW_CONTROL(0),
+      .USER_SETTINGS(0),
+      .DEVICE("SPARTAN6")
+   ) radio_0 (
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
+      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps),
 `ifdef B210
     `ifdef B200_UART_IS_GPIO
         .fp_gpio({debug_rxd,debug_txd,fp_gpio}), // B210 no UART
@@ -318,37 +326,44 @@ module b200_core
         .fp_gpio({discard1,discard2,discard3}), // B200 with UART
     `endif
 `endif // !`ifdef B210
-        .bus_clk(bus_clk), .bus_rst(bus_rst),
-        .tx_tdata(r0_tx_tdata), .tx_tlast(r0_tx_tlast), .tx_tvalid(r0_tx_tvalid), .tx_tready(r0_tx_tready),
-        .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
-        .ctrl_tdata(r0_ctrl_tdata), .ctrl_tlast(r0_ctrl_tlast),  .ctrl_tvalid(r0_ctrl_tvalid), .ctrl_tready(r0_ctrl_tready),
-        .resp_tdata(r0_resp_tdata), .resp_tlast(r0_resp_tlast),  .resp_tvalid(r0_resp_tvalid), .resp_tready(r0_resp_tready),
-
-        .debug(radio0_debug)
-    );
-
-
+      .bus_clk(bus_clk), .bus_rst(bus_rst),
+      .tx_tdata(r0_tx_tdata), .tx_tlast(r0_tx_tlast), .tx_tvalid(r0_tx_tvalid), .tx_tready(r0_tx_tready),
+      .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
+      .ctrl_tdata(r0_ctrl_tdata), .ctrl_tlast(r0_ctrl_tlast),  .ctrl_tvalid(r0_ctrl_tvalid), .ctrl_tready(r0_ctrl_tready),
+      .resp_tdata(r0_resp_tdata), .resp_tlast(r0_resp_tlast),  .resp_tvalid(r0_resp_tvalid), .resp_tready(r0_resp_tready),
+      
+      .debug(radio0_debug)
+      );
+   
     /*******************************************************************
      * Radio 1
      ******************************************************************/
 `ifdef B210 // B210 Has two radio instances.
-    assign radio_st = 8'h2;
-    wire [63:0] radio1_debug;
+   assign      radio_st = 8'h2;
 
-    radio_b200 #(.RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),.SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE), .FP_GPIO(0) ) radio_1
-    (
-        .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps),
+   wire [63:0] radio1_debug;
 
-        .bus_clk(bus_clk), .bus_rst(bus_rst),
-        .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
-        .rx_tdata(r1_rx_tdata), .rx_tlast(r1_rx_tlast),  .rx_tvalid(r1_rx_tvalid), .rx_tready(r1_rx_tready),
-        .ctrl_tdata(r1_ctrl_tdata), .ctrl_tlast(r1_ctrl_tlast),  .ctrl_tvalid(r1_ctrl_tvalid), .ctrl_tready(r1_ctrl_tready),
-        .resp_tdata(r1_resp_tdata), .resp_tlast(r1_resp_tlast),  .resp_tvalid(r1_resp_tvalid), .resp_tready(r1_resp_tready),
+   radio_b200 #(
+      .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), 
+      .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
+      .FP_GPIO(0),
+      .NEW_HB_INTERP(1),
+      .NEW_HB_DECIM(1),
+      .SOURCE_FLOW_CONTROL(0),
+      .USER_SETTINGS(0),
+      .DEVICE("SPARTAN6")
+   ) radio_1 (
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
+      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps),
 
-        .debug(radio1_debug)
-    );
+      .bus_clk(bus_clk), .bus_rst(bus_rst),
+      .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
+      .rx_tdata(r1_rx_tdata), .rx_tlast(r1_rx_tlast),  .rx_tvalid(r1_rx_tvalid), .rx_tready(r1_rx_tready),
+      .ctrl_tdata(r1_ctrl_tdata), .ctrl_tlast(r1_ctrl_tlast),  .ctrl_tvalid(r1_ctrl_tvalid), .ctrl_tready(r1_ctrl_tready),
+      .resp_tdata(r1_resp_tdata), .resp_tlast(r1_resp_tlast),  .resp_tvalid(r1_resp_tvalid), .resp_tready(r1_resp_tready),
 
+      .debug(radio1_debug)
+      );
 `else
     assign radio_st = 8'h1;
 
@@ -392,7 +407,7 @@ module b200_core
       .debug(debug_serial)
       );
 
-   // Nasty HAck to convert settings to wishbone crudely.
+   // Nasty Hack to convert settings to wishbone crudely.
    reg 	       wb_stb;
    wire        wb_ack_o;
 

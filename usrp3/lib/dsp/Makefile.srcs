@@ -23,6 +23,8 @@ small_hb_dec.v \
 small_hb_int.v \
 hb_dec.v \
 hb_interp.v \
+add_then_mac.v \
+hb47_int.v \
 round_sd.v \
 add2_and_clip_reg.v \
 add2_and_clip.v \

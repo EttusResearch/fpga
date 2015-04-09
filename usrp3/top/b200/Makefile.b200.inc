@@ -24,6 +24,7 @@ include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
 include ../../lib/io_cap_gen/Makefile.srcs
+include coregen_dsp/Makefile.srcs
 
 
 B200_COREGEN_SRCS = \
@@ -84,7 +85,8 @@ $(TIMING_SRCS) \
 $(DSP_SRCS) \
 $(VITA_SRCS) \
 $(AXI_SRCS) \
-$(CAT_CAP_GEN_SRCS)
+$(CAT_CAP_GEN_SRCS) \
+$(COREGEN_DSP_SRCS)
 
 ##################################################
 # Process Properties
