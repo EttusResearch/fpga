@@ -24,6 +24,7 @@ include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
 include ../../lib/io_cap_gen/Makefile.srcs
+include coregen_dsp/Makefile.srcs
 
 
 B200_COREGEN_SRCS = \
@@ -37,7 +38,7 @@ coregen/chipscope_ila_32.xco \
 coregen/chipscope_ila_128.v \
 coregen/chipscope_ila_128.xco \
 coregen/chipscope_ila_256.v \
-coregen/chipscope_ila_256.xco 
+coregen/chipscope_ila_256.xco
 
 
 
@@ -54,7 +55,7 @@ synthesis_tool "XST (VHDL/Verilog)" \
 simulator "ISE Simulator (VHDL/Verilog)" \
 "Preferred Language" "Verilog" \
 "Enable Message Filtering" FALSE \
-"Display Incremental Messages" FALSE 
+"Display Incremental Messages" FALSE
 
 ##################################################
 # Sources
@@ -68,6 +69,12 @@ timing.ucf \
 S6CLK2PIN.v \
 $(B200_COREGEN_SRCS)
 
+# GPIO only available for B210
+# The LX75 on the B200 is missing the connection from the balls to the internal fabric
+ifeq ($(NAME),B210)
+TOP_SRCS+=gpio.ucf
+endif
+
 SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) \
 $(TIMING_SRCS) $(OPENCORES_SRCS) \
@@ -78,7 +85,8 @@ $(TIMING_SRCS) \
 $(DSP_SRCS) \
 $(VITA_SRCS) \
 $(AXI_SRCS) \
-$(CAT_CAP_GEN_SRCS)
+$(CAT_CAP_GEN_SRCS) \
+$(COREGEN_DSP_SRCS)
 
 ##################################################
 # Process Properties
@@ -111,7 +119,7 @@ MAP_PROPERTIES = \
 "Register Duplication" TRUE
 
 PLACE_ROUTE_PROPERTIES = \
-"Place & Route Effort Level (Overall)" High 
+"Place & Route Effort Level (Overall)" High
 
 STATIC_TIMING_PROPERTIES = \
 "Number of Paths in Error/Verbose Report" 10 \

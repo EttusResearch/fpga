@@ -2,7 +2,7 @@
 # Copyright 2012-2014 Ettus Research LLC
 #
 
-# NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
+# NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
 ##-------------------
 ##USRP B2X0 FPGA Help
 ##-------------------
@@ -70,7 +70,17 @@ B200:  ##Build USRP B200 design.
 
 B210:  ##Build USRP B210 design.
 	$(call pre_build,B210)
-	$(call ise_build,XC6SLX150,B200_CAN_HAZ_R1=1)
+	$(call ise_build,XC6SLX150,B210=1)
+	$(call post_build,B210)
+
+B200_UART_IS_GPIO:  ##Build USRP B200 design with UART as GPIO.
+	$(call pre_build,B200)
+	$(call ise_build,XC6SLX75,B200_UART_IS_GPIO=1)
+	$(call post_build,B200)
+
+B210_UART_IS_GPIO:  ##Build USRP B210 design with UART as GPIO.
+	$(call pre_build,B210)
+	$(call ise_build,XC6SLX150,"B210=1 B200_UART_IS_GPIO=1")
 	$(call post_build,B210)
 
 clean: ##Clean up all build output.
@@ -83,7 +93,7 @@ help: ## Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s). 
+##PROJECT_ONLY=1   Only create a Xilinx project for the specified target(s).
 ##                 Useful for use with the ISE GUI.
 ##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
 ##                 Requires the project in build-*_* to be built.
