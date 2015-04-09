@@ -85,7 +85,8 @@ MAP_PROPERTIES = \
 "Map Effort Level" High \
 "Extra Effort" Normal \
 "Combinatorial Logic Optimization" TRUE \
-"Register Duplication" TRUE
+"Register Duplication" TRUE \
+"Starting Placer Cost Table (1-100)" 3
 
 PLACE_ROUTE_PROPERTIES = \
 "Place & Route Effort Level (Overall)" High 
