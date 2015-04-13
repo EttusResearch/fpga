@@ -26,7 +26,7 @@ module u2_core
    output clock_ready,
    input clk_to_mac,
    input pps_in,
-   
+
    // Misc, debug
    output [7:0] leds,
    output [31:0] debug,
@@ -35,7 +35,7 @@ module u2_core
    // Expansion
    input exp_time_in,
    output exp_time_out,
-   
+
    // GMII
    //   GMII-CTRL
    input GMII_COL,
@@ -65,7 +65,7 @@ module u2_core
    output ser_prbsen,
    output ser_loopen,
    output ser_rx_en,
-   
+
    output ser_tx_clk,
    output [15:0] ser_t,
    output ser_tklsb,
@@ -75,7 +75,7 @@ module u2_core
    input [15:0] ser_r,
    input ser_rklsb,
    input ser_rkmsb,
-   
+
    // CPLD interface
    output cpld_start,
    output cpld_mode,
@@ -87,18 +87,18 @@ module u2_core
    input cpld_init_b,
    input por,
    output config_success,
-   
+
    // ADC
    input [13:0] adc_a,
    input adc_ovf_a,
    output adc_on_a,
    output adc_oe_a,
-   
+
    input [13:0] adc_b,
    input adc_ovf_b,
    output adc_on_b,
    output adc_oe_b,
-   
+
    // DAC
    output [15:0] dac_a,
    output [15:0] dac_b,
@@ -110,7 +110,7 @@ module u2_core
    input sda_pad_i,
    output sda_pad_o,
    output sda_pad_oen_o,
-   
+
    // Clock Gen Control
    output [1:0] clk_en,
    output [1:0] clk_sel,
@@ -129,7 +129,7 @@ module u2_core
    output sen_rx_db,
    output sen_rx_adc,
    output sen_rx_dac,
-   
+
    // GPIO to DBoards
    inout [15:0] io_tx,
    inout [15:0] io_rx,
@@ -144,9 +144,9 @@ module u2_core
    output RAM_WEn,
    output RAM_OEn,
    output RAM_LDn,
-   
+
    // Debug stuff
-   output uart_tx_o, 
+   output uart_tx_o,
    input uart_rx_i,
    output uart_baud_o,
    input sim_mode,
@@ -168,9 +168,9 @@ module u2_core
    localparam SR_TX_CTRL  = 144;   // 6
    localparam SR_TX_DSP   = 160;   // 5
 
-   localparam SR_GPIO     = 184;   // 5   
+   localparam SR_GPIO     = 184;   // 5
    localparam SR_UDP_SM   = 192;   // 64
-   
+
    // FIFO Sizes, 9 = 512 lines, 10 = 1024, 11 = 2048
    // all (most?) are 36 bits wide, so 9 is 1 BRAM, 10 is 2, 11 is 4 BRAMs
    // localparam DSP_TX_FIFOSIZE = 9;  unused -- DSPTX uses extram fifo
@@ -188,7 +188,7 @@ module u2_core
    wire 	ram_loader_done, ram_loader_rst;
    wire 	wb_rst;
    wire 	dsp_rst = wb_rst;
-   
+
    wire [31:0] 	status;
    wire 	bus_error, spi_int, i2c_int, pps_int, onetime_int, periodic_int, buffer_int;
    wire 	proc_int, overrun0, overrun1, underrun;
@@ -202,21 +202,21 @@ module u2_core
    wire [15:0] 	ser_rx_occ, ser_tx_occ, dsp_rx_occ, dsp_tx_occ, eth_rx_occ, eth_tx_occ, eth_rx_occ2;
    wire 	ser_rx_full, ser_tx_full, dsp_rx_full, dsp_tx_full, eth_rx_full, eth_tx_full, eth_rx_full2;
    wire 	ser_rx_empty, ser_tx_empty, dsp_rx_empty, dsp_tx_empty, eth_rx_empty, eth_tx_empty, eth_rx_empty2;
-	
+
    wire 	serdes_link_up, good_sync;
    wire 	epoch;
    wire [31:0] 	irq;
    wire [63:0] 	vita_time, vita_time_pps;
-   
+
    wire 	 run_rx0, run_rx1, run_tx;
    reg 		 run_rx0_d1, run_rx1_d1;
-   
+
    // ///////////////////////////////////////////////////////////////////////////////////////////////
    // Wishbone Single Master INTERCON
    localparam 	dw = 32;  // Data bus width
    localparam 	aw = 16;  // Address bus width, for byte addressibility, 16 = 64K byte memory space
-   localparam	sw = 4;   // Select width -- 32-bit data bus with 8-bit granularity.  
-   
+   localparam	sw = 4;   // Select width -- 32-bit data bus with 8-bit granularity.
+
    wire [dw-1:0] m0_dat_o, m0_dat_i;
    wire [dw-1:0] s0_dat_o, s1_dat_o, s0_dat_i, s1_dat_i, s2_dat_o, s3_dat_o, s2_dat_i, s3_dat_i,
 		 s4_dat_o, s5_dat_o, s4_dat_i, s5_dat_i, s6_dat_o, s7_dat_o, s6_dat_i, s7_dat_i,
@@ -229,7 +229,7 @@ module u2_core
    wire 	 m0_cyc,s0_cyc,s1_cyc,s2_cyc,s3_cyc,s4_cyc,s5_cyc,s6_cyc,s7_cyc,s8_cyc,s9_cyc,sa_cyc,sb_cyc,sc_cyc, sd_cyc, se_cyc, sf_cyc;
    wire 	 m0_err, m0_rty;
    wire 	 m0_we,s0_we,s1_we,s2_we,s3_we,s4_we,s5_we,s6_we,s7_we,s8_we,s9_we,sa_we,sb_we,sc_we,sd_we,se_we,sf_we;
-   
+
    wb_1master #(.decode_w(8),
 		.s0_addr(8'b0000_0000),.s0_mask(8'b1100_0000),  // Main RAM (0-16K)
 		.s1_addr(8'b0100_0000),.s1_mask(8'b1111_0000),  // Packet Router (16-20K)
@@ -248,7 +248,7 @@ module u2_core
 		.se_addr(8'b1011_0000),.se_mask(8'b1111_0000),  // Unused
 		.sf_addr(8'b1100_0000),.sf_mask(8'b1100_0000),  // Unused
 		.dw(dw),.aw(aw),.sw(sw)) wb_1master
-     (.clk_i(wb_clk),.rst_i(wb_rst),       
+     (.clk_i(wb_clk),.rst_i(wb_rst),
       .m0_dat_o(m0_dat_o),.m0_ack_o(m0_ack),.m0_err_o(m0_err),.m0_rty_o(m0_rty),.m0_dat_i(m0_dat_i),
       .m0_adr_i(m0_adr),.m0_sel_i(m0_sel),.m0_we_i(m0_we),.m0_cyc_i(m0_cyc),.m0_stb_i(m0_stb),
       .s0_dat_o(s0_dat_o),.s0_adr_o(s0_adr),.s0_sel_o(s0_sel),.s0_we_o	(s0_we),.s0_cyc_o(s0_cyc),.s0_stb_o(s0_stb),
@@ -292,7 +292,7 @@ module u2_core
    assign sd_ack = 0;
    assign se_ack = 0;
    assign sf_ack = 0;
-   
+
    // ////////////////////////////////////////////////////////////////////////////////////////
    // Reset Controller
    system_control sysctrl (.wb_clk_i(wb_clk), // .por_i(por),
@@ -304,19 +304,19 @@ module u2_core
    reg 		 takeover = 0;
 
    wire 	 cpld_start_int, cpld_mode_int, cpld_done_int;
-   
+
    always @(posedge wb_clk)
      if(ram_loader_done)
        takeover = 1;
    assign 	 cpld_misc = ~takeover;
 
    wire 	 sd_clk, sd_csn, sd_mosi, sd_miso;
-   
+
    assign 	 sd_miso = cpld_din;
    assign 	 cpld_start = takeover ? sd_clk	: cpld_start_int;
    assign 	 cpld_mode = takeover ? sd_csn : cpld_mode_int;
    assign 	 cpld_done = takeover ? sd_mosi : cpld_done_int;
-   
+
    // ///////////////////////////////////////////////////////////////////
    // RAM Loader
 
@@ -337,7 +337,7 @@ module u2_core
 		 .cpld_mode(cpld_mode_int),
 		 .cpld_done(cpld_done_int),
 		 .cpld_detached(cpld_detached));
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // Processor
 
@@ -351,24 +351,24 @@ module u2_core
 	   .dat_i(m0_dat_o),.ack_i(m0_ack),.sel_o(m0_sel),.cyc_o(m0_cyc),
 	   // Interrupts and exceptions
 	   .zpu_status(zpu_status), .interrupt(proc_int & 1'b0));
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // Dual Ported RAM -- D-Port is Slave #0 on main Wishbone
    // I-port connects directly to processor and ram loader
 
    ram_harvard #(.AWIDTH(14),.RAM_SIZE(16384),.ICWIDTH(7),.DCWIDTH(6))
      sys_ram(.wb_clk_i(wb_clk),.wb_rst_i(wb_rst),
-	     
+
 	     .ram_loader_adr_i(ram_loader_adr[13:0]), .ram_loader_dat_i(ram_loader_dat),
 	     .ram_loader_stb_i(ram_loader_stb), .ram_loader_sel_i(ram_loader_sel),
 	     .ram_loader_we_i(ram_loader_we),
 	     .ram_loader_done_i(ram_loader_done),
-	     
+
 	     .if_adr(16'b0), .if_data(),
-	     
+
 	     .dwb_adr_i(s0_adr[13:0]), .dwb_dat_i(s0_dat_o), .dwb_dat_o(s0_dat_i),
 	     .dwb_we_i(s0_we), .dwb_ack_o(s0_ack), .dwb_stb_i(s0_stb), .dwb_sel_i(s0_sel));
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // Buffer Pool, slave #1
    wire 	 rd0_ready_i, rd0_ready_o;
@@ -431,8 +431,8 @@ module u2_core
 
    // /////////////////////////////////////////////////////////////////////////
    // I2C -- Slave #3
-   i2c_master_top #(.ARST_LVL(1)) 
-     i2c (.wb_clk_i(wb_clk),.wb_rst_i(wb_rst),.arst_i(1'b0), 
+   i2c_master_top #(.ARST_LVL(1))
+     i2c (.wb_clk_i(wb_clk),.wb_rst_i(wb_rst),.arst_i(1'b0),
 	  .wb_adr_i(s3_adr[4:2]),.wb_dat_i(s3_dat_o[7:0]),.wb_dat_o(s3_dat_i[7:0]),
 	  .wb_we_i(s3_we),.wb_stb_i(s3_stb),.wb_cyc_i(s3_cyc),
 	  .wb_ack_o(s3_ack),.wb_inta_o(i2c_int),
@@ -440,23 +440,23 @@ module u2_core
 	  .sda_pad_i(sda_pad_i),.sda_pad_o(sda_pad_o),.sda_padoen_o(sda_pad_oen_o) );
 
    assign 	 s3_dat_i[31:8] = 24'd0;
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // GPIOs
 
    wire [31:0] gpio_readback;
-   
-   gpio_atr #(.BASE(SR_GPIO), .WIDTH(32)) 
+
+   gpio_atr #(.BASE(SR_GPIO), .WIDTH(32))
    gpio_atr(.clk(dsp_clk),.reset(dsp_rst),
 	    .set_stb(set_stb_dsp),.set_addr(set_addr_dsp),.set_data(set_data_dsp),
 	    .rx(run_rx0_d1 | run_rx1_d1), .tx(run_tx),
 	    .gpio({io_tx,io_rx}), .gpio_readback(gpio_readback) );
 
    // /////////////////////////////////////////////////////////////////////////
-   // Buffer Pool Status -- Slave #5   
-   
+   // Buffer Pool Status -- Slave #5
+
    //compatibility number -> increment when the fpga has been sufficiently altered
-   localparam compat_num = {16'd10, 16'd1}; //major, minor
+   localparam compat_num = {16'd11, 16'd1}; //major, minor
 
    wire [31:0] irq_readback = {19'b0, spi_ready, clk_status, serdes_link_up, 10'b0};
 
@@ -474,12 +474,12 @@ module u2_core
    // /////////////////////////////////////////////////////////////////////////
    // Ethernet MAC  Slave #6
 
-   simple_gemac_wrapper #(.RXFIFOSIZE(ETH_RX_FIFOSIZE), 
+   simple_gemac_wrapper #(.RXFIFOSIZE(ETH_RX_FIFOSIZE),
 			  .TXFIFOSIZE(ETH_TX_FIFOSIZE)) simple_gemac_wrapper
      (.clk125(clk_to_mac),  .reset(wb_rst),
-      .GMII_GTX_CLK(GMII_GTX_CLK), .GMII_TX_EN(GMII_TX_EN),  
+      .GMII_GTX_CLK(GMII_GTX_CLK), .GMII_TX_EN(GMII_TX_EN),
       .GMII_TX_ER(GMII_TX_ER), .GMII_TXD(GMII_TXD),
-      .GMII_RX_CLK(GMII_RX_CLK), .GMII_RX_DV(GMII_RX_DV),  
+      .GMII_RX_CLK(GMII_RX_CLK), .GMII_RX_DV(GMII_RX_DV),
       .GMII_RX_ER(GMII_RX_ER), .GMII_RXD(GMII_RXD),
       .sys_clk(dsp_clk),
       .rx_f36_data(wr2_dat), .rx_f36_src_rdy(wr2_ready_i), .rx_f36_dst_rdy(wr2_ready_o),
@@ -495,7 +495,7 @@ module u2_core
      (.wb_clk(wb_clk),.wb_rst(wb_rst),.wb_adr_i(s7_adr),.wb_dat_i(s7_dat_o),
       .wb_stb_i(s7_stb),.wb_we_i(s7_we),.wb_ack_o(s7_ack),
       .strobe(set_stb),.addr(set_addr),.data(set_data));
-   
+
    assign 	 s7_dat_i = 32'd0;
 
    wire set_stb_dsp0, set_stb_dsp1;
@@ -558,7 +558,7 @@ module u2_core
 
    wire 	 phy_reset;
    assign 	 PHY_RESETn = ~phy_reset;
-   
+
    setting_reg #(.my_addr(SR_MISC+0),.width(8)) sr_clk
      (.clk(wb_clk),.rst(wb_rst),.strobe(s7_ack),.addr(set_addr),.in(set_data),.out(clock_outs),.changed());
 
@@ -576,10 +576,10 @@ module u2_core
    //    register 8 determines whether leds are controlled by SW or not
    //    1 = controlled by HW, 0 = by SW
    //    In Rev3 there are only 6 leds, and the highest one is on the ETH connector
-   
+
    wire [7:0] 	 led_src, led_sw;
    wire [7:0] 	 led_hw = {run_tx, (run_rx0_d1 | run_rx1_d1), clk_status, serdes_link_up & good_sync, 1'b0};
-   
+
    setting_reg #(.my_addr(SR_MISC+3),.width(8)) sr_led
      (.clk(dsp_clk),.rst(dsp_rst),.strobe(set_stb_dsp),.addr(set_addr_dsp),.in(set_data_dsp),.out(led_sw),.changed());
 
@@ -587,7 +587,7 @@ module u2_core
      (.clk(dsp_clk),.rst(dsp_rst),.strobe(set_stb_dsp),.addr(set_addr_dsp), .in(set_data_dsp),.out(led_src),.changed());
 
    assign 	 leds = (led_src & led_hw) | (~led_src & led_sw);
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // Interrupt Controller, Slave #8
 
@@ -595,11 +595,11 @@ module u2_core
 		{3'b0, uart_tx_int, 2'b0, uart_rx_int},
 		{4'b0, clk_status, 3'b0},
 		{3'b0, PHY_INTn,i2c_int,spi_int,2'b00}};
-   
+
    pic pic(.clk_i(wb_clk),.rst_i(wb_rst),.cyc_i(s8_cyc),.stb_i(s8_stb),.adr_i(s8_adr[4:2]),
 	   .we_i(s8_we),.dat_i(s8_dat_o),.dat_o(s8_dat_i),.ack_o(s8_ack),.int_o(proc_int),
 	   .irq(irq) );
- 	 
+
    // /////////////////////////////////////////////////////////////////////////
    // UART, Slave #10
 
@@ -613,14 +613,14 @@ module u2_core
    // /////////////////////////////////////////////////////////////////////////
    // ADC Frontend
    wire [23:0] 	 rx_fe_i, rx_fe_q;
-   
+
    rx_frontend #(.BASE(SR_RX_FRONT)) rx_frontend
      (.clk(dsp_clk),.rst(dsp_rst),
       .set_stb(set_stb_dsp),.set_addr(set_addr_dsp),.set_data(set_data_dsp),
       .adc_a({adc_a,2'b00}),.adc_ovf_a(adc_ovf_a),
       .adc_b({adc_b,2'b00}),.adc_ovf_b(adc_ovf_b),
       .i_out(rx_fe_i), .q_out(rx_fe_q), .run(run_rx0_d1 | run_rx1_d1), .debug());
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // DSP RX 0
    wire [31:0] 	 sample_rx0;
@@ -628,7 +628,7 @@ module u2_core
 
    always @(posedge dsp_clk)
      run_rx0_d1 <= run_rx0;
-   
+
    ddc_chain #(.BASE(SR_RX_DSP0), .DSPNO(0)) ddc_chain0
      (.clk(dsp_clk), .rst(dsp_rst), .clr(clear_rx0),
       .set_stb(set_stb_dsp),.set_addr(set_addr_dsp),.set_data(set_data_dsp),
@@ -653,7 +653,7 @@ module u2_core
 
    always @(posedge dsp_clk)
      run_rx1_d1 <= run_rx1;
-   
+
    ddc_chain #(.BASE(SR_RX_DSP1), .DSPNO(1)) ddc_chain1
      (.clk(dsp_clk), .rst(dsp_rst), .clr(clear_rx1),
       .set_stb(set_stb_dsp),.set_addr(set_addr_dsp),.set_data(set_data_dsp),
@@ -679,7 +679,7 @@ module u2_core
    wire [31:0] 	 debug_vt;
    wire 	 clear_tx;
 
-   ext_fifo #(.EXT_WIDTH(18),.INT_WIDTH(36),.RAM_DEPTH(19),.FIFO_DEPTH(19)) 
+   ext_fifo #(.EXT_WIDTH(18),.INT_WIDTH(36),.RAM_DEPTH(19),.FIFO_DEPTH(19))
      ext_fifo_i1
        (.int_clk(dsp_clk),
 	.ext_clk(clk_to_mac),
@@ -705,7 +705,7 @@ module u2_core
    wire [23:0] 	 tx_fe_i, tx_fe_q;
    wire [31:0]   sample_tx;
    wire strobe_tx;
-   
+
    vita_tx_chain #(.BASE(SR_TX_CTRL), .FIFOSIZE(DSP_TX_FIFOSIZE),
 		   .REPORT_ERROR(1), .DO_FLOW_CONTROL(1),
 		   .PROT_ENG_FLAGS(1), .USE_TRANS_HEADER(1),
@@ -749,7 +749,7 @@ module u2_core
       .serdes_link_up(serdes_link_up),.debug0(debug_serdes0), .debug1(debug_serdes1) );
 
    assign RAM_CLK = clk_to_mac;
-   
+
    // /////////////////////////////////////////////////////////////////////////
    // VITA Timing
 
@@ -762,10 +762,10 @@ module u2_core
 
    // /////////////////////////////////////////////////////////////////////////////////////////
    // Debug Pins
-  
+
    assign debug_clk = 2'b00; // {dsp_clk, clk_to_mac};
    assign debug = 32'd0;
    assign debug_gpio_0 = 32'd0;
    assign debug_gpio_1 = 32'd0;
-   
+
 endmodule // u2_core
