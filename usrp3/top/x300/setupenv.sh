@@ -58,15 +58,23 @@ if [[ $BASH_SOURCE = $0 ]]; then
     help
     exit 1
 fi
-echo "Setting up X3x0 FPGA build environment..."
 
 # Vivado environment setup
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
 
-$VIVADO_PATH/settings64.sh
-$VIVADO_PATH/.settings64-Vivado.sh
-${VIVADO_PATH/Vivado/Vivado_HLS}/.settings64-Vivado_High_Level_Synthesis.sh
-/opt/Xilinx/DocNav/.settings64-DocNav.sh
+# Detect platform bitness
+if [ "$(uname -m)" = "x86_64" ]; then
+    BITNESS="64"
+else
+    BITNESS="32"
+fi
+
+# Source Xilinx scripts
+echo "Setting up X3x0 FPGA build environment (${BITNESS}-bit)..."
+$VIVADO_PATH/settings${BITNESS}.sh
+$VIVADO_PATH/.settings${BITNESS}-Vivado.sh
+${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
+/opt/Xilinx/DocNav/.settings${BITNESS}-DocNav.sh
 
 # Optional Modelsim environment setup
 export MODELSIM_PATH=$MODELSIM_BASE_PATH/modeltech/bin
