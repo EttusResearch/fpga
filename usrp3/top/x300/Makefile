@@ -110,4 +110,4 @@ help:     ##Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI. 
 
-.PHONY: all clean X300 X310 help
+.PHONY: all clean cleanall help
