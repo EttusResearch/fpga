@@ -271,19 +271,43 @@ module x300
      .I(FPGA_125MHz_CLK),
      .O(fpga_clk125));
 
+   //----------------------------------------------------------------------------
+   //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+   //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+   //----------------------------------------------------------------------------
+   // CLK_OUT1___166.667______0.000______50.0______113.052_____96.948
+   // CLK_OUT2___125.000______0.000______50.0______119.348_____96.948
+   //
+   //----------------------------------------------------------------------------
+   // Input Clock   Freq (MHz)    Input Jitter (UI)
+   //----------------------------------------------------------------------------
+   // __primary_________125.000____________0.010
+   
    bus_clk_gen bus_clk_gen (
-      .CLK_IN1(fpga_clk125),                //Input Clock: 125MHz Clock from STC3
-      .CLK_OUT1(bus_clk),                   //Output Clock 1: 166.666667MHz
-      .CLK_OUT2(ioport2_clk),               //Output Clock 2: 125MHz
+      .CLK_IN1(fpga_clk125),
+      .CLK_OUT1(bus_clk),
+      .CLK_OUT2(ioport2_clk),
       .RESET(1'b0),
       .LOCKED(bus_clk_locked));
+
+   //----------------------------------------------------------------------------
+   //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+   //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+   //----------------------------------------------------------------------------
+   // CLK_OUT1____40.000______0.000______50.0______353.417_____96.948
+   // CLK_OUT2___200.000______0.000______50.0______192.299_____96.948
+   //
+   //----------------------------------------------------------------------------
+   // Input Clock   Freq (MHz)    Input Jitter (UI)
+   //----------------------------------------------------------------------------
+   // __primary_________125.000____________0.100
 
    //rio40_clk and ioport2_idelay_ref_clk cannot share a PLL/MMCM reset with ioport2_clk
    //so they have to come from a different clocking primitive instance
    pcie_clk_gen pcie_clk_gen (
-      .CLK_IN1(fpga_clk125),                //Input Clock: 125MHz Clock from STC3
-      .CLK_OUT1(rio40_clk),                 //Output Clock 1: 40MHz
-      .CLK_OUT2(ioport2_idelay_ref_clk),    //Output Clock 2: 200MHz
+      .CLK_IN1(fpga_clk125),
+      .CLK_OUT1(rio40_clk),
+      .CLK_OUT2(ioport2_idelay_ref_clk),
       .RESET(rio40_clk_reset),
       .LOCKED(rio40_clk_locked));
 
@@ -334,17 +358,27 @@ module x300
    // In CPRI or LTE mode, radio clock is 184.32 MHz.
    // radio_clk_2x is only to be used for clocking out TX samples to DAC
    //
+   //----------------------------------------------------------------------------
+   //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+   //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+   //----------------------------------------------------------------------------
+   // CLK_OUT1___200.000______0.000______50.0_______92.799_____82.655
+   // CLK_OUT2___400.000____-45.000______50.0_______81.254_____82.655
+   // CLK_OUT3___400.000_____60.000______50.0_______81.254_____82.655
+   //
+   //----------------------------------------------------------------------------
+   // Input Clock   Freq (MHz)    Input Jitter (UI)
+   //----------------------------------------------------------------------------
+   // __primary_________200.000____________0.010
+   //
    ////////////////////////////////////////////////////////////////////
-   wire        radio_clk_locked;
-
+   
+   wire radio_clk_locked;
    radio_clk_gen radio_clk_gen (
       .CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n),
       .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
       .RESET(sw_rst[2]), .LOCKED(radio_clk_locked));
    
-   //TODO: Ashish: Disabled for Vivado
-   //defparam radio_clk_gen.clkin1_buf.DIFF_TERM = "TRUE";
-
    ////////////////////////////////////////////////////////////////////
    //
    // IJB. Radio PLL doesn't seem to lock at power up.

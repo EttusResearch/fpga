@@ -550,9 +550,11 @@ set_property IOSTANDARD    LVCMOS33 [get_ports FPGA_125MHz_CLK]
 
 set_property PACKAGE_PIN   AG23     [get_ports FPGA_CLK_n]
 set_property IOSTANDARD    LVDS_25  [get_ports FPGA_CLK_n]
+set_property DIFF_TERM     TRUE     [get_ports FPGA_CLK_n]
 
 set_property PACKAGE_PIN   AF22     [get_ports FPGA_CLK_p]
 set_property IOSTANDARD    LVDS_25  [get_ports FPGA_CLK_p]
+set_property DIFF_TERM     TRUE     [get_ports FPGA_CLK_p]
 
 set_property PACKAGE_PIN   E11      [get_ports GPSDO_PWR_ENA]
 set_property IOSTANDARD    LVCMOS33 [get_ports GPSDO_PWR_ENA]

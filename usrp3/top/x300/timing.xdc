@@ -75,12 +75,12 @@ set_clock_groups -asynchronous -group [get_clocks radio_clk]   -group [get_clock
 #*******************************************************************************
 ## ADC Interface
 
-# At 200 MHz, static timing cannot be closed!
-# These constraints are simply here to "trick" the tools into
-# thinking that STA is met as well as force the receiving IDDRs into the optimal routing
+# At 200 MHz, static timing cannot be closed.
+# The input delays here exist simply to ensure that the tools don't accidentally create
+# nonsensical routes as well as force the receiving IDDRs into the optimal routing
 # and placement locations. The delay values are based on the typical setup and hold specs
-# for the the ADC
-# TODO: Review this for every Vivado version upgrade
+# for the the ADC.
+# The min/max delay constraints are modulo 5ns (the clock period)
 
 set adc_in_before   -1.340      ;# -7/26 * Ts
 set adc_valid_win    1.850
@@ -269,7 +269,7 @@ set_output_delay -clock VIRT_DAC_CLK -min [expr - $dac1_dci_out_delay_min] -cloc
 # The max set_output_delay is the time the data should be stable before the next
 # edge of interest. Since we are DDR, this is the falling edge. Hence we subtract
 # latest time the data should change, dac0_dci_out_delay_max, from the falling edge
-# time, DacPeriod/2.
+# time, dci_period/2 = 1.25ns.
 set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac0_dci_out_delay_max]                         [get_ports {DB0_DAC_DCI_*}]
 set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac0_dci_out_delay_max] -clock_fall -add_delay  [get_ports {DB0_DAC_DCI_*}] 
 set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max]                         [get_ports {DB1_DAC_DCI_*}]
@@ -278,10 +278,12 @@ set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max] 
 
 # Data to DCI Source-Sync Timing
 
-# The data setup and hold values must be... errr... modified in order to pass timing in
+# The data setup and hold values must be modified in order to pass timing in
 # the FPGA. The correct values are 0.270 and 0.090 for setup and hold, respectively.
 # The interface fails by around 350 ps in both directions, so we subtract the failing
 # amount from the actual amount to get a passing constraint.
+# NOTE: Any changes to the adjustment margin below would need to be validated over
+#       multiple builds, process and temperature. Try not to change it!
 set dac_data_setup      0.270
 set dac_data_hold       0.090
 set dac_setup_adj       0.360
