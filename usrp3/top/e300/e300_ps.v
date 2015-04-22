@@ -214,13 +214,18 @@ module e300_processing_system (
   wire              axi4_fifo_S_AXI_HP0_RVALID;
   wire              axi4_fifo_S_AXI_HP0_RREADY;
 
-  wire FCLK_RESET0_N;
-  assign FCLK_RESET0 = ~FCLK_RESET0_N;
+  wire FCLK_LOCKED, FCLK_RESET0_N;
+  assign FCLK_RESET0_N = ~FCLK_RESET0;
   e300_ps_fclk0_mmcm inst_e300_ps_fclk0_mmcm (
     .clk_50MHz_in(processing_system7_FCLK_CLK0),
     .clk_50MHz_out(FCLK_CLK0),
     .reset(~processing_system7_FCLK_RESET0_N),
-    .locked(FCLK_RESET0_N));
+    .locked(FCLK_LOCKED));
+
+  reset_sync fclk_reset_sync (
+    .clk(FCLK_CLK0),
+    .reset_in(~FCLK_LOCKED),
+    .reset_out(FCLK_RESET0));
 
   processing_system7 inst_processing_system7 (
     .ENET0_PTP_DELAY_REQ_RX(),
