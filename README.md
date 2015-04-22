@@ -20,11 +20,17 @@ the source is written in Verilog and the rest is in VHDL.
 * Devices: USRP N2X0, USRP B100, USRP E1X0, USRP2
 * Tools: ISE from Xilinx, GNU make
 
-#### Generation 3
+#### Generation 3 ISE
 
 * Directory: __usrp3__
-* Devices: USRP B2X0, USRP X Series, USRP E3X0
+* Devices: USRP B2X0
 * Tools: ISE from Xilinx, GNU make
+
+#### Generation 3 Vivado
+
+* Directory: __usrp3__
+* Devices: USRP X Series, USRP E3X0
+* Tools: Vivado from Xilinx, GNU make
 
 ## Build Instructions
 
@@ -51,13 +57,25 @@ tools above for more information.
 * The build output will be a product specific binary file in the ``usrp2/top/{project}/build``
   directory.
 
-### Building Generation 3 Designs
+### Building Generation 3 ISE Designs
 
 * Download and install __Xilinx ISE 14.7__ from http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html
 * To add xtclsh to the PATH and to setup up the Xilinx build environment run
   ``source <install_dir>/Xilinx/14.7/ISE_DS/settings64.sh`` for 64-bit platforms or
   ``source <install_dir>/Xilinx/14.7/ISE_DS/settings32.sh`` for 32-bit platforms.
-* Navigate ``to usrp3/top/{project}`` where project is b200, x300, or e300
+* Navigate ``to usrp3/top/{project}`` where project is b200
+* To build a binary configuration bitstream run ``make <target>``
+  where the target is specific to each product. To get a list of supported targets run
+  ``make help``.
+* The build output will be specific to the product and will be located in the
+  ``usrp3/top/{project}/build`` directory. Run ``make help`` for more information.
+
+### Building Generation 3 Vivado Designs
+
+* Download and install __Xilinx Vivado 2014.4__ from http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2014-4.html
+* Navigate ``to usrp3/top/{project}`` where project is x300, or e300
+* To add vivado to the PATH and to setup up the Xilinx build environment run
+  ``source setupenv.sh`` for all platforms (bash recommended)
 * To build a binary configuration bitstream run ``make <target>``
   where the target is specific to each product. To get a list of supported targets run
   ``make help``.
