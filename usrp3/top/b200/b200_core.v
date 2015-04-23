@@ -81,8 +81,7 @@ module b200_core
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_PPS_SEL   = 8'd48;
-
-    localparam COMPAT_MAJOR      = 16'h0005;
+    localparam COMPAT_MAJOR      = 16'h0006;
     localparam COMPAT_MINOR      = 16'h0000;
 
     reg [1:0] lock_state;
@@ -293,6 +292,7 @@ module b200_core
      ******************************************************************/
    wire [63:0] radio0_debug;
 
+
 `ifndef B210
    wire [7:0]  discard3;
 `endif
@@ -343,6 +343,7 @@ module b200_core
 
    wire [63:0] radio1_debug;
 
+
    radio_b200 #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), 
       .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
@@ -368,7 +369,7 @@ module b200_core
     assign radio_st = 8'h1;
 
     //assign undriven outputs
-    assign fe_atr1 = 8'b0;
+    assign fe_atr1 = 32'bz;
     assign tx1 = 32'b0;
 
     //unused control signals -- leave in loopback
