@@ -23,6 +23,7 @@ sources_1/imports/example_design/support/one_gig_eth_pcs_pma_support.v \
 IP_ONE_GIG_ETH_PCS_PMA_SRCS = $(IP_BUILD_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma.xci
 
 IP_ONE_GIG_ETH_PCS_PMA_OUTS = $(addprefix $(IP_BUILD_DIR)/one_gig_eth_pcs_pma/, \
+one_gig_eth_pcs_pma.xci.out \
 synth/one_gig_eth_pcs_pma_block.v \
 synth/one_gig_eth_pcs_pma_reset_sync.v \
 synth/one_gig_eth_pcs_pma.v \

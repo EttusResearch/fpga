@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_BUS_CLK_GEN_SRCS = $(IP_BUILD_DIR)/bus_clk_gen/bus_clk_gen.xci
 
 IP_BUS_CLK_GEN_OUTS = $(addprefix $(IP_BUILD_DIR)/bus_clk_gen/, \
+bus_clk_gen.xci.out \
 bus_clk_gen.v \
 ) 
 

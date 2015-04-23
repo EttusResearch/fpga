@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_AXI4_FIFO_512X64_SRCS = $(IP_BUILD_DIR)/axi4_fifo_512x64/axi4_fifo_512x64.xci
 
 IP_AXI4_FIFO_512X64_OUTS = $(addprefix $(IP_BUILD_DIR)/axi4_fifo_512x64/, \
+axi4_fifo_512x64.xci.out \
 synth/axi4_fifo_512x64.v \
 )
 

@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_RADIO_CLK_GEN_SRCS = $(IP_BUILD_DIR)/radio_clk_gen/radio_clk_gen.xci
 
 IP_RADIO_CLK_GEN_OUTS = $(addprefix $(IP_BUILD_DIR)/radio_clk_gen/, \
+radio_clk_gen.xci.out \
 radio_clk_gen.v \
 ) 
 

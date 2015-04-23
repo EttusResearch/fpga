@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_PROCESSING_SYSTEM7_SRCS = $(IP_BUILD_DIR)/processing_system7/processing_system7.xci
 
 IP_PROCESSING_SYSTEM7_OUTS = $(addprefix $(IP_BUILD_DIR)/processing_system7/, \
+processing_system7.xci.out \
 synth/processing_system7.v \
 )
 

@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_SRCS = $(IP_BUILD_DIR)/axi4_to_axi3_protocol_converter/axi4_to_axi3_protocol_converter.xci
 
 IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_OUTS = $(addprefix $(IP_BUILD_DIR)/axi4_to_axi3_protocol_converter/, \
+axi4_to_axi3_protocol_converter.xci.out \
 synth/axi4_to_axi3_protocol_converter.v \
 )
 

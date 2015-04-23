@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_AXI_INTERCON_4X64_128_SRCS = $(IP_BUILD_DIR)/axi_intercon_4x64_128/axi_intercon_4x64_128.xci
 
 IP_AXI_INTERCON_4X64_128_OUTS = $(addprefix $(IP_BUILD_DIR)/axi_intercon_4x64_128/, \
+axi_intercon_4x64_128.xci.out \
 synth/axi_intercon_4x64_128.v \
 ) 
 

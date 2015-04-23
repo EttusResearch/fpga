@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_INPUT_SAMPLE_FIFO_SRCS = $(IP_BUILD_DIR)/input_sample_fifo/input_sample_fifo.xci
 
 IP_INPUT_SAMPLE_FIFO_OUTS = $(addprefix $(IP_BUILD_DIR)/input_sample_fifo/, \
+nput_sample_fifo.xci.out \
 synth/input_sample_fifo.vhd \
 ) 
 

@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_PCIE_CLK_GEN_SRCS = $(IP_BUILD_DIR)/pcie_clk_gen/pcie_clk_gen.xci
 
 IP_PCIE_CLK_GEN_OUTS = $(addprefix $(IP_BUILD_DIR)/pcie_clk_gen/, \
+pcie_clk_gen.xci.out \
 pcie_clk_gen.v \
 ) 
 

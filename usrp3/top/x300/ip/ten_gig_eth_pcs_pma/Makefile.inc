@@ -20,6 +20,7 @@ sources_1/imports/example_design/support/ten_gig_eth_pcs_pma_support.v \
 IP_TEN_GIG_ETH_PCS_PMA_SRCS = $(IP_BUILD_DIR)/ten_gig_eth_pcs_pma/ten_gig_eth_pcs_pma.xci
 
 IP_TEN_GIG_ETH_PCS_PMA_OUTS = $(addprefix $(IP_BUILD_DIR)/ten_gig_eth_pcs_pma/, \
+ten_gig_eth_pcs_pma.xci.out \
 synth/ten_gig_eth_pcs_pma_block.v \
 synth/ten_gig_eth_pcs_pma_gtwizard_10gbaser_multi_gt.v \
 synth/ten_gig_eth_pcs_pma_cable_pull_logic.v \

@@ -7,6 +7,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 IP_AXI_DATAMOVER_SRCS = $(IP_BUILD_DIR)/axi_datamover/axi_datamover.xci
 
 IP_AXI_DATAMOVER_OUTS = $(addprefix $(IP_BUILD_DIR)/axi_datamover/, \
+axi_datamover.xci.out \
 synth/axi_datamover.v \
 )
 

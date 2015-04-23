@@ -21,17 +21,20 @@ endif
 BUILD_VIVADO_IP = \
 	@ \
 	echo "========================================================"; \
-	echo " Building IP $(1)"; \
+	echo "BUILDER: Building IP $(1)"; \
 	echo "========================================================"; \
 	export XCI_FILE=$(4)/$(1)/$(1).xci; \
 	export PART_NAME=$(subst /,,$(2)); \
 	export GEN_EXAMPLE=$(5); \
 	export SYNTH_IP=$(SYNTH_IP); \
-	echo "Staging IP in build directory..."; \
-	mkdir -p $(4)/$(1); \
+	echo "BUILDER: Staging IP in build directory..."; \
+	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(4)/$(1) reserve; \
 	cp -rf $(3)/$(1)/* $(4)/$(1); \
-	echo "Retargeting IP to part $$PART_NAME..."; \
+	echo "BUILDER: Retargeting IP to part $$PART_NAME..."; \
 	python $(TOOLS_DIR)/scripts/viv_retarget_ip.py --output_dir=$(4)/$(1) --part=$(2) $(3)/$(1)/$(1).xci; \
 	cd $(4); \
-	echo "Building IP..."; \
-	vivado -mode batch -source $(TOOLS_DIR)/scripts/viv_generate_ip.tcl -log $(1).log -nojournal
+	echo "BUILDER: Building IP..."; \
+	export VIV_ERR=0; \
+	vivado -mode batch -source $(TOOLS_DIR)/scripts/viv_generate_ip.tcl -log $(1).log -nojournal || export VIV_ERR=$$?; \
+	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(4)/$(1) release; \
+	exit $$(($$VIV_ERR))
