@@ -35,6 +35,14 @@ module catcodec_ddr_cmos
   wire codec_clk, half_clk;
   wire radio_clk_locked;
 
+  // Synchronize MIMO signal into codec_clk domain
+  wire mimo_r;
+  synchronizer mimo_sync (
+    .clk(codec_clk),
+    .rst(1'b0),
+    .in(mimo),
+    .out(mimo_r));
+
   generate
     if (DEVICE == "SPARTAN6") begin
       DCM_SP #(
@@ -56,7 +64,7 @@ module catcodec_ddr_cmos
       // - Capture clock's and source clock's (rx_clk) phase are aligned due to
       //   the MMCM's deskew ability (see the BUFG in the feedback clock path).
       // - BUFGCTRL muxes between the 1x and 1/2x clocks depending on MIMO mode. In MIMO mode, the 1/2x
-      //   clock is used as the sample clock rate is half the source clock rate.
+      //   clock is used, because the sample clock rate is half the source clock rate.
       // - Locked signal is used to ensure the BUFG's output is disabled if the MMCM is not locked.
       // - Avoided cascading BUFGs to ensure minimal skew between codec_clk and radio_clk.
       catcodec_mmcm inst_catcodec_mmcm (
@@ -73,10 +81,6 @@ module catcodec_ddr_cmos
       BUFGCTRL BUFGCTRL_radio_clk (.I0(clk0), .I1(clkdv), .S0(~mimo_r), .S1(mimo_r), .CE0(radio_clk_locked), .CE1(radio_clk_locked), .O(radio_clk));
     end
   endgenerate
-
-  //make codec clock domain mimo mode signal
-  reg mimo_r;
-  always @(posedge codec_clk) mimo_r <= mimo;
 
   //assign baseband sample interfaces
   //all samples are registered on strobe
