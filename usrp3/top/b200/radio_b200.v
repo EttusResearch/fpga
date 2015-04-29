@@ -157,7 +157,10 @@ module radio_b200
      (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rb_addr), .changed());
 
-   gpio_atr #(.BASE(SR_ATR), .WIDTH(32)) gpio_atr
+   //The fe_atr pins driven by this module are always configured as outputs so default
+   //the DDR (data direction register) to be all ones (outputs) so that the drive direction
+   //these lines does not change during/after resets.
+   gpio_atr #(.BASE(SR_ATR), .WIDTH(32), .default_ddr(32'hFFFFFFFF)) gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
