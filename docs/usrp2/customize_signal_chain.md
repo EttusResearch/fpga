@@ -1,4 +1,4 @@
-# Customizing the Signal Chain in Generation 2 products {#page_fpga_usrp2_customize}
+# Customizing the Signal Chain in Generation 2 products
 
 ## Adding DSP logic to Generation 2 products
 

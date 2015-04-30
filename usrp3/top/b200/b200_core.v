@@ -369,7 +369,7 @@ module b200_core
     assign radio_st = 8'h1;
 
     //assign undriven outputs
-    assign fe_atr1 = 32'bz;
+    assign fe_atr1 = 32'b0; //Always assumed to be outputs
     assign tx1 = 32'b0;
 
     //unused control signals -- leave in loopback

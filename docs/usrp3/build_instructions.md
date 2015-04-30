@@ -1,4 +1,4 @@
-# Generation 3 USRP Build Documentation {#page_fpga_usrp3}
+# Generation 3 USRP Build Documentation
 
 ## Dependencies and Requirements
 

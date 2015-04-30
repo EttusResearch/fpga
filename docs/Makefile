@@ -3,12 +3,11 @@
 #
 
 manual:
-	sed 's/(docs\//(/' ../README.md > doxREADME.md
-	doxygen Doxyfile.in
+	doxygen Doxyfile
 
 clean:
 	@rm -rf html
 	@rm -rf latex
-	@rm -f doxREADME.md
+	@rm -rf *.db
 
 .PHONY: manual clean
