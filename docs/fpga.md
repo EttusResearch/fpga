@@ -1,5 +1,5 @@
-FPGA Manual {#page_fpga}
-========================
+FPGA Manual
+===========
 
 Welcome to the USRP FPGA HDL source code tree! This repository contains
 free & open-source FPGA HDL for the Universal Software Radio Peripheral
@@ -16,22 +16,23 @@ USRP devices.
 - Directory: __usrp1__
 - Devices: USRP Classic Only
 - Tools: Quartus from Altera
-- \subpage page_fpga_usrp1 "Build Instructions"
+- \subpage md_usrp1_build_instructions "Build Instructions"
+
 
 ### Generation 2
 
 \li Directory: __usrp2__
 \li Devices: USRP N2X0, USRP B100, USRP E1X0, USRP2
 \li Tools: ISE from Xilinx, GNU make
-\li \subpage page_fpga_usrp2 "Build Instructions"
-\li \subpage page_fpga_usrp2_customize "Customization Instructions"
+\li \subpage md_usrp2_build_instructions "Build Instructions"
+\li \subpage md_usrp2_customize_signal_chain "Customization Instructions"
 
 ### Generation 3
 
 - Directory: __usrp3__
 - Devices: USRP B2X0, USRP X Series, USRP E3X0
 - Tools: ISE from Xilinx, GNU make
-- \subpage page_fpga_usrp3 "Build Instructions"
+- \subpage md_usrp3_build_instructions "Build Instructions"
 
 ## Pre-built FPGA Images
 

@@ -1,4 +1,4 @@
-# Generation 2 USRP Build Documentation {#page_fpga_usrp2}
+# Generation 2 USRP Build Documentation
 
 ## Dependencies and Requirements
 

@@ -1,4 +1,4 @@
-# Generation 1 USRP Build Documentation {#page_fpga_usrp1}
+# Generation 1 USRP Build Documentation
 
 The USRP FPGA build system requires only the Altera FPGA tools
 
