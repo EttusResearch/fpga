@@ -227,14 +227,17 @@ module b200 (
 
     ///////////////////////////////////////////////////////////////////////
     // frontend assignments
+    // Most B2x0's have frontends swapped (radio0 to FE2), but some hardware revisions do not.
+    // The ATR pins are mapped from radio to frontend here based on the swap_atr_n bit.
     ///////////////////////////////////////////////////////////////////////
-    wire [31:0] fe_atr1, fe_atr2;
-    assign {tx_enable1, SFDX1_RX, SFDX1_TX, SRX1_RX, SRX1_TX, LED_RX1, LED_TXRX1_RX, LED_TXRX1_TX} = fe_atr1[7:0];
-    assign {tx_enable2, SFDX2_RX, SFDX2_TX, SRX2_RX, SRX2_TX, LED_RX2, LED_TXRX2_RX, LED_TXRX2_TX} = fe_atr2[7:0];
+    wire swap_atr_n;
+    wire [31:0] radio0_fe_atr, radio1_fe_atr;
+    assign {tx_enable1, SFDX1_RX, SFDX1_TX, SRX1_RX, SRX1_TX, LED_RX1, LED_TXRX1_RX, LED_TXRX1_TX} = swap_atr_n ? radio1_fe_atr[7:0] : radio0_fe_atr[7:0];
+    assign {tx_enable2, SFDX2_RX, SFDX2_TX, SRX2_RX, SRX2_TX, LED_RX2, LED_TXRX2_RX, LED_TXRX2_TX} = swap_atr_n ? radio0_fe_atr[7:0] : radio1_fe_atr[7:0];
 
     wire [31:0] misc_outs; reg [31:0] misc_outs_r;
     always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
-    assign { tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, codec_arst, mimo, ref_sel } = misc_outs_r[7:0];
+    assign { swap_atr_n, tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, codec_arst, mimo, ref_sel } = misc_outs_r[8:0];
 
     assign codec_ctrl_in = 4'b1;
     assign codec_en_agc = 1'b1;
@@ -258,7 +261,7 @@ module b200 (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
         .rx0(rx_data2), .rx1(rx_data1),
         .tx0(tx_data2), .tx1(tx_data1),
-        .fe_atr0(fe_atr2), .fe_atr1(fe_atr1),
+        .fe_atr0(radio0_fe_atr), .fe_atr1(radio1_fe_atr),
 `ifdef B210
         .fp_gpio(fp_gpio),
 `endif
