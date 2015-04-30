@@ -24,7 +24,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 ## Build Instructions
 
-- Download and install [__Xilinx ISE 14.7__](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html)
+- Download and install [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html)
   + You may need to acquire an implementation license to build some USRP designs.
     Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
 

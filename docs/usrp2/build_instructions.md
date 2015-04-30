@@ -23,7 +23,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 ## Build Instructions
 
-- Download and install [__Xilinx ISE 12.2__](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v12_2.html)
+- Download and install [Xilinx ISE 12.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v12_2.html)
 
 - To add xtclsh to the PATH and to setup up the Xilinx build environment run
   + `source <install_dir>/Xilinx/12.2/ISE_DS/settings64.sh` (64-bit platform)
