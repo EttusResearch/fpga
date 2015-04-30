@@ -6,13 +6,15 @@
 
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
-- [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html)
+- [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For USRP B200 and B210)
+- [Xilinx Vivado 2014.4](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2014-4.html) (For USRP X300, X310 and E310)
 - [GNU Make](https://www.gnu.org/software/make/)
-- (Recommended) [GNU Bash](https://www.gnu.org/software/bash/)
+- [GNU Bash](https://www.gnu.org/software/bash/)
 
 ### Requirements
 
 - [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
+- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2014_4/ug973-vivado-release-notes-install-license.pdf)
 
 ### What FPGA does my USRP have?
 
@@ -22,7 +24,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - USRP X310: Kintex 7 XC7K410T
 - USRP E310: Zynq-7000 XC7Z020
 
-## Build Instructions
+## Build Instructions (Xilinx ISE only)
 
 - Download and install [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html)
   + You may need to acquire an implementation license to build some USRP designs.
@@ -34,8 +36,27 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 - Navigate to `usrp3/top/{project}` where project is:
   + b200: For USRP B200 and USRP B210
+
+- To build a binary configuration bitstream run `make <target>`
+  where the target is specific to each product. To get a list of supported targets run
+  `make help`.
+
+- The build output will be specific to the product and will be located in the
+  `usrp3/top/{project}/build` directory. Run `make help` for more information.
+
+## Build Instructions (Xilinx Vivado only)
+
+- Download and install [Xilinx Vivado 2014.4](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2014-4.html) (Not 2014.4.1)
+  + You may need to acquire an implementation license to build some USRP designs.
+    Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
+
+- Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
   + e300: For USRP E310
+
+- To add vivado to the PATH and to setup up the Xilinx build environment run
+  + `source setupenv.sh` (If Vivado is installed in the default path /opt/Xilinx/Vivado) _OR_
+  + `source setupenv.sh --vivado-path=<VIVADO_PATH>` (where VIVADO_PATH is a non-default installation path)
 
 - To build a binary configuration bitstream run `make <target>`
   where the target is specific to each product. To get a list of supported targets run
@@ -74,8 +95,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - `build/usrp_<product>_fpga_<image_type>.bit` :    Configuration bitstream with header
 - `build/usrp_<product>_fpga_<image_type>.bin` :    Configuration bitstream without header
 - `build/usrp_<product>_fpga_<image_type>.lvbitx` : Configuration bitstream for PCIe (NI-RIO)
-- `build/usrp_<product>_fpga_<image_type>.syr` :    Xilinx system report
-- `build/usrp_<product>_fpga_<image_type>.twr` :    Xilinx timing report
+- `build/usrp_<product>_fpga_<image_type>.rpt` :    System, utilization and timing summary report
 
 ### E310 Targets and Outputs
 
@@ -85,8 +105,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 #### Outputs
 - `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
 - `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
-- `build/usrp_<product>_fpga.syr` : Xilinx system report
-- `build/usrp_<product>_fpga.twr` : Xilinx timing report
+- `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
 
 ### Additional Build Options
 
@@ -95,6 +114,7 @@ the command. For example: `make B210 PROJECT_ONLY=1`
 
 Here are the supported options:
 
-- `PROJECT_ONLY=1` : Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI.
-- `EXPORT_ONLY=1` :  Export build targets from a GUI build to the build directory. Requires the project in build-\*_\* to be built.
+- `PROJECT_ONLY=1` : Only create a Xilinx project for the specified target(s). Useful for use with the ISE GUI. (*NOTE*: this option is only valid for Xilinx ISE)
+- `EXPORT_ONLY=1` :  Export build targets from a GUI build to the build directory. Requires the project in build-\*_\* to be built. (*NOTE*: this option is only valid for Xilinx ISE)
+- `GUI=1` : Run the Vivado build in GUI mode instead of batch mode. After the build is complete, Vivado provides an option to save the fully configured project for customization (*NOTE*: this option is only valid for Xilinx Vivado)
 

@@ -30,7 +30,7 @@ USRP devices.
 
 - Directory: __usrp3__
 - Devices: USRP B2X0, USRP X Series, USRP E3X0
-- Tools: ISE from Xilinx, GNU make
+- Tools: Vivado from Xilinx, ISE from Xilinx, GNU make
 - [Build Instructions](http://files.ettus.com/manual/page_fpga_usrp3.html)
 
 ## Pre-built FPGA Images
