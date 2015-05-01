@@ -1,5 +1,5 @@
-Ettus Research USRP FPGA HDL Source
-===================================
+FPGA Manual
+===========
 
 Welcome to the USRP FPGA HDL source code tree! This repository contains
 free & open-source FPGA HDL for the Universal Software Radio Peripheral
@@ -16,27 +16,27 @@ USRP devices.
 - Directory: __usrp1__
 - Devices: USRP Classic Only
 - Tools: Quartus from Altera
-- [Build Instructions](http://files.ettus.com/manual/page_fpga_usrp1.html)
+- \subpage md_usrp1_build_instructions "Build Instructions"
+
 
 ### Generation 2
 
-- Directory: __usrp2__
-- Devices: USRP N2X0, USRP B100, USRP E1X0, USRP2
-- Tools: ISE from Xilinx, GNU make
-- [Build Instructions](http://files.ettus.com/manual/page_fpga_usrp2.html)
-- [Customization Instructions](http://files.ettus.com/manual/page_fpga_usrp2_customize.html)
+\li Directory: __usrp2__
+\li Devices: USRP N2X0, USRP B100, USRP E1X0, USRP2
+\li Tools: ISE from Xilinx, GNU make
+\li \subpage md_usrp2_build_instructions "Build Instructions"
+\li \subpage md_usrp2_customize_signal_chain "Customization Instructions"
 
 ### Generation 3
 
 - Directory: __usrp3__
 - Devices: USRP B2X0, USRP X Series, USRP E3X0
 - Tools: ISE from Xilinx, GNU make
-- [Build Instructions](http://files.ettus.com/manual/page_fpga_usrp3.html)
+- \subpage md_usrp3_build_instructions "Build Instructions"
 
 ## Pre-built FPGA Images
 
-Pre-built FPGA and Firmware images are not hosted here. Please visit the
-[FPGA and Firmware manual page](http://files.ettus.com/manual/page_images.html)
+Pre-built FPGA and Firmware images are not hosted here. Please visit \ref page_images
 for instructions on downloading and using pre-built images. In most cases, running
 
     $ uhd_images_downloader

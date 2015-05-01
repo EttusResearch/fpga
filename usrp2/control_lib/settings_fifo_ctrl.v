@@ -79,13 +79,46 @@ module settings_fifo_ctrl
     wire command_fifo_full, command_fifo_empty;
     wire command_fifo_read, command_fifo_write;
 
+    wire [128:0] fifo2_datain, fifo3_datain, fifo4_datain;
+    wire fifo1_empty, fifo2_empty, fifo3_empty;
+    wire fifo2_full, fifo3_full, fifo4_full;
+    wire fifo1_to_fifo2, fifo2_to_fifo3, fifo3_to_fifo4;
+
     shortfifo #(.WIDTH(129)) command_fifo (
         .clk(clock), .rst(reset), .clear(clear),
         .datain({in_command_ticks, in_command_hdr, in_command_data, in_command_has_time}),
-        .dataout({out_command_ticks, out_command_hdr, out_command_data, out_command_has_time}),
+        .dataout(fifo2_datain),
         .write(command_fifo_write), .full(command_fifo_full), //input interface
+        .empty(fifo1_empty), .read(fifo1_to_fifo2)  //output interface
+    );
+
+    shortfifo #(.WIDTH(129)) command_fifo2 (
+        .clk(clock), .rst(reset), .clear(clear),
+        .datain(fifo2_datain),
+        .dataout(fifo3_datain),
+        .write(fifo1_to_fifo2), .full(fifo2_full), //input interface
+        .empty(fifo2_empty), .read(fifo2_to_fifo3)  //output interface
+    );
+
+    shortfifo #(.WIDTH(129)) command_fifo3 (
+        .clk(clock), .rst(reset), .clear(clear),
+        .datain(fifo3_datain),
+        .dataout(fifo4_datain),
+        .write(fifo2_to_fifo3), .full(fifo3_full), //input interface
+        .empty(fifo3_empty), .read(fifo3_to_fifo4)  //output interface
+    );
+
+    shortfifo #(.WIDTH(129)) command_fifo4 (
+        .clk(clock), .rst(reset), .clear(clear),
+        .datain(fifo4_datain),
+        .dataout({out_command_ticks, out_command_hdr, out_command_data, out_command_has_time}),
+        .write(fifo3_to_fifo4), .full(fifo4_full), //input interface
         .empty(command_fifo_empty), .read(command_fifo_read)  //output interface
     );
+
+    assign fifo1_to_fifo2 = ~fifo2_full & ~fifo1_empty;
+    assign fifo2_to_fifo3 = ~fifo3_full & ~fifo2_empty;
+    assign fifo3_to_fifo4 = ~fifo4_full & ~fifo3_empty;
 
     //------------------------------------------------------------------
     //-- The result fifo:
