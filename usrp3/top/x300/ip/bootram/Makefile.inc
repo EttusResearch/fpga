@@ -12,4 +12,4 @@ synth/bootram.vhd \
 ) 
 
 $(IP_BOOTRAM_SRCS) $(IP_BOOTRAM_OUTS) : $(IP_DIR)/bootram/bootram.xci $(IP_DIR)/bootram/bootram.coe
-	$(call BUILD_VIVADO_IP,bootram,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,bootram,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)

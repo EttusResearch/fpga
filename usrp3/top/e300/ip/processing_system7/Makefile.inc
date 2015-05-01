@@ -12,4 +12,4 @@ synth/processing_system7.v \
 )
 
 $(IP_PROCESSING_SYSTEM7_SRCS) $(IP_PROCESSING_SYSTEM7_OUTS) : $(IP_DIR)/processing_system7/processing_system7.xci
-	$(call BUILD_VIVADO_IP,processing_system7,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,processing_system7,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
