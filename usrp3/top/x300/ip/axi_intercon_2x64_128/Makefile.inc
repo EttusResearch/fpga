@@ -12,4 +12,4 @@ synth/axi_intercon_2x64_128.v \
 ) 
 
 $(IP_AXI_INTERCON_2X64_128_SRCS) $(IP_AXI_INTERCON_2X64_128_OUTS) : $(IP_DIR)/axi_intercon_2x64_128/axi_intercon_2x64_128.xci
-	$(call BUILD_VIVADO_IP,axi_intercon_2x64_128,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,axi_intercon_2x64_128,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)

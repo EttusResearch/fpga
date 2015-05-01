@@ -12,5 +12,5 @@ synth/catcodec_mmcm.v \
 )
 
 $(IP_CATCODEC_MMCM_SRCS) $(IP_CATCODEC_MMCM_OUTS) : $(IP_DIR)/catcodec_mmcm/catcodec_mmcm.xci
-	$(call BUILD_VIVADO_IP,catcodec_mmcm,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,catcodec_mmcm,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
 

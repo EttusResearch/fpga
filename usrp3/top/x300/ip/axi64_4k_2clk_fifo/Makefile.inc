@@ -12,4 +12,4 @@ synth/axi64_4k_2clk_fifo.vhd \
 ) 
 
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) $(IP_AXI64_4K_2CLK_FIFO_OUTS) : $(IP_DIR)/axi64_4k_2clk_fifo/axi64_4k_2clk_fifo.xci
-	$(call BUILD_VIVADO_IP,axi64_4k_2clk_fifo,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,axi64_4k_2clk_fifo,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)

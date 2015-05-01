@@ -12,4 +12,4 @@ synth/input_sample_fifo.vhd \
 ) 
 
 $(IP_INPUT_SAMPLE_FIFO_SRCS) $(IP_INPUT_SAMPLE_FIFO_OUTS) : $(IP_DIR)/input_sample_fifo/input_sample_fifo.xci
-	$(call BUILD_VIVADO_IP,input_sample_fifo,$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
+	$(call BUILD_VIVADO_IP,input_sample_fifo,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)
