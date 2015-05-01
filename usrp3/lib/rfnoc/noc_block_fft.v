@@ -174,7 +174,7 @@ module noc_block_fft #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(fft_size_log2_tdata), .o_tlast(), .o_tvalid(fft_size_log2_tvalid), .o_tready(fft_size_log2_tready));
 
-  streaming_fft inst_streaming_fft (
+  axi_fft inst_axi_fft (
     .aclk(ce_clk), .aresetn(~(ce_rst | fft_reset)),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),

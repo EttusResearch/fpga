@@ -17,6 +17,7 @@ include ../../tools/make/viv_preamble.mak
 
 include ip/Makefile.inc
 include coregen_dsp/Makefile.srcs
+include ../../lib/ip/Makefile.inc
 include ../../lib/control/Makefile.srcs
 include ../../lib/fifo/Makefile.srcs
 include ../../lib/zynq_fifo/Makefile.srcs
@@ -56,7 +57,9 @@ SOURCES = $(abspath $(TOP_SRCS)) \
           $(RADIO_SRCS) \
           $(CAT_CAP_GEN_SRCS) \
           $(COREGEN_DSP_SRCS) \
-          $(IP_XCI_SRCS)
+          $(IP_XCI_SRCS) \
+          $(RFNOC_SRCS) \
+          $(LIB_IP_XCI_SRCS)
 
 ##################################################
 # Git Hash
@@ -71,7 +74,7 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 export VIV_SOURCE_FILES=$(SOURCES)
 export VIV_VERILOG_DEFS=$(EXTRA_DEFS) $(SHORT_HASH)
 
-bin: prereqs $$(SOURCES) ip
+bin: prereqs $$(SOURCES) ip lib_ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
 .PHONY: bin

@@ -169,7 +169,7 @@ module noc_block_fir_filter #(
   wire        m_axis_fir_config_tready;
   assign      m_axis_config_tready[1]  = m_axis_fir_config_tready;
 
-  simple_fir inst_simple_fir (
+  axi_fir inst_axi_fir (
     .aresetn(~ce_rst), .aclk(ce_clk),
     .s_axis_data_tdata(m_axis_data_tdata),
     .s_axis_data_tlast(m_axis_data_tlast),

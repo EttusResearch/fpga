@@ -7,6 +7,7 @@
 # -------------------------------------------------------------------
 BASE_DIR = $(abspath ..)
 IP_DIR = $(abspath ./ip)
+LIB_IP_DIR = $(abspath ../../lib/ip)
 TOOLS_DIR = $(BASE_DIR)/../tools
 SIMULATION = 0
 

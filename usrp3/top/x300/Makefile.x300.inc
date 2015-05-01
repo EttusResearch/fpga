@@ -17,6 +17,7 @@ include ../../tools/make/viv_preamble.mak
 
 include ip/Makefile.inc
 include coregen_dsp/Makefile.srcs
+include ../../lib/ip/Makefile.inc
 include ../../lib/control/Makefile.srcs
 include ../../lib/fifo/Makefile.srcs
 include ../../lib/simple_gemac/Makefile.srcs
@@ -78,7 +79,8 @@ $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
 $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(ETH_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
-$(AXI_SRCS) $(RADIO_SRCS) $(IP_XCI_SRCS) $(RFNOC_SRCS)
+$(AXI_SRCS) $(RADIO_SRCS) $(IP_XCI_SRCS) $(RFNOC_SRCS) \
+$(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 
 
 ##################################################
@@ -89,7 +91,7 @@ $(AXI_SRCS) $(RADIO_SRCS) $(IP_XCI_SRCS) $(RFNOC_SRCS)
 export VIV_SOURCE_FILES=$(SOURCES)
 export VIV_VERILOG_DEFS=$(EXTRA_DEFS)
 
-bin: prereqs $$(SOURCES) ip
+bin: prereqs $$(SOURCES) ip lib_ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
 .PHONY: bin
