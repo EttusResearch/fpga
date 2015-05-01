@@ -1,0 +1,6 @@
+115a116
+>    input        pll_locked,  // IJB. Added as per Xilinx code comments.
+313c314
+<   assign rst_tmp_idelay = sys_rst_act_hi;
+---
+>   assign rst_tmp_idelay = sys_rst_act_hi || ~pll_locked; //IJB: Adding PLL lock because PLL is driving IDELAYCTRL

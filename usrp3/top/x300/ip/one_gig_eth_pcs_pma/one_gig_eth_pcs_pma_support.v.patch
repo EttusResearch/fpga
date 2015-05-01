@@ -1,0 +1,15 @@
+70,72c70
+<       input        gtrefclk_p,                // 125 MHz differential clock
+<       input        gtrefclk_n,                // 125 MHz differential clock
+<       output       gtrefclk_out,              // Very high quality 125MHz clock for GT transceiver.
+---
+>       input        gtrefclk,                // 125 MHz reference clock
+125d122
+<    wire         gtrefclk;                 // High quality 125 MHz clock
+202,203d198
+<       .gtrefclk_p                (gtrefclk_p),
+<       .gtrefclk_n                (gtrefclk_n),
+207d201
+<       .gtrefclk                  (gtrefclk),
+215d208
+< assign gtrefclk_out   = gtrefclk;

@@ -20,27 +20,31 @@ module capture_ddrlvds
    wire 		   ssclk;
    wire [(2*WIDTH)-1:0]    out_pre1;
    reg  [(2*WIDTH)-1:0]    out_pre2;
-   wire 		   ssclk_bufio1, ssclk_bufio2, ssclk_bufmr;
+   wire 		   ssclk_bufr1, ssclk_bufr2, ssclk_bufmr;
 
    IBUFGDS #(.DIFF_TERM("TRUE"))
    clkbuf (.O(ssclk), .I(ssclk_p), .IB(ssclk_n));
 
    BUFMR clkbufmr (
-		   .I(ssclk),
-		   .O(ssclk_bufmr)
-		   );
+      .I(ssclk),
+      .O(ssclk_bufmr)
+   );
 
-   BUFIO clkbufio1 (
-		    .I(ssclk_bufmr),
-		    .O(ssclk_bufio1)
-		   );
+   BUFR #(
+      .SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("BYPASS")
+   ) clkbufr1 (
+      .I(ssclk_bufmr),
+      .O(ssclk_bufr1)
+   );
 
-   BUFIO clkbufio2 (
-		    .I(ssclk_bufmr),
-		    .O(ssclk_bufio2)
-		    );
+   BUFR #(
+      .SIM_DEVICE("7SERIES"), .BUFR_DIVIDE("BYPASS")
+   ) clkbufr2 (
+      .I(ssclk_bufmr),
+      .O(ssclk_bufr2)
+   );
 
-   genvar 		   i;
+   genvar i;
 
    generate
       for(i = 0; i < WIDTH; i = i + 1)
@@ -49,13 +53,13 @@ module capture_ddrlvds
 	      IBUFDS #(.DIFF_TERM("FALSE")) ibufds
 		(.O(ddr_dat[i]), .I(in_p[i]), .IB(in_n[i]) );
 	      IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) iddr
-		(.Q1(out_pre1[2*i]), .Q2(out_pre1[(2*i)+1]), .C(ssclk_bufio2),
+		(.Q1(out_pre1[2*i]), .Q2(out_pre1[(2*i)+1]), .C(ssclk_bufr2),
 		 .CE(1'b1), .D(ddr_dat[i]), .R(1'b0), .S(1'b0));
 	   end else begin
 	      IBUFDS #(.DIFF_TERM("TRUE")) ibufds
 		(.O(ddr_dat[i]), .I(in_p[i]), .IB(in_n[i]) );
 	      IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) iddr
-		(.Q1(out_pre1[2*i]), .Q2(out_pre1[(2*i)+1]), .C(ssclk_bufio1),
+		(.Q1(out_pre1[2*i]), .Q2(out_pre1[(2*i)+1]), .C(ssclk_bufr1),
 		 .CE(1'b1), .D(ddr_dat[i]), .R(1'b0), .S(1'b0));
 	   end
 	end

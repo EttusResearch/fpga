@@ -15,8 +15,9 @@ NET "pll_ce"  LOC = "W11" | IOSTANDARD = LVCMOS18 ;
 NET "pll_mosi"  LOC = "AB11" | IOSTANDARD = LVCMOS18 ;
 NET "pll_sclk"  LOC = "Y12" | IOSTANDARD = LVCMOS18 ;
 
-NET "FPGA_RXD0"  LOC = "AB8" | IOSTANDARD = LVCMOS18 ;
-NET "FPGA_TXD0"  LOC = "AB7" | IOSTANDARD = LVCMOS18 ;
+## UART header not always connected so has pullups. Can also be GPIO as build option.
+NET "FPGA_RXD0"  LOC = "AB8" | IOSTANDARD = LVCMOS18 | PULLUP ;
+NET "FPGA_TXD0"  LOC = "AB7" | IOSTANDARD = LVCMOS18 | PULLUP ;
 
 ## Catalina Controls
 
@@ -185,8 +186,8 @@ NET "GPIF_*" SLEW = SLOW;
 
 NET "gps_lock"  LOC = "B14" | IOSTANDARD = LVCMOS33 ;
 NET "gps_rxd"  LOC = "A15" | IOSTANDARD = LVCMOS33 ;
-NET "gps_txd"  LOC = "A14" | IOSTANDARD = LVCMOS33 ;
-NET "gps_txd_nmea"  LOC = "C15" | IOSTANDARD = LVCMOS33 ;
+NET "gps_txd"  LOC = "A14" | IOSTANDARD = LVCMOS33  | PULLUP;
+NET "gps_txd_nmea"  LOC = "C15" | IOSTANDARD = LVCMOS33 | PULLUP ;
 
 ## LEDS
 

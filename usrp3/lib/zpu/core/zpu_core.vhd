@@ -1,6 +1,6 @@
 
 -- Company: ZPU4 generic memory interface CPU
--- Engineer: Øyvind Harboe
+-- Engineer: yvind Harboe
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -154,6 +154,7 @@ signal inInterrupt : std_logic;
 -- state machine.
 
 begin
+   mem_writeMask <= (others => '1');
 
 	zpu_status(maxAddrBitIncIO downto 0) <= trace_pc;
 	zpu_status(31) <= '1';
@@ -210,7 +211,6 @@ begin
 			mem_we <= '0';
 			multA <= (others => '0');
 			multB <= (others => '0');
-			mem_writeMask <= (others => '1');
 			out_mem_req <= '0';
 			mem_addr <= (others => DontCareValue);
 			mem_write <= (others => DontCareValue);

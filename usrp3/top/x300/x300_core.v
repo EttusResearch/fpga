@@ -61,9 +61,11 @@ module x300_core
    output mdc0,
    output mdio_in0,
    input mdio_out0,
+   input [15:0] eth0_phy_status,
    output mdc1,
    output mdio_in1,
    input mdio_out1,
+   input [15:0] eth1_phy_status,
 
 `ifdef ETH10G_PORT0
    // XGMII
@@ -459,6 +461,9 @@ module x300_core
     .s5_cyc(s5_cyc),
     .s5_we(s5_we),
     .s5_int(s5_int),
+    //Status signals
+    .eth0_phy_status(eth0_phy_status),
+    .eth1_phy_status(eth1_phy_status),
     // AXI_DRAM_FIFO BIST. Not for production.
     .bist_start(bist_start),
     .bist_control(bist_control),
@@ -1369,26 +1374,5 @@ module x300_core
       .CONTROL1(CONTROL1) // INOUT BUS [35:0]
       );
  -----/\----- EXCLUDED -----/\----- */
-/*
-   wire [35:0] CONTROL0;
-   reg [255:0] TRIG0;
 
-   always @(posedge bus_clk)
-     TRIG0 <= { { debug_r0 }, // 64 bits per line
-		{ ce_debug[2] },
-		{ ce_debug[1] },
-		{ ce_debug[0] } };
-
-   chipscope_ila chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(bus_clk), // IN
-      .TRIG0(TRIG0 ) // IN BUS [255:0]
-      );
-
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
-*/
 endmodule // x300_core

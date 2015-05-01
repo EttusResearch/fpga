@@ -30,7 +30,7 @@ module axi_fifo_short
    wire [WIDTH-1:0] int_tdata;
    wire int_tready;
 
-   reg full, empty;
+   reg full = 1'b0, empty = 1'b1;
    wire write        = i_tvalid & i_tready;
    // read_int will assert when either a read occurs or the output register is empty (and there is data in the shift register fifo)
    wire read_int     = ~empty & int_tready;

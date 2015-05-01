@@ -10,8 +10,8 @@ module axi_crossbar_tb;
    localparam STREAM_WIDTH = 64;
    
    // Currently support simulations upto 8x8 configurations
-   localparam MAX_NUM_INPUTS = 8;
-   localparam MAX_NUM_OUTPUTS = 8;
+   localparam MAX_NUM_INPUTS = 16;
+   localparam MAX_NUM_OUTPUTS = 16;
    
    wire [(MAX_NUM_INPUTS*STREAM_WIDTH)-1:0] i_tdata;
    wire [STREAM_WIDTH-1:0] 		i_tdata_array [0:MAX_NUM_INPUTS-1];   

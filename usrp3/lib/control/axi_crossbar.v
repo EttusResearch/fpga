@@ -155,7 +155,7 @@ module axi_crossbar
 	      .forward_valid(forward_valid_out[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]), 
 	      .forward_ack(forward_ack_in[(m+1)*NUM_OUTPUTS-1:m*NUM_OUTPUTS]),
 	      // Readback bus
-	      .rb_rd_stb(rb_rd_strobe && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)] == m)),
+	      .rb_rd_stb(rb_rd_stb && (rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)] == m)),
 	      .rb_addr(rb_addr[`LOG2(NUM_OUTPUTS):0]),
 	      .rb_data(rb_data_mux[m])
 	      );
