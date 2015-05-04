@@ -477,13 +477,7 @@ module e300
 
     .event_irq(stream_irq)
   );
-
-  // resync pps to bus_clk >>> TODO: check this makes sense
-  reg [1:0] ppsync;
-  wire pps = ppsync[1];
-  wire lpps;
-  always @(posedge bus_clk)
-    ppsync <= { ppsync[0], lpps };
+  wire pps;
 
   wire clk_tcxo = TCXO_CLK; // 40 MHz
 
@@ -501,7 +495,7 @@ module e300
     .reset(1'b0),
     .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
     .refsel(pps_select),
-    .lpps(lpps),
+    .lpps(pps),
     .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
     .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn),
     .dac_dflt(16'h7fff)
