@@ -56,7 +56,7 @@ module axis_dram_fifo_single
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
   axi_dram_fifo #(
-    .BASE('h0), .SIZE(24), .TIMEOUT(280)
+    .BASE('h0), .SIZE(18), .TIMEOUT(280)
   ) axi_dram_fifo_i0 (
     //
     // Clocks and reset
@@ -139,7 +139,7 @@ module axis_dram_fifo_single
   );
 
   generate if (USE_SRAM_MEMORY) begin
-    axi4_bram_1kx64 axi4_bram_1kx64_i1 (
+    axi4_dualport_sram axi4_dualport_sram_i1 (
       .s_aclk         (sys_clk), // input s_aclk
       .s_aresetn      (sys_rst_n), // input s_aresetn
       .s_axi_awid     (dma_axi_wr.addr.id), // input [0 : 0] s_axi_awid

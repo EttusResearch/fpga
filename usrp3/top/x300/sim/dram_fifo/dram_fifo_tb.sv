@@ -31,7 +31,7 @@ module dram_fifo_tb();
   wire calib_complete;
 `ifdef USE_SRAM_FIFO
 
-  axi_fifo #(.WIDTH(65), .SIZE(24)) dut_single (
+  axi_fifo #(.WIDTH(65), .SIZE(18)) dut_single (
     .clk(bus_clk),
     .reset(bus_rst),
     .clear(1'b0),
