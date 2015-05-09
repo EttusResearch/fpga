@@ -68,8 +68,8 @@
 //
 `define TEST_CASE_DONE(result) \
   tc_running = 0; \
-  $display("[TEST CASE %3d] (t=%09d) DONE... %s", tc_run_count, $time, (((result===1)&~tc_failed)?"Passed":"FAILED")); \
-  if ((result===1)&~tc_failed) tc_pass_count = tc_pass_count + 1;
+  $display("[TEST CASE %3d] (t=%09d) DONE... %s", tc_run_count, $time, ((((result)===1'b1)&~tc_failed)?"Passed":"FAILED")); \
+  if (((result)===1'b1)&~tc_failed) tc_pass_count = tc_pass_count + 1;
 
 // Wrapper around a an assert.
 // ASSERT_FATAL throws an error assertion and halts the simulator
