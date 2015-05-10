@@ -14,6 +14,7 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 # Design Specific
 #-------------------------------------------------
 # Define part using PART_ID (<device>/<package>/<speedgrade>)
+ARCH = kintex7
 PART_ID = xc7k410t/ffg900/-2
 
 # Include makefiles and sources for the DUT and its dependencies
@@ -32,7 +33,6 @@ $(CONTROL_LIB_SRCS) \
 #-------------------------------------------------
 # If simulation contains IP, define the IP_DIR and point
 # it to the base level IP directory
-ARCH = kintex7
 IP_DIR = ../../ip
 
 # Include makefiles and sources for all IP components
