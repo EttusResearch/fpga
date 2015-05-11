@@ -127,12 +127,12 @@ interface cvita_stream_t (input clk);
       stats.max   = 64'h0;
       stats.crc   = 64'h0;
 
-      @(negedge clk);
+      @(posedge clk);
       //Corner case. We are already looking at the end
       //of a packet i.e. its just a header
       if (axis.tready&axis.tvalid&axis.tlast) begin
         unflatten_chdr_no_ts(axis.tdata, hdr);
-        @(posedge clk);
+        @(negedge clk);
       end else begin
         while(~(axis.tready&axis.tvalid&axis.tlast)) begin
           if (axis.tready&axis.tvalid) begin
@@ -147,10 +147,10 @@ interface cvita_stream_t (input clk);
               `WAIT_FOR_PKT_GET_INFO__UPDATE
             end
           end
-          @(negedge clk);
+          @(posedge clk);
         end
         `WAIT_FOR_PKT_GET_INFO__UPDATE
-        @(posedge clk);
+        @(negedge clk);
       end
     end
   endtask
@@ -168,6 +168,7 @@ interface cvita_stream_t (input clk);
     begin
       cvita_hdr_t tmp_hdr = hdr;
       tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
+      @(negedge clk);
       push_hdr(tmp_hdr);
       if (hdr.has_time) axis.push_word(hdr.timestamp, 0);
 
@@ -195,6 +196,7 @@ interface cvita_stream_t (input clk);
 
       cvita_hdr_t tmp_hdr = hdr;
       tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
+      @(negedge clk);
       push_hdr(tmp_hdr);
       if (hdr.has_time) axis.push_word(hdr.timestamp, 0);
 
