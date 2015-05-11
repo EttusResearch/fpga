@@ -31,7 +31,6 @@ interface settings_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
       stb   = 1'b0;
       addr  = {AWIDTH{1'b0}};
       data  = {DWIDTH{1'b0}};
-      @(posedge clk);
     end
   endtask
 
