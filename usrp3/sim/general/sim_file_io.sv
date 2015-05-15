@@ -16,6 +16,12 @@ typedef enum {
   HEX, DEC, OCT, BIN, FLOAT
 } fformat_t;
 
+// Create a handle to a data_file with
+// - FILENAME: Name of the file
+// - FORMAT: Data format (HEX, DEC, OCT, BIN, FLOAT)
+// - DWIDTH: Width of each element stored in the file (one line per word)
+//
+
 //TODO: We would ideally use a class but that is not
 //      supported by most simulators.
 interface data_file_t #(
@@ -26,6 +32,12 @@ interface data_file_t #(
   bit     is_open;
   integer handle;
 
+  // Open the data file for reading or writing.
+  //
+  // Usage: open(mode)
+  // where
+  //  - mode: RW mode (Choose from: READ, WRITE, APPEND)
+  //
   function open(fopen_mode_t mode = READ);
     if (mode == APPEND)
       handle  = $fopen(`ABSPATH(FILENAME), "a");
@@ -41,16 +53,33 @@ interface data_file_t #(
     is_open = 1;
   endfunction
 
+
+  // Close an open data file. No-op if file isn't already open
+  //
+  // Usage: close()
+  //
   function close();
     $fclose(handle);
     handle  = 0;
     is_open = 0;
   endfunction
 
+  // Is end-of-file reached.
+  //
+  // Usage: is_eof() Returns eof
+  // where
+  // - eof: A boolean
+  //
   function logic is_eof();
     return ($feof(handle));
   endfunction
 
+  // Read a line from the datafile
+  //
+  // Usage: readline() Returns data
+  // where
+  // - data: A logic array of width DWIDTH containing the read word
+  //
   function logic [DWIDTH-1:0] readline();
     automatic logic [DWIDTH-1:0] word = 64'h0;
     automatic integer status;
@@ -71,6 +100,12 @@ interface data_file_t #(
     return word;
   endfunction
 
+  // Write a line to the datafile
+  //
+  // Usage: writeline(data) 
+  // where
+  // - data: A logic array of width DWIDTH to write to the file
+  //
   function void writeline(logic [DWIDTH-1:0] word);
     if (FORMAT == HEX)
       $fdisplay(handle, "%x", word);

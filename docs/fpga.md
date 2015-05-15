@@ -13,10 +13,10 @@ USRP devices.
 
 ### Generation 1
 
-- Directory: __usrp1__
-- Devices: USRP Classic Only
-- Tools: Quartus from Altera
-- \subpage md_usrp1_build_instructions "Build Instructions"
+\li Directory: __usrp1__
+\li Devices: USRP Classic Only
+\li Tools: Quartus from Altera
+\li \subpage md_usrp1_build_instructions "Build Instructions"
 
 
 ### Generation 2
@@ -29,10 +29,11 @@ USRP devices.
 
 ### Generation 3
 
-- Directory: __usrp3__
-- Devices: USRP B2X0, USRP X Series, USRP E3X0
-- Tools: ISE from Xilinx, GNU make
-- \subpage md_usrp3_build_instructions "Build Instructions"
+\li Directory: __usrp3__
+\li Devices: USRP B2X0, USRP X Series, USRP E3X0
+\li Tools: ISE from Xilinx, GNU make
+\li \subpage md_usrp3_build_instructions "Build Instructions"
+\li \subpage md_usrp3_simulation "Simulation"
 
 ## Pre-built FPGA Images
 
