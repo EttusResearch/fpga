@@ -68,7 +68,7 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 .SECONDEXPANSION:
 
 export VIV_SOURCE_FILES=$(SOURCES)
-export VIV_VERILOG_DEFS=$(EXTRA_DEFS) $(SHORT_HASH)
+export VIV_VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 
 bin: prereqs $$(SOURCES) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
