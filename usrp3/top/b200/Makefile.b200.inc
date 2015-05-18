@@ -63,6 +63,7 @@ TOP_SRCS = \
 b200.v \
 b200_core.v \
 radio_b200.v \
+b200_io.v \
 b200.ucf \
 timing.ucf \
 S6CLK2PIN.v \

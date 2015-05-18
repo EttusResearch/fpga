@@ -40,6 +40,7 @@ INST "gps_*" TNM = ls_misc_out;  # Bus clk domain
 #constrain the misc IOs to the clocks
 NET "gpif_clk" TNM_NET = "gpif_clk";
 TIMESPEC "TS_gpif_clk" = PERIOD "gpif_clk" 10 ns HIGH 50 %;
-TIMEGRP "ls_misc_out" OFFSET = OUT 15 ns AFTER "gpif_clk" RISING;
-TIMEGRP "radio_misc_out" OFFSET = OUT 15 ns AFTER "radio_clk" RISING;
+# These next 2 constarints have never worked...either fix them or remove them. Probably need a virtual clock to make them work.
+#TIMEGRP "ls_misc_out" OFFSET = OUT 15 ns AFTER "gpif_clk" RISING;
+#TIMEGRP "radio_misc_out" OFFSET = OUT 15 ns AFTER "radio_clk" RISING;
 
