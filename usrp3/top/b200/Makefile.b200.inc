@@ -23,7 +23,7 @@ include ../../lib/timing/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
-include ../../lib/io_cap_gen/Makefile.srcs
+
 
 
 B200_COREGEN_SRCS = \
