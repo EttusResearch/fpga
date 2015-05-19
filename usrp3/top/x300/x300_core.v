@@ -390,10 +390,15 @@ module x300_core
   //////////////////////////////////////////////////////////////////////////////////////////////
 
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
-  `ifdef RFNOC_X300
-    `include "rfnoc_ce_auto_inst_x300.v"
+  `ifdef RFNOC
+    `ifdef X300
+      `include "rfnoc_ce_auto_inst_x300.v"
+    `endif
+    `ifdef X310
+      `include "rfnoc_ce_auto_inst_x310.v"
+    `endif
   `else
-    `include "rfnoc_ce_auto_inst_x310.v"
+    localparam NUM_CE = 0;
   `endif
 
   /////////////////////////////////////////////////////////////////////////////////

@@ -181,7 +181,13 @@ module e300_core
   //////////////////////////////////////////////////////////////////////////////////////////////
 
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
-  `include "rfnoc_ce_auto_inst_e310.v"
+  `ifdef RFNOC
+    `ifdef E310
+      `include "rfnoc_ce_auto_inst_e310.v"
+    `endif
+  `else
+    localparam NUM_CE = 0;
+  `endif
 
   ////////////////////////////////////////////////////////////////////
   // routing logic, aka crossbar
@@ -220,42 +226,76 @@ module e300_core
   // 2    - Radio1
   // 3-15 - CEs
 
-  axi_crossbar
-  #(
-    .BASE(0),
-    .FIFO_WIDTH(64),
-    .DST_WIDTH(16),
-    .NUM_INPUTS(XBAR_NUM_PORTS),
-    .NUM_OUTPUTS(XBAR_NUM_PORTS)
-  ) axi_crossbar
-  (
-    .clk(bus_clk),
-    .reset(bus_rst),
-    .clear(1'b0),
-    .local_addr(xb_local_addr),
+  generate
+  if (NUM_CE > 0) begin
+    axi_crossbar
+    #(
+      .BASE(0),
+      .FIFO_WIDTH(64),
+      .DST_WIDTH(16),
+      .NUM_INPUTS(XBAR_NUM_PORTS),
+      .NUM_OUTPUTS(XBAR_NUM_PORTS)
+    ) axi_crossbar
+    (
+      .clk(bus_clk),
+      .reset(bus_rst),
+      .clear(1'b0),
+      .local_addr(xb_local_addr),
 
-    // settings bus for config
-    .set_stb(xbar_set_stb),
-    .set_addr({7'd0, xbar_set_addr[10:2]}), // Settings bus is word aligned, so drop lower two LSBs.
-                                            // Also, upper bits are masked to 0 as BASE address is set to 0.
-    .set_data(xbar_set_data),
-    .rb_rd_stb(xbar_rb_stb),
-    .rb_addr(xbar_rb_addr[2*(`LOG2(XBAR_NUM_PORTS))-1+2:2]), // Also word aligned
-    .rb_data(xbar_rb_data),
+      // settings bus for config
+      .set_stb(xbar_set_stb),
+      .set_addr({7'd0, xbar_set_addr[10:2]}), // Settings bus is word aligned, so drop lower two LSBs.
+                                              // Also, upper bits are masked to 0 as BASE address is set to 0.
+      .set_data(xbar_set_data),
+      .rb_rd_stb(xbar_rb_stb),
+      .rb_addr(xbar_rb_addr[2*(`LOG2(XBAR_NUM_PORTS))-1+2:2]), // Also word aligned
+      .rb_data(xbar_rb_data),
 
-    // inputs, real men flatten busses
-    .i_tdata({ce_flat_i_tdata, ri_tdata[1], ri_tdata[0], h2s_tdata}),
-    .i_tlast({ce_i_tlast, ri_tlast[1], ri_tlast[0], h2s_tlast}),
-    .i_tvalid({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
-    .i_tready({ce_i_tready, ri_tready[1], ri_tready[0], h2s_tready}),
+      // inputs, flattened busses
+      .i_tdata({ce_flat_i_tdata, ri_tdata[1], ri_tdata[0], h2s_tdata}),
+      .i_tlast({ce_i_tlast, ri_tlast[1], ri_tlast[0], h2s_tlast}),
+      .i_tvalid({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
+      .i_tready({ce_i_tready, ri_tready[1], ri_tready[0], h2s_tready}),
 
-    // outputs, real men flatten busses
-    .o_tdata({ce_flat_o_tdata, ro_tdata[1], ro_tdata[0], s2h_tdata}),
-    .o_tlast({ce_o_tlast, ro_tlast[1], ro_tlast[0], s2h_tlast}),
-    .o_tvalid({ce_o_tvalid, ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
-    .o_tready({ce_o_tready, ro_tready[1], ro_tready[0], s2h_tready}),
-    .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
-  );
+      // outputs, flattened busses
+      .o_tdata({ce_flat_o_tdata, ro_tdata[1], ro_tdata[0], s2h_tdata}),
+      .o_tlast({ce_o_tlast, ro_tlast[1], ro_tlast[0], s2h_tlast}),
+      .o_tvalid({ce_o_tvalid, ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
+      .o_tready({ce_o_tready, ro_tready[1], ro_tready[0], s2h_tready}),
+      .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
+    );
+  end else begin
+    axi_crossbar
+    #(
+      .BASE(0),
+      .FIFO_WIDTH(64),
+      .DST_WIDTH(16),
+      .NUM_INPUTS(XBAR_NUM_PORTS),
+      .NUM_OUTPUTS(XBAR_NUM_PORTS)
+    ) axi_crossbar
+    (
+      .clk(bus_clk),
+      .reset(bus_rst),
+      .clear(1'b0),
+      .local_addr(xb_local_addr),
+      .set_stb(xbar_set_stb),
+      .set_addr({7'd0, xbar_set_addr[10:2]}),
+      .set_data(xbar_set_data),
+      .rb_rd_stb(xbar_rb_stb),
+      .rb_addr(xbar_rb_addr[2*(`LOG2(XBAR_NUM_PORTS))-1+2:2]), // Also word aligned
+      .rb_data(xbar_rb_data),
+      .i_tdata({ri_tdata[1], ri_tdata[0], h2s_tdata}),
+      .i_tlast({ri_tlast[1], ri_tlast[0], h2s_tlast}),
+      .i_tvalid({ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
+      .i_tready({ri_tready[1], ri_tready[0], h2s_tready}),
+      .o_tdata({ro_tdata[1], ro_tdata[0], s2h_tdata}),
+      .o_tlast({ro_tlast[1], ro_tlast[0], s2h_tlast}),
+      .o_tvalid({ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
+      .o_tready({ro_tready[1], ro_tready[0], s2h_tready}),
+      .pkt_present({ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
+    );
+  end
+  endgenerate
 
   ////////////////////////////////////////////////////////////////////
   // radio instantiation
