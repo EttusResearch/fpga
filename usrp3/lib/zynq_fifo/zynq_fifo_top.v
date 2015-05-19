@@ -255,7 +255,7 @@ module zynq_fifo_top
         .rb_addr(rb_addr), .rb_data(rb_data_s2h), .rb_stb(rb_stb_s2h),
         .cmd_tdata(s2h_cmd_tdata), .cmd_tvalid(s2h_cmd_tvalid), .cmd_tready(s2h_cmd_tready),
         .sts_tdata(s2h_sts_tdata), .sts_tvalid(s2h_sts_tvalid), .sts_tready(s2h_sts_tready),
-        .ext_stream(which_stream_s2h), .stream_valid(s2h_tvalid_i0),
+        .ext_stream_sel(which_stream_s2h), .ext_stream_valid(s2h_tvalid_i0),
         .debug(s2h_arbiter_debug)
     );
 
@@ -269,17 +269,12 @@ module zynq_fifo_top
 
     assign h2s_irq = h2s_sts_tvalid;
 
-    //simple round robin implementation for checking available packets
-    reg [H2S_STREAMS_WIDTH-1:0] which_stream_h2s;
-    always @(posedge clk)
-        if (rst) which_stream_h2s <= 0;
-        else which_stream_h2s <= which_stream_h2s + 1'b1;
-
     wire [31:0] h2s_arbiter_debug;
     zf_arbiter #(
         .STREAMS_WIDTH(S2H_STREAMS_WIDTH),
         .CMDFIFO_DEPTH(S2H_CMDFIFO_DEPTH),
-        .PAGE_WIDTH(PAGE_WIDTH)
+        .PAGE_WIDTH(PAGE_WIDTH),
+        .USE_INT_STREAM_SEL(1)
     ) h2s_arbiter
     (
         .clk(clk), .rst(rst),
@@ -287,7 +282,7 @@ module zynq_fifo_top
         .rb_addr(rb_addr), .rb_data(rb_data_h2s), .rb_stb(rb_stb_h2s),
         .cmd_tdata(h2s_cmd_tdata), .cmd_tvalid(h2s_cmd_tvalid), .cmd_tready(h2s_cmd_tready),
         .sts_tdata(h2s_sts_tdata), .sts_tvalid(h2s_sts_tvalid), .sts_tready(h2s_sts_tready),
-        .ext_stream(which_stream_h2s), .stream_valid(1'b1),
+        .ext_stream_sel(), .ext_stream_valid(),
         .debug(h2s_arbiter_debug)
     );
 
