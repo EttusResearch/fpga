@@ -14,7 +14,7 @@
 //  Size  > 5: Uses BRAM fifo (axi_fifo_bram)
 
 module axi_fifo
-  #(parameter WIDTH=32, SIZE=6)
+  #(parameter WIDTH=32, SIZE=5)
    (input clk, input reset, input clear,
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
