@@ -40,6 +40,10 @@ E310_idle: ##Build USRP E310 idle design.
 	$(call vivado_build,xc7z020,E3X0_IDLE_IMAGE)
 	$(call post_build,E310_idle,)
 
+E310_RFNOC: ##Buil USRP E310. RFNoC enabled.
+	$(call vivado_build,xc7z020,RFNOC=1 E310=1)
+	$(call post_build,E310_RFNOC,HGS)
+
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
 	@rm -rf build-E3*
