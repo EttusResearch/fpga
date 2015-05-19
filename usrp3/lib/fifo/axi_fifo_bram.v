@@ -40,7 +40,7 @@ module axi_fifo_bram
    reg [SIZE-1:0] wr_addr, rd_addr;
    reg [1:0] 	  read_state;
 
-   reg 	  empty_reg, full_reg;
+   reg 	  empty_reg = 1'b1, full_reg = 1'b0;
    always @(posedge clk)
      if(reset)
        wr_addr <= 0;
