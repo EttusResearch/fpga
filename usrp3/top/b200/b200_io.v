@@ -1,10 +1,11 @@
-
+//------------------------------------------------------------------
 //
 // In SISO mode, we output a clock thats 1x the frequency of the Catalina 
 // source-synchronous bus clock to be used as the radio_clk.
 // In MIMO mode, we output a clock thats 1/2 the frequency of the Catalina 
 // source-synchronous bus clock to be usedio_clk as the radio_clk.
 //
+//------------------------------------------------------------------
 
 module b200_io
     (
@@ -169,8 +170,6 @@ module b200_io
        { rx_frame_d2, rx_frame_d1 } <= { rx_frame_1, 1'b0 };
      else
        { rx_frame_d2, rx_frame_d1 } <= { rx_frame_d1, rx_frame_1 };
-
-   //assign rx_strobe = rx_frame_d2;
    
    //------------------------------------------------------------------
    // RX Data Bus - In bank3 both LT and LB
@@ -446,24 +445,7 @@ module b200_io
    //------------------------------------------------------------------
    wire tx_strobe;
    reg [11:0] tx_i_del, tx_q_del;
-/* -----\/----- EXCLUDED -----\/-----
 
-   // Negedge so there can be no fast path race condition against radio_clk
-   always @(negedge siso_clk)
-     tx_strobe <= (mimo_sync)? ~tx_strobe : 1'b1;
-
-   always @(negedge siso_clk)
-     tx_strobe_del <= tx_strobe;
-
-   always @(negedge siso_clk)
-     if(tx_strobe)
-       begin
-	  {tx_i,tx_q} <= {tx_i0,tx_q0};
-	  {tx_i_del,tx_q_del} <= {tx_i1,tx_q1};
-       end
-     else
-       {tx_i,tx_q} <= {tx_i_del,tx_q_del};
-   -----/\----- EXCLUDED -----/\----- */
    reg 	      find_radio_clk_phase = 1'b0;
    reg 	      find_radio_clk_phase_del;
    
@@ -492,6 +474,7 @@ module b200_io
    //
    // Debug
    //
+/* -----\/----- EXCLUDED -----\/-----
    wire [35:0] CONTROL0;
    reg [11:0]  tx_i_del_debug, tx_q_del_debug;
    reg [11:0]  tx_i_debug,tx_q_debug;
@@ -540,6 +523,7 @@ module b200_io
 	      tx_strobe_del_debug
 	      }
 	     )
+
       );
-   
+    -----/\----- EXCLUDED -----/\----- */
 endmodule 
