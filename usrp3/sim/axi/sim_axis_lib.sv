@@ -25,6 +25,7 @@ interface axis_t #(parameter DWIDTH = 64)
       tdata  = word;
       @(posedge clk);                 //Put sample on data bus
       while(~tready) @(posedge clk);  //Wait until reciever ready
+      @(negedge clk);                 //Put sample on data bus
       tvalid = 0;
       tlast  = 0;
     end
@@ -34,7 +35,7 @@ interface axis_t #(parameter DWIDTH = 64)
   task automatic push_bubble;
     begin
       tvalid = 0;
-      @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
@@ -50,7 +51,7 @@ interface axis_t #(parameter DWIDTH = 64)
       while(~(tready&tvalid)) @(posedge clk);  //Wait until sample is transferred
       word = tdata;
       eop = tlast;
-      @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
@@ -58,7 +59,7 @@ interface axis_t #(parameter DWIDTH = 64)
   task automatic wait_for_bubble;
     begin
       while(tready&tvalid) @(posedge clk);
-      @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
@@ -66,7 +67,7 @@ interface axis_t #(parameter DWIDTH = 64)
   task automatic wait_for_pkt;
     begin
       while(~(tready&tvalid&tlast)) @(posedge clk);
-      @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
@@ -76,6 +77,7 @@ interface axis_t #(parameter DWIDTH = 64)
   task automatic push_rand_pkt;
     input integer num_samps;
     begin
+      @(negedge clk);
       repeat(num_samps-1) begin
         push_word({(((DWIDTH-1)/32)+1){$random}}, 0);
       end
@@ -94,6 +96,7 @@ interface axis_t #(parameter DWIDTH = 64)
     input [DWIDTH-1:0] ramp_inc;
     begin
       automatic integer counter = 0;
+      @(negedge clk);
       repeat(num_samps-1) begin
         push_word(ramp_start+(counter*ramp_inc), 0);
         counter = counter + 1;
