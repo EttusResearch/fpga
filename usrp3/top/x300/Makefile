@@ -93,11 +93,11 @@ X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
 
 X310_HGS_RFNOC: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
 	$(call vivado_build,xc7k410t,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1)
-	$(call post_build,X310_RFNOC,HGS)
+	$(call post_build,X310,HGS_RFNOC)
 
 X300_HGS_RFNOC: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
 	$(call vivado_build,xc7k325t,$(HYBRID_SRAM_DEFS) RFNOC=1 X300=1)
-	$(call post_build,X300_RFNOC,HGS)
+	$(call post_build,X300,HGS_RFNOC)
 
 
 clean:    ##Clean up all target build outputs.
