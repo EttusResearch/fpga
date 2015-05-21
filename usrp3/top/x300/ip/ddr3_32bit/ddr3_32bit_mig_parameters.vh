@@ -36,7 +36,7 @@ parameter ECC                   = "OFF",
 parameter DATA_WIDTH            = 32,
 parameter ECC_TEST              = "OFF",
 parameter PAYLOAD_WIDTH         = (ECC_TEST == "OFF") ? DATA_WIDTH : DQ_WIDTH,
-parameter MEM_ADDR_ORDER        = "BANK_ROW_COLUMN",
+parameter MEM_ADDR_ORDER        = "ROW_BANK_COLUMN",
                                    //Possible Parameters
                                    //1.BANK_ROW_COLUMN : Address mapping is
                                    //                    in form of Bank Row Column.
