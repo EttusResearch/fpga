@@ -95,15 +95,15 @@ module bus_int
     output s5_we,
     input s5_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
+    output        set_stb_ext,
+    output [7:0]  set_addr_ext,
+    output [31:0] set_data_ext,
+
     input [15:0] eth0_phy_status,
     input [15:0] eth1_phy_status,
 
-    // AXI_DRAM_FIFO BIST. Not for production.
-    output bist_start,
-    output [15:0] bist_control,
-    input bist_done,
-    input bist_fail,
-
+    input [31:0] dram_fifo0_rb_data,
+    input [31:0] dram_fifo1_rb_data,
 
    // Debug
     input [3:0] fifo_flags,
@@ -124,8 +124,8 @@ module bus_int
    localparam SR_SPI        = 8'd32;
    localparam SR_ETHINT0    = 8'd40;
    localparam SR_ETHINT1    = 8'd56;
-   // For AXI_DRAM_FIFO debug, not production
-   localparam SR_BIST       = 8'd128;
+   localparam SR_DRAM_FIFO0 = 8'd72;    //External to bus_int.v
+   localparam SR_DRAM_FIFO1 = 8'd80;    //External to bus_int.v
 
 
    localparam RB_COUNTER      = 8'd00;
@@ -139,10 +139,9 @@ module bus_int
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_FIFOFLAGS    = 8'd10;
+   localparam RB_DRAM_FIFO0   = 8'd11;
+   localparam RB_DRAM_FIFO1   = 8'd12;
    localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
-   // For AXI_DRAM_FIFO debug, not production
-   localparam RB_BIST         = 8'd128;
-
 
    localparam COMPAT_MAJOR    = 16'h000A;
    localparam COMPAT_MINOR    = 16'h0000;
@@ -281,6 +280,11 @@ module bus_int
       .debug0(debug2),
       .debug1()
       );
+   
+   //The main settings bus also goes outside the hierarchy to connect to control
+   //various components
+   //TODO: We should re-think the ownership of this bus master
+   assign {set_stb_ext, set_addr_ext, set_data_ext} = {set_stb, set_addr, set_data};
 
    setting_reg #(.my_addr(SR_LEDS), .awidth(SR_AWIDTH), .width(8)) set_leds
      (.clk(clk), .rst(reset),
@@ -329,10 +333,7 @@ module bus_int
      else if (clear_debug_flags)
        debug_flags <= 0;
      else
-       debug_flags <= debug_flags | {
-				     10'h0,
-				     ~fifo_flags[3:0],
-				     eth_debug_flags};
+       debug_flags <= debug_flags | {10'h0, ~fifo_flags[3:0], eth_debug_flags};
 
    reg [31:0] 	  counter;
    wire [31:0] 	  rb_data_crossbar;
@@ -368,20 +369,13 @@ module bus_int
 `endif
        // Read FIFO status from Ethernet Interfaces
        RB_FIFOFLAGS: rb_data = debug_flags;
+       RB_DRAM_FIFO0: rb_data = dram_fifo0_rb_data;
+       RB_DRAM_FIFO1: rb_data = dram_fifo1_rb_data;
 
        (RB_CROSSBAR | 6'bxxxxxx): rb_data = rb_data_crossbar;
-       // AXI_DRAM_FIFO BIST. Not for production.
-       RB_BIST: rb_data = {29'h0,bist_done,bist_fail,bist_start};
-
 
        default: rb_data = 32'h0;
      endcase // case (rb_addr)
-
-   // AXI_DRAM_FIFO BIST. Not for production.
-   setting_reg #(.my_addr(SR_BIST), .awidth(SR_AWIDTH), .width(17)) set_bist_start
-     (.clk(clk), .rst(reset),
-      .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({bist_start,bist_control}));
 
    // Latch state changes to SFP0+ pins.
    synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_modabs_sync (

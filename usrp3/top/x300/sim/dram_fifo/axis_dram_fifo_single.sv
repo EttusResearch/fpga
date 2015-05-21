@@ -6,7 +6,8 @@
 
 module axis_dram_fifo_single 
 #(
-  parameter USE_SRAM_MEMORY = 0
+  parameter USE_SRAM_MEMORY = 0,
+  parameter SR_BASE = 0
 ) (
   input         bus_clk,
   input         bus_rst,
@@ -22,7 +23,14 @@ module axis_dram_fifo_single
   output        o_tlast,
   output        o_tvalid,
   input         o_tready,
-  
+
+  input         set_stb,
+  input [7:0]   set_addr,
+  input [31:0]  set_data,
+  output [31:0] rb_data,
+
+  input [63:0]  forced_bit_err,
+
   output        init_calib_complete
 );
 
@@ -56,7 +64,11 @@ module axis_dram_fifo_single
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
   axi_dram_fifo #(
-    .BASE('h0), .SIZE(18), .TIMEOUT(280)
+    .BASE('h0), 
+    .SIZE(18), 
+    .TIMEOUT(280), 
+    .SR_BASE(SR_BASE),
+    .EXT_BIST(1)
   ) axi_dram_fifo_i0 (
     //
     // Clocks and reset
@@ -132,16 +144,23 @@ module axis_dram_fifo_single
     .o_tvalid                   (o_tvalid),
     .o_tready                   (o_tready),
     //
-    // Misc
-    .supress_threshold          (16'h0),
-    .supress_enable             (1'b0),
+    // Settings
+    .set_stb                    (set_stb),
+    .set_addr                   (set_addr),
+    .set_data                   (set_data),
+    .rb_data                    (rb_data),
+
     .debug()
   );
 
   generate if (USE_SRAM_MEMORY) begin
+    assign init_calib_complete  = 1;
+    assign ddr3_axi_clk         = bus_clk;
+    assign ddr3_axi_rst         = bus_rst;
+
     axi4_dualport_sram axi4_dualport_sram_i1 (
-      .s_aclk         (sys_clk), // input s_aclk
-      .s_aresetn      (sys_rst_n), // input s_aresetn
+      .s_aclk         (ddr3_axi_clk), // input s_aclk
+      .s_aresetn      (~ddr3_axi_rst), // input s_aresetn
       .s_axi_awid     (dma_axi_wr.addr.id), // input [0 : 0] s_axi_awid
       .s_axi_awaddr   (dma_axi_wr.addr.addr), // input [31 : 0] s_axi_awaddr
       .s_axi_awlen    (dma_axi_wr.addr.len), // input [7 : 0] s_axi_awlen
@@ -149,7 +168,7 @@ module axis_dram_fifo_single
       .s_axi_awburst  (dma_axi_wr.addr.burst), // input [1 : 0] s_axi_awburst
       .s_axi_awvalid  (dma_axi_wr.addr.valid), // input s_axi_awvalid
       .s_axi_awready  (dma_axi_wr.addr.ready), // output s_axi_awready
-      .s_axi_wdata    (dma_axi_wr.data.data), // input [63 : 0] s_axi_wdata
+      .s_axi_wdata    (dma_axi_wr.data.data ^ forced_bit_err), // input [63 : 0] s_axi_wdata
       .s_axi_wstrb    (dma_axi_wr.data.strb), // input [7 : 0] s_axi_wstrb
       .s_axi_wlast    (dma_axi_wr.data.last), // input s_axi_wlast
       .s_axi_wvalid   (dma_axi_wr.data.valid), // input s_axi_wvalid
@@ -172,11 +191,7 @@ module axis_dram_fifo_single
       .s_axi_rvalid   (dma_axi_rd.data.valid), // output s_axi_rvalid
       .s_axi_rready   (dma_axi_rd.data.ready) // input s_axi_rready
     );
-    
-    assign init_calib_complete  = 1;
-    assign ddr3_axi_clk         = sys_clk;
-    assign ddr3_axi_rst         = ~sys_rst_n;
-    
+
   end else begin  //generate if (USE_SRAM_MEMORY) begin
     //---------------------------------------------------
     // We use an interconnect to connect to FIFOs.
@@ -198,7 +213,7 @@ module axis_dram_fifo_single
       .S00_AXI_AWQOS                        (dma_axi_wr.addr.qos), // input [3 : 0] S00_AXI_AWQOS
       .S00_AXI_AWVALID                      (dma_axi_wr.addr.valid), // input S00_AXI_AWVALID
       .S00_AXI_AWREADY                      (dma_axi_wr.addr.ready), // output S00_AXI_AWREADY
-      .S00_AXI_WDATA                        (dma_axi_wr.data.data), // input [63 : 0] S00_AXI_WDATA
+      .S00_AXI_WDATA                        (dma_axi_wr.data.data ^ forced_bit_err), // input [63 : 0] S00_AXI_WDATA
       .S00_AXI_WSTRB                        (dma_axi_wr.data.strb), // input [7 : 0] S00_AXI_WSTRB
       .S00_AXI_WLAST                        (dma_axi_wr.data.last), // input S00_AXI_WLAST
       .S00_AXI_WVALID                       (dma_axi_wr.data.valid), // input S00_AXI_WVALID

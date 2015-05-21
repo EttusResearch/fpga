@@ -351,41 +351,28 @@ module x300_core
    wire 	 s5_we;
    wire 	 s5_int;
 
-   // AXI_DRAM_FIFO BIST. Not for production code.
-   wire [63:0] 	 bist_i_tdata;
-   wire 	 bist_i_tvalid;
-   wire 	 bist_i_tready;
-   wire 	 bist_i_tlast;
+   wire         set_stb;
+   wire [7:0]   set_addr;
+   wire [31:0]  set_data;
+   
+   wire [31:0]  dram_fifo0_rb_data, dram_fifo1_rb_data;
 
-   wire [63:0] 	 bist_o_tdata;
-   wire 	 bist_o_tvalid;
-   wire 	 bist_o_tready;
-   wire 	 bist_o_tlast;
+   /////////////////////////////////////////////////////////////////////////////////
+   // PPS synchronization logic
+   /////////////////////////////////////////////////////////////////////////////////
+   //PPS input signals will be flopped in via the 10MHz reference clock.
+   //Its assumed that the radio clock, which is derived from the 10MHz,
+   //will be able to flop this captured PPS signal without metastability.
+   //And that the relation of the radio clock to this ref clock will be
+   //consistent enough across multiple units to use for this purpose.
+   reg [1:0] pps_del;
+   always @(posedge ext_ref_clk)  pps_del[1:0] <= {pps_del[0], pps};
 
-   wire 	 bist_done;
-   wire 	 bist_start;
-   wire 	 bist_fail;
-   wire [15:0] 	 bist_control;
-
-
-
-
-    /////////////////////////////////////////////////////////////////////////////////
-    // PPS synchronization logic
-    /////////////////////////////////////////////////////////////////////////////////
-    //PPS input signals will be flopped in via the 10MHz reference clock.
-    //Its assumed that the radio clock, which is derived from the 10MHz,
-    //will be able to flop this captured PPS signal without metastability.
-    //And that the relation of the radio clock to this ref clock will be
-    //consistent enough across multiple units to use for this purpose.
-    reg [1:0] pps_del;
-    always @(posedge ext_ref_clk)  pps_del[1:0] <= {pps_del[0], pps};
-
-    //PPS detection - toggle pps_detect on each PPS rising edge.
-    reg pps_detect;
-    always @(posedge ext_ref_clk) begin
-        if (pps_del == 2'b01) pps_detect <= ~pps_detect;
-    end
+   //PPS detection - toggle pps_detect on each PPS rising edge.
+   reg pps_detect;
+   always @(posedge ext_ref_clk) begin
+      if (pps_del == 2'b01) pps_detect <= ~pps_detect;
+   end
 
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
@@ -458,15 +445,18 @@ module x300_core
       .s5_cyc(s5_cyc),
       .s5_we(s5_we),
       .s5_int(s5_int),
+
+      // ZPU Settings bus to control bus_clk periphs
+      .set_stb_ext(set_stb),
+      .set_addr_ext(set_addr),
+      .set_data_ext(set_data),
+
       //Status signals
       .eth0_phy_status(eth0_phy_status),
       .eth1_phy_status(eth1_phy_status),
+      .dram_fifo0_rb_data(dram_fifo0_rb_data),
+      .dram_fifo1_rb_data(dram_fifo1_rb_data),
 
-      // AXI_DRAM_FIFO BIST. Not for production.
-      .bist_start(bist_start),
-      .bist_control(bist_control),
-      .bist_done(bist_done),
-      .bist_fail(bist_fail),
       // Debug
       .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
@@ -889,203 +879,210 @@ module x300_core
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
+   localparam EXTENDED_DRAM_BIST = 0;  //Prune out additional BIST features for production
 
-   axi_dram_fifo
-     #(.BASE('h0),
-       .SIZE(24),
-       .TIMEOUT(280)
-       ) axi_dram_fifo_i0
-       (
-	//
-	// Clocks and reset
-	//
-	.bus_clk(bus_clk),
-	.bus_reset(bus_rst),
-	.clear(1'b0),
-	.dram_clk(ddr3_axi_clk),
-	.dram_reset(ddr3_axi_rst),
-	//
-	// AXI Write address channel
-	//
-	.m_axi_awid(s00_axi_awid), // output [0 : 0] m_axi_awid
-	.m_axi_awaddr(s00_axi_awaddr), // output [31 : 0] m_axi_awaddr
-	.m_axi_awlen(s00_axi_awlen), // output [7 : 0] m_axi_awlen
-	.m_axi_awsize(s00_axi_awsize), // output [2 : 0] m_axi_awsize
-	.m_axi_awburst(s00_axi_awburst), // output [1 : 0] m_axi_awburst
-	.m_axi_awlock(s00_axi_awlock), // output [0 : 0] m_axi_awlock
-	.m_axi_awcache(s00_axi_awcache), // output [3 : 0] m_axi_awcache
-	.m_axi_awprot(s00_axi_awprot), // output [2 : 0] m_axi_awprot
-	.m_axi_awqos(s00_axi_awqos), // output [3 : 0] m_axi_awqos
-	.m_axi_awregion(s00_axi_awregion), // output [3 : 0] m_axi_awregion
-	.m_axi_awuser(s00_axi_awuser), // output [0 : 0] m_axi_awuser
-	.m_axi_awvalid(s00_axi_awvalid), // output m_axi_awvalid
-	.m_axi_awready(s00_axi_awready), // input m_axi_awready
-	//
-	// AXI Write data channel.
-	//
-	.m_axi_wdata(s00_axi_wdata), // output [63 : 0] m_axi_wdata
-	.m_axi_wstrb(s00_axi_wstrb), // output [7 : 0] m_axi_wstrb
-	.m_axi_wlast(s00_axi_wlast), // output m_axi_wlast
-	.m_axi_wuser(s00_axi_wuser), // output [0 : 0] m_axi_wuser
-	.m_axi_wvalid(s00_axi_wvalid), // output m_axi_wvalid
-	.m_axi_wready(s00_axi_wready), // input m_axi_wready
-	//
-	// AXI Write response channel signals
-	//
-	.m_axi_bid(s00_axi_bid), // input [0 : 0] m_axi_bid
-	.m_axi_bresp(s00_axi_bresp), // input [1 : 0] m_axi_bresp
-	.m_axi_buser(s00_axi_buser), // input [0 : 0] m_axi_buser
-	.m_axi_bvalid(s00_axi_bvalid), // input m_axi_bvalid
-	.m_axi_bready(s00_axi_bready), // output m_axi_bready
-	//
-	// AXI Read address channel
-	//
-	.m_axi_arid(s00_axi_arid), // output [0 : 0] m_axi_arid
-	.m_axi_araddr(s00_axi_araddr), // output [31 : 0] m_axi_araddr
-	.m_axi_arlen(s00_axi_arlen), // output [7 : 0] m_axi_arlen
-	.m_axi_arsize(s00_axi_arsize), // output [2 : 0] m_axi_arsize
-	.m_axi_arburst(s00_axi_arburst), // output [1 : 0] m_axi_arburst
-	.m_axi_arlock(s00_axi_arlock), // output [0 : 0] m_axi_arlock
-	.m_axi_arcache(s00_axi_arcache), // output [3 : 0] m_axi_arcache
-	.m_axi_arprot(s00_axi_arprot), // output [2 : 0] m_axi_arprot
-	.m_axi_arqos(s00_axi_arqos), // output [3 : 0] m_axi_arqos
-	.m_axi_arregion(s00_axi_arregion), // output [3 : 0] m_axi_arregion
-	.m_axi_aruser(s00_axi_aruser), // output [0 : 0] m_axi_aruser
-	.m_axi_arvalid(s00_axi_arvalid), // output m_axi_arvalid
-	.m_axi_arready(s00_axi_arready), // input m_axi_arready
-	//
-	// AXI Read data channel
-	//
-	.m_axi_rid(s00_axi_rid), // input [0 : 0] m_axi_rid
-	.m_axi_rdata(s00_axi_rdata), // input [63 : 0] m_axi_rdata
-	.m_axi_rresp(s00_axi_rresp), // input [1 : 0] m_axi_rresp
-	.m_axi_rlast(s00_axi_rlast), // input m_axi_rlast
-	.m_axi_ruser(s00_axi_ruser), // input [0 : 0] m_axi_ruser
-	.m_axi_rvalid(s00_axi_rvalid), // input m_axi_rvalid
-	.m_axi_rready(s00_axi_rready), // output m_axi_rready
-	//
-	// CHDR friendly AXI stream input
-	//
-	.i_tdata(r0_tx_tdata_bo),
-	.i_tlast(r0_tx_tlast_bo),
-	.i_tvalid(r0_tx_tvalid_bo),
-	.i_tready(r0_tx_tready_bo),
-	//
-	// CHDR friendly AXI Stream output
-	//
-	.o_tdata(r0_tx_tdata_bi),
-	.o_tlast(r0_tx_tlast_bi),
-	.o_tvalid(r0_tx_tvalid_bi),
-	.o_tready(r0_tx_tready_bi),
-	//
-	//
-	//
-	.supress_threshold(bist_control),
-	.supress_enable(bist_start),
-	//
-	// Debug
-	//
-	.debug()
-	);
+   axi_dram_fifo #(
+      .BASE('h0),
+      .SIZE(24),
+      .TIMEOUT(280),
+      .SR_BASE(8'd72),
+      .EXT_BIST(EXTENDED_DRAM_BIST)
+   ) axi_dram_fifo_i0 (
+      //
+      // Clocks and reset
+      //
+      .bus_clk(bus_clk),
+      .bus_reset(bus_rst),
+      .clear(1'b0),
+      .dram_clk(ddr3_axi_clk),
+      .dram_reset(ddr3_axi_rst),
+      //
+      // AXI Write address channel
+      //
+      .m_axi_awid(s00_axi_awid), // output [0 : 0] m_axi_awid
+      .m_axi_awaddr(s00_axi_awaddr), // output [31 : 0] m_axi_awaddr
+      .m_axi_awlen(s00_axi_awlen), // output [7 : 0] m_axi_awlen
+      .m_axi_awsize(s00_axi_awsize), // output [2 : 0] m_axi_awsize
+      .m_axi_awburst(s00_axi_awburst), // output [1 : 0] m_axi_awburst
+      .m_axi_awlock(s00_axi_awlock), // output [0 : 0] m_axi_awlock
+      .m_axi_awcache(s00_axi_awcache), // output [3 : 0] m_axi_awcache
+      .m_axi_awprot(s00_axi_awprot), // output [2 : 0] m_axi_awprot
+      .m_axi_awqos(s00_axi_awqos), // output [3 : 0] m_axi_awqos
+      .m_axi_awregion(s00_axi_awregion), // output [3 : 0] m_axi_awregion
+      .m_axi_awuser(s00_axi_awuser), // output [0 : 0] m_axi_awuser
+      .m_axi_awvalid(s00_axi_awvalid), // output m_axi_awvalid
+      .m_axi_awready(s00_axi_awready), // input m_axi_awready
+      //
+      // AXI Write data channel.
+      //
+      .m_axi_wdata(s00_axi_wdata), // output [63 : 0] m_axi_wdata
+      .m_axi_wstrb(s00_axi_wstrb), // output [7 : 0] m_axi_wstrb
+      .m_axi_wlast(s00_axi_wlast), // output m_axi_wlast
+      .m_axi_wuser(s00_axi_wuser), // output [0 : 0] m_axi_wuser
+      .m_axi_wvalid(s00_axi_wvalid), // output m_axi_wvalid
+      .m_axi_wready(s00_axi_wready), // input m_axi_wready
+      //
+      // AXI Write response channel signals
+      //
+      .m_axi_bid(s00_axi_bid), // input [0 : 0] m_axi_bid
+      .m_axi_bresp(s00_axi_bresp), // input [1 : 0] m_axi_bresp
+      .m_axi_buser(s00_axi_buser), // input [0 : 0] m_axi_buser
+      .m_axi_bvalid(s00_axi_bvalid), // input m_axi_bvalid
+      .m_axi_bready(s00_axi_bready), // output m_axi_bready
+      //
+      // AXI Read address channel
+      //
+      .m_axi_arid(s00_axi_arid), // output [0 : 0] m_axi_arid
+      .m_axi_araddr(s00_axi_araddr), // output [31 : 0] m_axi_araddr
+      .m_axi_arlen(s00_axi_arlen), // output [7 : 0] m_axi_arlen
+      .m_axi_arsize(s00_axi_arsize), // output [2 : 0] m_axi_arsize
+      .m_axi_arburst(s00_axi_arburst), // output [1 : 0] m_axi_arburst
+      .m_axi_arlock(s00_axi_arlock), // output [0 : 0] m_axi_arlock
+      .m_axi_arcache(s00_axi_arcache), // output [3 : 0] m_axi_arcache
+      .m_axi_arprot(s00_axi_arprot), // output [2 : 0] m_axi_arprot
+      .m_axi_arqos(s00_axi_arqos), // output [3 : 0] m_axi_arqos
+      .m_axi_arregion(s00_axi_arregion), // output [3 : 0] m_axi_arregion
+      .m_axi_aruser(s00_axi_aruser), // output [0 : 0] m_axi_aruser
+      .m_axi_arvalid(s00_axi_arvalid), // output m_axi_arvalid
+      .m_axi_arready(s00_axi_arready), // input m_axi_arready
+      //
+      // AXI Read data channel
+      //
+      .m_axi_rid(s00_axi_rid), // input [0 : 0] m_axi_rid
+      .m_axi_rdata(s00_axi_rdata), // input [63 : 0] m_axi_rdata
+      .m_axi_rresp(s00_axi_rresp), // input [1 : 0] m_axi_rresp
+      .m_axi_rlast(s00_axi_rlast), // input m_axi_rlast
+      .m_axi_ruser(s00_axi_ruser), // input [0 : 0] m_axi_ruser
+      .m_axi_rvalid(s00_axi_rvalid), // input m_axi_rvalid
+      .m_axi_rready(s00_axi_rready), // output m_axi_rready
+      //
+      // CHDR friendly AXI stream input
+      //
+      .i_tdata(r0_tx_tdata_bo),
+      .i_tlast(r0_tx_tlast_bo),
+      .i_tvalid(r0_tx_tvalid_bo),
+      .i_tready(r0_tx_tready_bo),
+      //
+      // CHDR friendly AXI Stream output
+      //
+      .o_tdata(r0_tx_tdata_bi),
+      .o_tlast(r0_tx_tlast_bi),
+      .o_tvalid(r0_tx_tvalid_bi),
+      .o_tready(r0_tx_tready_bi),
+      //
+      // Settings
+      //
+      .set_stb(set_stb),
+      .set_addr(set_addr),
+      .set_data(set_data),
+      .rb_data(dram_fifo0_rb_data),
+      //
+      // Debug
+      //
+      .debug()
+   );
 
-   axi_dram_fifo
-     #(.BASE('h2000000),
-       .SIZE(24),
-       .TIMEOUT(280)
-       ) axi_dram_fifo_i1
-       (
-	//
-	// Clocks and reset
-	//
-	.bus_clk(bus_clk),
-	.bus_reset(bus_rst),
-	.clear(1'b0),
-	.dram_clk(ddr3_axi_clk),
-	.dram_reset(ddr3_axi_rst),
-	//
-	// AXI Write address channel
-	//
-	.m_axi_awid(s01_axi_awid), // output [0 : 0] m_axi_awid
-	.m_axi_awaddr(s01_axi_awaddr), // output [31 : 0] m_axi_awaddr
-	.m_axi_awlen(s01_axi_awlen), // output [7 : 0] m_axi_awlen
-	.m_axi_awsize(s01_axi_awsize), // output [2 : 0] m_axi_awsize
-	.m_axi_awburst(s01_axi_awburst), // output [1 : 0] m_axi_awburst
-	.m_axi_awlock(s01_axi_awlock), // output [0 : 0] m_axi_awlock
-	.m_axi_awcache(s01_axi_awcache), // output [3 : 0] m_axi_awcache
-	.m_axi_awprot(s01_axi_awprot), // output [2 : 0] m_axi_awprot
-	.m_axi_awqos(s01_axi_awqos), // output [3 : 0] m_axi_awqos
-	.m_axi_awregion(s01_axi_awregion), // output [3 : 0] m_axi_awregion
-	.m_axi_awuser(s01_axi_awuser), // output [0 : 0] m_axi_awuser
-	.m_axi_awvalid(s01_axi_awvalid), // output m_axi_awvalid
-	.m_axi_awready(s01_axi_awready), // input m_axi_awready
-	//
-	// AXI Write data channel.
-	//
-	.m_axi_wdata(s01_axi_wdata), // output [63 : 0] m_axi_wdata
-	.m_axi_wstrb(s01_axi_wstrb), // output [7 : 0] m_axi_wstrb
-	.m_axi_wlast(s01_axi_wlast), // output m_axi_wlast
-	.m_axi_wuser(s01_axi_wuser), // output [0 : 0] m_axi_wuser
-	.m_axi_wvalid(s01_axi_wvalid), // output m_axi_wvalid
-	.m_axi_wready(s01_axi_wready), // input m_axi_wready
-	//
-	// AXI Write response channel signals
-	//
-	.m_axi_bid(s01_axi_bid), // input [0 : 0] m_axi_bid
-	.m_axi_bresp(s01_axi_bresp), // input [1 : 0] m_axi_bresp
-	.m_axi_buser(s01_axi_buser), // input [0 : 0] m_axi_buser
-	.m_axi_bvalid(s01_axi_bvalid), // input m_axi_bvalid
-	.m_axi_bready(s01_axi_bready), // output m_axi_bready
-	//
-	// AXI Read address channel
-	//
-	.m_axi_arid(s01_axi_arid), // output [0 : 0] m_axi_arid
-	.m_axi_araddr(s01_axi_araddr), // output [31 : 0] m_axi_araddr
-	.m_axi_arlen(s01_axi_arlen), // output [7 : 0] m_axi_arlen
-	.m_axi_arsize(s01_axi_arsize), // output [2 : 0] m_axi_arsize
-	.m_axi_arburst(s01_axi_arburst), // output [1 : 0] m_axi_arburst
-	.m_axi_arlock(s01_axi_arlock), // output [0 : 0] m_axi_arlock
-	.m_axi_arcache(s01_axi_arcache), // output [3 : 0] m_axi_arcache
-	.m_axi_arprot(s01_axi_arprot), // output [2 : 0] m_axi_arprot
-	.m_axi_arqos(s01_axi_arqos), // output [3 : 0] m_axi_arqos
-	.m_axi_arregion(s01_axi_arregion), // output [3 : 0] m_axi_arregion
-	.m_axi_aruser(s01_axi_aruser), // output [0 : 0] m_axi_aruser
-	.m_axi_arvalid(s01_axi_arvalid), // output m_axi_arvalid
-	.m_axi_arready(s01_axi_arready), // input m_axi_arready
-	//
-	// AXI Read data channel
-	//
-	.m_axi_rid(s01_axi_rid), // input [0 : 0] m_axi_rid
-	.m_axi_rdata(s01_axi_rdata), // input [63 : 0] m_axi_rdata
-	.m_axi_rresp(s01_axi_rresp), // input [1 : 0] m_axi_rresp
-	.m_axi_rlast(s01_axi_rlast), // input m_axi_rlast
-	.m_axi_ruser(s01_axi_ruser), // input [0 : 0] m_axi_ruser
-	.m_axi_rvalid(s01_axi_rvalid), // input m_axi_rvalid
-	.m_axi_rready(s01_axi_rready), // output m_axi_rready
-	//
-	// CHDR friendly AXI stream input
-	//
-	.i_tdata(r1_tx_tdata_bo),
-	.i_tlast(r1_tx_tlast_bo),
-	.i_tvalid(r1_tx_tvalid_bo),
-	.i_tready(r1_tx_tready_bo),
-	//
-	// CHDR friendly AXI Stream output
-	//
-
-	.o_tdata(r1_tx_tdata_bi),
-	.o_tlast(r1_tx_tlast_bi),
-	.o_tvalid(r1_tx_tvalid_bi),
-	.o_tready(r1_tx_tready_bi),
-	//
-	//
-	//
-	.supress_threshold(bist_control),
-	.supress_enable(bist_start),
-	//
-	// Debug
-	//
-	.debug()
-	);
+   axi_dram_fifo #(
+      .BASE('h2000000),
+      .SIZE(24),
+      .TIMEOUT(280),
+      .SR_BASE(8'd80),
+      .EXT_BIST(EXTENDED_DRAM_BIST)
+   ) axi_dram_fifo_i1 (
+      //
+      // Clocks and reset
+      //
+      .bus_clk(bus_clk),
+      .bus_reset(bus_rst),
+      .clear(1'b0),
+      .dram_clk(ddr3_axi_clk),
+      .dram_reset(ddr3_axi_rst),
+      //
+      // AXI Write address channel
+      //
+      .m_axi_awid(s01_axi_awid), // output [0 : 0] m_axi_awid
+      .m_axi_awaddr(s01_axi_awaddr), // output [31 : 0] m_axi_awaddr
+      .m_axi_awlen(s01_axi_awlen), // output [7 : 0] m_axi_awlen
+      .m_axi_awsize(s01_axi_awsize), // output [2 : 0] m_axi_awsize
+      .m_axi_awburst(s01_axi_awburst), // output [1 : 0] m_axi_awburst
+      .m_axi_awlock(s01_axi_awlock), // output [0 : 0] m_axi_awlock
+      .m_axi_awcache(s01_axi_awcache), // output [3 : 0] m_axi_awcache
+      .m_axi_awprot(s01_axi_awprot), // output [2 : 0] m_axi_awprot
+      .m_axi_awqos(s01_axi_awqos), // output [3 : 0] m_axi_awqos
+      .m_axi_awregion(s01_axi_awregion), // output [3 : 0] m_axi_awregion
+      .m_axi_awuser(s01_axi_awuser), // output [0 : 0] m_axi_awuser
+      .m_axi_awvalid(s01_axi_awvalid), // output m_axi_awvalid
+      .m_axi_awready(s01_axi_awready), // input m_axi_awready
+      //
+      // AXI Write data channel.
+      //
+      .m_axi_wdata(s01_axi_wdata), // output [63 : 0] m_axi_wdata
+      .m_axi_wstrb(s01_axi_wstrb), // output [7 : 0] m_axi_wstrb
+      .m_axi_wlast(s01_axi_wlast), // output m_axi_wlast
+      .m_axi_wuser(s01_axi_wuser), // output [0 : 0] m_axi_wuser
+      .m_axi_wvalid(s01_axi_wvalid), // output m_axi_wvalid
+      .m_axi_wready(s01_axi_wready), // input m_axi_wready
+      //
+      // AXI Write response channel signals
+      //
+      .m_axi_bid(s01_axi_bid), // input [0 : 0] m_axi_bid
+      .m_axi_bresp(s01_axi_bresp), // input [1 : 0] m_axi_bresp
+      .m_axi_buser(s01_axi_buser), // input [0 : 0] m_axi_buser
+      .m_axi_bvalid(s01_axi_bvalid), // input m_axi_bvalid
+      .m_axi_bready(s01_axi_bready), // output m_axi_bready
+      //
+      // AXI Read address channel
+      //
+      .m_axi_arid(s01_axi_arid), // output [0 : 0] m_axi_arid
+      .m_axi_araddr(s01_axi_araddr), // output [31 : 0] m_axi_araddr
+      .m_axi_arlen(s01_axi_arlen), // output [7 : 0] m_axi_arlen
+      .m_axi_arsize(s01_axi_arsize), // output [2 : 0] m_axi_arsize
+      .m_axi_arburst(s01_axi_arburst), // output [1 : 0] m_axi_arburst
+      .m_axi_arlock(s01_axi_arlock), // output [0 : 0] m_axi_arlock
+      .m_axi_arcache(s01_axi_arcache), // output [3 : 0] m_axi_arcache
+      .m_axi_arprot(s01_axi_arprot), // output [2 : 0] m_axi_arprot
+      .m_axi_arqos(s01_axi_arqos), // output [3 : 0] m_axi_arqos
+      .m_axi_arregion(s01_axi_arregion), // output [3 : 0] m_axi_arregion
+      .m_axi_aruser(s01_axi_aruser), // output [0 : 0] m_axi_aruser
+      .m_axi_arvalid(s01_axi_arvalid), // output m_axi_arvalid
+      .m_axi_arready(s01_axi_arready), // input m_axi_arready
+      //
+      // AXI Read data channel
+      //
+      .m_axi_rid(s01_axi_rid), // input [0 : 0] m_axi_rid
+      .m_axi_rdata(s01_axi_rdata), // input [63 : 0] m_axi_rdata
+      .m_axi_rresp(s01_axi_rresp), // input [1 : 0] m_axi_rresp
+      .m_axi_rlast(s01_axi_rlast), // input m_axi_rlast
+      .m_axi_ruser(s01_axi_ruser), // input [0 : 0] m_axi_ruser
+      .m_axi_rvalid(s01_axi_rvalid), // input m_axi_rvalid
+      .m_axi_rready(s01_axi_rready), // output m_axi_rready
+      //
+      // CHDR friendly AXI stream input
+      //
+      .i_tdata(r1_tx_tdata_bo),
+      .i_tlast(r1_tx_tlast_bo),
+      .i_tvalid(r1_tx_tvalid_bo),
+      .i_tready(r1_tx_tready_bo),
+      //
+      // CHDR friendly AXI Stream output
+      //
+      
+      .o_tdata(r1_tx_tdata_bi),
+      .o_tlast(r1_tx_tlast_bi),
+      .o_tvalid(r1_tx_tvalid_bi),
+      .o_tready(r1_tx_tready_bi),
+      //
+      // Settings
+      //
+      .set_stb(set_stb),
+      .set_addr(set_addr),
+      .set_data(set_data),
+      .rb_data(dram_fifo1_rb_data),
+      //
+      // Debug
+      //
+      .debug()
+   );
 
    //
    // Provide flag in radio_clk domain that indicates DDR3 interface is calibrated
@@ -1253,175 +1250,6 @@ module x300_core
       .space(), .occupied()
       );
 
-
-
 `endif //  `ifndef NO_DRAM_FIFOS
-
-   //
-   // Chipscope for upto 192 signals
-   //
-/* -----\/----- EXCLUDED -----\/-----
-
-   reg [255:0] TRIG0;
-   reg [63:0] TRIG1;
-
-   wire [35:0] CONTROL0;
-   wire [35:0] CONTROL1;
- -----/\----- EXCLUDED -----/\----- */
-
-/* -----\/----- EXCLUDED -----\/-----
-   always @(posedge ddr3_axi_clk)
-     TRIG0 <= {
-		s01_axi_araddr[31:0], // 246-215
- -----/\----- EXCLUDED -----/\----- */
-//	      s01_axi_arlen,       // 239-232
-//	      s01_axi_rresp,       // 231-230
-//	      s01_axi_rlast,       // 229
-//	      debug_axi_dram_fifo[13:0], // 228-215
-//	      debug_axi_dram_fifo[31:0], // 246-215
-//	      bist_fail,           // 214
-//	      bist_start,          // 213
-//	      bist_done,           // 212
-//	      bus_rst,             // 211
-/* -----\/----- EXCLUDED -----\/-----
-	       4'h0, // 214-211
-	      s01_axi_awvalid,	   // 210
-	      s01_axi_awready,	   // 209
-	      s01_axi_wvalid,	   // 208
-	      s01_axi_wready,	   // 207
-	      s01_axi_bvalid,	   // 206
-	      s01_axi_bready,	   // 205
-	      s01_axi_arvalid,	   // 204
-	      s01_axi_arready,	   // 203
-	      s01_axi_rvalid,	   // 202
-	      s01_axi_rready,	   // 201
- -----/\----- EXCLUDED -----/\----- */
-/* -----\/----- EXCLUDED -----\/-----
-	      r1o_tvalid,          // 200
-	      r1o_tready,          // 199
-	      r1o_tlast,           // 198
- -----/\----- EXCLUDED -----/\----- */
-/* -----\/----- EXCLUDED -----\/-----
-	       3'h0, // 200-198
- -----/\----- EXCLUDED -----/\----- */
-//	      r1o_tdata[63:0],     // 197-134
-/* -----\/----- EXCLUDED -----\/-----
-	      debug_axi_dram_fifo[197:0]  // 197-0
- -----/\----- EXCLUDED -----/\----- */
-
-/* -----\/----- EXCLUDED -----\/-----
-	      r1_tx_tvalid_bo,     // 133
-	      r1_tx_tready_bo,     // 132
-	      r1_tx_tlast_bo,      // 131
-	      r1_tx_tdata_bo[63:0],// 130-67
-	      r1_tx_tvalid_bi,     // 66
-	      r1_tx_tready_bi,     // 65
-	      r1_tx_tlast_bi,      // 64
-	      r1_tx_tdata_bi[63:0] // 63-0
- -----/\----- EXCLUDED -----/\----- */
-/* -----\/----- EXCLUDED -----\/-----
-
-	      bist_i_tvalid,     // 133
-	      bist_i_tready,     // 132
-	      bist_i_tlast,      // 131
-	      bist_i_tdata[63:0],// 130-67
-	      bist_o_tvalid,     // 66
-	      bist_o_tready,     // 65
-	      bist_o_tlast,      // 64
-	      bist_o_tdata[63:0] // 63-0
- -----/\----- EXCLUDED -----/\----- */
-//	       };
-/* -----\/----- EXCLUDED -----\/-----
-   always @(posedge bus_clk)
-     TRIG0 <= {
-//	      s01_axi_arlen,       // 239-232
-//	      s01_axi_rresp,       // 231-230
-//	      s01_axi_rlast,       // 229
-//	      debug_axi_dram_fifo[13:0], // 228-215
-	      debug_axi_dram_fifo[31:0], // 246-215
-	      bist_fail,           // 214
-	      bist_start,          // 213
-	      bist_done,           // 212
-	      bus_rst,             // 211
-	      s01_axi_awvalid,	   // 210
-	      s01_axi_awready,	   // 209
-	      s01_axi_wvalid,	   // 208
-	      s01_axi_wready,	   // 207
-	      s01_axi_bvalid,	   // 206
-	      s01_axi_bready,	   // 205
-	      s01_axi_arvalid,	   // 204
-	      s01_axi_arready,	   // 203
-	      s01_axi_rvalid,	   // 202
-	      s01_axi_rready,	   // 201
-	      r1o_tvalid,          // 200
-	      r1o_tready,          // 199
-	      r1o_tlast,           // 198
-	      r1o_tdata[63:0],     // 197-134
-	      bist_i_tvalid,     // 133
-	      bist_i_tready,     // 132
-	      bist_i_tlast,      // 131
-	      bist_i_tdata[63:0],// 130-67
-	      bist_o_tvalid,     // 66
-	      bist_o_tready,     // 65
-	      bist_o_tlast,      // 64
-	      bist_o_tdata[63:0] // 63-0
-	       };
- -----/\----- EXCLUDED -----/\----- */
-/* -----\/----- EXCLUDED -----\/-----
-
-  always @(posedge ddr3_axi_clk)
-     TRIG1 <= {
-	       // Write Addr
-	       ddr3_axi_awid[3:0],   // 57-54
-	       ddr3_axi_awlen[7:0],  // 53-46
-	       ddr3_axi_awsize[2:0], // 45-43
-	       ddr3_axi_awcache[3:0],// 42-39
-               ddr3_axi_awvalid,     // 38
-               ddr3_axi_awready,     // 37
-	       // Write Data
-	       ddr3_axi_wlast,       // 36
-               ddr3_axi_wvalid,      // 35
-               ddr3_axi_wready,      // 34
-	       // Write Resp
-	       ddr3_axi_bready,      // 33
-	       ddr3_axi_bid[3:0],    // 32-29
-	       ddr3_axi_bvalid,      // 28
-	       // Read Addr
-	       ddr3_axi_arid[3:0],   // 27-24
-	       ddr3_axi_arlen[7:0],  // 23-16
-	       ddr3_axi_arsize[2:0], // 15-13
-	       ddr3_axi_arcache[3:0],// 12-9
-	       ddr3_axi_arvalid,     // 8
-               ddr3_axi_arready,     // 7
-	       // Read Data
-	       ddr3_axi_rid[3:0],    // 6-3
-	       ddr3_axi_rlast,       // 2
-	       ddr3_axi_rvalid,      // 1
-	       ddr3_axi_rready       // 0
-	       };
- -----/\----- EXCLUDED -----/\----- */
-
-/* -----\/----- EXCLUDED -----\/-----
-
-   chipscope_ila chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(ddr3_axi_clk), // IN
-      .TRIG0(TRIG0 ) // IN BUS [255:0]
-      );
-
-   chipscope_ila_64 chipscope_ila_i1
-     (
-      .CONTROL(CONTROL1), // INOUT BUS [35:0]
-      .CLK(ddr3_axi_clk), // IN
-      .TRIG0(TRIG1 ) // IN BUS [63:0]
-      );
-
-   chipscope_icon_2port chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0), // INOUT BUS [35:0]
-      .CONTROL1(CONTROL1) // INOUT BUS [35:0]
-      );
- -----/\----- EXCLUDED -----/\----- */
 
 endmodule // x300_core

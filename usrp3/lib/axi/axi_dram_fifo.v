@@ -6,104 +6,163 @@
 // 2) Never cross a 4KByte address boundry within a single transaction, this is an AXI4 rule.
 // 3) 2^SIZE must be greater than 4KB so that the 4KByte page protection also deals with FIFO wrap corner case.
 //
-module axi_dram_fifo
-  // NOTE: SIZE is log2 of size of FIFO buffer in bytes. i.e 13 for 8KBytes which is 1kx64
-  #(parameter BASE=0, SIZE=16, TIMEOUT=64)
-    (
-     input bus_clk,                  
-     input bus_reset,         
-     input clear,
-     input dram_clk,
-     input dram_reset,
-     //
-     // AXI Write address channel
-     //
-     output [0 : 0] m_axi_awid,     // Write address ID. This signal is the identification tag for the write address signals
-     output [31 : 0] m_axi_awaddr,  // Write address. The write address gives the address of the first transfer in a write burst
-     output [7 : 0] m_axi_awlen,    // Burst length. The burst length gives the exact number of transfers in a burst.
-     output [2 : 0] m_axi_awsize,   // Burst size. This signal indicates the size of each transfer in the burst. 
-     output [1 : 0] m_axi_awburst,  // Burst type. The burst type and the size information, determine how the address is calculated
-     output [0 : 0] m_axi_awlock,   // Lock type. Provides additional information about the atomic characteristics of the transfer.
-     output [3 : 0] m_axi_awcache,  // Memory type. This signal indicates how transactions are required to progress
-     output [2 : 0] m_axi_awprot,   // Protection type. This signal indicates the privilege and security level of the transaction
-     output [3 : 0] m_axi_awqos,    // Quality of Service, QoS. The QoS identifier sent for each write transaction
-     output [3 : 0] m_axi_awregion, // Region identifier. Permits a single physical interface on a slave to be re-used.
-     output [0 : 0] m_axi_awuser,   // User signal. Optional User-defined signal in the write address channel.
-     output m_axi_awvalid,      // Write address valid. This signal indicates that the channel is signaling valid write addr
-     input m_axi_awready,           // Write address ready. This signal indicates that the slave is ready to accept an address
-     //
-     // AXI Write data channel.
-     //
-     output [63 : 0] m_axi_wdata,   // Write data
-     output [7 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
-     output m_axi_wlast,        // Write last. This signal indicates the last transfer in a write burst
-     output [0 : 0] m_axi_wuser,    // User signal. Optional User-defined signal in the write data channel.
-     output m_axi_wvalid,           // Write valid. This signal indicates that valid write data and strobes are available. 
-     input m_axi_wready,            // Write ready. This signal indicates that the slave can accept the write data.
-     //
-     // AXI Write response channel signals
-     //
-     input [0 : 0] m_axi_bid,       // Response ID tag. This signal is the ID tag of the write response. 
-     input [1 : 0] m_axi_bresp,     // Write response. This signal indicates the status of the write transaction.
-     input [0 : 0] m_axi_buser,     // User signal. Optional User-defined signal in the write response channel.
-     input m_axi_bvalid,            // Write response valid. This signal indicates that the channel is signaling a valid response
-     output m_axi_bready,       // Response ready. This signal indicates that the master can accept a write response
-     //
-     // AXI Read address channel
-     //
-     output [0 : 0] m_axi_arid,     // Read address ID. This signal is the identification tag for the read address group of signals
-     output [31 : 0] m_axi_araddr,  // Read address. The read address gives the address of the first transfer in a read burst
-     output [7 : 0] m_axi_arlen,    // Burst length. This signal indicates the exact number of transfers in a burst.
-     output [2 : 0] m_axi_arsize,   // Burst size. This signal indicates the size of each transfer in the burst.
-     output [1 : 0] m_axi_arburst,  // Burst type. The burst type and the size information determine how the address for each transfer
-     output [0 : 0] m_axi_arlock,   // Lock type. This signal provides additional information about the atomic characteristics
-     output [3 : 0] m_axi_arcache,  // Memory type. This signal indicates how transactions are required to progress 
-     output [2 : 0] m_axi_arprot,   // Protection type. This signal indicates the privilege and security level of the transaction
-     output [3 : 0] m_axi_arqos,    // Quality of Service, QoS. QoS identifier sent for each read transaction.
-     output [3 : 0] m_axi_arregion, // Region identifier. Permits a single physical interface on a slave to be re-used
-     output [0 : 0] m_axi_aruser,   // User signal. Optional User-defined signal in the read address channel.
-     output m_axi_arvalid,          // Read address valid. This signal indicates that the channel is signaling valid read addr
-     input m_axi_arready,           // Read address ready. This signal indicates that the slave is ready to accept an address
-     //
-     // AXI Read data channel
-     //
-     input [0 : 0] m_axi_rid,       // Read ID tag. This signal is the identification tag for the read data group of signals
-     input [63 : 0] m_axi_rdata,    // Read data.
-     input [1 : 0] m_axi_rresp,     // Read response. This signal indicates the status of the read transfer
-     input m_axi_rlast,             // Read last. This signal indicates the last transfer in a read burst.
-     input [0 : 0] m_axi_ruser,     // User signal. Optional User-defined signal in the read data channel.
-     input m_axi_rvalid,            // Read valid. This signal indicates that the channel is signaling the required read data. 
-     output m_axi_rready,           // Read ready. This signal indicates that the master can accept the read data and response
-     //
-     // CHDR friendly AXI stream input
-     //
-     input [63:0] i_tdata,
-     input i_tlast,
-     input i_tvalid,
-     output i_tready,
-     //
-     // CHDR friendly AXI Stream output
-     //
-     output [63:0] o_tdata,
-     output o_tlast,
-     output o_tvalid,
-     input o_tready,
-     //
-     //
-     //
-     input [15:0] supress_threshold,
-     input supress_enable,
-     //
-     // Debug Bus
-     //
-     output [197:0] debug
-     );
- 
+module axi_dram_fifo 
+#(
+   parameter BASE     = 0,    //Base address of the FIFO in AXI memory space
+   parameter SIZE     = 16,   //log2 of size of FIFO buffer in bytes. i.e 13 for 8KBytes which is 1kx64
+   parameter TIMEOUT  = 64,   //Timeout for issuing smaller than optimal bursts
+   parameter SR_BASE  = 0,    //Base address for settings registers
+   parameter EXT_BIST = 0    //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+) (
+   input bus_clk,
+   input bus_reset, 
+   input clear,
+   input dram_clk,
+   input dram_reset,
+   //
+   // AXI Write address channel
+   //
+   output [0 : 0] m_axi_awid,     // Write address ID. This signal is the identification tag for the write address signals
+   output [31 : 0] m_axi_awaddr,  // Write address. The write address gives the address of the first transfer in a write burst
+   output [7 : 0] m_axi_awlen,    // Burst length. The burst length gives the exact number of transfers in a burst.
+   output [2 : 0] m_axi_awsize,   // Burst size. This signal indicates the size of each transfer in the burst. 
+   output [1 : 0] m_axi_awburst,  // Burst type. The burst type and the size information, determine how the address is calculated
+   output [0 : 0] m_axi_awlock,   // Lock type. Provides additional information about the atomic characteristics of the transfer.
+   output [3 : 0] m_axi_awcache,  // Memory type. This signal indicates how transactions are required to progress
+   output [2 : 0] m_axi_awprot,   // Protection type. This signal indicates the privilege and security level of the transaction
+   output [3 : 0] m_axi_awqos,    // Quality of Service, QoS. The QoS identifier sent for each write transaction
+   output [3 : 0] m_axi_awregion, // Region identifier. Permits a single physical interface on a slave to be re-used.
+   output [0 : 0] m_axi_awuser,   // User signal. Optional User-defined signal in the write address channel.
+   output m_axi_awvalid,      // Write address valid. This signal indicates that the channel is signaling valid write addr
+   input m_axi_awready,           // Write address ready. This signal indicates that the slave is ready to accept an address
+   //
+   // AXI Write data channel.
+   //
+   output [63 : 0] m_axi_wdata,   // Write data
+   output [7 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
+   output m_axi_wlast,        // Write last. This signal indicates the last transfer in a write burst
+   output [0 : 0] m_axi_wuser,    // User signal. Optional User-defined signal in the write data channel.
+   output m_axi_wvalid,           // Write valid. This signal indicates that valid write data and strobes are available. 
+   input m_axi_wready,            // Write ready. This signal indicates that the slave can accept the write data.
+   //
+   // AXI Write response channel signals
+   //
+   input [0 : 0] m_axi_bid,       // Response ID tag. This signal is the ID tag of the write response. 
+   input [1 : 0] m_axi_bresp,     // Write response. This signal indicates the status of the write transaction.
+   input [0 : 0] m_axi_buser,     // User signal. Optional User-defined signal in the write response channel.
+   input m_axi_bvalid,            // Write response valid. This signal indicates that the channel is signaling a valid response
+   output m_axi_bready,       // Response ready. This signal indicates that the master can accept a write response
+   //
+   // AXI Read address channel
+   //
+   output [0 : 0] m_axi_arid,     // Read address ID. This signal is the identification tag for the read address group of signals
+   output [31 : 0] m_axi_araddr,  // Read address. The read address gives the address of the first transfer in a read burst
+   output [7 : 0] m_axi_arlen,    // Burst length. This signal indicates the exact number of transfers in a burst.
+   output [2 : 0] m_axi_arsize,   // Burst size. This signal indicates the size of each transfer in the burst.
+   output [1 : 0] m_axi_arburst,  // Burst type. The burst type and the size information determine how the address for each transfer
+   output [0 : 0] m_axi_arlock,   // Lock type. This signal provides additional information about the atomic characteristics
+   output [3 : 0] m_axi_arcache,  // Memory type. This signal indicates how transactions are required to progress 
+   output [2 : 0] m_axi_arprot,   // Protection type. This signal indicates the privilege and security level of the transaction
+   output [3 : 0] m_axi_arqos,    // Quality of Service, QoS. QoS identifier sent for each read transaction.
+   output [3 : 0] m_axi_arregion, // Region identifier. Permits a single physical interface on a slave to be re-used
+   output [0 : 0] m_axi_aruser,   // User signal. Optional User-defined signal in the read address channel.
+   output m_axi_arvalid,          // Read address valid. This signal indicates that the channel is signaling valid read addr
+   input m_axi_arready,           // Read address ready. This signal indicates that the slave is ready to accept an address
+   //
+   // AXI Read data channel
+   //
+   input [0 : 0] m_axi_rid,       // Read ID tag. This signal is the identification tag for the read data group of signals
+   input [63 : 0] m_axi_rdata,    // Read data.
+   input [1 : 0] m_axi_rresp,     // Read response. This signal indicates the status of the read transfer
+   input m_axi_rlast,             // Read last. This signal indicates the last transfer in a read burst.
+   input [0 : 0] m_axi_ruser,     // User signal. Optional User-defined signal in the read data channel.
+   input m_axi_rvalid,            // Read valid. This signal indicates that the channel is signaling the required read data. 
+   output m_axi_rready,           // Read ready. This signal indicates that the master can accept the read data and response
+   //
+   // CHDR friendly AXI stream input
+   //
+   input [63:0] i_tdata,
+   input i_tlast,
+   input i_tvalid,
+   output i_tready,
+   //
+   // CHDR friendly AXI Stream output
+   //
+   output [63:0] o_tdata,
+   output o_tlast,
+   output o_tvalid,
+   input o_tready,
+   //
+   // Settings and Readback
+   //
+   input              set_stb,
+   input [7:0]        set_addr,
+   input [31:0]       set_data,
+   output reg [31:0]  rb_data,
+   //
+   // Debug Bus
+   //
+   output [197:0] debug
+);
+
    //
    // We are only solving for width 64bits here, since it's our standard CHDR quanta
    //
    localparam WIDTH=64;
+
+   //
+   // Settings and Readback
+   //
+   wire [2:0]   rb_addr;
+   wire         supress_enable_bclk;
+   wire [15:0]  supress_threshold_bclk;
    
+   wire [3:0]   rb_bist_status;
+   wire [95:0]  rb_bist_bw_ratio;
+   wire [31:0]  rb_fifo_occupied;
+
+   localparam RB_BIST_STATUS    = 3'd0;
+   localparam RB_BIST_XFER_CNT  = 3'd1;
+   localparam RB_BIST_CYC_CNT   = 3'd2;
+   localparam RB_FIFO_FULL_CNT  = 3'd3;
+
+   setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'h0)) sr_readback
+     (.clk(bus_clk), .rst(bus_reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(rb_addr));
+
+   setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(17), .at_reset(17'h0)) sr_suppress
+     (.clk(bus_clk), .rst(bus_reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out({supress_enable_bclk, supress_threshold_bclk}));
+
+   always @(*) begin
+      case(rb_addr)
+         RB_BIST_STATUS:      rb_data = {(EXT_BIST?1'b1:1'b0), 19'h0, rb_bist_status};
+         RB_BIST_XFER_CNT:    rb_data = rb_bist_bw_ratio[79:48];
+         RB_BIST_CYC_CNT:     rb_data = rb_bist_bw_ratio[31:0];
+         RB_FIFO_FULL_CNT:    rb_data = rb_fifo_occupied;
+         default:             rb_data = 32'h0;
+      endcase
+   end
+
+   //
+   // Synchronize settings register values to dram_clk
+   //
+   wire         supress_enable;
+   wire [15:0]  supress_threshold;
+
+   //All bits in the bus can be treated as asynchronous
+   synchronizer #(.INITIAL_VAL(1'b0)) sync_suppress_en (
+      .clk(dram_clk), .rst(1'b0 /* no reset */), .in(supress_enable_bclk), .out(supress_enable));
+   genvar i;
+   generate
+   for (i=0; i<16; i=i+1) begin: suppress_synchronizer_gen
+      synchronizer #(.INITIAL_VAL(1'b0)) sync_suppress (
+         .clk(dram_clk), .rst(1'b0 /* no reset */), .in(supress_threshold_bclk[i]), .out(supress_threshold[i]));
+   end
+   endgenerate
+
    //
    // Input side declarations
    //
@@ -156,10 +215,64 @@ module axi_dram_fifo
    reg [SIZE-3:0] space, occupied;
    wire [11:0] 	  input_page_boundry, output_page_boundry;
    
+   assign rb_fifo_occupied = occupied;
+   
+   ///////////////////////////////////////////////////////////////////////////////
+   // Inline BIST for production testing
+   //
+
+   wire [WIDTH-1:0] i_tdata_fifo;
+   wire       i_tvalid_fifo, i_tready_fifo, i_tlast_fifo;
+
+   wire [WIDTH-1:0] i_tdata_bist;
+   wire       i_tvalid_bist, i_tready_bist, i_tlast_bist;
+
+   wire [WIDTH-1:0] o_tdata_fifo;
+   wire       o_tvalid_fifo, o_tready_fifo, o_tlast_fifo;
+
+   wire [WIDTH-1:0] o_tdata_bist;
+   wire       o_tvalid_bist, o_tready_bist, o_tlast_bist;
+
+   axi_mux4 #(.PRIO(1), .WIDTH(64), .BUFFER(1)) axi_mux (
+      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready),
+      .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist), .i1_tready(i_tready_bist),
+      .i2_tdata(64'h0), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
+      .i3_tdata(64'h0), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
+      .o_tdata(i_tdata_fifo), .o_tlast(i_tlast_fifo), .o_tvalid(i_tvalid_fifo), .o_tready(i_tready_fifo)
+   );
+
+   wire       bist_running, bist_done;
+   wire [1:0] bist_error;
+   
+   axi_chdr_test_pattern #(
+     .DELAY_MODE(EXT_BIST ? "DYNAMIC" : "STATIC"), 
+     .SID_MODE(EXT_BIST ? "DYNAMIC" : "STATIC"), 
+     .BW_COUNTER(EXT_BIST ? 1 : 0),
+     .SR_BASE(SR_BASE + 4)
+   ) axi_chdr_test_pattern_i (
+      .clk(bus_clk), .reset(bus_reset),
+      .i_tdata(i_tdata_bist), .i_tlast(i_tlast_bist), .i_tvalid(i_tvalid_bist), .i_tready(i_tready_bist),
+      .o_tdata(o_tdata_bist), .o_tlast(o_tlast_bist), .o_tvalid(o_tvalid_bist), .o_tready(o_tready_bist),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+      .running(bist_running), .done(bist_done), .error(bist_error), .status_vtr(), .bw_ratio(rb_bist_bw_ratio)
+   );
+   assign rb_bist_status = {bist_error, bist_done, bist_running};
+
+   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64)) axi_demux(
+      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .header(), .dest({1'b0, bist_running}),
+      .i_tdata(o_tdata_fifo), .i_tlast(o_tlast_fifo), .i_tvalid(o_tvalid_fifo), .i_tready(o_tready_fifo),
+      .o0_tdata(o_tdata), .o0_tlast(o_tlast), .o0_tvalid(o_tvalid), .o0_tready(o_tready),
+      .o1_tdata(o_tdata_bist), .o1_tlast(o_tlast_bist), .o1_tvalid(o_tvalid_bist), .o1_tready(o_tready_bist),
+      .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b0),
+      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b0)
+   );
 
    //
    // Buffer input in FIFO's. Embeded tlast signal using ESCape code.
    //
+
    wire [WIDTH-1:0] i_tdata_i0;
    wire 	    i_tvalid_i0, i_tready_i0, i_tlast_i0;
  
@@ -174,19 +287,13 @@ module axi_dram_fifo
    wire [15:0] 	    space_input, occupied_input;
    reg [15:0] 	    space_input_reg;
    reg 		    supress_reads;
-   
-   ///////////////////////////
-   // DEBUG
-   ///////////////////////////
-   wire [31:0] 	    debug_axi_dma_master;
-   
-   //assign debug = {18'h0, input_state[2:0], output_state[2:0], debug_axi_dma_master[7:0]};
-    
+
+
    ///////////////////////////////////////////////////////////////////////////////
    
    wire 	    write_in, read_in, empty_in, full_in;
-   assign 	    i_tready = ~full_in;
-   assign 	    write_in = i_tvalid & i_tready;
+   assign 	    i_tready_fifo = ~full_in;
+   assign 	    write_in = i_tvalid_fifo & i_tready_fifo;
    assign 	    i_tvalid_i0 = ~empty_in;
    assign 	    read_in = i_tvalid_i0 & i_tready_i0;
    wire [6:0] 	    discard_i0;
@@ -194,7 +301,7 @@ module axi_dram_fifo
    fifo_short_2clk fifo_short_2clk_i0
      (.rst(bus_reset),
       .wr_clk(bus_clk),
-      .din({7'h0,i_tlast,i_tdata}), // input [71 : 0] din
+      .din({7'h0,i_tlast_fifo,i_tdata_fifo}), // input [71 : 0] din
       .wr_en(write_in), // input wr_en
       .full(full_in), // output full
       .wr_data_count(), // output [9 : 0] wr_data_count
@@ -366,8 +473,8 @@ module axi_dram_fifo
    wire 	    write_out, read_out, empty_out, full_out;
    assign 	    o_tready_i3 = ~full_out;
    assign 	    write_out = o_tvalid_i3 & o_tready_i3;
-   assign 	    o_tvalid = ~empty_out;
-   assign 	    read_out = o_tvalid & o_tready;
+   assign 	    o_tvalid_fifo = ~empty_out;
+   assign 	    read_out = o_tvalid_fifo & o_tready_fifo;
    wire [6:0] 	    discard_i1;
    
    fifo_short_2clk fifo_short_2clk_i1
@@ -380,7 +487,7 @@ module axi_dram_fifo
       .wr_data_count(), // output [9 : 0] wr_data_count
 	       
       .rd_clk(bus_clk), // input rd_clk
-      .dout({discard_i1,o_tlast,o_tdata}), // output [71 : 0] dout
+      .dout({discard_i1,o_tlast_fifo,o_tdata_fifo}), // output [71 : 0] dout
       .rd_en(read_out), // input rd_en
       .empty(empty_out), // output empty
       .rd_data_count()  // output [9 : 0] rd_data_count
@@ -785,32 +892,8 @@ module axi_dram_fifo
       //
       // Debug
       //
-      .debug(debug_axi_dma_master)
+      .debug()
       );
 
-   //
-   // Debug
-   //
-   assign debug = { checksum_error, 
-		    /*debug_axi_dma_master[7:0]*/
-		    input_timeout_triggered, // 195
-		    input_state[2:0], // 194-192
-		    output_timeout_triggered, // 191
-		    output_state[2:0],    // 190-188
-		    space_output[15:0],   // 187-172
-		    occupied[21:0],       // 171-150
-		    occupied_input[15:0], // 149-134
-
-   		    i_tvalid_i0,     // 133
-		    i_tready_i0,     // 132
-		    i_tlast_i0,      // 131
-		    i_tdata_i0[63:0],// 130-67
-		    o_tvalid_i1,     // 66
-		    o_tready_i1,     // 65
-		    o_tlast_i1,      // 64
-		    o_tdata_i1[63:0] // 63-0
-		    };
-
-   
  endmodule // axi_dram_fifo
 

@@ -61,7 +61,7 @@ include $(BASE_DIR)/../sim/axi/Makefile.srcs
 # Define only one toplevel module
 SIM_TOP = dram_fifo_bist_tb
 # Simulation runtime in microseconds
-SIM_RUNTIME_US = 2500
+SIM_RUNTIME_US = 3000
 
 SIM_SRCS = \
 $(abspath dram_fifo_bist_tb.sv) \
