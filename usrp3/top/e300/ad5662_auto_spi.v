@@ -15,7 +15,9 @@ module ad5662_auto_spi
   output reg mosi,
   output reg sync_n
 );
-  reg [15:0] ldat = 16'd32767;
+  // initialize ldat to 0, thus forcing
+  // a reload on init.
+  reg [15:0] ldat = 16'd0;
   wire upd = (dat != ldat); // new data present, need to update hw
 
   reg [23:0] shft=24'b0;
