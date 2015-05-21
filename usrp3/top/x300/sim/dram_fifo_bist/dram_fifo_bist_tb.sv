@@ -100,7 +100,7 @@ module dram_fifo_bist_tb();
     `TEST_CASE_DONE(calib_complete);
 
     //Select BIST status as the readback output
-    tst_set.write(SR_FIFO_BASE + 0, 3'd0);
+    tst_set.write(SR_FIFO_BASE + 0, 3'd1);
 
     header = '{
       pkt_type:DATA, has_time:0, eob:0, seqno:12'h666,
@@ -231,15 +231,15 @@ module dram_fifo_bist_tb();
     `TEST_CASE_DONE(done & ~running);
     
     `TEST_CASE_START("Validate Throughput");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd1);
-    xfer_cnt = rb_data;
     tst_set.write(SR_FIFO_BASE + 0, 3'd2);
+    xfer_cnt = rb_data;
+    tst_set.write(SR_FIFO_BASE + 0, 3'd3);
     cyc_cnt = rb_data;
     `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
     `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
     $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
     `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd0);  //Restore
+    tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
     `TEST_CASE_DONE(done & ~running);
 
     `TEST_CASE_START("Setup BIST: 10 x 256byte packets");
@@ -309,15 +309,15 @@ module dram_fifo_bist_tb();
     join
 
     `TEST_CASE_START("Validate Throughput");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd1);
-    xfer_cnt = rb_data;
     tst_set.write(SR_FIFO_BASE + 0, 3'd2);
+    xfer_cnt = rb_data;
+    tst_set.write(SR_FIFO_BASE + 0, 3'd3);
     cyc_cnt = rb_data;
     `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
     `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
     $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
     `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd0);  //Restore
+    tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
     `TEST_CASE_DONE(done & ~running);
 
   end

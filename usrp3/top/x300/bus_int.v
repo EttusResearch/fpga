@@ -120,7 +120,6 @@ module bus_int
    localparam SR_XB_LOCAL   = 8'd03;
    localparam SR_SFPP_CTRL0 = 8'd08;
    localparam SR_SFPP_CTRL1 = 8'd09;
-   localparam SR_FIFOFLAGS  = 8'd10;
    localparam SR_SPI        = 8'd32;
    localparam SR_ETHINT0    = 8'd40;
    localparam SR_ETHINT1    = 8'd56;
@@ -135,12 +134,11 @@ module bus_int
    localparam RB_ETH_TYPE0    = 8'd04;
    localparam RB_ETH_TYPE1    = 8'd05;
    localparam RB_COMPAT_NUM   = 8'd06;
-
+   localparam RB_UNUSED0      = 8'd07;  // ** UNUSED **
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
-   localparam RB_FIFOFLAGS    = 8'd10;
-   localparam RB_DRAM_FIFO0   = 8'd11;
-   localparam RB_DRAM_FIFO1   = 8'd12;
+   localparam RB_DRAM_FIFO0   = 8'd10;
+   localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
 
    localparam COMPAT_MAJOR    = 16'h000A;
@@ -154,7 +152,6 @@ module bus_int
    wire 	  set_stb;
    wire 	  spi_ready;
    wire [31:0] 	  rb_spi_data;
-   wire [17:0] 	  eth_debug_flags;
 
 
    // ZPU in and ZPU out axi streams
@@ -317,26 +314,8 @@ module bus_int
       .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
       .debug());
 
-   //
-   // Provide instrumentation so that abnormal FIFO conditions can be identifed.
-   //
-   wire 	  clear_debug_flags;
-   reg [31:0] 	  debug_flags;
-
-   setting_reg #(.my_addr(SR_FIFOFLAGS), .awidth(16), .width(1)) sr_reset_fifo_debug
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(),.changed(clear_debug_flags));
-
-   always @(posedge clk)
-     if (reset)
-       debug_flags <= 0;
-     else if (clear_debug_flags)
-       debug_flags <= 0;
-     else
-       debug_flags <= debug_flags | {10'h0, ~fifo_flags[3:0], eth_debug_flags};
-
-   reg [31:0] 	  counter;
-   wire [31:0] 	  rb_data_crossbar;
+   reg [31:0]   counter;
+   wire [31:0]  rb_data_crossbar;
 
    always @(posedge clk) counter <= counter + 1;
 
@@ -367,8 +346,6 @@ module bus_int
 `else
        RB_ETH_TYPE1: rb_data = {32'h0};
 `endif
-       // Read FIFO status from Ethernet Interfaces
-       RB_FIFOFLAGS: rb_data = debug_flags;
        RB_DRAM_FIFO0: rb_data = dram_fifo0_rb_data;
        RB_DRAM_FIFO1: rb_data = dram_fifo1_rb_data;
 
@@ -494,7 +471,7 @@ module bus_int
       .xi_tdata(e10_tdata), .xi_tuser(e10_tuser), .xi_tlast(e10_tlast), .xi_tvalid(e10_tvalid), .xi_tready(e10_tready),
       .e2z_tdata(zpui0_tdata), .e2z_tuser(zpui0_tuser), .e2z_tlast(zpui0_tlast), .e2z_tvalid(zpui0_tvalid), .e2z_tready(zpui0_tready),
       .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready),
-      .debug_flags(eth_debug_flags[8:0]),.debug(/*debug2*/));
+      .debug());
 
    eth_interface #(.BASE(SR_ETHINT1)) eth_interface1
      (.clk(clk), .reset(reset), .clear(clear),
@@ -509,7 +486,7 @@ module bus_int
       .xi_tdata(e01_tdata), .xi_tuser(e01_tuser), .xi_tlast(e01_tlast), .xi_tvalid(e01_tvalid), .xi_tready(e01_tready),
       .e2z_tdata(zpui1_tdata), .e2z_tuser(zpui1_tuser), .e2z_tlast(zpui1_tlast), .e2z_tvalid(zpui1_tvalid), .e2z_tready(zpui1_tready),
       .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready),
-      .debug_flags(eth_debug_flags[17:9]),.debug());
+      .debug());
 
    axi_mux4 #(.PRIO(0), .WIDTH(68)) zpui_mux
      (.clk(clk), .reset(reset), .clear(clear),

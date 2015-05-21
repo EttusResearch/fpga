@@ -1088,14 +1088,11 @@ module x300_core
    // Provide flag in radio_clk domain that indicates DDR3 interface is calibrated
    // and running.
    //
-
-   reg 	       ddr3_running_radio_clk_pre, ddr3_running_radio_clk;
-
-   always @(posedge radio_clk)
-     begin
-	ddr3_running_radio_clk_pre <= ddr3_running;
-	ddr3_running_radio_clk <= ddr3_running_radio_clk_pre;
-     end
+   reg ddr3_running_radio_clk_pre, ddr3_running_radio_clk;
+   always @(posedge radio_clk) begin
+      ddr3_running_radio_clk_pre <= ddr3_running;
+      ddr3_running_radio_clk <= ddr3_running_radio_clk_pre;
+   end
 
 
 `else //  `ifndef NO_DRAM_FIFOS
@@ -1177,6 +1174,8 @@ module x300_core
       .space(), .occupied()
       );
 
+   assign dram_fifo0_rb_data = 32'h0;
+
    wire [63:0] r1_tx_tdata_bos; wire r1_tx_tlast_bos, r1_tx_tvalid_bos, r1_tx_tready_bos;
    wire [63:0] r1_tx_tdata_0; wire r1_tx_tlast_0, r1_tx_tvalid_0, r1_tx_tready_0;
    wire [63:0] r1_tx_tdata_0s; wire r1_tx_tlast_0s, r1_tx_tvalid_0s, r1_tx_tready_0s;
@@ -1249,6 +1248,8 @@ module x300_core
       .o_tdata({r1_tx_tlast_bi,r1_tx_tdata_bi}), .o_tvalid(r1_tx_tvalid_bi), .o_tready(r1_tx_tready_bi),
       .space(), .occupied()
       );
+
+   assign dram_fifo1_rb_data = 32'h0;
 
 `endif //  `ifndef NO_DRAM_FIFOS
 

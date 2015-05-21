@@ -117,14 +117,14 @@ module axi_dram_fifo
    wire         supress_enable_bclk;
    wire [15:0]  supress_threshold_bclk;
    
+   wire [31:0]  rb_fifo_status;
    wire [3:0]   rb_bist_status;
    wire [95:0]  rb_bist_bw_ratio;
-   wire [31:0]  rb_fifo_occupied;
 
-   localparam RB_BIST_STATUS    = 3'd0;
-   localparam RB_BIST_XFER_CNT  = 3'd1;
-   localparam RB_BIST_CYC_CNT   = 3'd2;
-   localparam RB_FIFO_FULL_CNT  = 3'd3;
+   localparam RB_FIFO_STATUS    = 3'd0;
+   localparam RB_BIST_STATUS    = 3'd1;
+   localparam RB_BIST_XFER_CNT  = 3'd2;
+   localparam RB_BIST_CYC_CNT   = 3'd3;
 
    setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'h0)) sr_readback
      (.clk(bus_clk), .rst(bus_reset),
@@ -138,10 +138,10 @@ module axi_dram_fifo
 
    always @(*) begin
       case(rb_addr)
+         RB_FIFO_STATUS:      rb_data = rb_fifo_status;
          RB_BIST_STATUS:      rb_data = {(EXT_BIST?1'b1:1'b0), 19'h0, rb_bist_status};
          RB_BIST_XFER_CNT:    rb_data = rb_bist_bw_ratio[79:48];
          RB_BIST_CYC_CNT:     rb_data = rb_bist_bw_ratio[31:0];
-         RB_FIFO_FULL_CNT:    rb_data = rb_fifo_occupied;
          default:             rb_data = 32'h0;
       endcase
    end
@@ -214,9 +214,20 @@ module axi_dram_fifo
    // Track main FIFO active size.
    reg [SIZE-3:0] space, occupied;
    wire [11:0] 	  input_page_boundry, output_page_boundry;
-   
-   assign rb_fifo_occupied = occupied;
-   
+
+   // Assign FIFO status bits
+   wire [71:0] status_out_bclk;
+   fifo_short_2clk status_fifo_2clk(
+      .rst(bus_reset),
+      .wr_clk(dram_clk), .din({{(72-(SIZE-2)){1'b0}}, occupied}),
+      .wr_en(1'b1), .full(), .wr_data_count(),
+      .rd_clk(bus_clk), .dout(status_out_bclk),
+      .rd_en(1'b1), .empty(), .rd_data_count()
+   );
+   assign rb_fifo_status[31]       = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
+   assign rb_fifo_status[30:27]    = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
+   assign rb_fifo_status[SIZE-3:0] = status_out_bclk[SIZE-3:0];   //FIFO fullness count (max 27 bits = 1GiB)
+
    ///////////////////////////////////////////////////////////////////////////////
    // Inline BIST for production testing
    //
