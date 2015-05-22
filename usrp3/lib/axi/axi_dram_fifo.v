@@ -139,7 +139,7 @@ module axi_dram_fifo
    always @(*) begin
       case(rb_addr)
          RB_FIFO_STATUS:      rb_data = rb_fifo_status;
-         RB_BIST_STATUS:      rb_data = {(EXT_BIST?1'b1:1'b0), 19'h0, rb_bist_status};
+         RB_BIST_STATUS:      rb_data = {(EXT_BIST?1'b1:1'b0), 27'h0, rb_bist_status};
          RB_BIST_XFER_CNT:    rb_data = rb_bist_bw_ratio[79:48];
          RB_BIST_CYC_CNT:     rb_data = rb_bist_bw_ratio[31:0];
          default:             rb_data = 32'h0;
