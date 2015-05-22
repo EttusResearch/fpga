@@ -480,7 +480,7 @@ module axi_chdr_test_pattern #(
 
     //Count number of lines transferred
     always @(posedge clk) begin
-      if (reset | bist_clear | bist_start)
+      if (reset| (bist_clear & ~rearm_test) | bist_start)
         word_count  <= 48'd0;
       else if (o_tvalid && rx_state == RX_ACTIVE)
         word_count  <= word_count + 48'd1;
@@ -488,7 +488,7 @@ module axi_chdr_test_pattern #(
 
     //Count cycles as long as test is running
     always @(posedge clk) begin
-      if (reset | bist_clear | bist_start)
+      if (reset| (bist_clear & ~rearm_test) | bist_start)
         cyc_count   <= 48'd0;
       else if (rx_state == RX_ACTIVE || rx_state == RX_WAIT)
         cyc_count   <= cyc_count + 48'd1;
