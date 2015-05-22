@@ -879,7 +879,7 @@ module x300_core
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   localparam EXTENDED_DRAM_BIST = 0;  //Prune out additional BIST features for production
+   localparam EXTENDED_DRAM_BIST = 1;  //Prune out additional BIST features for production
 
    axi_dram_fifo #(
       .BASE('h0),
