@@ -461,12 +461,18 @@ module b200_io
    always @(posedge siso_clk)
      tx_strobe_del <= tx_strobe;
 
+   // This strange piece of logic allows either USRP DUC to drive the AD9361 in SISO mode.
+   // This is principly used in the CODEC loopback test.
+   wire [11:0] tx_im = (mimo_sync ||  tx_i0 != 12'h0) ? tx_i0 : tx_i1;
+   wire [11:0] tx_qm = (mimo_sync ||  tx_q0 != 12'h0) ? tx_q0 : tx_q1;
+   
+
    // Deal with the fact that Ch A and Ch B are labelled in silkscreen opposite to their documentation in AD9361.
    // (Except on B200 based on AD9364 where only the true Ch A is stuffed)
    always @(posedge siso_clk)
      if(tx_strobe)
        begin
-	  {tx_i,tx_q} <= mimo_sync ? {tx_i1,tx_q1} : {tx_i0,tx_q0};
+	  {tx_i,tx_q} <= mimo_sync ? {tx_i1,tx_q1} : {tx_im,tx_qm};
 	  {tx_i_del,tx_q_del} <= {tx_i0,tx_q0};
        end
      else
