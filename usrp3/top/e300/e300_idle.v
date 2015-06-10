@@ -28,11 +28,11 @@ module e300
   inout         DDR_VRN,
 
   //AVR SPI IO
-  output        AVR_CS_R,
-  input         AVR_IRQ,
-  input         AVR_MISO_R,
-  output        AVR_MOSI_R,
-  output        AVR_SCK_R,
+  input         AVR_CS_R,
+  output        AVR_IRQ,
+  output        AVR_MISO_R,
+  input         AVR_MOSI_R,
+  input         AVR_SCK_R,
 
   input         ONSWITCH_DB,
 
@@ -97,6 +97,12 @@ module e300
   // pps connections
   input         GPS_PPS,
   input         PPS_EXT_IN,
+
+  // VTCXO and the DAC that feeds it
+  output        TCXO_DAC_SYNCn,
+  output        TCXO_DAC_SCLK,
+  output        TCXO_DAC_SDIN,
+  input         TCXO_CLK,
 
   // gpios, change to inout somehow
   inout [5:0]   PL_GPIO
@@ -350,5 +356,11 @@ module e300
   assign CAT_ENAGC    = 1'b0;
 
   assign PL_GPIO = 6'b00_0000;
+
+  assign AVR_IRQ = 1'b0;
+
+  assign TCXO_DAC_SYNCn = 1'b1;
+  assign TCXO_DAC_SCLK = 1'b0;
+  assign TCXO_DAC_SDIN = 1'b0;
 
 endmodule // e300
