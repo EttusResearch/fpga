@@ -189,7 +189,13 @@ module e300
   wire button_press_irq = |button_press_reg;
   wire button_release_irq = |button_release_reg;
 
-   // First, make all connections to the PS (ARM+buses)
+  // connect PPS input to GPIO so ntpd can use it
+  reg [2:0] pps_reg;
+  always @ (posedge bus_clk)
+    pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
+  assign ps_gpio_in[8] = pps_reg[2]; // 62
+
+  // First, make all connections to the PS (ARM+buses)
   e300_ps e300_ps_instance
   (  // Outward connections to the pins
     .processing_system7_0_MIO(MIO),
