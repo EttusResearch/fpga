@@ -334,7 +334,15 @@ module b200_io
 	 
    //------------------------------------------------------------------
    //
-   // De-mux I & Q, Ch A & B onto fullrate clock
+   // De-mux I & Q, Ch A & B onto fullrate clock.
+   //
+   // In all modes we grab data from the IDDR2 using negedge of siso_clk.
+   // IDDR2 updates all Q pins on posedge of io_clk. siso_clk does not have aligned phase
+   // with siso_clk...siso_clk is always a little more delayed than io_clk.
+   // This small delay is always much smaller than half a clk cycle. Thus by sampling the Q outputs
+   // with negedge siso_clk we avoid any risk of a race condition (hold violation on receiveing register).
+   //
+   // In SISO mode data is replicated onto both CH0 and CH1 for max flexibility in using the DDC's.
    //
    //------------------------------------------------------------------
    reg [11:0] rx_i_del, rx_q_del;
@@ -374,12 +382,14 @@ module b200_io
 
    //------------------------------------------------------------------
    //
-   // Now cross data into radio_clk which can be (inverted) siso_clk or siso_clk/2
+   // Now prepare data for crossing into radio_clk domain which can be for SISO mode (inverted) siso_clk or for MIMO mode siso_clk/2.
+   // In MIMO mode tx_strobe is used to maintain a known phase relationship betwwen siso_clk and radio_clk.
    // (Note: Negedge or posedge is used conditionally so that we have massive margin against a fast-path race condition
    // betwwen siso_clk and radio_clk). This kind of arrangement could still lead to confusion in timing analysis
-   // even if it works in the real world.
+   // even if it works in the real world depending on how well the STA tool can do automatic case analysis.
    //
    //------------------------------------------------------------------
+   // This code lock only relevent in MIMO mode.
    always @(negedge siso_clk)
      if (tx_strobe)
        begin
@@ -388,7 +398,7 @@ module b200_io
 	  rx_i1_siso_neg[11:0] <= rx_i1_siso[11:0];
 	  rx_q1_siso_neg[11:0] <= rx_q1_siso[11:0];
        end
-   
+   // This code block only relevent in SISO mode.
    always @(posedge siso_clk) 
      begin
 	rx_i0_siso_pos[11:0] <= rx_i0_siso[11:0];
