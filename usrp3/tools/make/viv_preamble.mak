@@ -8,11 +8,13 @@
 BASE_DIR = $(abspath ..)
 IP_DIR = $(abspath ./ip)
 LIB_IP_DIR = $(abspath ../../lib/ip)
+HLS_IP_DIR = $(abspath ../../lib/hls)
 TOOLS_DIR = $(BASE_DIR)/../tools
 SIMULATION = 0
 
 BUILD_DIR = $(abspath ./build-$(NAME))
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
+HLS_IP_BUILD_DIR = $(IP_BUILD_DIR)
 
 include $(TOOLS_DIR)/make/viv_design_builder.mak
 
