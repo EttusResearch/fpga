@@ -2,7 +2,7 @@
 // Copyright 2015 Ettus Research LLC
 //
 
-interface settings_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
+interface settings_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
                       (input clk);
   logic               stb;
   logic [AWIDTH-1:0]  addr;
