@@ -18,6 +18,7 @@ include ../../tools/make/viv_preamble.mak
 include ip/Makefile.inc
 include coregen_dsp/Makefile.srcs
 include ../../lib/ip/Makefile.inc
+include ../../lib/hls/Makefile.inc
 include ../../lib/control/Makefile.srcs
 include ../../lib/fifo/Makefile.srcs
 include ../../lib/zynq_fifo/Makefile.srcs
@@ -46,6 +47,12 @@ else
 TOP_SRCS += e300_idle.v
 endif
 
+ifdef HLS
+HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
+else
+HLS_IP_GEN_SRCS =
+endif
+
 SOURCES = $(abspath $(TOP_SRCS)) \
           $(ZYNQ_FIFO_SRCS) \
           $(FIFO_SRCS) \
@@ -59,7 +66,8 @@ SOURCES = $(abspath $(TOP_SRCS)) \
           $(COREGEN_DSP_SRCS) \
           $(IP_XCI_SRCS) \
           $(RFNOC_SRCS) \
-          $(LIB_IP_XCI_SRCS)
+          $(LIB_IP_XCI_SRCS) \
+          $(HLS_IP_GEN_SRCS)
 
 ##################################################
 # Git Hash
@@ -77,4 +85,6 @@ export VIV_VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 bin: prereqs $$(SOURCES) ip lib_ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
-.PHONY: bin
+hls: prereqs hls_ip bin
+
+.PHONY: bin hls

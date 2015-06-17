@@ -14,8 +14,8 @@
 ## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga.rpt:    Build report (includes utilization and timing summary)
 
-# vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
+# vivado_build($1=Target, $2=Device, $2=Definitions)
+vivado_build = make -f Makefile.e300.inc $1 NAME=$@ ARCH=zynq PART_ID=$2/clg484/-1 $3 EXTRA_DEFS="$3"
 
 post_build = @\
 	mkdir -p build; \
@@ -33,16 +33,20 @@ post_build = @\
 all: E310 E310_idle ##(Default target)
 
 E310: ##Build USRP E310 design.
-	$(call vivado_build,xc7z020,)
+	$(call vivado_build,bin,xc7z020,)
 	$(call post_build,E310)
 
 E310_idle: ##Build USRP E310 idle design.
-	$(call vivado_build,xc7z020,E3X0_IDLE_IMAGE)
+	$(call vivado_build,bin,xc7z020,E3X0_IDLE_IMAGE)
 	$(call post_build,E310_idle)
 
 E310_RFNOC: ##Build USRP E310 with RFNoC enabled.
-	$(call vivado_build,xc7z020,RFNOC=1 E310=1)
+	$(call vivado_build,bin,xc7z020,RFNOC=1 E310=1)
 	$(call post_build,E310_RFNOC)
+
+E310_RFNOC_HLS: ##Build USRP E310 with RFNoC + Vivado HLS enabled.
+	$(call vivado_build,hls,xc7z020,RFNOC=1 E310=1 HLS=1)
+	$(call post_build,E310_RFNOC_HLS)
 
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
