@@ -18,6 +18,7 @@ include ../../tools/make/viv_preamble.mak
 include ip/Makefile.inc
 include coregen_dsp/Makefile.srcs
 include ../../lib/ip/Makefile.inc
+include ../../lib/hls/Makefile.inc
 include ../../lib/control/Makefile.srcs
 include ../../lib/fifo/Makefile.srcs
 include ../../lib/simple_gemac/Makefile.srcs
@@ -72,6 +73,12 @@ else
 DRAM_SRCS =
 endif
 
+ifdef HLS
+HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
+else
+HLS_IP_GEN_SRCS =
+endif
+
 SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
@@ -80,7 +87,7 @@ $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(ETH_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(IP_XCI_SRCS) $(RFNOC_SRCS) \
-$(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
+$(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 
 
 ##################################################
@@ -94,4 +101,6 @@ export VIV_VERILOG_DEFS=$(EXTRA_DEFS)
 bin: prereqs $$(SOURCES) ip lib_ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
-.PHONY: bin
+hls: prereqs hls_ip bin
+
+.PHONY: bin hls
