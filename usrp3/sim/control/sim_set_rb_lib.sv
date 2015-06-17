@@ -35,3 +35,35 @@ interface settings_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
   endtask
 
 endinterface
+
+//
+// Copyright 2015 Ettus Research LLC
+//
+
+interface readback_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
+                      (input clk);
+  logic               stb;
+  logic [AWIDTH-1:0]  addr;
+  logic [DWIDTH-1:0]  data;
+
+  modport master (output stb, output addr, input data);
+  modport slave (input stb, input addr, output data);
+
+  // Push a transaction onto the readback bus
+  // Args:
+  // - rb_addr: Address
+  task read;
+    input [AWIDTH-1:0] rb_addr;
+    begin
+      stb   = 1'b0;
+      addr  = {AWIDTH{1'b0}};
+      @(posedge clk);
+      stb   = 1'b1;
+      addr  = rb_addr;
+      @(posedge clk);
+      stb   = 1'b0;
+      addr  = {AWIDTH{1'b0}};
+    end
+  endtask
+
+endinterface
