@@ -285,19 +285,19 @@ module axi_dram_fifo
    //
 
    wire [WIDTH-1:0] i_tdata_i0;
-   wire 	    i_tvalid_i0, i_tready_i0, i_tlast_i0;
+   wire             i_tvalid_i0, i_tready_i0, i_tlast_i0;
  
    wire [WIDTH-1:0] i_tdata_i1;
-   wire 	    i_tvalid_i1, i_tready_i1;
+   wire             i_tvalid_i1, i_tready_i1;
 
    wire [WIDTH-1:0] i_tdata_i2;
-   wire 	    i_tvalid_i2, i_tready_i2;
-   
+   wire             i_tvalid_i2, i_tready_i2;
+
    wire [WIDTH-1:0] i_tdata_input;
-   wire 	    i_tvalid_input, i_tready_input;
-   wire [15:0] 	    space_input, occupied_input;
-   reg [15:0] 	    space_input_reg;
-   reg 		    supress_reads;
+   wire             i_tvalid_input, i_tready_input;
+   wire [15:0]      space_input, occupied_input;
+   reg [15:0]       space_input_reg;
+   reg              supress_reads;
 
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -394,24 +394,26 @@ module axi_dram_fifo
    // Buffer output in 32entry FIFO's. Extract embeded tlast signal.
    //
    wire [WIDTH-1:0] o_tdata_output;
-   wire 	    o_tvalid_output, o_tready_output;
-   wire [15:0] 	    space_output, occupied_output;
+   wire             o_tvalid_output, o_tready_output;
+   wire [15:0]      space_output, occupied_output;
 
    wire [WIDTH-1:0] o_tdata_i0;
-   wire 	    o_tvalid_i0, o_tready_i0;
+   wire             o_tvalid_i0, o_tready_i0;
    
    wire [WIDTH-1:0] o_tdata_i1;
-   wire 	    o_tvalid_i1, o_tready_i1, o_tlast_i1;
+   wire             o_tvalid_i1, o_tready_i1;
    
    wire [WIDTH-1:0] o_tdata_i2;
-   wire 	    o_tvalid_i2, o_tready_i2, o_tlast_i2;
+   wire             o_tvalid_i2, o_tready_i2;
    
    wire [WIDTH-1:0] o_tdata_i3;
-   wire 	    o_tvalid_i3, o_tready_i3, o_tlast_i3;
+   wire             o_tvalid_i3, o_tready_i3;
+   
+   wire [WIDTH-1:0] o_tdata_i4;
+   wire             o_tvalid_i4, o_tready_i4, o_tlast_i4;
 
-  wire 	    checksum_error;
-   
-   
+   wire             checksum_error;
+
    axi_fifo #(.WIDTH(WIDTH),.SIZE(9)) fifo_i2
      (
       .clk(dram_clk), 
@@ -461,29 +463,45 @@ module axi_dram_fifo
       .o_tvalid(o_tvalid_i2), 
       .o_tready(o_tready_i2)
       );
-   
+
+   // More pipeline flops after read suppressor
+   axi_fast_fifo #(.WIDTH(WIDTH)) fast_fifo_i3
+     (
+      .clk(dram_clk), 
+      .reset(dram_reset), 
+      .clear(clear),
+      //
+      .i_tdata(o_tdata_i2), 
+      .i_tvalid(o_tvalid_i2), 
+      .i_tready(o_tready_i2),
+      //
+      .o_tdata(o_tdata_i3), 
+      .o_tvalid(o_tvalid_i3), 
+      .o_tready(o_tready_i3)
+      );
+
     axi_fast_extract_tlast axi_fast_extract_tlast_i0
      (
       .clk(dram_clk),
       .reset(dram_reset),
       .clear(clear),
       //
-      .i_tdata(o_tdata_i2),
-      .i_tvalid(o_tvalid_i2),
-      .i_tready(o_tready_i2),
+      .i_tdata(o_tdata_i3),
+      .i_tvalid(o_tvalid_i3),
+      .i_tready(o_tready_i3),
       //
-      .o_tdata(o_tdata_i3),
-      .o_tlast(o_tlast_i3),
-      .o_tvalid(o_tvalid_i3),
-      .o_tready(o_tready_i3)
+      .o_tdata(o_tdata_i4),
+      .o_tlast(o_tlast_i4),
+      .o_tvalid(o_tvalid_i4),
+      .o_tready(o_tready_i4)
       //
  //     .checksum_error_reg(checksum_error)
       );
 
     
    wire 	    write_out, read_out, empty_out, full_out;
-   assign 	    o_tready_i3 = ~full_out;
-   assign 	    write_out = o_tvalid_i3 & o_tready_i3;
+   assign 	    o_tready_i4 = ~full_out;
+   assign 	    write_out = o_tvalid_i4 & o_tready_i4;
    assign 	    o_tvalid_fifo = ~empty_out;
    assign 	    read_out = o_tvalid_fifo & o_tready_fifo;
    wire [6:0] 	    discard_i1;
@@ -492,7 +510,7 @@ module axi_dram_fifo
      (
       .rst(bus_reset),
       .wr_clk(dram_clk),
-      .din({7'h0,o_tlast_i3,o_tdata_i3}), // input [71 : 0] din
+      .din({7'h0,o_tlast_i4,o_tdata_i4}), // input [71 : 0] din
       .wr_en(write_out), // input wr_en
       .full(full_out), // output full
       .wr_data_count(), // output [9 : 0] wr_data_count
