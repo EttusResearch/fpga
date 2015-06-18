@@ -54,7 +54,7 @@ create_generated_clock -name radio_clk                [get_pins -hierarchical -f
 create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT1"}]
 #create_generated_clock -name dac_dci_clk              [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT2"}]
 create_generated_clock -name bus_clk                  [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT0"}]
-create_generated_clock -name ioport2_clk              [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT1"}]
+create_generated_clock -name ioport2_clk              [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKFBOUT"}]
 create_generated_clock -name rio40_clk                [get_pins -hierarchical -filter {NAME =~ "*pcie_clk_gen/*/CLKOUT0"}]
 create_generated_clock -name ioport2_idelay_ref_clk   [get_pins -hierarchical -filter {NAME =~ "*pcie_clk_gen/*/CLKOUT1"}]
 
@@ -357,13 +357,11 @@ set_output_delay -clock [get_clocks IoTxClock] -max 1.600 -clock_fall -add_delay
 set_output_delay -clock [get_clocks IoTxClock] -min 0.400 -clock_fall -add_delay [get_ports {itIoTx*}]
 
 # These signals are all treated as async signals so no stringent timing requirements are needed.
-set_max_delay 10.0 -to     [get_ports {aIrq*}]
-set_max_delay  8.0 -from   [get_ports {aIoResetIn_n}]
-set_max_delay  8.0 -from   [get_ports {aIoReadyIn}]
-set_max_delay  8.0 -to     [get_ports {aIoReadyOut}]
-
-# FPGA feedback to STC3 through GPIO
-set_output_delay -clock [get_clocks FPGA_125MHz_CLK] 1.500 [get_ports aIoPort2Restart]
+set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIrq*]               10.000
+set_max_delay -from [get_ports aIoResetIn_n]        -to [all_registers -edge_triggered] 10.000
+set_max_delay -from [get_ports aIoReadyIn]          -to [all_registers -edge_triggered] 10.000
+set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIoReadyOut]         10.000
+set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIoPort2Restart]     10.000
 set_false_path -from [get_ports aStc3Gpio7]
 
 # Async reset

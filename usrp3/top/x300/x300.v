@@ -282,13 +282,20 @@ module x300
    // Input Clock   Freq (MHz)    Input Jitter (UI)
    //----------------------------------------------------------------------------
    // __primary_________125.000____________0.010
-   
+
+   wire ioport2_clk_unbuf;
+
    bus_clk_gen bus_clk_gen (
       .CLK_IN1(fpga_clk125),
+      .CLKFB_IN(ioport2_clk),
       .CLK_OUT1(bus_clk),
-      .CLK_OUT2(ioport2_clk),
-      .RESET(1'b0),
+      .CLK_OUT2_UNBUF(/* unused */),    //This exists to make the IP generate a 125MHz FB clock
+      .CLKFB_OUT(ioport2_clk_unbuf),
       .LOCKED(bus_clk_locked));
+
+   BUFG ioport2_clk_bufg_i (
+      .O(ioport2_clk),
+      .I(ioport2_clk_unbuf));
 
    //----------------------------------------------------------------------------
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
