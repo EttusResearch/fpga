@@ -37,8 +37,8 @@ module axis_dram_fifo_single
   // Misc declarations
   axi4_rd_t #(.DWIDTH(64), .AWIDTH(30), .IDWIDTH(4)) dma_axi_rd(.clk(sys_clk));
   axi4_wr_t #(.DWIDTH(64), .AWIDTH(30), .IDWIDTH(4)) dma_axi_wr(.clk(sys_clk));
-  axi4_rd_t #(.DWIDTH(128), .AWIDTH(30), .IDWIDTH(4)) mig_axi_rd(.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(128), .AWIDTH(30), .IDWIDTH(4)) mig_axi_wr(.clk(sys_clk));
+  axi4_rd_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_rd(.clk(sys_clk));
+  axi4_wr_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_wr(.clk(sys_clk));
 
   wire [31:0]   ddr3_dq;      // Data pins. Input for Reads; Output for Writes.
   wire [3:0]    ddr3_dqs_n;   // Data Strobes. Input for Reads; Output for Writes.
@@ -59,6 +59,7 @@ module axis_dram_fifo_single
   wire          ddr3_axi_clk;       // 1/4 DDR external clock rate (250MHz)
   wire          ddr3_axi_rst;       // Synchronized to ddr_sys_clk
   reg           ddr3_axi_rst_reg_n; // Synchronized to ddr_sys_clk
+  wire          ddr3_axi_clk_x2;
 
   always @(posedge ddr3_axi_clk)
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
@@ -75,7 +76,7 @@ module axis_dram_fifo_single
     .bus_clk                    (bus_clk),
     .bus_reset                  (bus_rst),
     .clear                      (1'b0),
-    .dram_clk                   (ddr3_axi_clk),
+    .dram_clk                   (ddr3_axi_clk_x2),
     .dram_reset                 (ddr3_axi_rst),
     //
     // AXI Write address channel
@@ -156,10 +157,11 @@ module axis_dram_fifo_single
   generate if (USE_SRAM_MEMORY) begin
     assign init_calib_complete  = 1;
     assign ddr3_axi_clk         = bus_clk;
+    assign ddr3_axi_clk_x2      = bus_clk;
     assign ddr3_axi_rst         = bus_rst;
 
     axi4_dualport_sram axi4_dualport_sram_i1 (
-      .s_aclk         (ddr3_axi_clk), // input s_aclk
+      .s_aclk         (ddr3_axi_clk_x2), // input s_aclk
       .s_aresetn      (~ddr3_axi_rst), // input s_aresetn
       .s_axi_awid     (dma_axi_wr.addr.id), // input [0 : 0] s_axi_awid
       .s_axi_awaddr   (dma_axi_wr.addr.addr), // input [31 : 0] s_axi_awaddr
@@ -197,11 +199,11 @@ module axis_dram_fifo_single
     // We use an interconnect to connect to FIFOs.
     //---------------------------------------------------
     axi_intercon_2x64_128 axi_intercon_2x64_128_i (
-      .INTERCONNECT_ACLK(ddr3_axi_clk), // input INTERCONNECT_ACLK
+      .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
       .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
       //
       .S00_AXI_ARESET_OUT_N                 (), // output S00_AXI_ARESET_OUT_N
-      .S00_AXI_ACLK                         (ddr3_axi_clk), // input S00_AXI_ACLK
+      .S00_AXI_ACLK                         (ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S00_AXI_AWID                         (dma_axi_wr.addr.id), // input [0 : 0] S00_AXI_AWID
       .S00_AXI_AWADDR                       (dma_axi_wr.addr.addr), // input [31 : 0] S00_AXI_AWADDR
       .S00_AXI_AWLEN                        (dma_axi_wr.addr.len), // input [7 : 0] S00_AXI_AWLEN
@@ -241,7 +243,7 @@ module axis_dram_fifo_single
       .S00_AXI_RREADY                       (dma_axi_rd.data.ready), // input S00_AXI_RREADY
       //
       .S01_AXI_ARESET_OUT_N                 (), // output S01_AXI_ARESET_OUT_N
-      .S01_AXI_ACLK                         (ddr3_axi_clk), // input S01_AXI_ACLK
+      .S01_AXI_ACLK                         (ddr3_axi_clk_x2), // input S01_AXI_ACLK
       .S01_AXI_AWID                         (0), // input [0 : 0] S01_AXI_AWID
       .S01_AXI_AWADDR                       (0), // input [31 : 0] S01_AXI_AWADDR
       .S01_AXI_AWLEN                        (0), // input [7 : 0] S01_AXI_AWLEN
@@ -344,8 +346,10 @@ module axis_dram_fifo_single
       .ddr3_dm                        (ddr3_dm),
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
-      .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
-      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
+      .ui_clk                         (ddr3_axi_clk),  // 150MHz clock out
+      .ui_clk_x2                      (ddr3_axi_clk_x2),  // 300MHz clock out
+      .ui_clk_div2                      (),  // 75MHz clock out
+      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 150MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
       .app_sr_active                  (),

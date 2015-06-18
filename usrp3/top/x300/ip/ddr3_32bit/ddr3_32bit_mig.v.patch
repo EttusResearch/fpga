@@ -17,7 +17,7 @@
 <                                      // # of unique CS outputs per rank for phy
 <    parameter CKE_WIDTH             = 1,
 <                                      // # of CKE outputs to memory.
-<    parameter DATA_BUF_ADDR_WIDTH   = 4,
+<    parameter DATA_BUF_ADDR_WIDTH   = 5,
 <    parameter DQ_CNT_WIDTH          = 5,
 <                                      // = ceil(log2(DQ_WIDTH))
 <    parameter DQ_PER_DM             = 8,
@@ -115,11 +115,11 @@
 <                                      // DDR2 SDRAM: Burst Type (Mode Register).
 <                                      // # = "SEQ" - (Sequential),
 <                                      //   = "INT" - (Interleaved).
-<    parameter CL                    = 7,
+<    parameter CL                    = 9,
 <                                      // in number of clock cycles
 <                                      // DDR3 SDRAM: CAS Latency (Mode Register 0).
 <                                      // DDR2 SDRAM: CAS Latency (Mode Register).
-<    parameter CWL                   = 6,
+<    parameter CWL                   = 7,
 <                                      // in number of clock cycles
 <                                      // DDR3 SDRAM: CAS Write Latency (Mode Register 2).
 <                                      // DDR2 SDRAM: Can be ignored
@@ -154,9 +154,9 @@
 <    // The following parameters are multiplier and divisor factors for PLLE2.
 <    // Based on the selected design frequency these parameters vary.
 <    //***************************************************************************
-<    parameter CLKIN_PERIOD          = 10000,
+<    parameter CLKIN_PERIOD          = 9996,
 <                                      // Input Clock Period
-<    parameter CLKFBOUT_MULT         = 10,
+<    parameter CLKFBOUT_MULT         = 12,
 <                                      // write PLL VCO multiplier
 <    parameter DIVCLK_DIVIDE         = 1,
 <                                      // write PLL VCO divisor
@@ -168,11 +168,11 @@
 <                                      // VCO output divisor for PLL output clock (CLKOUT1)
 <    parameter CLKOUT2_DIVIDE        = 32,
 <                                      // VCO output divisor for PLL output clock (CLKOUT2)
-<    parameter CLKOUT3_DIVIDE        = 4,
+<    parameter CLKOUT3_DIVIDE        = 8,
 <                                      // VCO output divisor for PLL output clock (CLKOUT3)
-<    parameter MMCM_VCO              = 1000,
+<    parameter MMCM_VCO              = 1200,
 <                                      // Max Freq (MHz) of MMCM VCO
-<    parameter MMCM_MULT_F           = 4,
+<    parameter MMCM_MULT_F           = 8,
 <                                      // write MMCM VCO multiplier
 <    parameter MMCM_DIVCLK_DIVIDE    = 1,
 <                                      // write MMCM VCO divisor
@@ -380,10 +380,10 @@
 <    //***************************************************************************
 <    // System clock frequency parameters
 <    //***************************************************************************
-<    parameter tCK                   = 2000,
+<    parameter tCK                   = 1666,
 <                                      // memory tCK paramter.
 <                                      // # = Clock Period in pS.
-<    parameter nCK_PER_CLK           = 2,
+<    parameter nCK_PER_CLK           = 4,
 <                                      // # of memory CKs per fabric CLK
 <    parameter DIFF_TERM_SYSCLK      = "TRUE",
 <                                      // Differential Termination for System
@@ -408,11 +408,11 @@
 <                                              // Width of S_AXI_AWADDR, S_AXI_ARADDR, M_AXI_AWADDR and
 <                                              // M_AXI_ARADDR for all SI/MI slots.
 <                                              // # = 32.
-<    parameter C_S_AXI_DATA_WIDTH            = 128,
+<    parameter C_S_AXI_DATA_WIDTH            = 256,
 <                                              // Width of WDATA and RDATA on SI slot.
 <                                              // Must be <= APP_DATA_WIDTH.
 <                                              // # = 32, 64, 128, 256.
-<    parameter C_MC_nCK_PER_CLK              = 2,
+<    parameter C_MC_nCK_PER_CLK              = 4,
 <                                              // Indicates whether to instatiate upsizer
 <                                              // Range: 0, 1
 <    parameter C_S_AXI_SUPPORTS_NARROW_BURST = 1,
@@ -494,20 +494,29 @@
 584,585d98
 <    // Single-ended iodelayctrl clk (reference clock)
 <    input                                        clk_ref_i,
-689a203,204
+587a101,102
+>    output                                       ui_clk_x2,
+>    output                                       ui_clk_div2,
+689a205,206
 >   wire                              clk_ref_i;
 >   wire                              clk_ref_i_buf;
-838c353
+838c355
 <       assign clk_ref_in = clk_ref_i;
 ---
 >       assign clk_ref_in = clk_ref_i_buf;
-863a379
+863a381
 >        .pll_locked       (pll_locked),
-917a434
+917a436
 >      .CLKOUT5_DIVIDE     (CLKOUT5_DIVIDE),
-933a451
+933a453
 >        .clk_ref_i        (clk_ref_i),
-954c472,475
+938,939c458,459
+<        .ui_addn_clk_0    (),
+<        .ui_addn_clk_1    (),
+---
+>        .ui_addn_clk_0    (ui_clk_x2),
+>        .ui_addn_clk_1    (ui_clk_div2),
+954c474,477
 <       
 ---
 > 

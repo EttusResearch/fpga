@@ -1055,6 +1055,7 @@ module x300
 
 
    wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (250MHz)
+   wire        ddr3_axi_clk_x2;        // 1/4 DDR external clock rate (250MHz)
    wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
    wire        ddr3_running;           // DRAM calibration complete.
 
@@ -1071,8 +1072,8 @@ module x300
    wire        s_axi_awvalid;
    wire        s_axi_awready;
    // Slave Interface Write Data Ports
-   wire [127:0] s_axi_wdata;
-   wire [15:0]  s_axi_wstrb;
+   wire [255:0] s_axi_wdata;
+   wire [31:0]  s_axi_wstrb;
    wire     s_axi_wlast;
    wire     s_axi_wvalid;
    wire     s_axi_wready;
@@ -1096,7 +1097,7 @@ module x300
    // Slave Interface Read Data Ports
    wire     s_axi_rready;
    wire [3:0]   s_axi_rid;
-   wire [127:0] s_axi_rdata;
+   wire [255:0] s_axi_rdata;
    wire [1:0]   s_axi_rresp;
    wire     s_axi_rlast;
    wire     s_axi_rvalid;
@@ -1137,6 +1138,7 @@ module x300
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
       .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
+      .ui_clk_x2                      (ddr3_axi_clk_x2),
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -1291,6 +1293,7 @@ module x300
 `ifndef NO_DRAM_FIFOS
       // DRAM signals.
       .ddr3_axi_clk              (ddr3_axi_clk),
+      .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
       .ddr3_axi_rst              (ddr3_axi_rst),
       .ddr3_running              (ddr3_running),
       // Slave Interface Write Address Ports
