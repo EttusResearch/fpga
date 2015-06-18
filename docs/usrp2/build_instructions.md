@@ -29,7 +29,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
   + `source <install_dir>/Xilinx/12.2/ISE_DS/settings64.sh` (64-bit platform)
   + `source <install_dir>/Xilinx/12.2/ISE_DS/settings32.sh` (32-bit platform)
 
-- Navigate to `usrp3/top/{project}` where project is:
+- Navigate to `usrp2/top/{project}` where project is:
   + N2x0: For USRP N200 and USRP N210
   + E1x0: For USRP E100 and USRP E110
 
@@ -38,7 +38,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
   `make help`.
 
 - The build output will be specific to the product and will be located in the
-  `usrp3/top/{project}/build` directory. Run `make help` for more information.
+  `usrp2/top/{project}/build` directory. Run `make help` for more information.
 
 ### N2x0 Targets and Outputs
 
