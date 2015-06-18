@@ -47,7 +47,7 @@ module axi_crossbar
      // readback bus
      input                        rb_rd_stb,
      input [`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):0] rb_addr,
-     output [31:0]                rb_data
+     output reg [31:0]            rb_data
      );
   
    genvar m,n;
@@ -162,7 +162,8 @@ module axi_crossbar
       end // block: instantiate_fifo_header
    endgenerate
 
-   assign rb_data = rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)]]; 
+   // Pipeline readback data to alleviate timing issues
+   always @(posedge clk) rb_data <= rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)]];
    
 
 endmodule // axi_crossbar

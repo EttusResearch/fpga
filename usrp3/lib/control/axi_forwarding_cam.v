@@ -220,31 +220,35 @@ module axi_forwarding_cam
 
        endcase // case (demux_state)
 
-   //
-   // Compile forwarding statistics
-   // (This uses a lot of registers!)
-   //
-   genvar m;
-   reg [31:0] statistics [0:NUM_OUTPUTS-1];
-   
-   generate
-      for (m = 0; m < NUM_OUTPUTS; m = m + 1) begin: generate_stats
-	 always @(posedge clk)
-	   if (reset | clear) 
-	     statistics[m] <= 0;
-	   else if ((rb_addr == m) && rb_rd_stb)
-	     statistics[m] <= 0;
-	   else if (forward_ack[m] & forward_valid[m])
-	     statistics[m] <= statistics[m] + 1;
-         end
-      endgenerate
-   
-   assign rb_data = statistics[rb_addr];
-   	
-	  
+  //
+  // Compile forwarding statistics
+  // (This uses a lot of registers!)
+  //
+  genvar m;
+  reg [31:0] statistics [0:NUM_OUTPUTS-1];
+  reg [NUM_OUTPUTS-1:0] clear_statistics;
+
+  generate
+    for (m = 0; m < NUM_OUTPUTS; m = m + 1) begin: generate_stats
+      always @(posedge clk) begin
+        if (reset | clear) begin
+          statistics[m] <= 0;
+          clear_statistics[m] <= 0;
+        end else if ((rb_addr == m) && rb_rd_stb) begin
+          clear_statistics[m] <= 1;
+        end else begin
+          // Clear statistic one clock cycle after readback strobe
+          // to allow time for reading rb_data
+          if (clear_statistics[m]) begin
+            statistics[m] <= 0;
+          end else if (forward_ack[m] & forward_valid[m]) begin
+            statistics[m] <= statistics[m] + 1;
+          end
+        end
+      end
+    end
+  endgenerate
+
+  assign rb_data = statistics[rb_addr];
+
 endmodule
-    
-	      
-	    
-   
-   
