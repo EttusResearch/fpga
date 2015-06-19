@@ -645,6 +645,17 @@ set_property PROHIBIT      TRUE     [get_sites {P26}]
 set_property PROHIBIT      TRUE     [get_sites {R26}]
 
 #*******************************************************************************
+# Miscellaneous
+
+# Expose this pin to work around a silicon bug in Series 7 FPGA where
+# race condition with the reading of PUDC during the erase of the FPGA
+# image cause glitches on output IO pins
+set_property PACKAGE_PIN   R23      [get_ports FPGA_PUDC_B]
+set_property IOSTANDARD    LVCMOS33 [get_ports FPGA_PUDC_B]
+set_property PULLUP        TRUE     [get_ports FPGA_PUDC_B]
+
+
+#*******************************************************************************
 # UNUSED or DEPOPULATED)
 
 # Security Chip
@@ -662,7 +673,6 @@ set_property PROHIBIT      TRUE     [get_sites {R26}]
 #NET   aIO_Interrupt_0        IOSTANDARD = LVCMOS33   |   LOC  =  AF28;
 #NET   aIO_Interrupt_1        IOSTANDARD = LVCMOS33   |   LOC  =  AK29;
 #NET   aStcIO_Reset_n         IOSTANDARD = LVCMOS33   |   LOC  =  AC27;
-#NET   FPGA_PUDC              IOSTANDARD = LVCMOS33   |   LOC  =  R23;
 #NET   0V75_VTT_REF           IOSTANDARD = DDR15      |   LOC  =  AD7;
 #NET   0V75_VTT_REF           IOSTANDARD = DDR15      |   LOC  =  AG8;
 #NET   XSIG030149             IOSTANDARD = DDR15      |   LOC  =  Y13;
