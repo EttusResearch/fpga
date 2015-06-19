@@ -31,7 +31,22 @@ route_design
 vivado_utils::generate_post_route_reports
 
 # -------------------------------------------------
-# STEP#5: Generate a bitstream, netlist and debug probes
+# STEP#5: If timing fails, run placer & router with high effort settings
+# -------------------------------------------------
+for {set i 0} {$i < 3} {incr i} {
+  # Stop if timing is met
+  if {[get_property SLACK [get_timing_paths ]] >= 0} {break};
+
+  place_design -post_place_opt
+  phys_opt_design -directive Explore
+  vivado_utils::generate_post_place_reports {_timing_fixup_iter_$i}
+  route_design -directive Explore -tns_cleanup
+  phys_opt_design -directive AggressiveExplore
+  vivado_utils::generate_post_route_reports {_timing_fixup_iter_$i}
+}
+
+# -------------------------------------------------
+# STEP#6: Generate a bitstream, netlist and debug probes
 # -------------------------------------------------
 vivado_utils::write_implementation_outputs
 
