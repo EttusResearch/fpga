@@ -6,9 +6,6 @@
 # X3x0 Pin Mapping
 #*******************************************************************************
 
-## DDR3
-## See ddr3.xdc
-
 #*******************************************************************************
 ## SFP Lanes
 
@@ -494,6 +491,7 @@ set_property IOSTANDARD    LVCMOS33 [get_ports {LED_*}]
 
 #*******************************************************************************
 ## Front panel GPIO on DB15
+
 set_property PACKAGE_PIN   Y25      [get_ports {FrontPanelGpio[0]}]
 set_property PACKAGE_PIN   AD27     [get_ports {FrontPanelGpio[1]}]
 set_property PACKAGE_PIN   AD28     [get_ports {FrontPanelGpio[2]}]
@@ -507,6 +505,7 @@ set_property PACKAGE_PIN   AG27     [get_ports {FrontPanelGpio[9]}]
 set_property PACKAGE_PIN   AG28     [get_ports {FrontPanelGpio[10]}]
 set_property PACKAGE_PIN   AH26     [get_ports {FrontPanelGpio[11]}]
 set_property IOSTANDARD    LVCMOS33 [get_ports {FrontPanelGpio*}]
+set_property PULLDOWN      TRUE     [get_ports {FrontPanelGpio*}]
 
 #*******************************************************************************
 ## LMK04816 Clock Control
