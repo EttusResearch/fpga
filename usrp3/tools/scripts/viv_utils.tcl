@@ -1,5 +1,5 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2014-2015 Ettus Research
 #
 
 # ---------------------------------------------------
@@ -148,6 +148,9 @@ proc ::vivado_utils::generate_post_route_reports {} {
     puts "BUILDER: Writing post-route checkpoint"
     write_checkpoint -force $g_output_dir/post_route 
     puts "BUILDER: Writing post-route reports"
+    if {[file exists "$g_output_dir/clock_util.rpt"] == 0} {
+        report_clock_utilization -file $g_output_dir/clock_util.rpt 
+    }
     report_timing_summary -file $g_output_dir/post_route_timing_summary.rpt 
     report_utilization -file $g_output_dir/post_route_util.rpt 
     report_power -file $g_output_dir/post_route_power.rpt 
