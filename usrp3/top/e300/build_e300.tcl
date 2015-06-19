@@ -35,14 +35,14 @@ vivado_utils::generate_post_route_reports
 # -------------------------------------------------
 for {set i 0} {$i < 3} {incr i} {
   # Stop if timing is met
-  if {[get_property SLACK [get_timing_paths ]] >= 0} {break};
+  #if {[get_property SLACK [get_timing_paths ]] >= 0} {break};
 
   place_design -post_place_opt
   phys_opt_design -directive Explore
-  vivado_utils::generate_post_place_reports {_timing_fixup_iter_$i}
+  vivado_utils::generate_post_place_reports "_high_effort_iter_$i"
   route_design -directive Explore -tns_cleanup
   phys_opt_design -directive AggressiveExplore
-  vivado_utils::generate_post_route_reports {_timing_fixup_iter_$i}
+  vivado_utils::generate_post_route_reports "_high_effort_iter_$i"
 }
 
 # -------------------------------------------------
