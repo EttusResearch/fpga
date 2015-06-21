@@ -3,10 +3,7 @@
 //
 
 // General FIFO block
-//  Size == 0: Uses a flop (axi_fifo_flop). More space efficient than axi_fifo_flop2 at the cost 
-//             of combinatorial paths on tready / tvalid signals. Use only if small size is 
-//             desired over speed. 
-//  Size == 1: Uses a flop (axi_fifo_flop2). Best choice for single stage pipelining. Breaks 
+//  Size == 0,1: Uses a flop (axi_fifo_flop). Best choice for single stage pipelining. Breaks 
 //             combinatorial paths on the AXI stream data / control lines at the cost of 
 //             additional registers. Maps to SLICELs (i.e. does not use distributed RAM).
 //  Size <= 5: Uses SRL32 to efficient maps a 32 deep FIFO to SLICEMs (axi_fifo_short). Not 
@@ -27,25 +24,15 @@ module axi_fifo
     output [15:0] occupied);
    
    generate
-   if(SIZE==0)
+   if(SIZE<=1)
    begin
       axi_fifo_flop #(.WIDTH(WIDTH)) fifo_flop
         (.clk(clk), .reset(reset), .clear(clear),
          .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
          .o_tdata(o_tdata), .o_tvalid(o_tvalid), .o_tready(o_tready),
-         .space(space[0]), .occupied(occupied[0]));
-      assign space[15:1] = 15'd0;
-      assign occupied[15:1] = 15'd0;
-   end
-   else if(SIZE==1)
-   begin
-      axi_fifo_flop2 #(.WIDTH(WIDTH)) fifo_flop2
-        (.clk(clk), .reset(reset), .clear(clear),
-         .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
-         .o_tdata(o_tdata), .o_tvalid(o_tvalid), .o_tready(o_tready),
-         .space(space[0]), .occupied(occupied[0]));
-      assign space[15:1] = 15'd0;
-      assign occupied[15:1] = 15'd0;
+         .space(space[1:0]), .occupied(occupied[1:0]));
+      assign space[15:2] = 14'd0;
+      assign occupied[15:2] = 14'd0;
    end
    else if(SIZE<=5)
    begin
