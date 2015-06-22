@@ -1,5 +1,5 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2014-2015 Ettus Research
 #
 
 # ---------------------------------------------------
@@ -114,48 +114,51 @@ proc ::vivado_utils::synthesize_design {args} {
 # ---------------------------------------------------
 # Generate post synthesis reports and checkpoint
 # ---------------------------------------------------
-proc ::vivado_utils::generate_post_synth_reports { {append {}} } {
+proc ::vivado_utils::generate_post_synth_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-synthesis checkpoint"
-    write_checkpoint -force $g_output_dir/post_synth$append
+    write_checkpoint -force $g_output_dir/post_synth 
     puts "BUILDER: Writing post-synthesis reports"
-    report_utilization -file $g_output_dir/post_synth_util$append.rpt
-    report_utilization -hierarchical -file $g_output_dir/post_synth_util_hier$append.rpt
-    report_drc -ruledeck methodology_checks -file $g_output_dir/methodology$append.rpt
-    report_high_fanout_nets -file $g_output_dir/high_fanout_nets$append.rpt
+    report_utilization -file $g_output_dir/post_synth_util.rpt 
+        report_utilization -hierarchical -file $g_output_dir/post_synth_util_hier.rpt
+    report_drc -ruledeck methodology_checks -file $g_output_dir/methodology.rpt 
+    report_high_fanout_nets -file $g_output_dir/high_fanout_nets.rpt 
 }
 
 # ---------------------------------------------------
 # Generate post placement reports and checkpoint
 # ---------------------------------------------------
-proc ::vivado_utils::generate_post_place_reports { {append {}} } {
+proc ::vivado_utils::generate_post_place_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-placement checkpoint"
-    write_checkpoint -force $g_output_dir/post_place$append
+    write_checkpoint -force $g_output_dir/post_place 
     puts "BUILDER: Writing post-placement reports"
-    report_clock_utilization -file $g_output_dir/clock_util$append.rpt
-    report_utilization -file $g_output_dir/post_place_util$append.rpt
-    report_utilization -hierarchical -file $g_output_dir/post_place_util_hier$append.rpt
-    report_timing -sort_by group -max_paths 5 -path_type summary -file $g_output_dir/post_place_timing$append.rpt
+    report_clock_utilization -file $g_output_dir/clock_util.rpt 
+    report_utilization -file $g_output_dir/post_place_util.rpt 
+    report_utilization -hierarchical -file $g_output_dir/post_place_util_hier.rpt
+    report_timing -sort_by group -max_paths 5 -path_type summary -file $g_output_dir/post_place_timing.rpt 
 }
 
 # ---------------------------------------------------
 # Generate post route reports and checkpoint
 # ---------------------------------------------------
-proc ::vivado_utils::generate_post_route_reports { {append {}} } {
+proc ::vivado_utils::generate_post_route_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-route checkpoint"
-    write_checkpoint -force $g_output_dir/post_route$append
+    write_checkpoint -force $g_output_dir/post_route 
     puts "BUILDER: Writing post-route reports"
-    report_timing_summary -file $g_output_dir/post_route_timing_summary$append.rpt
-    report_utilization -file $g_output_dir/post_route_util$append.rpt
-    report_utilization -hierarchical -file $g_output_dir/post_route_util_hier$append.rpt
-    report_power -file $g_output_dir/post_route_power$append.rpt
-    report_drc -file $g_output_dir/post_imp_drc$append.rpt
-    report_timing -sort_by group -max_paths 10 -path_type summary -file $g_output_dir/post_route_timing$append.rpt
+    if {[file exists "$g_output_dir/clock_util.rpt"] == 0} {
+        report_clock_utilization -file $g_output_dir/clock_util.rpt 
+    }
+    report_timing_summary -file $g_output_dir/post_route_timing_summary.rpt 
+    report_utilization -file $g_output_dir/post_route_util.rpt 
+    report_utilization -hierarchical -file $g_output_dir/post_route_util_hier.rpt
+    report_power -file $g_output_dir/post_route_power.rpt 
+    report_drc -file $g_output_dir/post_imp_drc.rpt 
+    report_timing -sort_by group -max_paths 10 -path_type summary -file $g_output_dir/post_route_timing.rpt 
 }
 
 # ---------------------------------------------------

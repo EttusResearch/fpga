@@ -226,20 +226,21 @@ module x300
    input SFPP1_TxFault, // Current 10G PMA/PCS apparently ignores this signal.
    output SFPP1_RS0,  // These are actually open drain outputs
    output SFPP1_RS1,  // CAUTION! Take great care, this signal shorted to VeeR on SFP module.
-   output SFPP1_TxDisable  // These are actually open drain outputs
+   output SFPP1_TxDisable, // These are actually open drain outputs
 
-   );
+   ///////////////////////////////////
+   //
+   // Misc.
+   //
+   ///////////////////////////////////
 
-   wire     radio_clk, radio_clk_2x, dac_dci_clk;
-   wire     global_rst, radio_rst, bus_rst;
+   input FPGA_PUDC_B
+);
 
+   wire         radio_clk, radio_clk_2x, dac_dci_clk;
+   wire         global_rst, radio_rst, bus_rst;
    wire [3:0]   sw_rst;
-
-
-   wire [63:0]  vita_time;
    wire [2:0]   led0, led1;
-
-   wire [31:0]  debug0, debug1;
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -250,10 +251,7 @@ module x300
 
    `ifdef DEBUG_UART
    assign FrontPanelGpio[11] = debug_txd;
-
    assign debug_rxd = FrontPanelGpio[10];
-
-
    `endif
 
    ////////////////////////////////////////////////////////////////////
@@ -1348,7 +1346,27 @@ module x300
       .pcii_tlast                (pcii_tlast),
       .pcii_tvalid               (pcii_tvalid),
       .pcii_tready               (pcii_tready)
-      );
+   );
 
+   /////////////////////////////////////////////////////////////////////
+   //
+   // PUDC Workaround
+   //
+   //////////////////////////////////////////////////////////////////////
+   // This is a workaround for a silicon bug in Series 7 FPGA where a
+   // race condition with the reading of PUDC during the erase of the FPGA
+   // image cause glitches on output IO pins. This glitch happens even if 
+   // you have PUDC correctly pulled high!!  When PUDC is high the pull up 
+   // resistor should never be enabled on the IO lines, however there is a
+   // race condition that causes this to not be the case.
+   //
+   // Workaround:
+   // - Define the PUDC pin in the XDC file with a pullup.
+   // - Implements an IBUF on the PUDC input and make sure that it does 
+   //   not get optimized out.
+   (* dont_touch = "true" *) wire fpga_pudc_b_buf;
+   IBUF pudc_ibuf_i (
+      .I(FPGA_PUDC_B),
+      .O(fpga_pudc_b_buf));
 
 endmodule // x300

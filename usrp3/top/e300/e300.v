@@ -31,11 +31,6 @@ module e300
   inout         DDR_VRP,
   inout         DDR_VRN,
 
-  // Control connections for FPGA
-  //input wire SYSCLK_P;
-  //input wire SYSCLK_N;
-  //input wire PS_SRST_B;
-
   //AVR SPI IO
   output        AVR_CS_R,
   input         AVR_IRQ,
@@ -212,6 +207,13 @@ module e300
   wire button_press_irq = |button_press_reg;
   wire button_release_irq = |button_release_reg;
 
+  // connect PPS input to GPIO so ntpd can use it
+  reg [2:0] pps_reg;
+  always @ (posedge bus_clk)
+    pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
+  assign ps_gpio_in[8] = pps_reg[2]; // 62
+
+   // First, make all connections to the PS (ARM+buses)
   e300_processing_system inst_e300_processing_system
   (  // Outward connections to the pins
     .MIO(MIO),
@@ -476,13 +478,7 @@ module e300
 
     .event_irq(stream_irq)
   );
-
-  // resync pps to bus_clk >>> TODO: check this makes sense
-  reg [1:0] ppsync;
-  wire pps = ppsync[1];
-  wire lpps;
-  always @(posedge bus_clk)
-    ppsync <= { ppsync[0], lpps };
+  wire pps;
 
   wire clk_tcxo = TCXO_CLK; // 40 MHz
 
@@ -500,7 +496,7 @@ module e300
     .reset(1'b0),
     .xoclk(clk_tcxo), .ppsgps(GPS_PPS), .ppsext(PPS_EXT_IN),
     .refsel(pps_select),
-    .lpps(lpps),
+    .lpps(pps),
     .is10meg(is_10meg), .ispps(is_pps), .reflck(reflck), .plllck(plllck),
     .sclk(TCXO_DAC_SCLK), .mosi(TCXO_DAC_SDIN), .sync_n(TCXO_DAC_SYNCn),
     .dac_dflt(16'h7fff)

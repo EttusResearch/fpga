@@ -316,16 +316,6 @@ set_output_delay -clock [get_clocks DB1_DAC_DCI] -max $dac1_out_delay_max -clock
 set_output_delay -clock [get_clocks DB1_DAC_DCI] -min $dac1_out_delay_min                        [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
 set_output_delay -clock [get_clocks DB1_DAC_DCI] -min $dac1_out_delay_min -clock_fall -add_delay [get_ports -regexp {DB1_DAC_D._. DB1_DAC_FRAME_.}]
 
-# Only analyze setup relationships between the rising-to-rising or falling-to-falling
-# edges of the data and DCI clock. Do not analyze the rising-to-falling or the
-# falling-to-rising path for setup. In a similar manner, we want to analyze the rising
-# to falling and falling to rising paths for hold. Do not analyze the rising-to-rising
-# or falling-to-falling paths. Do this for both clocks.
-set_false_path -setup -rise_from [get_clocks radio_clk_2x] -fall_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
-set_false_path -setup -fall_from [get_clocks radio_clk_2x] -rise_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
-set_false_path -hold  -rise_from [get_clocks radio_clk_2x] -rise_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
-set_false_path -hold  -fall_from [get_clocks radio_clk_2x] -fall_to [get_clocks -regexp {DB(0|1)_DAC_DCI}]
-
 
 #*******************************************************************************
 ## IoPort2

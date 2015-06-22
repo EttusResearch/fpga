@@ -15,6 +15,11 @@
 ## build/usrp_<product>_fpga.syr:    Xilinx system report
 ## build/usrp_<product>_fpga.twr:    Xilinx timing report
 
+# Build USRP B2x0 design with UART as GPIO
+ifeq ($(UART_IS_GPIO),1)
+OPTIONS += B200_UART_IS_GPIO=1
+endif
+
 print_report = \
 	echo "========================================================================"; \
 	cat $(1)/b200.syr | grep "Device utilization summary:" -A 30; \
@@ -32,11 +37,11 @@ endif
 
 # ise_build($1=Device, $2=Definitions)
 ifeq ($(PROJECT_ONLY),1)
-	ise_build = make -f Makefile.b200.inc proj NAME=$@ DEVICE=$1 EXTRA_DEFS="$2"
+	ise_build = make -f Makefile.b200.inc proj NAME=$@ DEVICE=$1 EXTRA_DEFS="$2 $(OPTIONS)"
 else ifeq ($(EXPORT_ONLY),1)
 	ise_build = @echo "Skipping ISE build and exporting pre-built files.";
 else
-	ise_build = make -f Makefile.b200.inc bin NAME=$@ DEVICE=$1 EXTRA_DEFS="$2"
+	ise_build = make -f Makefile.b200.inc bin NAME=$@ DEVICE=$1 EXTRA_DEFS="$2 $(OPTIONS)"
 endif
 
 # post_build($1=Device)
@@ -73,16 +78,6 @@ B210:  ##Build USRP B210 design.
 	$(call ise_build,XC6SLX150,B210=1)
 	$(call post_build,B210)
 
-B200_UART_IS_GPIO:  ##Build USRP B200 design with UART as GPIO.
-	$(call pre_build,B200)
-	$(call ise_build,XC6SLX75,B200_UART_IS_GPIO=1)
-	$(call post_build,B200)
-
-B210_UART_IS_GPIO:  ##Build USRP B210 design with UART as GPIO.
-	$(call pre_build,B210)
-	$(call ise_build,XC6SLX150,"B210=1 B200_UART_IS_GPIO=1")
-	$(call post_build,B210)
-
 clean: ##Clean up all build output.
 	rm -rf build-*
 	rm -rf build
@@ -97,5 +92,6 @@ help: ## Show this help message.
 ##                 Useful for use with the ISE GUI.
 ##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
 ##                 Requires the project in build-*_* to be built.
+##UART_IS_GPIO=1   Build USRP B2x0 design with the UART pins as GPIO
 
 .PHONY: all clean help
