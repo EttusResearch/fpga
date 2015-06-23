@@ -173,16 +173,16 @@ module axi_dram_fifo
    localparam INPUT4 = 4;
    localparam INPUT5 = 5;
    localparam INPUT6 = 6;
-	     
-   reg [2:0]  input_state;
-   reg 	      input_timeout_triggered;
-   reg 	      input_timeout_reset;
-   reg [8:0]  input_timeout_count;
-   reg [31:0] write_addr;
-   reg 	      write_ctrl_valid;
-   wire       write_ctrl_ready;
-   reg [7:0]  write_count;
-   reg 	      update_write;
+
+   reg [2:0]   input_state;
+   reg         input_timeout_triggered;
+   reg         input_timeout_reset;
+   reg [8:0]   input_timeout_count;
+   reg [31:0]  write_addr;
+   reg         write_ctrl_valid;
+   wire        write_ctrl_ready;
+   reg [7:0]   write_count;
+   reg         update_write;
    wire [63:0] write_data;
    wire        write_data_valid;
    wire        write_data_ready;
@@ -197,23 +197,23 @@ module axi_dram_fifo
    localparam OUTPUT4 = 4;
    localparam OUTPUT5 = 5;
    localparam OUTPUT6 = 6;
-	     
-   reg [2:0]  output_state;
-   reg 	      output_timeout_triggered;
-   reg 	      output_timeout_reset;
-   reg [8:0]  output_timeout_count;
-   reg [31:0] read_addr;
-   reg 	      read_ctrl_valid;
-   wire       read_ctrl_ready;
-   reg [7:0]  read_count; 
-   reg 	      update_read;
+
+   reg [2:0]   output_state;
+   reg         output_timeout_triggered;
+   reg         output_timeout_reset;
+   reg [8:0]   output_timeout_count;
+   reg [31:0]  read_addr;
+   reg         read_ctrl_valid;
+   wire        read_ctrl_ready;
+   reg [7:0]   read_count; 
+   reg         update_read;
    wire [63:0] read_data;
    wire        read_data_valid;
    wire        read_data_ready;
    
    // Track main FIFO active size.
    reg [SIZE-3:0] space, occupied;
-   wire [11:0] 	  input_page_boundry, output_page_boundry;
+   wire [11:0]    input_page_boundry, output_page_boundry;
 
    // Assign FIFO status bits
    wire [71:0] status_out_bclk;
@@ -288,10 +288,13 @@ module axi_dram_fifo
    wire             i_tvalid_i0, i_tready_i0, i_tlast_i0;
  
    wire [WIDTH-1:0] i_tdata_i1;
-   wire             i_tvalid_i1, i_tready_i1;
+   wire             i_tvalid_i1, i_tready_i1, i_tlast_i1;
 
    wire [WIDTH-1:0] i_tdata_i2;
    wire             i_tvalid_i2, i_tready_i2;
+
+   wire [WIDTH-1:0] i_tdata_i3;
+   wire             i_tvalid_i3, i_tready_i3;
 
    wire [WIDTH-1:0] i_tdata_input;
    wire             i_tvalid_input, i_tready_input;
@@ -302,12 +305,12 @@ module axi_dram_fifo
 
    ///////////////////////////////////////////////////////////////////////////////
    
-   wire 	    write_in, read_in, empty_in, full_in;
-   assign 	    i_tready_fifo = ~full_in;
-   assign 	    write_in = i_tvalid_fifo & i_tready_fifo;
-   assign 	    i_tvalid_i0 = ~empty_in;
-   assign 	    read_in = i_tvalid_i0 & i_tready_i0;
-   wire [6:0] 	    discard_i0;
+   wire         write_in, read_in, empty_in, full_in;
+   assign       i_tready_fifo = ~full_in;
+   assign       write_in = i_tvalid_fifo & i_tready_fifo;
+   assign       i_tvalid_i0 = ~empty_in;
+   assign       read_in = i_tvalid_i0 & i_tready_i0;
+   wire [6:0]   discard_i0;
    
    fifo_short_2clk fifo_short_2clk_i0
      (.rst(bus_reset),
@@ -316,12 +319,27 @@ module axi_dram_fifo
       .wr_en(write_in), // input wr_en
       .full(full_in), // output full
       .wr_data_count(), // output [9 : 0] wr_data_count
-	       
+
       .rd_clk(dram_clk), // input rd_clk
       .dout({discard_i0,i_tlast_i0,i_tdata_i0}), // output [71 : 0] dout
       .rd_en(read_in), // input rd_en
       .empty(empty_in), // output empty
       .rd_data_count()  // output [9 : 0] rd_data_count
+      );
+
+   axi_fifo_flop #(.WIDTH(WIDTH+1)) input_pipe_i0
+     (
+      .clk(dram_clk), 
+      .reset(dram_reset), 
+      .clear(clear),
+      //
+      .i_tdata({i_tlast_i0, i_tdata_i0}), 
+      .i_tvalid(i_tvalid_i0), 
+      .i_tready(i_tready_i0),
+      //
+      .o_tdata({i_tlast_i1, i_tdata_i1}), 
+      .o_tvalid(i_tvalid_i1), 
+      .o_tready(i_tready_i1)
       );
 
    axi_embed_tlast axi_embed_tlast_i
@@ -330,33 +348,17 @@ module axi_dram_fifo
       .reset(dram_reset),
       .clear(clear),
       //
-      .i_tdata(i_tdata_i0),
-      .i_tlast(i_tlast_i0),
-      .i_tvalid(i_tvalid_i0),
-      .i_tready(i_tready_i0),
-      //
-      .o_tdata(i_tdata_i1),
-      .o_tvalid(i_tvalid_i1),
-      .o_tready(i_tready_i1)
-      );
-
-   
-   axi_fast_fifo #(.WIDTH(WIDTH)) fast_fifo_i0
-     (
-      .clk(dram_clk), 
-      .reset(dram_reset), 
-      .clear(clear),
-      //
-      .i_tdata(i_tdata_i1), 
-      .i_tvalid(i_tvalid_i1), 
+      .i_tdata(i_tdata_i1),
+      .i_tlast(i_tlast_i1),
+      .i_tvalid(i_tvalid_i1),
       .i_tready(i_tready_i1),
       //
-      .o_tdata(i_tdata_i2), 
-      .o_tvalid(i_tvalid_i2), 
+      .o_tdata(i_tdata_i2),
+      .o_tvalid(i_tvalid_i2),
       .o_tready(i_tready_i2)
       );
- 
-   axi_fifo #(.WIDTH(WIDTH),.SIZE(12)) fifo_i1
+
+   axi_fifo_flop #(.WIDTH(WIDTH)) input_pipe_i1
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -365,6 +367,21 @@ module axi_dram_fifo
       .i_tdata(i_tdata_i2), 
       .i_tvalid(i_tvalid_i2), 
       .i_tready(i_tready_i2),
+      //
+      .o_tdata(i_tdata_i3), 
+      .o_tvalid(i_tvalid_i3), 
+      .o_tready(i_tready_i3)
+      );
+ 
+   axi_fifo #(.WIDTH(WIDTH),.SIZE(12)) fifo_i1
+     (
+      .clk(dram_clk), 
+      .reset(dram_reset), 
+      .clear(clear),
+      //
+      .i_tdata(i_tdata_i3), 
+      .i_tvalid(i_tvalid_i3), 
+      .i_tready(i_tready_i3),
       //
       .o_tdata(i_tdata_input), 
       .o_tvalid(i_tvalid_input), 
@@ -412,6 +429,9 @@ module axi_dram_fifo
    wire [WIDTH-1:0] o_tdata_i4;
    wire             o_tvalid_i4, o_tready_i4, o_tlast_i4;
 
+   wire [WIDTH-1:0] o_tdata_i5;
+   wire             o_tvalid_i5, o_tready_i5, o_tlast_i5;
+
    wire             checksum_error;
 
    axi_fifo #(.WIDTH(WIDTH),.SIZE(9)) fifo_i2
@@ -433,7 +453,7 @@ module axi_dram_fifo
       );
 
    // Place FLops straight after SRAM read access for timing.
-   axi_fast_fifo #(.WIDTH(WIDTH)) fast_fifo_i1
+   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i0
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -448,8 +468,10 @@ module axi_dram_fifo
       .o_tready(o_tready_i1 && ~supress_reads)
       );
 
-   // More pipeline flops to meet timing 
-   axi_fast_fifo #(.WIDTH(WIDTH)) fast_fifo_i2
+   // Read suppression logic
+   // The CL part of this exists between these
+   // axi_flops 
+   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i1
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -464,8 +486,8 @@ module axi_dram_fifo
       .o_tready(o_tready_i2)
       );
 
-   // More pipeline flops after read suppressor
-   axi_fast_fifo #(.WIDTH(WIDTH)) fast_fifo_i3
+   // Pipeline flop before tlast extraction logic
+   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i2
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -480,7 +502,7 @@ module axi_dram_fifo
       .o_tready(o_tready_i3)
       );
 
-    axi_fast_extract_tlast axi_fast_extract_tlast_i0
+    axi_extract_tlast axi_fast_extract_tlast_i0
      (
       .clk(dram_clk),
       .reset(dram_reset),
@@ -493,28 +515,44 @@ module axi_dram_fifo
       .o_tdata(o_tdata_i4),
       .o_tlast(o_tlast_i4),
       .o_tvalid(o_tvalid_i4),
-      .o_tready(o_tready_i4)
+      .o_tready(o_tready_i4),
       //
- //     .checksum_error_reg(checksum_error)
+      .checksum_error_reg()
+      );
+
+   // Pipeline flop after tlast extraction logic
+   axi_fifo_flop #(.WIDTH(WIDTH+1)) output_pipe_i3
+     (
+      .clk(dram_clk), 
+      .reset(dram_reset), 
+      .clear(clear),
+      //
+      .i_tdata({o_tlast_i4,o_tdata_i4}), 
+      .i_tvalid(o_tvalid_i4), 
+      .i_tready(o_tready_i4),
+      //
+      .o_tdata({o_tlast_i5,o_tdata_i5}), 
+      .o_tvalid(o_tvalid_i5), 
+      .o_tready(o_tready_i5)
       );
 
     
-   wire 	    write_out, read_out, empty_out, full_out;
-   assign 	    o_tready_i4 = ~full_out;
-   assign 	    write_out = o_tvalid_i4 & o_tready_i4;
-   assign 	    o_tvalid_fifo = ~empty_out;
-   assign 	    read_out = o_tvalid_fifo & o_tready_fifo;
-   wire [6:0] 	    discard_i1;
+   wire         write_out, read_out, empty_out, full_out;
+   assign       o_tready_i5 = ~full_out;
+   assign       write_out = o_tvalid_i5 & o_tready_i5;
+   assign       o_tvalid_fifo = ~empty_out;
+   assign       read_out = o_tvalid_fifo & o_tready_fifo;
+   wire [6:0]   discard_i1;
    
    fifo_short_2clk fifo_short_2clk_i1
      (
       .rst(bus_reset),
       .wr_clk(dram_clk),
-      .din({7'h0,o_tlast_i4,o_tdata_i4}), // input [71 : 0] din
+      .din({7'h0,o_tlast_i5,o_tdata_i5}), // input [71 : 0] din
       .wr_en(write_out), // input wr_en
       .full(full_out), // output full
       .wr_data_count(), // output [9 : 0] wr_data_count
-	       
+
       .rd_clk(bus_clk), // input rd_clk
       .dout({discard_i1,o_tlast_fifo,o_tdata_fifo}), // output [71 : 0] dout
       .rd_en(read_out), // input rd_en
