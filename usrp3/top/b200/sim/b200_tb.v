@@ -102,8 +102,8 @@ module b200_tb ();
    wire        rx_bandsel_a;
    wire        rx_bandsel_b;
    wire        rx_bandsel_c;
-   
-   
+
+
    b200 b200_i1(
 		// SPI Interfaces
 		.cat_ce(),
@@ -209,5 +209,5 @@ module b200_tb ();
 		.rx_bandsel_b(),
 		.rx_bandsel_c()
 		);
-   
+
 endmodule // b200_tb

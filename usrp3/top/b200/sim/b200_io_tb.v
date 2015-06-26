@@ -1,10 +1,10 @@
 `timescale 1ns/1ps
- 
+
   module b200_io_tb();
-   
+
    //
    // Xilinx Mandatory Simulation Primitive for global signals.
-   // 
+   //
    wire        GSR, GTS;
    glbl glbl( );
 
@@ -17,7 +17,7 @@
    wire [11:0] i1 = {4'hC,count};
    wire [11:0] q1 = {4'hD,count};
    reg 	       tb_clk = 0;
-   
+
    // RX sample bus.
    reg 	       rx_clk = 0;  // Simulated clock from AD9361 for RX sample interface, radio_clk derived from this.
    reg 	       rx_frame;
@@ -32,36 +32,36 @@
    reg 	       mimo;
    wire [11:0] rx_i0, rx_q0, rx_i1, rx_q1;
    reg [11:0] tx_i0, tx_q0, tx_i1, tx_q1;
-   
-   
+
+
    // Set tb_clk to 100MHz.
    // rx_clk is half the frequency of tb_clk, and tb_clk posedges are miday between edges on the rx_clk
    always #10 tb_clk = ~tb_clk;
    always @(negedge tb_clk) rx_clk <= ~rx_clk;
-   
+
 
    b200_io dut
      (
      .reset(reset),
      .mimo(mimo),
-    
+
      // Baseband sample interface
      .radio_clk(radio_clk),
-     .rx_i0(rx_i0), 
-     .rx_q0(rx_q0), 
-     .rx_i1(rx_i1), 
+     .rx_i0(rx_i0),
+     .rx_q0(rx_q0),
+     .rx_i1(rx_i1),
      .rx_q1(rx_q1),
-     .tx_i0(tx_i0), 
-     .tx_q0(tx_q0), 
-     .tx_i1(tx_i1), 
+     .tx_i0(tx_i0),
+     .tx_q0(tx_q0),
+     .tx_i1(tx_i1),
      .tx_q1(tx_q1),
-    
+
      // Catalina interface
-     .rx_clk(rx_clk), 
-     .rx_frame(rx_frame), 
-     .rx_data(rx_data), 
-     .tx_clk(tx_clk), 
-     .tx_frame(tx_frame), 
+     .rx_clk(rx_clk),
+     .rx_frame(rx_frame),
+     .rx_data(rx_data),
+     .tx_clk(tx_clk),
+     .tx_frame(tx_frame),
      .tx_data(tx_data)
      );
 
@@ -77,7 +77,7 @@
    //
    // Task's for stimulus
    //
-      
+
    task siso_burst;
       input [7:0] len;
       begin
@@ -104,12 +104,12 @@
 	      count <= count + 1;
 	   end // repeat (len)
 	 @(posedge rx_clk);
-	 @(posedge rx_clk);    
+	 @(posedge rx_clk);
       end
-      
+
    endtask // BURST
-   
-   
+
+
    task mimo_burst;
       input [7:0] len;
       begin
@@ -144,7 +144,7 @@
 	      count <= count + 1;
 	   end
 	 @(posedge rx_clk);
-	 @(posedge rx_clk);    
+	 @(posedge rx_clk);
       end
    endtask // MIMO_BURST
 
