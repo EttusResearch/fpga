@@ -362,6 +362,8 @@ module b200_io
    
    always @(negedge siso_clk)
      if(mimo_sync)
+       // rx_frame_0 was sampled by same falling io_clk edge as rx_i[x]
+       // rx_frame_0 == 0 causes I & Q to be allocated to CH0
        if(rx_frame_0) begin
 	  rx_i_del[11:0] <= rx_i[11:0];
 	  rx_q_del[11:0] <= rx_q[11:0];
