@@ -22,7 +22,7 @@ module radio #(
    inout [31:0] db_gpio,
    inout [31:0] fp_gpio,
    output [7:0] sen, output sclk, output mosi, input miso,
-   output [7:0] misc_outs, output [2:0] leds,
+   output [7:0] misc_outs, input [31:0] misc_ins, output [2:0] leds,
 
    input bus_clk, input bus_rst,
    input [63:0] in_tdata, input in_tlast, input in_tvalid, output in_tready,
@@ -190,11 +190,11 @@ module radio #(
    // Radio Readback Mux
    always @*
      case(rb_addr)
-       3'd0 : rb_data <= { spi_readback, gpio_readback};
+       3'd0 : rb_data <= {spi_readback, gpio_readback};
        3'd1 : rb_data <= vita_time;
        3'd2 : rb_data <= vita_time_lastpps;
        3'd3 : rb_data <= {rx, test_readback};
-       3'd4 : rb_data <= {32'h0, fp_gpio_readback};
+       3'd4 : rb_data <= {misc_ins, fp_gpio_readback};
        3'd5 : rb_data <= {tx,rx};
        3'd6 : rb_data <= {32'h0,RADIO_NUM};
        default : rb_data <= 64'd0;

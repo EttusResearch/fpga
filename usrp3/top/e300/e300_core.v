@@ -303,7 +303,7 @@ module e300_core
     .db_gpio(ctrl_out0),
     .fp_gpio(fp_gpio),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .misc_ins(32'h0), .leds(),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -336,7 +336,7 @@ module e300_core
     .db_gpio(ctrl_out1),
     .fp_gpio(),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(),
+    .misc_outs(), .misc_ins(32'h0), .leds(),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),
