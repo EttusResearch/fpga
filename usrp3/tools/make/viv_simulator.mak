@@ -48,6 +48,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 	export VIV_SIM_RUNTIME=$(SIM_RUNTIME_US); \
 	export VIV_SIM_FAST="$(SIM_FAST)"; \
 	export VIV_SIM_COMPLIBDIR="$(COMPLIBDIR)"; \
+	export VIV_SIM_USER_DO=$(MODELSIM_USER_DO); \
 	export VIV_MODE=$(VIVADO_MODE); \
 	vivado -mode $(VIVADO_MODE) -source $(BASE_DIR)/../tools/scripts/viv_sim_project.tcl -log xsim.log -nojournal
 

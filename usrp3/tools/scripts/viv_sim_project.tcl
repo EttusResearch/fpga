@@ -13,6 +13,7 @@ set part_name       $::env(VIV_PART_NAME)
 set sim_runtime     $::env(VIV_SIM_RUNTIME)
 set sim_fast        $::env(VIV_SIM_FAST)
 set sim_complibdir  $::env(VIV_SIM_COMPLIBDIR)
+set sim_user_do     $::env(VIV_SIM_USER_DO)
 set vivado_mode     $::env(VIV_MODE)
 set working_dir     [pwd]
 
@@ -84,9 +85,10 @@ set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_filese
 set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
 set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
 set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.log_all_signals} "true" -objects [get_filesets $sim_fileset]
+set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
 set_property modelsim.simulate.vsim.more_options -value {-c} -objects [get_filesets $sim_fileset]
 set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
+set_property modelsim.simulate.custom_udo "${sim_user_do}" -objects [get_filesets $sim_fileset]
 
 # Select the simulator and launch simulation
 set_property target_simulator $simulator [current_project]
