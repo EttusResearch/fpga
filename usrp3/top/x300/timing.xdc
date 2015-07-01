@@ -519,43 +519,30 @@ set_max_delay -from [get_cells -hier -filter {NAME =~ *IoPort2Basex/DoubleSyncWi
 # We assume that these signals are sampled by a 200MHz clock so
 # we guarantee a 2.5ns valid window
 set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}] \
-                     -from [all_registers -edge_triggered]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}] \
-                     -from [all_registers -edge_triggered]
+                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/gpio_atr/*/out_reg*}] \
+                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
 set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  7.500 -to   [all_registers -edge_triggered] \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
 
 # Front-panel GPIO
 # We assume that these signals are sampled by a 100MHz clock so
 # we guarantee a 5ns valid window
 set_max_delay 12.500 -datapath_only \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}] \
-                     -from [all_registers -edge_triggered]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}] \
-                     -from [all_registers -edge_triggered]
+                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/fp_gpio_atr/*/out_reg*}] \
+                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 set_max_delay 12.500 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
-set_min_delay  7.500 -to   [all_registers -edge_triggered] \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 
 # SPI Lines
 set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports {DB*_*X*MISO*}] 
-set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}] \
-                     -from [all_registers -edge_triggered]
-set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}] \
-                     -from [all_registers -edge_triggered]
-set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
-                     -from [get_ports {DB_SCL DB_SDA DB_DAC_MOSI}]
+set_max_delay 10.000 -to   [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}]
+set_max_delay 10.000 -to   [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}]
+set_max_delay 10.000 -from [get_ports {DB_SCL DB_SDA DB_DAC_MOSI}]
 
 # Clock distribution chip control
 set_max_delay -from   [get_ports {LMK_Status[*] LMK_Holdover LMK_Lock LMK_Sync}] 10.000
