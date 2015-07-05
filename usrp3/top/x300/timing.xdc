@@ -36,6 +36,11 @@ set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2]
 set_property LOC MMCME2_ADV_X0Y0 [get_cells -hierarchical -filter {NAME =~ "*radio_clk_gen/*mmcm_adv_inst"}]
 set_property LOC BUFGCTRL_X0Y8   [get_cells -hierarchical -filter {NAME =~ "*radio_clk_gen/*clkout1_buf"}]
 
+# The PCIe specific 40MHz and 200MHz clocks are only active in clock regious X0Y0 and X1Y0 so we use BUFHs
+# to distribute them. To do so, we have to use a PLL because the MMCM in that region is used by radio_clk_gen
+# Since that MMCM is LOC constrained, we must LOC constrain this PLL as well.
+set_property LOC PLLE2_ADV_X0Y0 [get_cells -hierarchical -filter {NAME =~ "*pcie_clk_gen/*plle2_adv_inst"}]
+
 
 #*******************************************************************************
 ## Generated clock definitions
