@@ -497,6 +497,10 @@ module x300
           (~DB1_TX_SEN & DB1_TX_MISO) |
           (~DB1_DAC_SEN & db_dac_miso);
 
+
+   wire [15:0] radio0_misc_out, radio1_misc_out;
+   wire [15:0] radio0_misc_in, radio1_misc_in;
+
    /////////////////////////////////////////////////////////////////////
    //
    // ADC Interface for ADS62P48
@@ -506,25 +510,48 @@ module x300
    // Analog diff pairs on I side of ADC are inverted for layout reasons, but data diff pairs are all swapped as well
    //  so I gets a double negative, and is unchanged.  Q must be inverted.
 
-   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db0
-     (.clk(radio_clk), .ssclk_p(DB0_ADC_DCLK_P), .ssclk_n(DB0_ADC_DCLK_N),
-      .in_p({{DB0_ADC_DA6_P, DB0_ADC_DA5_P, DB0_ADC_DA4_P, DB0_ADC_DA3_P, DB0_ADC_DA2_P, DB0_ADC_DA1_P, DB0_ADC_DA0_P},
+   capture_ddrlvds #(
+      .WIDTH(14),
+      .PATT_CHECKER("TRUE"),
+      .DATA_IDELAY_MODE("DYNAMIC"), .DATA_IDELAY_VAL(16), .DATA_IDELAY_FREF(200.0)
+   ) cap_db0 (
+      .adc_clk_p(DB0_ADC_DCLK_P), .adc_clk_n(DB0_ADC_DCLK_N),
+      .adc_data_p(
+        {{DB0_ADC_DA6_P, DB0_ADC_DA5_P, DB0_ADC_DA4_P, DB0_ADC_DA3_P, DB0_ADC_DA2_P, DB0_ADC_DA1_P, DB0_ADC_DA0_P},
          {DB0_ADC_DB6_P, DB0_ADC_DB5_P, DB0_ADC_DB4_P, DB0_ADC_DB3_P, DB0_ADC_DB2_P, DB0_ADC_DB1_P, DB0_ADC_DB0_P}}),
-
-      .in_n({{DB0_ADC_DA6_N, DB0_ADC_DA5_N, DB0_ADC_DA4_N, DB0_ADC_DA3_N, DB0_ADC_DA2_N, DB0_ADC_DA1_N, DB0_ADC_DA0_N},
+      .adc_data_n(
+        {{DB0_ADC_DA6_N, DB0_ADC_DA5_N, DB0_ADC_DA4_N, DB0_ADC_DA3_N, DB0_ADC_DA2_N, DB0_ADC_DA1_N, DB0_ADC_DA0_N},
          {DB0_ADC_DB6_N, DB0_ADC_DB5_N, DB0_ADC_DB4_N, DB0_ADC_DB3_N, DB0_ADC_DB2_N, DB0_ADC_DB1_N, DB0_ADC_DB0_N}}),
-      .out({rx0_i,rx0_q_inv}));
+      .radio_clk(radio_clk),
+      .data_delay_stb(radio0_misc_out[3]), .data_delay_val(radio0_misc_out[8:4]),
+      .adc_cap_clk(),
+      .data_out({rx0_i,rx0_q_inv}),
+      .checker_en(radio0_misc_out[9]), .checker_locked(radio0_misc_in[3:0]), .checker_failed(radio0_misc_in[7:4])
+   );
    assign rx0[31:0] = { rx0_i, 2'b00, ~rx0_q_inv, 2'b00 };
 
-   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db1
-     (.clk(radio_clk), .ssclk_p(DB1_ADC_DCLK_P), .ssclk_n(DB1_ADC_DCLK_N),
-      .in_p({{DB1_ADC_DA6_P, DB1_ADC_DA5_P, DB1_ADC_DA4_P, DB1_ADC_DA3_P, DB1_ADC_DA2_P, DB1_ADC_DA1_P, DB1_ADC_DA0_P},
+   capture_ddrlvds #(
+      .WIDTH(14),
+      .PATT_CHECKER("TRUE"),
+      .DATA_IDELAY_MODE("DYNAMIC"), .DATA_IDELAY_VAL(16), .DATA_IDELAY_FREF(200.0)
+   ) cap_db1 (
+      .adc_clk_p(DB1_ADC_DCLK_P), .adc_clk_n(DB1_ADC_DCLK_N),
+      .adc_data_p(
+        {{DB1_ADC_DA6_P, DB1_ADC_DA5_P, DB1_ADC_DA4_P, DB1_ADC_DA3_P, DB1_ADC_DA2_P, DB1_ADC_DA1_P, DB1_ADC_DA0_P},
          {DB1_ADC_DB6_P, DB1_ADC_DB5_P, DB1_ADC_DB4_P, DB1_ADC_DB3_P, DB1_ADC_DB2_P, DB1_ADC_DB1_P, DB1_ADC_DB0_P}}),
-
-      .in_n({{DB1_ADC_DA6_N, DB1_ADC_DA5_N, DB1_ADC_DA4_N, DB1_ADC_DA3_N, DB1_ADC_DA2_N, DB1_ADC_DA1_N, DB1_ADC_DA0_N},
+      .adc_data_n(
+        {{DB1_ADC_DA6_N, DB1_ADC_DA5_N, DB1_ADC_DA4_N, DB1_ADC_DA3_N, DB1_ADC_DA2_N, DB1_ADC_DA1_N, DB1_ADC_DA0_N},
          {DB1_ADC_DB6_N, DB1_ADC_DB5_N, DB1_ADC_DB4_N, DB1_ADC_DB3_N, DB1_ADC_DB2_N, DB1_ADC_DB1_N, DB1_ADC_DB0_N}}),
-      .out({rx1_i,rx1_q_inv}));
+      .radio_clk(radio_clk),
+      .data_delay_stb(radio1_misc_out[3]), .data_delay_val(radio1_misc_out[8:4]),
+      .adc_cap_clk(),
+      .data_out({rx1_i,rx1_q_inv}),
+      .checker_en(radio1_misc_out[9]), .checker_locked(radio1_misc_in[3:0]), .checker_failed(radio1_misc_in[7:4])
+   );
    assign rx1[31:0] = { rx1_i, 2'b00, ~rx1_q_inv, 2'b00 };
+
+   // IDELAYCTRL to calibrate all IDELAYE2 instances in capture_ddrlvds for both sides
+   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(), .REFCLK(radio_clk), .RST(radio_rst)); 
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1191,6 +1218,7 @@ module x300
    // X300 Core
    //
    ///////////////////////////////////////////////////////////////////////////////////
+
    x300_core x300_core
      (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
@@ -1203,12 +1231,12 @@ module x300
       // Radio0 signals
       .rx0(rx0), .tx0(tx0), .db_gpio0({DB0_TX_IO,DB0_RX_IO}),
       .sen0(sen0), .sclk0(sclk0), .mosi0(mosi0), .miso0(miso0),
-      .radio_led0(led0), .radio_misc0({DB_ADC_RESET, DB_DAC_RESET,DB0_DAC_ENABLE}),
+      .radio_led0(led0), .radio0_misc_out(radio0_misc_out), .radio0_misc_in(radio0_misc_in),
       .sync_dacs_radio0(sync_dacs_radio0),
       // Radio1 signals
       .rx1(rx1), .tx1(tx1), .db_gpio1({DB1_TX_IO,DB1_RX_IO}),
       .sen1(sen1), .sclk1(sclk1), .mosi1(mosi1), .miso1(miso1),
-      .radio_led1(led1), .radio_misc1({DB1_DAC_ENABLE}),
+      .radio_led1(led1), .radio1_misc_out(radio1_misc_out), .radio1_misc_in(radio1_misc_in),
       .sync_dacs_radio1(sync_dacs_radio1),
       // I2C bus
       .db_scl(DB_SCL), .db_sda(DB_SDA),
@@ -1347,6 +1375,9 @@ module x300
       .pcii_tvalid               (pcii_tvalid),
       .pcii_tready               (pcii_tready)
    );
+   
+   assign {DB_ADC_RESET, DB_DAC_RESET,DB0_DAC_ENABLE} = radio0_misc_out[2:0];
+   assign {DB1_DAC_ENABLE}                            = radio1_misc_out[0];   //[2:1] unused
 
    /////////////////////////////////////////////////////////////////////
    //
