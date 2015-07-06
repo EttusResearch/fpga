@@ -22,7 +22,7 @@ module radio #(
    inout [31:0] db_gpio,
    inout [31:0] fp_gpio,
    output [7:0] sen, output sclk, output mosi, input miso,
-   output [7:0] misc_outs, input [31:0] misc_ins, output [2:0] leds,
+   output [31:0] misc_outs, input [31:0] misc_ins, output [2:0] leds,
 
    input bus_clk, input bus_rst,
    input [63:0] in_tdata, input in_tlast, input in_tvalid, output in_tready,
@@ -228,7 +228,7 @@ module radio #(
      (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rb_addr), .changed());
 
-   setting_reg #(.my_addr(SR_MISC_OUTS), .awidth(8), .width(8), .at_reset(8'h0)) sr_misc
+   setting_reg #(.my_addr(SR_MISC_OUTS), .awidth(8), .width(32), .at_reset(32'h0)) sr_misc
      (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(misc_outs), .changed());
 
