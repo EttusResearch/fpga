@@ -62,6 +62,8 @@ TOP_SRCS = \
 	e300_core.v \
 	ppsloop.v \
 	ad5662_auto_spi.v \
+	axi_pmu.v \
+	spi_slave.v \
 	$(CHIPSCOPE_SRCS) \
 	coregen/axi_datamover_v3_00_a.xco \
 	coregen/fifo_4k_2clk.v \
@@ -100,11 +102,14 @@ else
 TOP_SRCS = \
 	e300_idle.v \
 	e300.ucf \
+	axi_pmu.v \
+	spi_slave.v \
 	rf_board.ucf
 
 SOURCES = \
 	$(abspath $(TOP_SRCS)) \
 	$(ZYNQ_PS_SRCS) \
+	$(FIFO_SRCS) \
 	$(CONTROL_LIB_SRCS)
 endif
 
