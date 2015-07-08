@@ -59,6 +59,23 @@
  PORT axi_ext_slave_conn_0_M_AXI_RRESP_pin = axi_ext_slave_conn_0_M_AXI_RRESP, DIR = I, VEC = [1:0]
  PORT axi_ext_slave_conn_0_M_AXI_RVALID_pin = axi_ext_slave_conn_0_M_AXI_RVALID, DIR = I
  PORT axi_ext_slave_conn_0_M_AXI_RREADY_pin = axi_ext_slave_conn_0_M_AXI_RREADY, DIR = O
+ PORT axi_ext_slave_conn_1_M_AXI_AWADDR_pin = axi_ext_slave_conn_1_M_AXI_AWADDR, DIR = O, VEC = [31:0]
+ PORT axi_ext_slave_conn_1_M_AXI_AWVALID_pin = axi_ext_slave_conn_1_M_AXI_AWVALID, DIR = O
+ PORT axi_ext_slave_conn_1_M_AXI_AWREADY_pin = axi_ext_slave_conn_1_M_AXI_AWREADY, DIR = I
+ PORT axi_ext_slave_conn_1_M_AXI_WDATA_pin = axi_ext_slave_conn_1_M_AXI_WDATA, DIR = O, VEC = [31:0]
+ PORT axi_ext_slave_conn_1_M_AXI_WSTRB_pin = axi_ext_slave_conn_1_M_AXI_WSTRB, DIR = O, VEC = [3:0]
+ PORT axi_ext_slave_conn_1_M_AXI_WVALID_pin = axi_ext_slave_conn_1_M_AXI_WVALID, DIR = O
+ PORT axi_ext_slave_conn_1_M_AXI_WREADY_pin = axi_ext_slave_conn_1_M_AXI_WREADY, DIR = I
+ PORT axi_ext_slave_conn_1_M_AXI_BRESP_pin = axi_ext_slave_conn_1_M_AXI_BRESP, DIR = I, VEC = [1:0]
+ PORT axi_ext_slave_conn_1_M_AXI_BVALID_pin = axi_ext_slave_conn_1_M_AXI_BVALID, DIR = I
+ PORT axi_ext_slave_conn_1_M_AXI_BREADY_pin = axi_ext_slave_conn_1_M_AXI_BREADY, DIR = O
+ PORT axi_ext_slave_conn_1_M_AXI_ARADDR_pin = axi_ext_slave_conn_1_M_AXI_ARADDR, DIR = O, VEC = [31:0]
+ PORT axi_ext_slave_conn_1_M_AXI_ARVALID_pin = axi_ext_slave_conn_1_M_AXI_ARVALID, DIR = O
+ PORT axi_ext_slave_conn_1_M_AXI_ARREADY_pin = axi_ext_slave_conn_1_M_AXI_ARREADY, DIR = I
+ PORT axi_ext_slave_conn_1_M_AXI_RDATA_pin = axi_ext_slave_conn_1_M_AXI_RDATA, DIR = I, VEC = [31:0]
+ PORT axi_ext_slave_conn_1_M_AXI_RRESP_pin = axi_ext_slave_conn_1_M_AXI_RRESP, DIR = I, VEC = [1:0]
+ PORT axi_ext_slave_conn_1_M_AXI_RVALID_pin = axi_ext_slave_conn_1_M_AXI_RVALID, DIR = I
+ PORT axi_ext_slave_conn_1_M_AXI_RREADY_pin = axi_ext_slave_conn_1_M_AXI_RREADY, DIR = O
  PORT processing_system7_0_IRQ_F2P_pin = processing_system7_0_IRQ_F2P, DIR = I, VEC = [15:0], SIGIS = INTERRUPT, SENSITIVITY = EDGE_RISING
  PORT processing_system7_0_GPIO_I_pin = processing_system7_0_GPIO_I, DIR = I, VEC = [31:0]
  PORT processing_system7_0_GPIO_O_pin = processing_system7_0_GPIO_O, DIR = O, VEC = [31:0]
@@ -277,6 +294,34 @@ BEGIN axi_ext_slave_conn
  PORT M_AXI_RRESP = axi_ext_slave_conn_0_M_AXI_RRESP
  PORT M_AXI_RVALID = axi_ext_slave_conn_0_M_AXI_RVALID
  PORT M_AXI_RREADY = axi_ext_slave_conn_0_M_AXI_RREADY
+END
+
+BEGIN axi_ext_slave_conn
+ PARAMETER INSTANCE = axi_ext_slave_conn_1
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_INTERCONNECT_S_AXI_MASTERS = processing_system7_0.M_AXI_GP0
+ PARAMETER C_S_AXI_RNG00_BASEADDR = 0x40300000
+ PARAMETER C_S_AXI_RNG00_HIGHADDR = 0x403FFFFF
+ PARAMETER C_S_AXI_PROTOCOL = AXI4Lite
+ BUS_INTERFACE S_AXI = axi_interconnect_2
+ PORT ACLK = processing_system7_0_FCLK_CLK0
+ PORT M_AXI_AWADDR = axi_ext_slave_conn_1_M_AXI_AWADDR
+ PORT M_AXI_AWVALID = axi_ext_slave_conn_1_M_AXI_AWVALID
+ PORT M_AXI_AWREADY = axi_ext_slave_conn_1_M_AXI_AWREADY
+ PORT M_AXI_WDATA = axi_ext_slave_conn_1_M_AXI_WDATA
+ PORT M_AXI_WSTRB = axi_ext_slave_conn_1_M_AXI_WSTRB
+ PORT M_AXI_WVALID = axi_ext_slave_conn_1_M_AXI_WVALID
+ PORT M_AXI_WREADY = axi_ext_slave_conn_1_M_AXI_WREADY
+ PORT M_AXI_BRESP = axi_ext_slave_conn_1_M_AXI_BRESP
+ PORT M_AXI_BVALID = axi_ext_slave_conn_1_M_AXI_BVALID
+ PORT M_AXI_BREADY = axi_ext_slave_conn_1_M_AXI_BREADY
+ PORT M_AXI_ARADDR = axi_ext_slave_conn_1_M_AXI_ARADDR
+ PORT M_AXI_ARVALID = axi_ext_slave_conn_1_M_AXI_ARVALID
+ PORT M_AXI_ARREADY = axi_ext_slave_conn_1_M_AXI_ARREADY
+ PORT M_AXI_RDATA = axi_ext_slave_conn_1_M_AXI_RDATA
+ PORT M_AXI_RRESP = axi_ext_slave_conn_1_M_AXI_RRESP
+ PORT M_AXI_RVALID = axi_ext_slave_conn_1_M_AXI_RVALID
+ PORT M_AXI_RREADY = axi_ext_slave_conn_1_M_AXI_RREADY
 END
 
 BEGIN axi_interconnect
