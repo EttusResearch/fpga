@@ -15,7 +15,7 @@
 ## build/usrp_<product>_fpga.rpt:    Build report (includes utilization and timing summary)
 
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.e300.inc bin NAME=$@ PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
 
 post_build = @\
 	mkdir -p build; \
