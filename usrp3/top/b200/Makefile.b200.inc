@@ -23,7 +23,7 @@ include ../../lib/timing/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
-include ../../lib/io_cap_gen/Makefile.srcs
+
 
 
 B200_COREGEN_SRCS = \
@@ -63,6 +63,7 @@ TOP_SRCS = \
 b200.v \
 b200_core.v \
 radio_b200.v \
+b200_io.v \
 b200.ucf \
 timing.ucf \
 S6CLK2PIN.v \
