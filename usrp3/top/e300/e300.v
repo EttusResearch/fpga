@@ -32,11 +32,11 @@ module e300
   inout         DDR_VRN,
 
   //AVR SPI IO
-  output        AVR_CS_R,
-  input         AVR_IRQ,
-  input         AVR_MISO_R,
-  output        AVR_MOSI_R,
-  output        AVR_SCK_R,
+  input         AVR_CS_R,
+  output        AVR_IRQ,
+  output        AVR_MISO_R,
+  input         AVR_MOSI_R,
+  input         AVR_SCK_R,
 
   input         ONSWITCH_DB,
 
@@ -113,53 +113,73 @@ module e300
 );
 
   // Internal connections to PS
-  //   GP0 -- General Purpose port 0, FPGA is the slave
-  wire [31:0] GP0_M_AXI_AWADDR_pin;
-  wire        GP0_M_AXI_AWVALID_pin;
-  wire        GP0_M_AXI_AWREADY_pin;
-  wire [31:0] GP0_M_AXI_WDATA_pin;
-  wire [3:0]  GP0_M_AXI_WSTRB_pin;
-  wire        GP0_M_AXI_WVALID_pin;
-  wire        GP0_M_AXI_WREADY_pin;
-  wire [1:0]  GP0_M_AXI_BRESP_pin;
-  wire        GP0_M_AXI_BVALID_pin;
-  wire        GP0_M_AXI_BREADY_pin;
-  wire [31:0] GP0_M_AXI_ARADDR_pin;
-  wire        GP0_M_AXI_ARVALID_pin;
-  wire        GP0_M_AXI_ARREADY_pin;
-  wire [31:0] GP0_M_AXI_RDATA_pin;
-  wire [1:0]  GP0_M_AXI_RRESP_pin;
-  wire        GP0_M_AXI_RVALID_pin;
-  wire        GP0_M_AXI_RREADY_pin;
+  //   GP0 -- General Purpose port 0, FPGA is slave 0
+  wire [31:0] GP0_M_AXI_AWADDR_S0;
+  wire        GP0_M_AXI_AWVALID_S0;
+  wire        GP0_M_AXI_AWREADY_S0;
+  wire [31:0] GP0_M_AXI_WDATA_S0;
+  wire [3:0]  GP0_M_AXI_WSTRB_S0;
+  wire        GP0_M_AXI_WVALID_S0;
+  wire        GP0_M_AXI_WREADY_S0;
+  wire [1:0]  GP0_M_AXI_BRESP_S0;
+  wire        GP0_M_AXI_BVALID_S0;
+  wire        GP0_M_AXI_BREADY_S0;
+  wire [31:0] GP0_M_AXI_ARADDR_S0;
+  wire        GP0_M_AXI_ARVALID_S0;
+  wire        GP0_M_AXI_ARREADY_S0;
+  wire [31:0] GP0_M_AXI_RDATA_S0;
+  wire [1:0]  GP0_M_AXI_RRESP_S0;
+  wire        GP0_M_AXI_RVALID_S0;
+  wire        GP0_M_AXI_RREADY_S0;
+  //   GP0 -- General Purpose port 0, FPGA is slave 1
+  wire [31:0] GP0_M_AXI_AWADDR_S1;
+  wire        GP0_M_AXI_AWVALID_S1;
+  wire        GP0_M_AXI_AWREADY_S1;
+  wire [31:0] GP0_M_AXI_WDATA_S1;
+  wire [3:0]  GP0_M_AXI_WSTRB_S1;
+  wire        GP0_M_AXI_WVALID_S1;
+  wire        GP0_M_AXI_WREADY_S1;
+  wire [1:0]  GP0_M_AXI_BRESP_S1;
+  wire        GP0_M_AXI_BVALID_S1;
+  wire        GP0_M_AXI_BREADY_S1;
+  wire [31:0] GP0_M_AXI_ARADDR_S1;
+  wire        GP0_M_AXI_ARVALID_S1;
+  wire        GP0_M_AXI_ARREADY_S1;
+  wire [31:0] GP0_M_AXI_RDATA_S1;
+  wire [1:0]  GP0_M_AXI_RRESP_S1;
+  wire        GP0_M_AXI_RVALID_S1;
+  wire        GP0_M_AXI_RREADY_S1;
+
+
   //   HP0 -- High Performance port 0, FPGA is the master
-  wire [31:0] HP0_S_AXI_AWADDR_pin;
-  wire [2:0]  HP0_S_AXI_AWPROT_pin;
-  wire        HP0_S_AXI_AWVALID_pin;
-  wire        HP0_S_AXI_AWREADY_pin;
-  wire [63:0] HP0_S_AXI_WDATA_pin;
-  wire [7:0]  HP0_S_AXI_WSTRB_pin;
-  wire        HP0_S_AXI_WVALID_pin;
-  wire        HP0_S_AXI_WREADY_pin;
-  wire [1:0]  HP0_S_AXI_BRESP_pin;
-  wire        HP0_S_AXI_BVALID_pin;
-  wire        HP0_S_AXI_BREADY_pin;
-  wire [31:0] HP0_S_AXI_ARADDR_pin;
-  wire [2:0]  HP0_S_AXI_ARPROT_pin;
-  wire        HP0_S_AXI_ARVALID_pin;
-  wire        HP0_S_AXI_ARREADY_pin;
-  wire [63:0] HP0_S_AXI_RDATA_pin;
-  wire [1:0]  HP0_S_AXI_RRESP_pin;
-  wire        HP0_S_AXI_RVALID_pin;
-  wire        HP0_S_AXI_RREADY_pin;
-  wire [3:0]  HP0_S_AXI_ARCACHE_pin;
-  wire [7:0]  HP0_S_AXI_AWLEN_pin;
-  wire [2:0]  HP0_S_AXI_AWSIZE_pin;
-  wire [1:0]  HP0_S_AXI_AWBURST_pin;
-  wire [3:0]  HP0_S_AXI_AWCACHE_pin;
-  wire        HP0_S_AXI_WLAST_pin;
-  wire [7:0]  HP0_S_AXI_ARLEN_pin;
-  wire [1:0]  HP0_S_AXI_ARBURST_pin;
-  wire [2:0]  HP0_S_AXI_ARSIZE_pin;
+  wire [31:0] HP0_S_AXI_AWADDR_M0;
+  wire [2:0]  HP0_S_AXI_AWPROT_M0;
+  wire        HP0_S_AXI_AWVALID_M0;
+  wire        HP0_S_AXI_AWREADY_M0;
+  wire [63:0] HP0_S_AXI_WDATA_M0;
+  wire [7:0]  HP0_S_AXI_WSTRB_M0;
+  wire        HP0_S_AXI_WVALID_M0;
+  wire        HP0_S_AXI_WREADY_M0;
+  wire [1:0]  HP0_S_AXI_BRESP_M0;
+  wire        HP0_S_AXI_BVALID_M0;
+  wire        HP0_S_AXI_BREADY_M0;
+  wire [31:0] HP0_S_AXI_ARADDR_M0;
+  wire [2:0]  HP0_S_AXI_ARPROT_M0;
+  wire        HP0_S_AXI_ARVALID_M0;
+  wire        HP0_S_AXI_ARREADY_M0;
+  wire [63:0] HP0_S_AXI_RDATA_M0;
+  wire [1:0]  HP0_S_AXI_RRESP_M0;
+  wire        HP0_S_AXI_RVALID_M0;
+  wire        HP0_S_AXI_RREADY_M0;
+  wire [3:0]  HP0_S_AXI_ARCACHE_M0;
+  wire [7:0]  HP0_S_AXI_AWLEN_M0;
+  wire [2:0]  HP0_S_AXI_AWSIZE_M0;
+  wire [1:0]  HP0_S_AXI_AWBURST_M0;
+  wire [3:0]  HP0_S_AXI_AWCACHE_M0;
+  wire        HP0_S_AXI_WLAST_M0;
+  wire [7:0]  HP0_S_AXI_ARLEN_M0;
+  wire [1:0]  HP0_S_AXI_ARBURST_M0;
+  wire [2:0]  HP0_S_AXI_ARSIZE_M0;
 
   wire        bus_clk_pin;
 
@@ -211,6 +231,8 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  wire pmu_irq;
+
    // First, make all connections to the PS (ARM+buses)
   e300_ps e300_ps_instance
   (  // Outward connections to the pins
@@ -238,61 +260,79 @@ module e300
 
     // Inward connections to our logic
     //    GP0  --  General Purpose Slave 0
-    .axi_ext_slave_conn_0_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_pin),
-    .axi_ext_slave_conn_0_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_pin),
-    .axi_ext_slave_conn_0_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_pin),
-    .axi_ext_slave_conn_0_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_pin),
-    .axi_ext_slave_conn_0_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_pin),
-    .axi_ext_slave_conn_0_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_pin),
-    .axi_ext_slave_conn_0_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_pin),
+    .axi_ext_slave_conn_0_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_S0),
+    .axi_ext_slave_conn_0_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_S0),
+    .axi_ext_slave_conn_0_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_S0),
+    .axi_ext_slave_conn_0_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_S0),
+    .axi_ext_slave_conn_0_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_S0),
+    .axi_ext_slave_conn_0_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_S0),
+    .axi_ext_slave_conn_0_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_S0),
+
+    .axi_ext_slave_conn_1_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_S1),
+    .axi_ext_slave_conn_1_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_S1),
+    .axi_ext_slave_conn_1_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_S1),
+    .axi_ext_slave_conn_1_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_S1),
+    .axi_ext_slave_conn_1_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_S1),
+    .axi_ext_slave_conn_1_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_S1),
+    .axi_ext_slave_conn_1_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_S1),
 
     //    Misc interrupts, GPIO, clk
-    .processing_system7_0_IRQ_F2P_pin({13'h0, button_release_irq, button_press_irq, stream_irq}),
+    .processing_system7_0_IRQ_F2P_pin({12'h0, pmu_irq, button_release_irq, button_press_irq, stream_irq}),
     .processing_system7_0_GPIO_I_pin(ps_gpio_in),
     .processing_system7_0_GPIO_O_pin(ps_gpio_out),
     .processing_system7_0_FCLK_CLK0_pin(bus_clk_pin),
     .processing_system7_0_FCLK_RESET0_N_pin(sys_arst_n),
 
     //    HP0  --  High Performance Master 0
-    .axi_ext_master_conn_0_S_AXI_AWADDR_pin(HP0_S_AXI_AWADDR_pin),
-    .axi_ext_master_conn_0_S_AXI_AWPROT_pin(HP0_S_AXI_AWPROT_pin),
-    .axi_ext_master_conn_0_S_AXI_AWVALID_pin(HP0_S_AXI_AWVALID_pin),
-    .axi_ext_master_conn_0_S_AXI_AWREADY_pin(HP0_S_AXI_AWREADY_pin),
-    .axi_ext_master_conn_0_S_AXI_WDATA_pin(HP0_S_AXI_WDATA_pin),
-    .axi_ext_master_conn_0_S_AXI_WSTRB_pin(HP0_S_AXI_WSTRB_pin),
-    .axi_ext_master_conn_0_S_AXI_WVALID_pin(HP0_S_AXI_WVALID_pin),
-    .axi_ext_master_conn_0_S_AXI_WREADY_pin(HP0_S_AXI_WREADY_pin),
-    .axi_ext_master_conn_0_S_AXI_BRESP_pin(HP0_S_AXI_BRESP_pin),
-    .axi_ext_master_conn_0_S_AXI_BVALID_pin(HP0_S_AXI_BVALID_pin),
-    .axi_ext_master_conn_0_S_AXI_BREADY_pin(HP0_S_AXI_BREADY_pin),
-    .axi_ext_master_conn_0_S_AXI_ARADDR_pin(HP0_S_AXI_ARADDR_pin),
-    .axi_ext_master_conn_0_S_AXI_ARPROT_pin(HP0_S_AXI_ARPROT_pin),
-    .axi_ext_master_conn_0_S_AXI_ARVALID_pin(HP0_S_AXI_ARVALID_pin),
-    .axi_ext_master_conn_0_S_AXI_ARREADY_pin(HP0_S_AXI_ARREADY_pin),
-    .axi_ext_master_conn_0_S_AXI_RDATA_pin(HP0_S_AXI_RDATA_pin),
-    .axi_ext_master_conn_0_S_AXI_RRESP_pin(HP0_S_AXI_RRESP_pin),
-    .axi_ext_master_conn_0_S_AXI_RVALID_pin(HP0_S_AXI_RVALID_pin),
-    .axi_ext_master_conn_0_S_AXI_RREADY_pin(HP0_S_AXI_RREADY_pin),
-    .axi_ext_master_conn_0_S_AXI_AWLEN_pin(HP0_S_AXI_AWLEN_pin),
-    .axi_ext_master_conn_0_S_AXI_RLAST_pin(HP0_S_AXI_RLAST_pin),
-    .axi_ext_master_conn_0_S_AXI_ARCACHE_pin(HP0_S_AXI_ARCACHE_pin),
-    .axi_ext_master_conn_0_S_AXI_AWSIZE_pin(HP0_S_AXI_AWSIZE_pin),
-    .axi_ext_master_conn_0_S_AXI_AWBURST_pin(HP0_S_AXI_AWBURST_pin),
-    .axi_ext_master_conn_0_S_AXI_AWCACHE_pin(HP0_S_AXI_AWCACHE_pin),
-    .axi_ext_master_conn_0_S_AXI_WLAST_pin(HP0_S_AXI_WLAST_pin),
-    .axi_ext_master_conn_0_S_AXI_ARLEN_pin(HP0_S_AXI_ARLEN_pin),
-    .axi_ext_master_conn_0_S_AXI_ARBURST_pin(HP0_S_AXI_ARBURST_pin),
-    .axi_ext_master_conn_0_S_AXI_ARSIZE_pin(HP0_S_AXI_ARSIZE_pin),
+    .axi_ext_master_conn_0_S_AXI_AWADDR_pin(HP0_S_AXI_AWADDR_M0),
+    .axi_ext_master_conn_0_S_AXI_AWPROT_pin(HP0_S_AXI_AWPROT_M0),
+    .axi_ext_master_conn_0_S_AXI_AWVALID_pin(HP0_S_AXI_AWVALID_M0),
+    .axi_ext_master_conn_0_S_AXI_AWREADY_pin(HP0_S_AXI_AWREADY_M0),
+    .axi_ext_master_conn_0_S_AXI_WDATA_pin(HP0_S_AXI_WDATA_M0),
+    .axi_ext_master_conn_0_S_AXI_WSTRB_pin(HP0_S_AXI_WSTRB_M0),
+    .axi_ext_master_conn_0_S_AXI_WVALID_pin(HP0_S_AXI_WVALID_M0),
+    .axi_ext_master_conn_0_S_AXI_WREADY_pin(HP0_S_AXI_WREADY_M0),
+    .axi_ext_master_conn_0_S_AXI_BRESP_pin(HP0_S_AXI_BRESP_M0),
+    .axi_ext_master_conn_0_S_AXI_BVALID_pin(HP0_S_AXI_BVALID_M0),
+    .axi_ext_master_conn_0_S_AXI_BREADY_pin(HP0_S_AXI_BREADY_M0),
+    .axi_ext_master_conn_0_S_AXI_ARADDR_pin(HP0_S_AXI_ARADDR_M0),
+    .axi_ext_master_conn_0_S_AXI_ARPROT_pin(HP0_S_AXI_ARPROT_M0),
+    .axi_ext_master_conn_0_S_AXI_ARVALID_pin(HP0_S_AXI_ARVALID_M0),
+    .axi_ext_master_conn_0_S_AXI_ARREADY_pin(HP0_S_AXI_ARREADY_M0),
+    .axi_ext_master_conn_0_S_AXI_RDATA_pin(HP0_S_AXI_RDATA_M0),
+    .axi_ext_master_conn_0_S_AXI_RRESP_pin(HP0_S_AXI_RRESP_M0),
+    .axi_ext_master_conn_0_S_AXI_RVALID_pin(HP0_S_AXI_RVALID_M0),
+    .axi_ext_master_conn_0_S_AXI_RREADY_pin(HP0_S_AXI_RREADY_M0),
+    .axi_ext_master_conn_0_S_AXI_AWLEN_pin(HP0_S_AXI_AWLEN_M0),
+    .axi_ext_master_conn_0_S_AXI_RLAST_pin(HP0_S_AXI_RLAST_M0),
+    .axi_ext_master_conn_0_S_AXI_ARCACHE_pin(HP0_S_AXI_ARCACHE_M0),
+    .axi_ext_master_conn_0_S_AXI_AWSIZE_pin(HP0_S_AXI_AWSIZE_M0),
+    .axi_ext_master_conn_0_S_AXI_AWBURST_pin(HP0_S_AXI_AWBURST_M0),
+    .axi_ext_master_conn_0_S_AXI_AWCACHE_pin(HP0_S_AXI_AWCACHE_M0),
+    .axi_ext_master_conn_0_S_AXI_WLAST_pin(HP0_S_AXI_WLAST_M0),
+    .axi_ext_master_conn_0_S_AXI_ARLEN_pin(HP0_S_AXI_ARLEN_M0),
+    .axi_ext_master_conn_0_S_AXI_ARBURST_pin(HP0_S_AXI_ARBURST_M0),
+    .axi_ext_master_conn_0_S_AXI_ARSIZE_pin(HP0_S_AXI_ARSIZE_M0),
 
     //    SPI Core 0 - To AD9361
     .processing_system7_0_SPI0_SS_O_pin(),
@@ -304,12 +344,52 @@ module e300
 
     //    SPI Core 1 - To AVR
     .processing_system7_0_SPI1_SS_O_pin(),
-    .processing_system7_0_SPI1_SS1_O_pin(AVR_CS_R),
+    .processing_system7_0_SPI1_SS1_O_pin(),
     .processing_system7_0_SPI1_SS2_O_pin(),
-    .processing_system7_0_SPI1_SCLK_O_pin(AVR_SCK_R),
-    .processing_system7_0_SPI1_MOSI_O_pin(AVR_MOSI_R),
-    .processing_system7_0_SPI1_MISO_I_pin(AVR_MISO_R)
+    .processing_system7_0_SPI1_SCLK_O_pin(),
+    .processing_system7_0_SPI1_MOSI_O_pin(),
+    .processing_system7_0_SPI1_MISO_I_pin()
   );
+  //------------------------------------------------------------------
+  //-- power management
+  //------------------------------------------------------------------
+
+  axi_pmu inst_axi_pmu0
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .ss(AVR_CS_R),
+    .mosi(AVR_MOSI_R),
+    .sck(AVR_SCK_R),
+    .miso(AVR_MISO_R),
+
+    .s_axi_awaddr(GP0_M_AXI_AWADDR_S1),
+    .s_axi_awvalid(GP0_M_AXI_AWVALID_S1),
+    .s_axi_awready(GP0_M_AXI_AWREADY_S1),
+
+    .s_axi_wdata(GP0_M_AXI_WDATA_S1),
+    .s_axi_wstrb(GP0_M_AXI_WSTRB_S1),
+    .s_axi_wvalid(GP0_M_AXI_WVALID_S1),
+    .s_axi_wready(GP0_M_AXI_WREADY_S1),
+
+    .s_axi_bresp(GP0_M_AXI_BRESP_S1),
+    .s_axi_bvalid(GP0_M_AXI_BVALID_S1),
+    .s_axi_bready(GP0_M_AXI_BREADY_S1),
+
+    .s_axi_araddr(GP0_M_AXI_ARADDR_S1),
+    .s_axi_arvalid(GP0_M_AXI_ARVALID_S1),
+    .s_axi_arready(GP0_M_AXI_ARREADY_S1),
+
+    .s_axi_rdata(GP0_M_AXI_RDATA_S1),
+    .s_axi_rresp(GP0_M_AXI_RRESP_S1),
+    .s_axi_rvalid(GP0_M_AXI_RVALID_S1),
+    .s_axi_rready(GP0_M_AXI_RREADY_S1),
+
+    .s_axi_irq(pmu_irq)
+  );
+
+  assign AVR_IRQ = 1'b0;
 
   //------------------------------------------------------------------
   //-- generate clock and reset signals
@@ -372,7 +452,6 @@ module e300
   //------------------------------------------------------------------
   //-- connect misc stuff to user GPIO
   //------------------------------------------------------------------
-  assign ps_gpio_in[5] = AVR_IRQ;       //59
   assign ps_gpio_in[7] = ONSWITCH_DB;   //61
 
   //------------------------------------------------------------------
@@ -410,54 +489,55 @@ module e300
   )
   zynq_fifo_top0
   (
-    .clk(bus_clk), .rst(bus_rst),
-    .CTL_AXI_AWADDR(GP0_M_AXI_AWADDR_pin),
-    .CTL_AXI_AWVALID(GP0_M_AXI_AWVALID_pin),
-    .CTL_AXI_AWREADY(GP0_M_AXI_AWREADY_pin),
-    .CTL_AXI_WDATA(GP0_M_AXI_WDATA_pin),
-    .CTL_AXI_WSTRB(GP0_M_AXI_WSTRB_pin),
-    .CTL_AXI_WVALID(GP0_M_AXI_WVALID_pin),
-    .CTL_AXI_WREADY(GP0_M_AXI_WREADY_pin),
-    .CTL_AXI_BRESP(GP0_M_AXI_BRESP_pin),
-    .CTL_AXI_BVALID(GP0_M_AXI_BVALID_pin),
-    .CTL_AXI_BREADY(GP0_M_AXI_BREADY_pin),
-    .CTL_AXI_ARADDR(GP0_M_AXI_ARADDR_pin),
-    .CTL_AXI_ARVALID(GP0_M_AXI_ARVALID_pin),
-    .CTL_AXI_ARREADY(GP0_M_AXI_ARREADY_pin),
-    .CTL_AXI_RDATA(GP0_M_AXI_RDATA_pin),
-    .CTL_AXI_RRESP(GP0_M_AXI_RRESP_pin),
-    .CTL_AXI_RVALID(GP0_M_AXI_RVALID_pin),
-    .CTL_AXI_RREADY(GP0_M_AXI_RREADY_pin),
+    .clk(bus_clk),
+    .rst(bus_rst),
+    .CTL_AXI_AWADDR(GP0_M_AXI_AWADDR_S0),
+    .CTL_AXI_AWVALID(GP0_M_AXI_AWVALID_S0),
+    .CTL_AXI_AWREADY(GP0_M_AXI_AWREADY_S0),
+    .CTL_AXI_WDATA(GP0_M_AXI_WDATA_S0),
+    .CTL_AXI_WSTRB(GP0_M_AXI_WSTRB_S0),
+    .CTL_AXI_WVALID(GP0_M_AXI_WVALID_S0),
+    .CTL_AXI_WREADY(GP0_M_AXI_WREADY_S0),
+    .CTL_AXI_BRESP(GP0_M_AXI_BRESP_S0),
+    .CTL_AXI_BVALID(GP0_M_AXI_BVALID_S0),
+    .CTL_AXI_BREADY(GP0_M_AXI_BREADY_S0),
+    .CTL_AXI_ARADDR(GP0_M_AXI_ARADDR_S0),
+    .CTL_AXI_ARVALID(GP0_M_AXI_ARVALID_S0),
+    .CTL_AXI_ARREADY(GP0_M_AXI_ARREADY_S0),
+    .CTL_AXI_RDATA(GP0_M_AXI_RDATA_S0),
+    .CTL_AXI_RRESP(GP0_M_AXI_RRESP_S0),
+    .CTL_AXI_RVALID(GP0_M_AXI_RVALID_S0),
+    .CTL_AXI_RREADY(GP0_M_AXI_RREADY_S0),
 
-    .DDR_AXI_AWADDR(HP0_S_AXI_AWADDR_pin),
-    .DDR_AXI_AWPROT(HP0_S_AXI_AWPROT_pin),
-    .DDR_AXI_AWVALID(HP0_S_AXI_AWVALID_pin),
-    .DDR_AXI_AWREADY(HP0_S_AXI_AWREADY_pin),
-    .DDR_AXI_WDATA(HP0_S_AXI_WDATA_pin),
-    .DDR_AXI_WSTRB(HP0_S_AXI_WSTRB_pin),
-    .DDR_AXI_WVALID(HP0_S_AXI_WVALID_pin),
-    .DDR_AXI_WREADY(HP0_S_AXI_WREADY_pin),
-    .DDR_AXI_BRESP(HP0_S_AXI_BRESP_pin),
-    .DDR_AXI_BVALID(HP0_S_AXI_BVALID_pin),
-    .DDR_AXI_BREADY(HP0_S_AXI_BREADY_pin),
-    .DDR_AXI_ARADDR(HP0_S_AXI_ARADDR_pin),
-    .DDR_AXI_ARPROT(HP0_S_AXI_ARPROT_pin),
-    .DDR_AXI_ARVALID(HP0_S_AXI_ARVALID_pin),
-    .DDR_AXI_ARREADY(HP0_S_AXI_ARREADY_pin),
-    .DDR_AXI_RDATA(HP0_S_AXI_RDATA_pin),
-    .DDR_AXI_RRESP(HP0_S_AXI_RRESP_pin),
-    .DDR_AXI_RVALID(HP0_S_AXI_RVALID_pin),
-    .DDR_AXI_RREADY(HP0_S_AXI_RREADY_pin),
-    .DDR_AXI_AWLEN(HP0_S_AXI_AWLEN_pin),
-    .DDR_AXI_RLAST(HP0_S_AXI_RLAST_pin),
-    .DDR_AXI_ARCACHE(HP0_S_AXI_ARCACHE_pin),
-    .DDR_AXI_AWSIZE(HP0_S_AXI_AWSIZE_pin),
-    .DDR_AXI_AWBURST(HP0_S_AXI_AWBURST_pin),
-    .DDR_AXI_AWCACHE(HP0_S_AXI_AWCACHE_pin),
-    .DDR_AXI_WLAST(HP0_S_AXI_WLAST_pin),
-    .DDR_AXI_ARLEN(HP0_S_AXI_ARLEN_pin),
-    .DDR_AXI_ARBURST(HP0_S_AXI_ARBURST_pin),
-    .DDR_AXI_ARSIZE(HP0_S_AXI_ARSIZE_pin),
+    .DDR_AXI_AWADDR(HP0_S_AXI_AWADDR_M0),
+    .DDR_AXI_AWPROT(HP0_S_AXI_AWPROT_M0),
+    .DDR_AXI_AWVALID(HP0_S_AXI_AWVALID_M0),
+    .DDR_AXI_AWREADY(HP0_S_AXI_AWREADY_M0),
+    .DDR_AXI_WDATA(HP0_S_AXI_WDATA_M0),
+    .DDR_AXI_WSTRB(HP0_S_AXI_WSTRB_M0),
+    .DDR_AXI_WVALID(HP0_S_AXI_WVALID_M0),
+    .DDR_AXI_WREADY(HP0_S_AXI_WREADY_M0),
+    .DDR_AXI_BRESP(HP0_S_AXI_BRESP_M0),
+    .DDR_AXI_BVALID(HP0_S_AXI_BVALID_M0),
+    .DDR_AXI_BREADY(HP0_S_AXI_BREADY_M0),
+    .DDR_AXI_ARADDR(HP0_S_AXI_ARADDR_M0),
+    .DDR_AXI_ARPROT(HP0_S_AXI_ARPROT_M0),
+    .DDR_AXI_ARVALID(HP0_S_AXI_ARVALID_M0),
+    .DDR_AXI_ARREADY(HP0_S_AXI_ARREADY_M0),
+    .DDR_AXI_RDATA(HP0_S_AXI_RDATA_M0),
+    .DDR_AXI_RRESP(HP0_S_AXI_RRESP_M0),
+    .DDR_AXI_RVALID(HP0_S_AXI_RVALID_M0),
+    .DDR_AXI_RREADY(HP0_S_AXI_RREADY_M0),
+    .DDR_AXI_AWLEN(HP0_S_AXI_AWLEN_M0),
+    .DDR_AXI_RLAST(HP0_S_AXI_RLAST_M0),
+    .DDR_AXI_ARCACHE(HP0_S_AXI_ARCACHE_M0),
+    .DDR_AXI_AWSIZE(HP0_S_AXI_AWSIZE_M0),
+    .DDR_AXI_AWBURST(HP0_S_AXI_AWBURST_M0),
+    .DDR_AXI_AWCACHE(HP0_S_AXI_AWCACHE_M0),
+    .DDR_AXI_WLAST(HP0_S_AXI_WLAST_M0),
+    .DDR_AXI_ARLEN(HP0_S_AXI_ARLEN_M0),
+    .DDR_AXI_ARBURST(HP0_S_AXI_ARBURST_M0),
+    .DDR_AXI_ARSIZE(HP0_S_AXI_ARSIZE_M0),
 
     .h2s_tdata(h2s_tdata),
     .h2s_tlast(h2s_tlast),
