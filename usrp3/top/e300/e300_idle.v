@@ -109,24 +109,45 @@ module e300
 );
 
   // Internal connections to PS
-  //   GP0 -- General Purpose port 0, FPGA is the slave
-  wire [31:0] GP0_M_AXI_AWADDR_pin;
-  wire        GP0_M_AXI_AWVALID_pin;
-  wire        GP0_M_AXI_AWREADY_pin;
-  wire [31:0] GP0_M_AXI_WDATA_pin;
-  wire [3:0]  GP0_M_AXI_WSTRB_pin;
-  wire        GP0_M_AXI_WVALID_pin;
-  wire        GP0_M_AXI_WREADY_pin;
-  wire [1:0]  GP0_M_AXI_BRESP_pin;
-  wire        GP0_M_AXI_BVALID_pin;
-  wire        GP0_M_AXI_BREADY_pin;
-  wire [31:0] GP0_M_AXI_ARADDR_pin;
-  wire        GP0_M_AXI_ARVALID_pin;
-  wire        GP0_M_AXI_ARREADY_pin;
-  wire [31:0] GP0_M_AXI_RDATA_pin;
-  wire [1:0]  GP0_M_AXI_RRESP_pin;
-  wire        GP0_M_AXI_RVALID_pin;
-  wire        GP0_M_AXI_RREADY_pin;
+  //   GP0 -- General Purpose port 0, FPGA is the slave 0
+  wire [31:0] GP0_M_AXI_AWADDR_S0;
+  wire        GP0_M_AXI_AWVALID_S0;
+  wire        GP0_M_AXI_AWREADY_S0;
+  wire [31:0] GP0_M_AXI_WDATA_S0;
+  wire [3:0]  GP0_M_AXI_WSTRB_S0;
+  wire        GP0_M_AXI_WVALID_S0;
+  wire        GP0_M_AXI_WREADY_S0;
+  wire [1:0]  GP0_M_AXI_BRESP_S0;
+  wire        GP0_M_AXI_BVALID_S0;
+  wire        GP0_M_AXI_BREADY_S0;
+  wire [31:0] GP0_M_AXI_ARADDR_S0;
+  wire        GP0_M_AXI_ARVALID_S0;
+  wire        GP0_M_AXI_ARREADY_S0;
+  wire [31:0] GP0_M_AXI_RDATA_S0;
+  wire [1:0]  GP0_M_AXI_RRESP_S0;
+  wire        GP0_M_AXI_RVALID_S0;
+  wire        GP0_M_AXI_RREADY_S0;
+
+  // Internal connections to PS
+  //   GP0 -- General Purpose port 0, FPGA is the slave 1
+  wire [31:0] GP0_M_AXI_AWADDR_S1;
+  wire        GP0_M_AXI_AWVALID_S1;
+  wire        GP0_M_AXI_AWREADY_S1;
+  wire [31:0] GP0_M_AXI_WDATA_S1;
+  wire [3:0]  GP0_M_AXI_WSTRB_S1;
+  wire        GP0_M_AXI_WVALID_S1;
+  wire        GP0_M_AXI_WREADY_S1;
+  wire [1:0]  GP0_M_AXI_BRESP_S1;
+  wire        GP0_M_AXI_BVALID_S1;
+  wire        GP0_M_AXI_BREADY_S1;
+  wire [31:0] GP0_M_AXI_ARADDR_S1;
+  wire        GP0_M_AXI_ARVALID_S1;
+  wire        GP0_M_AXI_ARREADY_S1;
+  wire [31:0] GP0_M_AXI_RDATA_S1;
+  wire [1:0]  GP0_M_AXI_RRESP_S1;
+  wire        GP0_M_AXI_RVALID_S1;
+  wire        GP0_M_AXI_RREADY_S1;
+
   //   HP0 -- High Performance port 0, FPGA is the master
   wire [31:0] HP0_S_AXI_AWADDR_pin;
   wire [2:0]  HP0_S_AXI_AWPROT_pin;
@@ -195,6 +216,8 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  wire pmu_irq;
+
   // First, make all connections to the PS (ARM+buses)
   e300_ps e300_ps_instance
   (  // Outward connections to the pins
@@ -222,26 +245,46 @@ module e300
 
     // Inward connections to our logic
     //    GP0  --  General Purpose Slave 0
-    .axi_ext_slave_conn_0_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_pin),
-    .axi_ext_slave_conn_0_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_pin),
-    .axi_ext_slave_conn_0_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_pin),
-    .axi_ext_slave_conn_0_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_pin),
-    .axi_ext_slave_conn_0_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_pin),
-    .axi_ext_slave_conn_0_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_pin),
-    .axi_ext_slave_conn_0_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_pin),
-    .axi_ext_slave_conn_0_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_pin),
-    .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_pin),
+    .axi_ext_slave_conn_0_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_S0),
+    .axi_ext_slave_conn_0_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_S0),
+    .axi_ext_slave_conn_0_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_S0),
+    .axi_ext_slave_conn_0_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_S0),
+    .axi_ext_slave_conn_0_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_S0),
+    .axi_ext_slave_conn_0_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_S0),
+    .axi_ext_slave_conn_0_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_S0),
+    .axi_ext_slave_conn_0_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_S0),
+    .axi_ext_slave_conn_0_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_S0),
+
+    // Inward connections to our logic
+    //    GP0  --  General Purpose Slave 1
+    .axi_ext_slave_conn_1_M_AXI_AWADDR_pin(GP0_M_AXI_AWADDR_S1),
+    .axi_ext_slave_conn_1_M_AXI_AWVALID_pin(GP0_M_AXI_AWVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_AWREADY_pin(GP0_M_AXI_AWREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_WDATA_pin(GP0_M_AXI_WDATA_S1),
+    .axi_ext_slave_conn_1_M_AXI_WSTRB_pin(GP0_M_AXI_WSTRB_S1),
+    .axi_ext_slave_conn_1_M_AXI_WVALID_pin(GP0_M_AXI_WVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_WREADY_pin(GP0_M_AXI_WREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_BRESP_pin(GP0_M_AXI_BRESP_S1),
+    .axi_ext_slave_conn_1_M_AXI_BVALID_pin(GP0_M_AXI_BVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_BREADY_pin(GP0_M_AXI_BREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARADDR_pin(GP0_M_AXI_ARADDR_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARVALID_pin(GP0_M_AXI_ARVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_ARREADY_pin(GP0_M_AXI_ARREADY_S1),
+    .axi_ext_slave_conn_1_M_AXI_RDATA_pin(GP0_M_AXI_RDATA_S1),
+    .axi_ext_slave_conn_1_M_AXI_RRESP_pin(GP0_M_AXI_RRESP_S1),
+    .axi_ext_slave_conn_1_M_AXI_RVALID_pin(GP0_M_AXI_RVALID_S1),
+    .axi_ext_slave_conn_1_M_AXI_RREADY_pin(GP0_M_AXI_RREADY_S1),
 
     //    Misc interrupts, GPIO, clk
-    .processing_system7_0_IRQ_F2P_pin({13'h0, button_release_irq, button_press_irq, 1'b0}),
+    .processing_system7_0_IRQ_F2P_pin({12'h0, pmu_irq, button_release_irq, button_press_irq, 1'b0}),
     .processing_system7_0_GPIO_I_pin(ps_gpio_in),
     .processing_system7_0_GPIO_O_pin(ps_gpio_out),
     .processing_system7_0_FCLK_CLK0_pin(bus_clk_pin),
@@ -288,12 +331,51 @@ module e300
 
     //    SPI Core 1 - To AVR
     .processing_system7_0_SPI1_SS_O_pin(),
-    .processing_system7_0_SPI1_SS1_O_pin(AVR_CS_R),
+    .processing_system7_0_SPI1_SS1_O_pin(),
     .processing_system7_0_SPI1_SS2_O_pin(),
-    .processing_system7_0_SPI1_SCLK_O_pin(AVR_SCK_R),
-    .processing_system7_0_SPI1_MOSI_O_pin(AVR_MOSI_R),
-    .processing_system7_0_SPI1_MISO_I_pin(AVR_MISO_R)
+    .processing_system7_0_SPI1_SCLK_O_pin(),
+    .processing_system7_0_SPI1_MOSI_O_pin(),
+    .processing_system7_0_SPI1_MISO_I_pin()
   );
+  //------------------------------------------------------------------
+  //-- power management
+  //------------------------------------------------------------------
+
+  axi_pmu inst_axi_pmu0
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .ss(AVR_CS_R),
+    .mosi(AVR_MOSI_R),
+    .sck(AVR_SCK_R),
+    .miso(AVR_MISO_R),
+
+    .s_axi_awaddr(GP0_M_AXI_AWADDR_S1),
+    .s_axi_awvalid(GP0_M_AXI_AWVALID_S1),
+    .s_axi_awready(GP0_M_AXI_AWREADY_S1),
+
+    .s_axi_wdata(GP0_M_AXI_WDATA_S1),
+    .s_axi_wstrb(GP0_M_AXI_WSTRB_S1),
+    .s_axi_wvalid(GP0_M_AXI_WVALID_S1),
+    .s_axi_wready(GP0_M_AXI_WREADY_S1),
+
+    .s_axi_bresp(GP0_M_AXI_BRESP_S1),
+    .s_axi_bvalid(GP0_M_AXI_BVALID_S1),
+    .s_axi_bready(GP0_M_AXI_BREADY_S1),
+
+    .s_axi_araddr(GP0_M_AXI_ARADDR_S1),
+    .s_axi_arvalid(GP0_M_AXI_ARVALID_S1),
+    .s_axi_arready(GP0_M_AXI_ARREADY_S1),
+
+    .s_axi_rdata(GP0_M_AXI_RDATA_S1),
+    .s_axi_rresp(GP0_M_AXI_RRESP_S1),
+    .s_axi_rvalid(GP0_M_AXI_RVALID_S1),
+    .s_axi_rready(GP0_M_AXI_RREADY_S1),
+
+    .s_axi_irq(pmu_irq)
+  );
+
 
   //------------------------------------------------------------------
   //-- generate clock and reset signals
