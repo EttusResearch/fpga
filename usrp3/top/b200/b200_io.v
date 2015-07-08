@@ -3,7 +3,7 @@
 // In SISO mode, we output a clock thats 1x the frequency of the Catalina
 // source-synchronous bus clock to be used as the radio_clk.
 // In MIMO mode, we output a clock thats 1/2 the frequency of the Catalina
-// source-synchronous bus clock to be usedio_clk as the radio_clk.
+// source-synchronous bus clock to be used as the radio_clk.
 //
 //------------------------------------------------------------------
 
