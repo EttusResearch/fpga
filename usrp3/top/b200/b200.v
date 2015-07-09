@@ -174,24 +174,42 @@ module b200 (
     reset_sync radio_sync(.clk(radio_clk), .reset_in(!clocks_ready), .reset_out(radio_rst));
 
    ///////////////////////////////////////////////////////////////////////
-   // CODEC capture/gen
+   // I/O
    ///////////////////////////////////////////////////////////////////////
-   wire [31:0] rx_data1, rx_data2;
-   wire [31:0] tx_data1, tx_data2;
-   wire mimo, codec_arst;
+   wire [31:0] rx_data0, rx_data1;
+   wire [31:0] tx_data0, tx_data1;
+   wire mimo;
+   
+   b200_io b200_io_i0
+     (
+      .reset(reset),
+      .mimo(mimo),
+      
+      // Baseband sample interface
+      .radio_clk(radio_clk),
 
-   catcodec_ddr_cmos
-   #(
-        .DEVICE("SPARTAN6")
-   )
-   catcodec
-   (
-        .radio_clk(radio_clk), .arst(codec_arst), .mimo(mimo),
-        .rx1(rx_data1), .rx2(rx_data2), .tx1(tx_data1), .tx2(tx_data2),
-        .rx_clk(codec_data_clk_p), .rx_frame(rx_frame_p), .rx_d(rx_codec_d),
-        .tx_clk(codec_fb_clk_p), .tx_frame(tx_frame_p), .tx_d(tx_codec_d)
-   );
-
+      .rx_i0(rx_data0[31:20]), 
+      .rx_q0(rx_data0[15:4]), 
+      .rx_i1(rx_data1[31:20]), 
+      .rx_q1(rx_data1[15:4]),
+      
+      .tx_i0(tx_data0[31:20]), 
+      .tx_q0(tx_data0[15:4]), 
+      .tx_i1(tx_data1[31:20]), 
+      .tx_q1(tx_data1[15:4]),
+      
+      // Catalina interface   
+      .rx_clk(codec_data_clk_p), 
+      .rx_frame(rx_frame_p),      
+      .rx_data(rx_codec_d), 
+      
+      .tx_clk(codec_fb_clk_p), 
+      .tx_frame(tx_frame_p), 
+      .tx_data(tx_codec_d) 
+      );
+   
+   assign {rx_data0[19:16],rx_data0[3:0],rx_data1[19:16],rx_data1[3:0]} = 16'h0;
+   
    ///////////////////////////////////////////////////////////////////////
    // SPI connections
    ///////////////////////////////////////////////////////////////////////
@@ -236,8 +254,12 @@ module b200 (
     assign {tx_enable2, SFDX2_RX, SFDX2_TX, SRX2_RX, SRX2_TX, LED_RX2, LED_TXRX2_RX, LED_TXRX2_TX} = swap_atr_n ? radio0_fe_atr[7:0] : radio1_fe_atr[7:0];
 
     wire [31:0] misc_outs; reg [31:0] misc_outs_r;
+   
     always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
-    assign { swap_atr_n, tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, codec_arst, mimo, ref_sel } = misc_outs_r[8:0];
+   
+    wire 	spare_signal; // WAS codec_arst...now obselete, this bit can be reused when UHD doesn't contain codec_arst code.
+   
+    assign { swap_atr_n, tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, spare_signal, mimo, ref_sel } = misc_outs_r[8:0];
 
     assign codec_ctrl_in = 4'b1;
     assign codec_en_agc = 1'b1;
@@ -259,8 +281,8 @@ module b200 (
         .resp_tdata(resp_tdata), .resp_tlast(resp_tlast),  .resp_tvalid(resp_tvalid), .resp_tready(resp_tready),
 
         .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx0(rx_data2), .rx1(rx_data1),
-        .tx0(tx_data2), .tx1(tx_data1),
+        .rx0(rx_data0), .rx1(rx_data1),
+        .tx0(tx_data0), .tx1(tx_data1),
         .fe_atr0(radio0_fe_atr), .fe_atr1(radio1_fe_atr),
 `ifdef B210
         .fp_gpio(fp_gpio),
