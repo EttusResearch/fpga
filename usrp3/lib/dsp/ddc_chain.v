@@ -71,13 +71,13 @@ module ddc_chain
    always @(posedge clk)
      if(swap_iq)
        begin
-          rx_fe_i_mux <= invert_i ? ~rx_fe_q + 1 : rx_fe_q;
-          rx_fe_q_mux <= realmode ? {WIDTH{1'b0}} : invert_q ? ~rx_fe_i + 1 : rx_fe_i;
+          rx_fe_i_mux <= invert_i ? ~rx_fe_q : rx_fe_q;
+          rx_fe_q_mux <= realmode ? {WIDTH{1'b0}} : invert_q ? ~rx_fe_i : rx_fe_i;
        end
      else
        begin
-	  rx_fe_i_mux <= invert_i ? ~rx_fe_i + 1 : rx_fe_i;
-          rx_fe_q_mux <= realmode ? {WIDTH{1'b0}} : invert_i ? ~rx_fe_q + 1 : rx_fe_q;
+	  rx_fe_i_mux <= invert_i ? ~rx_fe_i : rx_fe_i;
+          rx_fe_q_mux <= realmode ? {WIDTH{1'b0}} : invert_q ? ~rx_fe_q : rx_fe_q;
        end
 
    // NCO
