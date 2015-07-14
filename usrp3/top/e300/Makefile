@@ -10,10 +10,10 @@
 ## make <Targets> <Options>
 ##
 ##Output:
-## build/usrp_<product>_fpga.bit:    Configuration bitstream with header
-## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
-## build/usrp_<product>_fpga.syr:    Xilinx system report
-## build/usrp_<product>_fpga.twr:    Xilinx timing report
+## build/usrp_<product>_fpga[_idle].bit:    Configuration bitstream with header
+## build/usrp_<product>_fpga[_idle].bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga[_idle].syr:    Xilinx system report
+## build/usrp_<product>_fpga[_idle].twr:    Xilinx timing report
 
 print_report = \
 	echo "========================================================================"; \
@@ -39,22 +39,22 @@ else
 	ise_build = make -f Makefile.e300.inc bin NAME=$@ DEVICE=$1 EXTRA_DEFS="$2"
 endif
 
-# post_build($1=Device)
+# post_build($1=Device,$2=Suffix)
 ifeq ($(PROJECT_ONLY),1)
 	post_build = \
 		@echo "Generated $(shell pwd)/build-$(1)/e300.xise"; \
 		echo "\nProject Generation DONE ... $(1)\n";
 else
 	post_build = \
-		@$(call print_report,build-$(1)) \
+		@$(call print_report,build-$(1)$(2)) \
 		mkdir -p build; \
 		echo "Exporting bitstream files..."; \
-		cp build-$(1)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bin; \
-		cp build-$(1)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bit; \
+		cp build-$(1)$(2)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bin; \
+		cp build-$(1)$(2)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bit; \
 		echo "Exporting logs..."; \
-		cp build-$(1)/e300.syr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.syr; \
-		cp build-$(1)/e300.twr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.twr; \
-		echo "\nBuild DONE ... $(1)\n";
+		cp build-$(1)$(2)/e300.syr build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).syr; \
+		cp build-$(1)$(2)/e300.twr build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).twr; \
+		echo "\nBuild DONE ... $(1)$(2)\n";
 endif
 
 ##
@@ -66,12 +66,12 @@ all: E310 E310_idle ##(Default target)
 E310:  ##Build USRP E310 design.
 	$(call pre_build,E310)
 	$(call ise_build,XC7Z020,)
-	$(call post_build,E310)
+	$(call post_build,E310,)
 
 E310_idle: ##Build USRP E310 idle design.
 	$(call pre_build,E310_idle)
 	$(call ise_build,XC7Z020,IDLE)
-	$(call post_build,E310_idle)
+	$(call post_build,E310,_idle)
 
 clean: ##Clean up all build output.
 	rm -rf build-*
