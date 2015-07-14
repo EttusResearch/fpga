@@ -10,21 +10,22 @@
 ## make <Targets> <Options>
 ##
 ##Output:
-## build/usrp_<product>_fpga.bit:    Configuration bitstream with header
-## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
-## build/usrp_<product>_fpga.rpt:    Build report (includes utilization and timing summary)
+## build/usrp_<product>_fpga[_idle].bit:    Configuration bitstream with header
+## build/usrp_<product>_fpga[_idle].bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga[_idle].rpt:    Build report (includes utilization and timing summary)
 
 # vivado_build($1=Device, $2=Definitions)
 vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
 
+# post_build($1=Device, $2=Suffix)
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream files..."; \
-	cp build-$(1)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bin; \
-	cp build-$(1)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bit; \
+	cp build-$(1)$(2)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bin; \
+	cp build-$(1)$(2)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bit; \
 	echo "Exporting build report..."; \
-	cp build-$(1)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga.rpt; \
-	echo "Build DONE ... $(1)";
+	cp build-$(1)$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).rpt; \
+	echo "Build DONE ... $(1)$(2)";
 
 ##
 ##Supported Targets
@@ -38,7 +39,7 @@ E310: ##Build USRP E310 design.
 
 E310_idle: ##Build USRP E310 idle design.
 	$(call vivado_build,xc7z020,E3X0_IDLE_IMAGE)
-	$(call post_build,E310_idle,)
+	$(call post_build,E310,_idle)
 
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
