@@ -16,7 +16,8 @@ module x300_core
    output mosi0,
    input miso0,
    output [2:0] radio_led0,
-   output reg [7:0] radio_misc0,
+   output reg [15:0] radio0_misc_out,
+   input [15:0] radio0_misc_in,
    output sync_dacs_radio0,
    // Radio 1
    input [31:0] rx1,
@@ -27,7 +28,8 @@ module x300_core
    output mosi1,
    input miso1,
    output [2:0] radio_led1,
-   output reg [7:0] radio_misc1,
+   output reg [15:0] radio1_misc_out,
+   input [15:0] radio1_misc_in,
    output sync_dacs_radio1,
    // Radio shared misc
    inout db_scl,
@@ -218,7 +220,8 @@ module x300_core
    wire        ce0i_tready, ce0o_tready, ce1i_tready, ce1o_tready, ce2i_tready, ce2o_tready;
 
    // Radio Misc outputs before pipeline.
-   wire [7:0]  misc_outs0, misc_outs1;
+   wire [31:0]  misc_outs0, misc_outs1;
+   reg [15:0]  misc_ins0, misc_ins1;
 
    // assign eth1_tx_tready = 1'b1;
    //  assign eth1_rx_tvalid = 1'b0;
@@ -526,18 +529,16 @@ module x300_core
 `endif
 
    radio #(
-           .CHIPSCOPE(0),
-           .DELETE_DSP(`DELETE_DSP0),
-           .RADIO_NUM(0),
-           .DATA_FIFO_SIZE(10),
-           .MSG_FIFO_SIZE(9)
-           )
-   radio0
-     (
+      .CHIPSCOPE(0),
+      .DELETE_DSP(`DELETE_DSP0),
+      .RADIO_NUM(0),
+      .DATA_FIFO_SIZE(10),
+      .MSG_FIFO_SIZE(9)
+   ) radio0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx0), .tx(tx0), .db_gpio(db_gpio0), .fp_gpio(fp_gpio),
       .sen(sen0), .sclk(sclk0), .mosi(mosi0), .miso(miso0),
-      .misc_outs(misc_outs0), .leds(radio_led0),
+      .misc_outs(misc_outs0), .misc_ins({16'h0, misc_ins0}), .leds(radio_led0),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .in_tdata(r0i_tdata), .in_tlast(r0i_tlast), .in_tvalid(r0i_tvalid), .in_tready(r0i_tready),
       .out_tdata(r0o_tdata), .out_tlast(r0o_tlast), .out_tvalid(r0o_tvalid), .out_tready(r0o_tready),
@@ -545,11 +546,14 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio0)
-      );
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio0),
+      .debug()
+   );
 
-     always @(posedge radio_clk)
-       radio_misc0 <= misc_outs0;
+   always @(posedge radio_clk) begin
+      radio0_misc_out <= misc_outs0[15:0];
+      misc_ins0       <= radio0_misc_in;
+   end
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
@@ -562,18 +566,16 @@ module x300_core
 `endif
 
    radio #(
-           .CHIPSCOPE(0),
-           .DELETE_DSP(`DELETE_DSP1),
-           .RADIO_NUM(1),
-           .DATA_FIFO_SIZE(10),
-           .MSG_FIFO_SIZE(9)
-           )
-   radio1
-     (
+      .CHIPSCOPE(0),
+      .DELETE_DSP(`DELETE_DSP1),
+      .RADIO_NUM(1),
+      .DATA_FIFO_SIZE(10),
+      .MSG_FIFO_SIZE(9)
+   ) radio1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .db_gpio(db_gpio1),
+      .rx(rx1), .tx(tx1), .db_gpio(db_gpio1), .fp_gpio(),
       .sen(sen1), .sclk(sclk1), .mosi(mosi1), .miso(miso1),
-      .misc_outs(misc_outs1), .leds(radio_led1),
+      .misc_outs(misc_outs1), .misc_ins({16'h0, misc_ins1}), .leds(radio_led1),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .in_tdata(r1i_tdata), .in_tlast(r1i_tlast), .in_tvalid(r1i_tvalid), .in_tready(r1i_tready),
       .out_tdata(r1o_tdata), .out_tlast(r1o_tlast), .out_tvalid(r1o_tvalid), .out_tready(r1o_tready),
@@ -581,11 +583,14 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio1)
-      );
+      .pps(pps_del[1]), .sync_dacs(sync_dacs_radio1),
+      .debug()
+   );
 
-   always @(posedge radio_clk)
-     radio_misc1 <= misc_outs1;
+   always @(posedge radio_clk) begin
+      radio1_misc_out <= misc_outs1[15:0];
+      misc_ins1       <= radio1_misc_in;
+   end
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //

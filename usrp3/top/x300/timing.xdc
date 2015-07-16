@@ -24,7 +24,7 @@ set_clock_latency -source -early [expr $var_fpga_clk_delay - $var_fpga_clk_skew/
 set_clock_latency -source -late  [expr $var_fpga_clk_delay + $var_fpga_clk_skew/2] [get_clocks FPGA_CLK]
 
 set var_adc_clk_delay   8.440    ;# LMK->ADC=1.04ns, ADC->FPGA=0.750ns, ADC=6.65ns=(0.69*5ns)+5.7-2.5 
-set var_adc_clk_skew    0.100    ;# The real skew is ~3.5ns with which we will not meet static timing. Just use LMK jitter values.
+set var_adc_clk_skew    0.500    ;# The real skew is ~3.5ns with which we will not meet static timing. Ignore skew by temp variations.
 set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
 set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2] [get_clocks DB0_ADC_DCLK]
 set_clock_latency -source -early [expr $var_adc_clk_delay - $var_adc_clk_skew/2] [get_clocks DB1_ADC_DCLK]
@@ -35,6 +35,11 @@ set_clock_latency -source -late  [expr $var_adc_clk_delay + $var_adc_clk_skew/2]
 # lock the locations of the MMCM and BUFG to generate radio_clk.
 set_property LOC MMCME2_ADV_X0Y0 [get_cells -hierarchical -filter {NAME =~ "*radio_clk_gen/*mmcm_adv_inst"}]
 set_property LOC BUFGCTRL_X0Y8   [get_cells -hierarchical -filter {NAME =~ "*radio_clk_gen/*clkout1_buf"}]
+
+# The PCIe specific 40MHz and 200MHz clocks are only active in clock regious X0Y0 and X1Y0 so we use BUFHs
+# to distribute them. To do so, we have to use a PLL because the MMCM in that region is used by radio_clk_gen
+# Since that MMCM is LOC constrained, we must LOC constrain this PLL as well.
+set_property LOC PLLE2_ADV_X0Y0 [get_cells -hierarchical -filter {NAME =~ "*pcie_clk_gen/*plle2_adv_inst"}]
 
 
 #*******************************************************************************
@@ -75,18 +80,21 @@ set_clock_groups -asynchronous -group [get_clocks radio_clk]   -group [get_clock
 #*******************************************************************************
 ## ADC Interface
 
-# At 200 MHz, static timing cannot be closed.
-# The input delays here exist simply to ensure that the tools don't accidentally create
-# nonsensical routes as well as force the receiving IDDRs into the optimal routing
-# and placement locations. The delay values are based on the typical setup and hold specs
-# for the the ADC.
-# The min/max delay constraints are modulo 5ns (the clock period)
+# At 200 MHz, static timing cannot be closed so we tune data delays on the capture
+# interface from software at device creation time.
+# The data is center aligned wrt to the SS Clock when it is launched from the ADC
+# So we tune the data IDELAYS to half the range (16) so we have slack in both directions
+# In the constraints we capture this by padding the dv_before and dv_after by half the
+# tuning range of the IDELAY.
 
-set adc_in_before   -1.340      ;# -7/26 * Ts
-set adc_valid_win    1.850
+# Using typical values for ADC
+set adc_clk_delay_wrt_center    0.000      ;# Possible {-1.340, -0.769, 0, 0.769}
+set adc_in_dv_before_clk_edge   0.550      ;# Typical: 0.90ns
+set adc_in_dv_after_clk_edge    0.550      ;# Typical: 0.95ns
+set idelay_tune_range           2.500      ;# Refclk for IDELAY is 200MHz. Range of idelay is 0.5*period
 
-set adc_in_delay_min [expr $adc_valid_win - $adc_in_before + 2.500]
-set adc_in_delay_max [expr 2.500 - $adc_in_before - 2.500]
+set adc_in_delay_max [expr 2.500 - $adc_in_dv_before_clk_edge - $idelay_tune_range + $adc_clk_delay_wrt_center]
+set adc_in_delay_min [expr $adc_in_dv_after_clk_edge + $idelay_tune_range - $adc_clk_delay_wrt_center]
 
 set_input_delay -clock DB0_ADC_DCLK -max $adc_in_delay_max                         [get_ports {DB0_ADC_DA*}]
 set_input_delay -clock DB0_ADC_DCLK -min $adc_in_delay_min                         [get_ports {DB0_ADC_DA*}]
@@ -110,126 +118,134 @@ set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_dela
 
 # We use a simple synchronizer to cross ADC data over from the ADC_CLK domain to the radio_clk domain
 # Use max delay constraints to ensure that the transition happens safely
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME =~ *gen_lvds_pins[*].iddr}] 0.890
+set_max_delay -datapath_only 0.890 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
+                                   -to   [get_cells {cap_db0/adc_data_rclk_reg*[*]}]
+set_max_delay -datapath_only 0.890 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
+                                   -to   [get_cells {cap_db1/adc_data_rclk_reg*[*]}]
 
 # We also need to location constrain the first flops in the synchronizer to help the tools
 # meet timing reliably
 
 # ADC0
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[0]}]
-set_property LOC SLICE_X1Y192   [get_cells {cap_db0/out_pre2*[0]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[1]}]
-set_property LOC SLICE_X1Y192   [get_cells {cap_db0/out_pre2*[1]}]
-set_property BEL AFF            [get_cells {cap_db0/out_pre2*[2]}]
-set_property LOC SLICE_X1Y190   [get_cells {cap_db0/out_pre2*[2]}]
-set_property BEL BFF            [get_cells {cap_db0/out_pre2*[3]}]
-set_property LOC SLICE_X1Y190   [get_cells {cap_db0/out_pre2*[3]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[4]}]
-set_property LOC SLICE_X1Y188   [get_cells {cap_db0/out_pre2*[4]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[5]}]
-set_property LOC SLICE_X1Y188   [get_cells {cap_db0/out_pre2*[5]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[6]}]
-set_property LOC SLICE_X1Y186   [get_cells {cap_db0/out_pre2*[6]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[7]}]
-set_property LOC SLICE_X1Y186   [get_cells {cap_db0/out_pre2*[7]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[8]}]
-set_property LOC SLICE_X1Y184   [get_cells {cap_db0/out_pre2*[8]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[9]}]
-set_property LOC SLICE_X1Y184   [get_cells {cap_db0/out_pre2*[9]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[10]}]
-set_property LOC SLICE_X1Y182   [get_cells {cap_db0/out_pre2*[10]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[11]}]
-set_property LOC SLICE_X1Y182   [get_cells {cap_db0/out_pre2*[11]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[12]}]
-set_property LOC SLICE_X1Y180   [get_cells {cap_db0/out_pre2*[12]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[13]}]
-set_property LOC SLICE_X1Y180   [get_cells {cap_db0/out_pre2*[13]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[14]}]
-set_property LOC SLICE_X1Y178   [get_cells {cap_db0/out_pre2*[14]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[15]}]
-set_property LOC SLICE_X1Y178   [get_cells {cap_db0/out_pre2*[15]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[16]}]
-set_property LOC SLICE_X1Y174   [get_cells {cap_db0/out_pre2*[16]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[17]}]
-set_property LOC SLICE_X1Y174   [get_cells {cap_db0/out_pre2*[17]}]
-set_property BEL AFF            [get_cells {cap_db0/out_pre2*[18]}]
-set_property LOC SLICE_X1Y172   [get_cells {cap_db0/out_pre2*[18]}]
-set_property BEL BFF            [get_cells {cap_db0/out_pre2*[19]}]
-set_property LOC SLICE_X1Y172   [get_cells {cap_db0/out_pre2*[19]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[20]}]
-set_property LOC SLICE_X1Y218   [get_cells {cap_db0/out_pre2*[20]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[21]}]
-set_property LOC SLICE_X1Y218   [get_cells {cap_db0/out_pre2*[21]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[22]}]
-set_property LOC SLICE_X1Y198   [get_cells {cap_db0/out_pre2*[22]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[23]}]
-set_property LOC SLICE_X1Y198   [get_cells {cap_db0/out_pre2*[23]}]
-set_property BEL AFF            [get_cells {cap_db0/out_pre2*[24]}]
-set_property LOC SLICE_X1Y196   [get_cells {cap_db0/out_pre2*[24]}]
-set_property BEL BFF            [get_cells {cap_db0/out_pre2*[25]}]
-set_property LOC SLICE_X1Y196   [get_cells {cap_db0/out_pre2*[25]}]
-set_property BEL A5FF           [get_cells {cap_db0/out_pre2*[26]}]
-set_property LOC SLICE_X1Y194   [get_cells {cap_db0/out_pre2*[26]}]
-set_property BEL B5FF           [get_cells {cap_db0/out_pre2*[27]}]
-set_property LOC SLICE_X1Y194   [get_cells {cap_db0/out_pre2*[27]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[0]}]
+set_property LOC SLICE_X1Y192   [get_cells {cap_db0/adc_data_rclk_reg*[0]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[1]}]
+set_property LOC SLICE_X1Y192   [get_cells {cap_db0/adc_data_rclk_reg*[1]}]
+set_property BEL AFF            [get_cells {cap_db0/adc_data_rclk_reg*[2]}]
+set_property LOC SLICE_X1Y190   [get_cells {cap_db0/adc_data_rclk_reg*[2]}]
+set_property BEL BFF            [get_cells {cap_db0/adc_data_rclk_reg*[3]}]
+set_property LOC SLICE_X1Y190   [get_cells {cap_db0/adc_data_rclk_reg*[3]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[4]}]
+set_property LOC SLICE_X1Y188   [get_cells {cap_db0/adc_data_rclk_reg*[4]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[5]}]
+set_property LOC SLICE_X1Y188   [get_cells {cap_db0/adc_data_rclk_reg*[5]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[6]}]
+set_property LOC SLICE_X1Y186   [get_cells {cap_db0/adc_data_rclk_reg*[6]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[7]}]
+set_property LOC SLICE_X1Y186   [get_cells {cap_db0/adc_data_rclk_reg*[7]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[8]}]
+set_property LOC SLICE_X1Y184   [get_cells {cap_db0/adc_data_rclk_reg*[8]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[9]}]
+set_property LOC SLICE_X1Y184   [get_cells {cap_db0/adc_data_rclk_reg*[9]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[10]}]
+set_property LOC SLICE_X1Y182   [get_cells {cap_db0/adc_data_rclk_reg*[10]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[11]}]
+set_property LOC SLICE_X1Y182   [get_cells {cap_db0/adc_data_rclk_reg*[11]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[12]}]
+set_property LOC SLICE_X1Y180   [get_cells {cap_db0/adc_data_rclk_reg*[12]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[13]}]
+set_property LOC SLICE_X1Y180   [get_cells {cap_db0/adc_data_rclk_reg*[13]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[14]}]
+set_property LOC SLICE_X1Y178   [get_cells {cap_db0/adc_data_rclk_reg*[14]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[15]}]
+set_property LOC SLICE_X1Y178   [get_cells {cap_db0/adc_data_rclk_reg*[15]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[16]}]
+set_property LOC SLICE_X1Y174   [get_cells {cap_db0/adc_data_rclk_reg*[16]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[17]}]
+set_property LOC SLICE_X1Y174   [get_cells {cap_db0/adc_data_rclk_reg*[17]}]
+set_property BEL AFF            [get_cells {cap_db0/adc_data_rclk_reg*[18]}]
+set_property LOC SLICE_X1Y172   [get_cells {cap_db0/adc_data_rclk_reg*[18]}]
+set_property BEL BFF            [get_cells {cap_db0/adc_data_rclk_reg*[19]}]
+set_property LOC SLICE_X1Y172   [get_cells {cap_db0/adc_data_rclk_reg*[19]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[20]}]
+set_property LOC SLICE_X1Y218   [get_cells {cap_db0/adc_data_rclk_reg*[20]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[21]}]
+set_property LOC SLICE_X1Y218   [get_cells {cap_db0/adc_data_rclk_reg*[21]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[22]}]
+set_property LOC SLICE_X1Y198   [get_cells {cap_db0/adc_data_rclk_reg*[22]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[23]}]
+set_property LOC SLICE_X1Y198   [get_cells {cap_db0/adc_data_rclk_reg*[23]}]
+set_property BEL AFF            [get_cells {cap_db0/adc_data_rclk_reg*[24]}]
+set_property LOC SLICE_X1Y196   [get_cells {cap_db0/adc_data_rclk_reg*[24]}]
+set_property BEL BFF            [get_cells {cap_db0/adc_data_rclk_reg*[25]}]
+set_property LOC SLICE_X1Y196   [get_cells {cap_db0/adc_data_rclk_reg*[25]}]
+set_property BEL A5FF           [get_cells {cap_db0/adc_data_rclk_reg*[26]}]
+set_property LOC SLICE_X1Y194   [get_cells {cap_db0/adc_data_rclk_reg*[26]}]
+set_property BEL B5FF           [get_cells {cap_db0/adc_data_rclk_reg*[27]}]
+set_property LOC SLICE_X1Y194   [get_cells {cap_db0/adc_data_rclk_reg*[27]}]
 
 # ADC1
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[0]}]
-set_property LOC SLICE_X1Y298   [get_cells {cap_db1/out_pre2*[0]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[1]}]
-set_property LOC SLICE_X1Y298   [get_cells {cap_db1/out_pre2*[1]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[2]}]
-set_property LOC SLICE_X1Y284   [get_cells {cap_db1/out_pre2*[2]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[3]}]
-set_property LOC SLICE_X1Y284   [get_cells {cap_db1/out_pre2*[3]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[4]}]
-set_property LOC SLICE_X1Y288   [get_cells {cap_db1/out_pre2*[4]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[5]}]
-set_property LOC SLICE_X1Y288   [get_cells {cap_db1/out_pre2*[5]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[6]}]
-set_property LOC SLICE_X1Y282   [get_cells {cap_db1/out_pre2*[6]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[7]}]
-set_property LOC SLICE_X1Y282   [get_cells {cap_db1/out_pre2*[7]}]
-set_property BEL AFF            [get_cells {cap_db1/out_pre2*[8]}]
-set_property LOC SLICE_X1Y296   [get_cells {cap_db1/out_pre2*[8]}]
-set_property BEL BFF            [get_cells {cap_db1/out_pre2*[9]}]
-set_property LOC SLICE_X1Y296   [get_cells {cap_db1/out_pre2*[9]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[10]}]
-set_property LOC SLICE_X1Y280   [get_cells {cap_db1/out_pre2*[10]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[11]}]
-set_property LOC SLICE_X1Y280   [get_cells {cap_db1/out_pre2*[11]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[12]}]
-set_property LOC SLICE_X1Y286   [get_cells {cap_db1/out_pre2*[12]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[13]}]
-set_property LOC SLICE_X1Y286   [get_cells {cap_db1/out_pre2*[13]}]
-set_property BEL AFF            [get_cells {cap_db1/out_pre2*[14]}]
-set_property LOC SLICE_X1Y274   [get_cells {cap_db1/out_pre2*[14]}]
-set_property BEL BFF            [get_cells {cap_db1/out_pre2*[15]}]
-set_property LOC SLICE_X1Y274   [get_cells {cap_db1/out_pre2*[15]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[16]}]
-set_property LOC SLICE_X1Y272   [get_cells {cap_db1/out_pre2*[16]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[17]}]
-set_property LOC SLICE_X1Y272   [get_cells {cap_db1/out_pre2*[17]}]
-set_property BEL AFF            [get_cells {cap_db1/out_pre2*[18]}]
-set_property LOC SLICE_X1Y290   [get_cells {cap_db1/out_pre2*[18]}]
-set_property BEL BFF            [get_cells {cap_db1/out_pre2*[19]}]
-set_property LOC SLICE_X1Y290   [get_cells {cap_db1/out_pre2*[19]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[20]}]
-set_property LOC SLICE_X1Y342   [get_cells {cap_db1/out_pre2*[20]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[21]}]
-set_property LOC SLICE_X1Y342   [get_cells {cap_db1/out_pre2*[21]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[22]}]
-set_property LOC SLICE_X1Y294   [get_cells {cap_db1/out_pre2*[22]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[23]}]
-set_property LOC SLICE_X1Y294   [get_cells {cap_db1/out_pre2*[23]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[24]}]
-set_property LOC SLICE_X1Y268   [get_cells {cap_db1/out_pre2*[24]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[25]}]
-set_property LOC SLICE_X1Y268   [get_cells {cap_db1/out_pre2*[25]}]
-set_property BEL A5FF           [get_cells {cap_db1/out_pre2*[26]}]
-set_property LOC SLICE_X1Y292   [get_cells {cap_db1/out_pre2*[26]}]
-set_property BEL B5FF           [get_cells {cap_db1/out_pre2*[27]}]
-set_property LOC SLICE_X1Y292   [get_cells {cap_db1/out_pre2*[27]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[0]}]
+set_property LOC SLICE_X1Y298   [get_cells {cap_db1/adc_data_rclk_reg*[0]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[1]}]
+set_property LOC SLICE_X1Y298   [get_cells {cap_db1/adc_data_rclk_reg*[1]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[2]}]
+set_property LOC SLICE_X1Y284   [get_cells {cap_db1/adc_data_rclk_reg*[2]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[3]}]
+set_property LOC SLICE_X1Y284   [get_cells {cap_db1/adc_data_rclk_reg*[3]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[4]}]
+set_property LOC SLICE_X1Y288   [get_cells {cap_db1/adc_data_rclk_reg*[4]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[5]}]
+set_property LOC SLICE_X1Y288   [get_cells {cap_db1/adc_data_rclk_reg*[5]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[6]}]
+set_property LOC SLICE_X1Y282   [get_cells {cap_db1/adc_data_rclk_reg*[6]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[7]}]
+set_property LOC SLICE_X1Y282   [get_cells {cap_db1/adc_data_rclk_reg*[7]}]
+set_property BEL AFF            [get_cells {cap_db1/adc_data_rclk_reg*[8]}]
+set_property LOC SLICE_X1Y296   [get_cells {cap_db1/adc_data_rclk_reg*[8]}]
+set_property BEL BFF            [get_cells {cap_db1/adc_data_rclk_reg*[9]}]
+set_property LOC SLICE_X1Y296   [get_cells {cap_db1/adc_data_rclk_reg*[9]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[10]}]
+set_property LOC SLICE_X1Y280   [get_cells {cap_db1/adc_data_rclk_reg*[10]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[11]}]
+set_property LOC SLICE_X1Y280   [get_cells {cap_db1/adc_data_rclk_reg*[11]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[12]}]
+set_property LOC SLICE_X1Y286   [get_cells {cap_db1/adc_data_rclk_reg*[12]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[13]}]
+set_property LOC SLICE_X1Y286   [get_cells {cap_db1/adc_data_rclk_reg*[13]}]
+set_property BEL AFF            [get_cells {cap_db1/adc_data_rclk_reg*[14]}]
+set_property LOC SLICE_X1Y274   [get_cells {cap_db1/adc_data_rclk_reg*[14]}]
+set_property BEL BFF            [get_cells {cap_db1/adc_data_rclk_reg*[15]}]
+set_property LOC SLICE_X1Y274   [get_cells {cap_db1/adc_data_rclk_reg*[15]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[16]}]
+set_property LOC SLICE_X1Y272   [get_cells {cap_db1/adc_data_rclk_reg*[16]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[17]}]
+set_property LOC SLICE_X1Y272   [get_cells {cap_db1/adc_data_rclk_reg*[17]}]
+set_property BEL AFF            [get_cells {cap_db1/adc_data_rclk_reg*[18]}]
+set_property LOC SLICE_X1Y290   [get_cells {cap_db1/adc_data_rclk_reg*[18]}]
+set_property BEL BFF            [get_cells {cap_db1/adc_data_rclk_reg*[19]}]
+set_property LOC SLICE_X1Y290   [get_cells {cap_db1/adc_data_rclk_reg*[19]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[20]}]
+set_property LOC SLICE_X1Y342   [get_cells {cap_db1/adc_data_rclk_reg*[20]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[21]}]
+set_property LOC SLICE_X1Y342   [get_cells {cap_db1/adc_data_rclk_reg*[21]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[22]}]
+set_property LOC SLICE_X1Y294   [get_cells {cap_db1/adc_data_rclk_reg*[22]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[23]}]
+set_property LOC SLICE_X1Y294   [get_cells {cap_db1/adc_data_rclk_reg*[23]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[24]}]
+set_property LOC SLICE_X1Y268   [get_cells {cap_db1/adc_data_rclk_reg*[24]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[25]}]
+set_property LOC SLICE_X1Y268   [get_cells {cap_db1/adc_data_rclk_reg*[25]}]
+set_property BEL A5FF           [get_cells {cap_db1/adc_data_rclk_reg*[26]}]
+set_property LOC SLICE_X1Y292   [get_cells {cap_db1/adc_data_rclk_reg*[26]}]
+set_property BEL B5FF           [get_cells {cap_db1/adc_data_rclk_reg*[27]}]
+set_property LOC SLICE_X1Y292   [get_cells {cap_db1/adc_data_rclk_reg*[27]}]
+
+# IODELAY constraints
+set_property IODELAY_GROUP ADC_CAP_IODELAY_GRP [get_cells adc_cap_idelayctrl_i]
+set_property IODELAY_GROUP ADC_CAP_IODELAY_GRP [get_cells {cap_db0/gen_lvds_pins[*].idelay_i}]
+set_property IODELAY_GROUP ADC_CAP_IODELAY_GRP [get_cells {cap_db1/gen_lvds_pins[*].idelay_i}]
 
 
 #*******************************************************************************
@@ -517,43 +533,30 @@ set_max_delay -from [get_cells -hier -filter {NAME =~ *IoPort2Basex/DoubleSyncWi
 # We assume that these signals are sampled by a 200MHz clock so
 # we guarantee a 2.5ns valid window
 set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}] \
-                     -from [all_registers -edge_triggered]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}] \
-                     -from [all_registers -edge_triggered]
+                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/gpio_atr/*/out_reg*}] \
+                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
 set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  7.500 -to   [all_registers -edge_triggered] \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
 
 # Front-panel GPIO
 # We assume that these signals are sampled by a 100MHz clock so
 # we guarantee a 5ns valid window
 set_max_delay 12.500 -datapath_only \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}] \
-                     -from [all_registers -edge_triggered]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}] \
-                     -from [all_registers -edge_triggered]
+                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/fp_gpio_atr/*/out_reg*}] \
+                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 set_max_delay 12.500 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
-set_min_delay  7.500 -to   [all_registers -edge_triggered] \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 
 # SPI Lines
 set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
                      -from [get_ports {DB*_*X*MISO*}] 
-set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}] \
-                     -from [all_registers -edge_triggered]
-set_max_delay 10.000 -datapath_only \
-                     -to   [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}] \
-                     -from [all_registers -edge_triggered]
-set_max_delay 10.000 -datapath_only \
-                     -to   [all_registers -edge_triggered] \
-                     -from [get_ports {DB_SCL DB_SDA DB_DAC_MOSI}]
+set_max_delay 10.000 -to   [get_ports {DB*_*SCLK DB*_*SEN DB*_*MOSI}]
+set_max_delay 10.000 -to   [get_ports {DB_SCL DB_SDA DB0_DAC_ENABLE DB1_DAC_ENABLE DB_ADC_RESET DB_DAC_RESET}]
+set_max_delay 10.000 -from [get_ports {DB_SCL DB_SDA DB_DAC_MOSI}]
 
 # Clock distribution chip control
 set_max_delay -from   [get_ports {LMK_Status[*] LMK_Holdover LMK_Lock LMK_Sync}] 10.000
@@ -580,6 +583,7 @@ set_max_delay -to [get_pins {radio_reset_sync/reset_int*/PRE}] 10.000
 #*******************************************************************************
 ## Asynchronous paths
 
+set_false_path -to   [get_pins -hier -filter {NAME =~ */synchronizer_gen[0].value_int_reg[0]/D}]
 set_false_path -to   [get_ports LED_*]
 set_false_path -to   [get_ports {SFPP*_RS0 SFPP*_RS1 SFPP*_SCL SFPP*_SDA SFPP*_TxDisable}]
 set_false_path -from [get_ports {SFPP*_ModAbs SFPP*_RxLOS SFPP*_SCL SFPP*_SDA SFPP*_TxFault}]

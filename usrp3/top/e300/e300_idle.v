@@ -28,11 +28,11 @@ module e300
   inout         DDR_VRN,
 
   //AVR SPI IO
-  output        AVR_CS_R,
-  input         AVR_IRQ,
-  input         AVR_MISO_R,
-  output        AVR_MOSI_R,
-  output        AVR_SCK_R,
+  input         AVR_CS_R,
+  output        AVR_IRQ,
+  output        AVR_MISO_R,
+  input         AVR_MOSI_R,
+  input         AVR_SCK_R,
 
   input         ONSWITCH_DB,
 
@@ -197,6 +197,40 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  axi_pmu inst_axi_pmu
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .ss(AVR_CS_R),
+    .mosi(AVR_MOSI_R),
+    .sck(AVR_SCK_R),
+    .miso(AVR_MISO_R),
+
+    .s_axi_awaddr(GP0_M_AXI_AWADDR),
+    .s_axi_awvalid(GP0_M_AXI_AWVALID),
+    .s_axi_awready(GP0_M_AXI_AWREADY),
+
+    .s_axi_wdata(GP0_M_AXI_WDATA),
+    .s_axi_wstrb(GP0_M_AXI_WSTRB),
+    .s_axi_wvalid(GP0_M_AXI_WVALID),
+    .s_axi_wready(GP0_M_AXI_WREADY),
+
+    .s_axi_bresp(GP0_M_AXI_BRESP),
+    .s_axi_bvalid(GP0_M_AXI_BVALID),
+    .s_axi_bready(GP0_M_AXI_BREADY),
+
+    .s_axi_araddr(GP0_M_AXI_ARADDR),
+    .s_axi_arvalid(GP0_M_AXI_ARVALID),
+    .s_axi_arready(GP0_M_AXI_ARREADY),
+
+    .s_axi_rdata(GP0_M_AXI_RDATA),
+    .s_axi_rresp(GP0_M_AXI_RRESP),
+    .s_axi_rvalid(GP0_M_AXI_RVALID),
+    .s_axi_rready(GP0_M_AXI_RREADY),
+    .s_axi_irq(pmu_irq)
+  );
+
   // First, make all connections to the PS (ARM+buses)
   e300_processing_system inst_e300_processing_system
   (  // Outward connections to the pins
@@ -292,11 +326,11 @@ module e300
 
     //    SPI Core 1 - To AVR
     .SPI1_SS(),
-    .SPI1_SS1(AVR_CS_R),
+    .SPI1_SS1(),
     .SPI1_SS2(),
-    .SPI1_SCLK(AVR_SCK_R),
-    .SPI1_MOSI(AVR_MOSI_R),
-    .SPI1_MISO(AVR_MISO_R)
+    .SPI1_SCLK(),
+    .SPI1_MOSI(),
+    .SPI1_MISO()
   );
 
   //------------------------------------------------------------------
