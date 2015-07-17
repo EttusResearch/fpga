@@ -118,9 +118,13 @@ set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_dela
 
 # We use a simple synchronizer to cross ADC data over from the ADC_CLK domain to the radio_clk domain
 # Use max delay constraints to ensure that the transition happens safely
-set_max_delay -datapath_only 0.890 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
+set_min_delay                0.675 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db0/adc_data_rclk_reg*[*]}]
-set_max_delay -datapath_only 0.890 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
+set_min_delay                0.675 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
+                                   -to   [get_cells {cap_db1/adc_data_rclk_reg*[*]}]
+set_max_delay -datapath_only 0.925 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
+                                   -to   [get_cells {cap_db0/adc_data_rclk_reg*[*]}]
+set_max_delay -datapath_only 0.925 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db1/adc_data_rclk_reg*[*]}]
 
 # We also need to location constrain the first flops in the synchronizer to help the tools
@@ -363,11 +367,11 @@ set_output_delay -clock [get_clocks IoTxClock] -max 1.600 -clock_fall -add_delay
 set_output_delay -clock [get_clocks IoTxClock] -min 0.400 -clock_fall -add_delay [get_ports {itIoTx*}]
 
 # These signals are all treated as async signals so no stringent timing requirements are needed.
-set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIrq*]               10.000
-set_max_delay -from [get_ports aIoResetIn_n]        -to [all_registers -edge_triggered] 10.000
-set_max_delay -from [get_ports aIoReadyIn]          -to [all_registers -edge_triggered] 10.000
-set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIoReadyOut]         10.000
-set_max_delay -from [all_registers -edge_triggered] -to [get_ports aIoPort2Restart]     10.000
+set_max_delay -to [get_ports aIrq*]              10.000
+set_max_delay -from [get_ports aIoResetIn_n]     10.000
+set_max_delay -from [get_ports aIoReadyIn]       10.000
+set_max_delay -to [get_ports aIoReadyOut]        10.000
+set_max_delay -to [get_ports aIoPort2Restart]    10.000
 set_false_path -from [get_ports aStc3Gpio7]
 
 # Async reset
