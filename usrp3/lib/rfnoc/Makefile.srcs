@@ -69,6 +69,7 @@ axi_round_and_clip.v \
 join_complex.v \
 axi_round.v \
 axi_clip.v \
+axi_serializer.v \
 complex_to_mag_approx.v \
 fosphor/delay.v \
 fosphor/fifo_srl.v \
