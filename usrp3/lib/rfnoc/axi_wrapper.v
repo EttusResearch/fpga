@@ -3,8 +3,10 @@
 
 // Assumes 32-bit elements (like 16cs) carried over AXI
 // User block controls packet sizes with tlast
-// simple_mode=1 allows user to ignore chdr stuff, must produce 1 packet for each one consume
-// simple_mode=0 user controls all chdr info, must control s_axis_data_tuser
+// SIMPLE_MODE=1 -- allows user to ignore chdr stuff, must produce 1 packet for each one consume
+// SIMPLE_MODE=0 -- user controls all chdr info, must control s_axis_data_tuser
+// GENERATE_TLAST=1 -- Generate s_axis_data_tlast automatically based on packet size. s_axis_data_tuser must be valid and at the beginning of the packet.
+// GENERATE_TLAST=0 -- user handles tlast
 
 // _tuser bit definitions
 //  [127:64] == CHDR header
@@ -21,7 +23,8 @@ module axi_wrapper
   #(parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
     parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
-    parameter SIMPLE_MODE=1)            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
+    parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
+    parameter GENERATE_TLAST=0)         // 0 = User handles tlast, 1 = Automatically generate tlast based on header packet size
    (input clk, input reset,
 
     input clear_tx_seqnum,
@@ -54,6 +57,7 @@ module axi_wrapper
    // /////////////////////////////////////////////////////////
    // Insert time and burst handling here.  A simple FIFO works only if packets are produced 1-for-1 (they may be of different sizes, though)
    wire [127:0] s_axis_data_tuser_int;
+   wire         s_axis_data_tlast_int;
    reg          sof_in = 1'b1;
    wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
@@ -77,17 +81,55 @@ module axi_wrapper
             (.clk(clk), .reset(reset), .clear(1'b0),
              .i_tdata(header_fifo_i_tdata),
              .i_tvalid(header_fifo_i_tvalid), .i_tready(),
-            .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast&s_axis_data_tvalid&s_axis_data_tready));
-         end // if (SIMPLE_MODE)
-      else
-      assign s_axis_data_tuser_int = s_axis_data_tuser;
+            .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast_int & s_axis_data_tvalid & s_axis_data_tready));
+      end else begin
+        assign s_axis_data_tuser_int = s_axis_data_tuser;
+      end
    endgenerate
-   
+
+   // Generate tlast for user data based on received packet length
+   // TODO: There could be a race condition on s_axis_data_tuser_int when
+   //       receiving very short packets, but latency in chdr_deframer
+   //       prevents this from occurring. Need to fix so it cannot
+   //       occur by design.
+   generate
+     if (GENERATE_TLAST) begin
+       reg s_axis_data_tlast_reg;
+       reg [15:0] s_axis_pkt_cnt;
+       reg [15:0] s_axis_pkt_size;
+       always @(posedge clk) begin
+         if (reset) begin
+           s_axis_data_tlast_reg <= 1'b0;
+           s_axis_pkt_cnt        <= 4;
+           s_axis_pkt_size       <= 0;
+         end else begin
+           // Remove header
+           s_axis_pkt_size <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
+           if (s_axis_data_tvalid & s_axis_data_tready) begin
+             if (s_axis_pkt_cnt == s_axis_pkt_size) begin
+               s_axis_pkt_cnt        <= 4;
+             end else begin
+               s_axis_pkt_cnt        <= s_axis_pkt_cnt + 4;
+             end
+             if (s_axis_pkt_cnt == s_axis_pkt_size-4) begin
+               s_axis_data_tlast_reg <= 1'b1;
+             end else begin
+               s_axis_data_tlast_reg <= 1'b0;
+             end
+           end
+         end
+       end
+       assign s_axis_data_tlast_int = s_axis_data_tlast_reg;
+     end else begin
+       assign s_axis_data_tlast_int = s_axis_data_tlast;
+     end
+   endgenerate
+
    // /////////////////////////////////////////////////////////
    // Output side handling, chdr_framer
    chdr_framer #(.SIZE(10)) chdr_framer
      (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
-      .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
+      .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast_int), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
 
    // /////////////////////////////////////////////////////////
