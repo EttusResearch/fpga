@@ -165,6 +165,7 @@
       .m_cvita_data(noc_block_export_io_m_cvita_data), \
       .cvita_cmd(noc_block_export_io_cvita_cmd), \
       .cvita_ack(noc_block_export_io_cvita_ack), \
+      .sid(sid_tb), \
       .next_dst(tb_next_dst), \
       .m_axis_data(noc_block_export_io_m_axis_data), \
       .m_axis_config(noc_block_export_io_m_axis_config), \

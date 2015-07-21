@@ -29,6 +29,7 @@ module noc_block_export_io
   axis_t.slave cvita_cmd,
   axis_t.master cvita_ack,
   // AXI Wrapper, block port 0
+  input [15:0]  sid,
   input [15:0]  next_dst,
   axis_t.master m_axis_data, m_axis_config,
   axis_t.slave  s_axis_data
@@ -87,7 +88,8 @@ module noc_block_export_io
 
   axi_wrapper #(
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-    .NUM_AXI_CONFIG_BUS(1))
+    .NUM_AXI_CONFIG_BUS(1),
+    .SIMPLE_MODE(0))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
@@ -103,6 +105,7 @@ module noc_block_export_io
     .s_axis_data_tlast(s_axis_data.tlast),
     .s_axis_data_tvalid(s_axis_data.tvalid),
     .s_axis_data_tready(s_axis_data.tready),
+    .s_axis_data_tuser({32'd0,sid,next_dst,64'd0}),
     .m_axis_config_tdata(m_axis_config.tdata),
     .m_axis_config_tlast(m_axis_config.tlast),
     .m_axis_config_tvalid(m_axis_config.tvalid),
