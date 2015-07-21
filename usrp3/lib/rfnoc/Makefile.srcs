@@ -25,6 +25,7 @@ noc_block_window.v \
 noc_block_keep_one_in_n.v \
 noc_block_pfb.v \
 noc_block_export_io.sv \
+noc_block_conv_encoder_qpsk.v \
 pfb.v \
 pfb_stage.v \
 null_source.v \
