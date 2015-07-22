@@ -5,7 +5,7 @@
 
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 7
+`define NUM_TEST_CASES 10
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
@@ -67,6 +67,8 @@ module cap_pattern_verifier_tb();
   //Main thread for testbench execution
   //------------------------------------------
   initial begin : tb_main
+    localparam ASYNC_RST_LEN  = 2;
+    localparam OUTPUT_LATENCY = 2;
 
     `TEST_CASE_START("Wait for reset");
     while (rst) @(posedge clk);
@@ -84,7 +86,7 @@ module cap_pattern_verifier_tb();
 
     `TEST_CASE_START("Simple ramp");
     data0.push_ramp_pkt(100, 64'd0, 64'h1);
-    repeat (3) @(posedge clk);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
     `ASSERT_ERROR(count0==100,"Invalid state: count");
     `ASSERT_ERROR(errors0==0,"Invalid state: errors");
     `ASSERT_ERROR(locked0,"Invalid state: locked");
@@ -94,11 +96,27 @@ module cap_pattern_verifier_tb();
     rst <= 1;
     @(posedge clk);
     rst <= 0;
+    repeat (ASYNC_RST_LEN) @(posedge clk);
 
     `TEST_CASE_START("Multiple ramp iterations");
     data0.push_ramp_pkt(65536, 64'd0, 64'h1);
-    repeat (3) @(posedge clk);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
     `ASSERT_ERROR(count0==65536,"Invalid state: count");
+    `ASSERT_ERROR(errors0==0,"Invalid state: errors");
+    `ASSERT_ERROR(locked0,"Invalid state: locked");
+    `ASSERT_ERROR(~failed0,"Invalid state: failed");
+    `TEST_CASE_DONE(1);
+
+    #(`NS_PER_TICK*0.3333)
+    rst <= 1;
+    #(`NS_PER_TICK*3.25)
+    rst <= 0;
+    repeat (ASYNC_RST_LEN+1) @(posedge clk);
+
+    `TEST_CASE_START("Simple ramp after async reset");
+    data0.push_ramp_pkt(100, 64'd0, 64'h1);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
+    `ASSERT_ERROR(count0==100,"Invalid state: count");
     `ASSERT_ERROR(errors0==0,"Invalid state: errors");
     `ASSERT_ERROR(locked0,"Invalid state: locked");
     `ASSERT_ERROR(~failed0,"Invalid state: failed");
@@ -107,11 +125,12 @@ module cap_pattern_verifier_tb();
     rst <= 1;
     @(posedge clk);
     rst <= 0;
+    repeat (ASYNC_RST_LEN) @(posedge clk);
 
     `TEST_CASE_START("Simple failure");
     data0.push_ramp_pkt(9, 64'd0, 64'h1);
     data0.push_ramp_pkt(100, 64'd10, 64'h1);
-    repeat (3) @(posedge clk);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
     `ASSERT_ERROR(count0==109,"Invalid state: count");
     `ASSERT_ERROR(errors0==1,"Invalid state: errors");
     `ASSERT_ERROR(locked0,"Invalid state: locked");
@@ -120,7 +139,7 @@ module cap_pattern_verifier_tb();
 
     `TEST_CASE_START("Late start success");
     data1.push_ramp_pkt(4096, 64'd0, 64'h1);
-    repeat (3) @(posedge clk);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
     `ASSERT_ERROR(count1==4096-256,"Invalid state: count");
     `ASSERT_ERROR(errors1==0,"Invalid state: errors");
     `ASSERT_ERROR(locked1,"Invalid state: locked");
@@ -130,14 +149,43 @@ module cap_pattern_verifier_tb();
     rst <= 1;
     @(posedge clk);
     rst <= 0;
+    repeat (ASYNC_RST_LEN) @(posedge clk);
 
     `TEST_CASE_START("Late failure overshoot");
     data1.push_ramp_pkt(4097, 64'd0, 64'h1);
-    repeat (3) @(posedge clk);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
     `ASSERT_ERROR(count1==4097-256,"Invalid state: count");
     `ASSERT_ERROR(errors1==1,"Invalid state: errors");
     `ASSERT_ERROR(locked1,"Invalid state: locked");
     `ASSERT_ERROR(failed1,"Invalid state: failed");
+    `TEST_CASE_DONE(1);
+
+    `TEST_CASE_START("Metastable data in reset");
+    @(posedge clk);
+    rst <= 1;
+    data0.push_word(14'hXXXX, 1'b0);
+    data0.push_word(14'hXXXX, 1'b1);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
+    `ASSERT_ERROR(count0==0,"Invalid state: count");
+    `ASSERT_ERROR(errors0==0,"Invalid state: errors");
+    `ASSERT_ERROR(~locked0,"Invalid state: locked");
+    `ASSERT_ERROR(~failed0,"Invalid state: failed");
+    `TEST_CASE_DONE(1);
+
+    `TEST_CASE_START("Metastable data out of reset");
+    rst <= 0;
+    repeat (ASYNC_RST_LEN) @(posedge clk);
+    data0.push_word(14'h0000, 1'b0);
+    data0.push_word(14'h0001, 1'b0);
+    data0.push_word(14'h0002, 1'b0);
+    data0.push_word(14'hXXXX, 1'b0);
+    data0.push_word(14'hXXXX, 1'b0);
+    data0.push_word(14'h0005, 1'b0);
+    repeat (OUTPUT_LATENCY) @(posedge clk);
+    `ASSERT_ERROR(count0==6,"Invalid state: count");
+    `ASSERT_ERROR(errors0==2,"Invalid state: errors");
+    `ASSERT_ERROR(locked0,"Invalid state: locked");
+    `ASSERT_ERROR(failed0,"Invalid state: failed");
     `TEST_CASE_DONE(1);
 
   end

@@ -17,6 +17,12 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 ARCH = kintex7
 PART_ID = xc7k410t/ffg900/-2
 
+include $(BASE_DIR)/../lib/control/Makefile.srcs
+
+DESIGN_SRCS = $(abspath \
+$(CONTROL_LIB_SRCS) \
+)
+
 DESIGN_SRCS += $(abspath \
 ../../cap_pattern_verifier.v \
 )
