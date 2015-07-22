@@ -558,7 +558,8 @@ module x300
    assign rx1[31:0] = { rx1_i, 2'b00, ~rx1_q_inv, 2'b00 };
 
    // IDELAYCTRL to calibrate all IDELAYE2 instances in capture_ddrlvds for both sides
-   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(), .REFCLK(radio_clk), .RST(radio_rst)); 
+   wire adc_idlyctrl_rdy;
+   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(radio_rst)); 
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1055,6 +1056,8 @@ module x300
    ///////////////////////////////////////////////////////////////////////////////////
    wire LMK_Holdover_sync, LMK_Lock_sync, LMK_Sync_sync;
    wire LMK_Status0_sync, LMK_Status1_sync;
+   wire radio_clk_locked_sync;
+   wire adc_idlyctrl_rdy_sync;
 
    //Sync all LMK_* signals to bus_clk
    synchronizer #(.INITIAL_VAL(1'b0)) LMK_Holdover_sync_inst (
@@ -1069,6 +1072,10 @@ module x300
    synchronizer #(.INITIAL_VAL(1'b0)) LMK_Status1_sync_inst (
       .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Status[1]), .out(LMK_Status1_sync));
 
+   synchronizer #(.INITIAL_VAL(1'b0)) radio_clk_locked_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(radio_clk_locked), .out(radio_clk_locked_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) adc_idlyctrl_rdy_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(adc_idlyctrl_rdy), .out(adc_idlyctrl_rdy_sync));
 
 `ifndef NO_DRAM_FIFOS
 
@@ -1255,6 +1262,7 @@ module x300
       .clock_misc_opt({GPSDO_PWR_ENA, TCXO_ENA}),
       .LMK_Status({LMK_Status1_sync, LMK_Status0_sync}), .LMK_Holdover(LMK_Holdover_sync), .LMK_Lock(LMK_Lock_sync), .LMK_Sync(LMK_Sync_sync),
       .LMK_SEN(LMK_SEN), .LMK_SCLK(LMK_SCLK), .LMK_MOSI(LMK_MOSI),
+      .misc_clock_status({1'b0, adc_idlyctrl_rdy_sync, radio_clk_locked_sync}),
       // SFP+ 0 flags
       .SFPP0_SCL(SFPP0_SCL),
       .SFPP0_SDA(SFPP0_SDA),

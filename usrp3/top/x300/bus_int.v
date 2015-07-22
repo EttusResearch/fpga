@@ -43,7 +43,7 @@ module bus_int
     inout SFPP1_RS0,
     inout SFPP1_RS1,
     //
-    input [4:0] clock_status,
+    input [7:0] clock_status,
     output [6:0] clock_control,
     // ETH0
     output [63:0] eth0_tx_tdata, output [3:0] eth0_tx_tuser, output eth0_tx_tlast, output eth0_tx_tvalid, input eth0_tx_tready,
@@ -325,7 +325,7 @@ module bus_int
        RB_COUNTER: rb_data = counter;
        RB_SPI_RDY: rb_data = {31'b0, spi_ready};
        RB_SPI_DATA: rb_data = rb_spi_data;
-       RB_CLK_STATUS: rb_data = {27'b0, clock_status};
+       RB_CLK_STATUS: rb_data = {24'b0, clock_status};
        // SFPP Interface pins.
        RB_SFPP_STATUS0: rb_data = {
             eth0_phy_status_sync, 10'b0,

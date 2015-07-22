@@ -41,6 +41,7 @@ module x300_core
    input [1:0] LMK_Status,
    input LMK_Holdover, input LMK_Lock, output LMK_Sync,
    output LMK_SEN, output LMK_SCLK, output LMK_MOSI,
+   input [2:0] misc_clock_status,
    // SFP+ pins
    inout SFPP0_SCL,
    inout SFPP0_SDA,
@@ -397,7 +398,7 @@ module x300_core
       .SFPP1_ModAbs(SFPP1_ModAbs),.SFPP1_TxFault(SFPP1_TxFault),.SFPP1_RxLOS(SFPP1_RxLOS),
       .SFPP1_RS0(SFPP1_RS0), .SFPP1_RS1(SFPP1_RS1),
       //clocky locky misc
-      .clock_status({pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
+      .clock_status({misc_clock_status, pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
       .clock_control({clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
       // Eth0
       .eth0_tx_tdata(eth0_tx_tdata), .eth0_tx_tuser(eth0_tx_tuser), .eth0_tx_tlast(eth0_tx_tlast),
