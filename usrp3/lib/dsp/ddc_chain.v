@@ -14,17 +14,18 @@ module ddc_chain
     parameter DEVICE = "SPARTAN6"
   )
   (input clk, input rst, input clr,
-   input set_stb, input [7:0] set_addr, input [31:0] set_data,
+   input 	     set_stb, input [7:0] set_addr, input [31:0] set_data,
 
    // From RX frontend
    input [WIDTH-1:0] rx_fe_i,
    input [WIDTH-1:0] rx_fe_q,
 
    // To RX control
+//IJB   output reg [31:0] sample,
    output [31:0] sample,
-   input run,
-   output strobe,
-   output [31:0] debug
+   input 	     run,
+   output 	     strobe,
+   output [31:0]     debug
    );
 
    localparam  cwidth = 25;
@@ -34,8 +35,9 @@ module ddc_chain
    reg [31:0]  phase;
 
    wire [17:0] scale_factor;
+   wire [cwidth-1:0] to_cordic_i, to_cordic_q;
    wire [cwidth-1:0] i_cordic, q_cordic;
-   wire [WIDTH-1:0] i_cordic_clip, q_cordic_clip;
+   reg  [WIDTH-1:0] i_cordic_pipe, q_cordic_pipe;
    wire [WIDTH-1:0] i_cic, q_cic;
 
 
@@ -48,6 +50,15 @@ module ddc_chain
    wire        swap_iq;
    wire        invert_i;
    wire        invert_q;
+
+/* -----\/----- EXCLUDED -----\/-----
+   always @(posedge clk) begin
+      sample[31:16] <= {rx_fe_i[23:12],4'h0};
+      sample[15:0] <= {rx_fe_q[23:12],4'h0};
+   end
+   assign strobe = 1;
+ -----/\----- EXCLUDED -----/\----- */
+   
 
    setting_reg #(.my_addr(BASE+0)) sr_0
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
@@ -89,35 +100,42 @@ module ddc_chain
      else
        phase <= phase + phase_inc;
 
-   //sign extension of cordic input
-   wire [cwidth-1:0] to_cordic_i, to_cordic_q;
+   // CORDIC  24-bit I/O
+   // (Algorithmic gain through CORDIC => 1.647 * 0.5 = 0.8235)
+   // (Worst case gain through rotation => SQRT(2) = 1.4142)
+   // Total worst case gain => 0.8235 * 1.4142 = 1.1646
+   // So add an extra MSB bit for word growth.
+   
    sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_i (.in(rx_fe_i_mux), .out(to_cordic_i));
    sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_q (.in(rx_fe_q_mux), .out(to_cordic_q));
-
-   // CORDIC  24-bit I/O
+   
    cordic_z24 #(.bitwidth(cwidth))
-     cordic(.clock(clk), .reset(rst), .enable(run),
-	    .xi(to_cordic_i),. yi(to_cordic_q), .zi(phase[31:32-zwidth]),
-	    .xo(i_cordic),.yo(q_cordic),.zo() );
+   cordic(.clock(clk), .reset(rst), .enable(run),
+	  .xi(to_cordic_i),. yi(to_cordic_q), .zi(phase[31:32-zwidth]),
+	  .xo(i_cordic),.yo(q_cordic),.zo() );
 
-   clip_reg #(.bits_in(cwidth), .bits_out(WIDTH)) clip_i
-     (.clk(clk), .in(i_cordic), .strobe_in(1'b1), .out(i_cordic_clip),.strobe_out());
-   clip_reg #(.bits_in(cwidth), .bits_out(WIDTH)) clip_q
-     (.clk(clk), .in(q_cordic), .strobe_in(1'b1), .out(q_cordic_clip),.strobe_out());
+   always @(posedge clk) begin
+      i_cordic_pipe[23:0] <= i_cordic[24:1];
+      q_cordic_pipe[23:0] <= q_cordic[24:1];
+   end
+   
 
    // CIC decimator  24 bit I/O
+   // Applies crude 1/(2^N) right shift gain compensation internally to prevent excesive downstream word growth.
+   // Output gain is = algo_gain/(POW(2,CEIL(LOG2(algo_gain))) where algo_gain is = cic_decim_rate^4
+   // Thus output gain is <= 1.0 and no word growth occurs.
    cic_strober cic_strober(.clock(clk),.reset(rst),.enable(run),.rate(cic_decim_rate),
 			   .strobe_fast(1'b1),.strobe_slow(strobe_cic) );
 
    cic_decim #(.bw(WIDTH))
      decim_i (.clock(clk),.reset(rst),.enable(run),
 	      .rate(cic_decim_rate),.strobe_in(1'b1),.strobe_out(strobe_cic),
-	      .signal_in(i_cordic_clip),.signal_out(i_cic));
+	      .signal_in(i_cordic_pipe),.signal_out(i_cic));
 
    cic_decim #(.bw(WIDTH))
      decim_q (.clock(clk),.reset(rst),.enable(run),
 	      .rate(cic_decim_rate),.strobe_in(1'b1),.strobe_out(strobe_cic),
-	      .signal_in(q_cordic_clip),.signal_out(q_cic));
+	      .signal_in(q_cordic_pipe),.signal_out(q_cic));
 
    //////////////////////////////////////////////////////////////////////////
    //
@@ -152,7 +170,8 @@ module ddc_chain
 
 	 assign nd1 = strobe_cic;
 	 assign nd2 = strobe_hb1;
-
+	 
+	 // Default Coeffs have gain of ~1.0
 	 hbdec1 hbdec1
 	   (.clk(clk), // input clk
 	    .sclr(rst), // input sclr
@@ -168,7 +187,8 @@ module ddc_chain
 	    .data_valid(data_valid1), // output data_valid
 	    .dout_1(i_hb1), // output [46 : 0] dout_1
 	    .dout_2(q_hb1)); // output [46 : 0] dout_2
-
+	 
+	 // Default Coeffs have gain of ~1.0
 	 hbdec2 hbdec2
 	   (.clk(clk), // input clk
 	    .sclr(rst), // input sclr
@@ -185,6 +205,17 @@ module ddc_chain
 	    .dout_1(i_hb2), // output [46 : 0] dout_1
 	    .dout_2(q_hb2)); // output [46 : 0] dout_2
 
+	 // TEST. IJB
+	 wire [17:0] i_hb_round, q_hb_round;
+	 wire 	     strobe_hb1_round;
+	 
+	 round_sd #(.WIDTH_IN(24+HB1_SCALE), .WIDTH_OUT(18)) round_i_hb1
+	   (.clk(clk), .reset(rst), .in(i_hb1[23+HB1_SCALE:0]), .strobe_in(strobe_hb1), .out(i_hb_round[17:0]), .strobe_out(strobe_hb1_round));
+	 round_sd #(.WIDTH_IN(24+HB1_SCALE), .WIDTH_OUT(18)) round_q_hb1
+	   (.clk(clk), .reset(rst), .in(q_hb1[23+HB1_SCALE:0]), .strobe_in(strobe_hb1), .out(q_hb_round[17:0]), .strobe_out());
+	 
+	 // END TEST
+	 
 	 reg [17:0]  i_unscaled, q_unscaled;
 	 reg 	     strobe_unscaled;
 
@@ -207,9 +238,11 @@ module ddc_chain
 	     // One Halfband enabled, decimate by 2.
 	     2'd2 :
 	       begin
-		  strobe_unscaled <= strobe_hb1;
-		  i_unscaled <= i_hb1[23+HB1_SCALE:6+HB1_SCALE];
-		  q_unscaled <= q_hb1[23+HB1_SCALE:6+HB1_SCALE];
+		  strobe_unscaled <= strobe_hb1_round;
+		//  i_unscaled <= i_hb1[23+HB1_SCALE:6+HB1_SCALE];
+		//  q_unscaled <= q_hb1[23+HB1_SCALE:6+HB1_SCALE];
+		  i_unscaled <= i_hb_round[17:0];
+		  q_unscaled <= q_hb_round[17:0];
 	       end
 	     // Both Halfbands enabled, decimate by 4.
 	     2'd3 :
@@ -244,6 +277,23 @@ module ddc_chain
 		.CE(strobe_unscaled),   // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
+	 
+	 reg 		  strobe_scaled;
+	 wire 		  strobe_clip;
+	 wire [33:0] 	  i_clip, q_clip;
+
+	 always @(posedge clk)  strobe_scaled <= strobe_unscaled;
+   
+	 clip_reg #(.bits_in(36), .bits_out(34), .STROBED(1)) clip_i
+	   (.clk(clk), .in(prod_i[35:0]), .strobe_in(strobe_scaled), .out(i_clip), .strobe_out(strobe_clip));
+	 clip_reg #(.bits_in(36), .bits_out(34), .STROBED(1)) clip_q
+	   (.clk(clk), .in(prod_q[35:0]), .strobe_in(strobe_scaled), .out(q_clip), .strobe_out());
+
+//	 round_sd #(.WIDTH_IN(34), .WIDTH_OUT(16)) round_i
+//	   (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(sample[31:16]), .strobe_out(strobe));
+//	 round_sd #(.WIDTH_IN(34), .WIDTH_OUT(16)) round_q
+//	   (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(sample[15:0]), .strobe_out());
+   
 
 	 //pipeline for the multiplier (gain of 10 bits)
 	 reg [WIDTH-1:0]  prod_reg_i, prod_reg_q;
