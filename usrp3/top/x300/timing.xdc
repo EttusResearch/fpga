@@ -118,13 +118,13 @@ set_input_delay -clock DB1_ADC_DCLK -min $adc_in_delay_min -clock_fall -add_dela
 
 # We use a simple synchronizer to cross ADC data over from the ADC_CLK domain to the radio_clk domain
 # Use max delay constraints to ensure that the transition happens safely
-set_min_delay                0.675 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
+set_min_delay                0.700 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db0/adc_data_rclk_reg*[*]}]
-set_min_delay                0.675 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
+set_min_delay                0.700 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db1/adc_data_rclk_reg*[*]}]
-set_max_delay -datapath_only 0.925 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
+set_max_delay -datapath_only 0.950 -from [get_cells {cap_db0/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db0/adc_data_rclk_reg*[*]}]
-set_max_delay -datapath_only 0.925 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
+set_max_delay -datapath_only 0.950 -from [get_cells {cap_db1/gen_lvds_pins[*].iddr_i}] \
                                    -to   [get_cells {cap_db1/adc_data_rclk_reg*[*]}]
 
 # We also need to location constrain the first flops in the synchronizer to help the tools
