@@ -141,7 +141,7 @@ module bus_int
    localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
 
-   localparam COMPAT_MAJOR    = 16'h000C;
+   localparam COMPAT_MAJOR    = 16'h000D;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
@@ -293,7 +293,7 @@ module bus_int
    // [0] - PHY reset
    // [1] - Radio clk domain reset
    // [2] - Radio Clk PLL reset.
-   // [3] - Usused.
+   // [3] - ADC IdelayCtrl reset
    //
    setting_reg #(.my_addr(SR_SW_RST), .awidth(SR_AWIDTH), .width(4)) set_sw_rst
      (.clk(clk), .rst(reset),

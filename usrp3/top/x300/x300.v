@@ -238,7 +238,7 @@ module x300
 );
 
    wire         radio_clk, radio_clk_2x, dac_dci_clk;
-   wire         global_rst, radio_rst, bus_rst;
+   wire         global_rst, radio_rst, bus_rst, adc_idlyctrl_rst;
    wire [3:0]   sw_rst;
    wire [2:0]   led0, led1;
 
@@ -396,19 +396,23 @@ module x300
    //
    ////////////////////////////////////////////////////////////////////
 
-   reset_sync radio_reset_sync
-     (
+   reset_sync radio_reset_sync (
       .clk(radio_clk),
       .reset_in(global_rst || !bus_clk_locked || sw_rst[1]),
       .reset_out(radio_rst)
-      );
+   );
 
-   reset_sync int_reset_sync
-     (
+   reset_sync int_reset_sync (
       .clk(bus_clk),
       .reset_in(global_rst || !bus_clk_locked),
       .reset_out(bus_rst)
-      );
+   );
+
+   reset_sync adc_idlyctrl_reset_sync (
+      .clk(bus_clk),
+      .reset_in(global_rst || !bus_clk_locked || sw_rst[3]),
+      .reset_out(adc_idlyctrl_rst)
+   );
 
    ////////////////////////////////////////////////////////////////////
    // PPS
@@ -559,7 +563,7 @@ module x300
 
    // IDELAYCTRL to calibrate all IDELAYE2 instances in capture_ddrlvds for both sides
    wire adc_idlyctrl_rdy;
-   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(radio_rst)); 
+   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(adc_idlyctrl_rst)); 
 
    /////////////////////////////////////////////////////////////////////
    //
