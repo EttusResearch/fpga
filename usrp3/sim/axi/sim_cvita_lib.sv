@@ -215,6 +215,16 @@ class cvita_slave #(parameter DWIDTH = 64) extends axis_slave #(DWIDTH);
     end
   endtask
 
+  // Pull a packet from the AXI Stream bus and
+  // drop it instead of passing data to the user.
+  // Args: None
+  task automatic drop_pkt;
+    begin
+      cvita_pkt_t pkt;
+      this.pull_pkt(pkt);
+    end
+  endtask
+
 endclass
 
 
@@ -312,6 +322,12 @@ class cvita_bus #(parameter DWIDTH = 64);
     output cvita_pkt_t pkt;
     begin
       this.s_cvita.pull_pkt(pkt);
+    end
+  endtask
+
+  task automatic drop_pkt;
+    begin
+      this.s_cvita.drop_pkt();
     end
   endtask
 
