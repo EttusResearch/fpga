@@ -14,6 +14,8 @@ simple_i2c_core.v \
 setting_reg.v \
 axi_setting_reg.v \
 settings_bus_crossclock.v \
+settings_bus_mux.v \
+settings_bus_mux_crossclock.v \
 radio_ctrl_proc.v \
 ram_2port.v \
 axi_crossbar.v \
