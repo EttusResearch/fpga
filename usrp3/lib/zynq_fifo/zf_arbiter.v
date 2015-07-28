@@ -11,7 +11,8 @@ module zf_arbiter
 #(
     parameter STREAMS_WIDTH = 2,
     parameter CMDFIFO_DEPTH = 4,
-    parameter PAGE_WIDTH = 16
+    parameter PAGE_WIDTH = 16,
+    parameter USE_INT_STREAM_SEL = 0    // Use internal round robin stream selection
 )
 (
     input clk,
@@ -42,10 +43,10 @@ module zf_arbiter
     output sts_tready,
 
     //------------------------------------------------------------------
-    //-- which stream to process? externally provided
+    //-- which stream to process? externally provided if USE_INT_STREAM_SEL = 0
     //------------------------------------------------------------------
-    input [STREAMS_WIDTH-1:0] ext_stream,
-    input stream_valid,
+    input [STREAMS_WIDTH-1:0] ext_stream_sel,
+    input ext_stream_valid,
 
     output [31:0] debug
 );
@@ -78,6 +79,33 @@ module zf_arbiter
 
     reg [1:0] state;
 
+    wire [STREAMS_WIDTH-1:0] stream_sel;
+    wire stream_valid;
+
+    generate
+    if (USE_INT_STREAM_SEL) begin
+        reg [STREAMS_WIDTH-1:0] int_stream_sel;
+        always @(posedge clk) begin
+            if (rst) begin
+                int_stream_sel <= 0;
+            end else begin
+                if (state == STATE_SET_WHICH_STREAM) begin
+                    if (int_stream_sel < NUM_STREAMS-1) begin
+                        int_stream_sel <= int_stream_sel + 1;
+                    end else begin
+                        int_stream_sel <= 0;
+                    end
+                end
+            end
+        end
+        assign stream_sel = int_stream_sel;
+        assign stream_valid = 1'b1;
+    end else begin
+        assign stream_sel = ext_stream_sel;
+        assign stream_valid = ext_stream_valid;
+    end
+    endgenerate
+
     always @(posedge clk) begin
         if (rst) begin
             state <= STATE_SET_WHICH_STREAM;
@@ -86,8 +114,8 @@ module zf_arbiter
         else case (state)
 
         STATE_SET_WHICH_STREAM: begin
-            if (cmd_tvalid_i[ext_stream]) state <= STATE_ASSERT_DO_CMD;
-            which_stream <= ext_stream;
+            if (cmd_tvalid_i[stream_sel]) state <= STATE_ASSERT_DO_CMD;
+            which_stream <= stream_sel;
         end
 
         STATE_ASSERT_DO_CMD: begin
@@ -156,7 +184,7 @@ module zf_arbiter
         assign cmd_data_i[i][31] = 1'b0; //DRE ReAlignment Request
         assign cmd_data_i[i][30] = 1'b1; //always EOF for tlast stream
         assign cmd_data_i[i][29:24] = 6'b0; //DRE Stream Alignment
-        assign cmd_data_i[i][23] = 1'b0; //reserved - 0?
+        assign cmd_data_i[i][23] = 1'b1; // Transfer type, 0 = No addr incr / FIFO mode, 1 = incr addr
         assign cmd_data_i[i][22:0] = cmd_size[22:0];
 
         axi_fifo #(.WIDTH(32), .SIZE(CMDFIFO_DEPTH)) crl_addr_fifo
@@ -192,7 +220,7 @@ module zf_arbiter
     assign debug[5] = cmd_tready;
     assign debug[6] = sts_tvalid;
     assign debug[7] = sts_tready;
-    assign debug[8] = ext_stream;
+    assign debug[8] = stream_sel;
     assign debug[9] = which_stream;
     assign debug[15] = rb_addr[STREAMS_WIDTH+4:5];
 

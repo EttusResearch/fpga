@@ -111,7 +111,7 @@ module zynq_fifo_top
     output [31:0] core_set_addr,
     output        core_set_stb,
     input [31:0]  core_rb_data,
-    
+
     //------------------------------------------------------------------
     // Settings bus interface for crossbar (in e300 core)
     //------------------------------------------------------------------
@@ -136,18 +136,18 @@ module zynq_fifo_top
     wire [31:0] set_addr, set_data;
     wire [31:0] rb_addr, rb_data;
     wire [31:0] rb_data_s2h, rb_data_h2s;
-    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_loopup;
+    wire set_stb, set_stb_s2h, set_stb_h2s, set_stb_dest_lookup;
     wire rb_stb, rb_stb_s2h, rb_stb_h2s;
 
     wire [2:0] set_page = set_addr[PAGE_WIDTH+2:PAGE_WIDTH];
     wire [2:0] rb_page = rb_addr[PAGE_WIDTH+2:PAGE_WIDTH];
 
-    // each arbiter gets 1 page, e300_core the next, 
+    // each arbiter gets 1 page, e300_core the next,
     // destination lookup, and xbar gets two pages
     assign set_stb_s2h         = set_stb && (set_page == 3'h0);
     assign set_stb_h2s         = set_stb && (set_page == 3'h1);
     assign core_set_stb        = set_stb && (set_page == 3'h2);
-    assign dest_lookup_set_stb = set_stb && (set_page == 3'h3);
+    assign set_stb_dest_lookup = set_stb && (set_page == 3'h3);
     assign xbar_set_stb        = set_stb && (set_page == 3'h4 || set_page == 3'h5);
 
     assign rb_stb_s2h = rb_stb && (rb_page == 3'h0);
@@ -166,7 +166,7 @@ module zynq_fifo_top
     assign xbar_rb_addr = rb_addr;
     assign xbar_set_data = set_data;
     assign xbar_set_addr = set_addr;
-    
+
     //------------------------------------------------------------------
     // configuration slaves
     //------------------------------------------------------------------
@@ -218,7 +218,7 @@ module zynq_fifo_top
     cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
         .clk(clk), .rst(rst),
-        .set_stb(dest_lookup_set_stb), .set_addr(set_addr[9:2]), .set_data(set_data),
+        .set_stb(set_stb_dest_lookup), .set_addr(set_addr[9:2]), .set_data(set_data),
         .i_tdata(s2h_tdata), .i_tlast(s2h_tlast), .i_tvalid(s2h_tvalid), .i_tready(s2h_tready),
         .o_tdata(s2h_tdata_i0), .o_tlast(s2h_tlast_i0), .o_tvalid(s2h_tvalid_i0), .o_tready(s2h_tready_i0),
         .o_tdest(which_stream_s2h)
@@ -253,7 +253,7 @@ module zynq_fifo_top
         .rb_addr(rb_addr), .rb_data(rb_data_s2h), .rb_stb(rb_stb_s2h),
         .cmd_tdata(s2h_cmd_tdata), .cmd_tvalid(s2h_cmd_tvalid), .cmd_tready(s2h_cmd_tready),
         .sts_tdata(s2h_sts_tdata), .sts_tvalid(s2h_sts_tvalid), .sts_tready(s2h_sts_tready),
-        .ext_stream(which_stream_s2h), .stream_valid(s2h_tvalid_i0),
+        .ext_stream_sel(which_stream_s2h), .ext_stream_valid(s2h_tvalid_i0),
         .debug(s2h_arbiter_debug)
     );
 
@@ -267,17 +267,12 @@ module zynq_fifo_top
 
     assign h2s_irq = h2s_sts_tvalid;
 
-    //simple round robin implementation for checking available packets
-    reg [H2S_STREAMS_WIDTH-1:0] which_stream_h2s;
-    always @(posedge clk)
-        if (rst) which_stream_h2s <= 0;
-        else which_stream_h2s <= which_stream_h2s + 1'b1;
-
     wire [31:0] h2s_arbiter_debug;
     zf_arbiter #(
         .STREAMS_WIDTH(S2H_STREAMS_WIDTH),
         .CMDFIFO_DEPTH(S2H_CMDFIFO_DEPTH),
-        .PAGE_WIDTH(PAGE_WIDTH)
+        .PAGE_WIDTH(PAGE_WIDTH),
+        .USE_INT_STREAM_SEL(1)
     ) h2s_arbiter
     (
         .clk(clk), .rst(rst),
@@ -285,7 +280,7 @@ module zynq_fifo_top
         .rb_addr(rb_addr), .rb_data(rb_data_h2s), .rb_stb(rb_stb_h2s),
         .cmd_tdata(h2s_cmd_tdata), .cmd_tvalid(h2s_cmd_tvalid), .cmd_tready(h2s_cmd_tready),
         .sts_tdata(h2s_sts_tdata), .sts_tvalid(h2s_sts_tvalid), .sts_tready(h2s_sts_tready),
-        .ext_stream(which_stream_h2s), .stream_valid(1'b1),
+        .ext_stream_sel(), .ext_stream_valid(),
         .debug(h2s_arbiter_debug)
     );
 
