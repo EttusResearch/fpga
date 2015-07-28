@@ -2,7 +2,7 @@
 // Copyright 2014 Ettus Research LLC
 //
 
-// Radio Control Processor
+// Command Packet Processor
 //  Accepts compressed vita extension context packets of the following form:
 //       { VITA Compressed Header, Stream ID }
 //       { Optional 64 bit time }
@@ -17,40 +17,41 @@
 // Note -- if t0 is the requested time, the actual send time on the setting bus is t0 + 1 cycle.
 // Note 2 -- if t1 is the actual time the setting bus, t1+2 is the reported time.
 
-module radio_ctrl_proc
+module cmd_pkt_proc #(
+   parameter NUM_BLOCK_PORTS = 1)
   (input clk, input reset, input clear,
-   
-   input [63:0] ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output reg ctrl_tready,
+
+   input [63:0] cmd_tdata, input cmd_tlast, input cmd_tvalid, output reg cmd_tready,
    output reg [63:0] resp_tdata, output reg resp_tlast, output resp_tvalid, input resp_tready,
-   
+
    input [63:0] vita_time,
 
-   output set_stb, output [7:0] set_addr, output [31:0] set_data,
+   output [NUM_BLOCK_PORTS-1:0] set_stb, output [7:0] set_addr, output [31:0] set_data, output reg [63:0] set_vita,
    input ready,
-   
-   input [63:0] readback,
-   
-   output [31:0] debug);
+
+   input [NUM_BLOCK_PORTS*64-1:0] readback);
 
    localparam RC_HEAD   = 4'd0;
    localparam RC_TIME   = 4'd1;
    localparam RC_DATA   = 4'd2;
    localparam RC_DUMP   = 4'd3;
-   localparam RC_RESP_HEAD = 4'd4;
-   localparam RC_RESP_TIME = 4'd5;
-   localparam RC_RESP_DATA = 4'd6;
-   
-   wire 	 IS_EC = ctrl_tdata[63:62] == 2'b10;
-   wire 	 HAS_TIME = ctrl_tdata[61];
-   reg 		 HAS_TIME_reg;
-   
-   reg [3:0] 	 rc_state;
-   reg [63:0] 	 cmd_time;
+   localparam RC_RESP_WAIT = 4'd4;
+   localparam RC_RESP_HEAD = 4'd5;
+   localparam RC_RESP_TIME = 4'd6;
+   localparam RC_RESP_DATA = 4'd7;
 
-   wire 	 now, late, go;
+   wire 	 IS_EC = cmd_tdata[63:62] == 2'b10;
+   wire 	 HAS_TIME = cmd_tdata[61];
+   reg 		 HAS_TIME_reg;
+
+   reg [3:0] 	 rc_state;
+
    reg [11:0] 	 seqnum;
    reg [31:0] 	 sid;
-   
+   wire [15:0] src_sid = sid[31:16];
+   wire [15:0] dst_sid = sid[15:0];
+   wire [3:0] block_port = dst_sid[3:0];
+
    always @(posedge clk)
      if(reset)
        begin
@@ -58,44 +59,54 @@ module radio_ctrl_proc
 	  HAS_TIME_reg <= 1'b0;
 	  sid <= 32'd0;
 	  seqnum <= 12'd0;
+	  set_vita <= 64'd0;
        end
      else
 	 case(rc_state)
 	   RC_HEAD :
-	     if(ctrl_tvalid)
+	     if(cmd_tvalid)
 	       begin
-		  sid <= ctrl_tdata[31:0];
-		  seqnum <= ctrl_tdata[59:48];
+		  sid <= cmd_tdata[31:0];
+		  seqnum <= cmd_tdata[59:48];
 		  HAS_TIME_reg <= HAS_TIME;
 		  if(IS_EC)
-		    if(HAS_TIME)
+		    if(HAS_TIME) begin
 		      rc_state <= RC_TIME;
-		    else
+		    end else begin
+		      set_vita <= 64'd0;
 		      rc_state <= RC_DATA;
+		    end
 		  else
-		    if(~ctrl_tlast)
+		    if(~cmd_tlast)
 		      rc_state <= RC_DUMP;
 	       end
-	   
+
 	   RC_TIME :
-	     if(ctrl_tvalid)
-	       if(ctrl_tlast)
-		 rc_state <= RC_RESP_HEAD;
-	       else if(go)
+	     if(cmd_tvalid) begin
+	       set_vita <= cmd_tdata;
+	       if(cmd_tlast)
+		 rc_state <= RC_RESP_WAIT;
+	       else
 		 rc_state <= RC_DATA;
-	   
+		 end
+
 	   RC_DATA :
-	     if(ctrl_tvalid)
+	     if(cmd_tvalid)
 	       if(ready)
-		 if(ctrl_tlast)
-		   rc_state <= RC_RESP_HEAD;
+		 if(cmd_tlast)
+		   rc_state <= RC_RESP_WAIT;
 		 else
 		   rc_state <= RC_DUMP;
 
 	   RC_DUMP :
-	     if(ctrl_tvalid)
-	       if(ctrl_tlast)
-		 rc_state <= RC_RESP_HEAD;
+	     if(cmd_tvalid)
+	       if(cmd_tlast)
+		 rc_state <= RC_RESP_WAIT;
+
+	   // Wait a clock cycle to ensure readback
+	   // has time to propagate
+	   RC_RESP_WAIT :
+	     rc_state <= RC_RESP_HEAD;
 
 	   RC_RESP_HEAD :
 	     if(resp_tready)
@@ -115,30 +126,56 @@ module radio_ctrl_proc
 
    always @*
      case (rc_state)
-       RC_HEAD : ctrl_tready <= 1'b1;
-       RC_TIME : ctrl_tready <= ctrl_tlast | go;
-       RC_DATA : ctrl_tready <= ready;
-       RC_DUMP : ctrl_tready <= 1'b1;
-       default : ctrl_tready <= 1'b0;
+       RC_HEAD : cmd_tready <= 1'b1;
+       RC_TIME : cmd_tready <= cmd_tlast;
+       RC_DATA : cmd_tready <= ready;
+       RC_DUMP : cmd_tready <= 1'b1;
+       default : cmd_tready <= 1'b0;
      endcase // case (rc_state)
-      
-   time_compare time_compare
-     (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(ctrl_tdata), .now(now), .early(), .late(late), .too_early());
 
-   assign go = now | late;
-   
-   assign set_stb = (rc_state == RC_DATA) & ready & ctrl_tvalid;
-   assign set_addr = ctrl_tdata[39:32];
-   assign set_data = ctrl_tdata[31:0];
+   integer k;
+   reg [NUM_BLOCK_PORTS-1:0] block_port_stb;
+   reg [63:0] readback_reg;
+   wire [63:0] readback_mux[0:NUM_BLOCK_PORTS-1];
+   always @(posedge clk) begin
+     if (reset | clear) begin
+       block_port_stb <= 'd0;
+       readback_reg   <= 64'd0;
+     end else begin
+       for (k = 0; k < NUM_BLOCK_PORTS-1; k = k + 1) begin
+         if (block_port == k) begin
+           block_port_stb[k] <= 1'b1;
+         end else begin
+           block_port_stb[k] <= 1'b0;
+         end
+       end
+       if (block_port > NUM_BLOCK_PORTS-1) begin
+         readback_reg <= 64'd0;
+       end else begin
+         readback_reg <= readback_mux[block_port];
+       end
+     end
+   end
+
+   genvar i;
+   generate
+     for (i = 0; i < NUM_BLOCK_PORTS; i = i + 1) begin
+       assign set_stb[i] = (rc_state == RC_DATA) & ready & cmd_tvalid & block_port_stb[i];
+       assign readback_mux[i] = readback[64*i+63:64*i];
+     end
+   endgenerate
+
+   assign set_addr = cmd_tdata[39:32];
+   assign set_data = cmd_tdata[31:0];
 
    always @*
      case (rc_state)
-       RC_RESP_HEAD : { resp_tlast, resp_tdata } <= {1'b0, 4'hE, seqnum, 16'd24, sid[15:0], sid[31:16] };
+       RC_RESP_HEAD : { resp_tlast, resp_tdata } <= {1'b0, 4'hE, seqnum, 16'd24, dst_sid, src_sid};
        RC_RESP_TIME : { resp_tlast, resp_tdata } <= {1'b0, vita_time};
-       RC_RESP_DATA : { resp_tlast, resp_tdata } <= {1'b1, readback};
+       RC_RESP_DATA : { resp_tlast, resp_tdata } <= {1'b1, readback_reg};
        default : { resp_tlast, resp_tdata } <= 65'h0;
      endcase // case (rc_state)
-   
+
    assign resp_tvalid = (rc_state == RC_RESP_HEAD) | (rc_state == RC_RESP_TIME) | (rc_state == RC_RESP_DATA);
    
 endmodule // radio_ctrl_proc

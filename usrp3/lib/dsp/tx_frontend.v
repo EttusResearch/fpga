@@ -2,7 +2,11 @@
 // Copyright 2014 Ettus Research LLC
 //
 module tx_frontend
-  #(parameter BASE=0,
+  #(parameter SR_TX_DC_OFFSET_I,
+    parameter SR_TX_DC_OFFSET_Q,
+    parameter SR_TX_MAG_CORRECTION,
+    parameter SR_TX_PHASE_CORRECTION,
+    parameter SR_TX_MUX,
     parameter WIDTH_OUT=16,
     parameter IQCOMP_EN=1)
    (input clk, input rst,
@@ -20,23 +24,23 @@ module tx_frontend
    wire [23:0] i_bal, q_bal;
    wire [17:0] mag_corr, phase_corr;
    
-   setting_reg #(.my_addr(BASE+0), .width(24)) sr_0
+   setting_reg #(.my_addr(SR_TX_DC_OFFSET_I), .width(24)) sr_0
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(i_dco),.changed());
 
-   setting_reg #(.my_addr(BASE+1), .width(24)) sr_1
+   setting_reg #(.my_addr(SR_TX_DC_OFFSET_Q), .width(24)) sr_1
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(q_dco),.changed());
 
-   setting_reg #(.my_addr(BASE+2),.width(18)) sr_2
+   setting_reg #(.my_addr(SR_TX_MAG_CORRECTION),.width(18)) sr_2
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(mag_corr),.changed());
    
-   setting_reg #(.my_addr(BASE+3),.width(18)) sr_3
+   setting_reg #(.my_addr(SR_TX_PHASE_CORRECTION),.width(18)) sr_3
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(phase_corr),.changed());
   
-   setting_reg #(.my_addr(BASE+4), .width(8)) sr_4
+   setting_reg #(.my_addr(SR_TX_MUX), .width(8)) sr_4
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(mux_ctrl),.changed());
 

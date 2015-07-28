@@ -7,8 +7,8 @@
 ##################################################
 RADIO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
 radio_core.v \
-radio_rx.v \
-radio_tx.v \
+rx_frontend_gen3.v \
+tx_frontend_gen3.v \
 rx_control_gen3.v \
 tx_control_gen3.v \
 noc_block_radio_core.v \

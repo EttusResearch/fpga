@@ -59,17 +59,17 @@
   // NoC Shell Registers
   // 8-bit address space, but use 32-bits for convenience
   // One register per block port, spaced by 16 for (up to) 16 block ports
-  localparam [31:0] SR_FLOW_CTRL_CYCS_PER_ACK_BASE = 0;
-  localparam [31:0] SR_FLOW_CTRL_PKTS_PER_ACK_BASE = 16;
-  localparam [31:0] SR_FLOW_CTRL_WINDOW_SIZE_BASE  = 32;
-  localparam [31:0] SR_FLOW_CTRL_WINDOW_EN_BASE    = 48;
-  // One register per noc shell
-  localparam [31:0] SR_FLOW_CTRL_CLR_SEQ           = 126;
-  localparam [31:0] SR_NOC_SHELL_READBACK          = 127;
+  localparam [31:0] SR_FLOW_CTRL_CYCS_PER_ACK      = 0;
+  localparam [31:0] SR_FLOW_CTRL_PKTS_PER_ACK      = 1;
+  localparam [31:0] SR_FLOW_CTRL_WINDOW_SIZE       = 2;
+  localparam [31:0] SR_FLOW_CTRL_WINDOW_EN         = 3;
+  localparam [31:0] SR_BLOCK_SID                   = 4;
+  localparam [31:0] SR_NEXT_DST_SID                = 5;
+  localparam [31:0] SR_CLEAR_TX_FC                 = 126;
+  localparam [31:0] SR_RB_ADDR                     = 127;
   // Next destination as allocated by the user, one per block port
-  localparam [31:0] SR_NEXT_DST_BASE               = 128;
   localparam [31:0] SR_AXI_CONFIG_BASE             = 129;
-  localparam [31:0] SR_READBACK_ADDR               = 255;
+  localparam [31:0] SR_USER_RB_ADDR                = 255;
 
   `ifndef _RFNOC_SIM_LIB
   `define _RFNOC_SIM_LIB
@@ -262,21 +262,28 @@
   //  - pkt_size:              Maximum expected packet size in bytes
   //
   `define RFNOC_CONNECT_BLOCK_PORT(from_noc_block_name,from_block_port,to_noc_block_name,to_block_port,pkt_size) \
+    // Set block stream IDs \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_BLOCK_SID, 16'd0, (sid_``from_noc_block_name + from_block_port)}}); \
+    tb_cvita.drop_pkt();  // Don't care about response packets \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+                      {SR_BLOCK_SID, 16'd0, (sid_``to_noc_block_name + to_block_port)}}); \
+    tb_cvita.drop_pkt(); \
     // Send a flow control response packet on every received packet \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001}}); \
+                      {SR_FLOW_CTRL_PKTS_PER_ACK, 32'h8000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set up window size \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h1, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'd0 + (8*2**(``to_noc_block_name``.STR_SINK_FIFOSIZE[(to_block_port+1)*4-1:to_block_port*4]))/pkt_size}}); \
+                      {SR_FLOW_CTRL_WINDOW_SIZE, 32'd0 + (8*2**(``to_noc_block_name``.STR_SINK_FIFOSIZE[(to_block_port+1)*4-1:to_block_port*4]))/pkt_size}}); \
     tb_cvita.drop_pkt(); \
     // Enable window \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h2, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001}}); \
+                      {SR_FLOW_CTRL_WINDOW_EN, 32'h0000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set next destination stream ID \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_NEXT_DST_BASE, (sid_``to_noc_block_name + to_block_port)}}); \
+                      {SR_NEXT_DST, (sid_``to_noc_block_name + to_block_port)}}); \
     tb_cvita.drop_pkt();
 
   `endif

@@ -3,8 +3,8 @@
 //
 
 module tx_control_gen3
-  #(parameter BASE=0)
-   (input clk, input reset, input clear,
+  #(parameter SR_ERROR_POLICY=0)
+   (input clk, input rst, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
 
     input [63:0] vita_time,
@@ -17,7 +17,6 @@ module tx_control_gen3
     output reg error,
     output [11:0] seqnum,
     output reg [63:0] error_code,
-    output [31:0] sid,
 
     // To DSP Core
     output run, output [31:0] sample,
@@ -25,7 +24,6 @@ module tx_control_gen3
     );
 
    wire [63:0] 	  send_time = tx_tuser[63:0];
-   assign         sid = tx_tuser[95:64];
    assign 	  seqnum = tx_tuser[123:112];
    wire 	  eob = tx_tuser[124];
    wire 	  send_at = tx_tuser[125];
@@ -34,12 +32,12 @@ module tx_control_gen3
    wire 	  policy_next_burst, policy_next_packet, policy_wait;
    wire 	  clear_seqnum;
 
-   setting_reg #(.my_addr(BASE), .width(3)) sr_error_policy
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_ERROR_POLICY), .width(3)) sr_error_policy
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out({policy_next_burst,policy_next_packet,policy_wait}),.changed(clear_seqnum));
 
    time_compare
-     time_compare (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(send_time),
+     time_compare (.clk(clk), .reset(rst), .time_now(vita_time), .trigger_time(send_time),
 		   .now(now), .early(early), .late(late), .too_early(too_early));
 
    reg [2:0]     state;
@@ -62,14 +60,14 @@ module tx_control_gen3
 
    // FIXME should move seqnum error detection to noc_shell
    always @(posedge clk)
-     if(reset | clear | clear_seqnum)
+     if(rst | clear | clear_seqnum)
        expected_seqnum <= 12'd0;
      else
        if(tx_tvalid & tx_tready & tx_tlast)
 	 expected_seqnum <= seqnum + 12'd1;
 
    always @(posedge clk)
-     if(reset | clear)
+     if(rst | clear)
        begin
 	  state <= ST_IDLE;
 	  error <= 1'b0;

@@ -10,17 +10,22 @@
 
 
 module rx_control_gen3
-  #(parameter BASE=0)
-   (input clk, input reset, input clear,
+  #(parameter SR_RX_CTRL_COMMAND,
+    parameter SR_RX_CTRL_TIME_HI,
+    parameter SR_RX_CTRL_TIME_LO,
+    parameter SR_RX_CTRL_HALT,
+    parameter SR_RX_CTRL_MAXLEN)
+   (input clk, input rst, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    
+
     input [63:0] vita_time,
+    input [31:0] sid,
+    input [31:0] error_sid,
     output run,
     input [31:0] sample,
     input strobe,
-    
-    output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
-    output [127:0] rx_tuser
+
+    output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser
     );
    
    wire [31:0] 	   command_i;
@@ -40,52 +45,47 @@ module rx_control_gen3
    reg 		   halt;
    wire 	   set_halt;
    wire [15:0] 	   maxlen;
-   wire [31:0] 	   sid;
    wire 	   eob;
    reg [31:0] 	   err_data;
    wire 	   sid_changed;
    wire 	   error_state;
    reg [63:0] 	   err_time, start_time;
    
-   setting_reg #(.my_addr(BASE)) sr_cmd
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_RX_CTRL_COMMAND)) sr_cmd
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(command_i),.changed());
    
-   setting_reg #(.my_addr(BASE+1)) sr_time_h
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_RX_CTRL_TIME_HI)) sr_time_h
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(time_i[63:32]),.changed());
    
-   setting_reg #(.my_addr(BASE+2)) sr_time_l
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_RX_CTRL_TIME_LO)) sr_time_l
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(time_i[31:0]),.changed(store_command));
    
-   setting_reg #(.my_addr(BASE+3)) sr_rx_halt
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_RX_CTRL_HALT)) sr_rx_halt
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(),.changed(set_halt));
    
-   setting_reg #(.my_addr(BASE), .width(16)) sr_maxlen
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+   setting_reg #(.my_addr(SR_RX_CTRL_MAXLEN), .width(16)) sr_maxlen
+     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(maxlen),.changed());
    
-   setting_reg #(.my_addr(BASE+1), .width(32)) sr_sid
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(sid),.changed(sid_changed));
-   
    always @(posedge clk)
-     if (reset | clear | clear_halt)
+     if (rst | clear | clear_halt)
        halt <= 1'b0;
      else
        halt <= set_halt;
    
    axi_fifo_short #(.WIDTH(96)) commandfifo
-     (.clk(clk),.reset(reset),.clear(clear | clear_halt),
+     (.clk(clk),.reset(rst),.clear(clear | clear_halt),
       .i_tdata({command_i,time_i}), .i_tvalid(store_command), .i_tready(),
       .o_tdata({send_imm,chain,reload,stop,numlines,rcvtime}),
       .o_tvalid(command_valid), .o_tready(command_ready),
       .occupied(), .space() );
    
    time_compare 
-     time_compare (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(rcvtime), .now(now), .early(early), .late(late));
+     time_compare (.clk(clk), .reset(rst), .time_now(vita_time), .trigger_time(rcvtime), .now(now), .early(early), .late(late));
    
    localparam IBS_IDLE         = 0;
    localparam IBS_RUNNING      = 1;
@@ -99,7 +99,7 @@ module rx_control_gen3
    reg [15:0] 	   lines_left_pkt;
    
    always @(posedge clk)
-     if(reset | clear)
+     if(rst | clear)
        begin
 	  ibs_state <= IBS_IDLE;
 	  chain_sav <= 1'b0;
@@ -217,7 +217,7 @@ module rx_control_gen3
    assign rx_tvalid = error_state ? 1'b1 : (run & strobe);
 
    // FIXME add capability to send error packets to a different SID
-   assign rx_tuser = error_state ? { 4'b1111 /*Error w/Time*/, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, err_time } :
+   assign rx_tuser = error_state ? { 4'b1111 /*Error w/Time*/, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, error_sid, err_time } :
 		     { 3'b001 /*Data w/Time*/, eob, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, start_time };
    
 endmodule // new_rx_control

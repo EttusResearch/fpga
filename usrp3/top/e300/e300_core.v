@@ -94,6 +94,7 @@ module e300_core
   localparam SR_CORE_MISC     = 11'd4;
   localparam SR_CORE_TEST     = 11'd28;
   localparam SR_CORE_XB_LOCAL = 11'd32;
+  localparam SR_CORE_SPI      = 11'd64; // 64-66, used in e3x0_db_control
 
   localparam RB32_CORE_MISC     = 5'd1;
   localparam RB32_CORE_COMPAT   = 5'd2;

@@ -4,7 +4,9 @@
 
 
 module timekeeper
-  #(parameter BASE = 0)
+  #(parameter SR_TIME_HI = 0,
+    parameter SR_TIME_LO = 1,
+    parameter SR_TIME_CTRL = 2)
    (input clk, input reset, input pps,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     output reg [63:0] vita_time, output reg [63:0] vita_time_lastpps);
@@ -16,15 +18,15 @@ module timekeeper
    wire set_time_pps, set_time_now;
    wire cmd_trigger;
 
-   setting_reg #(.my_addr(BASE), .width(32)) sr_time_hi
+   setting_reg #(.my_addr(SR_TIME_HI), .width(32)) sr_time_hi
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[63:32]), .changed());
 
-   setting_reg #(.my_addr(BASE+1), .width(32)) sr_time_lo
+   setting_reg #(.my_addr(SR_TIME_LO), .width(32)) sr_time_lo
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[31:0]), .changed());
 
-   setting_reg #(.my_addr(BASE+2), .width(2)) sr_ctrl
+   setting_reg #(.my_addr(SR_TIME_CTRL), .width(2)) sr_ctrl
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out({set_time_pps, set_time_now}), .changed(cmd_trigger));
 

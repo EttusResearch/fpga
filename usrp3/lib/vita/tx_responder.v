@@ -34,7 +34,7 @@ module tx_responder
    wire [1:0] 	  msg_type = error ? 2'b11 : 2'b01;
    wire 	  eob = ack | error;
    
-   wire [99:0] 	  msg_data = { msg_type[1:0], USE_TIME[0], eob, sid[15:0], sid[31:16], ((ack | error) ? error_code : {32'h0,seqnum_int}) };
+   wire [99:0] 	  msg_data = { msg_type[1:0], USE_TIME[0], eob, sid, ((ack | error) ? error_code : {32'h0,seqnum_int}) };
    wire [99:0] 	  ctxt_data;
 
    reg [11:0] 	  reply_seqnum;
@@ -49,7 +49,7 @@ module tx_responder
    trigger_context_pkt
     #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
       .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK))
-   trig
+   trigger_context_pkt
      (.clk(clk), .reset(reset), .clear(clear),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .packet_consumed(packet_consumed), .trigger(trigger_fc));
