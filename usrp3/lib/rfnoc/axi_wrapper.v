@@ -1,12 +1,11 @@
 
 // Copyright 2014 Ettus Research
 
-// Assumes 32-bit elements (like 16cs) carried over AXI
-// User block controls packet sizes with tlast
-// SIMPLE_MODE=1 -- allows user to ignore chdr stuff, must produce 1 packet for each one consume
-// SIMPLE_MODE=0 -- user controls all chdr info, must control s_axis_data_tuser
-// GENERATE_TLAST=1 -- Generate s_axis_data_tlast automatically based on packet size. s_axis_data_tuser must be valid and at the beginning of the packet.
-// GENERATE_TLAST=0 -- user handles tlast
+// Assumes 32-bit elements (like sc16) carried over AXI
+// SIMPLE_MODE          -- Automatically handle header (s_axis_data_tuser), packets must be consumed / produced 1-to-1
+// RESIZE_INPUT_PACKET  -- Resize input packets. m_axis_data_tlast will be based on pkt_length. Otherwise packet length based on actual input packet length (via i_tlast).
+// RESIZE_OUTPUT_PACKET -- Resize output packets. s_axis_data_tlast will be ignored and instead use packet length in s_axis_tuser_data. Otherwise use s_axis_data_tlast.
+// *** Warning: RESIZE_INPUT_PACKET and/or RESIZE_OUTPUT_PACKET should not be used with SIMPLE_MODE since packets will not be produced / consumed 1-to-1
 
 // _tuser bit definitions
 //  [127:64] == CHDR header
@@ -24,21 +23,23 @@ module axi_wrapper
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
     parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
-    parameter GENERATE_TLAST=0)         // 0 = User handles tlast, 1 = Automatically generate tlast based on header packet size
+    parameter RESIZE_INPUT_PACKET=0,    // 0 = Do not resize, packet length determined by i_tlast, 1 = Generate m_axis_data_tlast based on user input m_axis_pkt_len_tdata
+    parameter RESIZE_OUTPUT_PACKET=0)   // 0 = Do not resize, packet length determined by s_axis_data_tlast, 1 = Use packet length from user header (s_axis_data_tuser)
    (input clk, input reset,
 
     input clear_tx_seqnum,
-    input [15:0] next_dst,
+    input [15:0] next_dst,              // Used with SIMPLE_MODE=1
 
     // To NoC Shell
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
-    
+
     // To AXI IP
     output [31:0] m_axis_data_tdata, output [127:0] m_axis_data_tuser, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
-    input [31:0] s_axis_data_tdata, input [127:0] s_axis_data_tuser, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready,
-    
+    input [31:0] s_axis_data_tdata, input [127:0] s_axis_data_tuser, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready, 
+    input [15:0] m_axis_pkt_len_tdata, input m_axis_pkt_len_tvalid, output m_axis_pkt_len_tready, // Used when RESIZE_INPUT_PACKET=1
+
     // Variable number of AXI configuration busses
     output [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata,
     output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast,
@@ -48,31 +49,34 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Input side handling, chdr_deframer
-   
-   chdr_deframer chdr_deframer
-     (.clk(clk), .reset(reset), .clear(1'b0),
-      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
-      .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser), .o_tlast(m_axis_data_tlast), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
-
-   // /////////////////////////////////////////////////////////
-   // Insert time and burst handling here.  A simple FIFO works only if packets are produced 1-for-1 (they may be of different sizes, though)
-   wire [127:0] s_axis_data_tuser_int;
-   wire         s_axis_data_tlast_int;
+   wire [127:0] s_axis_data_tuser_int, m_axis_data_tuser_int;
+   wire         s_axis_data_tlast_int, m_axis_data_tlast_int;
+   reg [15:0]   m_axis_pkt_len_reg = 16'd8;
    reg          sof_in = 1'b1;
    wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
+   chdr_deframer chdr_deframer
+     (.clk(clk), .reset(reset), .clear(1'b0),
+      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+      .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
+
+   assign m_axis_data_tuser[127:96] = m_axis_data_tuser_int[127:96];
+   assign m_axis_data_tuser[79:64]  = RESIZE_INPUT_PACKET ? (m_axis_data_tuser_int[125] ? m_axis_pkt_len_reg+16 : m_axis_pkt_len_reg+8) : m_axis_data_tuser_int[79:64];
+   assign m_axis_data_tuser[63:0]   = m_axis_data_tuser_int[63:0];
+
    // Only store header once per packet
    always @(posedge clk)
      if(reset)
-       sof_in <= 1'b1;
+       sof_in     <= 1'b1;
      else
        if(m_axis_data_tvalid & m_axis_data_tready)
          if(m_axis_data_tlast)
            sof_in <= 1'b1;
          else
            sof_in <= 1'b0;
-   
+
+   // SIMPLE MODE: Store input packet header to use as output packet header.
    generate
       if(SIMPLE_MODE)
          begin
@@ -87,31 +91,76 @@ module axi_wrapper
       end
    endgenerate
 
-   // Generate tlast for user data based on received packet length
+   // RESIZE INPUT PACKET
+   // Size input packets based on m_axis_pkt_len_tdata (RESIZE_INPUT_PACKET=1) or based on i_tdata
+   wire [15:0] m_axis_pkt_len_flop_tdata;
+   wire m_axis_pkt_len_flop_tvalid;
+   wire load_m_axis_pkt_len = sof_in & m_axis_pkt_len_flop_tvalid;
+   axi_fifo_flop #(.WIDTH(16)) axi_fifo_flop_pkt_len (
+     .clk(clk), .reset(reset), .clear(1'b0),
+     .i_tdata(m_axis_pkt_len_tdata), .i_tvalid(m_axis_pkt_len_tvalid), .i_tready(m_axis_pkt_len_tready),
+     .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len));
+
+   generate
+     if (RESIZE_INPUT_PACKET) begin
+       reg m_axis_data_tlast_reg;
+       reg [15:0] m_axis_pkt_cnt;
+       always @(posedge clk) begin
+         if (reset) begin
+           m_axis_data_tlast_reg <= 1'b0;
+           m_axis_pkt_cnt        <= 4;
+           m_axis_pkt_len_reg    <= 8;
+         end else begin
+           // Only update packet length at the beginning of a new packet
+           if (load_m_axis_pkt_len) begin
+             m_axis_pkt_len_reg <= m_axis_pkt_len_flop_tdata;
+           end
+           if (m_axis_data_tvalid & m_axis_data_tready) begin
+             if (m_axis_pkt_cnt == m_axis_pkt_len_reg) begin
+               m_axis_pkt_cnt        <= 4;
+             end else begin
+               m_axis_pkt_cnt        <= m_axis_pkt_cnt + 4;
+             end
+             if (m_axis_pkt_cnt == m_axis_pkt_len_reg-4) begin
+               m_axis_data_tlast_reg <= 1'b1;
+             end else begin
+               m_axis_data_tlast_reg <= 1'b0;
+             end
+           end
+         end
+       end
+       assign m_axis_data_tlast = m_axis_data_tlast_reg;
+     end else begin
+       assign m_axis_data_tlast = m_axis_data_tlast_int;
+     end
+   endgenerate
+
+   // RESIZE OUTPUT PACKET
+   // Size output packets based on either s_axis_data_tlast (RESIZE_OUTPUT_PACKETS=1) or packet length from user header (s_axis_data_tuser)
    // TODO: There could be a race condition on s_axis_data_tuser_int when
    //       receiving very short packets, but latency in chdr_deframer
    //       prevents this from occurring. Need to fix so it cannot
    //       occur by design.
    generate
-     if (GENERATE_TLAST) begin
+     if (RESIZE_OUTPUT_PACKET) begin
        reg s_axis_data_tlast_reg;
        reg [15:0] s_axis_pkt_cnt;
-       reg [15:0] s_axis_pkt_size;
+       reg [15:0] s_axis_pkt_len;
        always @(posedge clk) begin
          if (reset) begin
            s_axis_data_tlast_reg <= 1'b0;
            s_axis_pkt_cnt        <= 4;
-           s_axis_pkt_size       <= 0;
+           s_axis_pkt_len        <= 0;
          end else begin
            // Remove header
-           s_axis_pkt_size <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
+           s_axis_pkt_len <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
            if (s_axis_data_tvalid & s_axis_data_tready) begin
-             if (s_axis_pkt_cnt == s_axis_pkt_size) begin
+             if (s_axis_pkt_cnt == s_axis_pkt_len) begin
                s_axis_pkt_cnt        <= 4;
              end else begin
                s_axis_pkt_cnt        <= s_axis_pkt_cnt + 4;
              end
-             if (s_axis_pkt_cnt == s_axis_pkt_size-4) begin
+             if (s_axis_pkt_cnt == s_axis_pkt_len-4) begin
                s_axis_data_tlast_reg <= 1'b1;
              end else begin
                s_axis_data_tlast_reg <= 1'b0;
@@ -121,6 +170,7 @@ module axi_wrapper
        end
        assign s_axis_data_tlast_int = s_axis_data_tlast_reg;
      end else begin
+       // chdr_framer will automatically fill in the packet length based on user provided tlast
        assign s_axis_data_tlast_int = s_axis_data_tlast;
      end
    endgenerate
