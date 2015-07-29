@@ -11,20 +11,19 @@
 
 module noc_block_fft_tb();
   `TEST_BENCH_INIT("noc_block_fft_tb",`NUM_TEST_CASES,`NS_PER_TICK);
-  // Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst), 
-  // AXI crossbar, and Export IO RFNoC block instance.
-  // Export IO is a special RFNoC block used to expose the internal 
-  // NoC Shell / AXI wrapper interfaces to the test bench.
+  // Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst),
+  // AXI crossbar, and test bench signals to interact with RFNoC
+  // (tb_cvita_*, tb_axis_*, tb_next_dst, etc).
   `RFNOC_SIM_INIT(1,166.67,200);
-  // Instantiate & connect FFT RFNoC block
-  `CONNECT_RFNOC_BLOCK(noc_block_fft,0);
+  // Instantiate FFT RFNoC block
+  `RFNOC_ADD_BLOCK(noc_block_fft,0);
 
   // FFT specific settings
   localparam [15:0] FFT_SIZE = 256;
-  localparam FFT_BIN = FFT_SIZE/8 + FFT_SIZE/2;       // 1/8 sample rate freq + FFT shift
-  wire [7:0] fft_size_log2   = $clog2(FFT_SIZE);      // Set FFT size
-  wire fft_direction         = 0;                     // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
-  wire [11:0] fft_scale      = 12'b011010101010;      // Conservative scaling of 1/N
+  localparam FFT_BIN         = FFT_SIZE/8 + FFT_SIZE/2; // 1/8 sample rate freq + FFT shift
+  wire [7:0] fft_size_log2   = $clog2(FFT_SIZE);        // Set FFT size
+  wire fft_direction         = 0;                       // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
+  wire [11:0] fft_scale      = 12'b011010101010;        // Conservative scaling of 1/N
   // Padding of the control word depends on the FFT options enabled
   wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
 
@@ -35,8 +34,7 @@ module noc_block_fft_tb();
   logic last;
 
   /********************************************************
-  ** Setup RFNoC block's NoC Shell & control registers
-  ** and send sine tone to FFT RFNoC block
+  ** Verification
   ********************************************************/
   initial begin : tb_main
     `TEST_CASE_START("Wait for reset");
@@ -71,30 +69,27 @@ module noc_block_fft_tb();
 
   end
 
-  /*
-   * Setup RFNoC block's NoC Shell & control registers and send sine tone to FFT RFNoC block
-   */
+  /*********************************************************************
+   ** Connect RFNoC block, setup FFT, send sine tone to FFT RFNoC block
+   *********************************************************************/
   initial begin
     while (bus_rst) @(posedge bus_clk);
     while (ce_rst) @(posedge ce_clk);
 
     repeat (10) @(posedge bus_clk);
 
-    // Setup testbench (noc_block_export_io) flow control
-    header = flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:0, sid:sid_tb, timestamp:64'h0});
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001}}); // Command packet to setup flow control
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF}});  // Command packet to set up source control window size
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001}});    // Command packet to set up source control window enable
+    // Test bench -> FFT -> Test bench
+    `RFNOC_CONNECT(noc_block_tb,noc_block_fft,FFT_SIZE*4);
+    `RFNOC_CONNECT(noc_block_fft,noc_block_tb,FFT_SIZE*4);
 
-    // Setup FFT flow control
-    header = flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:0, sid:sid_noc_block_fft, timestamp:64'h0});
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001}});                             // Command packet to setup flow control
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF}});                              // Command packet to set up source control window size
-    tb_cvita_cmd.push_pkt({header, {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001}});                                // Command packet to set up source control window enable
-    tb_cvita_cmd.push_pkt({header, {SR_NEXT_DST_BASE, 16'd0, sid_tb}});                                           // Set next destination
+    // Setup FFT
+    header = flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_noc_block_tb, dst_sid:sid_noc_block_fft, timestamp:64'h0});
     tb_cvita_cmd.push_pkt({header, {SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word}}});                                // Configure FFT core
+    tb_cvita_ack.drop_pkt();    // Don't care about response
     tb_cvita_cmd.push_pkt({header, {24'd0, noc_block_fft.SR_FFT_SIZE_LOG2, {24'd0, fft_size_log2}}});             // Set FFT size register
+    tb_cvita_ack.drop_pkt();
     tb_cvita_cmd.push_pkt({header, {24'd0, noc_block_fft.SR_MAGNITUDE_OUT, {30'd0, noc_block_fft.MAG_SQ_OUT}}});  // Enable magnitude out
+    tb_cvita_ack.drop_pkt();
 
     repeat (10) @(posedge bus_clk);
 
