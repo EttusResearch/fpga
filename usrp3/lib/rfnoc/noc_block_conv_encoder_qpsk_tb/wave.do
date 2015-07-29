@@ -88,44 +88,6 @@ add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_conv_encoder_qpsk/s
 add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_conv_encoder_qpsk/s_axis_data_tdata
 add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_conv_encoder_qpsk/s_axis_data_tready
 add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_conv_encoder_qpsk/s_axis_data_tvalid
-add wave -noupdate -divider FIR
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/i_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/i_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/i_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/i_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/o_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/o_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/o_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/o_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/m_axis_data_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/m_axis_data_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/m_axis_data_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/m_axis_data_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/s_axis_data_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/s_axis_data_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/s_axis_data_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fir_filter/s_axis_data_tvalid
-add wave -noupdate -divider FFT
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/i_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/i_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/i_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/i_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/o_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/o_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/o_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/o_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/m_axis_data_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/m_axis_data_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/m_axis_data_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/m_axis_data_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/inst_axi_fft/m_axis_data_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/inst_axi_fft/m_axis_data_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/inst_axi_fft/m_axis_data_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/inst_axi_fft/m_axis_data_tvalid
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/s_axis_data_tdata
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/s_axis_data_tlast
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/s_axis_data_tready
-add wave -noupdate /noc_block_conv_encoder_qpsk_tb/noc_block_fft/s_axis_data_tvalid
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {4735013 ps} 0}
 quietly wave cursor active 1
