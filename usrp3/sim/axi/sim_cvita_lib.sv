@@ -11,7 +11,8 @@ typedef enum logic [1:0] {
 } cvita_pkt_type_t;
 
 typedef struct packed {
-  logic [31:0]     sid;
+  logic [15:0]     dst_sid;
+  logic [15:0]     src_sid;
   logic [15:0]     length;
   logic [11:0]     seqno;
   logic            eob;
@@ -21,7 +22,7 @@ typedef struct packed {
 } cvita_hdr_t;
 
 function logic[63:0] flatten_chdr_no_ts(input cvita_hdr_t hdr);
-  return {hdr.pkt_type, hdr.has_time, hdr.eob, hdr.seqno, hdr.length, hdr.sid};
+  return {hdr.pkt_type, hdr.has_time, hdr.eob, hdr.seqno, hdr.length, hdr.src_sid, hdr.dst_sid};
 endfunction
 
 //TODO: This should be a function but it segfaults XSIM.
@@ -31,7 +32,7 @@ task automatic unflatten_chdr_no_ts;
   begin
     hdr = '{
       pkt_type:cvita_pkt_type_t'(hdr_bits[63:62]), has_time:hdr_bits[61], eob:hdr_bits[60],
-      seqno:hdr_bits[59:48], length:hdr_bits[47:32], sid:hdr_bits[31:0], timestamp:0  //Default timestamp
+      seqno:hdr_bits[59:48], length:hdr_bits[47:32], src_sid:hdr_bits[31:16], dst_sid:hdr_bits[15:0], timestamp:0  //Default timestamp
     };
   end
 endtask
@@ -43,14 +44,14 @@ task automatic unflatten_chdr;
   begin
     hdr = '{
       pkt_type:cvita_pkt_type_t'(hdr_bits[63:62]), has_time:hdr_bits[61], eob:hdr_bits[60],
-      seqno:hdr_bits[59:48], length:hdr_bits[47:32], sid:hdr_bits[31:0], timestamp:timestamp
+      seqno:hdr_bits[59:48], length:hdr_bits[47:32], src_sid:hdr_bits[31:16], dst_sid:hdr_bits[15:0], timestamp:timestamp
     };
   end
 endtask
 
 function logic chdr_compare(input cvita_hdr_t a, input cvita_hdr_t b);
   return ((a.pkt_type == b.pkt_type) && (a.has_time == b.has_time) && (a.eob == b.eob) &&
-          (a.seqno == b.seqno) && (a.length == b.length) && (a.sid == b.sid));
+          (a.seqno == b.seqno) && (a.length == b.length) && (a.src_sid == b.src_sid) && (a.dst_sid == b.dst_sid));
 endfunction
 
 typedef struct packed {
