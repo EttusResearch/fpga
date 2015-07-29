@@ -1,11 +1,14 @@
-
-// Copyright 2014 Ettus Research
-
+//
+// Copyright 2015 Ettus Research
+//
 // Assumes 32-bit elements (like sc16) carried over AXI
 // SIMPLE_MODE          -- Automatically handle header (s_axis_data_tuser), packets must be consumed / produced 1-to-1
 // RESIZE_INPUT_PACKET  -- Resize input packets. m_axis_data_tlast will be based on pkt_length. Otherwise packet length based on actual input packet length (via i_tlast).
 // RESIZE_OUTPUT_PACKET -- Resize output packets. s_axis_data_tlast will be ignored and instead use packet length in s_axis_tuser_data. Otherwise use s_axis_data_tlast.
-// *** Warning: RESIZE_INPUT_PACKET and/or RESIZE_OUTPUT_PACKET should not be used with SIMPLE_MODE since packets will not be produced / consumed 1-to-1
+//
+// *** Warning: Care should be taken when using RESIZE_INPUT_PACKET and/or RESIZE_OUTPUT_PACKET along with SIMPLE_MODE
+//              as issues could arise if packets are not produced / consumed in a 1:1 ratio. For instance, the header
+//              FIFO could overflow or underflow.
 
 // _tuser bit definitions
 //  [127:64] == CHDR header
@@ -61,7 +64,7 @@ module axi_wrapper
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
 
-   assign m_axis_data_tuser[127:96] = m_axis_data_tuser_int[127:96];
+   assign m_axis_data_tuser[127:80] = m_axis_data_tuser_int[127:80];
    assign m_axis_data_tuser[79:64]  = RESIZE_INPUT_PACKET ? (m_axis_data_tuser_int[125] ? m_axis_pkt_len_reg+16 : m_axis_pkt_len_reg+8) : m_axis_data_tuser_int[79:64];
    assign m_axis_data_tuser[63:0]   = m_axis_data_tuser_int[63:0];
 
@@ -76,7 +79,7 @@ module axi_wrapper
          else
            sof_in <= 1'b0;
 
-   // SIMPLE MODE: Store input packet header to use as output packet header.
+   // SIMPLE MODE: Store input packet header to reuse as output packet header.
    generate
       if(SIMPLE_MODE)
          begin
@@ -85,7 +88,8 @@ module axi_wrapper
             (.clk(clk), .reset(reset), .clear(1'b0),
              .i_tdata(header_fifo_i_tdata),
              .i_tvalid(header_fifo_i_tvalid), .i_tready(),
-            .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast_int & s_axis_data_tvalid & s_axis_data_tready));
+             .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast_int & s_axis_data_tvalid & s_axis_data_tready),
+             .occupied(), .space());
       end else begin
         assign s_axis_data_tuser_int = s_axis_data_tuser;
       end
@@ -99,7 +103,8 @@ module axi_wrapper
    axi_fifo_flop #(.WIDTH(16)) axi_fifo_flop_pkt_len (
      .clk(clk), .reset(reset), .clear(1'b0),
      .i_tdata(m_axis_pkt_len_tdata), .i_tvalid(m_axis_pkt_len_tvalid), .i_tready(m_axis_pkt_len_tready),
-     .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len));
+     .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len),
+     .occupied(), .space());
 
    generate
      if (RESIZE_INPUT_PACKET) begin
@@ -198,7 +203,8 @@ module axi_wrapper
             .i_tready(),
             .o_tdata({m_axis_config_tlast[k],m_axis_config_tdata[32*k+31:32*k]}),
             .o_tvalid(m_axis_config_tvalid[k]),
-            .o_tready(m_axis_config_tready[k]));
+            .o_tready(m_axis_config_tready[k]),
+            .occupied(), .space());
       end
    endgenerate
    
