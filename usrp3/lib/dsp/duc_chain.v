@@ -84,8 +84,8 @@ module duc_chain
    wire        signed [17:0] da, db;
    wire        signed [35:0] prod_i, prod_q;
 
-   assign tx_fe_i = prod_i[33:34-WIDTH];
-   assign tx_fe_q = prod_q[33:34-WIDTH];
+   assign tx_fe_i = prod_i[32:33-WIDTH];
+   assign tx_fe_q = prod_q[32:33-WIDTH];
    
    // TEST. IJB
 /* -----\/----- EXCLUDED -----\/-----

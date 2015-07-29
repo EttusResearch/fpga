@@ -115,8 +115,8 @@ module ddc_chain
 	  .xo(i_cordic),.yo(q_cordic),.zo() );
 
    always @(posedge clk) begin
-      i_cordic_pipe[23:0] <= i_cordic[24:1];
-      q_cordic_pipe[23:0] <= q_cordic[24:1];
+      i_cordic_pipe[23:0] <= i_cordic[24:1]; 
+      q_cordic_pipe[23:0] <= q_cordic[24:1]; 
    end
    
 
@@ -205,18 +205,9 @@ module ddc_chain
 	    .dout_1(i_hb2), // output [46 : 0] dout_1
 	    .dout_2(q_hb2)); // output [46 : 0] dout_2
 
-	 // TEST. IJB
-	 wire [17:0] i_hb_round, q_hb_round;
-	 wire 	     strobe_hb1_round;
+
 	 
-	 round_sd #(.WIDTH_IN(24+HB1_SCALE), .WIDTH_OUT(18)) round_i_hb1
-	   (.clk(clk), .reset(rst), .in(i_hb1[23+HB1_SCALE:0]), .strobe_in(strobe_hb1), .out(i_hb_round[17:0]), .strobe_out(strobe_hb1_round));
-	 round_sd #(.WIDTH_IN(24+HB1_SCALE), .WIDTH_OUT(18)) round_q_hb1
-	   (.clk(clk), .reset(rst), .in(q_hb1[23+HB1_SCALE:0]), .strobe_in(strobe_hb1), .out(q_hb_round[17:0]), .strobe_out());
-	 
-	 // END TEST
-	 
-	 reg [17:0]  i_unscaled, q_unscaled;
+	 reg [18:0]  i_unscaled, q_unscaled;
 	 reg 	     strobe_unscaled;
 
 	 always @(posedge clk)
@@ -225,33 +216,40 @@ module ddc_chain
 	     2'd0 :
 	       begin
 		  strobe_unscaled <= strobe_cic;
-		  i_unscaled <= i_cic[23:6];
-		  q_unscaled <= q_cic[23:6];
+		  i_unscaled <= i_cic[23:5];
+		  q_unscaled <= q_cic[23:5];
 	       end
 	     // ILLEGAL. Only half sample rate half band enabled.
 	     2'd1 :
 	       begin
 		  strobe_unscaled <= strobe_cic;
-		  i_unscaled <= i_cic[23:6];
-		  q_unscaled <= q_cic[23:6];
+		  i_unscaled <= i_cic[23:5];
+		  q_unscaled <= q_cic[23:5];
 	       end
 	     // One Halfband enabled, decimate by 2.
 	     2'd2 :
 	       begin
-		  strobe_unscaled <= strobe_hb1_round;
-		//  i_unscaled <= i_hb1[23+HB1_SCALE:6+HB1_SCALE];
-		//  q_unscaled <= q_hb1[23+HB1_SCALE:6+HB1_SCALE];
-		  i_unscaled <= i_hb_round[17:0];
-		  q_unscaled <= q_hb_round[17:0];
+		  strobe_unscaled <= strobe_hb1;
+		  i_unscaled <= i_hb1[23+HB1_SCALE:5+HB1_SCALE];
+		  q_unscaled <= q_hb1[23+HB1_SCALE:5+HB1_SCALE];
 	       end
 	     // Both Halfbands enabled, decimate by 4.
 	     2'd3 :
 	       begin
 		  strobe_unscaled <= strobe_hb2;
-		  i_unscaled <= i_hb2[23+HB2_SCALE:6+HB2_SCALE];
-		  q_unscaled <= q_hb2[23+HB2_SCALE:6+HB2_SCALE];
+		  i_unscaled <= i_hb2[23+HB2_SCALE:5+HB2_SCALE];
+		  q_unscaled <= q_hb2[23+HB2_SCALE:5+HB2_SCALE];
 	     end
 	   endcase // case (hb_rate)
+
+	 // Need to clip 1 bit here or we loose small signal performance out the truncated LSB's for worst case CIC gain cases.
+	 wire strobe_unscaled_clip;
+	 wire [17:0] i_unscaled_clip, q_unscaled_clip;
+	 
+	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_i
+	   (.clk(clk), .in(i_unscaled[18:0]), .strobe_in(strobe_unscaled), .out(i_unscaled_clip[17:0]), .strobe_out(strobe_unscaled_clip));
+	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_q
+	   (.clk(clk), .in(q_unscaled[18:0]), .strobe_in(strobe_unscaled), .out(q_unscaled_clip[17:0]), .strobe_out());
 
 	 // //scalar operation (gain of 6 bits)
 	 wire [35:0] 	  prod_i, prod_q;
@@ -261,9 +259,9 @@ module ddc_chain
 		      .WIDTH_A(18),        // Multiplier A-input bus width, 1-25
 		      .WIDTH_B(18))        // Multiplier B-input bus width, 1-18
 	 mult_i (.P(prod_i),             // Multiplier output bus, width determined by WIDTH_P parameter
-		.A(i_unscaled),         // Multiplier input A bus, width determined by WIDTH_A parameter
+		.A(i_unscaled_clip),         // Multiplier input A bus, width determined by WIDTH_A parameter
 		.B(scale_factor),       // Multiplier input B bus, width determined by WIDTH_B parameter
-		.CE(strobe_unscaled),   // 1-bit active high input clock enable
+		.CE(strobe_unscaled_clip),   // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
 
@@ -272,45 +270,27 @@ module ddc_chain
 		      .WIDTH_A(18),        // Multiplier A-input bus width, 1-25
 		      .WIDTH_B(18))        // Multiplier B-input bus width, 1-18
 	 mult_q (.P(prod_q),             // Multiplier output bus, width determined by WIDTH_P parameter
-		.A(q_unscaled),         // Multiplier input A bus, width determined by WIDTH_A parameter
+		.A(q_unscaled_clip),         // Multiplier input A bus, width determined by WIDTH_A parameter
 		.B(scale_factor),       // Multiplier input B bus, width determined by WIDTH_B parameter
-		.CE(strobe_unscaled),   // 1-bit active high input clock enable
+		.CE(strobe_unscaled_clip),   // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
 	 
 	 reg 		  strobe_scaled;
 	 wire 		  strobe_clip;
-	 wire [33:0] 	  i_clip, q_clip;
+	 wire [32:0] 	  i_clip, q_clip;
 
-	 always @(posedge clk)  strobe_scaled <= strobe_unscaled;
+	 always @(posedge clk)  strobe_scaled <= strobe_unscaled_clip;
    
-	 clip_reg #(.bits_in(36), .bits_out(34), .STROBED(1)) clip_i
+	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
 	   (.clk(clk), .in(prod_i[35:0]), .strobe_in(strobe_scaled), .out(i_clip), .strobe_out(strobe_clip));
-	 clip_reg #(.bits_in(36), .bits_out(34), .STROBED(1)) clip_q
+	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q
 	   (.clk(clk), .in(prod_q[35:0]), .strobe_in(strobe_scaled), .out(q_clip), .strobe_out());
 
-//	 round_sd #(.WIDTH_IN(34), .WIDTH_OUT(16)) round_i
-//	   (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(sample[31:16]), .strobe_out(strobe));
-//	 round_sd #(.WIDTH_IN(34), .WIDTH_OUT(16)) round_q
-//	   (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(sample[15:0]), .strobe_out());
-   
-
-	 //pipeline for the multiplier (gain of 10 bits)
-	 reg [WIDTH-1:0]  prod_reg_i, prod_reg_q;
-	 reg 		  strobe_mult;
-
-	 always @(posedge clk) begin
-	    strobe_mult <= strobe_unscaled;
-	    prod_reg_i <= prod_i[33:34-WIDTH];
-	    prod_reg_q <= prod_q[33:34-WIDTH];
-	 end
-
-	 // Round final answer to 16 bits
-	 round_sd #(.WIDTH_IN(WIDTH),.WIDTH_OUT(16)) round_i
-	   (.clk(clk),.reset(rst), .in(prod_reg_i),.strobe_in(strobe_mult), .out(sample[31:16]), .strobe_out(strobe));
-
-	 round_sd #(.WIDTH_IN(WIDTH),.WIDTH_OUT(16)) round_q
-	   (.clk(clk),.reset(rst), .in(prod_reg_q),.strobe_in(strobe_mult), .out(sample[15:0]), .strobe_out());
+	 round_sd #(.WIDTH_IN(33), .WIDTH_OUT(16)) round_i
+	   (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(sample[31:16]), .strobe_out(strobe));
+	 round_sd #(.WIDTH_IN(33), .WIDTH_OUT(16)) round_q
+	   (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(sample[15:0]), .strobe_out());
 
       end else begin: old_hb // block: new_hb
 	 ///////////////////////////////////////////////
@@ -339,6 +319,15 @@ module ddc_chain
 	   (.clk(clk),.rst(rst),.bypass(~enable_hb2),.run(run),.cpi(cpi_hb),
 	    .stb_in(strobe_hb1),.data_in(q_hb1),.stb_out(),.data_out(q_hb2));
 
+	 // Need to clip 1 bit here or we loose small signal performance out the truncated LSB's for worst case CIC gain cases.
+	 wire strobe_unscaled_clip;
+	 wire [17:0] i_unscaled_clip, q_unscaled_clip;
+	 
+	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_i
+	   (.clk(clk), .in(i_hb2[WIDTH-1:WIDTH-19]), .strobe_in(strobe_hb2), .out(i_unscaled_clip[17:0]), .strobe_out(strobe_unscaled_clip));
+	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_q
+	   (.clk(clk), .in(q_hb2[WIDTH-1:WIDTH-19]), .strobe_in(strobe_hb2), .out(q_unscaled_clip[17:0]), .strobe_out());
+
 	 //scalar operation (gain of 6 bits)
 	 wire [35:0] 	  prod_i, prod_q;
 
@@ -347,9 +336,9 @@ module ddc_chain
 		      .WIDTH_A(18),        // Multiplier A-input bus width, 1-25
 		      .WIDTH_B(18))        // Multiplier B-input bus width, 1-18
 	 mult_i (.P(prod_i),             // Multiplier output bus, width determined by WIDTH_P parameter
-		.A(i_hb2[WIDTH-1:WIDTH-18]),// Multiplier input A bus, width determined by WIDTH_A parameter
+		.A(i_unscaled_clip),// Multiplier input A bus, width determined by WIDTH_A parameter
 		.B(scale_factor),       // Multiplier input B bus, width determined by WIDTH_B parameter
-		.CE(strobe_hb2),        // 1-bit active high input clock enable
+		.CE(strobe_unscaled_clip),        // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
 
@@ -358,9 +347,9 @@ module ddc_chain
 		      .WIDTH_A(18),        // Multiplier A-input bus width, 1-25
 		      .WIDTH_B(18))        // Multiplier B-input bus width, 1-18
 	 mult_q (.P(prod_q),             // Multiplier output bus, width determined by WIDTH_P parameter
-		.A(q_hb2[WIDTH-1:WIDTH-18]),// Multiplier input A bus, width determined by WIDTH_A parameter
+		.A(q_unscaled_clip),// Multiplier input A bus, width determined by WIDTH_A parameter
 		.B(scale_factor),       // Multiplier input B bus, width determined by WIDTH_B parameter
-		.CE(strobe_hb2),        // 1-bit active high input clock enable
+		.CE(strobe_unscaled_clip),        // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
 
@@ -369,9 +358,9 @@ module ddc_chain
 	 reg 		  strobe_mult;
 
 	 always @(posedge clk) begin
-	    strobe_mult <= strobe_hb2;
-	    prod_reg_i <= prod_i[33:34-WIDTH];
-	    prod_reg_q <= prod_q[33:34-WIDTH];
+	    strobe_mult <= strobe_unscaled_clip;
+	    prod_reg_i <= prod_i[32:33-WIDTH];
+	    prod_reg_q <= prod_q[32:33-WIDTH];
 	 end
 
 	 // Round final answer to 16 bits
