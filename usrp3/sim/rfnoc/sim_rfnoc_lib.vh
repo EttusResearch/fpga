@@ -19,7 +19,7 @@
 //   --------------------   | |       NoC Shell      | |
 //                          | |                      | |
 //                          | | block      block     | |
-//                          | | port 0     port 1    | |
+//                          | | port 1     port 0    | |
 //                          |  ----------------------  |
 //                          |     ||         ||        |
 //                          |     ||    -------------  |
@@ -83,7 +83,7 @@
   //
   // Usage: `RFNOC_SIM_INIT()
   // where
-  //   - num_rfnoc_blocks:           Number of RFNoC blocks in simulation. Max 15.
+  //   - num_rfnoc_blocks:           Number of RFNoC blocks in simulation. Max 14.
   //   - bus_clk_freq, ce_clk_freq:  Bus, RFNoC block clock frequencies
   //
   `define RFNOC_SIM_INIT(num_rfnoc_blocks, bus_clk_freq, ce_clk_freq) \
