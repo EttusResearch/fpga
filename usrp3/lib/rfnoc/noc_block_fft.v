@@ -106,14 +106,19 @@ module noc_block_fft #(
     .m_axis_data_tlast(m_axis_data_tlast),
     .m_axis_data_tvalid(m_axis_data_tvalid),
     .m_axis_data_tready(m_axis_data_tready),
+    .m_axis_data_tuser(),
     .s_axis_data_tdata(s_axis_data_tdata),
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
+    .s_axis_data_tuser(),
     .m_axis_config_tdata(m_axis_config_tdata),
     .m_axis_config_tlast(),
-    .m_axis_config_tvalid(m_axis_config_tvalid), 
-    .m_axis_config_tready(m_axis_config_tready));
+    .m_axis_config_tvalid(m_axis_config_tvalid),
+    .m_axis_config_tready(m_axis_config_tready),
+    .m_axis_pkt_len_tdata(),
+    .m_axis_pkt_len_tvalid(),
+    .m_axis_pkt_len_tready());
   
   ////////////////////////////////////////////////////////////
   //

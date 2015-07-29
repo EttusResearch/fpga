@@ -66,12 +66,14 @@ module chdr_deframer
    axi_fifo #(.WIDTH(128), .SIZE(5)) hdr_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(hdr_i_tuser), .i_tvalid(hdr_i_tvalid), .i_tready(hdr_i_tready),
-      .o_tdata(hdr_o_tuser), .o_tvalid(hdr_o_tvalid), .o_tready(hdr_o_tready));
+      .o_tdata(hdr_o_tuser), .o_tvalid(hdr_o_tvalid), .o_tready(hdr_o_tready),
+      .occupied(), .space());
    
    axi_fifo #(.WIDTH(65), .SIZE(5)) body_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({body_i_tlast, body_i_tdata}), .i_tvalid(body_i_tvalid), .i_tready(body_i_tready),
-      .o_tdata({body_o_tlast, body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready));
+      .o_tdata({body_o_tlast, body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready),
+      .occupied(), .space());
 
    wire odd_len = hdr_o_tuser[98] ^ |hdr_o_tuser[97:96];
    

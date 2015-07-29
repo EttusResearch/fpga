@@ -101,15 +101,19 @@ module noc_block_export_io
     .m_axis_data_tlast(m_axis_data.tlast),
     .m_axis_data_tvalid(m_axis_data.tvalid),
     .m_axis_data_tready(m_axis_data.tready),
+    .m_axis_data_tuser(), // Unused
     .s_axis_data_tdata(s_axis_data.tdata),
     .s_axis_data_tlast(s_axis_data.tlast),
     .s_axis_data_tvalid(s_axis_data.tvalid),
     .s_axis_data_tready(s_axis_data.tready),
-    .s_axis_data_tuser({32'd0,sid,next_dst,64'd0}),
+    .s_axis_data_tuser({4'd0,28'd0,sid,next_dst,64'd0}),
     .m_axis_config_tdata(m_axis_config.tdata),
     .m_axis_config_tlast(m_axis_config.tlast),
     .m_axis_config_tvalid(m_axis_config.tvalid),
-    .m_axis_config_tready(m_axis_config.tready));
+    .m_axis_config_tready(m_axis_config.tready),
+    .m_axis_pkt_len_tdata(), // Unused
+    .m_axis_pkt_len_tvalid(),
+    .m_axis_pkt_len_tready());
 
   setting_reg #(
     .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH))

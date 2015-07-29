@@ -37,6 +37,7 @@ module axi_round
    axi_fifo #(.WIDTH(WIDTH_OUT+1), .SIZE(FIFOSIZE)) flop
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i_tdata({i_tlast, out}), .i_tvalid(i_tvalid), .i_tready(i_tready),
-      .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready));
+      .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
+      .occupied(), .space());
 
 endmodule // axi_round

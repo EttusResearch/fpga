@@ -55,12 +55,14 @@ module chdr_framer
    axi_fifo_short #(.WIDTH(128)) header_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({i_tuser[127:112],length,i_tuser[95:0]}), .i_tvalid(header_i_tvalid), .i_tready(header_i_tready),
-      .o_tdata(header_o_tdata), .o_tvalid(header_o_tvalid), .o_tready(header_o_tready));
+      .o_tdata(header_o_tdata), .o_tvalid(header_o_tvalid), .o_tready(header_o_tready),
+      .occupied(), .space());
 
    axi_fifo #(.WIDTH(65), .SIZE(SIZE)) body_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({body_i_tlast,body_i_tdata}), .i_tvalid(body_i_tvalid), .i_tready(body_i_tready),
-      .o_tdata({body_o_tlast,body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready));
+      .o_tdata({body_o_tlast,body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready),
+      .occupied(), .space());
      
    reg [3:0] 	  chdr_state;
    localparam ST_IDLE = 0;
