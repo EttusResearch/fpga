@@ -231,8 +231,9 @@
   //
   `define RFNOC_ADD_CVITA_PORT(name,port_num) \
     cvita_bus name; \
+    localparam [15:0] sid_``name = {xbar_addr,4'd0+port_num,4'd0}; \
     initial begin \
-      name = new(xbar_m_cvita[port_num],xbar_s_cvita[port_num]); \
+      name = new(xbar_s_cvita[port_num],xbar_m_cvita[port_num]); \
     end
 
   // Connecting two RFNoC blocks requires setting up flow control and
