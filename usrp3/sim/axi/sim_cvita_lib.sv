@@ -207,7 +207,6 @@ class cvita_slave #(parameter DWIDTH = 64) extends axis_slave #(DWIDTH);
       logic [63:0] word;
       logic eop = 0;
 
-      this.wait_for_pkt();
       while(~eop) begin
         this.pull_word(word,eop);
         pkt.push_back(word);
