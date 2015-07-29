@@ -174,52 +174,55 @@
   //
   // Usage: `RFNOC_ADD_TESTBENCH_BLOCK()
   // where
+  //  - name:            Instance name
   //  - port_num:        Crossbar port to connect block to
   //
-  `define RFNOC_ADD_TESTBENCH_BLOCK(noc_block_name, port_num) \
-    localparam [15:0] sid_``noc_block_name = {xbar_addr,4'd0+port_num,4'd0}; \
-    logic [15:0] tb_next_dst; \
-    settings_bus_t #(.AWIDTH(8)) tb_set_bus(.clk(ce_clk)); \
-    readback_bus_t #(.AWIDTH(8)) tb_rb_bus(.clk(ce_clk)); \
-    axis_t #(.DWIDTH(64)) noc_block_name``_s_cvita_data_if(.clk(ce_clk)); \
-    axis_t #(.DWIDTH(64)) noc_block_name``_m_cvita_data_if(.clk(ce_clk)); \
-    axis_t #(.DWIDTH(64)) noc_block_name``_cvita_cmd_if(.clk(ce_clk)); \
-    axis_t #(.DWIDTH(64)) noc_block_name``_cvita_ack_if(.clk(ce_clk)); \
-    axis_t noc_block_name``_m_axis_data_if(.clk(ce_clk)); \
-    axis_t noc_block_name``_m_axis_config_if(.clk(ce_clk)); \
-    axis_t noc_block_name``_s_axis_data_if(.clk(ce_clk)); \
-    cvita_bus tb_cvita_data; \
-    cvita_master tb_cvita_cmd; \
-    cvita_slave tb_cvita_ack; \
-    axis_bus tb_axis_data; \
-    axis_slave tb_axis_config; \
+  `define RFNOC_ADD_TESTBENCH_BLOCK(name, port_num) \
+    settings_bus_t #(.AWIDTH(8)) noc_block_``name``_set_bus(.clk(ce_clk)); \
+    readback_bus_t #(.AWIDTH(8)) noc_block_``name``_rb_bus(.clk(ce_clk)); \
+    axis_t #(.DWIDTH(64)) noc_block_``name``_s_cvita_data(.clk(ce_clk)); \
+    axis_t #(.DWIDTH(64)) noc_block_``name``_m_cvita_data(.clk(ce_clk)); \
+    axis_t #(.DWIDTH(64)) noc_block_``name``_cvita_cmd(.clk(ce_clk)); \
+    axis_t #(.DWIDTH(64)) noc_block_``name``_cvita_ack(.clk(ce_clk)); \
+    axis_t noc_block_``name``_m_axis_data(.clk(ce_clk)); \
+    axis_t noc_block_``name``_m_axis_config(.clk(ce_clk)); \
+    axis_t noc_block_``name``_s_axis_data(.clk(ce_clk)); \
+    // User test bench signals \
+    localparam [15:0] sid_noc_block_``name = {xbar_addr,4'd0+port_num,4'd0}; \
+    logic [15:0] name``_next_dst; \
+    cvita_bus    name``_cvita_data; \
+    cvita_master name``_cvita_cmd; \
+    cvita_slave  name``_cvita_ack; \
+    axis_bus     name``_axis_data; \
+    axis_slave   name``_axis_config; \
     // Setup class instances for testbench to use & module flow control \
     initial begin \
-      tb_cvita_data = new(``noc_block_name``_s_cvita_data_if,``noc_block_name``_m_cvita_data_if); \
-      tb_cvita_cmd = new(``noc_block_name``_cvita_cmd_if); \
-      tb_cvita_ack = new(``noc_block_name``_cvita_ack_if); \
-      tb_axis_data = new(``noc_block_name``_s_axis_data_if,``noc_block_name``_m_axis_data_if); \
-      tb_axis_config = new(``noc_block_name``_m_axis_config_if); \
+      tb_cvita_data = new(noc_block_``name``_s_cvita_data,noc_block_``name``_m_cvita_data); \
+      tb_cvita_cmd = new(noc_block_``name``_cvita_cmd); \
+      tb_cvita_ack = new(noc_block_``name``_cvita_ack); \
+      tb_axis_data = new(noc_block_``name``_s_axis_data,noc_block_``name``_m_axis_data); \
+      tb_axis_config = new(noc_block_``name``_m_axis_config); \
     end \
     // Setup module \
     noc_block_export_io \
-    ``noc_block_name ( \
+    noc_block_``name ( \
       .bus_clk(bus_clk), \
       .bus_rst(bus_rst), \
       .ce_clk(ce_clk), \
       .ce_rst(ce_rst), \
       .s_cvita(xbar_m_cvita[port_num]), \
       .m_cvita(xbar_s_cvita[port_num]), \
-      .set_bus(tb_set_bus), \
-      .rb_bus(tb_rb_bus), \
-      .s_cvita_data(``noc_block_name``_s_cvita_data_if), \
-      .m_cvita_data(``noc_block_name``_m_cvita_data_if), \
-      .cvita_cmd(``noc_block_name``_cvita_cmd_if), \
-      .cvita_ack(``noc_block_name``_cvita_ack_if), \
-      .next_dst(tb_next_dst), \
-      .m_axis_data(``noc_block_name``_m_axis_data_if), \
-      .m_axis_config(``noc_block_name``_m_axis_config_if), \
-      .s_axis_data(``noc_block_name``_s_axis_data_if), \
+      .set_bus(noc_block_``name``_set_bus), \
+      .rb_bus(noc_block_``name``_rb_bus), \
+      .s_cvita_data(noc_block_``name``_s_cvita_data), \
+      .m_cvita_data(noc_block_``name``_m_cvita_data), \
+      .cvita_cmd(noc_block_``name``_cvita_cmd), \
+      .cvita_ack(noc_block_``name``_cvita_ack), \
+      .sid(sid_noc_block_``name), \
+      .next_dst(name``_next_dst), \
+      .m_axis_data(noc_block_``name``_m_axis_data), \
+      .m_axis_config(noc_block_``name``_m_axis_config), \
+      .s_axis_data(noc_block_``name``_s_axis_data), \
       .debug());
 
   // Instantiate and connect a cvita_bus instance directly to the crossbar.
