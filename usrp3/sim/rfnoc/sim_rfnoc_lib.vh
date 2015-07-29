@@ -260,19 +260,19 @@
   //
   `define RFNOC_CONNECT_BLOCK_PORT(from_noc_block_name,from_block_port,to_noc_block_name,to_block_port,pkt_size) \
     // Send a flow control response packet on every received packet \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
                       {SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set up window size \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h1, length:8, sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'd0 + (``to_noc_block_name``.STR_SINK_FIFOSIZE[(to_block_port+1)*4-1:to_block_port*4]*8)/pkt_size}}); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h1, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+                      {SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'd0 + (8*2**(``to_noc_block_name``.STR_SINK_FIFOSIZE[(to_block_port+1)*4-1:to_block_port*4]))/pkt_size}}); \
     tb_cvita.drop_pkt(); \
     // Enable window \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h2, length:8, sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h2, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
                       {SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set next destination stream ID \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h4, length:8, sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
                       {SR_NEXT_DST_BASE, (sid_``to_noc_block_name + to_block_port)}}); \
     tb_cvita.drop_pkt();
 
