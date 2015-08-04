@@ -86,20 +86,6 @@ module duc_chain
 
    assign tx_fe_i = prod_i[32:33-WIDTH];
    assign tx_fe_q = prod_q[32:33-WIDTH];
-   
-   // TEST. IJB
-/* -----\/----- EXCLUDED -----\/-----
-   wire [17:0] 		     i_hb_round, q_hb_round;
-   wire 		     strobe_hb1_round;
-   
-   round_sd #(.WIDTH_IN(34), .WIDTH_OUT(12)) round_i_out
-     (.clk(clk), .reset(rst), .in(prod_i[33:0]), .strobe_in(1'b1), .out(tx_fe_i[23:12]), .strobe_out());
-   round_sd #(.WIDTH_IN(34), .WIDTH_OUT(12)) round_q_out
-     (.clk(clk), .reset(rst), .in(prod_q[33:0]), .strobe_in(1'b1), .out(tx_fe_q[23:12]), .strobe_out());
-   assign tx_fe_i[11:0] = 0;
-   assign tx_fe_q[11:0] = 0;
- -----/\----- EXCLUDED -----/\----- */
-   // END TEST
 
    wire [17:0] i_interp, q_interp;
 
