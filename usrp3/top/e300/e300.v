@@ -218,6 +218,12 @@ module e300
 
   wire        fclk_clk0;
   wire        fclk_reset0;
+  wire        fclk_clk1;
+  wire        fclk_reset1;
+  wire        fclk_clk2;
+  wire        fclk_reset2;
+  wire        fclk_clk3;
+  wire        fclk_reset3;
 
   wire pl_dram_clk;
   wire pl_dram_rst;
@@ -396,6 +402,12 @@ module e300
     .GPIO_O(ps_gpio_out),
     .FCLK_CLK0(fclk_clk0),
     .FCLK_RESET0(fclk_reset0),
+    .FCLK_CLK1(fclk_clk1),
+    .FCLK_RESET1(fclk_reset1),
+    .FCLK_CLK2(fclk_clk2),
+    .FCLK_RESET2(fclk_reset2),
+    .FCLK_CLK3(fclk_clk3),
+    .FCLK_RESET3(fclk_reset3),
 
     .PL_DRAM_CLK(pl_dram_clk),
     .PL_DRAM_RST(pl_dram_rst),
@@ -521,6 +533,7 @@ module e300
            VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
            TX_ENABLE2B, TX_ENABLE2A //2
          } = gpio1[18:10];
+
 
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.

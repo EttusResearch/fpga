@@ -248,7 +248,11 @@ module e300_processing_system (
   assign FCLK_CLK3 = processing_system7_FCLK_CLK3;
   assign FCLK_RESET3 = ~processing_system7_FCLK_RESET3_N;
 
-  processing_system7 inst_processing_system7 (
+`ifdef E3XX_SG3
+  processing_system7_3 inst_processing_system7 (
+`else
+  processing_system7_1 inst_processing_system7 (
+`endif
     .ENET0_PTP_DELAY_REQ_RX(),
     .ENET0_PTP_DELAY_REQ_TX(),
     .ENET0_PTP_PDELAY_REQ_RX(),
@@ -382,6 +386,12 @@ module e300_processing_system (
     .IRQ_F2P(IRQ_F2P),
     .FCLK_CLK0(processing_system7_FCLK_CLK0),
     .FCLK_RESET0_N(processing_system7_FCLK_RESET0_N),
+    .FCLK_CLK1(processing_system7_FCLK_CLK1),
+    .FCLK_RESET1_N(processing_system7_FCLK_RESET1_N),
+    .FCLK_CLK2(processing_system7_FCLK_CLK2),
+    .FCLK_RESET2_N(processing_system7_FCLK_RESET2_N),
+    .FCLK_CLK3(processing_system7_FCLK_CLK3),
+    .FCLK_RESET3_N(processing_system7_FCLK_RESET3_N),
     .MIO(MIO),
     .DDR_CAS_n(DDR_CAS_n),
     .DDR_CKE(DDR_CKE),

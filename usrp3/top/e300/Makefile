@@ -14,36 +14,48 @@
 ## build/usrp_<product>_fpga[_idle].bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga[_idle].rpt:    Build report (includes utilization and timing summary)
 
-# vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-1 EXTRA_DEFS="$2"
+# vivado_build($1=Device, $2=SG, $3=Definitions)
+vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 EXTRA_DEFS="$3"
 
-# post_build($1=Device, $2=Suffix)
+# post_build($1=Device, $2=TYPE, $3=SG)
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream files..."; \
-	cp build-$(1)$(2)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bin; \
-	cp build-$(1)$(2)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bit; \
+	cp build-$(1)$(2)sg$(3)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2)$(3).bin; \
+	cp build-$(1)$(2)sg$(3)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2)$(3).bit; \
 	echo "Exporting build report..."; \
-	cp build-$(1)$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).rpt; \
-	echo "Build DONE ... $(1)$(2)";
+	cp build-$(1)$(2)sg$(3)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2)$(3).rpt; \
+	echo "Build DONE ... $(1)";
 
 ##
 ##Supported Targets
 ##-----------------
 
-all: E310 E310_idle ##(Default target)
+all: E310_sg1 E310_idle E310_sg3 E310_idle_sg3 ##(Default target)
 
-E310: ##Build USRP E310 design.
-	$(call vivado_build,xc7z020,)
-	$(call post_build,E310,)
+E310: ##Build USRP E310 design for SG1 device.
+	$(call vivado_build,xc7z020,1)
+	$(call post_build,E310,,)
 
-E310_idle: ##Build USRP E310 idle design.
-	$(call vivado_build,xc7z020,E3X0_IDLE_IMAGE)
-	$(call post_build,E310,_idle)
+E310_idle: ##Build USRP E310 idle design for SG1 device.
+	$(call vivado_build,xc7z020,1,E3XX_IDLE_IMAGE)
+	$(call post_build,E310,_idle,)
+
+E310_sg3: ##Build USRP E310 design for SG3 device.
+	$(call vivado_build,xc7z020,3,E3XX_SG3)
+	$(call post_build,E310,_,sg3)
+
+E310_idle_sg3: ##Build USRP E310 idle design for SG3 device.
+	$(call vivado_build,xc7z020,3,E3XX_IDLE_IMAGE E3XX_SG3)
+	$(call post_build,E310,_idle_,sg3)
 
 E310_dram_test: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,xc7z020,DRAM_TEST)
-	$(call post_build,E310,_dram_test)
+	$(call vivado_build,xc7z020,1,DRAM_TEST)
+	$(call post_build,E310,_dram_test,)
+
+E310_dram_test_sg3: ##Build USRP E310 design with DRAM test.
+	$(call vivado_build,xc7z020,3,DRAM_TEST E3XX_SG3)
+	$(call post_build,E310,_dram_test_,sg3)
 
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
@@ -64,4 +76,4 @@ help: ## Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI. 
 
-.PHONY: all clean cleanall E310 E310_idle help
+.PHONY: all clean cleanall E310 E310_idle E310_sg3 E310_idle_sg3 help

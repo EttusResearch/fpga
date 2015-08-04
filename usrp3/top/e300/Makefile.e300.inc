@@ -39,10 +39,16 @@ TOP_SRCS = e300_ps.v \
            e300.xdc \
            timing.xdc
 
-ifeq (,$(findstring E3X0_IDLE_IMAGE, $(EXTRA_DEFS)))
+ifeq (,$(findstring E3XX_IDLE_IMAGE, $(EXTRA_DEFS)))
 TOP_SRCS += e300.v
 else
 TOP_SRCS += e300_idle.v
+endif
+
+ifeq (,$(findstring E3XX_SG3, $(EXTRA_DEFS)))
+PS7_SRCS = $(IP_PS7_1_SRCS)
+else
+PS7_SRCS = $(IP_PS7_3_SRCS)
 endif
 
 SOURCES = $(abspath $(TOP_SRCS)) \
@@ -56,7 +62,8 @@ SOURCES = $(abspath $(TOP_SRCS)) \
           $(RADIO_SRCS) \
           $(CAT_CAP_GEN_SRCS) \
           $(COREGEN_DSP_SRCS) \
-          $(IP_XCI_SRCS)
+          $(IP_XCI_SRCS) \
+          $(PS7_SRCS)
 
 ##################################################
 # Git Hash
