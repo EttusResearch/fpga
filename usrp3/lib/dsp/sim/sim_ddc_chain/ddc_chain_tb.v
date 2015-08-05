@@ -27,28 +27,28 @@ module ddc_chain_tb();
 `include "../../../../../sim/radio_setting_regs.v"
 `include "../../../../../sim/task_library.v"
 
-   localparam DSPNO = 0;  
-   localparam WIDTH = 24;   
-   localparam NEW_HB_DECIM = 1;  
+   localparam DSPNO = 0;
+   localparam WIDTH = 24;
+   localparam NEW_HB_DECIM = 1;
    localparam DEVICE = "SPARTAN6";
 
    reg clk = 0;
    reg reset;
-   
+
    reg set_stb;
    reg [7:0] set_addr;
    reg [31:0] set_data;
-   
+
    wire [WIDTH-1:0] rx_fe_i, rx_fe_q;
    wire [31:0] 	    sample;
    reg 		    run;
    wire 	    strobe;
-   
+
    reg [11:0] 	    i_in, q_in;
 
    assign rx_fe_i = {i_in,12'h0};
    assign rx_fe_q = {q_in,12'h0};
-   
+
    //
    // DUT
    //
@@ -61,11 +61,11 @@ module ddc_chain_tb();
      .DEVICE("SPARTAN6")
        )
    dut_i0 (
-     .clk(clk), 
-     .rst(reset), 
+     .clk(clk),
+     .rst(reset),
      .clr(1'b0),
-     .set_stb(set_stb), 
-     .set_addr(set_addr), 
+     .set_stb(set_stb),
+     .set_addr(set_addr),
      .set_data(set_data),
 
      // From RX frontend
@@ -80,10 +80,10 @@ module ddc_chain_tb();
      );
 
 
-   
+
    //
    // Include testbench
    //
 `include "simulation_script.v"
-   
-endmodule // 
+
+endmodule //

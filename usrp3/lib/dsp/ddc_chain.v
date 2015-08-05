@@ -95,20 +95,20 @@ module ddc_chain
    // (Worst case gain through rotation => SQRT(2) = 1.4142)
    // Total worst case gain => 0.8235 * 1.4142 = 1.1646
    // So add an extra MSB bit for word growth.
-   
+
    sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_i (.in(rx_fe_i_mux), .out(to_cordic_i));
    sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_q (.in(rx_fe_q_mux), .out(to_cordic_q));
-   
+
    cordic_z24 #(.bitwidth(cwidth))
    cordic(.clock(clk), .reset(rst), .enable(run),
 	  .xi(to_cordic_i),. yi(to_cordic_q), .zi(phase[31:32-zwidth]),
 	  .xo(i_cordic),.yo(q_cordic),.zo() );
 
    always @(posedge clk) begin
-      i_cordic_pipe[23:0] <= i_cordic[24:1]; 
-      q_cordic_pipe[23:0] <= q_cordic[24:1]; 
+      i_cordic_pipe[23:0] <= i_cordic[24:1];
+      q_cordic_pipe[23:0] <= q_cordic[24:1];
    end
-   
+
 
    // CIC decimator  24 bit I/O
    // Applies crude 1/(2^N) right shift gain compensation internally to prevent excesive downstream word growth.
@@ -160,7 +160,7 @@ module ddc_chain
 
 	 assign nd1 = strobe_cic;
 	 assign nd2 = strobe_hb1;
-	 
+
 	 // Default Coeffs have gain of ~1.0
 	 hbdec1 hbdec1
 	   (.clk(clk), // input clk
@@ -177,7 +177,7 @@ module ddc_chain
 	    .data_valid(data_valid1), // output data_valid
 	    .dout_1(i_hb1), // output [46 : 0] dout_1
 	    .dout_2(q_hb1)); // output [46 : 0] dout_2
-	 
+
 	 // Default Coeffs have gain of ~1.0
 	 hbdec2 hbdec2
 	   (.clk(clk), // input clk
@@ -196,7 +196,7 @@ module ddc_chain
 	    .dout_2(q_hb2)); // output [46 : 0] dout_2
 
 
-	 
+
 	 reg [18:0]  i_unscaled, q_unscaled;
 	 reg 	     strobe_unscaled;
 
@@ -237,7 +237,7 @@ module ddc_chain
 	 // saturated.
 	 wire strobe_unscaled_clip;
 	 wire [17:0] i_unscaled_clip, q_unscaled_clip;
-	 
+
 	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_i
 	   (.clk(clk), .in(i_unscaled[18:0]), .strobe_in(strobe_unscaled), .out(i_unscaled_clip[17:0]), .strobe_out(strobe_unscaled_clip));
 	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_q
@@ -268,13 +268,13 @@ module ddc_chain
 		.CE(strobe_unscaled_clip),   // 1-bit active high input clock enable
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
-	 
+
 	 reg 		  strobe_scaled;
 	 wire 		  strobe_clip;
 	 wire [32:0] 	  i_clip, q_clip;
 
 	 always @(posedge clk)  strobe_scaled <= strobe_unscaled_clip;
-   
+
 	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
 	   (.clk(clk), .in(prod_i[35:0]), .strobe_in(strobe_scaled), .out(i_clip), .strobe_out(strobe_clip));
 	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q
@@ -315,7 +315,7 @@ module ddc_chain
 	 // Need to clip 1 bit here or we loose small signal performance out the truncated LSB's for worst case CIC gain cases.
 	 wire strobe_unscaled_clip;
 	 wire [17:0] i_unscaled_clip, q_unscaled_clip;
-	 
+
 	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_i
 	   (.clk(clk), .in(i_hb2[WIDTH-1:WIDTH-19]), .strobe_in(strobe_hb2), .out(i_unscaled_clip[17:0]), .strobe_out(strobe_unscaled_clip));
 	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_q
@@ -351,7 +351,7 @@ module ddc_chain
 	 wire [32:0] 	  i_clip, q_clip;
 
 	 always @(posedge clk)  strobe_scaled <= strobe_unscaled_clip;
-   
+
 	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
 	   (.clk(clk), .in(prod_i[35:0]), .strobe_in(strobe_scaled), .out(i_clip), .strobe_out(strobe_clip));
 	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q

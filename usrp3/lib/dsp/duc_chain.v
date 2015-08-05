@@ -190,7 +190,7 @@ module duc_chain
    // Note. No head room has been added to the CORDIC to accomodate gain in excess of the input signals dynamic range.
    // The CORDIC has algorithmic gain of 1.647, implementation gain of 0.5 and potential gain associated with rotation of 1.414.
    // Thus the CORDIC will overflow when rotating and an input CW with (clipped) effective amplitude of 1.22 is applied.
-   // 
+   //
    cordic_z24 #(.bitwidth(cwidth))
      cordic(.clock(clk), .reset(rst), .enable(run),
 	    .xi({i_interp,{(cwidth-18){1'b0}}}),.yi({q_interp,{(cwidth-18){1'b0}}}),
@@ -219,8 +219,8 @@ module duc_chain
 	   .CLK(clk),              // 1-bit positive edge clock input
 	   .RST(rst));             // 1-bit input active high reset
 
- 
-   wire [32:0] 	     i_clip, q_clip;  
+
+   wire [32:0] 	     i_clip, q_clip;
 
    // Cordic rotation coupled with a saturated input signal can cause overflow
    // so we clip here rather than allow a wrap.
@@ -232,7 +232,7 @@ module duc_chain
    assign tx_fe_i = i_clip[32:33-WIDTH];
    assign tx_fe_q = q_clip[32:33-WIDTH];
 
-   
+
    //
    // Debug
    //

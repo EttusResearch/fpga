@@ -10,8 +10,8 @@ always #50 clk <= ~clk;
 	set_stb <= 0;
 	set_addr <= 0;
 	set_data <= 0;
-	
-	
+
+
 	@(posedge clk);
 	// Into Reset...
 	reset <= 1'b1;
@@ -21,13 +21,13 @@ always #50 clk <= ~clk;
 	repeat(10) @(posedge clk);
 	// Now program DSP configuration via settings regs.
 	write_setting_bus(SR_DSP_RX_FREQ,42949672); // 100kHz @ 10MHz MCR
-	//  (1 << 15) * std::pow(2, ceil_log2(rate_pow))*2./(1.648*rate_pow) 
+	//  (1 << 15) * std::pow(2, ceil_log2(rate_pow))*2./(1.648*rate_pow)
 	write_setting_bus(SR_DSP_RX_SCALE_IQ, 39767); // Should include CORDIC and CIC gain compensation.
 	write_setting_bus(SR_DSP_RX_DECIM, 1<<9|1); // Decim = 2
 	write_setting_bus(SR_DSP_RX_MUX, 0);
 	write_setting_bus(SR_DSP_RX_COEFFS,0);
 	repeat(10) @(posedge clk);
-	 
+
 	// Set complex data inputs to DC unit circle position.
 	i_in <= 12'h7ff;
 	q_in <= 12'h0;
@@ -75,5 +75,3 @@ always #50 clk <= ~clk;
 	$finish();
 
      end // initial begin
-   
-   

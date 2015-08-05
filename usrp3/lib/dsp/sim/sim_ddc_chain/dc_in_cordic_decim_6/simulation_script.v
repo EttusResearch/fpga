@@ -10,8 +10,8 @@ always #50 clk <= ~clk;
 	set_stb <= 0;
 	set_addr <= 0;
 	set_data <= 0;
-	
-	
+
+
 	@(posedge clk);
 	// Into Reset...
 	reset <= 1'b1;
@@ -27,7 +27,7 @@ always #50 clk <= ~clk;
 	write_setting_bus(SR_DSP_RX_MUX, 0);
 	write_setting_bus(SR_DSP_RX_COEFFS,0);
 	repeat(10) @(posedge clk);
-	 
+
 	// Set complex data inputs to DC unit circle position.
 	i_in <= 12'h7ff;
 	q_in <= 12'h0;
@@ -76,5 +76,3 @@ always #50 clk <= ~clk;
 	$finish();
 
      end // initial begin
-   
-   
