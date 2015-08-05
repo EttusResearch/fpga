@@ -21,7 +21,6 @@ module ddc_chain
    input [WIDTH-1:0] rx_fe_q,
 
    // To RX control
-//IJB   output reg [31:0] sample,
    output [31:0] sample,
    input 	     run,
    output 	     strobe,
@@ -50,15 +49,6 @@ module ddc_chain
    wire        swap_iq;
    wire        invert_i;
    wire        invert_q;
-
-/* -----\/----- EXCLUDED -----\/-----
-   always @(posedge clk) begin
-      sample[31:16] <= {rx_fe_i[23:12],4'h0};
-      sample[15:0] <= {rx_fe_q[23:12],4'h0};
-   end
-   assign strobe = 1;
- -----/\----- EXCLUDED -----/\----- */
-   
 
    setting_reg #(.my_addr(BASE+0)) sr_0
      (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
@@ -243,6 +233,8 @@ module ddc_chain
 	   endcase // case (hb_rate)
 
 	 // Need to clip 1 bit here or we loose small signal performance out the truncated LSB's for worst case CIC gain cases.
+	 // NOTE: We can only clip here with CORDIC rotating, CIC in it's highest gain configurations and an input signal thats
+	 // saturated.
 	 wire strobe_unscaled_clip;
 	 wire [17:0] i_unscaled_clip, q_unscaled_clip;
 	 
@@ -251,7 +243,8 @@ module ddc_chain
 	 clip_reg #(.bits_in(19), .bits_out(18), .STROBED(1)) unscaled_clip_q
 	   (.clk(clk), .in(q_unscaled[18:0]), .strobe_in(strobe_unscaled), .out(q_unscaled_clip[17:0]), .strobe_out());
 
-	 // //scalar operation (gain of 6 bits)
+	 // Apply scaling gain to compensate for CORDIC and CIC gain adjustments so that signal swing over network transport has
+	 // optimal dynamic range.
 	 wire [35:0] 	  prod_i, prod_q;
 
 	 MULT_MACRO #(.DEVICE(DEVICE),  // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6","7SERIES"
@@ -353,22 +346,22 @@ module ddc_chain
 		.CLK(clk),              // 1-bit positive edge clock input
 		.RST(rst));             // 1-bit input active high reset
 
-	 //pipeline for the multiplier (gain of 10 bits)
-	 reg [WIDTH-1:0]  prod_reg_i, prod_reg_q;
-	 reg 		  strobe_mult;
+	 reg 		  strobe_scaled;
+	 wire 		  strobe_clip;
+	 wire [32:0] 	  i_clip, q_clip;
 
-	 always @(posedge clk) begin
-	    strobe_mult <= strobe_unscaled_clip;
-	    prod_reg_i <= prod_i[32:33-WIDTH];
-	    prod_reg_q <= prod_q[32:33-WIDTH];
-	 end
+	 always @(posedge clk)  strobe_scaled <= strobe_unscaled_clip;
+   
+	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
+	   (.clk(clk), .in(prod_i[35:0]), .strobe_in(strobe_scaled), .out(i_clip), .strobe_out(strobe_clip));
+	 clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q
+	   (.clk(clk), .in(prod_q[35:0]), .strobe_in(strobe_scaled), .out(q_clip), .strobe_out());
 
-	 // Round final answer to 16 bits
-	 round_sd #(.WIDTH_IN(WIDTH),.WIDTH_OUT(16)) round_i
-	   (.clk(clk),.reset(rst), .in(prod_reg_i),.strobe_in(strobe_mult), .out(sample[31:16]), .strobe_out(strobe));
+	 round_sd #(.WIDTH_IN(33), .WIDTH_OUT(16)) round_i
+	   (.clk(clk), .reset(rst), .in(i_clip), .strobe_in(strobe_clip), .out(sample[31:16]), .strobe_out(strobe));
+	 round_sd #(.WIDTH_IN(33), .WIDTH_OUT(16)) round_q
+	   (.clk(clk), .reset(rst), .in(q_clip), .strobe_in(strobe_clip), .out(sample[15:0]), .strobe_out());
 
-	 round_sd #(.WIDTH_IN(WIDTH),.WIDTH_OUT(16)) round_q
-	   (.clk(clk),.reset(rst), .in(prod_reg_q),.strobe_in(strobe_mult), .out(sample[15:0]), .strobe_out());
       end // block: old_hb
    endgenerate
 
