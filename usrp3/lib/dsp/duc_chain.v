@@ -84,9 +84,6 @@ module duc_chain
    wire        signed [17:0] da, db;
    wire        signed [35:0] prod_i, prod_q;
 
-   assign tx_fe_i = prod_i[32:33-WIDTH];
-   assign tx_fe_q = prod_q[32:33-WIDTH];
-
    wire [17:0] i_interp, q_interp;
 
    wire [17:0] hb1_i, hb1_q, hb2_i, hb2_q;
@@ -189,7 +186,11 @@ module duc_chain
    localparam  zwidth = 24;  // was 16
 
    wire [cwidth-1:0] da_c, db_c;
-
+   //
+   // Note. No head room has been added to the CORDIC to accomodate gain in excess of the input signals dynamic range.
+   // The CORDIC has algorithmic gain of 1.647, implementation gain of 0.5 and potential gain associated with rotation of 1.414.
+   // Thus the CORDIC will overflow when rotating and an input CW with (clipped) effective amplitude of 1.22 is applied.
+   // 
    cordic_z24 #(.bitwidth(cwidth))
      cordic(.clock(clk), .reset(rst), .enable(run),
 	    .xi({i_interp,{(cwidth-18){1'b0}}}),.yi({q_interp,{(cwidth-18){1'b0}}}),
@@ -218,6 +219,23 @@ module duc_chain
 	   .CLK(clk),              // 1-bit positive edge clock input
 	   .RST(rst));             // 1-bit input active high reset
 
+ 
+   wire [32:0] 	     i_clip, q_clip;  
+
+   // Cordic rotation coupled with a saturated input signal can cause overflow
+   // so we clip here rather than allow a wrap.
+   clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
+     (.clk(clk), .in(prod_i[35:0]), .strobe_in(1'b1), .out(i_clip), .strobe_out());
+   clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q
+     (.clk(clk), .in(prod_q[35:0]), .strobe_in(1'b1), .out(q_clip), .strobe_out());
+
+   assign tx_fe_i = i_clip[32:33-WIDTH];
+   assign tx_fe_q = q_clip[32:33-WIDTH];
+
+   
+   //
+   // Debug
+   //
    assign 	     debug = {strobe_cic, strobe_hb1, strobe_hb2,run};
 
 endmodule // duc_chain
