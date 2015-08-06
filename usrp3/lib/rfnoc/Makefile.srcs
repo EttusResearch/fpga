@@ -41,7 +41,7 @@ delay.v \
 delay_type2.v \
 delay_type3.v \
 complex_to_magsq.v \
-phase_acc.v \
+phase_accum.v \
 periodic_framer.v \
 threshold_scaled.v \
 moving_sum.v \
