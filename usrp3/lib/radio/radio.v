@@ -306,7 +306,7 @@ module radio #(
 
    generate
       if (DELETE_DSP==0) begin:	tx_dsp
-	 duc_chain #(.BASE(SR_TX_DSP), .DSPNO(0), .WIDTH(24)) duc_chain
+	 duc_chain #(.BASE(SR_TX_DSP), .DSPNO(0), .WIDTH(24), .NEW_HB_INTERP(1),  .DEVICE("7SERIES")) duc_chain
 	   (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
 	    .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	    .tx_fe_i(tx_fe_i),.tx_fe_q(tx_fe_q),
