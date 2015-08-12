@@ -47,7 +47,7 @@ module gpif2_to_fifo64
    assign 	    fifo_nearly_full = (space < 6); // 5 spaces left.
 
    //
-   // This FIFO is provdied purely to easy FPGA timing closure as data is comming from I/O pins.
+   // This FIFO is provdied purely to ease FPGA timing closure as data is comming from I/O pins.
    //
    axi_fifo #(.WIDTH(33), .SIZE(0)) ingress_timing_fifo
      (
@@ -120,5 +120,30 @@ module gpif2_to_fifo64
    //
    /////////////////////////////////////////////
 
+   reg 		    o_tready_debug;
+   reg 		    o_tvalid_debug;
+   reg 		    o_tlast_debug;
+   reg 		    i_tready_debug;
+   reg 		    i_tvalid_debug;
+   reg 		    i_tlast_debug;
 
+   always @(posedge gpif_clk) begin
+   	    o_tready_debug <= o_tready;
+ 	    o_tvalid_debug <= o_tvalid;
+ 	    o_tlast_debug <= o_tlast;
+  	    i_tready_debug <= i_tready;
+  	    i_tvalid_debug <= i_tvalid;
+	    i_tlast_debug <= i_tlast;
+   end
+
+   assign debug = {26'h0,
+		   o_tready_debug,
+    		   o_tvalid_debug,
+    		   o_tlast_debug,
+    		   i_tready_debug,
+    		   i_tvalid_debug,
+    		   i_tlast_debug
+		   };
+   
+   
 endmodule //fifo_to_gpif2

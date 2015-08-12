@@ -16,6 +16,7 @@ module radio_b200
     parameter SOURCE_FLOW_CONTROL = 0,
     parameter USER_SETTINGS = 0,
     parameter DEVICE = "SPARTAN6"
+
   )
   (input radio_clk, input radio_rst,
    input [31:0]  rx, output reg [31:0] tx,
@@ -471,11 +472,12 @@ endgenerate
       .o_tdata(rmux_tdata_r), .o_tlast(rmux_tlast_r), .o_tvalid(rmux_tvalid_r), .o_tready(rmux_tready_r));
 
 
-  
 
    /*******************************************************************
     * Debug only logic below here.
     ******************************************************************/
  assign debug = 0;
+
+   
    
 endmodule // radio_b200

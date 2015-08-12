@@ -40,6 +40,17 @@ module new_rx_framer
    wire [15:0] 	  maxlen;
    reg [31:0] 	  holding;
     
+   ////////////////////////////////////////////////////////////////////////////////////////////////////
+   // DBEUG CODE
+   //////////////
+   reg [31:0] 	  sample_int;
+
+   always @(posedge clk)
+     if (!run)
+       sample_int <= 32'h0;
+     else if (strobe)
+       sample_int <= sample_int + 1'h1;
+   ///////////////////////////////////////////////////////////////////////////////////////////////////
 	
    // FIXME need to handle case where hdr fifo is full (i.e. too many tiny packets)
    assign full = (sample_space == 16'd0) | (sample_space == 16'd1) | ~hdr_tready;
@@ -124,11 +135,17 @@ module new_rx_framer
 		  nearly_eop <= (numsamps >= (maxlen-2));
 	       end
        endcase // case (instate)
+     else  begin
+	  instate <= START;
+	  numsamps <= 0;
+	  nearly_eop <= 0;
+     end 
+   
 
    always @(posedge clk)
      if(strobe && run)
        begin
-	  holding <= sample;
+	  holding <= sample_int;
 	  if(instate == START)
 	    hold_time <= vita_time;
        end
@@ -154,7 +171,7 @@ module new_rx_framer
  
    wire 	  eop = eob | nearly_eop | full;
    
-   wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample} : {sample, 32'h0};
+   wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample_int} : {sample_int, 32'h0};
    wire 	  sample_tlast = eop;
    wire 	  sample_tvalid = run & strobe & ( (instate == SECOND) | eop );
    wire 	  sample_tready;
@@ -162,6 +179,10 @@ module new_rx_framer
    wire [80:0] 	  hdr_tdata = {eob,len[13:0],2'b0,(instate == START) ? vita_time : hold_time};
    wire 	  hdr_tvalid = sample_tlast && sample_tvalid && sample_tready;
    wire 	  hdr_tready;
+
+   wire [80:0] 	  hfifo_tdata_tmp;
+   wire 	  hfifo_tvalid_tmp, hfifo_tready_tmp;
+
 
    
    axi_fifo #(.WIDTH(65), .SIZE(SAMPLE_FIFO_SIZE)) datafifo
@@ -173,8 +194,17 @@ module new_rx_framer
    axi_fifo_short #(.WIDTH(81)) hdrfifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(hdr_tdata), .i_tvalid(hdr_tvalid), .i_tready(hdr_tready),
+      .o_tdata(hfifo_tdata_tmp), .o_tvalid(hfifo_tvalid_tmp), .o_tready(hfifo_tready_tmp),
+      .space(), .occupied());
+
+   axi_fifo_short #(.WIDTH(81)) hdrfifo2
+     (.clk(clk), .reset(reset), .clear(clear),
+      .i_tdata(hfifo_tdata_tmp), .i_tvalid(hfifo_tvalid_tmp), .i_tready(hfifo_tready_tmp),
       .o_tdata(hfifo_tdata), .o_tvalid(hfifo_tvalid), .o_tready(hfifo_tready),
       .space(), .occupied());
+
+   
+
 
    // The output state machine is responsible for forming output packets.
    // Output packets are formed by combining the entries in the header fifo,
