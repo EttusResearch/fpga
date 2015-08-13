@@ -9,7 +9,7 @@ module gpif2_to_fifo64
     )
     (
      //input interface
-     input gpif_clk, 
+     input gpif_clk,
      input gpif_rst,
      input [31:0] i_tdata,
      input i_tlast,
@@ -19,7 +19,7 @@ module gpif2_to_fifo64
      output fifo_nearly_full,
 
      //output fifo interface
-     input fifo_clk, 
+     input fifo_clk,
      input fifo_rst,
      output [63:0] o_tdata,
      output o_tlast,
@@ -34,7 +34,7 @@ module gpif2_to_fifo64
    wire 	    int_tlast;
    wire 	    int_tvalid, int_tready;
 
-   wire [31:0] 	    int0_tdata; 
+   wire [31:0] 	    int0_tdata;
    wire 	    int0_tlast, int0_tvalid, int0_tready;
 
    //
@@ -97,7 +97,7 @@ module gpif2_to_fifo64
       .o_tdata(o32_tdata), .o_tlast(o32_tlast), .o_tvalid(o32_tvalid), .o_tready(o32_tready),
       .bus_error(bus_error), .debug()
       );
-   
+
    //assign o32_tdata = chk_tdata;
    //assign o32_tlast = chk_tlast;
    //assign o32_tvalid = chk_tvalid;
@@ -144,6 +144,6 @@ module gpif2_to_fifo64
     		   i_tvalid_debug,
     		   i_tlast_debug
 		   };
-   
-   
+
+
 endmodule //fifo_to_gpif2

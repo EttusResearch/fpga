@@ -81,5 +81,5 @@ module axis_packet_debug
       end else begin
 	 bad_sid <= 1'b0;
       end
-   
+
 endmodule // cvita_packet_debug

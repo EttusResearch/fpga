@@ -7,7 +7,7 @@ module new_rx_framer
     )
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    
+
     input [63:0] vita_time,
 
     input strobe,
@@ -22,10 +22,10 @@ module new_rx_framer
 
     output [31:0] debug
     );
-  
+
    reg [15:0] 	  len;
    reg [63:0] 	  hold_time;
-   
+
    wire [63:0] 	  dfifo_tdata;
    wire 	  dfifo_tlast, dfifo_tvalid, dfifo_tready;
 
@@ -39,22 +39,11 @@ module new_rx_framer
 
    wire [15:0] 	  maxlen;
    reg [31:0] 	  holding;
-    
-   ////////////////////////////////////////////////////////////////////////////////////////////////////
-   // DBEUG CODE
-   //////////////
-   reg [31:0] 	  sample_int;
 
-   always @(posedge clk)
-     if (!run)
-       sample_int <= 32'h0;
-     else if (strobe)
-       sample_int <= sample_int + 1'h1;
-   ///////////////////////////////////////////////////////////////////////////////////////////////////
-	
+
    // FIXME need to handle case where hdr fifo is full (i.e. too many tiny packets)
    assign full = (sample_space == 16'd0) | (sample_space == 16'd1) | ~hdr_tready;
-   
+
    setting_reg #(.my_addr(BASE), .width(16)) sr_maxlen
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(maxlen),.changed());
@@ -67,19 +56,19 @@ module new_rx_framer
    localparam START = 0;
    localparam SECOND = 1;
    localparam FIRST = 2;
-   
+
    reg [1:0] 	  instate;
    reg [15:0] 	  numsamps;
    reg 		  nearly_eop;
-   
-   
+
+
    always @(posedge clk)
      if(reset | clear)
        begin
 	  instate <= START;
 	  numsamps <= 0;
 	  nearly_eop <= 0;
-	  
+
        end
      else if (run)
        case(instate)
@@ -139,13 +128,13 @@ module new_rx_framer
 	  instate <= START;
 	  numsamps <= 0;
 	  nearly_eop <= 0;
-     end 
-   
+     end
+
 
    always @(posedge clk)
      if(strobe && run)
        begin
-	  holding <= sample_int;
+	  holding <= sample;
 	  if(instate == START)
 	    hold_time <= vita_time;
        end
@@ -159,23 +148,23 @@ module new_rx_framer
 	   len <= 5;
 	 else
 	   len <= len + 1;
-   
+
    always @(posedge clk)
      if(reset | clear | sid_changed)
        seqnum <= 12'd0;
      else
        if(o_tlast_int & o_tvalid_int & o_tready_int)
 	 seqnum <= seqnum + 12'd1;
-   
 
- 
+
+
    wire 	  eop = eob | nearly_eop | full;
-   
-   wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample_int} : {sample_int, 32'h0};
+
+   wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample} : {sample, 32'h0};
    wire 	  sample_tlast = eop;
    wire 	  sample_tvalid = run & strobe & ( (instate == SECOND) | eop );
    wire 	  sample_tready;
-   
+
    wire [80:0] 	  hdr_tdata = {eob,len[13:0],2'b0,(instate == START) ? vita_time : hold_time};
    wire 	  hdr_tvalid = sample_tlast && sample_tvalid && sample_tready;
    wire 	  hdr_tready;
@@ -184,13 +173,13 @@ module new_rx_framer
    wire 	  hfifo_tvalid_tmp, hfifo_tready_tmp;
 
 
-   
+
    axi_fifo #(.WIDTH(65), .SIZE(SAMPLE_FIFO_SIZE)) datafifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({sample_tlast,sample_tdata}), .i_tvalid(sample_tvalid), .i_tready(sample_tready),
       .o_tdata({dfifo_tlast,dfifo_tdata}), .o_tvalid(dfifo_tvalid), .o_tready(dfifo_tready),
       .space(sample_space), .occupied());
-   
+
    axi_fifo_short #(.WIDTH(81)) hdrfifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(hdr_tdata), .i_tvalid(hdr_tvalid), .i_tready(hdr_tready),
@@ -203,7 +192,7 @@ module new_rx_framer
       .o_tdata(hfifo_tdata), .o_tvalid(hfifo_tvalid), .o_tready(hfifo_tready),
       .space(), .occupied());
 
-   
+
 
 
    // The output state machine is responsible for forming output packets.
@@ -216,7 +205,7 @@ module new_rx_framer
    localparam OUT_HEAD = 2'd1;
    localparam OUT_TIME = 2'd2;
    localparam OUT_BODY = 2'd3;
-   
+
    always @(posedge clk)
      if(reset | clear)
        outstate <= OUT_IDLE;
@@ -237,7 +226,7 @@ module new_rx_framer
        endcase // case (outstate)
 
    //output data mux feeds from single line of header fifo or the data fifo
-   assign o_tdata_int = (outstate == OUT_HEAD) ? { 3'b001, hfifo_tdata[80], seqnum, hfifo_tdata[79:64], sid} : 
+   assign o_tdata_int = (outstate == OUT_HEAD) ? { 3'b001, hfifo_tdata[80], seqnum, hfifo_tdata[79:64], sid} :
 			(outstate == OUT_TIME) ? hfifo_tdata[63:0] : dfifo_tdata;
 
    //output the last signal from the data fifo
@@ -251,7 +240,7 @@ module new_rx_framer
 
    //connect data fifo ready with out ready in the BODY state
    assign dfifo_tready = (outstate == OUT_BODY) ? o_tready_int : 1'b0;
-   
+
    axi_fifo_short #(.WIDTH(65)) output_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({o_tlast_int, o_tdata_int}), .i_tvalid(o_tvalid_int), .i_tready(o_tready_int),
@@ -265,7 +254,7 @@ module new_rx_framer
     assign debug[15:12] =  {1'b0, dfifo_tlast, dfifo_tvalid, dfifo_tready};
     assign debug[19:16] =  {1'b0, o_tlast_int, o_tvalid_int, o_tready_int};
  -----/\----- EXCLUDED -----/\----- */
-  
+
    assign debug = {
 		   sample_tlast, //15
 		   sample_tvalid,//14
@@ -282,6 +271,6 @@ module new_rx_framer
 		   outstate[1:0], //3:2
 		   instate[1:0]   //1:0
 		   };
-   
+
 
 endmodule // new_rx_framer
