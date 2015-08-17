@@ -5,7 +5,8 @@
 module noc_block_addsub #(
   parameter NOC_ID = 64'hADD0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
-  parameter USE_HLS = 0) // Use Vivado High-Level Synthsis version of AddSub module
+  parameter USE_HLS = 0, // Use Vivado High-Level Synthesis version of AddSub module
+  parameter USE_VHDL = 0) // Use VHDL version of AddSub module
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -82,6 +83,14 @@ module noc_block_addsub #(
       .b_TDATA(in_tdata[1]), .b_TVALID(in_tvalid[1]), .b_TREADY(in_tready[1]), .b_TLAST(in_tlast[1]),
       .add_TDATA(out_tdata[0]), .add_TVALID(out_tvalid[0]), .add_TREADY(out_tready[0]), .add_TLAST(out_tlast[0]),
       .sub_TDATA(out_tdata[1]), .sub_TVALID(out_tvalid[1]), .sub_TREADY(out_tready[1]), .sub_TLAST(out_tlast[1]));
+  else if (USE_VHDL)
+    // VHDL implementation
+    addsub_vhdl #(.width_g(16)) inst_addsub_vhdl (
+      .clk_i(ce_clk), .rst_i(ce_rst),
+      .i0_tdata(in_tdata[0]), .i0_tlast(in_tlast[0]), .i0_tvalid(in_tvalid[0]), .i0_tready(in_tready[0]),
+      .i1_tdata(in_tdata[1]), .i1_tlast(in_tlast[1]), .i1_tvalid(in_tvalid[1]), .i1_tready(in_tready[1]),
+      .sum_tdata(out_tdata[0]), .sum_tlast(out_tlast[0]), .sum_tvalid(out_tvalid[0]), .sum_tready(out_tready[0]),
+      .diff_tdata(out_tdata[1]), .diff_tlast(out_tlast[1]), .diff_tvalid(out_tvalid[1]), .diff_tready(out_tready[1]));
   else
     addsub #(.WIDTH(16)) inst_addsub (
       .clk(ce_clk), .reset(ce_rst),
