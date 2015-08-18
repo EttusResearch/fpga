@@ -290,7 +290,7 @@ module zynq_fifo_top
     // axi_datamover
     //------------------------------------------------------------------
     wire reset_dm = rst;
-    axi_datamover inst_axi_datamover
+    axi_dma_stream inst_axi_dma_stream
     (
         //host to stream reset stuff
         .m_axi_mm2s_aclk(clk),
