@@ -187,7 +187,7 @@ parameter MMCM_DIVCLK_DIVIDE    = 1,
 //***************************************************************************
 parameter tCKE                  = 5000,
                                   // memory tCKE paramter in pS
-parameter tFAW                  = 30000,
+parameter tFAW                  = 40000,
                                   // memory tRAW paramter in pS.
 parameter tPRDI                 = 1_000_000,
                                   // memory tPRDI paramter in pS.
@@ -201,7 +201,7 @@ parameter tRFC                  = 260000,
                                   // memory tRFC paramter in pS.
 parameter tRP                   = 13750,
                                   // memory tRP paramter in pS.
-parameter tRRD                  = 6000,
+parameter tRRD                  = 7500,
                                   // memory tRRD paramter in pS.
 parameter tRTP                  = 7500,
                                   // memory tRTP paramter in pS.
