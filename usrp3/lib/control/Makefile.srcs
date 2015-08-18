@@ -26,4 +26,5 @@ cvita_uart.v \
 serial_to_settings.v \
 filter_bad_sid.v \
 synchronizer.v \
+ad5662_auto_spi.v \
 ))
