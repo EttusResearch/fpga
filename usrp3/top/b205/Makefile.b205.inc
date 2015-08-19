@@ -23,7 +23,6 @@ include ../../lib/timing/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
-include ../../lib/io_cap_gen/Makefile.srcs
 include coregen_dsp/Makefile.srcs
 
 
@@ -57,6 +56,7 @@ b205.v \
 b205_ref_pll.v \
 b205_core.v \
 ../b200/radio_b200.v \
+b205_io.v \
 b205.ucf \
 timing.ucf \
 ../b200/S6CLK2PIN.v \
