@@ -197,6 +197,8 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  wire pmu_irq;
+
   axi_pmu inst_axi_pmu
   (
     .s_axi_aclk(bus_clk),
@@ -277,7 +279,7 @@ module e300
     .M_AXI_GP0_RREADY(GP0_M_AXI_RREADY),
 
     //    Misc interrupts, GPIO, clk
-    .IRQ_F2P({13'h0, button_release_irq, button_press_irq, stream_irq}),
+    .IRQ_F2P({12'h0, pmu_irq, button_release_irq, button_press_irq, 1'b0}),
     .GPIO_I(ps_gpio_in),
     .GPIO_O(ps_gpio_out),
     .FCLK_CLK0(fclk_clk0),
