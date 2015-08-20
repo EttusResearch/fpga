@@ -30,8 +30,8 @@ module phase_accum #(
       accum      <= 'd0;
       accum_next <= 'd0;
       phase_inc  <= 'd0;
-    end else if (output_round_tready) begin
-      if (i_tvalid & i_tlast) begin
+    end else if (i_tready & i_tvalid) begin
+      if (i_tlast) begin
         accum       <= {WIDTH_ACCUM{1'b0}};
         accum_next  <= $signed(i_tdata);
         phase_inc   <= $signed(i_tdata);
