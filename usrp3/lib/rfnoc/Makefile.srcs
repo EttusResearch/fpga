@@ -89,4 +89,5 @@ fosphor/f15_rise_decay.v \
 fosphor/axi_logpwr.v \
 noc_block_logpwr.v \
 noc_block_fosphor.v \
+noc_block_moving_avg.v \
 ))
