@@ -27,6 +27,7 @@ VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
 MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 VIVADO_VER=2015.2
 DEVICE_NAME="USRP-X300 and USRP-X310"
+REPO_BASE_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 # Go through cmd line options
 _MODELSIM_REQUESTED=0
@@ -88,6 +89,33 @@ function build_simlibs {
     vivado -mode batch -source $CMD_PATH -nolog -nojournal
     rm -f $CMD_PATH
     popd
+}
+
+VIV_HW_UTILS=$REPO_BASE_PATH/tools/scripts/viv_hardware_utils.tcl
+
+function viv_hw_console {
+    vivado -mode tcl -source $VIV_HW_UTILS -nolog -nojournal
+}
+
+function viv_jtag_list {
+    vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
+}
+
+function viv_jtag_program {
+    if [ "$1" == "" ]; then
+        echo "Downloads a bitfile to an FPGA device using Vivado"
+        echo ""
+        echo "Usage: viv_jtag_program <Bitfile Path> [<Device Address> = 0:0]"
+        echo "- <Bitfile Path>: Path to a .bit FPGA configuration file"
+        echo "- <Device Address>: Address to the device in the form <Target>:<Device>"
+        echo "                    Run viv_jtag_list to get a list of connected devices"
+        return
+    fi
+    if [ "$2" == "" ]; then
+        vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
+    else
+        vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
+    fi
 }
 
 # Update PATH
