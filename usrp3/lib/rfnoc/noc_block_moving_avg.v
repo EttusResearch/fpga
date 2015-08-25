@@ -12,15 +12,15 @@ module noc_block_moving_avg #(
   input ce_clk,
   input ce_rst,
 
-(* dont_touch = "true", mark_debug = "true" *) input [63:0] i_tdata,
-(* dont_touch = "true", mark_debug = "true" *) input i_tlast,
-(* dont_touch = "true", mark_debug = "true" *) input i_tvalid,
-(* dont_touch = "true", mark_debug = "true" *) output i_tready,
+  input [63:0] i_tdata,
+  input i_tlast,
+  input i_tvalid,
+  output i_tready,
 
-(* dont_touch = "true", mark_debug = "true" *) output [63:0] o_tdata,
-(* dont_touch = "true", mark_debug = "true" *) output o_tlast,
-(* dont_touch = "true", mark_debug = "true" *) output o_tvalid,
-(* dont_touch = "true", mark_debug = "true" *) input  o_tready,
+  output [63:0] o_tdata,
+  output o_tlast,
+  output o_tvalid,
+  input  o_tready,
 
   output [63:0] debug);
 
@@ -40,60 +40,60 @@ module noc_block_moving_avg #(
   //----------------------------------------------------------------------------
 
   // Set next destination in chain
- (* dont_touch = "true", mark_debug = "true" *)  wire [15:0] next_dst;
+ wire [15:0] next_dst;
 
   // Readback register address
   wire rb_addr;
 
   // Number of samples to accumulate
- (* dont_touch = "true", mark_debug = "true" *)  wire [7:0] sum_len;
- (* dont_touch = "true", mark_debug = "true" *)  wire sum_len_changed;
+  wire [7:0] sum_len;
+  wire sum_len_changed;
 
   // Sum will be divided by this number
- (* dont_touch = "true", mark_debug = "true" *)  wire [23:0] divisor;
+  wire [23:0] divisor;
 
   // RFNoC Shell
- (* dont_touch = "true", mark_debug = "true" *)  wire [31:0] set_data;
- (* dont_touch = "true", mark_debug = "true" *)  wire [7:0]  set_addr;
- (* dont_touch = "true", mark_debug = "true" *)  wire        set_stb;
+  wire [31:0] set_data;
+  wire [7:0]  set_addr;
+  wire        set_stb;
 
   wire clear_tx_seqnum;
 
- (* dont_touch = "true", mark_debug = "true" *)  wire [63:0] str_sink_tdata, str_src_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire str_sink_tlast, str_sink_tvalid, str_sink_tready;
- (* dont_touch = "true", mark_debug = "true" *)  wire str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [63:0] str_sink_tdata, str_src_tdata;
+  wire str_sink_tlast, str_sink_tvalid, str_sink_tready;
+  wire str_src_tlast, str_src_tvalid, str_src_tready;
 
   // AXI Wrapper
- (* dont_touch = "true", mark_debug = "true" *)  wire [31:0]  m_axis_data_tdata, s_axis_data_tdata;
+  wire [31:0]  m_axis_data_tdata, s_axis_data_tdata;
   wire [127:0] m_axis_data_tuser;
- (* dont_touch = "true", mark_debug = "true" *)  wire m_axis_data_tlast, m_axis_data_tvalid, m_axis_data_tready;
- (* dont_touch = "true", mark_debug = "true" *)  wire s_axis_data_tlast, s_axis_data_tvalid, s_axis_data_tready;
+  wire m_axis_data_tlast, m_axis_data_tvalid, m_axis_data_tready;
+  wire s_axis_data_tlast, s_axis_data_tvalid, s_axis_data_tready;
 
   // I part
- (* dont_touch = "true", mark_debug = "true" *)  wire [15:0] ipart_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire ipart_tlast, ipart_tvalid, ipart_tready;
+  wire [15:0] ipart_tdata;
+  wire ipart_tlast, ipart_tvalid, ipart_tready;
 
   // Q part
- (* dont_touch = "true", mark_debug = "true" *)  wire [15:0] qpart_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire qpart_tlast, qpart_tvalid, qpart_tready;
+  wire [15:0] qpart_tdata;
+  wire qpart_tlast, qpart_tvalid, qpart_tready;
 
   // I sum
- (* dont_touch = "true", mark_debug = "true" *)  wire [23:0] isum_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire isum_tlast, isum_tvalid, isum_tready;
+  wire [23:0] isum_tdata;
+  wire isum_tlast, isum_tvalid, isum_tready;
 
   // Q sum
- (* dont_touch = "true", mark_debug = "true" *)  wire [23:0] qsum_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire qsum_tlast, qsum_tvalid, qsum_tready;
+  wire [23:0] qsum_tdata;
+  wire qsum_tlast, qsum_tvalid, qsum_tready;
 
   // I average
- (* dont_touch = "true", mark_debug = "true" *)  wire [47:0] iavg_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire iavg_tlast, iavg_tvalid, iavg_tready;
- (* dont_touch = "true", mark_debug = "true" *)  wire idivisor_tready, idividend_tready;
+  wire [47:0] iavg_tdata;
+  wire iavg_tlast, iavg_tvalid, iavg_tready;
+  wire idivisor_tready, idividend_tready;
 
   // Q average
- (* dont_touch = "true", mark_debug = "true" *)  wire [47:0] qavg_tdata;
- (* dont_touch = "true", mark_debug = "true" *)  wire qavg_tlast, qavg_tvalid, qavg_tready;
- (* dont_touch = "true", mark_debug = "true" *)  wire qdivisor_tready, qdividend_tready;
+  wire [47:0] qavg_tdata;
+  wire qavg_tlast, qavg_tvalid, qavg_tready;
+  wire qdivisor_tready, qdividend_tready;
 
   //----------------------------------------------------------------------------
   // Registers
