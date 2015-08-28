@@ -21,8 +21,7 @@ module f15_core (
 	input  [15:0] cfg_alpha,  input [15:0] cfg_epsilon,
 	input  [11:0] cfg_decim, input cfg_decim_changed,
 	input  [31:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
-	output [31:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
-	output o_teob
+	output [31:0] o_hist_tdata, output o_hist_tlast, output o_hist_tvalid, input o_hist_tready, output o_hist_teob
 );
 	// Signals
 	reg [31:0] in_data;
@@ -70,12 +69,12 @@ module f15_core (
 
 	wire [5:0] out_binaddr_0, out_binaddr_9;
 	wire out_binlast_0, out_binlast_9;
-	wire [33:0] out_fifo_di;
-	wire out_fifo_wren;
-	wire out_fifo_afull;
-	wire [33:0] out_fifo_do;
-	wire out_fifo_rden;
-	wire out_fifo_empty;
+	wire [33:0] out_hist_fifo_di;
+	wire out_hist_fifo_wren;
+	wire out_hist_fifo_afull;
+	wire [33:0] out_hist_fifo_do;
+	wire out_hist_fifo_rden;
+	wire out_hist_fifo_empty;
 
 	wire [31:0] rng;
 
@@ -97,7 +96,7 @@ module f15_core (
 			// We know we can get a sample if :
 			//  - The output consumed a sample
 			//  - The FIFO has enough space
-			in_ready <= o_tready | ~out_fifo_afull;
+			in_ready <= o_hist_tready | ~out_hist_fifo_afull;
 		end
 
 		// Data pipeline
@@ -426,7 +425,7 @@ module f15_core (
 
 
 	// -----------------------------------------------------------------------
-	// Output
+	// Histogram Output
 	// -----------------------------------------------------------------------
 
 		// For the 'tap' to work, we need avmh and decay blocks to have the
@@ -452,10 +451,10 @@ module f15_core (
 		.in_spectra_avg(avgmh_avg_9[11:4]),
 		.in_last(decay_last_9),
 		.in_valid(decay_valid_9),
-		.out_data(out_fifo_di[31:0]),
-		.out_last(out_fifo_di[32]),
-		.out_eob(out_fifo_di[33]),
-		.out_valid(out_fifo_wren),
+		.out_data(out_hist_fifo_di[31:0]),
+		.out_last(out_hist_fifo_di[32]),
+		.out_eob(out_hist_fifo_di[33]),
+		.out_valid(out_hist_fifo_wren),
 		.cfg_decim(cfg_decim),
 		.cfg_decim_changed(cfg_decim_changed),
 		.clk(clk),
@@ -467,23 +466,23 @@ module f15_core (
 		.WIDTH(34),
 		.LOG2_DEPTH(6),
 		.AFULL_LEVEL(20)
-	) out_fifo_I (
-		.di(out_fifo_di),
-		.wren(out_fifo_wren),
-		.afull(out_fifo_afull),
-		.do(out_fifo_do),
-		.rden(out_fifo_rden),
-		.empty(out_fifo_empty),
+	) out_hist_fifo_I (
+		.di(out_hist_fifo_di),
+		.wren(out_hist_fifo_wren),
+		.afull(out_hist_fifo_afull),
+		.do(out_hist_fifo_do),
+		.rden(out_hist_fifo_rden),
+		.empty(out_hist_fifo_empty),
 		.clk(clk),
 		.rst(reset)
 	);
 
 	// AXI mapping
-	assign o_tdata = out_fifo_do[31:0];
-	assign o_tlast = out_fifo_do[32];
-	assign o_teob  = out_fifo_do[33];
-	assign o_tvalid = ~out_fifo_empty;
-	assign out_fifo_rden = ~out_fifo_empty && o_tready;
+	assign o_hist_tdata = out_hist_fifo_do[31:0];
+	assign o_hist_tlast = out_hist_fifo_do[32];
+	assign o_hist_teob  = out_hist_fifo_do[33];
+	assign o_hist_tvalid = ~out_hist_fifo_empty;
+	assign out_hist_fifo_rden = ~out_hist_fifo_empty && o_hist_tready;
 
 
 	// -----------------------------------------------------------------------

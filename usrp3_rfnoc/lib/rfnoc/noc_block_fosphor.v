@@ -199,8 +199,8 @@ module noc_block_fosphor #(
         .cfg_alpha(cfg_alpha), .cfg_epsilon(cfg_epsilon),
         .cfg_decim(cfg_decim), .cfg_decim_changed(cfg_decim_changed),
         .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-        .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready),
-        .o_teob(s_axis_data_teob));
+        .o_hist_tdata(s_axis_data_tdata), .o_hist_tlast(s_axis_data_tlast), .o_hist_tvalid(s_axis_data_tvalid), .o_hist_tready(s_axis_data_tready), .o_hist_teob(s_axis_data_teob)
+  );
 
   // Endian swap
   s_axis_data_tdata_swap <= { s_axis_data_tdata[7:0], s_axis_data_tdata[15:8], s_axis_data_tdata[23:16], s_axis_data_tdata[31:24] };
