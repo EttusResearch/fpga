@@ -14,7 +14,7 @@
 `endif
 
 module f15_avg #(
-	parameter integer WIDTH = 9
+	parameter integer WIDTH = 12
 )(
 	input  wire [WIDTH-1:0] yin_0,
 	input  wire [WIDTH-1:0] x_0,
