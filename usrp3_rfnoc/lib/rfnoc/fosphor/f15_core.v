@@ -57,13 +57,16 @@ module f15_core (
 	reg  [8:0]  decay_intensity_9;
 	wire decay_clear_0, decay_clear_9;
 
+	reg  [10:0] sls_addr_0;
+	wire [10:0] sls_addr_6;
+	wire [17:0] sls_data_2, sls_data_6;
+	wire sls_last_0;
+	wire sls_valid_0, sls_valid_6;
+
 	wire [8:0] avgmh_logpwr_0, avgmh_logpwr_2;
 	wire avgmh_clear_0, avgmh_clear_2;
-	reg  [10:0] avgmh_addr_0;
-	wire [10:0] avgmh_addr_6;
-	wire [17:0] avgmh_data_2, avgmh_data_6, avgmh_data_9;
-	wire avgmh_last_0;
-	wire avgmh_valid_0, avgmh_valid_6;
+	wire [8:0] avgmh_avg_2, avgmh_avg_6, avgmh_avg_9;
+	wire [8:0] avgmh_max_2, avgmh_max_6, avgmh_max_9;
 
 	wire [5:0] out_binaddr_0, out_binaddr_9;
 	wire out_binlast_0, out_binlast_9;
@@ -329,51 +332,70 @@ module f15_core (
 
 
 	// -----------------------------------------------------------------------
-	// Average and Max-Hold
+	// Shared line-storage
 	// -----------------------------------------------------------------------
+		// This is shared between the average/max-hold spectrum lines and the
+		// waterfall aggregation
 
 	// Input of this stage
-	assign avgmh_last_0   = proc_last_end;
-	assign avgmh_valid_0  = proc_valid_end;
-	assign avgmh_logpwr_0 = proc_logpwr_end[15:7];	// Only the 9-MSBs !
-	assign avgmh_clear_0  = proc_clear_end;
+	assign sls_last_0   = proc_last_end;
+	assign sls_valid_0  = proc_valid_end;
 
 	// Address
 	always @(posedge clk)
 	begin
 		if (reset)
-			avgmh_addr_0 <= 11'd0;
-		else if (avgmh_valid_0)
-			if (avgmh_last_0)
-				avgmh_addr_0 <= 11'd0;
+			sls_addr_0 <= 11'd0;
+		else if (sls_valid_0)
+			if (sls_last_0)
+				sls_addr_0 <= 11'd0;
 			else
-				avgmh_addr_0 <= avgmh_addr_0 + 1;
+				sls_addr_0 <= sls_addr_0 + 1;
 	end
+
+	delay_bus #(6, 11) dl_sls_addr  (sls_addr_0,  sls_addr_6,  clk);
+	delay_bit #(6)     dl_sls_valid (sls_valid_0, sls_valid_6, clk);
 
 	// Storage
 	f15_line_mem #(
 		.AWIDTH(11),
 		.DWIDTH(18)
 	) line_mem_I (
-		.rd_addr(avgmh_addr_0),
-		.rd_data(avgmh_data_2),
-		.rd_ena(avgmh_valid_0),
-		.wr_addr(avgmh_addr_6),
-		.wr_data(avgmh_data_6),
-		.wr_ena(avgmh_valid_6),
+		.rd_addr(sls_addr_0),
+		.rd_data(sls_data_2),
+		.rd_ena(sls_valid_0),
+		.wr_addr(sls_addr_6),
+		.wr_data(sls_data_6),
+		.wr_ena(sls_valid_6),
 		.clk(clk),
 		.rst(reset)
 	);
+
+	// Data mapping
+	assign avgmh_avg_2 = sls_data_2[ 8: 0];
+	assign avgmh_max_2 = sls_data_2[17: 9];
+
+	assign sls_data_6[ 8: 0] = avgmh_avg_6;
+	assign sls_data_6[17: 9] = avgmh_max_6;
+
+
+	// -----------------------------------------------------------------------
+	// Average and Max-Hold
+	// -----------------------------------------------------------------------
+
+	// Input of this stage
+	assign avgmh_logpwr_0 = proc_logpwr_end[15:7];	// Only the 9-MSBs !
+	assign avgmh_clear_0  = proc_clear_end;
 
 	// Modify stage: Average
 	f15_avg #(
 		.WIDTH(9)
 	) avg_I (
-		.yin_0(avgmh_data_2[8:0]),
+		.yin_0(avgmh_avg_2),
 		.x_0(avgmh_logpwr_2),
 		.alpha_0(cfg_alpha),
 		.clear_0(avgmh_clear_2),
-		.yout_4(avgmh_data_6[8:0]),
+		.yout_4(avgmh_avg_6),
 		.clk(clk),
 		.rst(reset)
 	);
@@ -382,11 +404,11 @@ module f15_core (
 	f15_maxhold #(
 		.WIDTH(9)
 	) maxhold_I (
-		.yin_0(avgmh_data_2[17:9]),
+		.yin_0(avgmh_max_2),
 		.x_0(avgmh_logpwr_2),
 		.epsilon_0(cfg_epsilon),
 		.clear_0(avgmh_clear_2),
-		.yout_4(avgmh_data_6[17:9]),
+		.yout_4(avgmh_max_6),
 		.clk(clk),
 		.rst(reset)
 	);
@@ -394,9 +416,8 @@ module f15_core (
 	// Delays
 	delay_bus #(2,  9) dl_avgmh_logpwr (avgmh_logpwr_0, avgmh_logpwr_2, clk);
 	delay_bit #(2)     dl_avgmh_clear  (avgmh_clear_0,  avgmh_clear_2,  clk);
-	delay_bus #(6, 11) dl_avgmh_addr   (avgmh_addr_0,   avgmh_addr_6,   clk);
-	delay_bit #(6)     dl_avgmh_valid  (avgmh_valid_0,  avgmh_valid_6,  clk);
-	delay_bus #(3, 18) dl_avgmh_data   (avgmh_data_6,   avgmh_data_9,   clk);
+	delay_bus #(3,  9) dl_avgmh_max    (avgmh_max_6,    avgmh_max_9,    clk);
+	delay_bus #(3,  9) dl_avgmh_avg    (avgmh_avg_6,    avgmh_avg_9,    clk);
 
 
 	// -----------------------------------------------------------------------
@@ -422,8 +443,8 @@ module f15_core (
 		.in_bin_addr(out_binaddr_9),
 		.in_bin_last(out_binlast_9),
 		.in_histo(decay_intensity_9[8:1]),
-		.in_spectra_max(avgmh_data_9[17:10]),
-		.in_spectra_avg(avgmh_data_9[8:1]),
+		.in_spectra_max(avgmh_max_9[8:1]),
+		.in_spectra_avg(avgmh_avg_9[8:1]),
 		.in_last(decay_last_9),
 		.in_valid(decay_valid_9),
 		.out_data(out_fifo_di[31:0]),
