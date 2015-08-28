@@ -63,7 +63,7 @@ module f15_core (
 	wire sls_last_0;
 	wire sls_valid_0, sls_valid_6;
 
-	wire [11:0] avgmh_logpwr_0, avgmh_logpwr_2;
+	wire [15:0] avgmh_logpwr_0, avgmh_logpwr_2;
 	wire avgmh_clear_0, avgmh_clear_2;
 	wire [11:0] avgmh_avg_2, avgmh_avg_6, avgmh_avg_9;
 	wire [11:0] avgmh_max_2, avgmh_max_6, avgmh_max_9;
@@ -384,15 +384,17 @@ module f15_core (
 	// -----------------------------------------------------------------------
 
 	// Input of this stage
-	assign avgmh_logpwr_0 = proc_logpwr_end[15:4];	// Only the 12-MSBs !
+	assign avgmh_logpwr_0 = proc_logpwr_end;
 	assign avgmh_clear_0  = proc_clear_end;
 
 	// Modify stage: Average
 	f15_avg #(
-		.WIDTH(12)
+		.Y_WIDTH(12),
+		.X_WIDTH(16)
 	) avg_I (
 		.yin_0(avgmh_avg_2),
 		.x_0(avgmh_logpwr_2),
+		.rng_0(rng[15:0]),
 		.alpha_0(cfg_alpha),
 		.clear_0(avgmh_clear_2),
 		.yout_4(avgmh_avg_6),
@@ -402,10 +404,13 @@ module f15_core (
 
 	// Modify stage: Max Hold
 	f15_maxhold #(
-		.WIDTH(12)
+		.Y_WIDTH(12),
+		.X_WIDTH(16),
+		.FRAC_WIDTH(8)
 	) maxhold_I (
 		.yin_0(avgmh_max_2),
 		.x_0(avgmh_logpwr_2),
+		.rng_0(rng[15:0]),
 		.epsilon_0(cfg_epsilon),
 		.clear_0(avgmh_clear_2),
 		.yout_4(avgmh_max_6),
@@ -414,7 +419,7 @@ module f15_core (
 	);
 
 	// Delays
-	delay_bus #(2, 12) dl_avgmh_logpwr (avgmh_logpwr_0, avgmh_logpwr_2, clk);
+	delay_bus #(2, 16) dl_avgmh_logpwr (avgmh_logpwr_0, avgmh_logpwr_2, clk);
 	delay_bit #(2)     dl_avgmh_clear  (avgmh_clear_0,  avgmh_clear_2,  clk);
 	delay_bus #(3, 12) dl_avgmh_max    (avgmh_max_6,    avgmh_max_9,    clk);
 	delay_bus #(3, 12) dl_avgmh_avg    (avgmh_avg_6,    avgmh_avg_9,    clk);
