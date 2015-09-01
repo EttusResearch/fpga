@@ -31,6 +31,23 @@ module e300
   inout         DDR_VRP,
   inout         DDR_VRN,
 
+  // PL DDR
+  input         PL_DDR3_SYSCLK,
+  output        PL_DDR3_RESET_n,
+  inout [15:0]  PL_DDR3_DQ,
+  inout [1:0]   PL_DDR3_DQS_N,
+  inout [1:0]   PL_DDR3_DQS_P,
+  output [14:0] PL_DDR3_ADDR,
+  output [2:0]  PL_DDR3_BA,
+  output        PL_DDR3_RAS_n,
+  output        PL_DDR3_CAS_n,
+  output        PL_DDR3_WE_n,
+  output [0:0]  PL_DDR3_CK_P,
+  output [0:0]  PL_DDR3_CK_N,
+  output [0:0]  PL_DDR3_CKE,
+  output [1:0]  PL_DDR3_DM,
+  output [0:0]  PL_DDR3_ODT,
+
   //AVR SPI IO
   input         AVR_CS_R,
   output        AVR_IRQ,
@@ -201,6 +218,9 @@ module e300
 
   wire        fclk_clk0;
   wire        fclk_reset0;
+
+  wire pl_dram_clk;
+  wire pl_dram_rst;
 
   wire        bus_clk, radio_clk;
   wire        bus_rst, radio_rst;
@@ -377,6 +397,9 @@ module e300
     .FCLK_CLK0(fclk_clk0),
     .FCLK_RESET0(fclk_reset0),
 
+    .PL_DRAM_CLK(pl_dram_clk),
+    .PL_DRAM_RST(pl_dram_rst),
+
     //    HP0  --  High Performance Master 0
     .S_AXI_HP0_AWID(HP0_S_AXI_AWID),
     .S_AXI_HP0_AWADDR(HP0_S_AXI_AWADDR),
@@ -507,6 +530,7 @@ module e300
   wire [31:0] core_set_addr, xbar_set_addr, xbar_rb_addr;
   wire        core_stb, xbar_set_stb, xbar_rb_stb;
 
+
   zynq_fifo_top
   #(
     .CONFIG_BASE(CONFIG_BASE),
@@ -626,6 +650,7 @@ module e300
   end
 
   // E300 Core logic
+  wire [31:0] debug;
 
   e300_core e300_core0
   (
@@ -681,7 +706,74 @@ module e300
     .rx_bandsel_a({RX2_BANDSEL, RX1_BANDSEL}),
     .rx_bandsel_b({RX2B_BANDSEL, RX1B_BANDSEL}),
     .rx_bandsel_c({RX2C_BANDSEL, RX1C_BANDSEL}),
+`ifdef DRAM_TEST
+    .debug(),
+    .debug_in(debug)
+`else /* DRAM_TEST */
     .debug()
+`endif /* DRAM_TEST */
   );
+
+  // PL DRAM Test
+  `ifdef DRAM_TEST
+
+  wire tg_compare_error;
+  wire tg_compare_error_sync;
+  reg tg_compare_error_latch;
+  wire init_calib_complete;
+  wire init_calib_complete_sync;
+
+  always @(posedge bus_clk)
+    if (bus_rst)
+      tg_compare_error_latch <= 1'b0;
+    else
+      // If an error ever occurs, latch it but only after initialization has completed
+      if (tg_compare_error_sync && init_calib_complete_sync)
+        tg_compare_error_latch <= 1'b1;
+
+  synchronizer #(.INITIAL_VAL(1'b0)) sync_init_calib_complete
+  (
+    .clk(bus_clk),
+    .rst(bus_rst),
+    .in(init_calib_complete),
+    .out(init_calib_complete_sync)
+  );
+
+  synchronizer #(.INITIAL_VAL(1'b0)) sync_tg_compare_error
+  (
+    .clk(bus_clk),
+    .rst(bus_rst),
+    .in(tg_compare_error),
+    .out(tg_compare_error_sync)
+  );
+
+  // Asserted (and latched) if an error occured
+  assign debug[0] = tg_compare_error_latch;
+  assign debug[1] = init_calib_complete_sync;
+
+  example_top inst_example_top
+  (
+    .ddr3_dq                       (PL_DDR3_DQ),
+    .ddr3_dqs_n                    (PL_DDR3_DQS_N),
+    .ddr3_dqs_p                    (PL_DDR3_DQS_P),
+    .ddr3_addr                     (PL_DDR3_ADDR),
+    .ddr3_ba                       (PL_DDR3_BA),
+    .ddr3_ras_n                    (PL_DDR3_RAS_n),
+    .ddr3_cas_n                    (PL_DDR3_CAS_n),
+    .ddr3_we_n                     (PL_DDR3_WE_n),
+    .ddr3_reset_n                  (PL_DDR3_RESET_n),
+    .ddr3_ck_p                     (PL_DDR3_CK_P),
+    .ddr3_ck_n                     (PL_DDR3_CK_N),
+    .ddr3_cke                      (PL_DDR3_CKE),
+    .ddr3_dm                       (PL_DDR3_DM),
+    .ddr3_odt                      (PL_DDR3_ODT),
+    .sys_clk_i                     (PL_DDR3_SYSCLK),
+    .clk_ref_i                     (pl_dram_clk),
+    .tg_compare_error              (tg_compare_error),
+    .init_calib_complete           (init_calib_complete),
+    .sys_rst                       (pl_dram_rst)
+  );
+
+  `endif /* DRAM_TEST */
 
 endmodule // e300
