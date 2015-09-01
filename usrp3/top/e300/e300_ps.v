@@ -83,6 +83,8 @@ module e300_processing_system (
   output            FCLK_RESET2,
   output            FCLK_CLK3,
   output            FCLK_RESET3,
+  output            PL_DRAM_CLK,
+  output            PL_DRAM_RST,
   output            SPI0_SS,
   output            SPI0_SS1,
   output            SPI0_SS2,
@@ -231,13 +233,19 @@ module e300_processing_system (
   e300_ps_fclk0_mmcm inst_e300_ps_fclk0_mmcm (
     .clk_50MHz_in(processing_system7_FCLK_CLK0),
     .clk_50MHz_out(FCLK_CLK0),
+    .clk_200MHz_out(PL_DRAM_CLK),
     .reset(~processing_system7_FCLK_RESET0_N),
     .locked(FCLK_LOCKED));
 
-  reset_sync fclk_reset_sync (
+  reset_sync inst_reset_sync0 (
     .clk(FCLK_CLK0),
     .reset_in(~FCLK_LOCKED),
     .reset_out(FCLK_RESET0));
+
+  reset_sync inst_reset_sync1 (
+    .clk(PL_DRAM_CLK),
+    .reset_in(~FCLK_LOCKED),
+    .reset_out(PL_DRAM_RST));
 
   assign FCLK_CLK1 = processing_system7_FCLK_CLK1;
   assign FCLK_RESET1 = ~processing_system7_FCLK_RESET1_N;
