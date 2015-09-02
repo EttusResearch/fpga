@@ -77,6 +77,12 @@ module e300_processing_system (
   output [31:0]     GPIO_O,
   output            FCLK_CLK0,
   output            FCLK_RESET0,
+  output            FCLK_CLK1,
+  output            FCLK_RESET1,
+  output            FCLK_CLK2,
+  output            FCLK_RESET2,
+  output            FCLK_CLK3,
+  output            FCLK_RESET3,
   output            SPI0_SS,
   output            SPI0_SS1,
   output            SPI0_SS2,
@@ -174,6 +180,12 @@ module e300_processing_system (
   wire [7:0]        processing_system7_S_AXI_HP0_WSTRB;
   wire              processing_system7_FCLK_CLK0;
   wire              processing_system7_FCLK_RESET0_N;
+  wire              processing_system7_FCLK_CLK1;
+  wire              processing_system7_FCLK_RESET1_N;
+  wire              processing_system7_FCLK_CLK2;
+  wire              processing_system7_FCLK_RESET2_N;
+  wire              processing_system7_FCLK_CLK3;
+  wire              processing_system7_FCLK_RESET3_N;
   wire [5:0]        axi4_fifo_S_AXI_HP0_AWID;
   wire [31:0]       axi4_fifo_S_AXI_HP0_AWADDR;
   wire [7:0]        axi4_fifo_S_AXI_HP0_AWLEN;
@@ -226,6 +238,13 @@ module e300_processing_system (
     .clk(FCLK_CLK0),
     .reset_in(~FCLK_LOCKED),
     .reset_out(FCLK_RESET0));
+
+  assign FCLK_CLK1 = processing_system7_FCLK_CLK1;
+  assign FCLK_RESET1 = ~processing_system7_FCLK_RESET1_N;
+  assign FCLK_CLK2 = processing_system7_FCLK_CLK2;
+  assign FCLK_RESET2 = ~processing_system7_FCLK_RESET2_N;
+  assign FCLK_CLK3 = processing_system7_FCLK_CLK3;
+  assign FCLK_RESET3 = ~processing_system7_FCLK_RESET3_N;
 
   processing_system7 inst_processing_system7 (
     .ENET0_PTP_DELAY_REQ_RX(),
@@ -361,6 +380,12 @@ module e300_processing_system (
     .IRQ_F2P(IRQ_F2P),
     .FCLK_CLK0(processing_system7_FCLK_CLK0),
     .FCLK_RESET0_N(processing_system7_FCLK_RESET0_N),
+    .FCLK_CLK1(processing_system7_FCLK_CLK1),
+    .FCLK_RESET1_N(processing_system7_FCLK_RESET1_N),
+    .FCLK_CLK2(processing_system7_FCLK_CLK2),
+    .FCLK_RESET2_N(processing_system7_FCLK_RESET2_N),
+    .FCLK_CLK3(processing_system7_FCLK_CLK3),
+    .FCLK_RESET3_N(processing_system7_FCLK_RESET3_N),
     .MIO(MIO),
     .DDR_CAS_n(DDR_CAS_n),
     .DDR_CKE(DDR_CKE),
