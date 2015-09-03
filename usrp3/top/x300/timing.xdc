@@ -71,10 +71,7 @@ set_clock_groups -asynchronous -group [get_clocks bus_clk]     -group [get_clock
 set_clock_groups -asynchronous -group [get_clocks ioport2_clk] -group [get_clocks rio40_clk]
 set_clock_groups -asynchronous -group [get_clocks bus_clk]     -group [get_clocks radio_clk]
 set_clock_groups -asynchronous -group [get_clocks ioport2_clk] -group [get_clocks IoPort2Wrapperx/RxLowSpeedClk]
-
-# TODO: Ashish: Review these. We should put synchronizers in some of these paths
 set_clock_groups -asynchronous -group [get_clocks bus_clk]     -group [get_clocks FPGA_REFCLK_10MHz]
-set_clock_groups -asynchronous -group [get_clocks radio_clk]   -group [get_clocks FPGA_REFCLK_10MHz]
 
 
 #*******************************************************************************
@@ -531,6 +528,32 @@ set_max_delay -from [get_cells -hier -filter {NAME =~ *IoPort2Basex/DoubleSyncWi
 
 
 #*******************************************************************************
+## PPS Timing
+
+# Constrain delay from PPS input pins to the first stage synchronizer flip-flop
+set_max_delay 5.000 -from [get_ports EXT_PPS_IN] \
+                    -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}] \
+                    -datapath_only
+set_min_delay 2.500 -from [get_ports EXT_PPS_IN] \
+                    -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}]
+set_max_delay 5.000 -from [get_ports GPS_PPS_OUT] \
+                    -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}] \
+                    -datapath_only
+set_min_delay 2.500 -from [get_ports GPS_PPS_OUT] \
+                    -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}]
+
+set_max_delay 6.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/C}]
+set_min_delay 1.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/C}]
+
+# Constrain input-output delay for external PPS
+set_max_delay 10.000 -from [get_ports EXT_PPS_IN] -to [get_ports {EXT_PPS_OUT}] -datapath_only
+set_min_delay 5.000  -from [get_ports EXT_PPS_IN] -to [get_ports {EXT_PPS_OUT}]
+
+# Constrain delay to the first flop in radio_clk with about 1ns of slack
+set_max_delay 6.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_tbclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}]
+set_min_delay 0.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_tbclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}]
+
+#*******************************************************************************
 ## Miscellaneous Interfaces
 
 # Dboard GPIO Interface 
@@ -571,12 +594,7 @@ set_max_delay -to     [get_ports {TCXO_ENA}]                                    
 # GPS UART
 set_max_delay -from   [get_ports {GPS_SER_OUT}] 6.000
 set_max_delay -to     [get_ports {GPS_SER_IN}]  6.000
-
-# PPS and GPS Signals are assumed to be sampled by a 10MHz clock
-set_max_delay -from   [get_ports {EXT_PPS_IN}]  25.000
 set_max_delay -from   [get_ports {GPS_LOCK_OK}] 25.000
-set_max_delay -from   [get_ports {GPS_PPS_OUT}] 25.000
-set_max_delay -to     [get_ports {EXT_PPS_OUT}] 25.000
 
 # Reset paths
 # All asynchronous resets must be held for at least 20ns
@@ -587,7 +605,7 @@ set_max_delay -to [get_pins {radio_reset_sync/reset_int*/PRE}] 10.000
 #*******************************************************************************
 ## Asynchronous paths
 
-set_false_path -to   [get_pins -hier -filter {NAME =~ */synchronizer_gen[0].value_int_reg[0]/D}]
+set_false_path -to   [get_pins -hier -filter {NAME =~ */synchronizer_false_path/stages[0].value_reg[0]/D}]
 set_false_path -to   [get_ports LED_*]
 set_false_path -to   [get_ports {SFPP*_RS0 SFPP*_RS1 SFPP*_SCL SFPP*_SDA SFPP*_TxDisable}]
 set_false_path -from [get_ports {SFPP*_ModAbs SFPP*_RxLOS SFPP*_SCL SFPP*_SDA SFPP*_TxFault}]

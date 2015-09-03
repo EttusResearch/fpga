@@ -422,14 +422,12 @@ module x300
    ////////////////////////////////////////////////////////////////////
 
    // Generate an internal PPS signal with a 25% duty cycle
-   reg [31:0] pps_count;
-   wire int_pps = (pps_count < 32'd2500000);
-   always @(posedge ref_clk_10mhz) begin
-      if (pps_count >= 32'd9999999)
-         pps_count <= 32'b0;
-      else
-         pps_count <= pps_count + 1'b1;
-   end
+   wire int_pps;
+   pps_generator #(
+      .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
+   ) pps_gen (
+      .clk(ref_clk_10mhz), .reset(1'b0), .pps(int_pps)
+   );
 
    // PPS MUX - selects internal, external, or gpsdo PPS
    reg pps;
