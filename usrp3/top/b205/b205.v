@@ -160,25 +160,33 @@ module b205 (
     assign CLKIN_10MHz_REQ = ref_sel;
 
    ///////////////////////////////////////////////////////////////////////
-   // CODEC capture/gen
+   // AD9364 I/O
    ///////////////////////////////////////////////////////////////////////
    wire [31:0] rx_data;
    wire [31:0] tx_data;
-   wire codec_arst;
 
-   catcodec_ddr_cmos
-   #(
-        .DEVICE("SPARTAN6")
-   )
-   catcodec
-   (
-        .radio_clk(radio_clk), .arst(codec_arst), .mimo(1'b0),
-        .rx1(rx_data), .rx2(), .tx1(tx_data), .tx2(tx_data),
-        .rx_clk(CAT_DCLK_P), .rx_frame(CAT_RX_FR_P), .rx_d(CAT_P0_D),
-        .tx_clk(CAT_FBCLK_P), .tx_frame(CAT_TX_FR_P), .tx_d(CAT_P1_D)
-   );
-    assign CAT_FBCLK_N = 1'b0;
-    assign CAT_TX_FR_N = 1'b0;
+   b205_io b205_io_i0
+     (
+      .reset(reset),
+      // Baseband sample interface
+      .radio_clk(radio_clk),
+      .rx_i0(rx_data[31:20]),
+      .rx_q0(rx_data[15:4]),
+      .tx_i0(tx_data[31:20]),
+      .tx_q0(tx_data[15:4]),
+       // Catalina interface
+      .rx_clk(CAT_DCLK_P),
+      .rx_frame(CAT_RX_FR_P),
+      .rx_data(CAT_P0_D),
+
+      .tx_clk(CAT_FBCLK_P),
+      .tx_frame(CAT_TX_FR_P),
+      .tx_data(CAT_P1_D)
+      );
+
+   assign {rx_data[19:16],rx_data[3:0]} = 8'h0;
+   assign CAT_FBCLK_N = 1'b0;
+   assign CAT_TX_FR_N = 1'b0;
 
    ///////////////////////////////////////////////////////////////////////
    // SPI connections
@@ -217,7 +225,6 @@ module b205 (
     wire [31:0] misc_outs;
     reg [31:0] misc_outs_r;
     always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
-    assign codec_arst = misc_outs_r[2];
     assign ref_sel = misc_outs_r[0];
 
     assign CAT_CTL_IN = 4'b1;

@@ -79,44 +79,44 @@ NET "CAT_CTL_IN<2>"   LOC = "J4" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SL
 NET "CAT_CTL_IN<3>"   LOC = "D1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; #
 
 # Rx Bus
-NET "CAT_P0_D<0>"  LOC = "H1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<1>"  LOC = "H2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<2>"  LOC = "G1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<3>"  LOC = "G3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<4>"  LOC = "F1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<5>"  LOC = "F2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<6>"  LOC = "E1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<7>"  LOC = "E3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<8>"  LOC = "L1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<9>"  LOC = "L3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<10>" LOC = "M1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
-NET "CAT_P0_D<11>" LOC = "M2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data
+NET "CAT_P0_D<0>"  LOC = "H1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P0_D<1>"  LOC = "H2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P0_D<2>"  LOC = "G1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<3>"  LOC = "G3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<4>"  LOC = "F1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<5>"  LOC = "F2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<6>"  LOC = "E1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<7>"  LOC = "E3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LT.
+NET "CAT_P0_D<8>"  LOC = "L1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P0_D<9>"  LOC = "L3" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P0_D<10>" LOC = "M1" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P0_D<11>" LOC = "M2" | IOSTANDARD = LVCMOS18; # Transceiver Parallel Data. Bank3 LB.
 
 # Tx Bus
-NET "CAT_P1_D<0>"  LOC = "T1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<1>"  LOC = "T2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<2>"  LOC = "U1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<3>"  LOC = "U3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<4>"  LOC = "V1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<5>"  LOC = "V2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<6>"  LOC = "W1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<7>"  LOC = "W3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<8>"  LOC = "Y1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<9>"  LOC = "Y2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<10>" LOC = "R1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
-NET "CAT_P1_D<11>" LOC = "R3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data
+NET "CAT_P1_D<0>"  LOC = "T1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<1>"  LOC = "T2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<2>"  LOC = "U1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<3>"  LOC = "U3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<4>"  LOC = "V1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<5>"  LOC = "V2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<6>"  LOC = "W1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<7>"  LOC = "W3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<8>"  LOC = "Y1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<9>"  LOC = "Y2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<10>" LOC = "R1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
+NET "CAT_P1_D<11>" LOC = "R3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Transceiver Parallel Data. Bank3 LB.
 
 # Frame syncs
-NET "CAT_TX_FR_N" LOC = "K1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; #
-NET "CAT_TX_FR_P" LOC = "K2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; #
-#NET "CAT_RX_FR_N" LOC = "P1" | IOSTANDARD = LVCMOS18; #
-NET "CAT_RX_FR_P" LOC = "P2" | IOSTANDARD = LVCMOS18; #
+NET "CAT_TX_FR_N" LOC = "K1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Bank3 LB.
+NET "CAT_TX_FR_P" LOC = "K2" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Bank3 LB.
+#NET "CAT_RX_FR_N" LOC = "P1" | IOSTANDARD = LVCMOS18; # Bank3 LB.
+NET "CAT_RX_FR_P" LOC = "P2" | IOSTANDARD = LVCMOS18; # Bank3 LB.
 
 # Clocks ('N' clock lines are currently unused)
 #NET "CAT_DCLK_N" LOC = "P3" | IOSTANDARD = LVCMOS18; # Data Clock
 NET "CAT_DCLK_P"  LOC = "N4" | IOSTANDARD = LVCMOS18; # Data Clock
-NET "CAT_FBCLK_P" LOC = "J3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Clock to AD9364
-NET "CAT_FBCLK_N" LOC = "J1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Clock to AD9364
+NET "CAT_FBCLK_P" LOC = "J3" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Clock to AD9364. Bank3 LB.
+NET "CAT_FBCLK_N" LOC = "J1" | IOSTANDARD = LVCMOS18 | DRIVE = 2 | SLEW = SLOW; # Clock to AD9364. Bank3 LB.
 
 #### Peripherals ############################################################
 # Radio Switchery
