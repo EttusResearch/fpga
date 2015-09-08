@@ -39,7 +39,7 @@ else
 	ise_build = make -f Makefile.b205.inc bin NAME=$@ DEVICE=$1
 endif
 
-# post_build($1=Device,$2=ProductName)
+# post_build($1=Device)
 ifeq ($(PROJECT_ONLY),1)
 	post_build = \
 		@echo "Generated $(shell pwd)/build-$(1)/b205.xise"; \
@@ -49,11 +49,11 @@ else
 		@$(call print_report,build-$(1)) \
 		mkdir -p build; \
 		echo "Exporting bitstream files..."; \
-		cp build-$(1)/b205.bin build/usrp_`echo $(2) | tr A-Z a-z`_fpga.bin; \
-		cp build-$(1)/b205.bit build/usrp_`echo $(2) | tr A-Z a-z`_fpga.bit; \
+		cp build-$(1)/b205.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bin; \
+		cp build-$(1)/b205.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bit; \
 		echo "Exporting logs..."; \
-		cp build-$(1)/b205.syr build/usrp_`echo $(2) | tr A-Z a-z`_fpga.syr; \
-		cp build-$(1)/b205.twr build/usrp_`echo $(2) | tr A-Z a-z`_fpga.twr; \
+		cp build-$(1)/b205.syr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.syr; \
+		cp build-$(1)/b205.twr build/usrp_`echo $(1) | tr A-Z a-z`_fpga.twr; \
 		echo "\nBuild DONE ... $(1)\n";
 endif
 
@@ -61,18 +61,18 @@ endif
 ##Supported Targets
 ##-----------------
 
-all:   B205  ##(Default target)
+all:      B200mini  ##(Default target)
 
-B205:  ##Build USRP B205 design.
-	$(call pre_build,B205)
+B200mini: ##Build USRP B200mini design.
+	$(call pre_build,B200mini)
 	$(call ise_build,XC6SLX75)
-	$(call post_build,B205,B200mini)
+	$(call post_build,B200mini)
 
-clean: ##Clean up all build output.
+clean:    ##Clean up all build output.
 	rm -rf build-*
 	rm -rf build
 
-help: ## Show this help message.
+help:    ## Show this help message.
 	@grep -h "##" Makefile | grep -v "\"##\"" | sed -e 's/\\$$//' | sed -e 's/##//'
 
 ##
