@@ -3,7 +3,7 @@
 //
 
 module pps_generator #(
-   parameter CLK_FREQ   = 32'd10_000_000, //Max value = 4GHz
+   parameter CLK_FREQ   = 32'd10_000_000, //Min:10kHz, Max:4GHz
    parameter DUTY_CYCLE = 25
 ) (
    input  clk,
@@ -22,5 +22,5 @@ module pps_generator #(
         end
     end
 
-    assign pps = (count < CLK_FREQ * (DUTY_CYCLE / 100));
+    assign pps = (count < ((CLK_FREQ / 100) * DUTY_CYCLE));
 endmodule //pps_generator
