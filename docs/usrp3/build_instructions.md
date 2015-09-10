@@ -7,7 +7,7 @@
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
 - [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For USRP B200 and B210)
-- [Xilinx Vivado 2014.4](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2014-4.html) (For USRP X300, X310 and E310)
+- [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html) (For USRP X300, X310 and E310)
 - [GNU Make](https://www.gnu.org/software/make/)
 - [GNU Bash](https://www.gnu.org/software/bash/)
 
@@ -46,9 +46,8 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 ## Build Instructions (Xilinx Vivado only)
 
-- Download and install [Xilinx Vivado 2014.4](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2014-4.html) (Not 2014.4.1)
-  + You may need to acquire an implementation license to build some USRP designs.
-    Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
+- Download and install [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html)
+  + Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
 
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
