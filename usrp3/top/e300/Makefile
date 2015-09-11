@@ -41,6 +41,10 @@ E310_idle: ##Build USRP E310 idle design.
 	$(call vivado_build,xc7z020,E3X0_IDLE_IMAGE)
 	$(call post_build,E310,_idle)
 
+E310_dram_test: ##Build USRP E310 design with DRAM test.
+	$(call vivado_build,xc7z020,DRAM_TEST)
+	$(call post_build,E310,_dram_test)
+
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
 	@rm -rf build-E3*
