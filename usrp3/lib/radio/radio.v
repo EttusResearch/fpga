@@ -14,6 +14,7 @@ module radio #(
    parameter CHIPSCOPE = 0,
    parameter DELETE_DSP = 0,
    parameter RADIO_NUM = 0,
+   parameter TX_PRE_FIFO_SIZE = 0,
    parameter DATA_FIFO_SIZE = 10,
    parameter MSG_FIFO_SIZE = 9
 ) (
@@ -59,14 +60,13 @@ module radio #(
    wire 	 rx_tready_b, rx_tready_b_fc, rx_tready_r, rx_tvalid_b, rx_tvalid_b_fc, rx_tvalid_r;
    wire 	 rx_tlast_b, rx_tlast_b_fc, rx_tlast_r;
 
-   // IJB. _b signals now unused since adding DRAM FIFO.
    wire [63:0] 	 tx_tdata_b, tx_tdata_r;
    wire 	 tx_tready_b, tx_tready_r, tx_tvalid_b, tx_tvalid_r;
    wire 	 tx_tlast_b, tx_tlast_r;
 
-   wire [63:0] 	 txresp_tdata_b, txresp_tdata_r;
-   wire 	 txresp_tready_b, txresp_tready_r, txresp_tvalid_b, txresp_tvalid_r;
-   wire 	 txresp_tlast_b, txresp_tlast_r;
+   wire [63:0] 	 txresp_tdata_b, txresp_tdata_fifo, txresp_tdata_r;
+   wire 	 txresp_tready_b, txresp_tready_fifo, txresp_tready_r, txresp_tvalid_b, txresp_tvalid_fifo, txresp_tvalid_r;
+   wire 	 txresp_tlast_b, txresp_tlast_fifo, txresp_tlast_r;
 
    wire [63:0] 	 rxfc_tdata_b;
    wire 	 rxfc_tready_b, rxfc_tvalid_b, rxfc_tlast_b;
@@ -88,7 +88,7 @@ module radio #(
       .i0_tdata(txresp_tdata_b), .i0_tlast(txresp_tlast_b), .i0_tvalid(txresp_tvalid_b), .i0_tready(txresp_tready_b), // TX Flow Control/ACK
       .i1_tdata(resp_tdata_b), .i1_tlast(resp_tlast_b), .i1_tvalid(resp_tvalid_b), .i1_tready(resp_tready_b), // Control Response
       .i2_tdata(rx_tdata_b_fc), .i2_tlast(rx_tlast_b_fc), .i2_tvalid(rx_tvalid_b_fc), .i2_tready(rx_tready_b_fc), // RX Data
-      .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),   // RX Command ACK/ERR
+      .i3_tdata(txresp_tdata_fifo), .i3_tlast(txresp_tlast_fifo), .i3_tvalid(txresp_tvalid_fifo), .i3_tready(txresp_tready_fifo),   // TX Pre-Fifo FC ACK
       .o_tdata(out_tdata), .o_tlast(out_tlast), .o_tvalid(out_tvalid), .o_tready(out_tready));
 
    wire [63:0] 	 vheader;
@@ -98,7 +98,7 @@ module radio #(
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(in_tdata), .i_tlast(in_tlast), .i_tvalid(in_tvalid), .i_tready(in_tready),
-      .o0_tdata(tx_tdata_bo), .o0_tlast(tx_tlast_bo), .o0_tvalid(tx_tvalid_bo), .o0_tready(tx_tready_bo),  // TX Data
+      .o0_tdata(tx_tdata_b), .o0_tlast(tx_tlast_b), .o0_tvalid(tx_tvalid_b), .o0_tready(tx_tready_b),  // TX Data
       .o1_tdata(ctrl_tdata_b), .o1_tlast(ctrl_tlast_b), .o1_tvalid(ctrl_tvalid_b), .o1_tready(ctrl_tready_b),  // Control
       .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
@@ -117,7 +117,13 @@ module radio #(
       .space(), .occupied()
       );
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(DATA_FIFO_SIZE)) tx_fifo
+   axi_fifo #(.WIDTH(65), .SIZE(TX_PRE_FIFO_SIZE)) tx_data_fifo
+     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata({tx_tlast_b,tx_tdata_b}), .i_tvalid(tx_tvalid_b), .i_tready(tx_tready_b),
+      .o_tdata({tx_tlast_bo,tx_tdata_bo}), .o_tvalid(tx_tvalid_bo), .o_tready(tx_tready_bo),
+      .space(), .occupied());
+
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(DATA_FIFO_SIZE)) tx_data_2clk_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(tx_tvalid_bi), .i_tready(tx_tready_bi), .i_tdata({tx_tlast_bi,tx_tdata_bi}),
       .o_aclk(radio_clk), .o_tvalid(tx_tvalid_r), .o_tready(tx_tready_r), .o_tdata({tx_tlast_r,tx_tdata_r}));
@@ -294,13 +300,35 @@ module radio #(
       .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
       .debug());
 
-   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
+   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder_pre_radio
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .vita_time(vita_time),
       .o_tdata(txresp_tdata_r), .o_tlast(txresp_tlast_r), .o_tvalid(txresp_tvalid_r), .o_tready(txresp_tready_r));
+
+   reg tx_tfirst_bo;
+   always @(posedge bus_clk) begin
+      if(bus_rst)
+         tx_tfirst_bo <= 1'b1;
+      else if(tx_tvalid_bo & tx_tready_bo)
+         tx_tfirst_bo <= tx_tlast_bo;
+   end
+
+   reg [63:0] tx_theader_bo;
+   always @(posedge bus_clk) begin
+      if (tx_tvalid_bo & tx_tready_bo & tx_tfirst_bo)
+         tx_theader_bo <= tx_tdata_bo;
+   end
+
+   tx_responder #(.BASE(SR_TX_CTRL+4)) tx_responder_pre_fifo
+     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
+      .ack_or_error(1'b0), .packet_consumed(tx_tvalid_bo & tx_tready_bo & tx_tlast_bo),
+      .seqnum(tx_theader_bo[59:48]), .error_code(64'd0), .sid(tx_theader_bo[31:0]),
+      .vita_time(64'd0),  //Assumption: FC handler in software does not care about time.
+      .o_tdata(txresp_tdata_fifo), .o_tlast(txresp_tlast_fifo), .o_tvalid(txresp_tvalid_fifo), .o_tready(txresp_tready_fifo));
 
    wire [15:0] 	tx_i_running, tx_q_running;
 
