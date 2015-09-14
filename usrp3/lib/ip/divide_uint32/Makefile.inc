@@ -6,7 +6,7 @@ include $(TOOLS_DIR)/make/viv_ip_builder.mak
 
 LIB_IP_DIVIDE_UINT32_SRCS = $(IP_BUILD_DIR)/divide_uint32/divide_uint32.xci
 
-LIB_IP_DIVIDE_UINT32_OUTS = $(addprefix $(IP_BUILD_DIR)/divide_int32/, \
+LIB_IP_DIVIDE_UINT32_OUTS = $(addprefix $(IP_BUILD_DIR)/divide_uint32/, \
 divide_uint32.xci.out \
 synth/divide_uint32.vhd \
 ) 
