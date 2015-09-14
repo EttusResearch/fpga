@@ -15,7 +15,7 @@ module e300
   inout         DDR_CS_n,
   inout         DDR_RAS_n,
   inout         DDR_CAS_n,
-  output        DDR_WEB_pin,
+  inout         DDR_WEB,
   inout [2:0]   DDR_BankAddr,
   inout [14:0]  DDR_Addr,
   inout         DDR_ODT,
@@ -26,6 +26,23 @@ module e300
   inout [3:0]   DDR_DQS_n,
   inout         DDR_VRP,
   inout         DDR_VRN,
+
+  // PL DDR
+  input         PL_DDR3_SYSCLK,
+  output        PL_DDR3_RESET_n,
+  inout [15:0]  PL_DDR3_DQ,
+  inout [1:0]   PL_DDR3_DQS_N,
+  inout [1:0]   PL_DDR3_DQS_P,
+  output [14:0] PL_DDR3_ADDR,
+  output [2:0]  PL_DDR3_BA,
+  output        PL_DDR3_RAS_n,
+  output        PL_DDR3_CAS_n,
+  output        PL_DDR3_WE_n,
+  output [0:0]  PL_DDR3_CK_P,
+  output [0:0]  PL_DDR3_CK_N,
+  output [0:0]  PL_DDR3_CKE,
+  output [1:0]  PL_DDR3_DM,
+  output [0:0]  PL_DDR3_ODT,
 
   //AVR SPI IO
   input         AVR_CS_R,

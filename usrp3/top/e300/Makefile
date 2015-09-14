@@ -41,6 +41,10 @@ E310_idle: ##Build USRP E310 idle design.
 	$(call vivado_build,bin,xc7z020,E3X0_IDLE_IMAGE)
 	$(call post_build,E310,_idle)
 
+E310_dram_test: ##Build USRP E310 design with DRAM test.
+	$(call vivado_build,bin,xc7z020,DRAM_TEST)
+	$(call post_build,E310,_dram_test)
+
 E310_RFNOC: ##Build USRP E310 with RFNoC enabled.
 	$(call vivado_build,bin,xc7z020,RFNOC=1 E310=1)
 	$(call post_build,E310,_RFNOC)

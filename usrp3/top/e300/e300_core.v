@@ -71,7 +71,12 @@ module e300_core
   // signals for ad9361 pll locks
   input [1:0]       lock_signals,
 
+`ifdef DRAM_TEST
+  output [31:0]     debug,
+  input [31:0]      debug_in
+`else /* DRAM_TEST */
   output [31:0]     debug
+`endif /* DRAM_TEST */
 );
 
   reg [1:0] lock_state;
@@ -94,6 +99,7 @@ module e300_core
   localparam RB32_CORE_COMPAT   = 5'd2;
   localparam RB32_CORE_GITHASH  = 5'd3;
   localparam RB32_CORE_PLL      = 5'd4;
+  localparam RB32_CORE_DEBUG    = 5'd5;
   localparam RB32_CORE_NUMCE    = 5'd8;
   localparam RB32_CORE_TEST     = 5'd24;
 
@@ -173,6 +179,9 @@ module e300_core
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
       RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE};
+`ifdef DRAM_TEST
+      RB32_CORE_DEBUG   : rb_data <= debug_in;
+`endif /* DRAM_TEST */
       default           : rb_data <= 64'hdeadbeef;
     endcase
 
