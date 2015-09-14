@@ -32,11 +32,11 @@ module e300
   inout         DDR_VRN,
 
   //AVR SPI IO
-  output        AVR_CS_R,
-  input         AVR_IRQ,
-  input         AVR_MISO_R,
-  output        AVR_MOSI_R,
-  output        AVR_SCK_R,
+  input         AVR_CS_R,
+  output        AVR_IRQ,
+  output        AVR_MISO_R,
+  input         AVR_MOSI_R,
+  input         AVR_SCK_R,
 
   input         ONSWITCH_DB,
 
@@ -131,6 +131,42 @@ module e300
   wire [1:0]  GP0_M_AXI_RRESP;
   wire        GP0_M_AXI_RVALID;
   wire        GP0_M_AXI_RREADY;
+  wire [31:0] GP0_M_AXI_AWADDR_S0;
+  wire        GP0_M_AXI_AWVALID_S0;
+  wire        GP0_M_AXI_AWREADY_S0;
+  wire [31:0] GP0_M_AXI_WDATA_S0;
+  wire [3:0]  GP0_M_AXI_WSTRB_S0;
+  wire        GP0_M_AXI_WVALID_S0;
+  wire        GP0_M_AXI_WREADY_S0;
+  wire [1:0]  GP0_M_AXI_BRESP_S0;
+  wire        GP0_M_AXI_BVALID_S0;
+  wire        GP0_M_AXI_BREADY_S0;
+  wire [31:0] GP0_M_AXI_ARADDR_S0;
+  wire        GP0_M_AXI_ARVALID_S0;
+  wire        GP0_M_AXI_ARREADY_S0;
+  wire [31:0] GP0_M_AXI_RDATA_S0;
+  wire [1:0]  GP0_M_AXI_RRESP_S0;
+  wire        GP0_M_AXI_RVALID_S0;
+  wire        GP0_M_AXI_RREADY_S0;
+
+  wire [31:0] GP0_M_AXI_AWADDR_S1;
+  wire        GP0_M_AXI_AWVALID_S1;
+  wire        GP0_M_AXI_AWREADY_S1;
+  wire [31:0] GP0_M_AXI_WDATA_S1;
+  wire [3:0]  GP0_M_AXI_WSTRB_S1;
+  wire        GP0_M_AXI_WVALID_S1;
+  wire        GP0_M_AXI_WREADY_S1;
+  wire [1:0]  GP0_M_AXI_BRESP_S1;
+  wire        GP0_M_AXI_BVALID_S1;
+  wire        GP0_M_AXI_BREADY_S1;
+  wire [31:0] GP0_M_AXI_ARADDR_S1;
+  wire        GP0_M_AXI_ARVALID_S1;
+  wire        GP0_M_AXI_ARREADY_S1;
+  wire [31:0] GP0_M_AXI_RDATA_S1;
+  wire [1:0]  GP0_M_AXI_RRESP_S1;
+  wire        GP0_M_AXI_RVALID_S1;
+  wire        GP0_M_AXI_RREADY_S1;
+
   //   HP0 -- High Performance port 0, FPGA is the master
   wire [5:0]  HP0_S_AXI_AWID;
   wire [31:0] HP0_S_AXI_AWADDR;
@@ -184,6 +220,8 @@ module e300
   wire        s2h_tready;
   wire        s2h_tlast;
 
+  wire        pmu_irq;
+
   // register the debounced onswitch signal to detect edges,
   // Note: ONSWITCH_DB is low active
   reg [1:0] onswitch_edge;
@@ -214,6 +252,80 @@ module e300
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
    // First, make all connections to the PS (ARM+buses)
+  axi_interconnect inst_axi_interconnect
+  (
+    .aclk(bus_clk),
+    .aresetn(~bus_rst),
+    .s_axi_awaddr(GP0_M_AXI_AWADDR),
+    .s_axi_awready(GP0_M_AXI_AWREADY),
+    .s_axi_awvalid(GP0_M_AXI_AWVALID),
+    .s_axi_wdata(GP0_M_AXI_WDATA),
+    .s_axi_wstrb(GP0_M_AXI_WSTRB),
+    .s_axi_wvalid(GP0_M_AXI_WVALID),
+    .s_axi_wready(GP0_M_AXI_WREADY),
+    .s_axi_bresp(GP0_M_AXI_BRESP),
+    .s_axi_bvalid(GP0_M_AXI_BVALID),
+    .s_axi_bready(GP0_M_AXI_BREADY),
+    .s_axi_araddr(GP0_M_AXI_ARADDR),
+    .s_axi_arvalid(GP0_M_AXI_ARVALID),
+    .s_axi_arready(GP0_M_AXI_ARREADY),
+    .s_axi_rdata(GP0_M_AXI_RDATA),
+    .s_axi_rresp(GP0_M_AXI_RRESP),
+    .s_axi_rvalid(GP0_M_AXI_RVALID),
+    .s_axi_rready(GP0_M_AXI_RREADY),
+    .m_axi_awaddr({GP0_M_AXI_AWADDR_S1, GP0_M_AXI_AWADDR_S0}),
+    .m_axi_awvalid({GP0_M_AXI_AWVALID_S1, GP0_M_AXI_AWVALID_S0}),
+    .m_axi_awready({GP0_M_AXI_AWREADY_S1, GP0_M_AXI_AWREADY_S0}),
+    .m_axi_wdata({GP0_M_AXI_WDATA_S1, GP0_M_AXI_WDATA_S0}),
+    .m_axi_wstrb({GP0_M_AXI_WSTRB_S1, GP0_M_AXI_WSTRB_S0}),
+    .m_axi_wvalid({GP0_M_AXI_WVALID_S1, GP0_M_AXI_WVALID_S0}),
+    .m_axi_wready({GP0_M_AXI_WREADY_S1, GP0_M_AXI_WREADY_S0}),
+    .m_axi_bresp({GP0_M_AXI_BRESP_S1, GP0_M_AXI_BRESP_S0}),
+    .m_axi_bvalid({GP0_M_AXI_BVALID_S1, GP0_M_AXI_BVALID_S0}),
+    .m_axi_bready({GP0_M_AXI_BREADY_S1, GP0_M_AXI_BREADY_S0}),
+    .m_axi_araddr({GP0_M_AXI_ARADDR_S1, GP0_M_AXI_ARADDR_S0}),
+    .m_axi_arvalid({GP0_M_AXI_ARVALID_S1, GP0_M_AXI_ARVALID_S0}),
+    .m_axi_arready({GP0_M_AXI_ARREADY_S1, GP0_M_AXI_ARREADY_S0}),
+    .m_axi_rdata({GP0_M_AXI_RDATA_S1, GP0_M_AXI_RDATA_S0}),
+    .m_axi_rresp({GP0_M_AXI_RRESP_S1, GP0_M_AXI_RRESP_S0}),
+    .m_axi_rvalid({GP0_M_AXI_RVALID_S1, GP0_M_AXI_RVALID_S0}),
+    .m_axi_rready({GP0_M_AXI_RREADY_S1, GP0_M_AXI_RREADY_S0})
+  );
+
+  axi_pmu inst_axi_pmu
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .ss(AVR_CS_R),
+    .mosi(AVR_MOSI_R),
+    .sck(AVR_SCK_R),
+    .miso(AVR_MISO_R),
+
+    .s_axi_awaddr(GP0_M_AXI_AWADDR_S1),
+    .s_axi_awvalid(GP0_M_AXI_AWVALID_S1),
+    .s_axi_awready(GP0_M_AXI_AWREADY_S1),
+
+    .s_axi_wdata(GP0_M_AXI_WDATA_S1),
+    .s_axi_wstrb(GP0_M_AXI_WSTRB_S1),
+    .s_axi_wvalid(GP0_M_AXI_WVALID_S1),
+    .s_axi_wready(GP0_M_AXI_WREADY_S1),
+
+    .s_axi_bresp(GP0_M_AXI_BRESP_S1),
+    .s_axi_bvalid(GP0_M_AXI_BVALID_S1),
+    .s_axi_bready(GP0_M_AXI_BREADY_S1),
+
+    .s_axi_araddr(GP0_M_AXI_ARADDR_S1),
+    .s_axi_arvalid(GP0_M_AXI_ARVALID_S1),
+    .s_axi_arready(GP0_M_AXI_ARREADY_S1),
+
+    .s_axi_rdata(GP0_M_AXI_RDATA_S1),
+    .s_axi_rresp(GP0_M_AXI_RRESP_S1),
+    .s_axi_rvalid(GP0_M_AXI_RVALID_S1),
+    .s_axi_rready(GP0_M_AXI_RREADY_S1),
+    .s_axi_irq(pmu_irq)
+  );
+
   e300_processing_system inst_e300_processing_system
   (  // Outward connections to the pins
     .MIO(MIO),
@@ -259,7 +371,7 @@ module e300
     .M_AXI_GP0_RREADY(GP0_M_AXI_RREADY),
 
     //    Misc interrupts, GPIO, clk
-    .IRQ_F2P({13'h0, button_release_irq, button_press_irq, stream_irq}),
+    .IRQ_F2P({12'h0, pmu_irq, button_release_irq, button_press_irq, stream_irq}),
     .GPIO_I(ps_gpio_in),
     .GPIO_O(ps_gpio_out),
     .FCLK_CLK0(fclk_clk0),
@@ -308,11 +420,11 @@ module e300
 
     //    SPI Core 1 - To AVR
     .SPI1_SS(),
-    .SPI1_SS1(AVR_CS_R),
+    .SPI1_SS1(),
     .SPI1_SS2(),
-    .SPI1_SCLK(AVR_SCK_R),
-    .SPI1_MOSI(AVR_MOSI_R),
-    .SPI1_MISO(AVR_MISO_R)
+    .SPI1_SCLK(),
+    .SPI1_MOSI(),
+    .SPI1_MISO()
   );
 
   //------------------------------------------------------------------
@@ -361,11 +473,15 @@ module e300
   assign CAT_RESET = ~(bus_rst || (CAT_CS & CAT_MOSI));   // Operates active-low, really CAT_RESET_B
   assign CAT_SYNC = 1'b0;
 
+  reg [2:0] pps_reg;
+  always @ (posedge bus_clk)
+    pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
+
   //------------------------------------------------------------------
   //-- connect misc stuff to user GPIO
   //------------------------------------------------------------------
-  assign ps_gpio_in[5] = AVR_IRQ;       //59
-  assign ps_gpio_in[7] = ONSWITCH_DB;   //61
+
+  assign ps_gpio_in[8] = pps_reg[2];  // 62
 
   //------------------------------------------------------------------
   //-- radio core from x300 for super fast bring up
@@ -404,23 +520,23 @@ module e300
   zynq_fifo_top0
   (
     .clk(bus_clk), .rst(bus_rst),
-    .CTL_AXI_AWADDR(GP0_M_AXI_AWADDR),
-    .CTL_AXI_AWVALID(GP0_M_AXI_AWVALID),
-    .CTL_AXI_AWREADY(GP0_M_AXI_AWREADY),
-    .CTL_AXI_WDATA(GP0_M_AXI_WDATA),
-    .CTL_AXI_WSTRB(GP0_M_AXI_WSTRB),
-    .CTL_AXI_WVALID(GP0_M_AXI_WVALID),
-    .CTL_AXI_WREADY(GP0_M_AXI_WREADY),
-    .CTL_AXI_BRESP(GP0_M_AXI_BRESP),
-    .CTL_AXI_BVALID(GP0_M_AXI_BVALID),
-    .CTL_AXI_BREADY(GP0_M_AXI_BREADY),
-    .CTL_AXI_ARADDR(GP0_M_AXI_ARADDR),
-    .CTL_AXI_ARVALID(GP0_M_AXI_ARVALID),
-    .CTL_AXI_ARREADY(GP0_M_AXI_ARREADY),
-    .CTL_AXI_RDATA(GP0_M_AXI_RDATA),
-    .CTL_AXI_RRESP(GP0_M_AXI_RRESP),
-    .CTL_AXI_RVALID(GP0_M_AXI_RVALID),
-    .CTL_AXI_RREADY(GP0_M_AXI_RREADY),
+    .CTL_AXI_AWADDR(GP0_M_AXI_AWADDR_S0),
+    .CTL_AXI_AWVALID(GP0_M_AXI_AWVALID_S0),
+    .CTL_AXI_AWREADY(GP0_M_AXI_AWREADY_S0),
+    .CTL_AXI_WDATA(GP0_M_AXI_WDATA_S0),
+    .CTL_AXI_WSTRB(GP0_M_AXI_WSTRB_S0),
+    .CTL_AXI_WVALID(GP0_M_AXI_WVALID_S0),
+    .CTL_AXI_WREADY(GP0_M_AXI_WREADY_S0),
+    .CTL_AXI_BRESP(GP0_M_AXI_BRESP_S0),
+    .CTL_AXI_BVALID(GP0_M_AXI_BVALID_S0),
+    .CTL_AXI_BREADY(GP0_M_AXI_BREADY_S0),
+    .CTL_AXI_ARADDR(GP0_M_AXI_ARADDR_S0),
+    .CTL_AXI_ARVALID(GP0_M_AXI_ARVALID_S0),
+    .CTL_AXI_ARREADY(GP0_M_AXI_ARREADY_S0),
+    .CTL_AXI_RDATA(GP0_M_AXI_RDATA_S0),
+    .CTL_AXI_RRESP(GP0_M_AXI_RRESP_S0),
+    .CTL_AXI_RVALID(GP0_M_AXI_RVALID_S0),
+    .CTL_AXI_RREADY(GP0_M_AXI_RREADY_S0),
 
     .DDR_AXI_AWID(HP0_S_AXI_AWID),
     .DDR_AXI_AWADDR(HP0_S_AXI_AWADDR),

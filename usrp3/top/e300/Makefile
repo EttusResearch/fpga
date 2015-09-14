@@ -10,21 +10,22 @@
 ## make <Targets> <Options>
 ##
 ##Output:
-## build/usrp_<product>_fpga.bit:    Configuration bitstream with header
-## build/usrp_<product>_fpga.bin:    Configuration bitstream without header
-## build/usrp_<product>_fpga.rpt:    Build report (includes utilization and timing summary)
+## build/usrp_<product>_fpga_<image_type>.bit:    Configuration bitstream with header
+## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
+## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
 # vivado_build($1=Target, $2=Device, $2=Definitions)
 vivado_build = make -f Makefile.e300.inc $1 NAME=$@ ARCH=zynq PART_ID=$2/clg484/-1 $3 EXTRA_DEFS="$3"
 
+# post_build($1=Device, $2=Suffix)
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream files..."; \
-	cp build-$(1)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bin; \
-	cp build-$(1)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga.bit; \
+	cp build-$(1)$(2)/e300.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bin; \
+	cp build-$(1)$(2)/e300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).bit; \
 	echo "Exporting build report..."; \
-	cp build-$(1)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga.rpt; \
-	echo "Build DONE ... $(1)";
+	cp build-$(1)$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga$(2).rpt; \
+	echo "Build DONE ... $(1)$(2)";
 
 ##
 ##Supported Targets
@@ -34,19 +35,19 @@ all: E310 E310_idle ##(Default target)
 
 E310: ##Build USRP E310 design.
 	$(call vivado_build,bin,xc7z020,)
-	$(call post_build,E310)
+	$(call post_build,E310,)
 
 E310_idle: ##Build USRP E310 idle design.
 	$(call vivado_build,bin,xc7z020,E3X0_IDLE_IMAGE)
-	$(call post_build,E310_idle)
+	$(call post_build,E310,_idle)
 
 E310_RFNOC: ##Build USRP E310 with RFNoC enabled.
 	$(call vivado_build,bin,xc7z020,RFNOC=1 E310=1)
-	$(call post_build,E310_RFNOC)
+	$(call post_build,E310,_RFNOC)
 
 E310_RFNOC_HLS: ##Build USRP E310 with RFNoC + Vivado HLS enabled.
 	$(call vivado_build,hls,xc7z020,RFNOC=1 E310=1 HLS=1)
-	$(call post_build,E310_RFNOC_HLS)
+	$(call post_build,E310,_RFNOC_HLS)
 
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."

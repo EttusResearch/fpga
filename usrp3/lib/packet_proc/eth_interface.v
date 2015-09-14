@@ -24,7 +24,6 @@ module eth_interface
     output [63:0] e2z_tdata, output [3:0] e2z_tuser, output e2z_tlast, output e2z_tvalid, input e2z_tready,
     input [63:0] z2e_tdata, input [3:0] z2e_tuser, input z2e_tlast, input z2e_tvalid, output z2e_tready,
     // Debug
-    output [31:0] debug_flags,
     output [31:0] debug
     );
 
@@ -67,7 +66,6 @@ module eth_interface
    wire [63:0]    e2z_tdata_int;
    wire [3:0]     e2z_tuser_int;
    wire           e2z_tlast_int, e2z_tvalid_int, e2z_tready_int;
-   wire [2:0]     dispatch_debug_flags;
 
    eth_dispatch #(.BASE(BASE+8)) eth_dispatch
      (.clk(clk), .reset(reset), .clear(clear),
@@ -76,7 +74,7 @@ module eth_interface
       .vita_tdata(e2v_tdata_int), .vita_tlast(e2v_tlast_int), .vita_tvalid(e2v_tvalid_int), .vita_tready(e2v_tready_int),
       .zpu_tdata(e2z_tdata_int), .zpu_tuser(e2z_tuser_int), .zpu_tlast(e2z_tlast_int), .zpu_tvalid(e2z_tvalid_int), .zpu_tready(e2z_tready_int),
       .xo_tdata(xo_tdata), .xo_tuser(xo_tuser), .xo_tlast(xo_tlast), .xo_tvalid(xo_tvalid), .xo_tready(xo_tready), // to other eth port
-      .debug_flags(dispatch_debug_flags),.debug(debug));
+      .debug_flags(),.debug());
 
    axi_fifo_short #(.WIDTH(65)) e2v_pipeline_srl
      (.clk(clk), .reset(reset), .clear(clear),

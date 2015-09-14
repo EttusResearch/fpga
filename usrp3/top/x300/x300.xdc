@@ -46,6 +46,10 @@ set_property PACKAGE_PIN   K24      [get_ports DB0_ADC_DA6_N]
 set_property PACKAGE_PIN   K23      [get_ports DB0_ADC_DA6_P]
 set_property IOSTANDARD    LVDS_25  [get_ports {DB0_ADC_DA*}]
 
+set_property DIFF_TERM     TRUE     [get_ports {DB0_ADC_DA*}]
+# Bit 3 is in the 3.3V bank and does no support diff termination
+set_property DIFF_TERM     FALSE    [get_ports DB0_ADC_DA3_*]
+
 set_property PACKAGE_PIN   K21      [get_ports DB0_ADC_DB0_N]
 set_property PACKAGE_PIN   L21      [get_ports DB0_ADC_DB0_P]
 set_property PACKAGE_PIN   J22      [get_ports DB0_ADC_DB1_N]
@@ -61,6 +65,8 @@ set_property PACKAGE_PIN   L30      [get_ports DB0_ADC_DB5_P]
 set_property PACKAGE_PIN   J26      [get_ports DB0_ADC_DB6_N]
 set_property PACKAGE_PIN   K26      [get_ports DB0_ADC_DB6_P]
 set_property IOSTANDARD    LVDS_25  [get_ports {DB0_ADC_DB*}]
+
+set_property DIFF_TERM     TRUE     [get_ports {DB0_ADC_DB*}]
 
 set_property PACKAGE_PIN   K25      [get_ports DB0_ADC_DCLK_N]
 set_property PACKAGE_PIN   L25      [get_ports DB0_ADC_DCLK_P]
@@ -85,6 +91,10 @@ set_property PACKAGE_PIN   H19      [get_ports DB1_ADC_DA6_N]
 set_property PACKAGE_PIN   J19      [get_ports DB1_ADC_DA6_P]
 set_property IOSTANDARD    LVDS_25  [get_ports {DB1_ADC_DA*}]
 
+set_property DIFF_TERM     TRUE     [get_ports {DB1_ADC_DA*}]
+# Bit 3 is in the 3.3V bank and does no support diff termination
+set_property DIFF_TERM     FALSE    [get_ports DB1_ADC_DA3_*]
+
 set_property PACKAGE_PIN   J18      [get_ports DB1_ADC_DB0_N]
 set_property PACKAGE_PIN   K18      [get_ports DB1_ADC_DB0_P]
 set_property PACKAGE_PIN   C21      [get_ports DB1_ADC_DB1_N]
@@ -100,6 +110,8 @@ set_property PACKAGE_PIN   D22      [get_ports DB1_ADC_DB5_P]
 set_property PACKAGE_PIN   H22      [get_ports DB1_ADC_DB6_N]
 set_property PACKAGE_PIN   H21      [get_ports DB1_ADC_DB6_P]
 set_property IOSTANDARD    LVDS_25  [get_ports {DB1_ADC_DB*}]
+
+set_property DIFF_TERM     TRUE     [get_ports {DB1_ADC_DB*}]
 
 set_property PACKAGE_PIN   E20      [get_ports DB1_ADC_DCLK_N]
 set_property PACKAGE_PIN   F20      [get_ports DB1_ADC_DCLK_P]

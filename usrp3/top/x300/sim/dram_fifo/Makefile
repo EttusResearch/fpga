@@ -14,6 +14,7 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 # Design Specific
 #-------------------------------------------------
 # Define part using PART_ID (<device>/<package>/<speedgrade>)
+ARCH = kintex7
 PART_ID = xc7k410t/ffg900/-2
 
 # Include makefiles and sources for the DUT and its dependencies
@@ -40,14 +41,14 @@ include $(IP_DIR)/ddr3_32bit/Makefile.inc
 include $(IP_DIR)/axi_intercon_2x64_128/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
-include $(IP_DIR)/axi4_bram_1kx64/Makefile.inc
+include $(IP_DIR)/axi4_dualport_sram/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(IP_DDR3_32BIT_SRCS) \
 $(IP_AXI_INTERCON_2X64_128_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
-$(IP_AXI4_BRAM_1KX64_SRCS) \
+$(IP_AXI4_BRAM_SRCS) \
 )
 
 #-------------------------------------------------
@@ -59,7 +60,7 @@ include $(BASE_DIR)/../sim/axi/Makefile.srcs
 # Define only one toplevel module
 SIM_TOP = dram_fifo_tb
 # Simulation runtime in microseconds
-SIM_RUNTIME_US = 80
+SIM_RUNTIME_US = 100
 
 SIM_SRCS = \
 $(abspath dram_fifo_tb.sv) \

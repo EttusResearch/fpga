@@ -169,7 +169,7 @@ module e300_core
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
-      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'h7, 8'h0};
+      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'd255, 8'd0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
       RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE};
@@ -322,7 +322,7 @@ module e300_core
     .db_gpio(ctrl_out0),
     .fp_gpio(fp_gpio),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(leds0),
+    .misc_outs(), .misc_ins(32'h0), .leds(leds0),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -355,7 +355,7 @@ module e300_core
     .db_gpio(ctrl_out1),
     .fp_gpio(),
     .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .leds(leds1),
+    .misc_outs(), .misc_ins(32'h0), .leds(leds1),
 
     //bus clock domain and fifos
     .bus_clk(bus_clk), .bus_rst(bus_rst),

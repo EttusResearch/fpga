@@ -238,7 +238,7 @@ module x300
 );
 
    wire         radio_clk, radio_clk_2x, dac_dci_clk;
-   wire         global_rst, radio_rst, bus_rst;
+   wire         global_rst, radio_rst, bus_rst, adc_idlyctrl_rst;
    wire [3:0]   sw_rst;
    wire [2:0]   led0, led1;
 
@@ -280,13 +280,20 @@ module x300
    // Input Clock   Freq (MHz)    Input Jitter (UI)
    //----------------------------------------------------------------------------
    // __primary_________125.000____________0.010
-   
+
+   wire ioport2_clk_unbuf;
+
    bus_clk_gen bus_clk_gen (
       .CLK_IN1(fpga_clk125),
+      .CLKFB_IN(ioport2_clk),
       .CLK_OUT1(bus_clk),
-      .CLK_OUT2(ioport2_clk),
-      .RESET(1'b0),
+      .CLK_OUT2_UNBUF(/* unused */),    //This exists to make the IP generate a 125MHz FB clock
+      .CLKFB_OUT(ioport2_clk_unbuf),
       .LOCKED(bus_clk_locked));
+
+   BUFG ioport2_clk_bufg_i (
+      .O(ioport2_clk),
+      .I(ioport2_clk_unbuf));
 
    //----------------------------------------------------------------------------
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
@@ -389,19 +396,23 @@ module x300
    //
    ////////////////////////////////////////////////////////////////////
 
-   reset_sync radio_reset_sync
-     (
+   reset_sync radio_reset_sync (
       .clk(radio_clk),
       .reset_in(global_rst || !bus_clk_locked || sw_rst[1]),
       .reset_out(radio_rst)
-      );
+   );
 
-   reset_sync int_reset_sync
-     (
+   reset_sync int_reset_sync (
       .clk(bus_clk),
       .reset_in(global_rst || !bus_clk_locked),
       .reset_out(bus_rst)
-      );
+   );
+
+   reset_sync adc_idlyctrl_reset_sync (
+      .clk(bus_clk),
+      .reset_in(global_rst || !bus_clk_locked || sw_rst[3]),
+      .reset_out(adc_idlyctrl_rst)
+   );
 
    ////////////////////////////////////////////////////////////////////
    // PPS
@@ -411,14 +422,12 @@ module x300
    ////////////////////////////////////////////////////////////////////
 
    // Generate an internal PPS signal with a 25% duty cycle
-   reg [31:0] pps_count;
-   wire int_pps = (pps_count < 32'd2500000);
-   always @(posedge ref_clk_10mhz) begin
-      if (pps_count >= 32'd9999999)
-         pps_count <= 32'b0;
-      else
-         pps_count <= pps_count + 1'b1;
-   end
+   wire int_pps;
+   pps_generator #(
+      .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
+   ) pps_gen (
+      .clk(ref_clk_10mhz), .reset(1'b0), .pps(int_pps)
+   );
 
    // PPS MUX - selects internal, external, or gpsdo PPS
    reg pps;
@@ -497,6 +506,10 @@ module x300
           (~DB1_TX_SEN & DB1_TX_MISO) |
           (~DB1_DAC_SEN & db_dac_miso);
 
+
+   wire [15:0] radio0_misc_out, radio1_misc_out;
+   wire [15:0] radio0_misc_in, radio1_misc_in;
+
    /////////////////////////////////////////////////////////////////////
    //
    // ADC Interface for ADS62P48
@@ -506,25 +519,49 @@ module x300
    // Analog diff pairs on I side of ADC are inverted for layout reasons, but data diff pairs are all swapped as well
    //  so I gets a double negative, and is unchanged.  Q must be inverted.
 
-   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db0
-     (.clk(radio_clk), .ssclk_p(DB0_ADC_DCLK_P), .ssclk_n(DB0_ADC_DCLK_N),
-      .in_p({{DB0_ADC_DA6_P, DB0_ADC_DA5_P, DB0_ADC_DA4_P, DB0_ADC_DA3_P, DB0_ADC_DA2_P, DB0_ADC_DA1_P, DB0_ADC_DA0_P},
+   capture_ddrlvds #(
+      .WIDTH(14),
+      .PATT_CHECKER("TRUE"),
+      .DATA_IDELAY_MODE("DYNAMIC"), .DATA_IDELAY_VAL(16), .DATA_IDELAY_FREF(200.0)
+   ) cap_db0 (
+      .adc_clk_p(DB0_ADC_DCLK_P), .adc_clk_n(DB0_ADC_DCLK_N),
+      .adc_data_p(
+        {{DB0_ADC_DA6_P, DB0_ADC_DA5_P, DB0_ADC_DA4_P, DB0_ADC_DA3_P, DB0_ADC_DA2_P, DB0_ADC_DA1_P, DB0_ADC_DA0_P},
          {DB0_ADC_DB6_P, DB0_ADC_DB5_P, DB0_ADC_DB4_P, DB0_ADC_DB3_P, DB0_ADC_DB2_P, DB0_ADC_DB1_P, DB0_ADC_DB0_P}}),
-
-      .in_n({{DB0_ADC_DA6_N, DB0_ADC_DA5_N, DB0_ADC_DA4_N, DB0_ADC_DA3_N, DB0_ADC_DA2_N, DB0_ADC_DA1_N, DB0_ADC_DA0_N},
+      .adc_data_n(
+        {{DB0_ADC_DA6_N, DB0_ADC_DA5_N, DB0_ADC_DA4_N, DB0_ADC_DA3_N, DB0_ADC_DA2_N, DB0_ADC_DA1_N, DB0_ADC_DA0_N},
          {DB0_ADC_DB6_N, DB0_ADC_DB5_N, DB0_ADC_DB4_N, DB0_ADC_DB3_N, DB0_ADC_DB2_N, DB0_ADC_DB1_N, DB0_ADC_DB0_N}}),
-      .out({rx0_i,rx0_q_inv}));
+      .radio_clk(radio_clk),
+      .data_delay_stb(radio0_misc_out[3]), .data_delay_val(radio0_misc_out[8:4]),
+      .adc_cap_clk(),
+      .data_out({rx0_i,rx0_q_inv}),
+      .checker_en(radio0_misc_out[9]), .checker_locked(radio0_misc_in[3:0]), .checker_failed(radio0_misc_in[7:4])
+   );
    assign rx0[31:0] = { rx0_i, 2'b00, ~rx0_q_inv, 2'b00 };
 
-   capture_ddrlvds #(.WIDTH(14),.X300(1)) cap_db1
-     (.clk(radio_clk), .ssclk_p(DB1_ADC_DCLK_P), .ssclk_n(DB1_ADC_DCLK_N),
-      .in_p({{DB1_ADC_DA6_P, DB1_ADC_DA5_P, DB1_ADC_DA4_P, DB1_ADC_DA3_P, DB1_ADC_DA2_P, DB1_ADC_DA1_P, DB1_ADC_DA0_P},
+   capture_ddrlvds #(
+      .WIDTH(14),
+      .PATT_CHECKER("TRUE"),
+      .DATA_IDELAY_MODE("DYNAMIC"), .DATA_IDELAY_VAL(16), .DATA_IDELAY_FREF(200.0)
+   ) cap_db1 (
+      .adc_clk_p(DB1_ADC_DCLK_P), .adc_clk_n(DB1_ADC_DCLK_N),
+      .adc_data_p(
+        {{DB1_ADC_DA6_P, DB1_ADC_DA5_P, DB1_ADC_DA4_P, DB1_ADC_DA3_P, DB1_ADC_DA2_P, DB1_ADC_DA1_P, DB1_ADC_DA0_P},
          {DB1_ADC_DB6_P, DB1_ADC_DB5_P, DB1_ADC_DB4_P, DB1_ADC_DB3_P, DB1_ADC_DB2_P, DB1_ADC_DB1_P, DB1_ADC_DB0_P}}),
-
-      .in_n({{DB1_ADC_DA6_N, DB1_ADC_DA5_N, DB1_ADC_DA4_N, DB1_ADC_DA3_N, DB1_ADC_DA2_N, DB1_ADC_DA1_N, DB1_ADC_DA0_N},
+      .adc_data_n(
+        {{DB1_ADC_DA6_N, DB1_ADC_DA5_N, DB1_ADC_DA4_N, DB1_ADC_DA3_N, DB1_ADC_DA2_N, DB1_ADC_DA1_N, DB1_ADC_DA0_N},
          {DB1_ADC_DB6_N, DB1_ADC_DB5_N, DB1_ADC_DB4_N, DB1_ADC_DB3_N, DB1_ADC_DB2_N, DB1_ADC_DB1_N, DB1_ADC_DB0_N}}),
-      .out({rx1_i,rx1_q_inv}));
+      .radio_clk(radio_clk),
+      .data_delay_stb(radio1_misc_out[3]), .data_delay_val(radio1_misc_out[8:4]),
+      .adc_cap_clk(),
+      .data_out({rx1_i,rx1_q_inv}),
+      .checker_en(radio1_misc_out[9]), .checker_locked(radio1_misc_in[3:0]), .checker_failed(radio1_misc_in[7:4])
+   );
    assign rx1[31:0] = { rx1_i, 2'b00, ~rx1_q_inv, 2'b00 };
+
+   // IDELAYCTRL to calibrate all IDELAYE2 instances in capture_ddrlvds for both sides
+   wire adc_idlyctrl_rdy;
+   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(adc_idlyctrl_rst)); 
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1021,6 +1058,8 @@ module x300
    ///////////////////////////////////////////////////////////////////////////////////
    wire LMK_Holdover_sync, LMK_Lock_sync, LMK_Sync_sync;
    wire LMK_Status0_sync, LMK_Status1_sync;
+   wire radio_clk_locked_sync;
+   wire adc_idlyctrl_rdy_sync;
 
    //Sync all LMK_* signals to bus_clk
    synchronizer #(.INITIAL_VAL(1'b0)) LMK_Holdover_sync_inst (
@@ -1035,6 +1074,10 @@ module x300
    synchronizer #(.INITIAL_VAL(1'b0)) LMK_Status1_sync_inst (
       .clk(bus_clk), .rst(1'b0 /* no reset */), .in(LMK_Status[1]), .out(LMK_Status1_sync));
 
+   synchronizer #(.INITIAL_VAL(1'b0)) radio_clk_locked_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(radio_clk_locked), .out(radio_clk_locked_sync));
+   synchronizer #(.INITIAL_VAL(1'b0)) adc_idlyctrl_rdy_sync_inst (
+      .clk(bus_clk), .rst(1'b0 /* no reset */), .in(adc_idlyctrl_rdy), .out(adc_idlyctrl_rdy_sync));
 
 `ifndef NO_DRAM_FIFOS
 
@@ -1046,6 +1089,7 @@ module x300
 
 
    wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (250MHz)
+   wire        ddr3_axi_clk_x2;        // 1/4 DDR external clock rate (250MHz)
    wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
    wire        ddr3_running;           // DRAM calibration complete.
 
@@ -1062,8 +1106,8 @@ module x300
    wire        s_axi_awvalid;
    wire        s_axi_awready;
    // Slave Interface Write Data Ports
-   wire [127:0] s_axi_wdata;
-   wire [15:0]  s_axi_wstrb;
+   wire [255:0] s_axi_wdata;
+   wire [31:0]  s_axi_wstrb;
    wire     s_axi_wlast;
    wire     s_axi_wvalid;
    wire     s_axi_wready;
@@ -1087,7 +1131,7 @@ module x300
    // Slave Interface Read Data Ports
    wire     s_axi_rready;
    wire [3:0]   s_axi_rid;
-   wire [127:0] s_axi_rdata;
+   wire [255:0] s_axi_rdata;
    wire [1:0]   s_axi_rresp;
    wire     s_axi_rlast;
    wire     s_axi_rvalid;
@@ -1128,6 +1172,7 @@ module x300
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
       .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
+      .ui_clk_x2                      (ddr3_axi_clk_x2),
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -1191,6 +1236,7 @@ module x300
    // X300 Core
    //
    ///////////////////////////////////////////////////////////////////////////////////
+
    x300_core x300_core
      (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
@@ -1203,12 +1249,12 @@ module x300
       // Radio0 signals
       .rx0(rx0), .tx0(tx0), .db_gpio0({DB0_TX_IO,DB0_RX_IO}),
       .sen0(sen0), .sclk0(sclk0), .mosi0(mosi0), .miso0(miso0),
-      .radio_led0(led0), .radio_misc0({DB_ADC_RESET, DB_DAC_RESET,DB0_DAC_ENABLE}),
+      .radio_led0(led0), .radio0_misc_out(radio0_misc_out), .radio0_misc_in(radio0_misc_in),
       .sync_dacs_radio0(sync_dacs_radio0),
       // Radio1 signals
       .rx1(rx1), .tx1(tx1), .db_gpio1({DB1_TX_IO,DB1_RX_IO}),
       .sen1(sen1), .sclk1(sclk1), .mosi1(mosi1), .miso1(miso1),
-      .radio_led1(led1), .radio_misc1({DB1_DAC_ENABLE}),
+      .radio_led1(led1), .radio1_misc_out(radio1_misc_out), .radio1_misc_in(radio1_misc_in),
       .sync_dacs_radio1(sync_dacs_radio1),
       // I2C bus
       .db_scl(DB_SCL), .db_sda(DB_SDA),
@@ -1218,6 +1264,7 @@ module x300
       .clock_misc_opt({GPSDO_PWR_ENA, TCXO_ENA}),
       .LMK_Status({LMK_Status1_sync, LMK_Status0_sync}), .LMK_Holdover(LMK_Holdover_sync), .LMK_Lock(LMK_Lock_sync), .LMK_Sync(LMK_Sync_sync),
       .LMK_SEN(LMK_SEN), .LMK_SCLK(LMK_SCLK), .LMK_MOSI(LMK_MOSI),
+      .misc_clock_status({1'b0, adc_idlyctrl_rdy_sync, radio_clk_locked_sync}),
       // SFP+ 0 flags
       .SFPP0_SCL(SFPP0_SCL),
       .SFPP0_SDA(SFPP0_SDA),
@@ -1282,6 +1329,7 @@ module x300
 `ifndef NO_DRAM_FIFOS
       // DRAM signals.
       .ddr3_axi_clk              (ddr3_axi_clk),
+      .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
       .ddr3_axi_rst              (ddr3_axi_rst),
       .ddr3_running              (ddr3_running),
       // Slave Interface Write Address Ports
@@ -1347,6 +1395,9 @@ module x300
       .pcii_tvalid               (pcii_tvalid),
       .pcii_tready               (pcii_tready)
    );
+   
+   assign {DB_ADC_RESET, DB_DAC_RESET,DB0_DAC_ENABLE} = radio0_misc_out[2:0];
+   assign {DB1_DAC_ENABLE}                            = radio1_misc_out[0];   //[2:1] unused
 
    /////////////////////////////////////////////////////////////////////
    //

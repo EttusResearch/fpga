@@ -21,7 +21,7 @@ module bus_int
     parameter dw = 32,            // Data bus width
     parameter aw = 16,            // Address bus width, for byte addressibility, 16 = 64K byte memory space
     parameter sw = 4,             // Select width -- 32-bit data bus with 8-bit granularity.
-    parameter NUM_CE = 3         // Number of computation engines
+    parameter NUM_CE = 3          // Number of computation engines
     )
    (input clk, input reset,
     output sen, output sclk, output mosi, input miso,
@@ -45,7 +45,7 @@ module bus_int
     inout SFPP1_RS0,
     inout SFPP1_RS1,
     //
-    input [4:0] clock_status,
+    input [7:0] clock_status,
     output [6:0] clock_control,
     // ETH0
     output [63:0] eth0_tx_tdata, output [3:0] eth0_tx_tuser, output eth0_tx_tlast, output eth0_tx_tvalid, input eth0_tx_tready,
@@ -91,15 +91,15 @@ module bus_int
     output s5_we,
     input s5_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
+    output        set_stb_ext,
+    output [7:0]  set_addr_ext,
+    output [31:0] set_data_ext,
+
     input [15:0] eth0_phy_status,
     input [15:0] eth1_phy_status,
 
-    // AXI_DRAM_FIFO BIST. Not for production.
-    output bist_start,
-    output [15:0] bist_control,
-    input bist_done,
-    input bist_fail,
-
+    input [31:0] dram_fifo0_rb_data,
+    input [31:0] dram_fifo1_rb_data,
 
    // Debug
     input [3:0] fifo_flags,
@@ -122,8 +122,8 @@ module bus_int
    localparam SR_ETHINT1      = 8'd56;
    // Sets the readback bus address dedicated to the xbar
    localparam SR_RB_ADDR_XBAR = 8'd64;
-   // For AXI_DRAM_FIFO debug, not production
-   localparam SR_BIST         = 8'd128;
+   localparam SR_DRAM_FIFO0   = 8'd72;    //External to bus_int.v
+   localparam SR_DRAM_FIFO1   = 8'd80;    //External to bus_int.v
 
 
    localparam RB_COUNTER      = 8'd00;
@@ -136,11 +136,9 @@ module bus_int
    localparam RB_NUM_CE       = 8'd07;
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
-   localparam RB_FIFOFLAGS    = 8'd10;
+   localparam RB_DRAM_FIFO0   = 8'd10;
+   localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64;
-   // For AXI_DRAM_FIFO debug, not production
-   localparam RB_BIST         = 8'd128;
-
 
    localparam COMPAT_MAJOR    = 16'd1000;
    localparam COMPAT_MINOR    = 16'd0000;
@@ -153,7 +151,6 @@ module bus_int
    wire 	  set_stb;
    wire 	  spi_ready;
    wire [31:0] 	  rb_spi_data;
-   wire [17:0] 	  eth_debug_flags;
 
 
    // ZPU in and ZPU out axi streams
@@ -279,6 +276,11 @@ module bus_int
       .debug0(debug2),
       .debug1()
       );
+   
+   //The main settings bus also goes outside the hierarchy to connect to control
+   //various components
+   //TODO: We should re-think the ownership of this bus master
+   assign {set_stb_ext, set_addr_ext, set_data_ext} = {set_stb, set_addr, set_data};
 
    setting_reg #(.my_addr(SR_LEDS), .awidth(SR_AWIDTH), .width(8)) set_leds
      (.clk(clk), .rst(reset),
@@ -290,7 +292,7 @@ module bus_int
    // [0] - PHY reset
    // [1] - Radio clk domain reset
    // [2] - Radio Clk PLL reset.
-   // [3] - Usused.
+   // [3] - ADC IdelayCtrl reset
    //
    setting_reg #(.my_addr(SR_SW_RST), .awidth(SR_AWIDTH), .width(4)) set_sw_rst
      (.clk(clk), .rst(reset),
@@ -311,29 +313,8 @@ module bus_int
       .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
       .debug());
 
-   //
-   // Provide instrumentation so that abnormal FIFO conditions can be identifed.
-   //
-   wire 	  clear_debug_flags;
-   reg [31:0] 	  debug_flags;
-
-   setting_reg #(.my_addr(SR_FIFOFLAGS), .awidth(16), .width(1)) sr_reset_fifo_debug
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(),.changed(clear_debug_flags));
-
-   always @(posedge clk)
-     if (reset)
-       debug_flags <= 0;
-     else if (clear_debug_flags)
-       debug_flags <= 0;
-     else
-       debug_flags <= debug_flags | {
-				     10'h0,
-				     ~fifo_flags[3:0],
-				     eth_debug_flags};
-
-   reg [31:0] 	  counter;
-   wire [31:0] 	  rb_data_crossbar;
+   reg [31:0]   counter;
+   wire [31:0]  rb_data_crossbar;
 
    always @(posedge clk) counter <= counter + 1;
 
@@ -344,7 +325,7 @@ module bus_int
        RB_COUNTER: rb_data = counter;
        RB_SPI_RDY: rb_data = {31'b0, spi_ready};
        RB_SPI_DATA: rb_data = rb_spi_data;
-       RB_CLK_STATUS: rb_data = {27'b0, clock_status};
+       RB_CLK_STATUS: rb_data = {24'b0, clock_status};
        // SFPP Interface pins.
        RB_SFPP_STATUS0: rb_data = {
             eth0_phy_status_sync, 10'b0,
@@ -365,22 +346,13 @@ module bus_int
 `else
        RB_ETH_TYPE1: rb_data = {32'h0};
 `endif
-       // Read FIFO status from Ethernet Interfaces
-       RB_FIFOFLAGS: rb_data = debug_flags;
+       RB_DRAM_FIFO0: rb_data = dram_fifo0_rb_data;
+       RB_DRAM_FIFO1: rb_data = dram_fifo1_rb_data;
 
        RB_CROSSBAR: rb_data = rb_data_crossbar;
-       // AXI_DRAM_FIFO BIST. Not for production.
-       RB_BIST: rb_data = {29'h0,bist_done,bist_fail,bist_start};
-
 
        default: rb_data = 32'h0;
      endcase // case (rb_addr)
-
-   // AXI_DRAM_FIFO BIST. Not for production.
-   setting_reg #(.my_addr(SR_BIST), .awidth(SR_AWIDTH), .width(17)) set_bist_start
-     (.clk(clk), .rst(reset),
-      .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({bist_start,bist_control}));
 
    // Latch state changes to SFP0+ pins.
    synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_modabs_sync (
@@ -499,7 +471,7 @@ module bus_int
       .xi_tdata(e10_tdata), .xi_tuser(e10_tuser), .xi_tlast(e10_tlast), .xi_tvalid(e10_tvalid), .xi_tready(e10_tready),
       .e2z_tdata(zpui0_tdata), .e2z_tuser(zpui0_tuser), .e2z_tlast(zpui0_tlast), .e2z_tvalid(zpui0_tvalid), .e2z_tready(zpui0_tready),
       .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready),
-      .debug_flags(eth_debug_flags[8:0]),.debug(/*debug2*/));
+      .debug());
 
    eth_interface #(.BASE(SR_ETHINT1)) eth_interface1
      (.clk(clk), .reset(reset), .clear(clear),
@@ -514,7 +486,7 @@ module bus_int
       .xi_tdata(e01_tdata), .xi_tuser(e01_tuser), .xi_tlast(e01_tlast), .xi_tvalid(e01_tvalid), .xi_tready(e01_tready),
       .e2z_tdata(zpui1_tdata), .e2z_tuser(zpui1_tuser), .e2z_tlast(zpui1_tlast), .e2z_tvalid(zpui1_tvalid), .e2z_tready(zpui1_tready),
       .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready),
-      .debug_flags(eth_debug_flags[17:9]),.debug());
+      .debug());
 
    axi_mux4 #(.PRIO(0), .WIDTH(68)) zpui_mux
      (.clk(clk), .reset(reset), .clear(clear),

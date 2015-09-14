@@ -28,8 +28,10 @@ dram_2port.v \
 cvita_uart.v \
 serial_to_settings.v \
 filter_bad_sid.v \
+synchronizer_impl.v \
 synchronizer.v \
 binary_encoder.v \
 priority_encoder.v \
 priority_encoder_one_hot.v \
+ad5662_auto_spi.v \
 ))

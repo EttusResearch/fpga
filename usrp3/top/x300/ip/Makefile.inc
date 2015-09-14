@@ -2,7 +2,7 @@
 # Copyright 2014 Ettus Research
 #
 
-include $(IP_DIR)/axi4_bram_1kx64/Makefile.inc
+include $(IP_DIR)/axi4_dualport_sram/Makefile.inc
 include $(IP_DIR)/axi64_4k_2clk_fifo/Makefile.inc
 include $(IP_DIR)/axi64_8k_2clk_fifo/Makefile.inc
 include $(IP_DIR)/axi_intercon_2x64_128/Makefile.inc
@@ -19,7 +19,7 @@ include $(IP_DIR)/radio_clk_gen/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 
 IP_XCI_SRCS = \
-$(IP_AXI4_BRAM_1KX64_SRCS) \
+$(IP_AXI4_BRAM_SRCS) \
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) \
 $(IP_AXI64_8K_2CLK_FIFO_SRCS) \
 $(IP_BOOTRAM_SRCS) \
@@ -48,7 +48,7 @@ $(ONE_GIGE_PHY_SRCS) \
 $(TEN_GIGE_PHY_SRCS)
 
 IP_SYNTH_OUTPUTS = \
-$(IP_AXI4_BRAM_1KX64_OUTS) \
+$(IP_AXI4_BRAM_OUTS) \
 $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
 $(IP_AXI_INTERCON_2X64_128_OUTS) \
