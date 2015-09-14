@@ -811,13 +811,14 @@ module x300
    //
    //////////////////////////////////////////////////////////////////////
 `ifdef BUILD_1G
-   wire  gige_refclk;
+   wire  gige_refclk, gige_refclk_bufg;
 
    one_gige_phy_clk_gen gige_clk_gen_i (
       .areset(global_rst | sw_rst[0]),
       .refclk_p(ETH_CLK_p),
       .refclk_n(ETH_CLK_n),
-      .refclk(gige_refclk)
+      .refclk(gige_refclk),
+      .refclk_bufg(gige_refclk_bufg)
    );
 `endif
 `ifdef BUILD_10G
@@ -914,6 +915,7 @@ module x300
       .independent_clock(bus_clk),
       // Tranceiver Interface
       .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
+      .gtrefclk_bufg(gige_refclk_bufg),// Reference clock routed through a BUFG
       .txp(SFP0_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
       .txn(SFP0_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
       .rxp(SFP0_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
@@ -1023,6 +1025,7 @@ module x300
       .independent_clock(bus_clk),
       // Tranceiver Interface
       .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
+      .gtrefclk_bufg(gige_refclk_bufg),// Reference clock routed through a BUFG
       .txp(SFP1_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
       .txn(SFP1_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
       .rxp(SFP1_RX_p),                 // Differential +ve for serial reception from PMD to PMA.

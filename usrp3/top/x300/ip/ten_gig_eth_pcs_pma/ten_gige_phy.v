@@ -195,12 +195,12 @@ module ten_gige_phy
 
    // Instantiate the 10GBASER/KR Block Level
    ten_gig_eth_pcs_pma ten_gig_eth_pcs_pma_i (
-      .clk156(clk156),
+      .coreclk(clk156),
       .dclk(dclk),
       .txusrclk(txusrclk),
       .txusrclk2(txusrclk2),
-      .txclk322(txclk322),
-      .areset_clk156(areset_clk156),
+      .txoutclk(txclk322),
+      .areset_coreclk(areset_clk156),
       .txuserrdy(txuserrdy),
       .areset(areset),
       .gttxreset(gttxreset),

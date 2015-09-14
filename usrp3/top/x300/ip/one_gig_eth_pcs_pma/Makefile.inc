@@ -44,5 +44,7 @@ $(IP_ONE_GIG_ETH_PCS_PMA_EXAMPLE_SRCS) : $(IP_ONE_GIG_ETH_PCS_PMA_OUTS)
 
 $(IP_ONE_GIG_ETH_PCS_PMA_SRCS) $(IP_ONE_GIG_ETH_PCS_PMA_OUTS) : $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma.xci
 	$(call BUILD_VIVADO_IP,one_gig_eth_pcs_pma,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),1)
+	cp $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_clocking.v $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_clocking.v.orig
 	patch $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_clocking.v $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_clocking.v.patch
+	cp $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_support.v $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_support.v.orig
 	patch $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/sources_1/imports/example_design/support/one_gig_eth_pcs_pma_support.v $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_support.v.patch

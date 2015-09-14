@@ -542,9 +542,6 @@ set_max_delay 5.000 -from [get_ports GPS_PPS_OUT] \
 set_min_delay 2.500 -from [get_ports GPS_PPS_OUT] \
                     -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/D}]
 
-set_max_delay 6.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/C}]
-set_min_delay 1.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_refclk_inst/synchronizer_constrained/stages[0].value_reg[0]/C}]
-
 # Constrain input-output delay for external PPS
 set_max_delay 10.000 -from [get_ports EXT_PPS_IN] -to [get_ports {EXT_PPS_OUT}] -datapath_only
 set_min_delay 5.000  -from [get_ports EXT_PPS_IN] -to [get_ports {EXT_PPS_OUT}]
@@ -559,13 +556,13 @@ set_min_delay 0.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_tbclk_inst/s
 # Dboard GPIO Interface 
 # We assume that these signals are sampled by a 200MHz clock so
 # we guarantee a 2.5ns valid window
-set_max_delay 10.000 -datapath_only \
+set_max_delay  6.250 -datapath_only \
                      -from [get_cells -hier -filter {NAME =~ x300_core/radio*/gpio_atr/*/out_reg*}] \
                      -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_max_delay 10.000 -datapath_only \
+set_min_delay  3.750 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_max_delay  6.250 -datapath_only \
                      -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_min_delay  3.750 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
 
 # Front-panel GPIO
 # We assume that these signals are sampled by a 100MHz clock so

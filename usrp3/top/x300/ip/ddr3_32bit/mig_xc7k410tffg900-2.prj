@@ -127,7 +127,7 @@
             <Pin PADName="No connect" Bank="Select Bank" name="tg_compare_error" />
         </System_Control>
         <TimingParameters>
-            <Parameters twtr="7.5" trrd="6" trefi="7.8" tfaw="30" trtp="7.5" tcke="5" trfc="260" trp="13.75" tras="35" trcd="13.75" />
+            <Parameters twtr="7.5" trrd="7.5" trefi="7.8" tfaw="40" trtp="7.5" tcke="5" trfc="260" trp="13.75" tras="35" trcd="13.75" />
         </TimingParameters>
         <mrBurstLength name="Burst Length" >8 - Fixed</mrBurstLength>
         <mrBurstType name="Read Burst Type and Length" >Sequential</mrBurstType>

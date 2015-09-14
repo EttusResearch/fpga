@@ -13,7 +13,7 @@ ddr3_32bit/user_design/rtl/ddr3_32bit_mig.v \
 )
 
 IP_DDR3_32BIT_SIM_OUTS = $(addprefix $(IP_BUILD_DIR)/ddr3_32bit/, \
-ddr3_32bit/example_design/sim/ddr3_model.v \
+ddr3_32bit/example_design/sim/ddr3_model.sv \
 ddr3_32bit/example_design/sim/ddr3_model_parameters.vh \
 )
 

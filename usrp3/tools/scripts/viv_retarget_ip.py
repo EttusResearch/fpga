@@ -13,28 +13,28 @@ parser.add_option("--output_dir", type="string", dest="output_dir", help="Build 
 
 # Args
 if (len(args) < 1):
-	print 'ERROR: Please specify an input IP XCI file'
+	print('ERROR: Please specify an input IP XCI file')
 	parser.print_help()
 	sys.exit(1)
 arch = options.arch
 if (len(arch) == 0):
-	print 'ERROR: Please specify an architecture'
+	print('ERROR: Please specify an architecture')
 	parser.print_help()
 	sys.exit(1)
 part_info = str.split(options.part, '/')
 if (len(part_info) != 3):
-	print 'ERROR: Part name ' + options.part + ' is invalid.'
+	print('ERROR: Part name ' + options.part + ' is invalid.')
 	parser.print_help()
 	sys.exit(1)
 if (options.output_dir is None or not os.path.isdir(options.output_dir)):
-	print 'ERROR: IP Build directory ' + options.build_dir + ' could not be accessed or is not a directory.'
+	print('ERROR: IP Build directory ' + options.build_dir + ' could not be accessed or is not a directory.')
 	parser.print_help()
 	sys.exit(1)
 
 in_xci_filename = os.path.abspath(args[0])
 out_xci_filename = os.path.join(os.path.abspath(options.output_dir), os.path.basename(in_xci_filename))
 if (not os.path.isfile(in_xci_filename)):
-	print 'ERROR: XCI File ' + in_xci_filename + ' could not be accessed or is not a file.'
+	print('ERROR: XCI File ' + in_xci_filename + ' could not be accessed or is not a file.')
 	parser.print_help()
 	sys.exit(1)
 

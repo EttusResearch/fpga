@@ -9,6 +9,7 @@ module one_gige_phy
    // Tranceiver Interface
    //---------------------
    input            gtrefclk,              // Reference clock for MGT: 125MHz, very high quality.
+   input            gtrefclk_bufg,         // Reference clock routed through a BUFG
    output           txp,                   // Differential +ve of serial transmission from PMA to PMD.
    output           txn,                   // Differential -ve of serial transmission from PMA to PMD.
    input            rxp,                   // Differential +ve for serial reception from PMD to PMA.
@@ -61,6 +62,7 @@ module one_gige_phy
    //----------------------------------------------------------------------------
    one_gig_eth_pcs_pma_support core_support_i (
       .gtrefclk              (gtrefclk),
+      .gtrefclk_bufg         (gtrefclk_bufg),
       .txp                   (txp),
       .txn                   (txn),
       .rxp                   (rxp),
