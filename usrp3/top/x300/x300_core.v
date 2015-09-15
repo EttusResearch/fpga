@@ -880,13 +880,13 @@ module x300_core
 
    localparam EXTENDED_DRAM_BIST = 1;  //Prune out additional BIST features for production
 
-   axi_dram_fifo #(
+   axi_dma_fifo #(
       .BASE('h0),
       .SIZE(24),
       .TIMEOUT(280),
       .SR_BASE(8'd72),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i0 (
+   ) axi_dma_fifo_i0 (
       //
       // Clocks and reset
       //
@@ -981,13 +981,13 @@ module x300_core
       .debug()
    );
 
-   axi_dram_fifo #(
+   axi_dma_fifo #(
       .BASE('h2000000),
       .SIZE(24),
       .TIMEOUT(280),
       .SR_BASE(8'd80),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i1 (
+   ) axi_dma_fifo_i1 (
       //
       // Clocks and reset
       //

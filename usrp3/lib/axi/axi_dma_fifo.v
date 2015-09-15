@@ -6,7 +6,7 @@
 // 2) Never cross a 4KByte address boundry within a single transaction, this is an AXI4 rule.
 // 3) 2^SIZE must be greater than 4KB so that the 4KByte page protection also deals with FIFO wrap corner case.
 //
-module axi_dram_fifo 
+module axi_dma_fifo 
 #(
    parameter BASE     = 0,    //Base address of the FIFO in AXI memory space
    parameter SIZE     = 16,   //log2 of size of FIFO buffer in bytes. i.e 13 for 8KBytes which is 1kx64
@@ -973,5 +973,5 @@ module axi_dram_fifo
       .debug()
       );
 
- endmodule // axi_dram_fifo
+ endmodule // axi_dma_fifo
 
