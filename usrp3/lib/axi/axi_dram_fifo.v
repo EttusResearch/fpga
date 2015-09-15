@@ -244,12 +244,15 @@ module axi_dram_fifo
    wire [WIDTH-1:0] o_tdata_bist;
    wire       o_tvalid_bist, o_tready_bist, o_tlast_bist;
 
-   axi_mux4 #(.PRIO(1), .WIDTH(64), .BUFFER(1)) axi_mux (
+   wire [WIDTH-1:0] o_tdata_gate;
+   wire       o_tvalid_gate, o_tready_gate, o_tlast_gate;
+
+   axi_mux4 #(.PRIO(1), .WIDTH(WIDTH), .BUFFER(1)) axi_mux (
       .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
       .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready),
       .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist), .i1_tready(i_tready_bist),
-      .i2_tdata(64'h0), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
-      .i3_tdata(64'h0), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
+      .i2_tdata({WIDTH{1'b0}}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
+      .i3_tdata({WIDTH{1'b0}}), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(i_tdata_fifo), .o_tlast(i_tlast_fifo), .o_tvalid(i_tvalid_fifo), .o_tready(i_tready_fifo)
    );
 
@@ -270,14 +273,22 @@ module axi_dram_fifo
    );
    assign rb_bist_status = {bist_error, bist_done, bist_running};
 
-   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64)) axi_demux(
+   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(WIDTH)) axi_demux(
       .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
       .header(), .dest({1'b0, bist_running}),
       .i_tdata(o_tdata_fifo), .i_tlast(o_tlast_fifo), .i_tvalid(o_tvalid_fifo), .i_tready(o_tready_fifo),
-      .o0_tdata(o_tdata), .o0_tlast(o_tlast), .o0_tvalid(o_tvalid), .o0_tready(o_tready),
+      .o0_tdata(o_tdata_gate), .o0_tlast(o_tlast_gate), .o0_tvalid(o_tvalid_gate), .o0_tready(o_tready_gate),
       .o1_tdata(o_tdata_bist), .o1_tlast(o_tlast_bist), .o1_tvalid(o_tvalid_bist), .o1_tready(o_tready_bist),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b0),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b0)
+   );
+
+   //Insert package gate before output to absorb any intra-packet bubble cycles
+   axi_packet_gate #(.WIDTH(WIDTH), .SIZE(11)) out_pkt_gate (
+      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
+      .i_terror(1'b0),
+      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready)
    );
 
    //
@@ -373,7 +384,7 @@ module axi_dram_fifo
       .o_tready(i_tready_i3)
       );
  
-   axi_fifo #(.WIDTH(WIDTH),.SIZE(12)) fifo_i1
+   axi_fifo #(.WIDTH(WIDTH),.SIZE(10)) fifo_i1
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -434,7 +445,7 @@ module axi_dram_fifo
 
    wire             checksum_error;
 
-   axi_fifo #(.WIDTH(WIDTH),.SIZE(9)) fifo_i2
+   axi_fifo #(.WIDTH(WIDTH),.SIZE(10)) fifo_i2
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
