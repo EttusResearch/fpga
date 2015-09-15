@@ -513,10 +513,22 @@ module x300_core
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
-   // Radio 0
+   // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
 
+   localparam MSG_FIFO_SIZE    = 9;
+`ifndef NO_DRAM_FIFOS
+   localparam TX_PRE_FIFO_SIZE = 14;
+   localparam DATA_FIFO_SIZE   = 12;
+`else
+   localparam TX_PRE_FIFO_SIZE = 0;
+   localparam DATA_FIFO_SIZE   = 10;
+`endif
+
+   //------------------------------------
+   // Radio 0
+   //------------------------------------
 `ifndef DELETE_DSP0
  `define DELETE_DSP0 0
 `endif
@@ -525,8 +537,9 @@ module x300_core
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP0),
       .RADIO_NUM(0),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx0), .tx(tx0), .db_gpio(db_gpio0), .fp_gpio(fp_gpio),
@@ -548,12 +561,9 @@ module x300_core
       misc_ins0       <= radio0_misc_in;
    end
 
-   /////////////////////////////////////////////////////////////////////////////////////////////
-   //
+   //------------------------------------
    // Radio 1
-   //
-   /////////////////////////////////////////////////////////////////////////////////////////////
-
+   //------------------------------------
 `ifndef DELETE_DSP1
  `define DELETE_DSP1 0
 `endif
@@ -562,8 +572,9 @@ module x300_core
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP1),
       .RADIO_NUM(1),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx1), .tx(tx1), .db_gpio(db_gpio1), .fp_gpio(),
