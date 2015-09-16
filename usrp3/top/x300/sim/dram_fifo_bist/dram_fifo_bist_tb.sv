@@ -99,6 +99,8 @@ module dram_fifo_bist_tb();
     while (calib_complete !== 1'b1) @(posedge bus_clk);
     `TEST_CASE_DONE(calib_complete);
 
+    //Pull the FIFO out of clear mode
+    tst_set.write(SR_FIFO_BASE + 1, {16'h0, 12'd280, 2'b00, 1'b0, 1'b0});
     //Select BIST status as the readback output
     tst_set.write(SR_FIFO_BASE + 0, 3'd1);
 

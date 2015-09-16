@@ -11,6 +11,7 @@
 `include "sim_exec_report.vh"
 `include "sim_cvita_lib.sv"
 `include "sim_axi4_lib.sv"
+`include "sim_set_rb_lib.sv"
 
 //`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
 //`define USE_SRAM_MIG      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
@@ -24,6 +25,7 @@ module dram_fifo_tb();
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
   `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
 
+  settings_t #(.AWIDTH(8),.DWIDTH(32)) tst_set (.clk(bus_clk));
   cvita_stream_t chdr_i (.clk(bus_clk));
   cvita_stream_t chdr_o (.clk(bus_clk));
 
@@ -72,9 +74,9 @@ module dram_fifo_tb();
     .o_tvalid(chdr_o.axis.tvalid),
     .o_tready(chdr_o.axis.tready),
     
-    .set_stb(1'b0),
-    .set_addr(8'b0),
-    .set_data(32'b0),
+    .set_stb(tst_set.stb),
+    .set_addr(tst_set.addr),
+    .set_data(tst_set.data),
     .rb_data(),
 
     .forced_bit_err(64'h0),
@@ -98,6 +100,7 @@ module dram_fifo_tb();
     while (~sys_rst_n) @(posedge sys_clk);
     `TEST_CASE_DONE((~bus_rst & sys_rst_n));
     
+    tst_set.write(1, {16'h0, 12'd280, 2'b00, 1'b0, 1'b0});
     repeat (200) @(posedge sys_clk);
 
     `TEST_CASE_START("Wait for initial calibration to complete");

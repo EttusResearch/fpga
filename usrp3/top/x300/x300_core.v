@@ -455,7 +455,6 @@ module x300_core
       .dram_fifo1_rb_data(dram_fifo1_rb_data),
 
       // Debug
-      .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
 
    //////////////////////////////////////////////////////////////////////////////////////////////
@@ -889,12 +888,12 @@ module x300_core
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   localparam EXTENDED_DRAM_BIST = 1;  //Prune out additional BIST features for production
+   localparam EXTENDED_DRAM_BIST = 0;  //Prune out additional BIST features for production
 
    axi_dma_fifo #(
-      .BASE('h0),
-      .SIZE(24),
-      .TIMEOUT(280),
+      .DEFAULT_BASE(30'h00000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd72),
       .EXT_BIST(EXTENDED_DRAM_BIST)
    ) axi_dma_fifo_i0 (
@@ -903,7 +902,6 @@ module x300_core
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //
@@ -993,9 +991,9 @@ module x300_core
    );
 
    axi_dma_fifo #(
-      .BASE('h2000000),
-      .SIZE(24),
-      .TIMEOUT(280),
+      .DEFAULT_BASE(30'h02000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd80),
       .EXT_BIST(EXTENDED_DRAM_BIST)
    ) axi_dma_fifo_i1 (
@@ -1004,7 +1002,6 @@ module x300_core
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //
