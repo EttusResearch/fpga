@@ -13,7 +13,7 @@ module noc_block_addsub_tb();
   /*********************************************
   ** DUT
   *********************************************/
-  noc_block_addsub inst_noc_block_addsub (
+  noc_block_addsub #(.USE_VHDL(1)) inst_noc_block_addsub (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
