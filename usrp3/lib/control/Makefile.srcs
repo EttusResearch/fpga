@@ -9,6 +9,7 @@ CONTROL_LIB_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/control/, \
 reset_sync.v \
 por_gen.v \
 gpio_atr.v \
+gpio_atr_io.v \
 simple_spi_core.v \
 simple_i2c_core.v \
 setting_reg.v \

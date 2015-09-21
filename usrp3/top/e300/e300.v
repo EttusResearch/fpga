@@ -523,6 +523,7 @@ module e300
   //------------------------------------------------------------------
 
   wire [31:0] gpio0, gpio1;
+  wire [5:0]  fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
 
   assign { LED_TXRX1_TX, LED_TXRX1_RX, LED_RX1_RX, //3
            VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
@@ -533,6 +534,11 @@ module e300
            VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
            TX_ENABLE2B, TX_ENABLE2A //2
          } = gpio1[18:10];
+
+  gpio_atr_io #(.WIDTH(6)) fp_gpio_atr_inst (
+    .clk(radio_clk), .gpio_pins(PL_GPIO),
+    .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
+  );
 
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.
@@ -693,7 +699,9 @@ module e300
     .ctrl_out0(gpio1),
     .ctrl_out1(gpio0),
 
-    .fp_gpio(PL_GPIO),
+    .fp_gpio_in(fp_gpio_in),
+    .fp_gpio_out(fp_gpio_out),
+    .fp_gpio_ddr(fp_gpio_ddr),
 
     .set_data(core_set_data),
     .set_addr(core_set_addr),

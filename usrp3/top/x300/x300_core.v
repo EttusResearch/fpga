@@ -1,35 +1,25 @@
 
-module x300_core
-  (
+module x300_core (
+   //Clocks and resets
    input radio_clk,
    input radio_rst,
    input bus_clk,
    input bus_rst,
    output [3:0] sw_rst,
    // Radio 0
-   inout [31:0] fp_gpio,
-   input [31:0] rx0,
-   output [31:0] tx0,
-   inout [31:0] db_gpio0,
-   output [7:0] sen0,
-   output sclk0,
-   output mosi0,
-   input miso0,
+   input [31:0] rx0, output [31:0] tx0,
+   input [31:0] db0_gpio_in, output [31:0] db0_gpio_out, output [31:0] db0_gpio_ddr,
+   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
+   output [7:0] sen0, output sclk0, output mosi0, input miso0,
    output [2:0] radio_led0,
-   output reg [15:0] radio0_misc_out,
-   input [15:0] radio0_misc_in,
+   output reg [15:0] radio0_misc_out, input [15:0] radio0_misc_in,
    output sync_dacs_radio0,
    // Radio 1
-   input [31:0] rx1,
-   output [31:0] tx1,
-   inout [31:0] db_gpio1,
-   output [7:0] sen1,
-   output sclk1,
-   output mosi1,
-   input miso1,
+   input [31:0] rx1, output [31:0] tx1,
+   input [31:0] db1_gpio_in, output [31:0] db1_gpio_out, output [31:0] db1_gpio_ddr,
+   output [7:0] sen1, output sclk1, output mosi1, input miso1,
    output [2:0] radio_led1,
-   output reg [15:0] radio1_misc_out,
-   input [15:0] radio1_misc_in,
+   output reg [15:0] radio1_misc_out, input [15:0] radio1_misc_in,
    output sync_dacs_radio1,
    // Radio shared misc
    inout db_scl,
@@ -529,7 +519,9 @@ module x300_core
       .MSG_FIFO_SIZE(9)
    ) radio0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), .db_gpio(db_gpio0), .fp_gpio(fp_gpio),
+      .rx(rx0), .tx(tx0), 
+      .db_gpio_in(db0_gpio_in), .db_gpio_out(db0_gpio_out), .db_gpio_ddr(db0_gpio_ddr),
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .sen(sen0), .sclk(sclk0), .mosi(mosi0), .miso(miso0),
       .misc_outs(misc_outs0), .misc_ins({16'h0, misc_ins0}), .leds(radio_led0),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -566,7 +558,9 @@ module x300_core
       .MSG_FIFO_SIZE(9)
    ) radio1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .db_gpio(db_gpio1), .fp_gpio(),
+      .rx(rx1), .tx(tx1),
+      .db_gpio_in(db1_gpio_in), .db_gpio_out(db1_gpio_out), .db_gpio_ddr(db1_gpio_ddr),
+      .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(),
       .sen(sen1), .sclk(sclk1), .mosi(mosi1), .miso(miso1),
       .misc_outs(misc_outs1), .misc_ins({16'h0, misc_ins1}), .leds(radio_led1),
       .bus_clk(bus_clk), .bus_rst(bus_rst),

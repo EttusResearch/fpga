@@ -39,8 +39,8 @@ module b205_core
 
     input [31:0]  rx0,
     output [31:0] tx0,
-    inout [31:0]  fe_atr,
-    inout [7:0]   fp_gpio,
+    output [7:0] fe_gpio_out,
+    input [7:0] fp_gpio_in, output [7:0] fp_gpio_out, output [7:0] fp_gpio_ddr,
     output ext_ref_is_pps,
     input pps_ext,
 
@@ -211,8 +211,12 @@ module b205_core
     /*******************************************************************
      * Radio
      ******************************************************************/
-    wire [1:0]  fpgpio_discard;
-
+    wire [31:0] fe_gpio_out32;
+    wire [9:0] fp_gpio_out10, fp_gpio_ddr10;
+    assign fe_gpio_out = fe_gpio_out32[7:0];
+    assign fp_gpio_out = fp_gpio_out10[7:0];
+    assign fp_gpio_ddr = fp_gpio_ddr10[7:0];
+    
     radio_b200 #(
         .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
         .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
@@ -224,8 +228,9 @@ module b205_core
         .DEVICE("SPARTAN6")
     ) radio (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx(rx0), .tx(tx0), .fe_atr(fe_atr), .pps(pps),
-        .fp_gpio({fpgpio_discard,fp_gpio}),
+        .rx(rx0), .tx(tx0), .pps(pps),
+        .fe_gpio_in(32'h00000000), .fe_gpio_out(fe_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
+        .fp_gpio_in({2'b00, fp_gpio_in}), .fp_gpio_out(fp_gpio_out10), .fp_gpio_ddr(fp_gpio_ddr10),  
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
         .rx_tdata(rx_tdata), .rx_tlast(rx_tlast),  .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),

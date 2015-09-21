@@ -64,7 +64,9 @@ module e300_core
   output [3:0]      rx_bandsel_c,
 
   // front panel (internal) gpio
-  inout [5:0]       fp_gpio,
+  input [5:0]       fp_gpio_in,
+  output [5:0]      fp_gpio_out,
+  output [5:0]      fp_gpio_ddr,
 
   // signals for ad9361 pll locks
   input [1:0]       lock_signals,
@@ -294,6 +296,10 @@ module e300_core
   wire tx_tlast_bo[1:0], tx_tvalid_bo [1:0], tx_tready_bo [1:0];
   wire tx_tlast_bi[1:0], tx_tvalid_bi [1:0], tx_tready_bi [1:0];
 
+  wire [31:0] fp_gpio_out32, fp_gpio_ddr32;
+  assign fp_gpio_out = fp_gpio_out32[5:0];
+  assign fp_gpio_ddr = fp_gpio_ddr32[5:0];
+
   axi_fifo #(.WIDTH(65), .SIZE(11)) axi_fifo_tx_packet_buff0
   (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -309,8 +315,8 @@ module e300_core
 
     //not connected
     .rx(rx_data0), .tx(tx_data0),
-    .db_gpio(ctrl_out0),
-    .fp_gpio(fp_gpio),
+    .db_gpio_in(32'h0), .db_gpio_out(ctrl_out0), .db_gpio_ddr(/*assumed to be all outputs*/),
+    .fp_gpio_in({26'h0, fp_gpio_in}), .fp_gpio_out(fp_gpio_out32), .fp_gpio_ddr(fp_gpio_ddr32),
     .sen(), .sclk(), .mosi(), .miso(),
     .misc_outs(), .misc_ins(32'h0), .leds(),
 
@@ -342,8 +348,8 @@ module e300_core
 
     //not connected
     .rx(rx_data1), .tx(tx_data1),
-    .db_gpio(ctrl_out1),
-    .fp_gpio(),
+    .db_gpio_in(32'h0), .db_gpio_out(ctrl_out1), .db_gpio_ddr(/*assumed to be all outputs*/),
+    .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(),
     .sen(), .sclk(), .mosi(), .miso(),
     .misc_outs(), .misc_ins(32'h0), .leds(),
 

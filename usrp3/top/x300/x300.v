@@ -242,18 +242,6 @@ module x300
    wire [3:0]   sw_rst;
    wire [2:0]   led0, led1;
 
-   /////////////////////////////////////////////////////////////////////
-   //
-   // Debug logic on front panel GPIO pins
-   //
-   //////////////////////////////////////////////////////////////////////
-   wire     debug_txd, debug_rxd;
-
-   `ifdef DEBUG_UART
-   assign FrontPanelGpio[11] = debug_txd;
-   assign debug_rxd = FrontPanelGpio[10];
-   `endif
-
    ////////////////////////////////////////////////////////////////////
    //
    // Generate Bus Clock and PCIe Clocks.
@@ -1234,28 +1222,62 @@ module x300
 
 `endif //  `ifndef NO_DRAM_FIFOS
 
+   /////////////////////////////////////////////////////////////////////
+   //
+   // Daughterboard GPIO and Debug UART
+   //
+   //////////////////////////////////////////////////////////////////////
+
+   wire [31:0] db0_gpio_in, db0_gpio_out, db0_gpio_ddr;
+   wire [31:0] db1_gpio_in, db1_gpio_out, db1_gpio_ddr;
+   wire [31:0] fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
+   wire        debug_txd, debug_rxd;
+
+   gpio_atr_io #(.WIDTH(32)) gpio_atr_db0_inst (
+      .clk(radio_clk), .gpio_pins({DB0_TX_IO,DB0_RX_IO}),
+      .gpio_ddr(db0_gpio_ddr), .gpio_out(db0_gpio_out), .gpio_in(db0_gpio_in)
+   );
+
+   gpio_atr_io #(.WIDTH(32)) gpio_atr_db1_inst (
+      .clk(radio_clk), .gpio_pins({DB1_TX_IO,DB1_RX_IO}),
+      .gpio_ddr(db1_gpio_ddr), .gpio_out(db1_gpio_out), .gpio_in(db1_gpio_in)
+   );
+
+`ifdef DEBUG_UART
+   gpio_atr_io #(.WIDTH(10)) fp_gpio_atr_inst (
+      .clk(radio_clk), .gpio_pins(FrontPanelGpio[9:0]),
+      .gpio_ddr(fp_gpio_ddr[9:0]), .gpio_out(fp_gpio_out[9:0]), .gpio_in(fp_gpio_in[9:0])
+   );
+   assign FrontPanelGpio[11] = debug_txd;
+   assign debug_rxd = FrontPanelGpio[10];
+`else
+   gpio_atr_io #(.WIDTH(12)) fp_gpio_atr_inst (
+      .clk(radio_clk), .gpio_pins(FrontPanelGpio[11:0]),
+      .gpio_ddr(fp_gpio_ddr[11:0]), .gpio_out(fp_gpio_out[11:0]), .gpio_in(fp_gpio_in[11:0])
+   );
+   assign debug_rxd = 1'b0;
+`endif
+   assign fp_gpio_in[31:12] = 20'h0;
+
    ///////////////////////////////////////////////////////////////////////////////////
    //
    // X300 Core
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   x300_core x300_core
-     (
+   x300_core x300_core (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
-`ifdef DEBUG_UART
-      .fp_gpio(FrontPanelGpio[9:0]), // Discard upper unsued bits.
-`else
-      .fp_gpio(FrontPanelGpio[11:0]), // Discard upper unsued bits.
-      `endif
       // Radio0 signals
-      .rx0(rx0), .tx0(tx0), .db_gpio0({DB0_TX_IO,DB0_RX_IO}),
+      .rx0(rx0), .tx0(tx0), 
+      .db0_gpio_in(db0_gpio_in), .db0_gpio_out(db0_gpio_out), .db0_gpio_ddr(db0_gpio_ddr),
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .sen0(sen0), .sclk0(sclk0), .mosi0(mosi0), .miso0(miso0),
       .radio_led0(led0), .radio0_misc_out(radio0_misc_out), .radio0_misc_in(radio0_misc_in),
       .sync_dacs_radio0(sync_dacs_radio0),
       // Radio1 signals
-      .rx1(rx1), .tx1(tx1), .db_gpio1({DB1_TX_IO,DB1_RX_IO}),
+      .rx1(rx1), .tx1(tx1),
+      .db1_gpio_in(db1_gpio_in), .db1_gpio_out(db1_gpio_out), .db1_gpio_ddr(db1_gpio_ddr),
       .sen1(sen1), .sclk1(sclk1), .mosi1(mosi1), .miso1(miso1),
       .radio_led1(led1), .radio1_misc_out(radio1_misc_out), .radio1_misc_in(radio1_misc_in),
       .sync_dacs_radio1(sync_dacs_radio1),
@@ -1378,7 +1400,6 @@ module x300
       .ddr3_axi_rvalid           (s_axi_rvalid),
       .ddr3_axi_rready           (s_axi_rready),
 `endif //  `ifndef NO_DRAM_FIFOS
-
       // IoPort2 Message FIFOs
       .o_iop2_msg_tdata          (o_iop2_msg_tdata),
       .o_iop2_msg_tvalid         (o_iop2_msg_tvalid),

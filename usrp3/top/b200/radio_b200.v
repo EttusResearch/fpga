@@ -18,10 +18,11 @@ module radio_b200
     parameter DEVICE = "SPARTAN6"
   )
   (input radio_clk, input radio_rst,
-   input [31:0]  rx, output reg [31:0] tx,
-   inout [31:0]  fe_atr, input pps,
-   inout [9:0] 	 fp_gpio,
-   input 	 bus_clk, input bus_rst,
+   input [31:0] rx, output reg [31:0] tx,
+   input [31:0] fe_gpio_in, output [31:0] fe_gpio_out, output [31:0] fe_gpio_ddr,
+   input [9:0] fp_gpio_in, output [9:0] fp_gpio_out, output [9:0] fp_gpio_ddr,
+   input pps,
+   input bus_clk, input bus_rst,
    input [63:0]  tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
    output [63:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready,
    input [63:0]  ctrl_tdata, input ctrl_tlast, input ctrl_tvalid, output ctrl_tready,
@@ -254,11 +255,11 @@ endgenerate
    //The fe_atr pins driven by this module are always configured as outputs so default
    //the DDR (data direction register) to be all ones (outputs) so that the drive direction
    //these lines does not change during/after resets.
-   gpio_atr #(.BASE(SR_ATR), .WIDTH(32), .default_ddr(32'hFFFFFFFF)) gpio_atr
+   gpio_atr #(.BASE(SR_ATR), .WIDTH(32), .DEFAULT_DDR(32'hFFFFFFFF), .DEFAULT_IDLE(32'h00000000)) fe_gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
-      .gpio(fe_atr), .gpio_readback() );
+      .gpio_in(fe_gpio_in), .gpio_out(fe_gpio_out), .gpio_ddr(fe_gpio_ddr), .gpio_sw_rb() );
 
    generate
       if (FP_GPIO != 0) begin: add_fp_gpio
@@ -266,7 +267,7 @@ endgenerate
             (.clk(radio_clk),.reset(radio_rst),
             .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
             .rx(run_rx), .tx(run_tx),
-            .gpio(fp_gpio), .gpio_readback(fp_gpio_readback) );
+            .gpio_in(fp_gpio_in), .gpio_out(fp_gpio_out), .gpio_ddr(fp_gpio_ddr), .gpio_sw_rb(fp_gpio_readback));
       end
    endgenerate
 

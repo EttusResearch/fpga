@@ -17,7 +17,7 @@
 
 # Build USRP B2x0 design with UART as GPIO
 ifeq ($(UART_IS_GPIO),1)
-OPTIONS += B200_UART_IS_GPIO=1
+OPTIONS += UART_PINS_AS_GPIO=1
 endif
 
 print_report = \
@@ -75,7 +75,7 @@ B200:  ##Build USRP B200 design.
 
 B210:  ##Build USRP B210 design.
 	$(call pre_build,B210)
-	$(call ise_build,XC6SLX150,B210=1)
+	$(call ise_build,XC6SLX150,TARGET_B210=1)
 	$(call post_build,B210)
 
 clean: ##Clean up all build output.

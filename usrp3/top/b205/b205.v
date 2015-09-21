@@ -211,13 +211,19 @@ module b205 (
     ///////////////////////////////////////////////////////////////////////
     // frontend assignments
     ///////////////////////////////////////////////////////////////////////
-    wire [31:0] fe_atr;
-    assign {cTXDRV_PWEN, cFE_SEL_RX_RX2, cFE_SEL_TRX_TX, cFE_SEL_RX_TRX, cFE_SEL_TRX_RX} = fe_atr[7:3];
-    assign cLED_TRX_R = ~fe_atr[0];
-    assign cLED_TRX_G = ~fe_atr[1];
+    wire [7:0] fe_gpio_out;
+    reg [7:0] fe_gpio_reg;
+    
+    //Register in IOB
+    always @(posedge radio_clk)
+      fe_gpio_reg <= fe_gpio_out;
+    
+    assign {cTXDRV_PWEN, cFE_SEL_RX_RX2, cFE_SEL_TRX_TX, cFE_SEL_RX_TRX, cFE_SEL_TRX_RX} = fe_gpio_reg[7:3];
+    assign cLED_TRX_R = ~fe_gpio_reg[0];
+    assign cLED_TRX_G = ~fe_gpio_reg[1];
     assign cLED_TRX_B = 1'b1;
     assign cLED_RX2_R = 1'b1;
-    assign cLED_RX2_G = ~fe_atr[2];
+    assign cLED_RX2_G = ~fe_gpio_reg[2];
     assign cLED_RX2_B = 1'b1;
     assign cLED_S0 = ~ext_ref_locked;
     assign cLED_S1 = ~(ext_ref);
@@ -236,6 +242,7 @@ module b205 (
     ///////////////////////////////////////////////////////////////////////
     // b205 core
     ///////////////////////////////////////////////////////////////////////
+    wire [7:0] fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
     b205_core #(.EXTRA_BUFF_SIZE(12)) b205_core
     (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -247,8 +254,8 @@ module b205 (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
         .rx0(rx_data),
         .tx0(tx_data),
-        .fe_atr(fe_atr),
-        .fp_gpio(fp_gpio),
+        .fe_gpio_out(fe_gpio_out),
+        .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
         .ext_ref_is_pps(ext_ref_is_pps),
         .pps_ext(PPS_IN),
 
@@ -258,6 +265,11 @@ module b205 (
         .lock_signals(CAT_CTL_OUT[7:6]),
 
         .debug()
+    );
+
+    gpio_atr_io #(.WIDTH(8)) gpio_atr_io_inst (
+        .clk(radio_clk), .gpio_pins(fp_gpio),
+        .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
     );
 
     ///////////////////////////////////////////////////////////////////////

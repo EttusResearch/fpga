@@ -40,11 +40,8 @@ module b200_core
 
     input [31:0]  rx0, input [31:0] rx1,
     output [31:0] tx0, output [31:0] tx1,
-    inout [31:0]  fe_atr0,
-    inout [31:0]  fe_atr1,
-`ifdef B210
-    inout [7:0]   fp_gpio,
-`endif
+    output [7:0] fe0_gpio_out, output [7:0] fe1_gpio_out,
+    input [9:0] fp_gpio_in, output [9:0] fp_gpio_out, output [9:0] fp_gpio_ddr,
     input 	  pps_int, input pps_ext,
 
     ////////////////////////////////////////////////////////////////////
@@ -62,8 +59,10 @@ module b200_core
     ////////////////////////////////////////////////////////////////////
     // debug UART
     ////////////////////////////////////////////////////////////////////
-    inout 	  debug_txd, inout debug_rxd,
-    input 	  debug_scl, input debug_sda,
+`ifndef UART_PINS_AS_GPIO
+    output debug_txd, input debug_rxd,
+`endif
+    input debug_scl, input debug_sda,
 
     ////////////////////////////////////////////////////////////////////
     // fe lock signals
@@ -101,7 +100,7 @@ module b200_core
     // Generate an internal PPS signal
     wire int_pps;
     pps_generator #(.CLK_FREQ(100000000)) pps_gen
-    (.clk(bus_clk), .pps(int_pps));
+    (.clk(bus_clk), .reset(1'b0), .pps(int_pps));
 
     // Flop PPS signals into radio clock domain
     reg [1:0] 	 gpsdo_pps_del, ext_pps_del, int_pps_del;
@@ -291,15 +290,8 @@ module b200_core
      * Radio 0
      ******************************************************************/
    wire [63:0] radio0_debug;
-
-
-`ifndef B210
-   wire [7:0]  discard3;
-`endif
-
-`ifndef B200_UART_IS_GPIO
-   wire        discard1, discard2;
-`endif
+   wire [31:0] fe0_gpio_out32;
+   assign fe0_gpio_out = fe0_gpio_out32[7:0];
 
    radio_b200 #( 
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
@@ -312,37 +304,26 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps),
-`ifdef B210
-    `ifdef B200_UART_IS_GPIO
-        .fp_gpio({debug_rxd,debug_txd,fp_gpio}), // B210 no UART
-    `else
-        .fp_gpio({discard1,discard2,fp_gpio}), // B210 with UART
-    `endif
-`else
-    `ifdef B200_UART_IS_GPIO
-        .fp_gpio({debug_rxd,debug_txd,discard3}), // B200 no UART
-    `else
-        .fp_gpio({discard1,discard2,discard3}), // B200 with UART
-    `endif
-`endif // !`ifdef B210
+      .rx(rx0), .tx(tx0), .pps(pps),
+      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe0_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),  
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r0_tx_tdata), .tx_tlast(r0_tx_tlast), .tx_tvalid(r0_tx_tvalid), .tx_tready(r0_tx_tready),
       .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
       .ctrl_tdata(r0_ctrl_tdata), .ctrl_tlast(r0_ctrl_tlast),  .ctrl_tvalid(r0_ctrl_tvalid), .ctrl_tready(r0_ctrl_tready),
       .resp_tdata(r0_resp_tdata), .resp_tlast(r0_resp_tlast),  .resp_tvalid(r0_resp_tvalid), .resp_tready(r0_resp_tready),
-      
       .debug(radio0_debug)
-      );
+   );
    
     /*******************************************************************
      * Radio 1
      ******************************************************************/
-`ifdef B210 // B210 Has two radio instances.
+`ifdef TARGET_B210 // B210 Has two radio instances.
    assign      radio_st = 8'h2;
 
    wire [63:0] radio1_debug;
-
+   wire [31:0] fe1_gpio_out32;
+   assign fe1_gpio_out = fe1_gpio_out32[7:0];
 
    radio_b200 #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), 
@@ -355,21 +336,21 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps),
-
+      .rx(rx1), .tx(tx1), .pps(pps),
+      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe1_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
+      .fp_gpio_in(32'h00000000), .fp_gpio_out(), .fp_gpio_ddr(),  
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
       .rx_tdata(r1_rx_tdata), .rx_tlast(r1_rx_tlast),  .rx_tvalid(r1_rx_tvalid), .rx_tready(r1_rx_tready),
       .ctrl_tdata(r1_ctrl_tdata), .ctrl_tlast(r1_ctrl_tlast),  .ctrl_tvalid(r1_ctrl_tvalid), .ctrl_tready(r1_ctrl_tready),
       .resp_tdata(r1_resp_tdata), .resp_tlast(r1_resp_tlast),  .resp_tvalid(r1_resp_tvalid), .resp_tready(r1_resp_tready),
-
       .debug(radio1_debug)
-      );
+   );
 `else
     assign radio_st = 8'h1;
 
     //assign undriven outputs
-    assign fe_atr1 = 32'b0; //Always assumed to be outputs
+    assign fe1_gpio_out = 32'b0; //Always assumed to be outputs
     assign tx1 = 32'b0;
 
     //unused control signals -- leave in loopback
@@ -384,7 +365,7 @@ module b200_core
     assign r1_rx_tvalid = r1_tx_tvalid;
     assign r1_tx_tready = r1_tx_tready;
 
-`endif // !`ifdef B210
+`endif // !`ifdef TARGET_B210
 
    /*******************************************************************
     * Debug UART for FX3
@@ -409,25 +390,15 @@ module b200_core
       );
 
    // Nasty Hack to convert settings to wishbone crudely.
-   reg 	       wb_stb;
-   wire        wb_ack_o;
-
+   reg    wb_stb;
+   wire   wb_ack_o;
 
    always @(posedge bus_clk)
      wb_stb <= debug_stb ? 1 : ((wb_ack_o) ? 0 : wb_stb);
 
-
-
-   wire        debug_txd_out, debug_rxd_in;
- `ifndef B200_UART_IS_GPIO
-   assign debug_txd = debug_txd_out;
- `endif
-
-   assign debug_rxd_in = debug_rxd;
-
-
+`ifndef UART_PINS_AS_GPIO
    simple_uart debug_uart
-     (
+   (
       .clk_i(bus_clk),
       .rst_i(bus_rst),
       .we_i(wb_stb),
@@ -439,48 +410,12 @@ module b200_core
       .dat_o(),
       .rx_int_o(),
       .tx_int_o(),
-      .tx_o(debug_txd_out),
-      .rx_i(debug_rxd_in),
+      .tx_o(debug_txd),
+      .rx_i(debug_rxd),
       .baud_o()
-      );
-
-
-   //
-   // Debug
-   //
-/* -----\/----- EXCLUDED -----\/-----
-
-   wire [35:0] CONTROL0;
-
-   chipscope_ila_128 chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(bus_clk), // IN
-      .TRIG0(
-         {
-	  triggerA0,
-	  triggerB0,
-	  r0_rx_tlast,
-	  r0_rx_tvalid,
-	  r0_rx_tready,
-	  r1_rx_tlast,
-	  r1_rx_tvalid,
-	  r1_rx_tready,
-	  rx_tlast,
-	  rx_tvalid,
-	  rx_tready,
-	  r0_rx_tdata[15:0],
-	  r1_rx_tdata[15:0],
-	  rx_tdata[15:0]
-          }
-         ) // IN BUS [191:0]
-      );
-
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
- -----/\----- EXCLUDED -----/\----- */
-
+   );
+`else
+    assign wb_ack_o = 1'b0;
+`endif
 
 endmodule // b200_core
