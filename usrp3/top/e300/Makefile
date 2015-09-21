@@ -34,24 +34,24 @@ post_build = @\
 all: E310 E310_idle ##(Default target)
 
 E310: ##Build USRP E310 design.
-	$(call vivado_build,bin,xc7z020,)
+	$(call vivado_build,bin,xc7z020,RFNOC=1 E310=1)
 	$(call post_build,E310,)
 
 E310_idle: ##Build USRP E310 idle design.
-	$(call vivado_build,bin,xc7z020,E3X0_IDLE_IMAGE)
+	$(call vivado_build,bin,xc7z020,E3X0_IDLE_IMAGE=1)
 	$(call post_build,E310,_idle)
 
 E310_dram_test: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,bin,xc7z020,DRAM_TEST)
+	$(call vivado_build,bin,xc7z020,DRAM_TEST=1)
 	$(call post_build,E310,_dram_test)
 
 E310_RFNOC: ##Build USRP E310 with RFNoC enabled.
 	$(call vivado_build,bin,xc7z020,RFNOC=1 E310=1)
-	$(call post_build,E310,_RFNOC)
+	$(call post_build,E310_RFNOC,)
 
 E310_RFNOC_HLS: ##Build USRP E310 with RFNoC + Vivado HLS enabled.
 	$(call vivado_build,hls,xc7z020,RFNOC=1 E310=1 HLS=1)
-	$(call post_build,E310,_RFNOC_HLS)
+	$(call post_build,E310_RFNOC_HLS,)
 
 clean: ##Clean up all itarget build outputs.
 	@echo "Cleaning targets..."
@@ -72,4 +72,4 @@ help: ## Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI. 
 
-.PHONY: all clean cleanall E310 E310_idle help
+.PHONY: all clean cleanall help

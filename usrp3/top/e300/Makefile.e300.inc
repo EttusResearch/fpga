@@ -42,10 +42,10 @@ TOP_SRCS = e300_ps.v \
            e300.xdc \
            timing.xdc
 
-ifeq (,$(findstring E3X0_IDLE_IMAGE, $(EXTRA_DEFS)))
-TOP_SRCS += e300.v
-else
+ifdef E3X0_IDLE_IMAGE
 TOP_SRCS += e300_idle.v
+else
+TOP_SRCS += e300.v
 endif
 
 ifdef HLS

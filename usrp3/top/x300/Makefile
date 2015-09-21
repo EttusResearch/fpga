@@ -76,11 +76,11 @@ X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
 	$(call post_build,X300,XG)
 
 X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,bin,xc7k410t,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,bin,xc7k410t,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1)
 	$(call post_build,X310,HGS)
 
 X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,bin,xc7k325t,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,bin,xc7k325t,$(HYBRID_SRAM_DEFS) RFNOC=1 X300=1)
 	$(call post_build,X300,HGS)
 
 X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
