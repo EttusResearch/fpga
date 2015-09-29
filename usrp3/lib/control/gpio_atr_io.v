@@ -6,25 +6,30 @@
 module gpio_atr_io #(
   parameter WIDTH = 32
 ) (
-  input                   clk,
-  input      [WIDTH-1:0]  gpio_ddr,
-  input      [WIDTH-1:0]  gpio_out,
-  output reg [WIDTH-1:0]  gpio_in,
-  inout      [WIDTH-1:0]  gpio_pins
+  input               clk,
+  input  [WIDTH-1:0]  gpio_ddr,
+  input  [WIDTH-1:0]  gpio_out,
+  output [WIDTH-1:0]  gpio_in,
+  inout  [WIDTH-1:0]  gpio_pins
 );
 
-  reg [WIDTH-1:0] pins_reg, gpio_out_reg;
-
   //Instantiate registers in the IOB
-  always @(posedge clk)
-    gpio_in <= gpio_pins;
+  (* IOB = "true" *) reg [WIDTH-1:0] gpio_in_iob, gpio_out_iob;
+  always @(posedge clk) begin
+    gpio_in_iob   <= gpio_pins;
+    gpio_out_iob  <= gpio_out;
+  end
+  assign gpio_in = gpio_in_iob;
 
+  //Pipeline the data direction bus
+  reg [WIDTH-1:0] gpio_ddr_reg;
   always @(posedge clk)
-    gpio_out_reg <= gpio_out;
+    gpio_ddr_reg <= gpio_ddr;
 
+  //Tristate buffers
   genvar i;
-  generate for (i=0; i<WIDTH; i=i+1) begin: io_gen
-    assign gpio_pins[i] = gpio_ddr[i] ? gpio_out_reg[i] : 1'bz;
+  generate for (i=0; i<WIDTH; i=i+1) begin: io_tristate_gen
+    assign gpio_pins[i] = gpio_ddr_reg[i] ? gpio_out_iob[i] : 1'bz;
   end endgenerate
 
 endmodule // gpio_atr_io
