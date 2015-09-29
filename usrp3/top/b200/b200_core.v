@@ -59,9 +59,7 @@ module b200_core
     ////////////////////////////////////////////////////////////////////
     // debug UART
     ////////////////////////////////////////////////////////////////////
-`ifndef UART_PINS_AS_GPIO
     output debug_txd, input debug_rxd,
-`endif
     input debug_scl, input debug_sda,
 
     ////////////////////////////////////////////////////////////////////
@@ -396,7 +394,6 @@ module b200_core
    always @(posedge bus_clk)
      wb_stb <= debug_stb ? 1 : ((wb_ack_o) ? 0 : wb_stb);
 
-`ifndef UART_PINS_AS_GPIO
    simple_uart debug_uart
    (
       .clk_i(bus_clk),
@@ -414,8 +411,5 @@ module b200_core
       .rx_i(debug_rxd),
       .baud_o()
    );
-`else
-    assign wb_ack_o = 1'b0;
-`endif
 
 endmodule // b200_core

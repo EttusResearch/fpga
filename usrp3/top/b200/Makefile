@@ -15,9 +15,9 @@
 ## build/usrp_<product>_fpga.syr:    Xilinx system report
 ## build/usrp_<product>_fpga.twr:    Xilinx timing report
 
-# Build USRP B2x0 design with UART as GPIO
-ifeq ($(UART_IS_GPIO),1)
-OPTIONS += UART_PINS_AS_GPIO=1
+# Build USRP B2x0 design with a debug UART on J400
+ifeq ($(DEBUG_UART),1)
+OPTIONS += DEBUG_UART=1
 endif
 
 print_report = \
@@ -92,6 +92,6 @@ help: ## Show this help message.
 ##                 Useful for use with the ISE GUI.
 ##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
 ##                 Requires the project in build-*_* to be built.
-##UART_IS_GPIO=1   Build USRP B2x0 design with the UART pins as GPIO
+##DEBUG_UART=1     Build USRP B2x0 design with a debug UART on J400
 
 .PHONY: all clean help

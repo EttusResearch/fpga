@@ -299,36 +299,38 @@ module b200 (
       .rb_misc({31'b0, pll_lock}), .misc_outs(misc_outs),
 
       .debug_scl(GPIF_CTL8), .debug_sda(GPIF_CTL6),
-`ifndef UART_PINS_AS_GPIO
+`ifdef DEBUG_UART
       .debug_txd(FPGA_TXD0), .debug_rxd(FPGA_RXD0),
+`else
+      .debug_txd(), .debug_rxd(1'b0),
 `endif
 
       .lock_signals(codec_ctrl_out[7:6]),
       .debug()
    );
 
-`ifdef (TARGET_B210)
-   `ifdef (UART_PINS_AS_GPIO)
-      gpio_atr_io #(.WIDTH(10)) gpio_atr_io_inst (  // B210 no UART
-         .clk(radio_clk), .gpio_pins({FPGA_RXD0, FPGA_TXD0, fp_gpio}),
-         .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
-      );
-   `else
+`ifdef TARGET_B210
+   `ifdef DEBUG_UART
       gpio_atr_io #(.WIDTH(8)) gpio_atr_io_inst (   // B210 with UART
          .clk(radio_clk), .gpio_pins(fp_gpio),
          .gpio_ddr(fp_gpio_ddr[7:0]), .gpio_out(fp_gpio_out[7:0]), .gpio_in(fp_gpio_in[7:0])
       );
       assign fp_gpio_in[9:8] = 2'b00;
+   `else
+      gpio_atr_io #(.WIDTH(10)) gpio_atr_io_inst (  // B210 no UART
+         .clk(radio_clk), .gpio_pins({FPGA_RXD0, FPGA_TXD0, fp_gpio}),
+         .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
+      );
    `endif
 `else
-   `ifdef (UART_PINS_AS_GPIO)
+   `ifdef DEBUG_UART
+      assign fp_gpio_in = 10'h000;                  // B200 with UART
+   `else
       gpio_atr_io #(.WIDTH(2)) gpio_atr_io_inst (   // B200 no UART
          .clk(radio_clk), .gpio_pins({FPGA_RXD0, FPGA_TXD0}),
          .gpio_ddr(fp_gpio_ddr[9:8]), .gpio_out(fp_gpio_out[9:8]), .gpio_in(fp_gpio_in[9:8])
       );
       assign fp_gpio_in[7:0] = 8'h00;
-   `else
-      assign fp_gpio_in = 10'h000;                  // B200 with UART
    `endif
 `endif
 
