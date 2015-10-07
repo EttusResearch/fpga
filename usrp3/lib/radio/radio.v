@@ -258,7 +258,7 @@ module radio #(
       .gpio(leds), .gpio_readback() );
 
    timekeeper #(.BASE(SR_TIME)) timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps),
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(1'b0),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 

@@ -19,7 +19,7 @@ module radio_b200
   )
   (input radio_clk, input radio_rst,
    input [31:0]  rx, output reg [31:0] tx,
-   inout [31:0]  fe_atr, input pps,
+   inout [31:0]  fe_atr, input pps, input time_sync,
    inout [9:0] 	 fp_gpio,
    input 	 bus_clk, input bus_rst,
    input [63:0]  tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready,
@@ -145,7 +145,7 @@ module radio_b200
 
    wire [63:0] vita_time, vita_time_lastpps;
    timekeeper #(.BASE(SR_TIME)) timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps),
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
@@ -471,11 +471,11 @@ endgenerate
       .o_tdata(rmux_tdata_r), .o_tlast(rmux_tlast_r), .o_tvalid(rmux_tvalid_r), .o_tready(rmux_tready_r));
 
 
-  
+
 
    /*******************************************************************
     * Debug only logic below here.
     ******************************************************************/
  assign debug = 0;
-   
+
 endmodule // radio_b200

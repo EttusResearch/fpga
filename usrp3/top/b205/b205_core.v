@@ -66,7 +66,7 @@ module b205_core
     localparam SR_CORE_COMPAT    = 8'd24;
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
-    localparam SR_CORE_PPS_SEL   = 8'd48;
+    localparam SR_CORE_SYNC      = 8'd48;
     localparam COMPAT_MAJOR      = 16'h0002;
     localparam COMPAT_MINOR      = 16'h0000;
 
@@ -154,6 +154,8 @@ module b205_core
 
     wire [63:0] l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
+    wire time_sync;
+
     axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -184,10 +186,10 @@ module b205_core
         .out(rb_addr), .changed()
     );
 
-    setting_reg #(.my_addr(SR_CORE_PPS_SEL), .awidth(8), .width(2)) sr_pps_sel
+    setting_reg #(.my_addr(SR_CORE_SYNC), .awidth(8), .width(2)) sr_sync
     (
         .clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
-        .out(pps_select), .changed()
+        .out({time_sync,pps_select}), .changed()
     );
 
     simple_spi_core #(.BASE(SR_CORE_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) misc_spi
@@ -224,7 +226,7 @@ module b205_core
         .DEVICE("SPARTAN6")
     ) radio (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx(rx0), .tx(tx0), .fe_atr(fe_atr), .pps(pps),
+        .rx(rx0), .tx(tx0), .fe_atr(fe_atr), .pps(pps), .time_sync(time_sync),
         .fp_gpio({fpgpio_discard,fp_gpio}),
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),

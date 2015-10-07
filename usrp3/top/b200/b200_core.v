@@ -80,7 +80,7 @@ module b200_core
     localparam SR_CORE_COMPAT    = 8'd24;
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
-    localparam SR_CORE_PPS_SEL   = 8'd48;
+    localparam SR_CORE_SYNC      = 8'd48;
     localparam COMPAT_MAJOR      = 16'h000B;
     localparam COMPAT_MINOR      = 16'h0000;
 
@@ -193,6 +193,8 @@ module b200_core
 
     wire [63:0] l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
+    wire time_sync;
+
     axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -221,9 +223,9 @@ module b200_core
      (.clk(bus_clk), .rst(1'b0/*keep*/), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(gpsdo_st), .changed());
 
-    setting_reg #(.my_addr(SR_CORE_PPS_SEL), .awidth(8), .width(2)) sr_pps_sel
+    setting_reg #(.my_addr(SR_CORE_SYNC), .awidth(8), .width(3)) sr_sync
      (.clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(pps_select), .changed());
+      .out({time_sync,pps_select}), .changed());
 
     simple_spi_core #(.BASE(SR_CORE_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) misc_spi
      (.clock(bus_clk), .reset(bus_rst),
@@ -301,7 +303,7 @@ module b200_core
    wire        discard1, discard2;
 `endif
 
-   radio_b200 #( 
+   radio_b200 #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
       .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .FP_GPIO(1),
@@ -312,7 +314,7 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps),
+      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps), .time_sync(time_sync),
 `ifdef B210
     `ifdef B200_UART_IS_GPIO
         .fp_gpio({debug_rxd,debug_txd,fp_gpio}), // B210 no UART
@@ -331,10 +333,10 @@ module b200_core
       .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
       .ctrl_tdata(r0_ctrl_tdata), .ctrl_tlast(r0_ctrl_tlast),  .ctrl_tvalid(r0_ctrl_tvalid), .ctrl_tready(r0_ctrl_tready),
       .resp_tdata(r0_resp_tdata), .resp_tlast(r0_resp_tlast),  .resp_tvalid(r0_resp_tvalid), .resp_tready(r0_resp_tready),
-      
+
       .debug(radio0_debug)
       );
-   
+
     /*******************************************************************
      * Radio 1
      ******************************************************************/
@@ -345,7 +347,7 @@ module b200_core
 
 
    radio_b200 #(
-      .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), 
+      .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
       .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .FP_GPIO(0),
       .NEW_HB_INTERP(1),
@@ -355,7 +357,7 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps),
+      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps), .time_sync(time_sync),
 
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
