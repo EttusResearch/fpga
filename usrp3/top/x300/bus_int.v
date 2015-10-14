@@ -106,7 +106,6 @@ module bus_int
     input [31:0] dram_fifo1_rb_data,
 
    // Debug
-    input [3:0] fifo_flags,
     output [31:0] debug0,
     output [31:0] debug1,
     output [127:0] debug2);
@@ -141,7 +140,7 @@ module bus_int
    localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
 
-   localparam COMPAT_MAJOR    = 16'h000F;
+   localparam COMPAT_MAJOR    = 16'h0010;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
@@ -447,9 +446,6 @@ module bus_int
    assign SFPP1_RS0 = sfpp1_ctrl[0] ? 1'b0 : 1'bz;
    assign SFPP1_RS1 = sfpp1_ctrl[1] ? 1'b0 : 1'bz;
 
-
-   //assign debug = { 9'b0, set_stb, spi_ready, i2c_ready, sen, sclk, mosi, miso, set_addr[7:0], state[7:0]};
-
    // ////////////////////////////////////////////////////////////////
    // ETH interfaces
 
@@ -547,82 +543,4 @@ module bus_int
       .rb_addr(rb_addr[`LOG2(CROSSBAR_IN)+`LOG2(CROSSBAR_OUT)-1:0]), .rb_data(rb_data_crossbar)
       );
 
-/*
-assign debug2 = {
-        pcii_tdata[31:0],                                                                                   //[127:92]
-        pcio_tdata[31:0],                                                                                   //[91:64]
-        local_addr[5:0],                                                                                    //[63:58]
-        set_stb_xb,                                                                                         //[57]
-        set_addr_xb,                                                                                        //[56:48]
-        pcii_tvalid,ce2i_tvalid,ce1i_tvalid,ce0i_tvalid,r1i_tvalid,r0i_tvalid,e2v1_tvalid,e2v0_tvalid,      //[47:40]
-        pcii_tready,ce2i_tready,ce1i_tready,ce0i_tready,r1i_tready,r0i_tready,e2v1_tready,e2v0_tready,      //[39:32]
-        pcii_tlast,ce2i_tlast,ce1i_tlast,ce0i_tlast,r1i_tlast,r0i_tlast,e2v1_tlast,e2v0_tlast,              //[31:24]
-        pcio_tvalid,ce2o_tvalid,ce1o_tvalid,ce0o_tvalid,r1o_tvalid,r0o_tvalid,v2e1_tvalid,v2e0_tvalid,      //[23:16]
-        pcio_tready,ce2o_tready,ce1o_tready,ce0o_tready,r1o_tready,r0o_tready,v2e1_tready,v2e0_tready,      //[15:8]
-        pcio_tlast,ce2o_tlast,ce1o_tlast,ce0o_tlast,r1o_tlast,r0o_tlast,v2e1_tlast,v2e0_tlast               //[7:0]
-	 };
-*/
-   //
-   // This next section adds the ability to send messages and data via chipscope and the setting bus.
-   // If chipscope is used elsewhere in the hierarchy then this must be commented.
-   //
-/* -----\/----- EXCLUDED -----\/-----
-   wire [35:0] 		 CONTROL0;
-   (* keep = "true", max_fanout = 10 *)   reg [31:0] 		 set_data_debug;
-   (* keep = "true", max_fanout = 10 *)   reg [7:0] 		 set_addr_debug;
-   (* keep = "true", max_fanout = 10 *)   reg 			 set_stb_debug;
-
-   always @(posedge clk) begin
-      set_data_debug = set_data;
-      set_addr_debug = set_addr;
-      set_stb_debug = set_stb;
-   end
-
-   chipscope_icon chipscope_icon_i0
-     (
-      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
-      );
-
-   chipscope_ila_64 chipscope_ila_i0
-     (
-      .CONTROL(CONTROL0), // INOUT BUS [35:0]
-      .CLK(clk), // IN
-      .TRIG0(
-	     {
-	      set_stb_debug,       // [40]
-	      set_addr_debug[7:0], // [39:32]
-	      set_data_debug[31:0] // [31:0]
-	      })
-      );
- -----/\----- EXCLUDED -----/\----- */
-
-
-   // Fixed connections
-/* -----\/----- EXCLUDED -----\/-----
-   assign { r0o_tvalid, r0o_tlast, r0o_tdata } = { e2v0_tvalid, e2v0_tlast, e2v0_tdata };
-   assign e2v0_tready = r0o_tready;
-
-   assign { v2e0_tvalid, v2e0_tlast, v2e0_tdata } = { r0i_tvalid, r0i_tlast, r0i_tdata };
-   assign r0i_tready = v2e0_tready;
- -----/\----- EXCLUDED -----/\----- */
-
-/*
-    assign debug2 = {
-        eth0_tx_tvalid, eth0_tx_tready,
-        eth0_rx_tvalid, eth0_rx_tready,
-        e2v0_tvalid, e2v0_tready,
-        v2e0_tvalid, v2e0_tready,
-
-        e01_tvalid, e01_tready,
-        e10_tvalid, e10_tready,
-        zpui0_tvalid, zpui0_tready,
-        zpuo0_tvalid, zpuo0_tready,
-
-        zpuo_tvalid, zpuo_tready,
-        zpui_tvalid, zpui_tready,
-        4'b0,
-
-        8'b0
-    };
-*/
 endmodule // bus_int

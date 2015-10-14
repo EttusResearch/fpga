@@ -54,7 +54,7 @@ module axi_extract_tlast
 	checksum <= 0;
 	old_checksum <= 0;
      end else if (i_tready && i_tvalid && (state == IDLE)) begin
-	checksum <= checksum + i_tdata[31:0] + i_tdata[63:32];
+	checksum <= checksum ^ i_tdata[31:0] ^ i_tdata[63:32];
 	old_checksum <= checksum;
      end
 

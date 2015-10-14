@@ -6,17 +6,16 @@
 // 2) Never cross a 4KByte address boundry within a single transaction, this is an AXI4 rule.
 // 3) 2^SIZE must be greater than 4KB so that the 4KByte page protection also deals with FIFO wrap corner case.
 //
-module axi_dram_fifo 
+module axi_dma_fifo 
 #(
-   parameter BASE     = 0,    //Base address of the FIFO in AXI memory space
-   parameter SIZE     = 16,   //log2 of size of FIFO buffer in bytes. i.e 13 for 8KBytes which is 1kx64
-   parameter TIMEOUT  = 64,   //Timeout for issuing smaller than optimal bursts
-   parameter SR_BASE  = 0,    //Base address for settings registers
-   parameter EXT_BIST = 0    //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+   parameter DEFAULT_BASE     = 30'h00000000,
+   parameter DEFAULT_MASK     = 30'hFF000000,
+   parameter DEFAULT_TIMEOUT  = 12'd256,
+   parameter SR_BASE          = 0,            //Base address for settings registers
+   parameter EXT_BIST         = 0             //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
 ) (
    input bus_clk,
    input bus_reset, 
-   input clear,
    input dram_clk,
    input dram_reset,
    //
@@ -108,15 +107,21 @@ module axi_dram_fifo
    //
    // We are only solving for width 64bits here, since it's our standard CHDR quanta
    //
-   localparam WIDTH=64;
+   localparam DWIDTH = 64;
+   localparam AWIDTH = 30;
 
    //
    // Settings and Readback
    //
-   wire [2:0]   rb_addr;
-   wire         supress_enable_bclk;
-   wire [15:0]  supress_threshold_bclk;
-   
+   wire [2:0]         rb_addr;
+   wire               clear_bclk;
+   wire               supress_enable_bclk;
+   wire [15:0]        supress_threshold_bclk;
+   wire [11:0]        timeout_bclk;
+   wire [AWIDTH-1:0]  fifo_base_addr_bclk;
+   wire [AWIDTH-1:0]  fifo_addr_mask_bclk;
+   wire [1:0]         ctrl_reserved;
+
    wire [31:0]  rb_fifo_status;
    wire [3:0]   rb_bist_status;
    wire [95:0]  rb_bist_bw_ratio;
@@ -126,15 +131,48 @@ module axi_dram_fifo
    localparam RB_BIST_XFER_CNT  = 3'd2;
    localparam RB_BIST_CYC_CNT   = 3'd3;
 
-   setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'h0)) sr_readback
+   // SETTING: Readback Address Register
+   // Fields:
+   // - [2:0]  : Address for readback register
+   //            - 0 = RB_FIFO_STATUS
+   //            - 1 = RB_BIST_STATUS
+   //            - 2 = RB_BIST_XFER_CNT
+   //            - 3 = RB_BIST_CYC_CNT
+   //            - rest reserved
+   setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'b000)) sr_readback
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(rb_addr));
 
-   setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(17), .at_reset(17'h0)) sr_suppress
+   // SETTING: FIFO Control Register
+   // Fields:
+   // - [0]     : Clear FIFO and discard stored data
+   // - [1]     : Enable read suppression to prioritize writes
+   // - [3:2]   : Reserved
+   // - [15:4]  : Timeout (in memory clock beats) for issuing smaller than optimal bursts
+   // - [31:16] : Read suppression threshold in number of words
+   setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(32), .at_reset({16'h0, DEFAULT_TIMEOUT[11:0], 2'b00, 1'b0, 1'b1})) sr_fifo_ctrl
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({supress_enable_bclk, supress_threshold_bclk}));
+      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_bclk}));
+
+   // SETTING: Base Address for FIFO in memory space
+   // Fields:
+   // - [29:0]  : Base address
+   setting_reg #(.my_addr(SR_BASE + 2), .awidth(8), .width(AWIDTH), .at_reset(DEFAULT_BASE)) sr_fifo_base_addr
+     (.clk(bus_clk), .rst(bus_reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(fifo_base_addr_bclk));
+
+   // SETTING: Address Mask for FIFO in memory space. The mask is ANDed with the base address to define
+   //          a unique address for this FIFO. A zero in the mask signifies that the DRAM FIFO can
+   //          utilize the address bit internally for maintaining FIFO data
+   // Fields:
+   // - [29:0]  : Address mask
+   setting_reg #(.my_addr(SR_BASE + 3), .awidth(8), .width(AWIDTH), .at_reset(DEFAULT_MASK)) sr_fifo_addr_mask
+     (.clk(bus_clk), .rst(bus_reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(fifo_addr_mask_bclk));
 
    always @(*) begin
       case(rb_addr)
@@ -149,19 +187,30 @@ module axi_dram_fifo
    //
    // Synchronize settings register values to dram_clk
    //
-   wire         supress_enable;
-   wire [15:0]  supress_threshold;
+   wire clear;
+   synchronizer #(.INITIAL_VAL(1'b1)) clear_sync_inst (.clk(dram_clk), .rst(1'b0), .in(clear_bclk), .out(clear));
 
-   //All bits in the bus can be treated as asynchronous
-   synchronizer #(.INITIAL_VAL(1'b0)) sync_suppress_en (
-      .clk(dram_clk), .rst(1'b0 /* no reset */), .in(supress_enable_bclk), .out(supress_enable));
-   genvar i;
-   generate
-   for (i=0; i<16; i=i+1) begin: suppress_synchronizer_gen
-      synchronizer #(.INITIAL_VAL(1'b0)) sync_suppress (
-         .clk(dram_clk), .rst(1'b0 /* no reset */), .in(supress_threshold_bclk[i]), .out(supress_threshold[i]));
-   end
-   endgenerate
+   wire               set_suppress_en;
+   wire [15:0]        set_supress_threshold;
+   wire [11:0]        set_timeout;
+   wire [AWIDTH-1:0]  set_fifo_base_addr, set_fifo_addr_mask, set_fifo_addr_mask_bar;
+
+   wire [(72-AWIDTH-29-1):0]  set_sync_discard0;
+   wire [(72-(2*AWIDTH)-1):0] set_sync_discard1;
+   fifo_short_2clk set_sync_fifo0(
+      .rst(bus_reset),
+      .wr_clk(bus_clk), .din({{(72-AWIDTH-29){1'b0}}, timeout_bclk, supress_enable_bclk, supress_threshold_bclk, fifo_base_addr_bclk}),
+      .wr_en(1'b1), .full(), .wr_data_count(),
+      .rd_clk(dram_clk), .dout({set_sync_discard0, set_timeout, set_suppress_en, set_supress_threshold, set_fifo_base_addr}),
+      .rd_en(1'b1), .empty(), .rd_data_count()
+   );
+   fifo_short_2clk set_sync_fifo1(
+      .rst(bus_reset),
+      .wr_clk(bus_clk), .din({{(72-(2*AWIDTH)){1'b0}}, ~fifo_addr_mask_bclk, fifo_addr_mask_bclk}),
+      .wr_en(1'b1), .full(), .wr_data_count(),
+      .rd_clk(dram_clk), .dout({set_sync_discard1, set_fifo_addr_mask_bar, set_fifo_addr_mask}),
+      .rd_en(1'b1), .empty(), .rd_data_count()
+   );
 
    //
    // Input side declarations
@@ -178,7 +227,7 @@ module axi_dram_fifo
    reg         input_timeout_triggered;
    reg         input_timeout_reset;
    reg [8:0]   input_timeout_count;
-   reg [31:0]  write_addr;
+   reg [AWIDTH-1:0]  write_addr;
    reg         write_ctrl_valid;
    wire        write_ctrl_ready;
    reg [7:0]   write_count;
@@ -202,7 +251,7 @@ module axi_dram_fifo
    reg         output_timeout_triggered;
    reg         output_timeout_reset;
    reg [8:0]   output_timeout_count;
-   reg [31:0]  read_addr;
+   reg [AWIDTH-1:0]  read_addr;
    reg         read_ctrl_valid;
    wire        read_ctrl_ready;
    reg [7:0]   read_count; 
@@ -212,46 +261,53 @@ module axi_dram_fifo
    wire        read_data_ready;
    
    // Track main FIFO active size.
-   reg [SIZE-3:0] space, occupied;
+   reg [AWIDTH-3:0] space, occupied;
    wire [11:0]    input_page_boundry, output_page_boundry;
 
    // Assign FIFO status bits
    wire [71:0] status_out_bclk;
    fifo_short_2clk status_fifo_2clk(
       .rst(bus_reset),
-      .wr_clk(dram_clk), .din({{(72-(SIZE-2)){1'b0}}, occupied}),
+      .wr_clk(dram_clk), .din({{(72-(AWIDTH-2)){1'b0}}, occupied}),
       .wr_en(1'b1), .full(), .wr_data_count(),
       .rd_clk(bus_clk), .dout(status_out_bclk),
       .rd_en(1'b1), .empty(), .rd_data_count()
    );
-   assign rb_fifo_status[31]       = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
-   assign rb_fifo_status[30:27]    = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
-   assign rb_fifo_status[SIZE-3:0] = status_out_bclk[SIZE-3:0];   //FIFO fullness count (max 27 bits = 1GiB)
+   assign rb_fifo_status[31]         = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
+   assign rb_fifo_status[30:27]      = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
+   assign rb_fifo_status[AWIDTH-4:0] = status_out_bclk[AWIDTH-4:0];   //FIFO fullness count in 64bit words (max 27 bits = 1GiB)
 
    ///////////////////////////////////////////////////////////////////////////////
    // Inline BIST for production testing
    //
+   wire       i_tready_int;
 
-   wire [WIDTH-1:0] i_tdata_fifo;
+   wire [DWIDTH-1:0] i_tdata_fifo;
    wire       i_tvalid_fifo, i_tready_fifo, i_tlast_fifo;
 
-   wire [WIDTH-1:0] i_tdata_bist;
+   wire [DWIDTH-1:0] i_tdata_bist;
    wire       i_tvalid_bist, i_tready_bist, i_tlast_bist;
 
-   wire [WIDTH-1:0] o_tdata_fifo;
+   wire       o_tvalid_int;
+
+   wire [DWIDTH-1:0] o_tdata_fifo;
    wire       o_tvalid_fifo, o_tready_fifo, o_tlast_fifo;
 
-   wire [WIDTH-1:0] o_tdata_bist;
+   wire [DWIDTH-1:0] o_tdata_bist;
    wire       o_tvalid_bist, o_tready_bist, o_tlast_bist;
 
-   axi_mux4 #(.PRIO(1), .WIDTH(64), .BUFFER(1)) axi_mux (
+   wire [DWIDTH-1:0] o_tdata_gate;
+   wire       o_tvalid_gate, o_tready_gate, o_tlast_gate;
+
+   axi_mux4 #(.PRIO(1), .WIDTH(DWIDTH), .BUFFER(1)) axi_mux (
       .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
-      .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready),
+      .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready_int),
       .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist), .i1_tready(i_tready_bist),
-      .i2_tdata(64'h0), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
-      .i3_tdata(64'h0), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
+      .i2_tdata({DWIDTH{1'b0}}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
+      .i3_tdata({DWIDTH{1'b0}}), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(i_tdata_fifo), .o_tlast(i_tlast_fifo), .o_tvalid(i_tvalid_fifo), .o_tready(i_tready_fifo)
    );
+   assign i_tready = i_tready_int & (~clear_bclk);
 
    wire       bist_running, bist_done;
    wire [1:0] bist_error;
@@ -270,33 +326,42 @@ module axi_dram_fifo
    );
    assign rb_bist_status = {bist_error, bist_done, bist_running};
 
-   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64)) axi_demux(
+   axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(DWIDTH)) axi_demux(
       .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
       .header(), .dest({1'b0, bist_running}),
       .i_tdata(o_tdata_fifo), .i_tlast(o_tlast_fifo), .i_tvalid(o_tvalid_fifo), .i_tready(o_tready_fifo),
-      .o0_tdata(o_tdata), .o0_tlast(o_tlast), .o0_tvalid(o_tvalid), .o0_tready(o_tready),
+      .o0_tdata(o_tdata_gate), .o0_tlast(o_tlast_gate), .o0_tvalid(o_tvalid_gate), .o0_tready(o_tready_gate),
       .o1_tdata(o_tdata_bist), .o1_tlast(o_tlast_bist), .o1_tvalid(o_tvalid_bist), .o1_tready(o_tready_bist),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b0),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b0)
    );
 
+   //Insert package gate before output to absorb any intra-packet bubble cycles
+   axi_packet_gate #(.WIDTH(DWIDTH), .SIZE(11)) out_pkt_gate (
+      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
+      .i_terror(1'b0),
+      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid_int), .o_tready(o_tready | clear_bclk)
+   );
+   assign o_tvalid = o_tvalid_int & (~clear_bclk);
+
    //
    // Buffer input in FIFO's. Embeded tlast signal using ESCape code.
    //
 
-   wire [WIDTH-1:0] i_tdata_i0;
+   wire [DWIDTH-1:0] i_tdata_i0;
    wire             i_tvalid_i0, i_tready_i0, i_tlast_i0;
  
-   wire [WIDTH-1:0] i_tdata_i1;
+   wire [DWIDTH-1:0] i_tdata_i1;
    wire             i_tvalid_i1, i_tready_i1, i_tlast_i1;
 
-   wire [WIDTH-1:0] i_tdata_i2;
+   wire [DWIDTH-1:0] i_tdata_i2;
    wire             i_tvalid_i2, i_tready_i2;
 
-   wire [WIDTH-1:0] i_tdata_i3;
+   wire [DWIDTH-1:0] i_tdata_i3;
    wire             i_tvalid_i3, i_tready_i3;
 
-   wire [WIDTH-1:0] i_tdata_input;
+   wire [DWIDTH-1:0] i_tdata_input;
    wire             i_tvalid_input, i_tready_input;
    wire [15:0]      space_input, occupied_input;
    reg [15:0]       space_input_reg;
@@ -312,8 +377,8 @@ module axi_dram_fifo
    assign       read_in = i_tvalid_i0 & i_tready_i0;
    wire [6:0]   discard_i0;
    
-   fifo_short_2clk fifo_short_2clk_i0
-     (.rst(bus_reset),
+   fifo_short_2clk fifo_short_2clk_i0 (
+      .rst(bus_reset),
       .wr_clk(bus_clk),
       .din({7'h0,i_tlast_fifo,i_tdata_fifo}), // input [71 : 0] din
       .wr_en(write_in), // input wr_en
@@ -325,10 +390,9 @@ module axi_dram_fifo
       .rd_en(read_in), // input rd_en
       .empty(empty_in), // output empty
       .rd_data_count()  // output [9 : 0] rd_data_count
-      );
+   );
 
-   axi_fifo_flop #(.WIDTH(WIDTH+1)) input_pipe_i0
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH+1)) input_pipe_i0 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -340,10 +404,9 @@ module axi_dram_fifo
       .o_tdata({i_tlast_i1, i_tdata_i1}), 
       .o_tvalid(i_tvalid_i1), 
       .o_tready(i_tready_i1)
-      );
+   );
 
-   axi_embed_tlast axi_embed_tlast_i
-     (
+   axi_embed_tlast axi_embed_tlast_i (
       .clk(dram_clk),
       .reset(dram_reset),
       .clear(clear),
@@ -356,10 +419,9 @@ module axi_dram_fifo
       .o_tdata(i_tdata_i2),
       .o_tvalid(i_tvalid_i2),
       .o_tready(i_tready_i2)
-      );
+   );
 
-   axi_fifo_flop #(.WIDTH(WIDTH)) input_pipe_i1
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH)) input_pipe_i1 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -371,10 +433,9 @@ module axi_dram_fifo
       .o_tdata(i_tdata_i3), 
       .o_tvalid(i_tvalid_i3), 
       .o_tready(i_tready_i3)
-      );
- 
-   axi_fifo #(.WIDTH(WIDTH),.SIZE(12)) fifo_i1
-     (
+   );
+
+   axi_fifo #(.WIDTH(DWIDTH),.SIZE(10)) fifo_i1 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -389,53 +450,50 @@ module axi_dram_fifo
       //
       .space(space_input), 
       .occupied(occupied_input)
-      );
+   );
 
    //
    // Monitor occupied_input to deduce when DRAM FIFO is running short of bandwidth and there is a danger of backpressure
    // passing upstream of the DRAM FIFO.
    // In this situation supress read requests to the DRAM FIFO so that more bandwidth is available to writes.
    //
-
-   
    always @(posedge dram_clk) 
-     begin
-	space_input_reg <= space_input;
-	if ((space_input_reg < supress_threshold[15:0])  && supress_enable)
-	  supress_reads <= 1'b1;
-	else 
-	  supress_reads <= 1'b0;
-     end
+      begin
+         space_input_reg <= space_input;
+         if ((space_input_reg < set_supress_threshold[15:0])  && set_suppress_en)
+            supress_reads <= 1'b1;
+         else 
+            supress_reads <= 1'b0;
+      end
 
    //
    // Buffer output in 32entry FIFO's. Extract embeded tlast signal.
    //
-   wire [WIDTH-1:0] o_tdata_output;
+   wire [DWIDTH-1:0] o_tdata_output;
    wire             o_tvalid_output, o_tready_output;
    wire [15:0]      space_output, occupied_output;
 
-   wire [WIDTH-1:0] o_tdata_i0;
+   wire [DWIDTH-1:0] o_tdata_i0;
    wire             o_tvalid_i0, o_tready_i0;
    
-   wire [WIDTH-1:0] o_tdata_i1;
+   wire [DWIDTH-1:0] o_tdata_i1;
    wire             o_tvalid_i1, o_tready_i1;
    
-   wire [WIDTH-1:0] o_tdata_i2;
+   wire [DWIDTH-1:0] o_tdata_i2;
    wire             o_tvalid_i2, o_tready_i2;
    
-   wire [WIDTH-1:0] o_tdata_i3;
+   wire [DWIDTH-1:0] o_tdata_i3;
    wire             o_tvalid_i3, o_tready_i3;
    
-   wire [WIDTH-1:0] o_tdata_i4;
+   wire [DWIDTH-1:0] o_tdata_i4;
    wire             o_tvalid_i4, o_tready_i4, o_tlast_i4;
 
-   wire [WIDTH-1:0] o_tdata_i5;
+   wire [DWIDTH-1:0] o_tdata_i5;
    wire             o_tvalid_i5, o_tready_i5, o_tlast_i5;
 
    wire             checksum_error;
 
-   axi_fifo #(.WIDTH(WIDTH),.SIZE(9)) fifo_i2
-     (
+   axi_fifo #(.WIDTH(DWIDTH),.SIZE(10)) fifo_i2 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -450,11 +508,10 @@ module axi_dram_fifo
       //
       .space(space_output), 
       .occupied(occupied_output)
-      );
+   );
 
    // Place FLops straight after SRAM read access for timing.
-   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i0
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH)) output_pipe_i0 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -466,13 +523,12 @@ module axi_dram_fifo
       .o_tdata(o_tdata_i1), 
       .o_tvalid(o_tvalid_i1), 
       .o_tready(o_tready_i1 && ~supress_reads)
-      );
+   );
 
    // Read suppression logic
    // The CL part of this exists between these
    // axi_flops 
-   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i1
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH)) output_pipe_i1 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -484,11 +540,10 @@ module axi_dram_fifo
       .o_tdata(o_tdata_i2), 
       .o_tvalid(o_tvalid_i2), 
       .o_tready(o_tready_i2)
-      );
+   );
 
    // Pipeline flop before tlast extraction logic
-   axi_fifo_flop #(.WIDTH(WIDTH)) output_pipe_i2
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH)) output_pipe_i2 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -500,10 +555,9 @@ module axi_dram_fifo
       .o_tdata(o_tdata_i3), 
       .o_tvalid(o_tvalid_i3), 
       .o_tready(o_tready_i3)
-      );
+   );
 
-    axi_extract_tlast axi_fast_extract_tlast_i0
-     (
+    axi_extract_tlast axi_extract_tlast_i (
       .clk(dram_clk),
       .reset(dram_reset),
       .clear(clear),
@@ -518,11 +572,10 @@ module axi_dram_fifo
       .o_tready(o_tready_i4),
       //
       .checksum_error_reg()
-      );
+   );
 
    // Pipeline flop after tlast extraction logic
-   axi_fifo_flop #(.WIDTH(WIDTH+1)) output_pipe_i3
-     (
+   axi_fifo_flop #(.WIDTH(DWIDTH+1)) output_pipe_i3 (
       .clk(dram_clk), 
       .reset(dram_reset), 
       .clear(clear),
@@ -534,9 +587,8 @@ module axi_dram_fifo
       .o_tdata({o_tlast_i5,o_tdata_i5}), 
       .o_tvalid(o_tvalid_i5), 
       .o_tready(o_tready_i5)
-      );
+   );
 
-    
    wire         write_out, read_out, empty_out, full_out;
    assign       o_tready_i5 = ~full_out;
    assign       write_out = o_tvalid_i5 & o_tready_i5;
@@ -544,8 +596,7 @@ module axi_dram_fifo
    assign       read_out = o_tvalid_fifo & o_tready_fifo;
    wire [6:0]   discard_i1;
    
-   fifo_short_2clk fifo_short_2clk_i1
-     (
+   fifo_short_2clk fifo_short_2clk_i1 (
       .rst(bus_reset),
       .wr_clk(dram_clk),
       .din({7'h0,o_tlast_i5,o_tdata_i5}), // input [71 : 0] din
@@ -558,26 +609,25 @@ module axi_dram_fifo
       .rd_en(read_out), // input rd_en
       .empty(empty_out), // output empty
       .rd_data_count()  // output [9 : 0] rd_data_count
-      );
+   );
 
    //
    // Simple input timeout counter for now.
    // Timeout count only increments when there is some data waiting to be written.
    //
    always @(posedge dram_clk)
-     if (dram_reset | clear) begin
-	input_timeout_count <= 0;
-	input_timeout_triggered <= 1'b0;
-     end else if (input_timeout_reset) begin
-	input_timeout_count <= 0;
-	input_timeout_triggered <= 1'b0;
-     end else if (input_timeout_count == TIMEOUT) begin
-	input_timeout_triggered <= 1'b1;
+      if (dram_reset | clear) begin
+         input_timeout_count <= 0;
+         input_timeout_triggered <= 1'b0;
+      end else if (input_timeout_reset) begin
+         input_timeout_count <= 0;
+         input_timeout_triggered <= 1'b0;
+     end else if (input_timeout_count == set_timeout) begin
+         input_timeout_triggered <= 1'b1;
      end else if (input_state == INPUT_IDLE) begin
-	input_timeout_count <= input_timeout_count + (occupied_input != 0);
+         input_timeout_count <= input_timeout_count + (occupied_input != 0);
      end
-	
-   		      
+
    //
    // Wait for 16 entries in input FIFO to trigger DRAM write burst.
    // Timeout can also trigger burst so fragments of data are not left to rot in the input FIFO.
@@ -585,143 +635,142 @@ module axi_dram_fifo
    // of a 4KByte page then immediately start the burst.
    //
    always @(posedge dram_clk)
-     if (dram_reset | clear) begin
-	input_state <= INPUT_IDLE;
-	write_addr[31:SIZE] <= BASE >> SIZE;
-	write_addr[SIZE-1:0] <= 0;
-	input_timeout_reset <= 1'b0;
-	write_ctrl_valid <= 1'b0;
-	write_count <= 8'd0; 
-	update_write <= 1'b0;
-     end else
-       case (input_state)
-	 //
-	 // INPUT_IDLE.
-	 // To start an input transfer to DRAM need:
-	 // 1) Space in the DRAM FIFO 
-	 // and either
-	 // 2) 256 entrys in the input FIFO
-	 // or
-	 // 3) Timeout waiting for more data.
-	 //
-	 INPUT_IDLE: begin
-	    write_ctrl_valid <= 1'b0;
-	    update_write <= 1'b0;
-	    if (space > 255) begin // Space in the DRAM FIFO
-	       if (occupied_input > 255) begin  // 256 or more entrys in input FIFO
-		  input_state <= INPUT1;
-		  input_timeout_reset <= 1'b1;
-	       end else if (input_timeout_triggered) begin // input FIFO timeout waiting for new data.
-		  input_state <= INPUT2;
-		  input_timeout_reset <= 1'b1;
-	       end else begin
-	       	  input_timeout_reset <= 1'b0;
-		  input_state <= INPUT_IDLE;
-	       end
-	    end else begin
-	       input_timeout_reset <= 1'b0;
-	       input_state <= INPUT_IDLE;
-	    end
-	 end
-	 //
-	 // INPUT1.
-	 // Caused by input FIFO reaching 256 entries.
-	 // Request write burst of lesser of:
-	 // 1) Entrys until page boundry crossed
-	 // 2) 256.
-	 //
-	 INPUT1: begin
-	    write_count <= (input_page_boundry < 255) ? input_page_boundry[7:0] : 8'd255;
-	    write_ctrl_valid <= 1'b1;
-	    if (write_ctrl_ready)
-	      input_state <= INPUT4; // Pre-emptive ACK
-	    else
-	      input_state <= INPUT3; // Wait for ACK
-	 end
-	 //
-	 // INPUT2.
-	 // Caused by timeout of input FIFO. (occupied_input was implicitly less than 256 last cycle)
-	 // Request write burst of lesser of:
-	 // 1) Entries until page boundry crossed
-	 // 2) Entries in input FIFO
-	 //
-	 INPUT2: begin
-	    write_count <= (input_page_boundry < ({3'h0,occupied_input[8:0]} - 12'd1)) ? input_page_boundry[7:0] : (occupied_input[8:0] - 7'd1);
-	    write_ctrl_valid <= 1'b1;
-	    if (write_ctrl_ready)
-	      input_state <= INPUT4; // Pre-emptive ACK
-	    else
-	      input_state <= INPUT3; // Wait for ACK
-	 end
-	 //
-	 // INPUT3.
-	 // Wait in this state for AXI4_DMA engine to accept transaction.
-	 //
-	 INPUT3: begin
-	    if (write_ctrl_ready) begin
-	       write_ctrl_valid <= 1'b0;
-	       input_state <= INPUT4; // ACK
-	    end else begin
-	       write_ctrl_valid <= 1'b1;
-	       input_state <= INPUT3; // Wait for ACK
-	    end
-	 end
-	 //
-	 // INPUT4.
-	 // Wait here until write_ctrl_ready_deasserts.
-	 // This is important as the next time it asserts we know that a write response was receieved.
-	 INPUT4: begin
-	    write_ctrl_valid <= 1'b0;
-	    if (!write_ctrl_ready)
-	      input_state <= INPUT5; // Move on
-	    else
-	      input_state <= INPUT4; // Wait for deassert
-	 end	 
-	 //
-	 // INPUT5.
-	 // Transaction has been accepted by AXI4 DMA engine. Now we wait for the re-assertion
-	 // of write_ctrl_ready which signals that the AXI4 DMA engine has receieved a response
-	 // for the whole write transaction and we assume that this means it is commited to DRAM.
-	 // We are now free to update write_addr pointer and go back to idle state.
-	 // 
-	 INPUT5: begin
-	    write_ctrl_valid <= 1'b0;
-	    if (write_ctrl_ready) begin
-	       write_addr[SIZE-1:0] <= write_addr[SIZE-1:0] + ((write_count + 1) << 3);
-	       input_state <= INPUT6;
-	       update_write <= 1'b1;	       
-	    end else begin
-	       input_state <= INPUT5;
-	    end
-	 end
-	 //
-	 // INPUT6:
-	 // Need to let space update before looking if there's more to do.
-	 //
-	 INPUT6: begin
-	    input_state <= INPUT_IDLE;
-	    update_write <= 1'b0;
-	 end
-	 // Ass covering.
-	 default: input_state <= INPUT_IDLE;
-	 
-       endcase // case(input_state)
-   
+      if (dram_reset | clear) begin
+         input_state <= INPUT_IDLE;
+         write_addr <= set_fifo_base_addr & set_fifo_addr_mask;
+         input_timeout_reset <= 1'b0;
+         write_ctrl_valid <= 1'b0;
+         write_count <= 8'd0; 
+         update_write <= 1'b0;
+      end else
+         case (input_state)
+         //
+         // INPUT_IDLE.
+         // To start an input transfer to DRAM need:
+         // 1) Space in the DRAM FIFO 
+         // and either
+         // 2) 256 entrys in the input FIFO
+         // or
+         // 3) Timeout waiting for more data.
+         //
+         INPUT_IDLE: begin
+            write_ctrl_valid <= 1'b0;
+            update_write <= 1'b0;
+            if (space > 255) begin // Space in the DRAM FIFO
+               if (occupied_input > 255) begin  // 256 or more entrys in input FIFO
+                  input_state <= INPUT1;
+                  input_timeout_reset <= 1'b1;
+               end else if (input_timeout_triggered) begin // input FIFO timeout waiting for new data.
+                  input_state <= INPUT2;
+                  input_timeout_reset <= 1'b1;
+               end else begin
+                  input_timeout_reset <= 1'b0;
+                  input_state <= INPUT_IDLE;
+               end
+            end else begin
+               input_timeout_reset <= 1'b0;
+               input_state <= INPUT_IDLE;
+            end
+         end
+         //
+         // INPUT1.
+         // Caused by input FIFO reaching 256 entries.
+         // Request write burst of lesser of:
+         // 1) Entrys until page boundry crossed
+         // 2) 256.
+         //
+         INPUT1: begin
+            write_count <= (input_page_boundry < 255) ? input_page_boundry[7:0] : 8'd255;
+            write_ctrl_valid <= 1'b1;
+            if (write_ctrl_ready)
+               input_state <= INPUT4; // Pre-emptive ACK
+            else
+               input_state <= INPUT3; // Wait for ACK
+         end
+         //
+         // INPUT2.
+         // Caused by timeout of input FIFO. (occupied_input was implicitly less than 256 last cycle)
+         // Request write burst of lesser of:
+         // 1) Entries until page boundry crossed
+         // 2) Entries in input FIFO
+         //
+         INPUT2: begin
+            write_count <= (input_page_boundry < ({3'h0,occupied_input[8:0]} - 12'd1)) ? input_page_boundry[7:0] : (occupied_input[8:0] - 7'd1);
+            write_ctrl_valid <= 1'b1;
+            if (write_ctrl_ready)
+               input_state <= INPUT4; // Pre-emptive ACK
+            else
+               input_state <= INPUT3; // Wait for ACK
+         end
+         //
+         // INPUT3.
+         // Wait in this state for AXI4_DMA engine to accept transaction.
+         //
+         INPUT3: begin
+            if (write_ctrl_ready) begin
+               write_ctrl_valid <= 1'b0;
+               input_state <= INPUT4; // ACK
+            end else begin
+               write_ctrl_valid <= 1'b1;
+               input_state <= INPUT3; // Wait for ACK
+            end
+         end
+         //
+         // INPUT4.
+         // Wait here until write_ctrl_ready_deasserts.
+         // This is important as the next time it asserts we know that a write response was receieved.
+         INPUT4: begin
+            write_ctrl_valid <= 1'b0;
+            if (!write_ctrl_ready)
+               input_state <= INPUT5; // Move on
+            else
+               input_state <= INPUT4; // Wait for deassert
+         end   
+         //
+         // INPUT5.
+         // Transaction has been accepted by AXI4 DMA engine. Now we wait for the re-assertion
+         // of write_ctrl_ready which signals that the AXI4 DMA engine has receieved a response
+         // for the whole write transaction and we assume that this means it is commited to DRAM.
+         // We are now free to update write_addr pointer and go back to idle state.
+         // 
+         INPUT5: begin
+            write_ctrl_valid <= 1'b0;
+            if (write_ctrl_ready) begin
+               write_addr <= ((write_addr + ((write_count + 1) << 3)) & set_fifo_addr_mask_bar) | (write_addr & set_fifo_addr_mask);
+               input_state <= INPUT6;
+               update_write <= 1'b1;
+            end else begin
+               input_state <= INPUT5;
+            end
+         end
+         //
+         // INPUT6:
+         // Need to let space update before looking if there's more to do.
+         //
+         INPUT6: begin
+            input_state <= INPUT_IDLE;
+            update_write <= 1'b0;
+         end
+
+         default: 
+            input_state <= INPUT_IDLE;
+      endcase // case(input_state)
+
 
    //
    // Simple output timeout counter for now
    //
    always @(posedge dram_clk)
-     if (dram_reset | clear) begin
-	output_timeout_count <= 0;
-	output_timeout_triggered <= 1'b0;
-     end else if (output_timeout_reset) begin
-	output_timeout_count <= 0;
-	output_timeout_triggered <= 1'b0;
-     end else if (output_timeout_count == TIMEOUT) begin
-	output_timeout_triggered <= 1'b1;
-     end else if (output_state == OUTPUT_IDLE) begin
-	output_timeout_count <= output_timeout_count + (occupied != 0 );
+      if (dram_reset | clear) begin
+         output_timeout_count <= 0;
+         output_timeout_triggered <= 1'b0;
+      end else if (output_timeout_reset) begin
+         output_timeout_count <= 0;
+         output_timeout_triggered <= 1'b0;
+      end else if (output_timeout_count == set_timeout) begin
+         output_timeout_triggered <= 1'b1;
+      end else if (output_state == OUTPUT_IDLE) begin
+         output_timeout_count <= output_timeout_count + (occupied != 0);
      end
 
 
@@ -732,159 +781,155 @@ module axi_dram_fifo
    // of a 4KByte page then immediately start the burst.
    //
    always @(posedge dram_clk)
-     if (dram_reset | clear) begin
-	output_state <= OUTPUT_IDLE;
-	read_addr[31:SIZE] <= BASE >> SIZE;
-	read_addr[SIZE-1:0] <= 0;
-	output_timeout_reset <= 1'b0;
-	read_ctrl_valid <= 1'b0;
-	read_count <= 8'd0;
-	update_read <= 1'b0;
-     end else
-       case (output_state)
-	 //
-	 // OUTPUT_IDLE.
-	 // To start an output tranfer from DRAM
-	 // 1) Space in the small output FIFO 
-	 // and either
-	 // 2) 256 entrys in the DRAM FIFO
-	 // or
-	 // 3) Timeout waiting for more data.
-	 //
-	 OUTPUT_IDLE: begin
-	    read_ctrl_valid <= 1'b0;
-	    update_read <= 1'b0;
-	    if (space_output > 255) begin // Space in the output FIFO.
-	      if (occupied > 255) begin // 64 or more entrys in main FIFO
-		 output_state <= OUTPUT1;
-		 output_timeout_reset <= 1'b1;
-	      end else if (output_timeout_triggered) begin // output FIFO timeout waiting for new data.
-		 output_state <= OUTPUT2;
-		 output_timeout_reset <= 1'b1;
-	      end else begin
-		 output_timeout_reset <= 1'b0;
-		 output_state <= OUTPUT_IDLE;
-	      end
-	    end else begin
-	       output_timeout_reset <= 1'b0;
-	       output_state <= OUTPUT_IDLE;
-	    end
-	 end // case: OUTPUT_IDLE
-	 //
-	 // OUTPUT1.
-	 // Caused by main FIFO reaching 256 entries.
-	 // Request read burst of lesser of lesser of:
-	 // 1) Entrys until page boundry crossed
-	 // 2) 256.
-	 //
-	 OUTPUT1: begin
-	    read_count <= (output_page_boundry < 255) ? output_page_boundry : 8'd255;
-	    read_ctrl_valid <= 1'b1;
-	    if (read_ctrl_ready)
-	      output_state <= OUTPUT4; // Pre-emptive ACK
-	    else
-	      output_state <= OUTPUT3; // Wait for ACK
-	 end
-	 //
-	 // OUTPUT2.
-	 // Caused by timeout of main FIFO
-	 // Request read burst of lesser of:
-	 // 1) Entries until page boundry crossed
-	 // 2) Entries in main FIFO
-	 //
-	 OUTPUT2: begin
-	    read_count <= (output_page_boundry < (occupied - 1)) ? output_page_boundry : (occupied - 1);
-	    read_ctrl_valid <= 1'b1;
-	    if (read_ctrl_ready)
-	      output_state <= OUTPUT4; // Pre-emptive ACK
-	    else
-	      output_state <= OUTPUT3; // Wait for ACK
-	 end
-	 //
-	 // OUTPUT3.
-	 // Wait in this state for AXI4_DMA engine to accept transaction.
-	 //
-	 OUTPUT3: begin
-	    if (read_ctrl_ready) begin
-	       read_ctrl_valid <= 1'b0;
-	       output_state <= OUTPUT4; // ACK
-	    end else begin
-	       read_ctrl_valid <= 1'b1;
-	       output_state <= OUTPUT3; // Wait for ACK
-	    end
-	 end
-	 //
-	 // OUTPUT4.
-	 // Wait here unitl read_ctrl_ready_deasserts.
-	 // This is important as the next time it asserts we know that a read response was receieved.
-	 OUTPUT4: begin
-	    read_ctrl_valid <= 1'b0;
-	    if (!read_ctrl_ready)
-	      output_state <= OUTPUT5; // Move on
-	    else
-	      output_state <= OUTPUT4; // Wait for deassert
-	 end	 
-	 //
-	 // OUTPUT5.
-	 // Transaction has been accepted by AXI4 DMA engine. Now we wait for the re-assertion
-	 // of read_ctrl_ready which signals that the AXI4 DMA engine has receieved a last signal and good response
-	 // for the whole read transaction.
-	 // We are now free to update read_addr pointer and go back to idle state.
-	 // 
-	 OUTPUT5: begin
-	    read_ctrl_valid <= 1'b0;
-	    if (read_ctrl_ready) begin
-	       read_addr[SIZE-1:0] <= read_addr[SIZE-1:0] + ((read_count + 1) << 3);
-	       output_state <= OUTPUT6;
-	       update_read <= 1'b1;
-	       
-	    end else begin
-	       output_state <= OUTPUT5;
-	    end
-	 end // case: OUTPUT5
-	 //
-	 // OUTPUT6.
-	 // Need to get occupied value updated before checking if there's more to do.
-	 //
-	 OUTPUT6: begin
-	    update_read <= 1'b0;
-	    output_state <= OUTPUT_IDLE;
-	 end
-	 // Ass covering.
-	 default: output_state <= OUTPUT_IDLE;
-	 
+      if (dram_reset | clear) begin
+         output_state <= OUTPUT_IDLE;
+         read_addr <= set_fifo_base_addr & set_fifo_addr_mask;
+         output_timeout_reset <= 1'b0;
+         read_ctrl_valid <= 1'b0;
+         read_count <= 8'd0;
+         update_read <= 1'b0;
+      end else
+         case (output_state)
+         //
+         // OUTPUT_IDLE.
+         // To start an output tranfer from DRAM
+         // 1) Space in the small output FIFO 
+         // and either
+         // 2) 256 entrys in the DRAM FIFO
+         // or
+         // 3) Timeout waiting for more data.
+         //
+         OUTPUT_IDLE: begin
+            read_ctrl_valid <= 1'b0;
+            update_read <= 1'b0;
+            if (space_output > 255) begin // Space in the output FIFO.
+               if (occupied > 255) begin // 64 or more entrys in main FIFO
+                  output_state <= OUTPUT1;
+                  output_timeout_reset <= 1'b1;
+               end else if (output_timeout_triggered) begin // output FIFO timeout waiting for new data.
+                  output_state <= OUTPUT2;
+                  output_timeout_reset <= 1'b1;
+               end else begin
+                  output_timeout_reset <= 1'b0;
+                  output_state <= OUTPUT_IDLE;
+               end
+            end else begin
+               output_timeout_reset <= 1'b0;
+               output_state <= OUTPUT_IDLE;
+            end
+         end // case: OUTPUT_IDLE
+         //
+         // OUTPUT1.
+         // Caused by main FIFO reaching 256 entries.
+         // Request read burst of lesser of lesser of:
+         // 1) Entrys until page boundry crossed
+         // 2) 256.
+         //
+         OUTPUT1: begin
+            read_count <= (output_page_boundry < 255) ? output_page_boundry : 8'd255;
+            read_ctrl_valid <= 1'b1;
+            if (read_ctrl_ready)
+               output_state <= OUTPUT4; // Pre-emptive ACK
+            else
+               output_state <= OUTPUT3; // Wait for ACK
+         end
+         //
+         // OUTPUT2.
+         // Caused by timeout of main FIFO
+         // Request read burst of lesser of:
+         // 1) Entries until page boundry crossed
+         // 2) Entries in main FIFO
+         //
+         OUTPUT2: begin
+            read_count <= (output_page_boundry < (occupied - 1)) ? output_page_boundry : (occupied - 1);
+            read_ctrl_valid <= 1'b1;
+            if (read_ctrl_ready)
+               output_state <= OUTPUT4; // Pre-emptive ACK
+            else
+               output_state <= OUTPUT3; // Wait for ACK
+         end
+         //
+         // OUTPUT3.
+         // Wait in this state for AXI4_DMA engine to accept transaction.
+         //
+         OUTPUT3: begin
+            if (read_ctrl_ready) begin
+               read_ctrl_valid <= 1'b0;
+               output_state <= OUTPUT4; // ACK
+            end else begin
+               read_ctrl_valid <= 1'b1;
+               output_state <= OUTPUT3; // Wait for ACK
+            end
+         end
+         //
+         // OUTPUT4.
+         // Wait here unitl read_ctrl_ready_deasserts.
+         // This is important as the next time it asserts we know that a read response was receieved.
+         OUTPUT4: begin
+            read_ctrl_valid <= 1'b0;
+            if (!read_ctrl_ready)
+               output_state <= OUTPUT5; // Move on
+            else
+               output_state <= OUTPUT4; // Wait for deassert
+         end   
+         //
+         // OUTPUT5.
+         // Transaction has been accepted by AXI4 DMA engine. Now we wait for the re-assertion
+         // of read_ctrl_ready which signals that the AXI4 DMA engine has receieved a last signal and good response
+         // for the whole read transaction.
+         // We are now free to update read_addr pointer and go back to idle state.
+         // 
+         OUTPUT5: begin
+            read_ctrl_valid <= 1'b0;
+            if (read_ctrl_ready) begin
+               read_addr <= ((read_addr + ((read_count + 1) << 3)) & set_fifo_addr_mask_bar) | (read_addr & set_fifo_addr_mask);
+               output_state <= OUTPUT6;
+               update_read <= 1'b1;
+            end else begin
+               output_state <= OUTPUT5;
+            end
+         end // case: OUTPUT5
+         //
+         // OUTPUT6.
+         // Need to get occupied value updated before checking if there's more to do.
+         //
+         OUTPUT6: begin
+            update_read <= 1'b0;
+            output_state <= OUTPUT_IDLE;
+         end
+
+         default: 
+            output_state <= OUTPUT_IDLE;
        endcase // case(output_state)
 
    //
    // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
    // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
    //
-   assign input_page_boundry = {write_addr[31:12],9'h1ff} - write_addr[31:3];   
-   assign output_page_boundry = {read_addr[31:12],9'h1ff} - read_addr[31:3];
+   assign input_page_boundry = {write_addr[AWIDTH-1:12],9'h1ff} - write_addr[AWIDTH-1:3];   
+   assign output_page_boundry = {read_addr[AWIDTH-1:12],9'h1ff} - read_addr[AWIDTH-1:3];
    
    //
    // Count number of used entries in main DRAM FIFO.
    // Note that this is expressed in units of 64bit wide words.
    //
    always @(posedge dram_clk)
-     if (dram_reset | clear)
-       occupied <= 0;
-     else
-       occupied <= occupied + (update_write ? write_count + 1 : 0) - (update_read ? read_count + 1 : 0);
+      if (dram_reset | clear)
+         occupied <= 0;
+      else
+         occupied <= occupied + (update_write ? write_count + 1 : 0) - (update_read ? read_count + 1 : 0);
    
    always @(posedge dram_clk)
-     if (dram_reset | clear)
-       space <= (1 << SIZE-3) - 'd64; // Subtract 64 from space to make allowance for read/write reordering in DRAM controller confuing pointer math.
-     else
-       space <= space - (update_write ? write_count + 1 : 0) + (update_read ? read_count + 1 : 0);
+      if (dram_reset | clear)
+         space <= set_fifo_addr_mask_bar[AWIDTH-1:3] & ~('d63); // Subtract 64 from space to make allowance for read/write reordering in DRAM controller
+      else
+         space <= space - (update_write ? write_count + 1 : 0) + (update_read ? read_count + 1 : 0);
 
    //
    // Instamce of axi_dma_master
    //
-
-   
    axi_dma_master axi_dma_master_i
-     (
+   (
       .aclk(dram_clk), // input aclk
       .areset(dram_reset | clear), // input aresetn
       // Write control
@@ -939,7 +984,7 @@ module axi_dram_fifo
       //
       // DMA interface for Write transaction
       //
-      .write_addr(write_addr),       // Byte address for start of write transaction (should be 64bit alligned)
+      .write_addr({{(32-AWIDTH){1'b0}}, write_addr}),       // Byte address for start of write transaction (should be 64bit alligned)
       .write_count(write_count),       // Count of 64bit words to write.
       .write_ctrl_valid(write_ctrl_valid),
       .write_ctrl_ready(write_ctrl_ready),
@@ -949,7 +994,7 @@ module axi_dram_fifo
       //
       // DMA interface for Read
       //
-      .read_addr(read_addr),       // Byte address for start of read transaction (should be 64bit alligned)
+      .read_addr({{(32-AWIDTH){1'b0}}, read_addr}),       // Byte address for start of read transaction (should be 64bit alligned)
       .read_count(read_count),       // Count of 64bit words to read.
       .read_ctrl_valid(read_ctrl_valid),
       .read_ctrl_ready(read_ctrl_ready),
@@ -960,7 +1005,7 @@ module axi_dram_fifo
       // Debug
       //
       .debug()
-      );
+   );
 
- endmodule // axi_dram_fifo
+ endmodule // axi_dma_fifo
 

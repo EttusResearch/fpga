@@ -445,7 +445,6 @@ module x300_core (
       .dram_fifo1_rb_data(dram_fifo1_rb_data),
 
       // Debug
-      .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
 
    //////////////////////////////////////////////////////////////////////////////////////////////
@@ -503,10 +502,22 @@ module x300_core (
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
-   // Radio 0
+   // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
 
+   localparam MSG_FIFO_SIZE    = 9;
+`ifndef NO_DRAM_FIFOS
+   localparam TX_PRE_FIFO_SIZE = 14;
+   localparam DATA_FIFO_SIZE   = 12;
+`else
+   localparam TX_PRE_FIFO_SIZE = 0;
+   localparam DATA_FIFO_SIZE   = 10;
+`endif
+
+   //------------------------------------
+   // Radio 0
+   //------------------------------------
 `ifndef DELETE_DSP0
  `define DELETE_DSP0 0
 `endif
@@ -515,8 +526,9 @@ module x300_core (
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP0),
       .RADIO_NUM(0),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx0), .tx(tx0), 
@@ -540,12 +552,9 @@ module x300_core (
       misc_ins0       <= radio0_misc_in;
    end
 
-   /////////////////////////////////////////////////////////////////////////////////////////////
-   //
+   //------------------------------------
    // Radio 1
-   //
-   /////////////////////////////////////////////////////////////////////////////////////////////
-
+   //------------------------------------
 `ifndef DELETE_DSP1
  `define DELETE_DSP1 0
 `endif
@@ -554,8 +563,9 @@ module x300_core (
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP1),
       .RADIO_NUM(1),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx1), .tx(tx1),
@@ -872,21 +882,20 @@ module x300_core (
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   localparam EXTENDED_DRAM_BIST = 1;  //Prune out additional BIST features for production
+   localparam EXTENDED_DRAM_BIST = 0;  //Prune out additional BIST features for production
 
-   axi_dram_fifo #(
-      .BASE('h0),
-      .SIZE(24),
-      .TIMEOUT(280),
+   axi_dma_fifo #(
+      .DEFAULT_BASE(30'h00000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd72),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i0 (
+   ) axi_dma_fifo_i0 (
       //
       // Clocks and reset
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //
@@ -975,19 +984,18 @@ module x300_core (
       .debug()
    );
 
-   axi_dram_fifo #(
-      .BASE('h2000000),
-      .SIZE(24),
-      .TIMEOUT(280),
+   axi_dma_fifo #(
+      .DEFAULT_BASE(30'h02000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd80),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i1 (
+   ) axi_dma_fifo_i1 (
       //
       // Clocks and reset
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //

@@ -53,7 +53,7 @@ module axi_embed_tlast
      end else if (i_tready && i_tvalid && i_tlast) begin
 	checksum <= 0;
      end else if (i_tready && i_tvalid) begin
-	checksum <= checksum + i_tdata[31:0] + i_tdata[63:32];
+	checksum <= checksum ^ i_tdata[31:0] ^ i_tdata[63:32];
      end 
    
    always @(posedge clk) 
