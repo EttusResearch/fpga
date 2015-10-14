@@ -31,6 +31,7 @@ module radio #(
    output [63:0] tx_tdata_bo, output tx_tlast_bo, output tx_tvalid_bo, input tx_tready_bo,
 
    input pps,
+   input time_sync,
    output sync_dacs,
 
    output [31:0] debug
@@ -258,7 +259,7 @@ module radio #(
       .gpio(leds), .gpio_readback() );
 
    timekeeper #(.BASE(SR_TIME)) timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(1'b0),
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 

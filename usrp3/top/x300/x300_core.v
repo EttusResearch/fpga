@@ -359,8 +359,15 @@ module x300_core
    wire         set_stb;
    wire [7:0]   set_addr;
    wire [31:0]  set_data;
-   
+
    wire [31:0]  dram_fifo0_rb_data, dram_fifo1_rb_data;
+
+   /////////////////////////////////////////////////////////////////////////////////
+   // Internal time synchronization
+   /////////////////////////////////////////////////////////////////////////////////
+   wire time_sync, time_sync_r;
+    synchronizer time_sync_synchronizer
+     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
 
    /////////////////////////////////////////////////////////////////////////////////
    // PPS synchronization logic
@@ -391,7 +398,7 @@ module x300_core
       .SFPP1_RS0(SFPP1_RS0), .SFPP1_RS1(SFPP1_RS1),
       //clocky locky misc
       .clock_status({misc_clock_status, pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
-      .clock_control({clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
+      .clock_control({time_sync, clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
       // Eth0
       .eth0_tx_tdata(eth0_tx_tdata), .eth0_tx_tuser(eth0_tx_tuser), .eth0_tx_tlast(eth0_tx_tlast),
       .eth0_tx_tvalid(eth0_tx_tvalid), .eth0_tx_tready(eth0_tx_tready),
@@ -539,7 +546,7 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_rclk), .sync_dacs(sync_dacs_radio0),
+      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio0),
       .debug()
    );
 
@@ -576,7 +583,7 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_rclk), .sync_dacs(sync_dacs_radio1),
+      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio1),
       .debug()
    );
 
@@ -1065,7 +1072,7 @@ module x300_core
       //
       // CHDR friendly AXI Stream output
       //
-      
+
       .o_tdata(r1_tx_tdata_bi),
       .o_tlast(r1_tx_tlast_bi),
       .o_tvalid(r1_tx_tvalid_bi),

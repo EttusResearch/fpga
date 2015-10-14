@@ -44,7 +44,7 @@ module bus_int
     inout SFPP1_RS1,
     //
     input [7:0] clock_status,
-    output [6:0] clock_control,
+    output [7:0] clock_control,
     // ETH0
     output [63:0] eth0_tx_tdata, output [3:0] eth0_tx_tuser, output eth0_tx_tlast, output eth0_tx_tvalid, input eth0_tx_tready,
     input [63:0] eth0_rx_tdata, input [3:0] eth0_rx_tuser, input eth0_rx_tlast, input eth0_rx_tvalid, output eth0_rx_tready,
@@ -277,7 +277,7 @@ module bus_int
       .debug0(debug2),
       .debug1()
       );
-   
+
    //The main settings bus also goes outside the hierarchy to connect to control
    //various components
    //TODO: We should re-think the ownership of this bus master
@@ -300,7 +300,7 @@ module bus_int
       .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(sw_rst));
 
-   setting_reg #(.my_addr(SR_CLOCK_CTRL), .awidth(SR_AWIDTH), .width(7),
+   setting_reg #(.my_addr(SR_CLOCK_CTRL), .awidth(SR_AWIDTH), .width(8),
         .at_reset(7'b1000000) //bit 6 high means GPSDO on by default
     ) set_clk_ctrl
      (.clk(clk), .rst(reset),

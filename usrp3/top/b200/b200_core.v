@@ -193,7 +193,7 @@ module b200_core
 
     wire [63:0] l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
-    wire time_sync;
+    wire time_sync, time_sync_r;
 
     axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
     (
@@ -226,6 +226,9 @@ module b200_core
     setting_reg #(.my_addr(SR_CORE_SYNC), .awidth(8), .width(3)) sr_sync
      (.clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out({time_sync,pps_select}), .changed());
+
+    synchronizer time_sync_synchronizer
+     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
 
     simple_spi_core #(.BASE(SR_CORE_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) misc_spi
      (.clock(bus_clk), .reset(bus_rst),
@@ -314,7 +317,7 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps), .time_sync(time_sync),
+      .rx(rx0), .tx(tx0), .fe_atr(fe_atr0), .pps(pps), .time_sync(time_sync_r),
 `ifdef B210
     `ifdef B200_UART_IS_GPIO
         .fp_gpio({debug_rxd,debug_txd,fp_gpio}), // B210 no UART
@@ -357,7 +360,7 @@ module b200_core
       .DEVICE("SPARTAN6")
    ) radio_1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps), .time_sync(time_sync),
+      .rx(rx1), .tx(tx1), .fe_atr(fe_atr1), .pps(pps), .time_sync(time_sync_r),
 
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
