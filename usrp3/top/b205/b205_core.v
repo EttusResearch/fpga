@@ -154,7 +154,10 @@ module b205_core
 
     wire [63:0] l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
-    wire time_sync;
+    wire time_sync, time_sync_r;
+
+    synchronizer time_sync_synchronizer
+     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
 
     axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
     (
@@ -226,7 +229,7 @@ module b205_core
         .DEVICE("SPARTAN6")
     ) radio (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx(rx0), .tx(tx0), .fe_atr(fe_atr), .pps(pps), .time_sync(time_sync),
+        .rx(rx0), .tx(tx0), .fe_atr(fe_atr), .pps(pps), .time_sync(time_sync_r),
         .fp_gpio({fpgpio_discard,fp_gpio}),
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
