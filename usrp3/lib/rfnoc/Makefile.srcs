@@ -6,6 +6,7 @@
 # RFNoC Sources
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
+cmd_pkt_proc.v \
 chdr_framer.v \
 chdr_deframer.v \
 noc_shell.v \
