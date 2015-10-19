@@ -49,7 +49,7 @@ module axi_crossbar_intf
   wire [15:0] set_addr = set_bus.addr;
   wire [31:0] set_data = set_bus.data;
   wire rb_rd_stb = rb_bus.stb;
-  wire [2*$clog2(NUM_PORTS):0] rb_addr = rb_bus.addr;
+  wire [$clog2(NUM_PORTS):0] rb_addr = rb_bus.addr;
   wire [31:0] rb_data;
   assign rb_bus.data = rb_data;
 

@@ -40,7 +40,7 @@ endinterface
 // Copyright 2015 Ettus Research LLC
 //
 
-interface readback_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)
+interface readback_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 64)
                       (input clk);
   logic               stb;
   logic [AWIDTH-1:0]  addr;

@@ -37,6 +37,34 @@ task automatic unflatten_chdr_no_ts;
   end
 endtask
 
+// Extracts header from CVITA packets.
+// Args:
+// - pkt: CVITA packet
+// - hdr: CVITA header
+task automatic extract_chdr(ref cvita_pkt_t pkt, ref cvita_hdr_t hdr);
+  begin
+    unflatten_chdr_no_ts(pkt[0],hdr);
+    if (hdr.has_time) begin
+      hdr.timestamp = pkt[1];
+      // Delete both header and time stamp
+      pkt = pkt[2:$];
+    end else begin
+      // Delete header
+      pkt = pkt[2:$];
+    end
+  end
+endtask
+
+// Drops header from CVITA packets leaving only payload data.
+// Args:
+// - pkt: CVITA packet
+task automatic drop_chdr(ref cvita_pkt_t pkt);
+  begin
+    automatic cvita_hdr_t hdr;
+    extract_chdr(pkt,hdr);
+  end
+endtask
+
 task automatic unflatten_chdr;
   input logic[63:0] hdr_bits;
   input logic[63:0] timestamp;

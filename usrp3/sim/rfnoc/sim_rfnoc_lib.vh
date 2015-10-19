@@ -63,8 +63,10 @@
   localparam [31:0] SR_FLOW_CTRL_PKTS_PER_ACK      = 1;
   localparam [31:0] SR_FLOW_CTRL_WINDOW_SIZE       = 2;
   localparam [31:0] SR_FLOW_CTRL_WINDOW_EN         = 3;
-  localparam [31:0] SR_BLOCK_SID                   = 4;
+  localparam [31:0] SR_SRC_SID                     = 4;
   localparam [31:0] SR_NEXT_DST_SID                = 5;
+  localparam [31:0] SR_FORWARDING_DST_SID          = 6;
+  localparam [31:0] SR_ERROR_POLICY                = 7;
   localparam [31:0] SR_CLEAR_TX_FC                 = 126;
   localparam [31:0] SR_RB_ADDR                     = 127;
   // Next destination as allocated by the user, one per block port
@@ -197,11 +199,11 @@
     axis_slave   name``_axis_config; \
     // Setup class instances for testbench to use & module flow control \
     initial begin \
-      tb_cvita_data = new(noc_block_``name``_s_cvita_data,noc_block_``name``_m_cvita_data); \
-      tb_cvita_cmd = new(noc_block_``name``_cvita_cmd); \
-      tb_cvita_ack = new(noc_block_``name``_cvita_ack); \
-      tb_axis_data = new(noc_block_``name``_s_axis_data,noc_block_``name``_m_axis_data); \
-      tb_axis_config = new(noc_block_``name``_m_axis_config); \
+      name``_cvita_data = new(noc_block_``name``_s_cvita_data,noc_block_``name``_m_cvita_data); \
+      name``_cvita_cmd = new(noc_block_``name``_cvita_cmd); \
+      name``_cvita_ack = new(noc_block_``name``_cvita_ack); \
+      name``_axis_data = new(noc_block_``name``_s_axis_data,noc_block_``name``_m_axis_data); \
+      name``_axis_config = new(noc_block_``name``_m_axis_config); \
     end \
     // Setup module \
     noc_block_export_io \
@@ -218,8 +220,8 @@
       .m_cvita_data(noc_block_``name``_m_cvita_data), \
       .cvita_cmd(noc_block_``name``_cvita_cmd), \
       .cvita_ack(noc_block_``name``_cvita_ack), \
-      .sid(sid_noc_block_``name), \
-      .next_dst(name``_next_dst), \
+      .src_sid(sid_noc_block_``name), \
+      .next_dst_sid(name``_next_dst), \
       .m_axis_data(noc_block_``name``_m_axis_data), \
       .m_axis_config(noc_block_``name``_m_axis_config), \
       .s_axis_data(noc_block_``name``_s_axis_data), \
@@ -264,10 +266,10 @@
   `define RFNOC_CONNECT_BLOCK_PORT(from_noc_block_name,from_block_port,to_noc_block_name,to_block_port,pkt_size) \
     // Set block stream IDs \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_BLOCK_SID, 16'd0, (sid_``from_noc_block_name + from_block_port)}}); \
+                      {SR_SRC_SID, 16'd0, (sid_``from_noc_block_name + from_block_port)}}); \
     tb_cvita.drop_pkt();  // Don't care about response packets \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_BLOCK_SID, 16'd0, (sid_``to_noc_block_name + to_block_port)}}); \
+                      {SR_SRC_SID, 16'd0, (sid_``to_noc_block_name + to_block_port)}}); \
     tb_cvita.drop_pkt(); \
     // Send a flow control response packet on every received packet \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
@@ -283,7 +285,11 @@
     tb_cvita.drop_pkt(); \
     // Set next destination stream ID \
     tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_NEXT_DST, (sid_``to_noc_block_name + to_block_port)}}); \
+                      {SR_NEXT_DST_SID, (sid_``to_noc_block_name + to_block_port)}}); \
+    tb_cvita.drop_pkt(); \
+    // Set forwarding destination stream ID, default to test bench block \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_FORWARDING_DST_SID, sid_noc_block_tb}}); \
     tb_cvita.drop_pkt();
 
   `endif
