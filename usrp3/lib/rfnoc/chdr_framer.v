@@ -4,9 +4,10 @@
 // FIXME handle odd length inputs
 
 module chdr_framer
-  #(parameter SIZE=10)
+  #(parameter SIZE=10,
+    parameter WIDTH=32)  // 32 or 64 only! TODO: Extend to other widths.
    (input clk, input reset, input clear,
-    input [31:0] i_tdata, input [127:0] i_tuser, input i_tlast, input i_tvalid, output i_tready,
+    input [WIDTH-1:0] i_tdata, input [127:0] i_tuser, input i_tlast, input i_tvalid, output i_tready,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
    wire 	  header_i_tvalid, header_i_tready;
@@ -17,30 +18,38 @@ module chdr_framer
    wire 	  header_o_tvalid, header_o_tready;
    wire [63:0] 	  body_o_tdata;
    wire 	  body_o_tlast, body_o_tvalid, body_o_tready;
-   reg 		  even;
    reg [15:0] 	  length;
    reg [11:0] 	  seqnum;
-   reg [31:0] 	  held_i_tdata;
 
-   always @(posedge clk)
-     if(i_tvalid & i_tready)
-       held_i_tdata <= i_tdata;
-   
    assign i_tready = header_i_tready & body_i_tready;
    assign header_i_tvalid = i_tlast & i_tvalid & i_tready;
-   assign body_i_tvalid = i_tvalid & i_tready & (i_tlast | even);
-   assign body_i_tdata = even ? { held_i_tdata, i_tdata } : {i_tdata, i_tdata}; // really should be 0 in bottom, but this simplifies mux
    assign body_i_tlast = i_tlast;
-   
-   always @(posedge clk)
-     if(reset | clear)
-       even <= 0;
-     else 
-       if(i_tvalid & i_tready)
-	 if(i_tlast)
-	   even <= 0;
-	 else
-	   even <= ~even;
+
+   // Handle 32 and 64 widths
+   generate
+     if (WIDTH == 32) begin
+       reg even;
+       always @(posedge clk)
+         if(reset | clear)
+           even <= 0;
+         else
+           if(i_tvalid & i_tready)
+             if(i_tlast)
+               even <= 0;
+             else
+              even <= ~even;
+
+       reg [31:0]     held_i_tdata;
+       always @(posedge clk) begin
+         if (i_tvalid & i_tready) held_i_tdata <= i_tdata;
+       end
+       assign body_i_tvalid = i_tvalid & i_tready & (i_tlast | even);
+       assign body_i_tdata  = even ? { held_i_tdata, i_tdata } : {i_tdata, i_tdata}; // really should be 0 in bottom, but this simplifies mux
+     end else begin
+       assign body_i_tvalid = i_tvalid;
+       assign body_i_tdata  = i_tdata;
+     end
+   endgenerate
 
    // FIXME handle lengths of partial 32-bit words
    always @(posedge clk)
@@ -49,7 +58,7 @@ module chdr_framer
      else if(header_i_tready & header_i_tvalid)
        length <= 0;
      else if(i_tvalid & i_tready)
-       length <= length + 4;
+       length <= (WIDTH == 32) ? length + 4 : length + 8;
 
    // FIXME don't really need a FIFO, could just use a register or maybe even wires
    axi_fifo_short #(.WIDTH(128)) header_fifo
