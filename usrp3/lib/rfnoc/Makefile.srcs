@@ -7,10 +7,10 @@
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 cmd_pkt_proc.v \
+cvita_hdr_parser.v \
 chdr_framer.v \
 chdr_deframer.v \
 noc_shell.v \
-simple_axi_wrapper.v \
 axi_wrapper.v \
 axi_bit_reduce.v \
 noc_block_axi_fifo_loopback.v \
@@ -52,6 +52,7 @@ cmul.v \
 cadd.v \
 noc_input_port.v \
 noc_output_port.v \
+noc_responder.v \
 keep_one_in_n_vec.v \
 vector_iir.v \
 addsub.v \

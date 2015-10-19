@@ -1,5 +1,5 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2015 Ettus Research
 //
 // Issues
 //   Inline vs. Async commands
@@ -7,13 +7,12 @@
 //   Different seqnums on incoming and outgoing
 //   Multiple streams
 //   Seqnum for different types
-
 module noc_shell
-  #(parameter NOC_ID = 64'hDEAD_BEEF_0123_4567,                     // Unique block ID
-    parameter MTU = 10,                                             // Maximum packet size
-    parameter BLOCK_PORTS = 1,                                      // Number of block ports
-    parameter [BLOCK_PORTS*4-1:0] STR_SINK_FIFOSIZES = 4'd11,       // Array of each block port's window size
-    parameter [BLOCK_PORTS-1:0] USE_GATE_MASK = 1'b0)               // Bit mask enabling axi gate per block port (i.e. 3'b101, enable axi gate on block ports 0 & 2.)
+  #(parameter [63:0] NOC_ID = 64'hDEAD_BEEF_0123_4567,        // Unique block ID
+    parameter BLOCK_PORTS = 1,                                // Number of input / output port pairs, min 1, Note: Not both ports have to be used
+    parameter [BLOCK_PORTS*8-1:0] STR_SINK_FIFOSIZES = {BLOCK_PORTS{8'd11}}, // Flattened array of each block port's window sizes
+    parameter [BLOCK_PORTS*8-1:0] MTU = {BLOCK_PORTS{8'd10}}, // Flattened array of maximum (output) packet sizes (sizes FIFO used with packet gate)
+    parameter [BLOCK_PORTS-1:0] USE_GATE_MASK = 'd0)          // Bit mask enabling axi gate per block port (i.e. 3'b101, enable packet gate on block ports 0 & 2.)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -23,7 +22,7 @@ module noc_shell
     input clk, input reset,
     
     // Control Sink
-    output [31:0] set_data, output [7:0] set_addr, output [BLOCK_PORTS-1:0] set_stb, output [63:0] set_vita,
+    output [31:0] set_data, output [7:0] set_addr, output [BLOCK_PORTS-1:0] set_stb, output [63:0] set_time,
     input [(BLOCK_PORTS-1)*64+63:0] rb_data,
 
     // Control Source
@@ -39,13 +38,10 @@ module noc_shell
     input [BLOCK_PORTS-1:0] str_src_tvalid, output [BLOCK_PORTS-1:0] str_src_tready,
 
     // Misc
-    output [BLOCK_PORTS-1:0] clear_tx_seqnum,       // Clear TX Sequence Number
-    output [BLOCK_PORTS*16-1:0] block_sid,          // Stream ID of this RFNoC block
-    output [BLOCK_PORTS*16-1:0] next_dst_sid,       // Stream ID of downstream block
-
-    // Time used in response packet time field. Most blocks will not use this and 
-    // can be safely set to 0 if unused.
-    input  [63:0] vita_time,
+    output [BLOCK_PORTS-1:0] clear_tx_seqnum,        // Clear TX Sequence Number, one per output port
+    output [BLOCK_PORTS*16-1:0] src_sid,             // Stream ID of block port, one per input and/or output port
+    output [BLOCK_PORTS*16-1:0] next_dst_sid,        // Stream ID of downstream block, one per output port
+    output [BLOCK_PORTS*16-1:0] forwarding_dst_sid,  // Stream ID of block to forward errors / special messages, one per input and/or output port
 
     output [63:0] debug
     );
@@ -54,10 +50,17 @@ module noc_shell
    localparam SR_FLOW_CTRL_PKTS_PER_ACK      = 1;
    localparam SR_FLOW_CTRL_WINDOW_SIZE       = 2;
    localparam SR_FLOW_CTRL_WINDOW_EN         = 3;
-   localparam SR_BLOCK_SID                   = 4;
+   localparam SR_SRC_SID                     = 4;
    localparam SR_NEXT_DST_SID                = 5;
-   localparam SR_CLEAR_TX_FC                 = 126;
+   localparam SR_FORWARDING_DST_SID          = 6;
+   localparam SR_ERROR_POLICY                = 7;
+   localparam SR_CLEAR_FC                    = 126;
    localparam SR_RB_ADDR                     = 127;
+   
+   localparam RB_NOC_ID                      = 0;
+   localparam RB_BLOCK_PORT_SETTINGS         = 1;
+   localparam RB_GLOBAL_SETTINGS             = 2;
+   localparam RB_USER_RB_DATA                = 3;
    // Allocate all regs 128-255 to user device
    
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
@@ -71,9 +74,9 @@ module noc_shell
 
    wire [31:0] 	  debug_sfc;
    
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos to get the computation engine on its own clock
-
+   ///////////////////////////////////////////////////////////////////////////////////////
    wire [63:0] 	  i_tdata_b, o_tdata_b;
    wire 	  i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
    axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(5)) in_fifo   // Very little buffering needed here, only a clock domain crossing
@@ -86,9 +89,9 @@ module noc_shell
       .i_aclk(clk), .i_tvalid(o_tvalid_b), .i_tready(o_tready_b), .i_tdata({o_tlast_b,o_tdata_b}),
       .o_aclk(bus_clk), .o_tvalid(o_tvalid), .o_tready(o_tready), .o_tdata({o_tlast,o_tdata}));
    
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // Mux and Demux to join/split streams going to/coming from RFNoC
-   
+   ///////////////////////////////////////////////////////////////////////////////////////
    axi_mux4 #(.PRIO(0), .WIDTH(64), .BUFFER(1)) output_mux
      (.clk(clk), .reset(reset), .clear(1'b0),
       .i0_tdata(dataout_tdata), .i0_tlast(dataout_tlast), .i0_tvalid(dataout_tvalid), .i0_tready(dataout_tready),
@@ -105,23 +108,23 @@ module noc_shell
       .header(vheader), .dest(vdest),
       .i_tdata(i_tdata_b), .i_tlast(i_tlast_b), .i_tvalid(i_tvalid_b), .i_tready(i_tready_b),
       .o0_tdata(datain_tdata), .o0_tlast(datain_tlast), .o0_tvalid(datain_tvalid), .o0_tready(datain_tready),
-      .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready), // FIXME may need
+      .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready),
       .o2_tdata(cmdin_tdata), .o2_tlast(cmdin_tlast), .o2_tvalid(cmdin_tvalid), .o2_tready(cmdin_tready),
       .o3_tdata(ackin_tdata), .o3_tlast(ackin_tlast), .o3_tvalid(ackin_tvalid), .o3_tready(ackin_tready));
 
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // Control Sink (required)
-
+   ///////////////////////////////////////////////////////////////////////////////////////
    wire [BLOCK_PORTS*64-1:0] rb_data_flat;
-   cmd_pkt_proc #(.NUM_BLOCK_PORTS(BLOCK_PORTS)) cmd_pkt_proc
+   cmd_pkt_proc #(.NUM_SR_BUSES(BLOCK_PORTS)) cmd_pkt_proc
      (.clk(clk), .reset(reset), .clear(1'b0),
       .cmd_tdata(cmdin_tdata), .cmd_tlast(cmdin_tlast), .cmd_tvalid(cmdin_tvalid), .cmd_tready(cmdin_tready),
       .resp_tdata(ackout_tdata), .resp_tlast(ackout_tlast), .resp_tvalid(ackout_tvalid), .resp_tready(ackout_tready),
-      .vita_time(vita_time),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_vita(set_vita),
+      .vita_time(64'd0),
+      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
       .ready(1'b1), .readback(rb_data_flat));
 
-   wire [BLOCK_PORTS-1:0] clear_tx_fc;
+   wire [BLOCK_PORTS-1:0] clear_fc;
    wire [1:0] rb_addr[0:BLOCK_PORTS-1];
 
    genvar k;
@@ -137,10 +140,16 @@ module noc_shell
            rb_data_gen <= 64'd0;
          end else begin
            case(rb_addr[k])
-             2'd0 : rb_data_gen <= NOC_ID;
-             2'd1 : rb_data_gen <= {59'h0, STR_SINK_FIFOSIZES[k]};
-             2'd2 : rb_data_gen <= 64'd0;
-             2'd3 : rb_data_gen <= rb_data[64*k+63:64*k];
+             RB_NOC_ID              : rb_data_gen <= NOC_ID;
+             // Block port specific settings
+             RB_BLOCK_PORT_SETTINGS : rb_data_gen <= {src_sid[16*k+15:16*k],            // SRC SID / SID of this block port
+                                                      next_dst_sid[16*k+15:16*k],       // Next Dest SID
+                                                      forwarding_dst_sid[16*k+15:16*k], // Forwarding Dest SID (usually for sending errors back to the host)
+                                                      MTU[8*k+7:8*k],                   // MTU
+                                                      STR_SINK_FIFOSIZES[8*k+7:8*k]};   // Window size
+             // NoC Shell global settings shared across all block ports
+             RB_GLOBAL_SETTINGS     : rb_data_gen <= {59'd0, BLOCK_PORTS[4:0]};         // Need 5 bits as we can have up to 16 ports
+             RB_USER_RB_DATA        : rb_data_gen <= rb_data[64*k+63:64*k];
            endcase
          end
        end
@@ -148,24 +157,27 @@ module noc_shell
        assign rb_data_flat[64*k+63:64*k] = rb_data_gen;
 
        // Clearing the flow control window can also be used to reset the sequence number
-       assign clear_tx_seqnum[k] = clear_tx_fc[k];
-       setting_reg #(.my_addr(SR_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
+       assign clear_tx_seqnum[k] = clear_fc[k];
+       setting_reg #(.my_addr(SR_CLEAR_FC), .at_reset(0)) sr_clear_fc
          (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
-          .in(set_data),.out(),.changed(clear_tx_fc[k]));
+          .in(set_data),.out(),.changed(clear_fc[k]));
        // Stream ID of this RFNoC block
-       setting_reg #(.my_addr(SR_BLOCK_SID), .width(16), .at_reset(0)) sr_block_sid
+       setting_reg #(.my_addr(SR_SRC_SID), .width(16), .at_reset(0)) sr_block_sid
          (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
-          .in(set_data),.out(block_sid[16*k+15:16*k]),.changed());
+          .in(set_data),.out(src_sid[16*k+15:16*k]),.changed());
        // Destination Stream ID of the next RFNoC block
        setting_reg #(.my_addr(SR_NEXT_DST_SID), .width(16), .at_reset(0)) sr_next_dst_sid
          (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
           .in(set_data),.out(next_dst_sid[16*k+15:16*k]),.changed());
+       setting_reg #(.my_addr(SR_NEXT_DST_SID), .width(16), .at_reset(0)) sr_forwarding_dst_sid
+         (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
+          .in(set_data),.out(forwarding_dst_sid[16*k+15:16*k]),.changed());
      end
    endgenerate
 
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // Stream Source
-
+   ///////////////////////////////////////////////////////////////////////////////////////
    wire [64*BLOCK_PORTS-1:0] dataout_ports_tdata;
    wire [BLOCK_PORTS-1:0]    dataout_ports_tvalid, dataout_ports_tready, dataout_ports_tlast;
 
@@ -192,7 +204,7 @@ module noc_shell
          noc_output_port #(
            .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
            .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN),
-           .PORT_NUM(i), .MTU(MTU), .USE_GATE(USE_GATE_MASK[i]))
+           .PORT_NUM(i), .MTU(MTU[8*i+7:8*i]), .USE_GATE(USE_GATE_MASK[i]))
          noc_output_port (
            .clk(clk), .reset(reset),
            .set_stb(set_stb[i]), .set_addr(set_addr), .set_data(set_data),
@@ -215,9 +227,9 @@ module noc_shell
      end
    endgenerate
 
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // Stream Sink
-
+   ///////////////////////////////////////////////////////////////////////////////////////
    wire [64*BLOCK_PORTS-1:0] datain_ports_tdata;
    wire [BLOCK_PORTS-1:0]    datain_ports_tvalid, datain_ports_tready, datain_ports_tlast;
 
@@ -232,32 +244,32 @@ module noc_shell
        noc_input_port #(
          .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
          .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
-         .PORT_NUM(0),
+         .SR_ERROR_POLICY(SR_ERROR_POLICY),
          .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZES))
        noc_input_port (
-         .clk(clk), .reset(reset),
+         .clk(clk), .reset(reset), .clear(clear_fc),
+         .forwarding_sid({src_sid,forwarding_dst_sid}),
          .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-         .datain_tdata(datain_tdata), .datain_tlast(datain_tlast), .datain_tvalid(datain_tvalid), .datain_tready(datain_tready),
-         .fcout_tdata(fcout_tdata), .fcout_tlast(fcout_tlast), .fcout_tvalid(fcout_tvalid), .fcout_tready(fcout_tready),
-         .clear_tx_fc(clear_tx_fc),
-         .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready));
+         .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
+         .o_tdata(str_sink_tdata), .o_tlast(str_sink_tlast), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
+         .fc_tdata(fcout_tdata), .fc_tlast(fcout_tlast), .fc_tvalid(fcout_tvalid), .fc_tready(fcout_tready));
      end else begin : gen_noc_input_port
        for(j=0; j<BLOCK_PORTS; j=j+1) begin : loop
          noc_input_port #(
            .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
            .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
-           .PORT_NUM(j),
+           .SR_ERROR_POLICY(SR_ERROR_POLICY),
            .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZES[j]))
          noc_input_port (
-           .clk(clk), .reset(reset),
+           .clk(clk), .reset(reset), .clear(clear_fc[j]),
+           .forwarding_sid({src_sid[16*j+15:16*j],forwarding_dst_sid[16*j+15:16*j]}),
            .set_stb(set_stb[j]), .set_addr(set_addr), .set_data(set_data),
-           .datain_tdata(datain_ports_tdata[64*j+63:64*j]), .datain_tlast(datain_ports_tlast[j]),
-           .datain_tvalid(datain_ports_tvalid[j]), .datain_tready(datain_ports_tready[j]),
-           .fcout_tdata(fcout_ports_tdata[64*j+63:64*j]), .fcout_tlast(fcout_ports_tlast[j]),
-           .fcout_tvalid(fcout_ports_tvalid[j]), .fcout_tready(fcout_ports_tready[j]),
-           .clear_tx_fc(clear_tx_fc[j]),
-           .str_sink_tdata(str_sink_tdata[64*j+63:64*j]), .str_sink_tlast(str_sink_tlast[j]),
-           .str_sink_tvalid(str_sink_tvalid[j]), .str_sink_tready(str_sink_tready[j]));
+           .i_tdata(datain_ports_tdata[64*j+63:64*j]), .i_tlast(datain_ports_tlast[j]),
+           .i_tvalid(datain_ports_tvalid[j]), .i_tready(datain_ports_tready[j]),
+           .o_tdata(str_sink_tdata[64*j+63:64*j]), .o_tlast(str_sink_tlast[j]),
+           .o_tvalid(str_sink_tvalid[j]), .o_tready(str_sink_tready[j]),
+           .fc_tdata(fcout_ports_tdata[64*j+63:64*j]), .fc_tlast(fcout_ports_tlast[j]),
+           .fc_tvalid(fcout_ports_tvalid[j]), .fc_tready(fcout_ports_tready[j]));
          axi_demux #(.WIDTH(64), .SIZE(BLOCK_PORTS)) axi_demux (
            .clk(clk), .reset(reset), .clear(1'b0),
            .header(header_datain), .dest(header_datain[3:0]),
@@ -270,9 +282,9 @@ module noc_shell
      end
    endgenerate
 
-   // ////////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////////////////////////////////////////
    // Debug pins
-
+   ///////////////////////////////////////////////////////////////////////////////////////
    assign debug[31:0] = { // input side 16 bits
 			  4'b0000,
 			  i_tvalid_b, i_tready_b,

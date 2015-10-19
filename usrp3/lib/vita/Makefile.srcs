@@ -6,6 +6,8 @@
 # VITA Sources
 ##################################################
 VITA_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/vita/, \
+flow_control_responder.v \
+packet_error_responder.v \
 new_tx_control.v \
 new_tx_deframer.v \
 tx_responder.v \
