@@ -1,131 +1,117 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2015 Ettus Research
 //
+// Converts AXI-Stream sample data to a strobed data interface for the radio frontend
+// Outputs an error packet if an underrun or late timed command occurs.
 
-module tx_control_gen3
-  #(parameter SR_ERROR_POLICY=0)
-   (input clk, input rst, input clear,
-    input set_stb, input [7:0] set_addr, input [31:0] set_data,
+module tx_control_gen3 #(
+  parameter SR_ERROR_POLICY = 0   // What to do when errors occur -- wait for next packet or next burst  
+)(
+  input clk, input reset, input clear,
+  input [63:0] vita_time, input [31:0] forwarding_sid,
+  input set_stb, input [7:0] set_addr, input [31:0] set_data,
+  // Data packets
+  input [31:0] tx_tdata, input [127:0] tx_tuser, input tx_tlast, input tx_tvalid, output tx_tready,
+  // Error packets
+  output reg [63:0] resp_tdata, output reg [127:0] resp_tuser, output reg resp_tlast, output reg resp_tvalid, input resp_tready,
+  // To radio frontend
+  output run, output [31:0] sample, input strobe
+);
 
-    input [63:0] vita_time,
-    input [31:0] tx_tdata,
-    input [127:0] tx_tuser,
-    input tx_tlast,
-    input tx_tvalid,
-    output tx_tready,
+  wire [63:0] send_time = tx_tuser[63:0];
+  wire [11:0] seqnum    = tx_tuser[123:112];
+  wire        eob       = tx_tuser[124];
+  wire        send_at   = tx_tuser[125];
 
-    output reg error,
-    output [11:0] seqnum,
-    output reg [63:0] error_code,
+  wire now, early, late, too_early;
+  wire policy_next_burst, policy_next_packet;
 
-    // To DSP Core
-    output run, output [31:0] sample,
-    input strobe
-    );
+  setting_reg #(.my_addr(SR_ERROR_POLICY), .width(2), .at_reset(2'b01)) sr_error_policy (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+    .in(set_data),.out({policy_next_burst,policy_next_packet}),.changed());
 
-   wire [63:0] 	  send_time = tx_tuser[63:0];
-   assign 	  seqnum = tx_tuser[123:112];
-   wire 	  eob = tx_tuser[124];
-   wire 	  send_at = tx_tuser[125];
+  time_compare time_compare (
+    .clk(clk), .reset(reset),
+    .time_now(vita_time), .trigger_time(send_time),
+    .now(now), .early(early), .late(late), .too_early(too_early));
 
-   wire 	  now, early, late, too_early;
-   wire 	  policy_next_burst, policy_next_packet, policy_wait;
-   wire 	  clear_seqnum;
+  reg [2:0] state;
 
-   setting_reg #(.my_addr(SR_ERROR_POLICY), .width(3)) sr_error_policy
-     (.clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out({policy_next_burst,policy_next_packet,policy_wait}),.changed(clear_seqnum));
+  localparam ST_IDLE        = 0;
+  localparam ST_SAMP        = 1;
+  localparam ST_ERROR       = 2;
+  localparam ST_ERROR_WAIT  = 3;
 
-   time_compare
-     time_compare (.clk(clk), .reset(rst), .time_now(vita_time), .trigger_time(send_time),
-		   .now(now), .early(early), .late(late), .too_early(too_early));
+  assign run = (state == ST_SAMP);
 
-   reg [2:0]     state;
+  wire [63:0] CODE_EOB_ACK      = {32'd1,20'd0,seqnum};
+  wire [63:0] CODE_UNDERRUN     = {32'd2,20'd0,seqnum};
+  wire [63:0] CODE_TIME_ERROR   = {32'd8,20'd0,seqnum};
 
-   localparam ST_IDLE  = 0;
-   localparam ST_SAMP  = 1;
-   localparam ST_ERROR = 2;
-   localparam ST_WAIT  = 3;
+  wire [127:0] error_header     = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, forwarding_sid, vita_time};
+  wire [127:0] resp_header      = {2'b11, 1'b1, 1'b0, 12'd0 /* don't care */, 16'd0 /* don't care */, forwarding_sid, vita_time};
 
-   assign run = (state == ST_SAMP);
+  always @(posedge clk) begin
+    if (reset | clear) begin
+      state <= ST_IDLE;
+      resp_tvalid <= 1'b0;
+      resp_tlast  <= 1'b0;
+      resp_tuser <= 'd0;
+      resp_tdata <= 'd0;
+    end else begin
+      // Deassert tvalid after response packet is consumed
+      if (resp_tvalid & resp_tlast & resp_tready) begin
+        resp_tvalid <= 1'b0;
+        resp_tlast  <= 1'b0;
+      end
 
-   reg [11:0]  expected_seqnum;
+      case (state)
+        ST_IDLE : begin
+          if (tx_tvalid) begin
+            if (~send_at | now) begin
+              state <= ST_SAMP;
+            end else if (late) begin
+              resp_tvalid <= 1'b1;
+              resp_tlast  <= 1'b1;
+              resp_tuser  <= error_header;
+              resp_tdata  <= CODE_TIME_ERROR;
+              state       <= ST_ERROR;
+            end
+          end
+        end
 
-   wire [63:0] CODE_EOB_ACK            = {32'd1,20'd0,seqnum};
-   wire [63:0] CODE_UNDERRUN           = {32'd2,20'd0,seqnum};
-   wire [63:0] CODE_SEQ_ERROR          = {32'd4,4'd0,expected_seqnum,4'd0,seqnum};
-   wire [63:0] CODE_TIME_ERROR         = {32'd8,20'd0,seqnum};
-   //wire [63:0] CODE_UNDERRUN_MIDPKT    = {32'd16,20'd0,seqnum};
-   wire [63:0] CODE_SEQ_ERROR_MIDBURST = {32'd32,4'd0,expected_seqnum,4'd0,seqnum};
+        ST_SAMP :
+          if (strobe)
+            if (~tx_tvalid) begin
+              resp_tvalid <= 1'b1;
+              resp_tlast  <= 1'b1;
+              resp_tuser  <= error_header;
+              resp_tdata  <= CODE_UNDERRUN;
+              state       <= ST_ERROR_WAIT;
+            end else if (tx_tlast & eob) begin
+              resp_tvalid <= 1'b1;
+              resp_tlast  <= 1'b1;
+              resp_tuser  <= resp_header;
+              resp_tdata  <= CODE_EOB_ACK;
+              state       <= ST_IDLE;
+            end
 
-   // FIXME should move seqnum error detection to noc_shell
-   always @(posedge clk)
-     if(rst | clear | clear_seqnum)
-       expected_seqnum <= 12'd0;
-     else
-       if(tx_tvalid & tx_tready & tx_tlast)
-	 expected_seqnum <= seqnum + 12'd1;
+        // Wait until end of packet or burst depending on the policy
+        ST_ERROR_WAIT : begin
+          if (tx_tvalid & tx_tlast) begin
+            if (policy_next_packet | (policy_next_burst & eob)) begin
+              state <= ST_IDLE;
+            end
+          end
+        end
 
-   always @(posedge clk)
-     if(rst | clear)
-       begin
-	  state <= ST_IDLE;
-	  error <= 1'b0;
-	  error_code <= 64'd0;
-       end
-     else
-       case(state)
-	 ST_IDLE :
-	   begin
-	      error <= 1'b0;
-	      if(tx_tvalid)
-		if(expected_seqnum != seqnum)
-		  begin
-		     state <= ST_ERROR;
-		     error <= 1'b1;
-		     error_code <= CODE_SEQ_ERROR;
-		  end
-		else if(~send_at | now)
-		  state <= ST_SAMP;
-		else if(late)
-		  begin
-		     state <= ST_ERROR;
-		     error <= 1'b1;
-		     error_code <= CODE_TIME_ERROR;
-		  end
-	   end // case: ST_IDLE
-	 ST_SAMP :
-	   if(strobe)
-	     if(~tx_tvalid)
-	       begin
-		  state <= ST_ERROR;
-		  error <= 1'b1;
-		  error_code <= CODE_UNDERRUN;
-	       end
-	     else if(expected_seqnum != seqnum)
-	       begin
-		  state <= ST_ERROR;
-		  error <= 1'b1;
-		  error_code <= CODE_SEQ_ERROR_MIDBURST;
-	       end
-	     else if(tx_tlast & eob)
-	       begin
-		  state <= ST_IDLE;
-		  error <= 1'b1;
-		  error_code <= CODE_EOB_ACK;
-	       end
-	 ST_ERROR :
-	   begin
-	      error <= 1'b0;
-	      if(tx_tvalid & tx_tlast)
-		if(policy_next_packet | (policy_next_burst & eob))
-		  state <= ST_IDLE;
-		else if(policy_wait)
-		  state <= ST_WAIT;
-	   end
-       endcase // case (state)
+        default : state <= ST_IDLE;
+      endcase // case (state)
+    end
+  end
 
-   assign tx_tready = (state == ST_ERROR) | (strobe & (state == ST_SAMP));
-   assign sample = tx_tdata;
-   
+  // Read packet in 'sample' state or dump it in error state
+  assign tx_tready = (state == ST_ERROR_WAIT) | (strobe & (state == ST_SAMP));
+  assign sample = tx_tdata;
+
 endmodule // tx_control_gen3

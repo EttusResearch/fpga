@@ -2,9 +2,6 @@
 // Copyright 2015 Ettus Research LLC
 //
 
-
-
-
 module rx_dcoffset 
   #(parameter WIDTH=16,
     parameter ADDR=8'd0,
@@ -20,13 +17,13 @@ module rx_dcoffset
 
    localparam int_width = WIDTH + alpha_shift;
    reg [int_width-1:0] integrator;
-   reg                 integ_stb;
+   reg                 integ_in_stb;
    wire [WIDTH-1:0]    quantized;
 
    always @(posedge clk) begin
      if(rst)
        begin
-       integ_stb <= 0;
+       integ_in_stb <= 0;
 	  fixed <= 0;
 	  integrator <= {int_width{1'b0}};
        end
@@ -38,13 +35,13 @@ module rx_dcoffset
        end
      else if(~fixed & in_stb)
        integrator <= integrator +  {{(alpha_shift){out[WIDTH-1]}},out};
-     integ_stb <= in_stb;
+     integ_in_stb <= in_stb;
    end
 
    round_sd #(.WIDTH_IN(int_width),.WIDTH_OUT(WIDTH)) round_sd
-     (.clk(clk), .reset(rst), .in(integrator), .strobe_in(integ_stb), .out(quantized), .strobe_out(out_stb));
-   
+     (.clk(clk), .reset(rst), .in(integrator), .strobe_in(integ_in_stb), .out(quantized), .strobe_out());
+
    add2_and_clip_reg #(.WIDTH(WIDTH)) add2_and_clip_reg
-     (.clk(clk), .rst(rst), .in1(in), .in2(-quantized), .strobe_in(integ_stb), .sum(out), .strobe_out(out_stb));
+     (.clk(clk), .rst(rst), .in1(in), .in2(-quantized), .strobe_in(in_stb), .sum(out), .strobe_out(out_stb));
 
 endmodule // rx_dcoffset

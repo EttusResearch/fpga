@@ -12,7 +12,7 @@ module rx_frontend_gen3 #(
   parameter BYPASS_IQ_COMP = 0,
   parameter DEVICE = "7SERIES"
 )(
-  input clk, input rst, input run,
+  input clk, input reset,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input adc_stb, input [15:0] adc_i, input [15:0] adc_q,
   output rx_stb, output [15:0] rx_i, output [15:0] rx_q
@@ -41,15 +41,15 @@ module rx_frontend_gen3 #(
   ** Settings Bus Registers
   ********************************************************/
   setting_reg #(.my_addr(SR_MAG_CORRECTION),.width(18)) sr_mag_corr (
-    .clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(mag_corr),.changed());
 
   setting_reg #(.my_addr(SR_PHASE_CORRECTION),.width(18)) sr_phase_corr (
-    .clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(phase_corr),.changed());
 
   setting_reg #(.my_addr(SR_SWAP_IQ), .width(4)) sr_mux_sel (
-    .clk(clk),.rst(rst),.strobe(set_stb),.addr(set_addr),
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out({invert_i,invert_q,realmode,swap_iq}),.changed());
 
   /********************************************************
@@ -71,12 +71,12 @@ module rx_frontend_gen3 #(
   generate
     if (BYPASS_DC_OFFSET_CORR == 1) begin
       rx_dcoffset #(.WIDTH(24),.ADDR(SR_OFFSET_I)) rx_dcoffset_i (
-        .clk(clk),.rst(rst),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-        .in_stb(adc_mux_stb & run),.in({adc_i_mux,8'd0}),
+        .clk(clk),.rst(reset),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+        .in_stb(adc_mux_stb),.in({adc_i_mux,8'd0}),
         .out_stb(adc_ofs_stb),.out(adc_i_ofs));
       rx_dcoffset #(.WIDTH(24),.ADDR(SR_OFFSET_Q)) rx_dcoffset_q (
-        .clk(clk),.rst(rst),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-        .in_stb(adc_mux_stb & run),.in({adc_q_mux,8'd0}),
+        .clk(clk),.rst(reset),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
+        .in_stb(adc_mux_stb),.in({adc_q_mux,8'd0}),
         .out_stb(),.out(adc_q_ofs));
     end else begin
       assign adc_ofs_stb = adc_mux_stb;
@@ -93,18 +93,18 @@ module rx_frontend_gen3 #(
         .DEVICE(DEVICE), .LATENCY(1),
         .WIDTH_A(18), .WIDTH_B(18))
       mult_i (
-        .CLK(clk), .RST(rst), .CE(adc_ofs_stb & run),
+        .CLK(clk), .RST(reset), .CE(adc_ofs_stb),
         .P(corr_i), .A(adc_i_ofs[23:6]), .B(mag_corr));
       MULT_MACRO #(
         .DEVICE(DEVICE), .LATENCY(1),
         .WIDTH_A(18), .WIDTH_B(18))
       mult_q (
-        .CLK(clk), .RST(rst), .CE(adc_ofs_stb & run),
+        .CLK(clk), .RST(reset), .CE(adc_ofs_stb),
         .P(corr_q), .A(adc_i_ofs[23:6]), .B(phase_corr));
 
       // Delay to match path latencies
       always @(posedge clk) begin
-        if (rst) begin
+        if (reset) begin
           adc_ofs_stb_dly <= 1'b0;
           adc_i_ofs_dly   <= 24'd0;
           adc_q_ofs_dly   <= 24'd0;
@@ -119,13 +119,13 @@ module rx_frontend_gen3 #(
 
       add2_and_clip_reg #(.WIDTH(24))
       add_clip_i (
-        .clk(clk), .rst(rst),
-        .in1(adc_i_ofs_dly), .in2(corr_i[35:12]), .strobe_in(adc_ofs_stb_dly & run),
+        .clk(clk), .rst(reset),
+        .in1(adc_i_ofs_dly), .in2(corr_i[35:12]), .strobe_in(adc_ofs_stb_dly),
         .sum(adc_i_comp), .strobe_out(adc_comp_stb));
       add2_and_clip_reg #(.WIDTH(24))
       add_clip_q (
-        .clk(clk), .rst(rst), 
-        .in1(adc_q_ofs_dly), .in2(corr_q[35:12]), .strobe_in(adc_ofs_stb_dly & run),
+        .clk(clk), .rst(reset), 
+        .in1(adc_q_ofs_dly), .in2(corr_q[35:12]), .strobe_in(adc_ofs_stb_dly),
         .sum(adc_q_comp), .strobe_out());
 
     end else begin
@@ -137,8 +137,8 @@ module rx_frontend_gen3 #(
 
   // Round to short complex (sc16)
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_i (
-    .clk(clk),.reset(rst), .in(adc_i_comp),.strobe_in(adc_comp_stb & run), .out(rx_i), .strobe_out(rx_stb));
+    .clk(clk),.reset(reset), .in(adc_i_comp),.strobe_in(adc_comp_stb), .out(rx_i), .strobe_out(rx_stb));
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_q (
-    .clk(clk),.reset(rst), .in(adc_q_comp),.strobe_in(adc_comp_stb & run), .out(rx_q), .strobe_out());
+    .clk(clk),.reset(reset), .in(adc_q_comp),.strobe_in(adc_comp_stb), .out(rx_q), .strobe_out());
 
 endmodule

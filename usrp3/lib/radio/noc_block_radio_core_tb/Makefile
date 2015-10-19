@@ -25,6 +25,7 @@ include $(BASE_DIR)/../lib/control/Makefile.srcs
 include $(BASE_DIR)/../lib/vita/Makefile.srcs
 include $(BASE_DIR)/../lib/timing/Makefile.srcs
 include $(BASE_DIR)/../lib/packet_proc/Makefile.srcs
+include $(BASE_DIR)/../lib/dsp/Makefile.srcs
 include $(BASE_DIR)/../lib/radio/Makefile.srcs
 include $(BASE_DIR)/../lib/rfnoc/Makefile.srcs
 
@@ -35,6 +36,7 @@ $(CONTROL_LIB_SRCS) \
 $(VITA_SRCS) \
 $(TIMING_SRCS) \
 $(PACKET_PROC_SRCS) \
+$(DSP_SRCS) \
 $(RADIO_SRCS) \
 $(RFNOC_SRCS) \
 )
@@ -73,12 +75,13 @@ SIM_RUNTIME_US = 1000
 SIM_SRCS = \
 $(abspath noc_block_radio_core_tb.sv) \
 $(abspath ../../control/axi_crossbar_intf.sv) \
+$(abspath ../../../top/e300/e3x0_db_control.v) \
 $(SIM_GENERAL_SRCS) \
 $(SIM_AXI_SRCS) \
 $(SIM_CONTROL_SRCS) \
 $(SIM_RFNOC_SRCS)
 
-MODELSIM_USER_DO = $(abspath wave.do)
+VIV_SIM_USER_DO = $(abspath wave.do)
 
 #-------------------------------------------------
 # Bottom-of-Makefile
