@@ -2,7 +2,7 @@
 // Copyright 2013-2014 Ettus Research LLC
 //
 
-module e300_core
+module e310_core
 (
   // bus interfaces
   input             bus_clk,
@@ -34,16 +34,16 @@ module e300_core
 
   // settings bus to control global registers
   input [31:0]      set_data,
-  input [31:0]      set_addr,
+  input [7:0]       set_addr,
   input             set_stb,
   output reg [31:0] rb_data,
 
   // settings bus to crossbar registers
   input [31:0]      xbar_set_data,
-  input [31:0]      xbar_set_addr,
+  input [10:0]      xbar_set_addr,
   input             xbar_set_stb,
   output [31:0]     xbar_rb_data,
-  input [31:0]      xbar_rb_addr,
+  input [10:0]      xbar_rb_addr,
   input             xbar_rb_stb,
 
   // pps signals -- muxing happens toplevel
@@ -86,12 +86,11 @@ module e300_core
     else
       {lock_state_r, lock_state} <= {lock_state, lock_signals};
 
-
   // Global register offsets
-  localparam SR_CORE_READBACK = 11'd0;
-  localparam SR_CORE_MISC     = 11'd4;
-  localparam SR_CORE_TEST     = 11'd28;
-  localparam SR_CORE_XB_LOCAL = 11'd32;
+  localparam SR_CORE_READBACK = 8'h00;
+  localparam SR_CORE_MISC     = 8'h04;
+  localparam SR_CORE_TEST     = 8'h1c;
+  localparam SR_CORE_XB_LOCAL = 8'h20;
 
   localparam RB32_CORE_MISC     = 5'd1;
   localparam RB32_CORE_COMPAT   = 5'd2;
@@ -115,11 +114,10 @@ module e300_core
 
   wire [31:0] misc_out;
 
-
   setting_reg
   #( .my_addr(SR_CORE_READBACK),
-     .awidth(11), .width(5),
-     .at_reset(2'h0)
+     .awidth(8), .width(5),
+     .at_reset(5'd0)
   ) sr_readback_addr
   (
     .clk(bus_clk), .rst(bus_rst),
@@ -130,7 +128,7 @@ module e300_core
 
   setting_reg
   #( .my_addr(SR_CORE_TEST),
-     .awidth(11), .width(32),
+     .awidth(8), .width(32),
      .at_reset(32'h0)
   ) sr_test
   (
@@ -145,7 +143,7 @@ module e300_core
   setting_reg
   #(
     .my_addr(SR_CORE_MISC),
-    .awidth(11), .width(32),
+    .awidth(8), .width(32),
     .at_reset({30'h0, 2'b10})
   ) sr_misc
   (
@@ -167,7 +165,7 @@ module e300_core
   setting_reg
   #(
     .my_addr(SR_CORE_XB_LOCAL),
-    .awidth(11), .width(8),
+    .awidth(8), .width(8),
     .at_reset(11'd40)
   ) sr_xb_local
   (

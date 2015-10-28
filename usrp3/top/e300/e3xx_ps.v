@@ -182,6 +182,12 @@ module e300_processing_system (
   wire [7:0]        processing_system7_S_AXI_HP0_WSTRB;
   wire              processing_system7_FCLK_CLK0;
   wire              processing_system7_FCLK_RESET0_N;
+  wire              processing_system7_FCLK_CLK1;
+  wire              processing_system7_FCLK_RESET1_N;
+  wire              processing_system7_FCLK_CLK2;
+  wire              processing_system7_FCLK_RESET2_N;
+  wire              processing_system7_FCLK_CLK3;
+  wire              processing_system7_FCLK_RESET3_N;
   wire [5:0]        axi4_fifo_S_AXI_HP0_AWID;
   wire [31:0]       axi4_fifo_S_AXI_HP0_AWADDR;
   wire [7:0]        axi4_fifo_S_AXI_HP0_AWLEN;

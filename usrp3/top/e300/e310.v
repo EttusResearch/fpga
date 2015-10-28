@@ -148,6 +148,7 @@ module e300
   wire [1:0]  GP0_M_AXI_RRESP;
   wire        GP0_M_AXI_RVALID;
   wire        GP0_M_AXI_RREADY;
+
   wire [31:0] GP0_M_AXI_AWADDR_S0;
   wire        GP0_M_AXI_AWVALID_S0;
   wire        GP0_M_AXI_AWREADY_S0;
@@ -508,10 +509,6 @@ module e300
   assign CAT_RESET = ~(bus_rst || (CAT_CS & CAT_MOSI));   // Operates active-low, really CAT_RESET_B
   assign CAT_SYNC = 1'b0;
 
-  reg [2:0] pps_reg;
-  always @ (posedge bus_clk)
-    pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
-
   //------------------------------------------------------------------
   //-- connect misc stuff to user GPIO
   //------------------------------------------------------------------
@@ -534,14 +531,14 @@ module e300
            TX_ENABLE2B, TX_ENABLE2A //2
          } = gpio1[18:10];
 
-
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.
   //------------------------------------------------------------------
 
   wire [31:0] core_set_data, core_rb_data, xbar_set_data, xbar_rb_data;
-  wire [31:0] core_set_addr, xbar_set_addr, xbar_rb_addr;
-  wire        core_stb, xbar_set_stb, xbar_rb_stb;
+  wire [7:0] core_set_addr;
+  wire [10:0] xbar_set_addr, xbar_rb_addr;
+  wire        core_set_stb, xbar_set_stb, xbar_rb_stb;
 
 
   zynq_fifo_top
@@ -665,7 +662,7 @@ module e300
   // E300 Core logic
   wire [31:0] debug;
 
-  e300_core e300_core0
+  e310_core e310_core0
   (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),

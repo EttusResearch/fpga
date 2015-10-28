@@ -110,7 +110,7 @@ module zynq_fifo_top
     // Settings bus interface that will got to e300 core
     //------------------------------------------------------------------
     output [31:0] core_set_data,
-    output [31:0] core_set_addr,
+    output [7:0]  core_set_addr,
     output        core_set_stb,
     input [31:0]  core_rb_data,
 
@@ -165,9 +165,9 @@ module zynq_fifo_top
     assign core_set_addr = set_addr[7:0];
     assign core_set_data = set_data;
 
-    assign xbar_rb_addr = rb_addr;
+    assign xbar_rb_addr = rb_addr[10:0];
     assign xbar_set_data = set_data;
-    assign xbar_set_addr = set_addr;
+    assign xbar_set_addr = set_addr[10:0];
 
     //------------------------------------------------------------------
     // configuration slaves
