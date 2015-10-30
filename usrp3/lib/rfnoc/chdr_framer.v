@@ -54,9 +54,9 @@ module chdr_framer
    // FIXME handle lengths of partial 32-bit words
    always @(posedge clk)
      if(reset | clear)
-       length <= 0;
+       length <= (WIDTH == 32) ? 4 : 8;
      else if(header_i_tready & header_i_tvalid)
-       length <= 0;
+       length <= (WIDTH == 32) ? 4 : 8;
      else if(i_tvalid & i_tready)
        length <= (WIDTH == 32) ? length + 4 : length + 8;
 
@@ -80,7 +80,7 @@ module chdr_framer
    localparam ST_BODY = 3;
 
    always @(posedge clk)
-     if(reset)
+     if(reset | clear)
        chdr_state <= ST_IDLE;
      else
        case(chdr_state)
@@ -108,7 +108,7 @@ module chdr_framer
        if(o_tvalid & o_tready & o_tlast)
 	 seqnum <= seqnum + 12'd1;
    
-   wire [15:0] 	  out_length = header_o_tdata[111:96] + (header_o_tdata[125] ? 16'd20 : 16'd12);
+   wire [15:0] 	  out_length = header_o_tdata[111:96] + (header_o_tdata[125] ? 16'd16 : 16'd8);
    
    assign o_tvalid = (chdr_state == ST_HEAD) | (chdr_state == ST_TIME) | (body_o_tvalid & (chdr_state == ST_BODY));
    assign o_tlast = (chdr_state == ST_BODY) & body_o_tlast;
