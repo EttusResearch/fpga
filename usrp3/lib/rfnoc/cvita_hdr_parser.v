@@ -64,15 +64,15 @@ module cvita_hdr_parser #(
     end
   end
 
-  // REGISTER = 0: Always use o_tdata
+  // REGISTER = 0: Always use o_tdata, output only valid when hdr_stb = 1
   // REGISTER = 1: Mux to make sure header output is available immediately and also registered for rest of packet.
-  assign hdr           = (hdr_stb       | ~REGISTER) ? o_tdata : hdr_reg;
-  assign hdr_vita_time = (vita_time_stb | ~REGISTER) ? o_tdata : vita_time_reg;
+  assign hdr           = (hdr_stb       | (REGISTER == 0)) ? o_tdata : hdr_reg;
+  assign hdr_vita_time = (vita_time_stb | (REGISTER == 0)) ? o_tdata : vita_time_reg;
 
   assign hdr_stb   = first_line & o_tvalid & o_tready;
   assign pkt_type  = hdr[63:62];
-  assign eob       = hdr[61];
-  assign has_time  = hdr[60];
+  assign has_time  = hdr[61];
+  assign eob       = hdr[60];
   assign seqnum    = hdr[59:48];
   assign pkt_len   = hdr[47:32];
   assign sid       = hdr[31:0];
