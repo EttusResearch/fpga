@@ -11,7 +11,7 @@ module noc_input_port #(
   parameter STR_SINK_FIFOSIZE = 10)
 (
   input clk, input reset, input clear,  // Note: Clear is used to clear the FIFO and flow control
-  input [31:0] forwarding_sid,          // Stream ID destination used with error packets
+  input [31:0] resp_sid,                // Stream ID used with response packets
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // To / From NoC Shell
   input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -39,7 +39,7 @@ module noc_input_port #(
     .USE_TIME(0))
   noc_responder (
     .clk(clk), .reset(reset), .clear(clear),
-    .forwarding_sid(forwarding_sid),
+    .resp_sid(resp_sid),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(int_tdata), .i_tlast(int_tlast), .i_tvalid(int_tvalid), .i_tready(int_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),

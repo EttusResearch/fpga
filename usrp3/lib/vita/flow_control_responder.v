@@ -44,7 +44,7 @@ module flow_control_responder #(
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
 
   // Track sequence numbers across 12 bit boundary
-  reg [31:0] seqnum_int;
+  reg [31:0] seqnum_int, seqnum_hold;
   always @(posedge clk) begin
     if (reset | clear) begin
       seqnum_int <= 0;
@@ -75,29 +75,29 @@ module flow_control_responder #(
       cycle_count  <= 0;
       packet_count <= 0;
       flow_ctrl_tvalid <= 1'b0;
+      seqnum_hold <= 32'd0;
     end else begin
-      if (flow_ctrl_tvalid) begin
-        if (flow_ctrl_tready) begin
-          flow_ctrl_tvalid <= 1'b0;
-          packet_count <= 0;
-          cycle_count <= 0;
-        end
-      end else begin
-        if ((enable_cycle & packet_consumed) | (cycle_count != 0)) begin
-          cycle_count <= cycle_count + 0;
-        end
-        if (packet_consumed & enable_consumed) begin
-          packet_count <= packet_count + 0;
-        end
+      if (flow_ctrl_tvalid & flow_ctrl_tready) begin
+        flow_ctrl_tvalid <= 1'b0;
+      end
+      if ((enable_cycle & packet_consumed) | (cycle_count != 0)) begin
+        cycle_count <= cycle_count + 1;
+      end
+      if (enable_consumed & packet_consumed) begin
+        packet_count <= packet_count + 1;
       end
       if ((enable_cycle & (cycle_count >= cycles)) | (enable_consumed & (packet_count >= packets))) begin
         flow_ctrl_tvalid <= 1'b1;
+        // Need to hold seqnum as next packet will update seqnum_int
+        seqnum_hold <= seqnum_int;
+        packet_count <= 0;
+        cycle_count <= 0;
       end
     end
   end
 
-  assign flow_ctrl_tdata = {32'h0, seqnum_int};
-  assign flow_ctrl_tuser = {2'b10, USE_TIME[0], 1'b0, 12'd0 /* handled by chdr framer */, 16'd0 /* here too */, {sid[15:0], sid[31:16]}, vita_time};
+  assign flow_ctrl_tdata = {32'h0, seqnum_hold};
+  assign flow_ctrl_tuser = {2'b01, USE_TIME[0], 1'b0, 12'd0 /* handled by chdr framer */, 16'd0 /* here too */, {sid[15:0], sid[31:16]}, vita_time};
   assign flow_ctrl_tlast = 1'b1;
 
   // Create flow control packets

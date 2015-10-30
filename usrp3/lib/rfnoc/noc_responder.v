@@ -10,7 +10,7 @@ module noc_responder #(
   parameter USE_TIME = 1)
 (
   input clk, input reset, input clear,
-  input [31:0] forwarding_sid,  // Stream ID destination used with error packets
+  input [31:0] resp_sid,          // Stream ID used with response packets
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [63:0] i_tdata, input i_tlast, input i_tvalid, input i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
@@ -42,7 +42,7 @@ module noc_responder #(
     .USE_TIME(0))
   packet_error_responder (
     .clk(clk), .reset(reset), .clear(clear),
-    .sid(forwarding_dst_sid),
+    .sid(resp_sid),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(int_tdata), .i_tlast(int_tlast), .i_tvalid(int_tvalid), .i_tready(int_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
