@@ -11,13 +11,13 @@ typedef enum logic [1:0] {
 } cvita_pkt_type_t;
 
 typedef struct packed {
-  logic [15:0]     dst_sid;
-  logic [15:0]     src_sid;
-  logic [15:0]     length;
-  logic [11:0]     seqno;
-  logic            eob;
-  logic            has_time;
   cvita_pkt_type_t pkt_type;
+  logic            has_time;
+  logic            eob;
+  logic [11:0]     seqno;
+  logic [15:0]     length;
+  logic [15:0]     src_sid;
+  logic [15:0]     dst_sid;
   logic [63:0]     timestamp;
 } cvita_hdr_t;
 
@@ -50,7 +50,7 @@ task automatic extract_chdr(ref cvita_pkt_t pkt, ref cvita_hdr_t hdr);
       pkt = pkt[2:$];
     end else begin
       // Delete header
-      pkt = pkt[2:$];
+      pkt = pkt[1:$];
     end
   end
 endtask
