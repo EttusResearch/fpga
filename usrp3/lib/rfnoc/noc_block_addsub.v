@@ -39,13 +39,12 @@ module noc_block_addsub #(
   wire [127:0]  out_tuser[0:1], out_tuser_pre[0:1];
   wire [1:0]    out_tlast, out_tvalid, out_tready;
 
-  wire          clear_tx_seqnum;
+  wire [1:0]    clear_tx_seqnum;
   wire [15:0]   src_sid[0:1], next_dst_sid[0:1];
 
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE({2{STR_SINK_FIFOSIZE[7:0]}}),
-    .MTU({2{MTU[7:0]}}),
     .INPUT_PORTS(2),
     .OUTPUT_PORTS(2))
   inst_noc_shell (
@@ -63,7 +62,8 @@ module noc_block_addsub #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(/* Unused */), .resp_out_dst_sid(/* Unused */),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid({src_sid[1],src_sid[0]}), .next_dst_sid({next_dst_sid[1],next_dst_sid[0]}),
+    .resp_in_dst_sid(/* Unused */), .resp_out_dst_sid(/* Unused */),
     .debug(debug));
 
   genvar     i;

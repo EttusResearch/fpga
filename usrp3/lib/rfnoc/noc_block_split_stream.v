@@ -62,8 +62,10 @@ module noc_block_split_stream #(
     // Stream Sink
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
-    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
+    .str_src_tdata({str_src_tdata[1],str_src_tdata[0]}), .str_src_tlast({str_src_tlast[1],str_src_tlast[0]}),
+    .str_src_tvalid({str_src_tvalid[1],str_src_tvalid[0]}), .str_src_tready({str_src_tready[1],str_src_tready[0]}),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid({src_sid[1],src_sid[0]}), .next_dst_sid({next_dst_sid[1],next_dst_sid[0]}),
+    .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   chdr_deframer chdr_deframer (
@@ -81,13 +83,15 @@ module noc_block_split_stream #(
   assign out_tuser[0] = { out_tuser_pre[0][127:96], src_sid[0], next_dst_sid[0], out_tuser_pre[0][63:0] };
   assign out_tuser[1] = { out_tuser_pre[1][127:96], src_sid[1], next_dst_sid[1], out_tuser_pre[1][63:0] };
 
+  localparam MTU = 10;
+
   genvar i;
   generate
     for (i=0; i<NUM_OUTPUTS; i=i+1) begin
       chdr_framer #(.SIZE(MTU)) chdr_framer (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[j]),
         .i_tdata(out_tdata[i]), .i_tuser(out_tuser[i]), .i_tlast(out_tlast[i]), .i_tvalid(out_tvalid[i]), .i_tready(out_tready[i]),
-        .o_tdata(str_src_tdata[i*64+63:i*64]), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
+        .o_tdata(str_src_tdata[i]), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
     end
   endgenerate
 

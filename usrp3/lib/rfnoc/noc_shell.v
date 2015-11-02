@@ -282,7 +282,7 @@ module noc_shell
            .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
            .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
            .SR_ERROR_POLICY(SR_ERROR_POLICY),
-           .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE[8*j-7:8*j]))
+           .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE[8*j+7:8*j]))
          noc_input_port (
            .clk(clk), .reset(reset), .clear(clear_rx_fc[j]),
            .resp_sid({src_sid[16*j+15:16*j],resp_in_dst_sid[16*j+15:16*j]}),
