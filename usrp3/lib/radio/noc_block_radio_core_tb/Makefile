@@ -70,7 +70,7 @@ include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
 # Define only one toplevel module
 SIM_TOP = noc_block_radio_core_tb
 # Simulation runtime in microseconds
-SIM_RUNTIME_US = 1000
+SIM_RUNTIME_US = 10000
 
 SIM_SRCS = \
 $(abspath noc_block_radio_core_tb.sv) \

@@ -3,19 +3,19 @@
 //
 
 module tx_frontend_gen3 #(
-  parameter SR_OFFSET_I,
-  parameter SR_OFFSET_Q,
-  parameter SR_MAG_CORRECTION,
-  parameter SR_PHASE_CORRECTION,
-  parameter SR_MUX,
+  parameter SR_OFFSET_I = 0,
+  parameter SR_OFFSET_Q = 1,
+  parameter SR_MAG_CORRECTION = 2,
+  parameter SR_PHASE_CORRECTION = 3,
+  parameter SR_MUX = 4,
   parameter BYPASS_DC_OFFSET_CORR = 0,
   parameter BYPASS_IQ_COMP = 0,
   parameter DEVICE = "7SERIES"
 )(
   input clk, input reset,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
-  output tx_stb, input [15:0] tx_i, input [15:0] tx_q,
-  input dac_stb, output reg [15:0] dac_i, output reg [15:0] dac_q
+  input tx_stb, input [15:0] tx_i, input [15:0] tx_q,
+  output reg dac_stb, output reg [15:0] dac_i, output reg [15:0] dac_q
 );
 
   wire [23:0]        i_dco, q_dco;
@@ -29,8 +29,6 @@ module tx_frontend_gen3 #(
   wire [23:0]        tx_i_comp, tx_q_comp, tx_i_ofs, tx_q_ofs;
   wire               tx_round_stb;
   wire [15:0]        tx_i_round, tx_q_round;
-
-  assign tx_stb = dac_stb;
 
   /********************************************************
   ** Settings Registers
@@ -126,24 +124,26 @@ module tx_frontend_gen3 #(
 
   // Round to short complex (sc16)
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_i (
-    .clk(clk),.reset(reset), .in(tx_i_comp),.strobe_in(tx_ofs_stb), .out(tx_i_round), .strobe_out(tx_round_stb));
+    .clk(clk),.reset(reset), .in(tx_i_ofs),.strobe_in(tx_ofs_stb), .out(tx_i_round), .strobe_out(tx_round_stb));
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_q (
-    .clk(clk),.reset(reset), .in(tx_q_comp),.strobe_in(tx_ofs_stb), .out(tx_q_round), .strobe_out());
+    .clk(clk),.reset(reset), .in(tx_q_ofs),.strobe_in(tx_ofs_stb), .out(tx_q_round), .strobe_out());
 
   // Mux
   always @(posedge clk) begin
     if (reset) begin
-      dac_i <= 16'd0;
-      dac_q <= 16'd0;
+      dac_stb <= 1'b0;
+      dac_i   <= 16'd0;
+      dac_q   <= 16'd0;
     end else begin
+      dac_stb <= tx_round_stb;
       case(mux_ctrl[3:0])
         0 : dac_i <= tx_i_round;
         1 : dac_i <= tx_q_round;
         default : dac_i <= 0;
       endcase
       case(mux_ctrl[7:4])
-        0 : dac_q <= tx_i_round;
-        1 : dac_q <= tx_q_round;
+        0 : dac_q <= tx_q_round;
+        1 : dac_q <= tx_i_round;
         default : dac_q <= 0;
       endcase
     end

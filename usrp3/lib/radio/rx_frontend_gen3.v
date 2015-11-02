@@ -3,11 +3,11 @@
 //
 
 module rx_frontend_gen3 #(
-  parameter SR_MAG_CORRECTION,
-  parameter SR_PHASE_CORRECTION,
-  parameter SR_OFFSET_I,
-  parameter SR_OFFSET_Q,
-  parameter SR_SWAP_IQ,
+  parameter SR_MAG_CORRECTION = 0,
+  parameter SR_PHASE_CORRECTION = 1,
+  parameter SR_OFFSET_I = 2,
+  parameter SR_OFFSET_Q = 3,
+  parameter SR_SWAP_IQ = 4,
   parameter BYPASS_DC_OFFSET_CORR = 0,
   parameter BYPASS_IQ_COMP = 0,
   parameter DEVICE = "7SERIES"
@@ -18,7 +18,6 @@ module rx_frontend_gen3 #(
   output rx_stb, output [15:0] rx_i, output [15:0] rx_q
 );
 
-  wire [31:0]        phase_inc;
   wire               realmode;
   wire               swap_iq;
   wire               invert_i;
@@ -34,8 +33,6 @@ module rx_frontend_gen3 #(
   reg  [23:0]        adc_i_ofs_dly, adc_q_ofs_dly;
   reg                adc_mux_stb;
   reg  [15:0]        adc_i_mux, adc_q_mux;
-
-  reg  [31:0]        phase;
 
   /********************************************************
   ** Settings Bus Registers
@@ -58,11 +55,11 @@ module rx_frontend_gen3 #(
   // MUX so we can do realmode signals on either input
   always @(posedge clk) begin
     if (swap_iq) begin
-      adc_i_mux <= invert_i ? ~adc_q   : adc_q;
-      adc_q_mux <= realmode ? 16'd0 : invert_q ? ~adc_i : adc_i;
+      adc_i_mux <= invert_q ? ~adc_q   : adc_q;
+      adc_q_mux <= realmode ? 16'd0 : invert_i ? ~adc_i : adc_i;
     end else begin
-      adc_q_mux <= invert_i ? ~adc_i   : adc_i;
-      adc_q_mux <= realmode ? 16'd0 : invert_i ? ~adc_q : adc_q;
+      adc_i_mux <= invert_i ? ~adc_i   : adc_i;
+      adc_q_mux <= realmode ? 16'd0 : invert_q ? ~adc_q : adc_q;
     end
     adc_mux_stb <= adc_stb;
   end

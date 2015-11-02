@@ -5,10 +5,10 @@
 // Outputs an error packet if an underrun or late timed command occurs.
 
 module tx_control_gen3 #(
-  parameter SR_ERROR_POLICY = 0   // What to do when errors occur -- wait for next packet or next burst  
+  parameter SR_ERROR_POLICY = 0   // What to do when errors occur -- wait for next packet or next burst
 )(
   input clk, input reset, input clear,
-  input [63:0] vita_time, input [31:0] forwarding_sid,
+  input [63:0] vita_time, input [31:0] resp_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
   input [31:0] tx_tdata, input [127:0] tx_tuser, input tx_tlast, input tx_tvalid, output tx_tready,
@@ -39,30 +39,42 @@ module tx_control_gen3 #(
 
   localparam ST_IDLE        = 0;
   localparam ST_SAMP        = 1;
-  localparam ST_ERROR       = 2;
-  localparam ST_ERROR_WAIT  = 3;
+  localparam ST_ERROR_WAIT  = 2;
 
-  assign run = (state == ST_SAMP);
+  assign run = (state == ST_SAMP) & ~(strobe & ~tx_tvalid); // Immediately drops run signal on underrun
 
   wire [63:0] CODE_EOB_ACK      = {32'd1,20'd0,seqnum};
   wire [63:0] CODE_UNDERRUN     = {32'd2,20'd0,seqnum};
   wire [63:0] CODE_TIME_ERROR   = {32'd8,20'd0,seqnum};
 
-  wire [127:0] error_header     = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, forwarding_sid, vita_time};
-  wire [127:0] resp_header      = {2'b11, 1'b1, 1'b0, 12'd0 /* don't care */, 16'd0 /* don't care */, forwarding_sid, vita_time};
+  wire [127:0] error_header     = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, resp_sid, vita_time};
+  wire [127:0] resp_header      = {2'b11, 1'b1, 1'b0, 12'd0 /* don't care */, 16'd0 /* don't care */, resp_sid, vita_time};
+
+  reg sop, eob_reg;
 
   always @(posedge clk) begin
     if (reset | clear) begin
-      state <= ST_IDLE;
+      state       <= ST_IDLE;
       resp_tvalid <= 1'b0;
       resp_tlast  <= 1'b0;
-      resp_tuser <= 'd0;
-      resp_tdata <= 'd0;
+      resp_tuser  <= 'd0;
+      resp_tdata  <= 'd0;
+      sop         <= 1'b1;
+      eob_reg     <= 1'b0;
     end else begin
       // Deassert tvalid after response packet is consumed
       if (resp_tvalid & resp_tlast & resp_tready) begin
         resp_tvalid <= 1'b0;
         resp_tlast  <= 1'b0;
+      end
+      // Track start of packet
+      if (tx_tvalid & tx_tready) begin
+        if (tx_tlast) begin
+          sop <= 1'b1;
+        end else if (sop) begin
+          eob_reg <= eob;
+          sop     <= 1'b0;
+        end
       end
 
       case (state)
@@ -75,31 +87,39 @@ module tx_control_gen3 #(
               resp_tlast  <= 1'b1;
               resp_tuser  <= error_header;
               resp_tdata  <= CODE_TIME_ERROR;
-              state       <= ST_ERROR;
+              state       <= ST_ERROR_WAIT;
             end
           end
         end
 
-        ST_SAMP :
-          if (strobe)
+        ST_SAMP : begin
+          if (strobe) begin
             if (~tx_tvalid) begin
               resp_tvalid <= 1'b1;
               resp_tlast  <= 1'b1;
               resp_tuser  <= error_header;
               resp_tdata  <= CODE_UNDERRUN;
               state       <= ST_ERROR_WAIT;
-            end else if (tx_tlast & eob) begin
-              resp_tvalid <= 1'b1;
-              resp_tlast  <= 1'b1;
-              resp_tuser  <= resp_header;
-              resp_tdata  <= CODE_EOB_ACK;
-              state       <= ST_IDLE;
+            end else begin
+              if (tx_tlast & eob) begin
+                resp_tvalid <= 1'b1;
+                resp_tlast  <= 1'b1;
+                resp_tuser  <= resp_header;
+                resp_tdata  <= CODE_EOB_ACK;
+                state       <= ST_IDLE;
+              end
             end
+          end
+        end
 
         // Wait until end of packet or burst depending on the policy
         ST_ERROR_WAIT : begin
-          if (tx_tvalid & tx_tlast) begin
-            if (policy_next_packet | (policy_next_burst & eob)) begin
+          // Two valid times to transition back to IDLE:
+          // 1. We are at the end of a packet OR
+          // 2. We are not currently receiving a packet
+          if ((tx_tvalid & tx_tlast) | (~tx_tvalid & sop)) begin
+            // Use eob_reg as eob may not be valid when tx_tvalid=0
+            if (policy_next_packet | (policy_next_burst & eob_reg)) begin
               state <= ST_IDLE;
             end
           end

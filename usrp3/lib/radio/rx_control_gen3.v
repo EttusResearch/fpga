@@ -9,14 +9,14 @@
 // HALT also flushes all remaining pending commands in the commmand FIFO.
 
 module rx_control_gen3 #(
-  parameter SR_RX_CTRL_COMMAND,     // Command FIFO
-  parameter SR_RX_CTRL_TIME_HI,     // Command execute time (high word)
-  parameter SR_RX_CTRL_TIME_LO,     // Command execute time (low word)
-  parameter SR_RX_CTRL_HALT,        // Halt command -> return to idle state
-  parameter SR_RX_CTRL_MAXLEN       // Packet length
+  parameter SR_RX_CTRL_COMMAND = 0,     // Command FIFO
+  parameter SR_RX_CTRL_TIME_HI = 1,     // Command execute time (high word)
+  parameter SR_RX_CTRL_TIME_LO = 2,     // Command execute time (low word)
+  parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
+  parameter SR_RX_CTRL_MAXLEN = 4       // Packet length
 )(
   input clk, input reset, input clear,
-  input [63:0] vita_time, input [31:0] sid, input [31:0] forwarding_sid,
+  input [63:0] vita_time, input [31:0] sid, input [31:0] resp_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
   output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
@@ -44,9 +44,7 @@ module rx_control_gen3 #(
   wire set_halt;
   wire [15:0] maxlen;
   wire eob;
-  reg [31:0] err_data;
-  wire sid_changed;
-  reg [63:0] err_time, start_time;
+  reg [63:0] start_time;
 
   setting_reg #(.my_addr(SR_RX_CTRL_COMMAND)) sr_cmd (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -88,15 +86,14 @@ module rx_control_gen3 #(
   // State machine states
   localparam IBS_IDLE               = 0;
   localparam IBS_RUNNING            = 1;
-  localparam IBS_ERR_RUNNING        = 2;
-  localparam IBS_ERR_WAIT_FOR_READY = 3;
+  localparam IBS_ERR_WAIT_FOR_READY = 2;
 
   // Error codes
   localparam ERR_OVERRUN      = {32'd8,32'd0};
   localparam ERR_BROKENCHAIN  = {32'd4,32'd0};
   localparam ERR_LATECMD      = {32'd2,32'd0};
 
-  wire [127:0] error_header = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, forwarding_sid, vita_time};
+  wire [127:0] error_header = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, resp_sid, vita_time};
 
   reg [2:0] ibs_state;
   reg [27:0] lines_left, repeat_lines;
@@ -105,6 +102,10 @@ module rx_control_gen3 #(
   always @(posedge clk) begin
     if (reset | clear) begin
       ibs_state <= IBS_IDLE;
+      lines_left <= 'd0;
+      lines_left_pkt <= 'd0;
+      repeat_lines <= 'd0;
+      start_time <= 'd0;
       chain_sav <= 1'b0;
       reload_sav <= 1'b0;
       clear_halt <= 1'b0;
@@ -147,7 +148,7 @@ module rx_control_gen3 #(
               resp_tlast <= 1'b1;
               resp_tuser <= error_header;
               resp_tdata <= ERR_OVERRUN;
-              ibs_state <= IBS_ERR_RUNNING;
+              ibs_state <= IBS_ERR_WAIT_FOR_READY;
             end else begin
               if (lines_left_pkt == 1) begin
                 lines_left_pkt <= maxlen;
@@ -177,7 +178,7 @@ module rx_control_gen3 #(
                     resp_tlast <= 1'b1;
                     resp_tuser <= error_header;
                     resp_tdata <= ERR_BROKENCHAIN;
-                    ibs_state <= IBS_ERR_RUNNING;
+                    ibs_state <= IBS_ERR_WAIT_FOR_READY;
                   end
                 end else begin // Chain is not true, so don't look for new command, instead go idle.
                   ibs_state <= IBS_IDLE;
@@ -186,20 +187,6 @@ module rx_control_gen3 #(
                 lines_left <= lines_left - 28'd1;
               end
             end
-          end
-        end
-
-        // Error occured while running, need to end data packet (i.e. set tlast) with eob
-        IBS_ERR_RUNNING : begin
-          if (resp_tready & ~rx_tready) begin
-            resp_tvalid <= 1'b0;
-            resp_tlast <= 1'b0;
-          end
-          if (~resp_tready & rx_tready) begin
-            ibs_state <= IBS_ERR_WAIT_FOR_READY;
-          end
-          if (resp_tready & rx_tready) begin
-            ibs_state <= IBS_IDLE;
           end
         end
 
@@ -227,11 +214,11 @@ module rx_control_gen3 #(
     endcase // case (ibs_state)
   end
 
-  assign eob = (strobe && (lines_left == 1) && ( !chain_sav || (command_valid && stop) || (!command_valid && !reload_sav) || halt)) | (ibs_state == IBS_ERR_RUNNING);
+  assign eob = (strobe && (lines_left == 1) && ( !chain_sav || (command_valid && stop) || (!command_valid && !reload_sav) || halt));
 
   assign rx_tdata = sample;
-  assign rx_tlast = eob | (lines_left_pkt == 1) | (ibs_state == IBS_ERR_RUNNING);
-  assign rx_tvalid = (run & strobe) | (ibs_state == IBS_ERR_RUNNING);
+  assign rx_tlast = eob | (lines_left_pkt == 1);
+  assign rx_tvalid = run & strobe;
   assign rx_tuser = { 3'b001 /*Data w/Time*/, eob, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, start_time };
 
 endmodule // new_rx_control
