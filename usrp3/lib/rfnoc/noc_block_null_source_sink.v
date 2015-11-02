@@ -28,6 +28,8 @@ module noc_block_null_source_sink #(
   wire [63:0] str_sink_tdata, str_src_tdata;
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
+  wire [15:0] src_sid, next_dst_sid;
+
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
@@ -38,7 +40,7 @@ module noc_block_null_source_sink #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -46,6 +48,7 @@ module noc_block_null_source_sink #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+    .clear_tx_seqnum(), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   // Control Source Unused
@@ -63,17 +66,17 @@ module noc_block_null_source_sink #(
   //
   ////////////////////////////////////////////////////////////
 
-  localparam SR_NEXT_DST            = 128;
   localparam SR_LINES_PER_PACKET    = 129;
   localparam SR_LINE_RATE           = 130;
   localparam SR_ENABLE_STREAM       = 131;
 
   null_source #(
-    .SR_NEXT_DST(SR_NEXT_DST),
     .SR_LINES_PER_PACKET(SR_LINES_PER_PACKET),
     .SR_LINE_RATE(SR_LINE_RATE),
     .SR_ENABLE_STREAM(SR_ENABLE_STREAM))
-  inst_null_source (.clk(ce_clk), .reset(ce_rst),
+  inst_null_source (
+    .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum),
+    .sid({src_sid, next_dst_sid}),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
 

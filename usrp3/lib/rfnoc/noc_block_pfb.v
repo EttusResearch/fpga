@@ -26,6 +26,9 @@ module noc_block_pfb
    
    wire [63:0] 	  str_sink_tdata, str_src_tdata;
    wire 	  str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+
+   wire        clear_tx_seqnum;
+   wire [15:0] next_dst_sid;
    
    noc_shell #(.NOC_ID(NOC_ID), .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE)) inst_noc_shell
      (.bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -34,7 +37,7 @@ module noc_block_pfb
       // Computer Engine Clock Domain
       .clk(ce_clk), .reset(ce_rst),
       // Control Sink
-      .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0),
+      .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0), .rb_addr(),
       // Control Source
       .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
       .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -42,6 +45,7 @@ module noc_block_pfb
       .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
       // Stream Source
       .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+      .clear_tx_seqnum(clear_tx_seqnum), .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
       .debug(debug));
    
    // //////////////////////////////////////////////////////////
@@ -68,16 +72,7 @@ module noc_block_pfb
    wire 	  m_axis_config_tready;
    
    localparam AXI_WRAPPER_BASE    = 128;
-   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
    localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
-
-   // Set next destination in chain
-   wire [15:0] next_dst;
-   setting_reg #(
-     .my_addr(SR_NEXT_DST), .width(16))
-   sr_next_dst(
-     .clk(ce_clk), .rst(ce_rst),
-     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
 
    axi_wrapper #(
       .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
@@ -85,7 +80,7 @@ module noc_block_pfb
    inst_axi_wrapper (
       .clk(ce_clk), .reset(ce_rst),
       .clear_tx_seqnum(clear_tx_seqnum),
-      .next_dst(next_dst),
+      .next_dst(next_dst_sid),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
       .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),

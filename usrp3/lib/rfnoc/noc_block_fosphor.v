@@ -29,6 +29,7 @@ module noc_block_fosphor #(
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire        clear_tx_seqnum;
+  wire [15:0] src_sid, next_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
@@ -40,7 +41,7 @@ module noc_block_fosphor #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -48,7 +49,7 @@ module noc_block_fosphor #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   ////////////////////////////////////////////////////////////
@@ -71,15 +72,6 @@ module noc_block_fosphor #(
   wire         s_axis_data_teob;
 
   localparam AXI_WRAPPER_BASE    = 128;
-  localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
-
-  // Set next destination in chain
-  wire [15:0] next_dst;
-  setting_reg #(
-    .my_addr(SR_NEXT_DST), .width(16))
-  sr_next_dst(
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
 
   axi_wrapper #(
     .SIMPLE_MODE(0))
@@ -247,8 +239,8 @@ module noc_block_fosphor #(
     s_axis_data_teob,           // EOB
     chdr_cur[123:112],          // Seq Num
     2'b00, chdr_cur[111:98],    // length in bytes (input size / 4)
-    chdr_cur[79:64],            // SRC SID (=destinatio from input packet)
-    next_dst,                   // DST SID
+    src_sid,                    // SRC SID
+    next_dst_sid,               // DST SID
     chdr_cur[63:0]              // Timestamp
   };
 

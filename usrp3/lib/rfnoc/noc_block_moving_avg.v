@@ -1,49 +1,33 @@
 //
-// Copyright 2015 National Instruments
+// Copyright 2015 Ettus Research
 //
 
 module noc_block_moving_avg #(
   parameter NOC_ID = 64'hAAD2_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
 (
-  input bus_clk,
-  input bus_rst,
-
-  input ce_clk,
-  input ce_rst,
-
-  input [63:0] i_tdata,
-  input i_tlast,
-  input i_tvalid,
-  output i_tready,
-
-  output [63:0] o_tdata,
-  output o_tlast,
-  output o_tvalid,
-  input  o_tready,
-
-  output [63:0] debug);
+  input bus_clk, input bus_rst,
+  input ce_clk, input ce_rst,
+  input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+  output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
+  output [63:0] debug
+);
 
   //----------------------------------------------------------------------------
   // Constants
   //----------------------------------------------------------------------------
 
   // Settings registers addresses
-  localparam SR_NEXT_DST   = 128;
   localparam SR_AXI_CONFIG = 129;
   localparam SR_SUM_LEN    = 192;
   localparam SR_DIVISOR    = 193;
-  localparam SR_READBACK   = 255;
 
   //----------------------------------------------------------------------------
   // Wires
   //----------------------------------------------------------------------------
 
-  // Set next destination in chain
- wire [15:0] next_dst;
-
   // Readback register address
-  wire rb_addr;
+  wire [7:0] rb_addr;
 
   // Number of samples to accumulate
   wire [7:0] sum_len;
@@ -58,6 +42,7 @@ module noc_block_moving_avg #(
   wire        set_stb;
 
   wire clear_tx_seqnum;
+  wire [15:0] next_dst_sid;
 
   wire [63:0] str_sink_tdata, str_src_tdata;
   wire str_sink_tlast, str_sink_tvalid, str_sink_tready;
@@ -105,32 +90,6 @@ module noc_block_moving_avg #(
   //----------------------------------------------------------------------------
   // Instantiations
   //----------------------------------------------------------------------------
-
-  // Set next destination in chain
-  setting_reg #(
-    .my_addr(SR_NEXT_DST),
-    .width(16))
-  sr_next_dst(
-    .clk(ce_clk),
-    .rst(ce_rst),
-    .strobe(set_stb),
-    .addr(set_addr),
-    .in(set_data),
-    .out(next_dst),
-    .changed());
-
-  // Readback registers
-  setting_reg #(
-    .my_addr(SR_READBACK),
-    .width(1))
-  sr_rdback (
-    .clk(ce_clk),
-    .rst(ce_rst),
-    .strobe(set_stb),
-    .addr(set_addr),
-    .in(set_data),
-    .out(rb_addr),
-    .changed());
 
   // Sum length
   setting_reg #(
@@ -181,6 +140,7 @@ module noc_block_moving_avg #(
     .set_addr(set_addr),
     .set_stb(set_stb),
     .rb_data(rb_data),
+    .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(64'd0),
     .cmdout_tlast(1'b0),
@@ -201,6 +161,10 @@ module noc_block_moving_avg #(
     .str_src_tvalid(str_src_tvalid),
     .str_src_tready(str_src_tready),
     .clear_tx_seqnum(clear_tx_seqnum),
+    .src_sid(),
+    .next_dst_sid(next_dst_sid),
+    .resp_in_dst_sid(),
+    .resp_out_dst_sid(),
     .debug(debug));
 
   // AXI Wrapper - Convert RFNoC Shell interface into AXI stream interface
@@ -211,7 +175,7 @@ module noc_block_moving_avg #(
     .reset(ce_rst),
     // RFNoC Shell
     .clear_tx_seqnum(clear_tx_seqnum),
-    .next_dst(next_dst),
+    .next_dst(next_dst_sid),
     .set_stb(set_stb),
     .set_addr(set_addr),
     .set_data(set_data),
@@ -357,8 +321,8 @@ module noc_block_moving_avg #(
   // Readback register values
   always @*
     case(rb_addr)
-      1'd0    : rb_data <= sum_len;
-      1'd1    : rb_data <= divisor;
+      8'd0    : rb_data <= sum_len;
+      8'd1    : rb_data <= divisor;
       default : rb_data <= 64'h0BADC0DE0BADC0DE;
     endcase
 

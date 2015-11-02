@@ -5,15 +5,14 @@
 // Will generate as fast as it can.
 
 module null_source
-  #(parameter SR_NEXT_DST            = 128,
-    parameter SR_LINES_PER_PACKET    = 129,
+  #(parameter SR_LINES_PER_PACKET    = 129,
     parameter SR_LINE_RATE           = 130,
     parameter SR_ENABLE_STREAM       = 131)
-   (input clk, input reset,
+   (input clk, input reset, input clear,
+    input [31:0] sid,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
-   wire [31:0] 	  sid;
    reg [11:0] 	  seqnum;
    wire [15:0] 	  rate;
    reg [1:0] 	  state;
@@ -27,10 +26,6 @@ module null_source
    reg [15:0] 	  packet_count;
    wire 	  changed_sid;
    wire 	  enable;
-   
-   setting_reg #(.my_addr(SR_NEXT_DST), .width(32)) sid_reg
-     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(sid), .changed(changed_sid));
    
    setting_reg #(.my_addr(SR_LINES_PER_PACKET), .width(16)) len_reg
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -49,7 +44,7 @@ module null_source
    localparam DATA = 2'd2;
 
    always @(posedge clk)
-     if(reset)
+     if(reset | clear)
        begin
 	  state <= IDLE;
 	  count <= 0;
@@ -91,7 +86,7 @@ module null_source
 
    reg [15:0]  line_timer;
    always @(posedge clk)
-     if(reset)
+     if(reset | clear)
        line_timer <= 0;
      else
        if(line_timer == 0)
@@ -102,7 +97,7 @@ module null_source
    assign int_tvalid = ((state==HEAD)|(state==DATA)) & (line_timer==0);
    
    axi_packet_gate #(.WIDTH(64), .SIZE(10)) gate
-     (.clk(clk), .reset(reset), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(int_tdata), .i_tlast(int_tlast), .i_terror(1'b0), .i_tvalid(int_tvalid), .i_tready(int_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
    

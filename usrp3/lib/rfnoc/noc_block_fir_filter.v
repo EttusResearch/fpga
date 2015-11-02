@@ -1,5 +1,5 @@
 //
-// Copyright 2014-2015 Ettus Research LLC
+// Copyright 2014-2015 Ettus Research
 //
 
 module noc_block_fir_filter #(
@@ -18,12 +18,11 @@ module noc_block_fir_filter #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  localparam SR_READBACK = 255;
-  
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
   reg  [63:0] rb_data;
+  wire [7:0]  rb_addr;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -32,6 +31,7 @@ module noc_block_fir_filter #(
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire        clear_tx_seqnum;
+  wire [15:0] next_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
@@ -43,7 +43,7 @@ module noc_block_fir_filter #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(rb_data),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -51,7 +51,7 @@ module noc_block_fir_filter #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   ////////////////////////////////////////////////////////////
@@ -92,25 +92,17 @@ module noc_block_fir_filter #(
   endgenerate
 
   localparam AXI_WRAPPER_BASE    = 128;
-  localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
   localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
-  // Set next destination in chain
-  wire [15:0] next_dst;
-  setting_reg #(
-    .my_addr(SR_NEXT_DST), .width(16))
-  sr_next_dst(
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
-
   axi_wrapper #(
+    .SIMPLE_MODE(1),
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
     .CONFIG_BUS_FIFO_DEPTH(8)) // Need deeper FIFO to prevent overflow when configuring coefficients
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
-    .next_dst(next_dst),
+    .next_dst(next_dst_sid),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
@@ -124,7 +116,7 @@ module noc_block_fir_filter #(
     .s_axis_data_tready(s_axis_data_tready),
     .m_axis_config_tdata(m_axis_config_tdata),
     .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid), 
+    .m_axis_config_tvalid(m_axis_config_tvalid),
     .m_axis_config_tready(m_axis_config_tready));
 
   ////////////////////////////////////////////////////////////
@@ -140,19 +132,11 @@ module noc_block_fir_filter #(
   assign ackin_tready = 1'b1;
 
   localparam NUM_TAPS = 41;
-  localparam RB_ADDR_WIDTH = 3;
-
-  wire [RB_ADDR_WIDTH-1:0] rb_addr;
-  setting_reg #(
-    .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH)) 
-  sr_rdback (
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(rb_addr), .changed());
 
   // Readback register for number of FIR filter taps
   always @*
     case(rb_addr)
-      3'd0    : rb_data <= {NUM_TAPS};
+      8'd0    : rb_data <= {NUM_TAPS};
       default : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
 

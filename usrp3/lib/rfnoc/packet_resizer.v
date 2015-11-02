@@ -4,21 +4,16 @@
 // Not necessarily that useful in general, but a good test block
 
 module packet_resizer
-  #(parameter SR_NEXT_DST=0,
-    parameter SR_PKT_SIZE=1)
+  #(parameter SR_PKT_SIZE=1)
    (input clk, input reset,
+    input [15:0] next_dst_sid,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input [31:0] i_tdata, input [127:0] i_tuser, input i_tlast, input i_tvalid, output i_tready,
     output [31:0] o_tdata, output [127:0] o_tuser, output o_tlast, output o_tvalid, input o_tready);
 
-   wire [15:0] 	  next_destination;
    wire [15:0] 	  pkt_size;
    reg [15:0] 	  count;
    reg 		  first_packet_in_burst = 1'b1;
-   
-   setting_reg #(.my_addr(SR_NEXT_DST), .width(16)) new_destination
-     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(next_destination[15:0]));
    
    setting_reg #(.my_addr(SR_PKT_SIZE), .width(16)) reg_pkt_size
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -41,7 +36,7 @@ module packet_resizer
    wire [11:0] 	  SEQ_out = SEQ_in;     // Doesn't actually matter, it gets overwritten by chdr_framer
    wire [15:0] 	  LEN_out = LEN_in;     // Only the bottom 2 bits actually matter, rest gets overwritten
    wire [15:0] 	  SRC_out = DST_in;
-   wire [15:0] 	  DST_out = next_destination;
+   wire [15:0] 	  DST_out = next_dst_sid;
    wire [63:0] 	  TIME_out = TIME_in;
 
    // Pass nearly everything through unchanged

@@ -23,7 +23,7 @@ module noc_block_addsub #(
   ////////////////////////////////////////////////////////////
   wire [31:0]   set_data;
   wire [7:0]    set_addr;
-  wire          set_stb;
+  wire [1:0]    set_stb;
 
   wire [63:0]   cmdout_tdata, ackin_tdata;
   wire          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -39,12 +39,13 @@ module noc_block_addsub #(
   wire [127:0]  out_tuser[0:1], out_tuser_pre[0:1];
   wire [1:0]    out_tlast, out_tvalid, out_tready;
 
-  wire clear_tx_seqnum;
+  wire          clear_tx_seqnum;
+  wire [15:0]   src_sid[0:1], next_dst_sid[0:1];
 
   noc_shell #(
     .NOC_ID(NOC_ID),
-    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
-    .MTU(MTU),
+    .STR_SINK_FIFOSIZE({2{STR_SINK_FIFOSIZE[7:0]}}),
+    .MTU({2{MTU[7:0]}}),
     .INPUT_PORTS(2),
     .OUTPUT_PORTS(2))
   inst_noc_shell (
@@ -54,7 +55,7 @@ module noc_block_addsub #(
     // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data('d0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -62,7 +63,7 @@ module noc_block_addsub #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(/* Unused */), .resp_out_dst_sid(/* Unused */),
     .debug(debug));
 
   genvar     i;
@@ -92,24 +93,6 @@ module noc_block_addsub #(
       .diff_tdata(out_tdata[1]), .diff_tlast(out_tlast[1]), .diff_tvalid(out_tvalid[1]), .diff_tready(out_tready[1]));
   endgenerate
 
-  wire [15:0]  next_destination[0:1];
-  localparam   SR_NEXT_DST_BASE = 128;
-
-  setting_reg #(
-    .my_addr(SR_NEXT_DST_BASE),
-    .width(16))
-  next_destination_0 (
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(next_destination[0]));
-
-  setting_reg #(
-    .my_addr(SR_NEXT_DST_BASE+1), .width(16))
-  next_destination_1 (
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(next_destination[1]));
-
   split_stream_fifo #(
     .WIDTH(128), .ACTIVE_MASK(4'b0011))
   tuser_splitter (
@@ -119,8 +102,8 @@ module noc_block_addsub #(
     .o1_tdata(out_tuser_pre[1]), .o1_tlast(), .o1_tvalid(), .o1_tready(out_tlast[1] & out_tready[1]),
     .o2_tready(1'b1), .o3_tready(1'b1));
 
-  assign out_tuser[0] = { out_tuser_pre[0][127:96], out_tuser_pre[0][79:68], 4'b0000, next_destination[0], out_tuser_pre[0][63:0] };
-  assign out_tuser[1] = { out_tuser_pre[1][127:96], out_tuser_pre[1][79:68], 4'b0001, next_destination[1], out_tuser_pre[1][63:0] };
+  assign out_tuser[0] = { out_tuser_pre[0][127:96], src_sid[0], next_dst_sid[0], out_tuser_pre[0][63:0] };
+  assign out_tuser[1] = { out_tuser_pre[1][127:96], src_sid[1], next_dst_sid[1], out_tuser_pre[1][63:0] };
 
   genvar   j;
   generate
@@ -128,7 +111,7 @@ module noc_block_addsub #(
     chdr_framer #(
       .SIZE(MTU))
     framer (
-      .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum),
+      .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[j]),
       .i_tdata(out_tdata[j]), .i_tuser(out_tuser[j]), .i_tlast(out_tlast[j]), .i_tvalid(out_tvalid[j]), .i_tready(out_tready[j]),
       .o_tdata(str_src_tdata[j*64+63:j*64]), .o_tlast(str_src_tlast[j]), .o_tvalid(str_src_tvalid[j]), .o_tready(str_src_tready[j]));
   endgenerate
