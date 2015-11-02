@@ -63,10 +63,13 @@
   localparam [31:0] SR_FLOW_CTRL_PKTS_PER_ACK      = 1;
   localparam [31:0] SR_FLOW_CTRL_WINDOW_SIZE       = 2;
   localparam [31:0] SR_FLOW_CTRL_WINDOW_EN         = 3;
-  localparam [31:0] SR_SRC_SID                     = 4;
-  localparam [31:0] SR_NEXT_DST_SID                = 5;
-  localparam [31:0] SR_FORWARDING_DST_SID          = 6;
-  localparam [31:0] SR_ERROR_POLICY                = 7;
+  localparam [31:0] SR_ERROR_POLICY                = 4;
+  localparam [31:0] SR_SRC_SID                     = 5;
+  localparam [31:0] SR_NEXT_DST_SID                = 6;
+  localparam [31:0] SR_RESP_IN_DST_SID             = 7;
+  localparam [31:0] SR_RESP_OUT_DST_SID            = 8;
+  localparam [31:0] SR_RB_ADDR_USER                = 124;
+  localparam [31:0] SR_CLEAR_RX_FC                 = 125;
   localparam [31:0] SR_CLEAR_TX_FC                 = 126;
   localparam [31:0] SR_RB_ADDR                     = 127;
   // Next destination as allocated by the user, one per block port
@@ -191,7 +194,6 @@
     axis_t noc_block_``name``_s_axis_data(.clk(ce_clk)); \
     // User test bench signals \
     localparam [15:0] sid_noc_block_``name = {xbar_addr,4'd0+port_num,4'd0}; \
-    logic [15:0] name``_next_dst; \
     cvita_bus    name``_cvita_data; \
     cvita_master name``_cvita_cmd; \
     cvita_slave  name``_cvita_ack; \
@@ -220,8 +222,6 @@
       .m_cvita_data(noc_block_``name``_m_cvita_data), \
       .cvita_cmd(noc_block_``name``_cvita_cmd), \
       .cvita_ack(noc_block_``name``_cvita_ack), \
-      .src_sid(sid_noc_block_``name), \
-      .next_dst_sid(name``_next_dst), \
       .m_axis_data(noc_block_``name``_m_axis_data), \
       .m_axis_config(noc_block_``name``_m_axis_config), \
       .s_axis_data(noc_block_``name``_s_axis_data), \
@@ -265,31 +265,36 @@
   //
   `define RFNOC_CONNECT_BLOCK_PORT(from_noc_block_name,from_block_port,to_noc_block_name,to_block_port,pkt_size) \
     // Set block stream IDs \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_SRC_SID, 16'd0, (sid_``from_noc_block_name + from_block_port)}}); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_SRC_SID, 16'd0, 16'(sid_``from_noc_block_name + from_block_port)}}); \
     tb_cvita.drop_pkt();  // Don't care about response packets \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_SRC_SID, 16'd0, (sid_``to_noc_block_name + to_block_port)}}); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h1, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+                      {SR_SRC_SID, 16'd0, 16'(sid_``to_noc_block_name + to_block_port)}}); \
     tb_cvita.drop_pkt(); \
     // Send a flow control response packet on every received packet \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h2, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
                       {SR_FLOW_CTRL_PKTS_PER_ACK, 32'h8000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set up window size \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h1, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
-                      {SR_FLOW_CTRL_WINDOW_SIZE, 32'd0 + (8*2**(``to_noc_block_name``.STR_SINK_FIFOSIZE[(to_block_port+1)*4-1:to_block_port*4]))/pkt_size}}); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_FLOW_CTRL_WINDOW_SIZE, \
+                      // Subtract 1 to account for +1 in source_flow_control.v \
+                      32'((8*2**(``to_noc_block_name``.noc_shell.STR_SINK_FIFOSIZE[(to_block_port+1)*8-1:to_block_port*8]))/pkt_size)-32'd1}}); \
     tb_cvita.drop_pkt(); \
     // Enable window \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h2, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``to_noc_block_name + to_block_port), timestamp:64'h0})}, \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h4, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
                       {SR_FLOW_CTRL_WINDOW_EN, 32'h0000_0001}}); \
     tb_cvita.drop_pkt(); \
     // Set next destination stream ID \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_NEXT_DST_SID, (sid_``to_noc_block_name + to_block_port)}}); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h5, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_NEXT_DST_SID, 32'(sid_``to_noc_block_name + to_block_port)}}); \
     tb_cvita.drop_pkt(); \
-    // Set forwarding destination stream ID, default to test bench block \
-    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h3, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
-                      {SR_FORWARDING_DST_SID, sid_noc_block_tb}}); \
+    // Set both response destination stream IDs, default to test bench block \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h6, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_RESP_IN_DST_SID, 32'(sid_noc_block_tb)}}); \
+    tb_cvita.drop_pkt(); \
+    tb_cvita.push_pkt({{flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h7, length:8, src_sid:sid_tb_cvita, dst_sid:(sid_``from_noc_block_name + from_block_port), timestamp:64'h0})}, \
+                      {SR_RESP_OUT_DST_SID, 32'(sid_noc_block_tb)}}); \
     tb_cvita.drop_pkt();
 
   `endif
