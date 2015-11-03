@@ -23,16 +23,27 @@ module e300_core
   // radio interfaces
   input             radio_clk,
   input             radio_rst,
+  input             rx_stb0,
   input [31:0]      rx_data0,
+  input             tx_stb0,
   output [31:0]     tx_data0,
+  input             rx_stb1,
   input [31:0]      rx_data1,
+  input             tx_stb1,
   output [31:0]     tx_data1,
 
   // gpio controls
-  output [31:0]     ctrl_out0,
-  output [31:0]     ctrl_out1,
+  output [31:0]     db_gpio0,
+  output [31:0]     db_gpio1,
   output [2:0]      leds0,
   output [2:0]      leds1,
+
+  // SPI from radio core 0
+  output            spi_select,
+  output            spi_sen,
+  output            spi_sclk,
+  output            spi_mosi,
+  output            spi_miso,
 
   // settings bus to control global registers
   input [31:0]      set_data,
@@ -59,14 +70,18 @@ module e300_core
   // codec async reset
   output            codec_arst,
 
-  // bandselects
+  // TX band select lines, controlled by radio 0
   output [2:0]      tx_bandsel,
-  output [5:0]      rx_bandsel_a,
-  output [3:0]      rx_bandsel_b,
-  output [3:0]      rx_bandsel_c,
+  // RX band select lines, 1 set per radio
+  output [2:0]      rx1_bandsel_a,
+  output [1:0]      rx1_bandsel_b,
+  output [1:0]      rx1_bandsel_c,
+  output [2:0]      rx2_bandsel_a,
+  output [1:0]      rx2_bandsel_b,
+  output [1:0]      rx2_bandsel_c,
 
   // front panel (internal) gpio
-  inout [5:0]       fp_gpio,
+  inout [5:0]       fp_gpio0,
 
   // signals for ad9361 pll locks
   input [1:0]       lock_signals,
@@ -94,7 +109,7 @@ module e300_core
   localparam SR_CORE_MISC     = 11'd4;
   localparam SR_CORE_TEST     = 11'd28;
   localparam SR_CORE_XB_LOCAL = 11'd32;
-  localparam SR_CORE_SPI      = 11'd64; // 64-66, used in e3x0_db_control
+  localparam SR_CORE_SPI      = 11'd64;
 
   localparam RB32_CORE_MISC     = 5'd1;
   localparam RB32_CORE_COMPAT   = 5'd2;
@@ -109,7 +124,7 @@ module e300_core
   wire [31:0] rb_data_xb;
   wire [7:0] xb_local_addr;
 
-  wire [31:0] misc_out;
+  wire [31:0] core_misc_out;
 
 
   setting_reg
@@ -147,17 +162,13 @@ module e300_core
   (
     .clk(bus_clk), .rst(bus_rst),
     .strobe(set_stb), .addr(set_addr),
-    .in(set_data), .out(misc_out),
+    .in(set_data), .out(core_misc_out),
     .changed()
   );
 
-  assign pps_select   = misc_out[1:0];
-  assign mimo         = misc_out[2];
-  assign codec_arst   = misc_out[3];
-  assign tx_bandsel   = misc_out[6:4];
-  assign rx_bandsel_a = misc_out[12:7];
-  assign rx_bandsel_b = misc_out[16:13];
-  assign rx_bandsel_c = misc_out[20:17];
+  assign pps_select   = core_misc_out[1:0];
+  assign mimo         = core_misc_out[2];
+  assign codec_arst   = core_misc_out[3];
 
   setting_reg
   #(
@@ -172,10 +183,22 @@ module e300_core
     .changed()
   );
 
+  setting_reg
+  #( .my_addr(SR_CORE_SPI),
+     .awidth(11), .width(1),
+     .at_reset(1'b0)
+  ) sr_spi
+  (
+    .clk(bus_clk), .rst(bus_rst),
+    .strobe(set_stb), .addr(set_addr),
+    .in(set_data), .out(spi_select),
+    .changed()
+  );
+
   always @(*)
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
-      RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
+      RB32_CORE_MISC    : rb_data <= {25'd0, spi_select, tcxo_status, pps_select};
       RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'd255, 8'd0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
@@ -203,17 +226,17 @@ module e300_core
   // routing logic, aka crossbar
   ////////////////////////////////////////////////////////////////////
 
-  wire [63:0]          ro_tdata [1:0];
-  wire                 ro_tlast [1:0];
-  wire                 ro_tvalid [1:0];
-  wire                 ro_tready [1:0];
+  wire [63:0]          ro_tdata;
+  wire                 ro_tlast;
+  wire                 ro_tvalid;
+  wire                 ro_tready;
 
-  wire [63:0]          ri_tdata [1:0];
-  wire                 ri_tlast [1:0];
-  wire                 ri_tvalid [1:0];
-  wire                 ri_tready [1:0];
+  wire [63:0]          ri_tdata;
+  wire                 ri_tlast;
+  wire                 ri_tvalid;
+  wire                 ri_tready;
 
-  localparam XBAR_FIXED_PORTS = 3;
+  localparam XBAR_FIXED_PORTS = 2;
   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
 
   `ifndef LOG2
@@ -262,17 +285,17 @@ module e300_core
       .rb_data(xbar_rb_data),
 
       // inputs, flattened busses
-      .i_tdata({ce_flat_i_tdata, ri_tdata[1], ri_tdata[0], h2s_tdata}),
-      .i_tlast({ce_i_tlast, ri_tlast[1], ri_tlast[0], h2s_tlast}),
-      .i_tvalid({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
-      .i_tready({ce_i_tready, ri_tready[1], ri_tready[0], h2s_tready}),
+      .i_tdata({ce_flat_i_tdata, ri_tdata, h2s_tdata}),
+      .i_tlast({ce_i_tlast, ri_tlast, h2s_tlast}),
+      .i_tvalid({ce_i_tvalid, ri_tvalid, h2s_tvalid}),
+      .i_tready({ce_i_tready, ri_tready, h2s_tready}),
 
       // outputs, flattened busses
-      .o_tdata({ce_flat_o_tdata, ro_tdata[1], ro_tdata[0], s2h_tdata}),
-      .o_tlast({ce_o_tlast, ro_tlast[1], ro_tlast[0], s2h_tlast}),
-      .o_tvalid({ce_o_tvalid, ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
-      .o_tready({ce_o_tready, ro_tready[1], ro_tready[0], s2h_tready}),
-      .pkt_present({ce_i_tvalid, ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
+      .o_tdata({ce_flat_o_tdata, ro_tdata, s2h_tdata}),
+      .o_tlast({ce_o_tlast, ro_tlast, s2h_tlast}),
+      .o_tvalid({ce_o_tvalid, ro_tvalid, s2h_tvalid}),
+      .o_tready({ce_o_tready, ro_tready, s2h_tready}),
+      .pkt_present({ce_i_tvalid, ri_tvalid, h2s_tvalid})
     );
   end else begin
     axi_crossbar
@@ -294,15 +317,15 @@ module e300_core
       .rb_rd_stb(xbar_rb_stb),
       .rb_addr(xbar_rb_addr[2*(`LOG2(XBAR_NUM_PORTS))-1+2:2]), // Also word aligned
       .rb_data(xbar_rb_data),
-      .i_tdata({ri_tdata[1], ri_tdata[0], h2s_tdata}),
-      .i_tlast({ri_tlast[1], ri_tlast[0], h2s_tlast}),
-      .i_tvalid({ri_tvalid[1], ri_tvalid[0], h2s_tvalid}),
-      .i_tready({ri_tready[1], ri_tready[0], h2s_tready}),
-      .o_tdata({ro_tdata[1], ro_tdata[0], s2h_tdata}),
-      .o_tlast({ro_tlast[1], ro_tlast[0], s2h_tlast}),
-      .o_tvalid({ro_tvalid[1], ro_tvalid[0], s2h_tvalid}),
-      .o_tready({ro_tready[1], ro_tready[0], s2h_tready}),
-      .pkt_present({ri_tvalid[1], ri_tvalid[0], h2s_tvalid})
+      .i_tdata({ri_tdata, h2s_tdata}),
+      .i_tlast({ri_tlast, h2s_tlast}),
+      .i_tvalid({ri_tvalid, h2s_tvalid}),
+      .i_tready({ri_tready, h2s_tready}),
+      .o_tdata({ro_tdata, s2h_tdata}),
+      .o_tlast({ro_tlast, s2h_tlast}),
+      .o_tvalid({ro_tvalid, s2h_tvalid}),
+      .o_tready({ro_tready, s2h_tready}),
+      .pkt_present({ri_tvalid, h2s_tvalid})
     );
   end
   endgenerate
@@ -310,74 +333,48 @@ module e300_core
   ////////////////////////////////////////////////////////////////////
   // radio instantiation
   ////////////////////////////////////////////////////////////////////
-  wire [63:0] tx_tdata_bo [1:0], tx_tdata_bi [1:0];
-  wire tx_tlast_bo[1:0], tx_tvalid_bo [1:0], tx_tready_bo [1:0];
-  wire tx_tlast_bi[1:0], tx_tvalid_bi [1:0], tx_tready_bi [1:0];
-
-  axi_fifo #(.WIDTH(65), .SIZE(11)) axi_fifo_tx_packet_buff0
-  (
-    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-    .i_tdata({tx_tlast_bo[0], tx_tdata_bo[0]}), .i_tvalid(tx_tvalid_bo[0]), .i_tready(tx_tready_bo[0]),
-    .o_tdata({tx_tlast_bi[0], tx_tdata_bi[0]}), .o_tvalid(tx_tvalid_bi[0]), .o_tready(tx_tready_bi[0]),
-    .occupied()
-  );
-
-  radio #(.RADIO_NUM(0), .DATA_FIFO_SIZE(13), .MSG_FIFO_SIZE(9)) radio0
-  (
-    //radio domain stuff
-    .radio_clk(radio_clk), .radio_rst(radio_rst),
-
-    //not connected
-    .rx(rx_data0), .tx(tx_data0),
-    .db_gpio(ctrl_out0),
-    .fp_gpio(fp_gpio),
-    .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .misc_ins(32'h0), .leds(leds0),
-
-    //bus clock domain and fifos
+  // Daughter board I/O is replicated per radio, some of it is unused
+  localparam NUM_RADIOS = 2;
+  wire [31:0] misc_outs[0:NUM_RADIOS-1], leds[0:NUM_RADIOS-1];
+  wire [31:0] fp_gpio[0:NUM_RADIOS-1], db_gpio[0:NUM_RADIOS-1];
+  wire [7:0] sen[0:NUM_RADIOS-1];
+  wire sclk[0:NUM_RADIOS-1], mosi[0:NUM_RADIOS-1], miso[0:NUM_RADIOS-1];
+  noc_block_radio_core #(
+    .NUM_RADIOS(NUM_RADIOS),
+    .STR_SINK_FIFOSIZE(13))
+  noc_block_radio_core (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .in_tdata(ro_tdata[0]), .in_tlast(ro_tlast[0]), .in_tvalid(ro_tvalid[0]), .in_tready(ro_tready[0]),
-    .out_tdata(ri_tdata[0]), .out_tlast(ri_tlast[0]), .out_tvalid(ri_tvalid[0]), .out_tready(ri_tready[0]),
+    .ce_clk(radio_clk), .ce_rst(radio_rst),
+    .i_tdata(ro_tdata), .i_tlast(ro_tlast), .i_tvalid(ro_tvalid), .i_tready(ro_tready),
+    // Ports connected to radio front end
+    .rx({rx_data1,rx_data0}), .rx_stb({rx_stb1,rx_stb0}),
+    .tx({tx_data1,tx_data0}), .tx_stb({tx_stb1,tx_stb0}),
+    // Interfaces to front panel and daughter board
+    .pps(pps), .sync(),
+    .misc_ins('d0), .misc_outs({misc_outs[1],misc_outs[0]}),
+    .fp_gpio({fp_gpio[1],fp_gpio[0]}), .db_gpio({db_gpio[1],db_gpio[0]}), .leds({leds[1],leds[0]}),
+    .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
+    .debug());
 
-    //tx buffering -- used for insertion of axi_fifo_tx_packet_buff
-    .tx_tdata_bo(tx_tdata_bo[0]), .tx_tlast_bo(tx_tlast_bo[0]), .tx_tvalid_bo(tx_tvalid_bo[0]), .tx_tready_bo(tx_tready_bo[0]),
-    .tx_tdata_bi(tx_tdata_bi[0]), .tx_tlast_bi(tx_tlast_bi[0]), .tx_tvalid_bi(tx_tvalid_bi[0]), .tx_tready_bi(tx_tready_bi[0]),
-
-    .pps(pps), .sync_dacs(),
-    .debug()
-  );
-
-  axi_fifo #(.WIDTH(65), .SIZE(11)) axi_fifo_tx_packet_buff1
-  (
-    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-    .i_tdata({tx_tlast_bo[1], tx_tdata_bo[1]}), .i_tvalid(tx_tvalid_bo[1]), .i_tready(tx_tready_bo[1]),
-    .o_tdata({tx_tlast_bi[1], tx_tdata_bi[1]}), .o_tvalid(tx_tvalid_bi[1]), .o_tready(tx_tready_bi[1]),
-    .occupied()
-  );
-
-  radio #(.RADIO_NUM(1), .DATA_FIFO_SIZE(13), .MSG_FIFO_SIZE(9)) radio1
-  (
-    //radio domain stuff
-    .radio_clk(radio_clk), .radio_rst(radio_rst),
-
-    //not connected
-    .rx(rx_data1), .tx(tx_data1),
-    .db_gpio(ctrl_out1),
-    .fp_gpio(),
-    .sen(), .sclk(), .mosi(), .miso(),
-    .misc_outs(), .misc_ins(32'h0), .leds(leds1),
-
-    //bus clock domain and fifos
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .in_tdata(ro_tdata[1]), .in_tlast(ro_tlast[1]), .in_tvalid(ro_tvalid[1]), .in_tready(ro_tready[1]),
-    .out_tdata(ri_tdata[1]), .out_tlast(ri_tlast[1]), .out_tvalid(ri_tvalid[1]), .out_tready(ri_tready[1]),
-
-    //tx buffering -- used for insertion of axi_fifo_tx_packet_buff
-    .tx_tdata_bo(tx_tdata_bo[1]), .tx_tlast_bo(tx_tlast_bo[1]), .tx_tvalid_bo(tx_tvalid_bo[1]), .tx_tready_bo(tx_tready_bo[1]),
-    .tx_tdata_bi(tx_tdata_bi[1]), .tx_tlast_bi(tx_tlast_bi[1]), .tx_tvalid_bi(tx_tvalid_bi[1]), .tx_tready_bi(tx_tready_bi[1]),
-
-    .pps(pps), .sync_dacs(),
-    .debug()
-  );
+  // Connect daughter board I/O
+  // Note: In cases where I/O is shared between radio cores (i.e. SPI interface),
+  //       radio 0's DB I/O is used.
+  assign fp_gpio0      = fp_gpio[0][5:0];
+  assign spi_sen       = sen[0][0];
+  assign spi_sclk      = sclk[0];
+  assign spi_mosi      = mosi[0];
+  assign miso[0]       = spi_mosi;
+  assign miso[1]       = 1'b0;
+  assign tx_bandsel    = misc_outs[0][2:0];
+  assign rx1_bandsel_a = misc_outs[0][5:3];
+  assign rx1_bandsel_b = misc_outs[0][7:6];
+  assign rx1_bandsel_c = misc_outs[0][9:8];
+  assign rx2_bandsel_a = misc_outs[1][5:3];
+  assign rx2_bandsel_b = misc_outs[1][7:6];
+  assign rx2_bandsel_c = misc_outs[1][9:8];
+  assign db_gpio0      = db_gpio[0];
+  assign db_gpio1      = db_gpio[1];
+  assign leds0         = leds[0][2:0];
+  assign leds1         = leds[1][2:0];
 
 endmodule // e300_core

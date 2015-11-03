@@ -55,6 +55,10 @@ set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_da
 set_output_delay -clock CAT_FB_CLK -max [expr $cat_fb_data_prog_dly + $cat_fb_data_setup] [get_ports {CAT_P1_D* CAT_TX_FRAME}] -clock_fall -add_delay;
 set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_data_hold]  [get_ports {CAT_P1_D* CAT_TX_FRAME}] -clock_fall -add_delay;
 
+# CAT SPI, max SPI clock of 4 MHz
+set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 20.000
+set_max_delay -from [get_ports CAT_MISO] 20.000
+
 # TCXO DAC SPI
 # 12 MHz SPI clock rate
 set_max_delay -datapath_only -to [get_ports TCXO_DAC*] -from [all_registers -edge_triggered] 40

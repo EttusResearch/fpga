@@ -277,6 +277,16 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  // Mux SPI (allows timed SPI commands from radio core)
+  // spi_select: 0 = PS SPI, 1 = radio core SPI
+  wire sen0, sclk0, mosi0;
+  wire miso0 = CAT_MISO;
+  wire PS_SPI0_SS1, PS_SPI0_SCLK, PS_SPI0_MOSI;
+  wire PS_SPI0_MISO = CAT_MISO;
+  assign CAT_CS   = spi_select ? sen0  : PS_SPI0_SS1;
+  assign CAT_SCLK = spi_select ? sclk0 : PS_SPI0_SCLK;
+  assign CAT_MOSI = spi_select ? mosi0 : PS_SPI0_MOSI;
+
    // First, make all connections to the PS (ARM+buses)
   axi_interconnect inst_axi_interconnect
   (
@@ -447,11 +457,11 @@ module e300
 
     //    SPI Core 0 - To AD9361
     .SPI0_SS(),
-    .SPI0_SS1(CAT_CS),
+    .SPI0_SS1(PS_SPI0_SS1),
     .SPI0_SS2(),
-    .SPI0_SCLK(CAT_SCLK),
-    .SPI0_MOSI(CAT_MOSI),
-    .SPI0_MISO(CAT_MISO),
+    .SPI0_SCLK(PS_SPI0_SCLK),
+    .SPI0_MOSI(PS_SPI0_MOSI),
+    .SPI0_MISO(PS_SPI0_MISO),
 
     //    SPI Core 1 - To AVR
     .SPI1_SS(),
@@ -684,19 +694,29 @@ module e300
     .radio_rst(radio_rst),
     // flip them to match case
     // this is a hack
+    .rx_stb0(1'b1),
     .rx_data0(rx_data1),
+    .tx_stb0(1'b1),
     .tx_data0(tx_data1),
+    .rx_stb1(1'b1),
     .rx_data1(rx_data0),
+    .tx_stb1(1'b1),
     .tx_data1(tx_data0),
 
     // flip them, to match
     // case ... this is a hack
-    .ctrl_out0(gpio1),
-    .ctrl_out1(gpio0),
+    .db_gpio0(gpio1),
+    .db_gpio1(gpio0),
     .leds0(leds1),
     .leds1(leds0),
 
-    .fp_gpio(PL_GPIO),
+    .fp_gpio0(PL_GPIO),
+
+    .spi_select(spi_select),
+    .spi_sen(spi_sen),
+    .spi_sclk(spi_sclk),
+    .spi_mosi(spi_mosi),
+    .spi_miso(spi_miso),
 
     .set_data(core_set_data),
     .set_addr(core_set_addr),
@@ -718,9 +738,12 @@ module e300
     .mimo(mimo),
     .codec_arst(codec_arst),
     .tx_bandsel(TX_BANDSEL),
-    .rx_bandsel_a({RX2_BANDSEL, RX1_BANDSEL}),
-    .rx_bandsel_b({RX2B_BANDSEL, RX1B_BANDSEL}),
-    .rx_bandsel_c({RX2C_BANDSEL, RX1C_BANDSEL}),
+    .rx1_bandsel_a(RX1_BANDSEL),
+    .rx1_bandsel_b(RX1B_BANDSEL),
+    .rx1_bandsel_c(RX1C_BANDSEL),
+    .rx2_bandsel_a(RX2_BANDSEL),
+    .rx2_bandsel_b(RX2B_BANDSEL),
+    .rx2_bandsel_c(RX2C_BANDSEL),
 `ifdef DRAM_TEST
     .debug(),
     .debug_in(debug)
