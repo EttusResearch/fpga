@@ -50,6 +50,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 	export VIV_SIM_COMPLIBDIR="$(COMPLIBDIR)"; \
 	export VIV_SIM_USER_DO=$(MODELSIM_USER_DO); \
 	export VIV_MODE=$(VIVADO_MODE); \
+	export VIV_SIM_64BIT=$(MODELSIM_64BIT); \
 	vivado -mode $(VIVADO_MODE) -source $(BASE_DIR)/../tools/scripts/viv_sim_project.tcl -log xsim.log -nojournal
 
 .SECONDEXPANSION:

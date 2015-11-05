@@ -29,6 +29,16 @@ VIVADO_VER=2015.2
 DEVICE_NAME="USRP-X300 and USRP-X310"
 REPO_BASE_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
+# Modelsim specific settings
+declare -a MODELSIM_VERSIONS
+MODELSIM_VERSIONS=("DE" "SE")
+declare -A MODELSIM_VER_PATHS
+MODELSIM_VER_PATHS["DE"]="modelsim_dlx"
+MODELSIM_VER_PATHS["SE"]="modeltech"
+declare -A MODELSIM_VER_BITNESS
+MODELSIM_VER_BITNESS["DE"]="32"
+MODELSIM_VER_BITNESS["SE"]="64"
+
 # Go through cmd line options
 _MODELSIM_REQUESTED=0
 for i in "$@"
@@ -78,14 +88,30 @@ ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis
 /opt/Xilinx/DocNav/.settings${BITNESS}-DocNav.sh
 
 # Optional Modelsim environment setup
-export MODELSIM_PATH=$MODELSIM_BASE_PATH/modeltech/bin
+for i in "${MODELSIM_VERSIONS[@]}"
+do
+    if [ -d $MODELSIM_BASE_PATH/${MODELSIM_VER_PATHS[$i]} ]; then
+        export MODELSIM_VER=$i
+        export MODELSIM_PATH=$MODELSIM_BASE_PATH/${MODELSIM_VER_PATHS[$i]}/bin
+        if [ "${MODELSIM_VER_BITNESS[$i]}" == "64" ]; then
+            export MODELSIM_64BIT=1
+        else
+            export MODELSIM_64BIT=0
+        fi
+        break;
+    fi
+done
 export SIM_COMPLIBDIR=$VIVADO_PATH/modelsim
 
 function build_simlibs {
     mkdir -p $VIVADO_PATH/modelsim
     pushd $VIVADO_PATH/modelsim
     CMD_PATH=`mktemp XXXXXXXX.vivado_simgen.tcl`
-    echo "compile_simlib -force -simulator modelsim -family all -language all -library all -directory $VIVADO_PATH/modelsim" > $CMD_PATH
+    if [ "$MODELSIM_64BIT" == "1" ]; then
+        echo "compile_simlib -force -simulator modelsim -family all -language all -library all -directory $VIVADO_PATH/modelsim" > $CMD_PATH
+    else
+        echo "compile_simlib -force -simulator modelsim -family all -language all -library all -32 -directory $VIVADO_PATH/modelsim" > $CMD_PATH
+    fi
     vivado -mode batch -source $CMD_PATH -nolog -nojournal
     rm -f $CMD_PATH
     popd
@@ -130,7 +156,7 @@ else
     return 1
 fi
 if [ -d "$MODELSIM_PATH" ]; then
-    echo "- Modelsim: Found ($MODELSIM_PATH)"
+    echo "- Modelsim: Found ($MODELSIM_VER, ${MODELSIM_VER_BITNESS[$MODELSIM_VER]}-bit, $MODELSIM_PATH)"
     if [ -e "$VIVADO_PATH/modelsim/modelsim.ini" ]; then
         echo "- Modelsim Compiled Libs: Found ($VIVADO_PATH/modelsim)"
     else
@@ -141,6 +167,11 @@ else
         echo "- Modelsim: Not found! (WARNING.. Simulations with vsim will not work)"
     fi
 fi
+
+# Cleanup
+unset MODELSIM_VERSIONS
+unset MODELSIM_VER_PATHS
+unset MODELSIM_VER_BITNESS
 
 echo
 echo "Environment successfully initialized."
