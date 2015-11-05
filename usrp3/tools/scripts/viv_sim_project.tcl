@@ -13,6 +13,8 @@ set part_name       $::env(VIV_PART_NAME)
 set sim_runtime     $::env(VIV_SIM_RUNTIME)
 set sim_fast        $::env(VIV_SIM_FAST)
 set sim_complibdir  $::env(VIV_SIM_COMPLIBDIR)
+set sim_user_do     $::env(VIV_SIM_USER_DO)
+set sim_64bit       $::env(VIV_SIM_64BIT)
 set vivado_mode     $::env(VIV_MODE)
 set working_dir     [pwd]
 
@@ -67,6 +69,11 @@ foreach sim_src $sim_srcs {
 
 # Simulator independent config
 set_property top $sim_top [get_filesets $sim_fileset]
+set_property default_lib work [current_project]
+
+# Select the simulator
+# WARNING: Do this first before setting simulator specific properties!
+set_property target_simulator $simulator [current_project]
 
 # Vivado quirk when passing options to external simulators
 if [expr [string equal $simulator "XSim"] == 1] {
@@ -82,14 +89,17 @@ set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_filese
 
 # Modelsim specific settings
 set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
+# Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
+# See: http://www.xilinx.com/support/answers/62210.html
+set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
 set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
 set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.log_all_signals} "true" -objects [get_filesets $sim_fileset]
+set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
 set_property modelsim.simulate.vsim.more_options -value {-c} -objects [get_filesets $sim_fileset]
 set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
+set_property modelsim.simulate.custom_udo -value "${sim_user_do}" -objects [get_filesets $sim_fileset]
 
-# Select the simulator and launch simulation
-set_property target_simulator $simulator [current_project]
+# Launch simulation
 launch_simulation
 
 if [string equal $vivado_mode "batch"] {
