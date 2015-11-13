@@ -90,8 +90,9 @@ def get_options():
     parser = argparse.ArgumentParser(description='Generate a template XDC file from an RINF netlist and a Xilinx package file.')
     parser.add_argument('--rinf', type=str, default=None, help='Input RINF netlist file.')
     parser.add_argument('--xil_pkg_file', type=str, default=None, help='Input Xilinx package pinout file.')
-    parser.add_argument('--xdc_out', type=str, default='constraints.xdc', help='Output XDC file.')
     parser.add_argument('--ref_des', type=str, default='U0', help='Reference designator')
+    parser.add_argument('--xdc_out', type=str, default='output.xdc', help='Output XDC file.')
+    parser.add_argument('--vstub_out', type=str, default=None, help='Output Verilog stub file with the portmap')
     args = parser.parse_args()
     if not args.xil_pkg_file:
         print 'ERROR: Please specify a Xilinx package file using the --xil_pkg_file option\n'
@@ -160,43 +161,31 @@ def filter_fpga_pins(ref_des, terminal_db, fpga_pin_db):
                     pins[term.name] = fpga_pin_t(term.name, term.pin, iotype, bank)
     return pins
 
-# Write a raw XDC file with no checks or readability enhancements
-def write_xdc_raw(xdc_path, fpga_pins):
-    with open(xdc_path, 'w') as xdc_f:
-        max_pin_len = reduce(lambda x,y:max(x,y), map(len, fpga_pins.keys()))
-        for pin in sorted(fpga_pins.keys()):
-            xdc_pin = pin.replace('(', '[').replace(')',']').upper()
-            xdc_loc = fpga_pins[pin].loc.upper().ljust(16)
-            xdc_iotype = fpga_pins[pin].iotype
-            xdc_iostd = ('<IOSTD_BANK' + fpga_pins[pin].bank + '>').ljust(16)
-            xdc_f.write('set_property PACKAGE_PIN   ' + xdc_loc + (' [get_ports {' + xdc_pin + '}]').ljust(max_pin_len+16) + '\n')
-            xdc_f.write('set_property IOSTANDARD    ' + xdc_iostd + ' [get_ports {' + xdc_pin + '}]\n')
-            xdc_f.write('\n')
-
 # Write an XDC file with sanity checks and readability enhancements
-def write_xdc_smart(xdc_path, fpga_pins):
-    with open(xdc_path, 'w') as xdc_f:
-        # Figure out the max pin name length for human readable text alignment
-        max_pin_len = reduce(lambda x,y:max(x,y), map(len, fpga_pins.keys()))
+def write_output_files(xdc_path, vstub_path, fpga_pins):
+    # Figure out the max pin name length for human readable text alignment
+    max_pin_len = reduce(lambda x,y:max(x,y), map(len, fpga_pins.keys()))
 
-        # Create a bus database. Collapse multi-bit buses into single entries
-        bus_db = dict()
-        for pin in sorted(fpga_pins.keys()):
-            m = re.search('([a-zA-Z0-9_()]+)\(([0-9]+)\)', pin)
-            if m:
-                bus_name = m.group(1)
-                bit_num = int(m.group(2))
-                if bus_db.has_key(bus_name):
-                    bus_db[bus_name].append(bit_num)
-                else:
-                    bus_db[bus_name] = [bit_num]
+    # Create a bus database. Collapse multi-bit buses into single entries
+    bus_db = dict()
+    for pin in sorted(fpga_pins.keys()):
+        m = re.search('([a-zA-Z0-9_()]+)\(([0-9]+)\)', pin)
+        if m:
+            bus_name = m.group(1)
+            bit_num = int(m.group(2))
+            if bus_db.has_key(bus_name):
+                bus_db[bus_name].append(bit_num)
             else:
-                    bus_db[pin] = []
+                bus_db[bus_name] = [bit_num]
+        else:
+                bus_db[pin] = []
 
-        # Walk through the bus database and write the XDC file
+    # Walk through the bus database and write the XDC file
+    with open(xdc_path, 'w') as xdc_f:
+        print 'INFO: Writing template XDC ' + xdc_path + '...'
         for bus in sorted(bus_db.keys()):
-            if not re.match("^[a-zA-Z0-9_]*$", bus):
-                print 'CRITICAL WARNING: Invalid character(s) in net name: ' + bus + '. Please review.'
+            if not re.match("[a-zA-Z].[a-zA-Z0-9_]*$", bus):
+                print 'CRITICAL WARNING: Invalid Verilog net name: ' + bus + '. Please review.'
             if bus_db[bus] == []:
                 xdc_pin = bus.upper()
                 xdc_loc = fpga_pins[bus].loc.upper().ljust(16)
@@ -220,12 +209,36 @@ def write_xdc_smart(xdc_path, fpga_pins):
                 xdc_f.write('set_property IOSTANDARD    ' + xdc_iostd + ' [get_ports {' + bus.upper() + '[*]}]\n')
                 xdc_f.write('\n')
 
+    # Walk through the bus database and write a stub Verilog file
+    if vstub_path:
+        with open(vstub_path, 'w') as vstub_f:
+            print 'INFO: Writing Verilog stub ' + vstub_path + '...'
+            vstub_f.write('module ' + os.path.splitext(os.path.basename(vstub_path))[0] + ' (\n')
+            i = 1
+            for bus in sorted(bus_db.keys()):
+                port_name = bus.upper()
+                port_loc = fpga_pins[bus].loc.upper() if (bus_db[bus] == []) else '<Multiple>'
+                port_dir_short = raw_input('[' + str(i) + '/' + str(len(bus_db.keys())) +'] Direction for ' + port_name + ' (' + port_loc + ')? {[i]nput,[o]utput,[b]oth}: ').lower()
+                if port_dir_short.startswith('i'):
+                    port_dir = '  input '
+                elif port_dir_short.startswith('o'):
+                    port_dir = '  output'
+                else:
+                    port_dir = '  inout '
+
+                if bus_db[bus] == []:
+                    vstub_f.write(port_dir + '          ' + port_name + ',\n')
+                else:
+                    bus_def = str(sorted(bus_db[bus])[-1]) + ':0'
+                    vstub_f.write(port_dir + (' [' + bus_def + '] ').ljust(10) + port_name + ',\n')
+                i = i + 1
+            vstub_f.write(');\n\nendmodule')
+
 #------------------------------------------------------------
 # Main
 #------------------------------------------------------------
 def main():
     args = get_options();
-
     print 'INFO: Parsing Xilinx Package File ' + args.xil_pkg_file + '...'
     fpga_pin_db = fpga_pin_db_t(args.xil_pkg_file)
     print 'INFO: Parsing RINF File ' + args.rinf + '...'
@@ -241,9 +254,8 @@ def main():
     if not fpga_pins:
         print 'ERROR: Could not cross-reference pins for ' + args.ref_des + ' with FPGA device. Are you sure it is an FPGA?'
         sys.exit(1)
-    print 'INFO: Writing template XDC ' + args.xdc_out + '...'
-    write_xdc_smart(args.xdc_out, fpga_pins)
-    print 'INFO: XDC file generated successfully!!!. Please review it and fill in the IO standards before using it.'
+    write_output_files(args.xdc_out, args.vstub_out, fpga_pins)
+    print 'INFO: Output file(s) generated successfully!'
 
 if __name__ == '__main__':
     main()
