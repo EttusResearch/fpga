@@ -88,16 +88,18 @@ set_property xsim.elaborate.debug_level "all" -objects [get_filesets $sim_filese
 set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
 
 # Modelsim specific settings
-set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
-# Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
-# See: http://www.xilinx.com/support/answers/62210.html
-set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
-set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.vsim.more_options -value {-c} -objects [get_filesets $sim_fileset]
-set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.custom_udo -value "${sim_user_do}" -objects [get_filesets $sim_fileset]
+if [expr [string equal $simulator "Modelsim"] == 1] {
+    set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
+    # Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
+    # See: http://www.xilinx.com/support/answers/62210.html
+    set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
+    set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.vsim.more_options -value "-c" -objects [get_filesets $sim_fileset]
+    set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.custom_udo -value "${sim_user_do}" -objects [get_filesets $sim_fileset]
+}
 
 # Launch simulation
 launch_simulation
