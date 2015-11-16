@@ -31,7 +31,7 @@ HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO
 XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.x300.inc bin NAME=$@ ARCH=kintex7 PART_ID=$1/ffg900/-2 $2 EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.x300.inc bin NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 EXTRA_DEFS="$2"
 
 post_build = @\
 	mkdir -p build; \
@@ -52,43 +52,43 @@ post_build = @\
 all:      X300_HGS X310_HGS ##(Default target)
 
 X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k410t,$(GIGE_DEFS))
+	$(call vivado_build,X310,$(GIGE_DEFS))
 	$(call post_build,X310,1G)
 
 X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k325t,$(GIGE_DEFS))
+	$(call vivado_build,X300,$(GIGE_DEFS))
 	$(call post_build,X300,1G)
 
 X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k410t,$(HYBRID_DEFS))
+	$(call vivado_build,X310,$(HYBRID_DEFS))
 	$(call post_build,X310,HG)
 
 X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k325t,$(HYBRID_DEFS))
+	$(call vivado_build,X300,$(HYBRID_DEFS))
 	$(call post_build,X300,HG)
 
 X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k410t,$(XGIGE_DEFS))
+	$(call vivado_build,X310,$(XGIGE_DEFS))
 	$(call post_build,X310,XG)
 
 X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,xc7k325t,$(XGIGE_DEFS))
+	$(call vivado_build,X300,$(XGIGE_DEFS))
 	$(call post_build,X300,XG)
 
 X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,xc7k410t,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,X310,$(HYBRID_SRAM_DEFS))
 	$(call post_build,X310,HGS)
 
 X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,xc7k325t,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,X300,$(HYBRID_SRAM_DEFS))
 	$(call post_build,X300,HGS)
 
 X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,xc7k410t,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,X310,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X310,XGS)
 
 X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,xc7k325t,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,X300,$(XGIGE_SRAM_DEFS))
 	$(call post_build,X300,XGS)
 
 clean:    ##Clean up all target build outputs.

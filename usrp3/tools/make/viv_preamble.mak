@@ -30,3 +30,13 @@ build_dirs:
 prereqs: check_tool build_dirs
 
 .PHONY: check_tool build_dirs prereqs
+
+# -------------------------------------------------------------------
+# Validate prerequisites
+# -------------------------------------------------------------------
+ifndef NAME
+	$(error NAME was empty or not set)
+endif
+ifndef PART_ID
+	$(error PART_ID was empty or not set)
+endif

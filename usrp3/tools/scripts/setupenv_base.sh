@@ -32,8 +32,12 @@ if [ -z "$VIVADO_VER" ]; then
     echo "ERROR: Please define the variable VIVADO_VER before calling this script"
     return 
 fi
-if [ -z "$DEVICE_NAME" ]; then 
-    echo "ERROR: Please define the variable DEVICE_NAME before calling this script"
+if [ -z "$DISPLAY_NAME" ]; then 
+    echo "ERROR: Please define the variable DISPLAY_NAME before calling this script"
+    return 
+fi
+if [ ${#PRODUCT_ID_MAP[@]} -eq 0 ]; then 
+    echo "ERROR: Please define the variable PRODUCT_ID_MAP before calling this script"
     return 
 fi
 
@@ -59,7 +63,7 @@ Usage: source setupenv.sh [--help|-h] [--vivado-path=<PATH>] [--modelsim-path=<P
 --help -h       : Shows this message.
 
 This script sets up the environment required to build FPGA images for the Ettus Research
-${DEVICE_NAME}. It will also optionally set up the the environment to run the
+${DISPLAY_NAME}. It will also optionally set up the the environment to run the
 Modelsim simulator (although this tool is not required).
 
 Required tools: Xilinx Vivado $VIVADO_VER (Synthesis and Simulation)
@@ -106,7 +110,7 @@ done
 # Vivado environment setup
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
 
-echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DEVICE_NAME}..."
+echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}..."
 #----------------------------------------------------------------------------
 # Prepare Vivado environment
 #----------------------------------------------------------------------------
@@ -170,19 +174,21 @@ else
 fi
 
 #----------------------------------------------------------------------------
-# Finish up
+# Misc export variables
 #----------------------------------------------------------------------------
 export PATH=$(echo ${PATH} | tr ':' '\n' | awk '$0 !~ "/Vivado/"' | paste -sd:)
 export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$MODELSIM_PATH
 
-echo
-echo "Environment successfully initialized."
-return 0
-
-# Cleanup
-unset MODELSIM_VERSIONS
-unset MODELSIM_VER_PATHS
-unset MODELSIM_VER_BITNESS
+for prod in "${!PRODUCT_ID_MAP[@]}"; do
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$prod]}"
+    if [ ${#prod_tokens[@]} -eq 4 ]; then 
+        export XIL_ARCH_${prod}=${prod_tokens[0]}
+        export XIL_PART_ID_${prod}=${prod_tokens[1]}/${prod_tokens[2]}/${prod_tokens[3]}
+    else
+        echo "ERROR: Invalid PRODUCT_ID_MAP entry: \"${PRODUCT_ID_MAP[$prod]}\". Must be <arch>/<part>/<pkg>/<sg>."
+        return 1 
+    fi
+done
 
 #----------------------------------------------------------------------------
 # Define hardware programming aliases
@@ -213,3 +219,14 @@ function viv_jtag_program {
         vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
     fi
 }
+
+#----------------------------------------------------------------------------
+# Finish up
+#----------------------------------------------------------------------------
+unset MODELSIM_VERSIONS
+unset MODELSIM_VER_PATHS
+unset MODELSIM_VER_BITNESS
+
+echo
+echo "Environment successfully initialized."
+return 0
