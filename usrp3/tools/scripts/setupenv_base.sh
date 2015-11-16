@@ -199,50 +199,78 @@ function viv_create_ip {
     if [[ -z $1 || -z $2 || -z $3 || -z $4 ]]; then
         echo "Create a new Vivado IP instance and a Makefile for it"
         echo ""
-        echo "Usage: viv_create_new_ip <IP Name> <IP Type> <Product> <IP Location>" 
+        echo "Usage: viv_create_new_ip <IP Name> <IP Location> <IP VLNV> <Product>" 
         echo "- <IP Name>: Name of the IP instance"
-        echo "- <IP VLNV>: The vendor, library, name, and version string for the IP as defined by Xilinx"
-        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         echo "- <IP Location>: Base location for IP"
+        echo "- <IP VLNV>: The vendor, library, name, and version (VLNV) string for the IP as defined by Xilinx"
+        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
     
     ip_name=$1
-    ip_vlnv=$2
-    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$3]}"
+    ip_dir=$(readlink -f $2)
+    ip_vlnv=$3
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$4]}"
     part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
-    ip_dir=$4
+    if [[ -z $part_name ]]; then
+        echo "ERROR: Invalid product name $4. Supported: ${!PRODUCT_ID_MAP[@]}"
+        return 1
+    fi
     if [[ -d $ip_dir/$ip_name ]]; then
         echo "ERROR: IP $ip_dir/$ip_name already exists. Please choose a different name."
-    else
-        echo "Launching Vivado GUI..."
-        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $ip_name $ip_vlnv $part_name $ip_dir
-        echo "Generating Makefile..."
-        python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
-        echo "Done generating IP in $ip_dir/$ip_name"
+        return 1
     fi
+
+    echo "Launching Vivado GUI..."
+    vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $ip_name $ip_vlnv $part_name $ip_dir
+    echo "Generating Makefile..."
+    python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
+    echo "Done generating IP in $ip_dir/$ip_name"
 }
 
 function viv_modify_ip {
-    if [[ -z $1 || -z $2 || -z $3 ]]; then
+    if [[ -z $1 || -z $2 ]]; then
         echo "Modify an existing Vivado IP instance"
         echo ""
         echo "Usage: viv_modify_ip <IP Name> <Product> <IP Location>" 
-        echo "- <IP Name>: Name of the IP instance"
+        echo "- <IP XCI Path>: Path to the IP XCI file."
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
-        echo "- <IP Location>: Base location for IP"
         return 1
     fi
-    
-    ip_name=$1
+
+    xci_path=$(readlink -f $1)
+    ip_dir=$(dirname $(dirname $xci_path))
+    ip_name=$(basename $(dirname $xci_path))
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$2]}"
     part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
-    ip_dir=$3
-    if [[ -d $ip_dir/$ip_name ]]; then
-        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $ip_name unknown $part_name $ip_dir
-    else
-        echo "ERROR: IP $ip_dir/$ip_name not found."
+    if [[ -z $part_name ]]; then
+        echo "ERROR: Invalid product name $2. Supported: ${!PRODUCT_ID_MAP[@]}"
+        return 1
     fi
+    if [[ -f $xci_path ]]; then
+        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $ip_name 0 $part_name $ip_dir
+    else
+        echo "ERROR: IP $xci_path not found."
+        return 1
+    fi
+}
+
+function viv_ls_ip {
+    if [[ -z $1 ]]; then
+        echo "List the items in the Vivado IP catalog"
+        echo ""
+        echo "Usage: viv_ls_ip <Product>" 
+        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
+        return 1
+    fi
+
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$1]}"
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    if [[ -z $part_name ]]; then
+        echo "ERROR: Invalid product name $1. Supported: ${!PRODUCT_ID_MAP[@]}"
+        return 1
+    fi
+    vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs list 0 0 $part_name 0 | grep -v -E '(^$|^#|\*\*)'
 }
 
 #----------------------------------------------------------------------------
@@ -266,7 +294,7 @@ function viv_jtag_program {
         echo "- <Bitfile Path>: Path to a .bit FPGA configuration file"
         echo "- <Device Address>: Address to the device in the form <Target>:<Device>"
         echo "                    Run viv_jtag_list to get a list of connected devices"
-        return
+        return 1
     fi
     if [ "$2" == "" ]; then
         vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
