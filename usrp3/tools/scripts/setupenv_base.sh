@@ -191,6 +191,61 @@ for prod in "${!PRODUCT_ID_MAP[@]}"; do
 done
 
 #----------------------------------------------------------------------------
+# Define IP management aliases
+#----------------------------------------------------------------------------
+VIV_IP_UTILS=$REPO_BASE_PATH/tools/scripts/viv_ip_utils.tcl
+
+function viv_create_ip {
+    if [[ -z $1 || -z $2 || -z $3 || -z $4 ]]; then
+        echo "Create a new Vivado IP instance and a Makefile for it"
+        echo ""
+        echo "Usage: viv_create_new_ip <IP Name> <IP Type> <Product> <IP Location>" 
+        echo "- <IP Name>: Name of the IP instance"
+        echo "- <IP VLNV>: The vendor, library, name, and version string for the IP as defined by Xilinx"
+        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
+        echo "- <IP Location>: Base location for IP"
+        return 1
+    fi
+    
+    ip_name=$1
+    ip_vlnv=$2
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$3]}"
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    ip_dir=$4
+    if [[ -d $ip_dir/$ip_name ]]; then
+        echo "ERROR: IP $ip_dir/$ip_name already exists. Please choose a different name."
+    else
+        echo "Launching Vivado GUI..."
+        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $ip_name $ip_vlnv $part_name $ip_dir
+        echo "Generating Makefile..."
+        python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
+        echo "Done generating IP in $ip_dir/$ip_name"
+    fi
+}
+
+function viv_modify_ip {
+    if [[ -z $1 || -z $2 || -z $3 ]]; then
+        echo "Modify an existing Vivado IP instance"
+        echo ""
+        echo "Usage: viv_modify_ip <IP Name> <Product> <IP Location>" 
+        echo "- <IP Name>: Name of the IP instance"
+        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
+        echo "- <IP Location>: Base location for IP"
+        return 1
+    fi
+    
+    ip_name=$1
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$2]}"
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    ip_dir=$3
+    if [[ -d $ip_dir/$ip_name ]]; then
+        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $ip_name unknown $part_name $ip_dir
+    else
+        echo "ERROR: IP $ip_dir/$ip_name not found."
+    fi
+}
+
+#----------------------------------------------------------------------------
 # Define hardware programming aliases
 #----------------------------------------------------------------------------
 VIV_HW_UTILS=$REPO_BASE_PATH/tools/scripts/viv_hardware_utils.tcl
