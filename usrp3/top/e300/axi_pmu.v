@@ -76,9 +76,9 @@ module axi_pmu
       spi_rx_r2 <= spi_stb && (rx_type == 2) ? spi_rx : spi_rx_r2;
     end
 
-  localparam IDLE              = 3'b000;
+  localparam IDLE              = 3'b001;
   localparam READ_IN_PROGRESS  = 3'b010;
-  localparam WRITE_IN_PROGRESS = 3'b001;
+  localparam WRITE_IN_PROGRESS = 3'b100;
 
   reg [2:0] state;
   reg [7:0] addr;
