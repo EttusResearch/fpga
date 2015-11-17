@@ -221,34 +221,29 @@ function viv_create_ip {
         return 1
     fi
 
-    echo "Launching Vivado GUI..."
-    vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $ip_name $ip_vlnv $part_name $ip_dir
+    vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $part_name $ip_name $ip_dir $ip_vlnv 
     echo "Generating Makefile..."
     python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
     echo "Done generating IP in $ip_dir/$ip_name"
 }
 
 function viv_modify_ip {
-    if [[ -z $1 || -z $2 ]]; then
+    if [[ -z $1 ]]; then
         echo "Modify an existing Vivado IP instance"
         echo ""
-        echo "Usage: viv_modify_ip <IP Name> <Product> <IP Location>" 
+        echo "Usage: viv_modify_ip <IP XCI Path>" 
         echo "- <IP XCI Path>: Path to the IP XCI file."
-        echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
 
     xci_path=$(readlink -f $1)
-    ip_dir=$(dirname $(dirname $xci_path))
-    ip_name=$(basename $(dirname $xci_path))
-    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$2]}"
-    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    part_name=$(python $REPO_BASE_PATH/tools/scripts/viv_ip_xci_editor.py read_part $xci_path)
     if [[ -z $part_name ]]; then
-        echo "ERROR: Invalid product name $2. Supported: ${!PRODUCT_ID_MAP[@]}"
+        echo "ERROR: Invalid part name $part_name. XCI parse error."
         return 1
     fi
     if [[ -f $xci_path ]]; then
-        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $ip_name 0 $part_name $ip_dir
+        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $part_name $xci_path
     else
         echo "ERROR: IP $xci_path not found."
         return 1
@@ -270,7 +265,34 @@ function viv_ls_ip {
         echo "ERROR: Invalid product name $1. Supported: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
-    vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs list 0 0 $part_name 0 | grep -v -E '(^$|^#|\*\*)'
+    vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
+}
+
+function viv_upgrade_ip {
+    if [[ -z $1 ]]; then
+        echo "Upgrade one or more Xilinx IP targets"
+        echo ""
+        echo "Usage: viv_upgrade_ip <IP Directory> [--recursive]" 
+        echo "- <IP Directory>: Path to the IP XCI file."
+        return 1
+    fi
+    max_depth="-maxdepth 1"
+    if [[ $2 == "--recursive" ]]; then
+        max_depth=""
+    fi
+    search_path=$(readlink -f $1)
+    IFS='' read -r -a xci_files <<< $(find $search_path $max_depth | grep .xci | xargs)
+    echo $xci_files
+    for xci_path in $xci_files; do
+        if [[ -f $xci_path ]]; then
+            echo "Upgrading $xci_path..."
+            part_name=$(python $REPO_BASE_PATH/tools/scripts/viv_ip_xci_editor.py read_part $xci_path)
+            vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs upgrade $part_name $xci_path | grep -v -E '(^$|^#|\*\*)'
+        else
+            echo "ERROR: IP $xci_path not found."
+            return 1
+        fi
+    done
 }
 
 #----------------------------------------------------------------------------

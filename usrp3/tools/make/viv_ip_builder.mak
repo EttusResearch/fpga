@@ -31,8 +31,8 @@ BUILD_VIVADO_IP = \
 	echo "BUILDER: Staging IP in build directory..."; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) reserve; \
 	cp -rf $(4)/$(1)/* $(5)/$(1); \
-	echo "BUILDER: Retargeting IP to part $$PART_NAME..."; \
-	python $(TOOLS_DIR)/scripts/viv_retarget_ip.py --output_dir=$(5)/$(1) --arch=$(2) --part=$(3) $(4)/$(1)/$(1).xci; \
+	echo "BUILDER: Retargeting IP to part $(2)/$(3)..."; \
+	python $(TOOLS_DIR)/scripts/viv_ip_xci_editor.py --output_dir=$(5)/$(1) --target=$(2)/$(3) retarget $(4)/$(1)/$(1).xci; \
 	cd $(5); \
 	echo "BUILDER: Building IP..."; \
 	export VIV_ERR=0; \
