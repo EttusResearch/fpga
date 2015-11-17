@@ -282,7 +282,6 @@ function viv_upgrade_ip {
     fi
     search_path=$(readlink -f $1)
     IFS='' read -r -a xci_files <<< $(find $search_path $max_depth | grep .xci | xargs)
-    echo $xci_files
     for xci_path in $xci_files; do
         if [[ -f $xci_path ]]; then
             echo "Upgrading $xci_path..."
