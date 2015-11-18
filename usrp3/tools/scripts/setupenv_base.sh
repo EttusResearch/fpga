@@ -308,7 +308,7 @@ function viv_jtag_list {
 }
 
 function viv_jtag_program {
-    if [ "$1" == "" ]; then
+    if [[ -z $1 ]]; then
         echo "Downloads a bitfile to an FPGA device using Vivado"
         echo ""
         echo "Usage: viv_jtag_program <Bitfile Path> [<Device Address> = 0:0]"
@@ -322,6 +322,17 @@ function viv_jtag_program {
     else
         vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
     fi
+}
+
+function probe_bitfile {
+    if [[ -z $1 ]]; then
+        echo "Probe a Xilinx bit file and report header information"
+        echo ""
+        echo "Usage: probe_bitfile <Bitfile Path>"
+        echo "- <Bitfile Path>: Path to a .bit FPGA configuration file"
+        return 1
+    fi
+    python $REPO_BASE_PATH/tools/scripts/xil_bitfile_parser.py --info $1
 }
 
 #----------------------------------------------------------------------------

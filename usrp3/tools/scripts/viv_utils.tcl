@@ -19,6 +19,7 @@ namespace eval ::vivado_utils {
         get_vivado_mode
 
     # Required environment variables
+    variable g_tools_dir    $::env(VIV_TOOLS_DIR)
     variable g_top_module   $::env(VIV_TOP_MODULE)
     variable g_part_name    $::env(VIV_PART_NAME)
     variable g_output_dir   $::env(VIV_OUTPUT_DIR)
@@ -161,15 +162,21 @@ proc ::vivado_utils::generate_post_route_reports {} {
 # ---------------------------------------------------
 # Export implementation
 # ---------------------------------------------------
-proc ::vivado_utils::write_implementation_outputs {} {
+proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
     variable g_output_dir
     variable g_top_module
+    variable g_tools_dir
 
     puts "BUILDER: Writing implementation netlist and XDC"
     write_verilog -force $g_output_dir/${g_top_module}_impl_netlist.v 
     write_xdc -no_fixed_only -force $g_output_dir/${g_top_module}_impl.xdc 
     puts "BUILDER: Writing bitstream"
-    write_bitstream -force -bin_file $g_output_dir/${g_top_module}.bit 
+    write_bitstream -force $g_output_dir/${g_top_module}.bit
+    if {$byte_swap_bin == 1} {
+        exec python $g_tools_dir/scripts/xil_bitfile_parser.py --flip --bin_out $g_output_dir/${g_top_module}.bin $g_output_dir/${g_top_module}.bit
+    } else {
+        exec python $g_tools_dir/scripts/xil_bitfile_parser.py --bin_out $g_output_dir/${g_top_module}.bin $g_output_dir/${g_top_module}.bit
+    }
     puts "BUILDER: Writing debug probes"
     write_debug_probes -force $g_output_dir/${g_top_module}.ltx
     puts "BUILDER: Writing export report"
