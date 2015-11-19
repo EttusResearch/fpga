@@ -14,6 +14,9 @@ terminal_t = collections.namedtuple('terminal_t', 'name pin')
 fpga_pin_t = collections.namedtuple('fpga_pin_t', 'name loc iotype bank')
 
 # A (ref designator -> terminals) map
+# For each reference designator, this class maintains a list of all terminals
+# including names and pin locations. It also maintains a reverse mapping for all
+# terminal names to reference designator
 class terminal_db_t:
     def __init__(self):
         self.db = dict()
@@ -36,6 +39,8 @@ class terminal_db_t:
         return self.rev_db[net_name]
 
 # A (component -> properties) map
+# For each component, this class maintains all properties that are
+# listed in the RINF file
 class component_db_t:
     def __init__(self):
         self.db = dict()
@@ -59,6 +64,8 @@ class component_db_t:
         return self.db[comp_name][attr_name]
 
 # An FPGA (pin location -> properties) map
+# For each FPGA pin location, this class maintains a list of various pin properties
+# Also maintans all the IO Types to aid in filtering
 class fpga_pin_db_t:
     def __init__(self, pkg_file, io_exclusions = []):
         print 'INFO: Parsing Xilinx Package File ' + pkg_file + '...'
@@ -113,6 +120,7 @@ def get_options():
     parser.add_argument('--vstub_out', type=str, default=None, help='Output Verilog stub file with the portmap')
     parser.add_argument('--exclude_io', type=str, default='MIO,DDR,CONFIG', help='Exlcude the specified FPGA IO types from consideration')
     parser.add_argument('--suppress_warn', action='store_true', default=False, help='Suppress sanity check warnings')
+    parser.add_argument('--traverse_depth', type=int, default=1, help='How many linear components to traverse before finding a named net')
     args = parser.parse_args()
     if not args.xil_pkg_file:
         print 'ERROR: Please specify a Xilinx package file using the --xil_pkg_file option\n'
@@ -172,23 +180,39 @@ def parse_rinf(rinf_path, suppress_warnings):
 
 # From all the FPGA pins filter out the ones
 # relevant for creating an XDC
-def filter_fpga_pins(ref_des, terminal_db, fpga_pin_db):
+def filter_fpga_pins(ref_des, terminal_db, fpga_pin_db, max_level):
     terminals = terminal_db.get_terminals(ref_des)
     pins = dict()
-    for term in terminals:
-        if term.name and (not term.name.startswith('$')):
-            if fpga_pin_db.is_iface_pin(term.pin):
-                iotype = fpga_pin_db.get_pin_attr(term.pin, 'I/O Type')
-                bank = fpga_pin_db.get_pin_attr(term.pin, 'Bank')
-                if iotype != 'CONFIG' and iotype != 'NA':
-                    pins[term.name] = fpga_pin_t(term.name, term.pin, iotype, bank)
+    # Loop through all the terminals of the FPGA
+    for fpga_term in terminals:
+        term = fpga_term
+        level = 0
+        # For each net check if there is a valid (non $XXXXXX) name
+        # If yes, use it. If not, then traverse one component down and check again
+        # If the next net has a valid name, use that. One requirement for this
+        # traversal is that the downstream components must form a linear network
+        # i.e. no branching. As soon as this algorithm sees a brach, it aborts.
+        while term and term.name.startswith('$') and level < max_level:
+            level = level + 1
+            comps = terminal_db.lookup_endpoints(term.name)
+            if len(comps) == 2: #Check for branch
+                next_comp = comps[1] if comps[0] == ref_des else comps[0]
+                sec_terms = terminal_db.get_terminals(next_comp)
+                if len(sec_terms) == 2: #Check for branch
+                    term = sec_terms[1] if sec_terms[0].name == term.name else sec_terms[0]
+                    break 
+        # At this point we either found a valid net of we reached the max_depth
+        # Check again before approving this as a valid connection 
+        if term.name and (not term.name.startswith('$')) and fpga_pin_db.is_iface_pin(fpga_term.pin):
+            iotype = fpga_pin_db.get_pin_attr(fpga_term.pin, 'I/O Type')
+            bank = fpga_pin_db.get_pin_attr(fpga_term.pin, 'Bank')
+            pins[term.name] = fpga_pin_t(term.name, fpga_term.pin, iotype, bank)
     return pins
 
 # Write an XDC file with sanity checks and readability enhancements
 def write_output_files(xdc_path, vstub_path, fpga_pins):
     # Figure out the max pin name length for human readable text alignment
     max_pin_len = reduce(lambda x,y:max(x,y), map(len, fpga_pins.keys()))
-
     # Create a bus database. Collapse multi-bit buses into single entries
     bus_db = dict()
     for pin in sorted(fpga_pins.keys()):
@@ -202,7 +226,6 @@ def write_output_files(xdc_path, vstub_path, fpga_pins):
                 bus_db[bus_name] = [bit_num]
         else:
                 bus_db[pin] = []
-
     # Walk through the bus database and write the XDC file
     with open(xdc_path, 'w') as xdc_f:
         print 'INFO: Writing template XDC ' + xdc_path + '...'
@@ -231,7 +254,6 @@ def write_output_files(xdc_path, vstub_path, fpga_pins):
                     xdc_f.write('set_property PACKAGE_PIN   ' + xdc_loc + (' [get_ports {' + xdc_pin + '}]').ljust(max_pin_len+16) + '\n')
                 xdc_f.write('set_property IOSTANDARD    ' + xdc_iostd + ' [get_ports {' + bus.upper() + '[*]}]\n')
                 xdc_f.write('\n')
-
     # Walk through the bus database and write a stub Verilog file
     if vstub_path:
         with open(vstub_path, 'w') as vstub_f:
@@ -260,8 +282,13 @@ def write_output_files(xdc_path, vstub_path, fpga_pins):
 # Report unconnected pins
 def report_unconnected_pins(fpga_pins, fpga_pin_db):
     print 'WARNING: The following pins were not connected. Please review.'
+    # Collect all the pin locations that have been used for constrain/stub creation
+    iface_pins = set()
+    for net in fpga_pins.keys():
+        iface_pins.add(fpga_pins[net].loc)
+    # Loop through all possible pins and check if we have missed any
     for pin in sorted(fpga_pin_db.iface_pins()):
-        if pin not in fpga_pins.keys():
+        if pin not in iface_pins:
             print (' * ' + pin.ljust(6) + ': ' +
                    'Bank = ' + str(fpga_pin_db.get_pin_attr(pin, 'Bank')).ljust(6) +
                    'IO Type = ' + str(fpga_pin_db.get_pin_attr(pin, 'I/O Type')).ljust(10) +
@@ -285,7 +312,7 @@ def main():
     print 'INFO: * Name = ' + fpga_info['Name']
     print 'INFO: * Description = ' + fpga_info['Description']
     # Build a list of all FPGA interface pins in the netlist
-    fpga_pins = filter_fpga_pins(args.ref_des, terminal_db, fpga_pin_db)
+    fpga_pins = filter_fpga_pins(args.ref_des, terminal_db, fpga_pin_db, args.traverse_depth)
     if not fpga_pins:
         print 'ERROR: Could not cross-reference pins for ' + args.ref_des + ' with FPGA device. Are you sure it is an FPGA?'
         sys.exit(1)
