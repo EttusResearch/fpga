@@ -140,7 +140,7 @@ module bus_int
    localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64; // Block of 64 addresses start here.
 
-   localparam COMPAT_MAJOR    = 16'h0011;
+   localparam COMPAT_MAJOR    = 16'h0012;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
