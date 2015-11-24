@@ -158,7 +158,7 @@ module radio #(
    localparam SR_RX_DSP    = 8'd144;
    localparam SR_TX_DSP    = 8'd184;
    localparam SR_LEDS      = 8'd195;
-   localparam SR_FP_GPIO   = 8'd200;
+   localparam SR_FP_GPIO   = 8'd201;
    localparam SR_RX_FRONT  = 8'd208;
    localparam SR_TX_FRONT  = 8'd216;
    localparam SR_CODEC_IDLE = 8'd250;
