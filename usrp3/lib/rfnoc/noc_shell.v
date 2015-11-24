@@ -65,9 +65,11 @@ module noc_shell
    localparam SR_RB_ADDR                     = 127;
    
    localparam RB_NOC_ID                      = 0;
-   localparam RB_BLOCK_PORT_PARAMS           = 1;
-   localparam RB_BLOCK_PORT_SIDS             = 2;
-   localparam RB_USER_RB_DATA                = 3;
+   localparam RB_GLOBAL_PARAMS               = 1;
+   localparam RB_FIFOSIZE                    = 2;
+   localparam RB_MTU                         = 3;
+   localparam RB_BLOCK_PORT_SIDS             = 4;
+   localparam RB_USER_RB_DATA                = 5;
    // Allocate all regs 128-255 to user device
    
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
@@ -133,12 +135,12 @@ module noc_shell
 
    wire [INPUT_PORTS-1:0] clear_rx_fc;
    wire [OUTPUT_PORTS-1:0] clear_tx_fc;
-   wire [1:0] rb_addr_noc_shell[0:BLOCK_PORTS-1];
+   wire [2:0] rb_addr_noc_shell[0:BLOCK_PORTS-1];
 
    genvar k;
    generate
      for (k = 0; k < BLOCK_PORTS; k = k + 1) begin
-       setting_reg #(.my_addr(SR_RB_ADDR), .width(2), .at_reset(0)) sr_rb_addr
+       setting_reg #(.my_addr(SR_RB_ADDR), .width(3), .at_reset(0)) sr_rb_addr
          (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
           .in(set_data),.out(rb_addr_noc_shell[k]),.changed());
        setting_reg #(.my_addr(SR_RB_ADDR_USER), .width(8), .at_reset(0)) sr_rb_addr_user
@@ -152,10 +154,9 @@ module noc_shell
          end else begin
            case(rb_addr_noc_shell[k])
              RB_NOC_ID                : rb_data_gen <= NOC_ID;
-             RB_BLOCK_PORT_PARAMS     : rb_data_gen <= {40'd0,
-                                                        INPUT_PORTS[4:0], OUTPUT_PORTS[4:0],
-                                                        k < OUTPUT_PORTS ? MTU[8*k+7:8*k]                 : 8'd0,
-                                                        k < INPUT_PORTS  ? STR_SINK_FIFOSIZE[8*k+7:8*k]   : 8'd0};
+             RB_GLOBAL_PARAMS         : rb_data_gen <= {56'd0, INPUT_PORTS[4:0], OUTPUT_PORTS[4:0]};
+             RB_FIFOSIZE              : rb_data_gen <= k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0;
+             RB_MTU                   : rb_data_gen <= k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0;
              RB_BLOCK_PORT_SIDS       : rb_data_gen <= {src_sid[16*k+15:16*k],
                                                         k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
                                                         k < INPUT_PORTS  ? resp_in_dst_sid[16*k+15:16*k]  : 16'd0,

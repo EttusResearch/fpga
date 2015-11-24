@@ -48,7 +48,7 @@ module radio_core #(
 
   localparam RB_VITA_TIME            = 8'd0;
   localparam RB_VITA_LASTPPS         = 8'd1;
-  localparam RB_RX                   = 8'd2;
+  localparam RB_TEST                 = 8'd2;
   localparam RB_TXRX                 = 8'd3;
   localparam RB_RADIO_NUM            = 8'd4;
   localparam RB_DB_CONTROL_BASE      = 8'd16; // 16 - 32 reserved for db control
@@ -67,7 +67,7 @@ module radio_core #(
       case (rb_addr)
         RB_VITA_TIME    : rb_data <= vita_time;
         RB_VITA_LASTPPS : rb_data <= vita_time_lastpps;
-        RB_RX           : rb_data <= {rx, test_readback};
+        RB_TEST         : rb_data <= {rx, test_readback};
         RB_TXRX         : rb_data <= {tx, rx};
         RB_RADIO_NUM    : rb_data <= {32'd0, RADIO_NUM[31:0]};
         // All others default to daughter board control readback data

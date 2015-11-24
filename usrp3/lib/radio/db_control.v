@@ -21,7 +21,7 @@ module db_control #(
   // Note: Only use addrs 0-63, as others are used in radio core
   localparam SR_MISC_OUTS  = SR_BASE + 8'd0;
   localparam SR_SYNC       = SR_BASE + 8'd1;
-  localparam SR_CLEAR_FIFO = SR_BASE + 8'd2;
+  localparam SR_CLEAR_CMDS = SR_BASE + 8'd2;
   localparam SR_SPI        = SR_BASE + 8'd16; // 16-18
   localparam SR_LEDS       = SR_BASE + 8'd24; // 24
   localparam SR_FP_GPIO    = SR_BASE + 8'd32; // 32-37
@@ -63,7 +63,7 @@ module db_control #(
     .strobe(set_stb_timed), .addr(set_addr_timed), .in(set_data_timed),
     .out(leds), .changed());
 
-  setting_reg #(.my_addr(SR_CLEAR_FIFO), .width(1)) sr_clear (
+  setting_reg #(.my_addr(SR_CLEAR_CMDS), .width(1)) sr_clear (
     .clk(clk), .rst(reset),
     .strobe(set_stb_timed), .addr(set_addr_timed), .in(set_data_timed),
     .out(), .changed(clear_fifo));
