@@ -102,6 +102,14 @@ module e300_core
   localparam RB32_CORE_DEBUG    = 5'd5;
   localparam RB32_CORE_TEST     = 5'd24;
 
+
+   /////////////////////////////////////////////////////////////////////////////////
+   // Internal time synchronization
+   /////////////////////////////////////////////////////////////////////////////////
+   wire time_sync, time_sync_r;
+    synchronizer time_sync_synchronizer
+     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
+
   wire [4:0]  rb_addr;
   wire [31:0] rb_test;
   wire [31:0] rb_data_xb;
@@ -156,6 +164,7 @@ module e300_core
   assign rx_bandsel_a = misc_out[12:7];
   assign rx_bandsel_b = misc_out[16:13];
   assign rx_bandsel_c = misc_out[20:17];
+  assign time_sync    = misc_out[21];
 
   setting_reg
   #(
@@ -174,7 +183,7 @@ module e300_core
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
-      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'hD, 8'h0};
+      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'hE, 8'h0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
 `ifdef DRAM_TEST
@@ -329,7 +338,7 @@ module e300_core
     .tx_tdata_bo(tx_tdata_bo[0]), .tx_tlast_bo(tx_tlast_bo[0]), .tx_tvalid_bo(tx_tvalid_bo[0]), .tx_tready_bo(tx_tready_bo[0]),
     .tx_tdata_bi(tx_tdata_bi[0]), .tx_tlast_bi(tx_tlast_bi[0]), .tx_tvalid_bi(tx_tvalid_bi[0]), .tx_tready_bi(tx_tready_bi[0]),
 
-    .pps(pps), .sync_dacs(),
+    .pps(pps), .time_sync(time_sync_r), .sync_dacs(),
     .debug()
   );
 
@@ -362,7 +371,7 @@ module e300_core
     .tx_tdata_bo(tx_tdata_bo[1]), .tx_tlast_bo(tx_tlast_bo[1]), .tx_tvalid_bo(tx_tvalid_bo[1]), .tx_tready_bo(tx_tready_bo[1]),
     .tx_tdata_bi(tx_tdata_bi[1]), .tx_tlast_bi(tx_tlast_bi[1]), .tx_tvalid_bi(tx_tvalid_bi[1]), .tx_tready_bi(tx_tready_bi[1]),
 
-    .pps(pps), .sync_dacs(),
+    .pps(pps), .time_sync(time_sync_r), .sync_dacs(),
     .debug()
   );
 

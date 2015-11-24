@@ -5,7 +5,7 @@
 
 module timekeeper
   #(parameter BASE = 0)
-   (input clk, input reset, input pps,
+   (input clk, input reset, input pps, input sync,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     output reg [63:0] vita_time, output reg [63:0] vita_time_lastpps);
 
@@ -13,7 +13,7 @@ module timekeeper
    // timer settings for this module
    //////////////////////////////////////////////////////////////////////////
    wire [63:0] time_at_next_event;
-   wire set_time_pps, set_time_now;
+   wire set_time_pps, set_time_now, set_time_sync;
    wire cmd_trigger;
 
    setting_reg #(.my_addr(BASE), .width()) sr_time_hi
@@ -24,9 +24,9 @@ module timekeeper
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[31:0]), .changed());
 
-   setting_reg #(.my_addr(BASE+2), .width(2)) sr_ctrl
+   setting_reg #(.my_addr(BASE+2), .width(3)) sr_ctrl
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({set_time_pps, set_time_now}), .changed(cmd_trigger));
+      .out({set_time_sync, set_time_pps, set_time_now}), .changed(cmd_trigger));
 
    //////////////////////////////////////////////////////////////////////////
    // PPS edge detection logic
@@ -41,7 +41,7 @@ module timekeeper
    // arm the trigger to latch a new time when the ctrl register is written
    //////////////////////////////////////////////////////////////////////////
    reg armed;
-   wire time_event = armed && ((set_time_now) || (set_time_pps && pps_edge));
+   wire time_event = armed && ((set_time_now) || (set_time_pps && pps_edge) || (set_time_sync && sync));
    always @(posedge clk) begin
      if (reset) armed <= 1'b0;
      else if (cmd_trigger) armed <= 1'b1;
