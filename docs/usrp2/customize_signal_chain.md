@@ -45,5 +45,5 @@ The following module definition keys are possible (X is a DSP number):
 - `RX_DSP<X>_MODULE`: Set the module for the transmit dsp chain.
 - `TX_DSP<X>_MODULE`: Set the module for the receive dsp chain.
 
-Examples of custom modules can be found in usrp2/custom/*.v
+Examples of custom modules can be found in the Verilog files in `usrp2/custom/`.
 

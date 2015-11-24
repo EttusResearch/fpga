@@ -468,4 +468,4 @@ It is encouraged to use (and create) reusable libraries in product specific
 test benches. Libraries can provide macros, modules, tasks and functions for
 ease-of-use with particular protocols and subsystems.
 
-The [Simulation Libraries](creating_a_tb.md) page has more information.
+The \ref md_usrp3_sim_writing_testbenches page has more information.
