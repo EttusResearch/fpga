@@ -117,7 +117,7 @@ echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}
 if [ -d "$VIVADO_PATH/bin" ]; then
     echo "- Vivado: Found ($VIVADO_PATH/bin)"
 else
-    echo "- Vivado: Not found in $VIVADO_BASE_PATH (ERROR.. Builds and simulations will not work)"
+    echo "- Vivado: Version $VIVADO_VER not found in $VIVADO_BASE_PATH (ERROR.. Builds and simulations will not work)"
     echo "          Use the --vivado-path option to override the search path"
     return 1
 fi
