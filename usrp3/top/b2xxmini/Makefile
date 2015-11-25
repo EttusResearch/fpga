@@ -4,7 +4,7 @@
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
 ##-------------------
-##USRP B2X0 FPGA Help
+##USRP B2XXXmini FPGA Help
 ##-------------------
 ##Usage:
 ## make <Targets> <Options>
