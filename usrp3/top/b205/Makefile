@@ -61,12 +61,17 @@ endif
 ##Supported Targets
 ##-----------------
 
-all:      B200mini  ##(Default target)
+all:      B200mini B205mini  ##(Default target)
 
 B200mini: ##Build USRP B200mini design.
 	$(call pre_build,B200mini)
 	$(call ise_build,XC6SLX75)
 	$(call post_build,B200mini)
+
+B205mini: ##Build USRP B205mini design.
+	$(call pre_build,B205mini)
+	$(call ise_build,XC6SLX150)
+	$(call post_build,B205mini)
 
 clean:    ##Clean up all build output.
 	rm -rf build-*
@@ -83,4 +88,4 @@ help:    ## Show this help message.
 ##EXPORT_ONLY=1    Export build targets from a GUI build to the build directory.
 ##                 Requires the project in build-*_* to be built.
 
-.PHONY: all clean help
+.PHONY: all clean help B200mini B205mini
