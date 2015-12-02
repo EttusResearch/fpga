@@ -24,9 +24,9 @@ endif
 # -------------------------------------------------------------------
 # Path variables
 
-SIMLIB_DIR = $(BASE_DIR)/../sim
+SIMLIB_DIR = $(abspath $(BASE_DIR)/../sim)
 ifdef SIM_COMPLIBDIR
-COMPLIBDIR = $(SIM_COMPLIBDIR)
+COMPLIBDIR = $(call RESOLVE_PATH,$(SIM_COMPLIBDIR))
 endif
 
 # -------------------------------------------------------------------
@@ -41,22 +41,24 @@ PART_NAME=$(subst /,,$(PART_ID))
 SETUP_AND_LAUNCH_SIMULATION = \
 	@ \
 	export VIV_SIMULATOR=$1; \
-	export VIV_DESIGN_SRCS="$(DESIGN_SRCS)"; \
-	export VIV_SIM_SRCS="$(SIM_SRCS)"; \
+	export VIV_DESIGN_SRCS=$(call RESOLVE_PATHS,$(DESIGN_SRCS)); \
+	export VIV_SIM_SRCS=$(call RESOLVE_PATHS,$(SIM_SRCS)); \
 	export VIV_SIM_TOP=$(SIM_TOP); \
 	export VIV_PART_NAME=$(PART_NAME); \
 	export VIV_SIM_RUNTIME=$(SIM_RUNTIME_US); \
 	export VIV_SIM_FAST="$(SIM_FAST)"; \
-	export VIV_SIM_COMPLIBDIR="$(COMPLIBDIR)"; \
+	export VIV_SIM_COMPLIBDIR=$(COMPLIBDIR); \
 	export VIV_SIM_USER_DO=$(MODELSIM_USER_DO); \
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_SIM_64BIT=$(MODELSIM_64BIT); \
-	vivado -mode $(VIVADO_MODE) -source $(BASE_DIR)/../tools/scripts/viv_sim_project.tcl -log xsim.log -nojournal
+	vivado -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_sim_project.tcl) -log xsim.log -nojournal
 
 .SECONDEXPANSION:
 
+check_tool: ; @vivado -version 2>&1 | grep Vivado
+
 ##xsim:       Run the simulation using the Xilinx Vivado Simulator
-xsim: $(DESIGN_SRCS) $(SIM_SRCS)
+xsim: check_tool $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
 ##xclean:     Cleanup Xilinx Vivado Simulator intermediate files
@@ -70,7 +72,7 @@ xclean:
 	@rm -f vivado_pid*.str
 
 ##vsim:       Run the simulation using Modelsim
-vsim: $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
+vsim: check_tool $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,Modelsim)
 
 ##vclean:     Cleanup Modelsim intermediate files

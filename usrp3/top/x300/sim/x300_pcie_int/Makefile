@@ -14,6 +14,7 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 # Design Specific
 #-------------------------------------------------
 # Define part using PART_ID (<device>/<package>/<speedgrade>)
+ARCH = kintex7
 PART_ID = xc7k410t/ffg900/-2
 
 # Include makefiles and sources for the DUT and its dependencies

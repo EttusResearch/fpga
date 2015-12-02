@@ -71,7 +71,7 @@ else
 DRAM_SRCS =
 endif
 
-SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
+DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
@@ -86,10 +86,8 @@ $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS)
 ##################################################
 .SECONDEXPANSION:
 
-export VIV_SOURCE_FILES=$(SOURCES)
-export VIV_VERILOG_DEFS=$(EXTRA_DEFS)
-
-bin: prereqs $$(SOURCES) ip
+# DESIGN_SRCS and VERILOG_DEFS must be defined
+bin: prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
 .PHONY: bin

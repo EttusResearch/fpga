@@ -3,11 +3,22 @@
 #
 
 # -------------------------------------------------------------------
+# Environment Setup
+# -------------------------------------------------------------------
+ifeq ($(VIV_PLATFORM),Cygwin)
+RESOLVE_PATH = $(subst \,\\,$(shell cygpath -aw $(1)))
+RESOLVE_PATHS = "$(foreach path,$(1),$(subst \,\\\\,$(shell cygpath -aw $(abspath $(path)))))"
+else
+RESOLVE_PATH = $(1)
+RESOLVE_PATHS = "$(1)"
+endif
+
+# -------------------------------------------------------------------
 # Project Setup
 # -------------------------------------------------------------------
 BASE_DIR = $(abspath ..)
 IP_DIR = $(abspath ./ip)
-TOOLS_DIR = $(BASE_DIR)/../tools
+TOOLS_DIR = $(abspath $(BASE_DIR)/../tools)
 SIMULATION = 0
 
 BUILD_DIR = $(abspath ./build-$(NAME))

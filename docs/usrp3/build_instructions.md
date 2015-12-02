@@ -6,48 +6,72 @@
 
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
-- [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For USRP B200 and B210)
-- [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html) (For USRP X300, X310 and E310)
-- [GNU Make](https://www.gnu.org/software/make/)
-- [GNU Bash](https://www.gnu.org/software/bash/)
-
-### Requirements
-
-- [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
-- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2014_4/ug973-vivado-release-notes-install-license.pdf)
+- [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html) (For 7 Series FPGAs)
+- [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For all other FPGAs)
+- [GNU Make 3.6+](https://www.gnu.org/software/make/)
+- [GNU Bash 4.0+](https://www.gnu.org/software/bash/)
+- [Python 2.7.x](https://www.python.org/)
+- [Doxygen](http://www.stack.nl/~dimitri/doxygen/index.html) (Optional: To build the manual)
+- [ModelSim](https://www.mentor.com/products/fv/modelsim/) (Optional: For simulation)
 
 ### What FPGA does my USRP have?
 
 - USRP B200: Spartan 6 XC6SLX75
+- USRP B200mini: Spartan 6 XC6SLX75
 - USRP B210: Spartan 6 XC6SLX150
-- USRP X300: Kintex 7 XC7K325T
-- USRP X310: Kintex 7 XC7K410T
-- USRP E310: Zynq-7000 XC7Z020
+- USRP X300: Kintex 7 XC7K325T (7 Series)
+- USRP X310: Kintex 7 XC7K410T (7 Series)
+- USRP E310: Zynq-7000 XC7Z020 (7 Series)
 
-## Build Instructions (Xilinx ISE only)
+### Requirements
 
-- Download and install [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html)
-  + You may need to acquire an implementation license to build some USRP designs.
-    Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
+- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2015_2/ug973-vivado-release-notes-install-license.pdf)
+- [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
 
-- To add xtclsh to the PATH and to setup up the Xilinx build environment run
-  + `source <install_dir>/Xilinx/14.7/ISE_DS/settings64.sh` (64-bit platform)
-  + `source <install_dir>/Xilinx/14.7/ISE_DS/settings32.sh` (32-bit platform)
+## Build Environment Setup
 
-- Navigate to `usrp3/top/{project}` where project is:
-  + b200: For USRP B200 and USRP B210
+### Download and Install Xilinx Tools
 
-- To build a binary configuration bitstream run `make <target>`
-  where the target is specific to each product. To get a list of supported targets run
-  `make help`.
+Download and install Xilinx Vivado or Xilinx ISE based on the target USRP.
+- The recommended installation directory is `/opt/Xilinx/` for Linux and `C:\Xilinx` in Windows
+- Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
+- You may need to acquire a synthesis and implementation license from Xilinx to build some USRP designs.
+- You may need to acquire a simulation license from Xilinx to run some testbenches
 
-- The build output will be specific to the product and will be located in the
-  `usrp3/top/{project}/build` directory. Run `make help` for more information.
+### Download and Install ModelSim (Optional)
+
+Download and install Mentor ModelSim using the link above.
+- The recommended installation directory is `/opt/mentor/modelsim` for Linux and `C:\mentor\modelsim` in Windows
+- Supported versions are PE, DE, SE, DE-64 and SE-64
+- You may need to acquire a license from Mentor Graphics to run ModelSim
+
+### Setting up build dependencies on Ubuntu
+
+You can install all the dependencies through the package manager:
+
+    sudo apt-get install python bash build-essential doxygen
+
+Your actual command may differ.
+
+### Setting up build dependencies on Fedora
+
+You can install all the dependencies through the package manager:
+
+    sudo yum -y install python bash make doxygen
+
+Your actual command may differ.
+
+### Setting up build dependencies on Windows (using Cygwin)
+
+**NOTE**: Windows is only supported with Vivado. The build system does not support Xilinx ISE in Windows.
+
+Download the latest version on [Cygwin](https://cygwin.com/install.html) (64-bit is preferred on a 64-bit OS)
+and install it using [these instructions](http://x.cygwin.com/docs/ug/setup-cygwin-x-installing.html).
+The following additional packages are also required and can be selected in the GUI installer
+
+    python patch patchutils bash make doxygen
 
 ## Build Instructions (Xilinx Vivado only)
-
-- Download and install [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html)
-  + Please check the Xilinx Requirements document above for the FPGA technology used by your USRP device.
 
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
@@ -56,6 +80,23 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - To add vivado to the PATH and to setup up the Xilinx build environment run
   + `source setupenv.sh` (If Vivado is installed in the default path /opt/Xilinx/Vivado) _OR_
   + `source setupenv.sh --vivado-path=<VIVADO_PATH>` (where VIVADO_PATH is a non-default installation path)
+
+- To build a binary configuration bitstream run `make <target>`
+  where the target is specific to each product. To get a list of supported targets run
+  `make help`.
+
+- The build output will be specific to the product and will be located in the
+  `usrp3/top/{project}/build` directory. Run `make help` for more information.
+
+## Build Instructions (Xilinx ISE only)
+
+- To add xtclsh to the PATH and to setup up the Xilinx build environment run
+  + `source <install_dir>/Xilinx/14.7/ISE_DS/settings64.sh` (64-bit platform)
+  + `source <install_dir>/Xilinx/14.7/ISE_DS/settings32.sh` (32-bit platform)
+
+- Navigate to `usrp3/top/{project}` where project is:
+  + b200: For USRP B200 and USRP B210
+  + b200mini: For USRP B200mini
 
 - To build a binary configuration bitstream run `make <target>`
   where the target is specific to each product. To get a list of supported targets run

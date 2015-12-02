@@ -23,7 +23,7 @@ namespace eval ::vivado_utils {
     variable g_top_module   $::env(VIV_TOP_MODULE)
     variable g_part_name    $::env(VIV_PART_NAME)
     variable g_output_dir   $::env(VIV_OUTPUT_DIR)
-    variable g_source_files $::env(VIV_SOURCE_FILES)
+    variable g_source_files $::env(VIV_DESIGN_SRCS)
     variable g_vivado_mode  $::env(VIV_MODE)
 
     # Optional environment variables
@@ -119,11 +119,11 @@ proc ::vivado_utils::generate_post_synth_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-synthesis checkpoint"
-    write_checkpoint -force $g_output_dir/post_synth 
+    write_checkpoint -force $g_output_dir/post_synth
     puts "BUILDER: Writing post-synthesis reports"
-    report_utilization -file $g_output_dir/post_synth_util.rpt 
-    report_drc -ruledeck methodology_checks -file $g_output_dir/methodology.rpt 
-    report_high_fanout_nets -file $g_output_dir/high_fanout_nets.rpt 
+    report_utilization -file $g_output_dir/post_synth_util.rpt
+    report_drc -ruledeck methodology_checks -file $g_output_dir/methodology.rpt
+    report_high_fanout_nets -file $g_output_dir/high_fanout_nets.rpt
 }
 
 # ---------------------------------------------------
@@ -133,11 +133,11 @@ proc ::vivado_utils::generate_post_place_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-placement checkpoint"
-    write_checkpoint -force $g_output_dir/post_place 
+    write_checkpoint -force $g_output_dir/post_place
     puts "BUILDER: Writing post-placement reports"
-    report_clock_utilization -file $g_output_dir/clock_util.rpt 
-    report_utilization -file $g_output_dir/post_place_util.rpt 
-    report_timing -sort_by group -max_paths 5 -path_type summary -file $g_output_dir/post_place_timing.rpt 
+    report_clock_utilization -file $g_output_dir/clock_util.rpt
+    report_utilization -file $g_output_dir/post_place_util.rpt
+    report_timing -sort_by group -max_paths 5 -path_type summary -file $g_output_dir/post_place_timing.rpt
 }
 
 # ---------------------------------------------------
@@ -147,16 +147,16 @@ proc ::vivado_utils::generate_post_route_reports {} {
     variable g_output_dir
 
     puts "BUILDER: Writing post-route checkpoint"
-    write_checkpoint -force $g_output_dir/post_route 
+    write_checkpoint -force $g_output_dir/post_route
     puts "BUILDER: Writing post-route reports"
     if {[file exists "$g_output_dir/clock_util.rpt"] == 0} {
-        report_clock_utilization -file $g_output_dir/clock_util.rpt 
+        report_clock_utilization -file $g_output_dir/clock_util.rpt
     }
-    report_timing_summary -file $g_output_dir/post_route_timing_summary.rpt 
-    report_utilization -file $g_output_dir/post_route_util.rpt 
-    report_power -file $g_output_dir/post_route_power.rpt 
-    report_drc -file $g_output_dir/post_imp_drc.rpt 
-    report_timing -sort_by group -max_paths 10 -path_type summary -file $g_output_dir/post_route_timing.rpt 
+    report_timing_summary -file $g_output_dir/post_route_timing_summary.rpt
+    report_utilization -file $g_output_dir/post_route_util.rpt
+    report_power -file $g_output_dir/post_route_power.rpt
+    report_drc -file $g_output_dir/post_imp_drc.rpt
+    report_timing -sort_by group -max_paths 10 -path_type summary -file $g_output_dir/post_route_timing.rpt
 }
 
 # ---------------------------------------------------
@@ -168,15 +168,15 @@ proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
     variable g_tools_dir
 
     puts "BUILDER: Writing implementation netlist and XDC"
-    write_verilog -force $g_output_dir/${g_top_module}_impl_netlist.v 
-    write_xdc -no_fixed_only -force $g_output_dir/${g_top_module}_impl.xdc 
-    puts "BUILDER: Writing bitstream"
+    write_verilog -force $g_output_dir/${g_top_module}_impl_netlist.v
+    write_xdc -no_fixed_only -force $g_output_dir/${g_top_module}_impl.xdc
+    puts "BUILDER: Writing bitfile"
     write_bitstream -force $g_output_dir/${g_top_module}.bit
-    if {$byte_swap_bin == 1} {
-        exec python $g_tools_dir/scripts/xil_bitfile_parser.py --flip --bin_out $g_output_dir/${g_top_module}.bin $g_output_dir/${g_top_module}.bit
-    } else {
-        exec python $g_tools_dir/scripts/xil_bitfile_parser.py --bin_out $g_output_dir/${g_top_module}.bin $g_output_dir/${g_top_module}.bit
-    }
+    puts "BUILDER: Writing config bitstream"
+    set binsize [expr [file size $g_output_dir/${g_top_module}.bit]/(1024*1024)]
+    set binsize_pow2 [expr {int(pow(2,ceil(log($binsize)/log(2))))}]
+    set bin_iface [expr $byte_swap_bin?"SMAPx32":"SMAPx8"]
+    write_cfgmem -force -quiet -interface $bin_iface -format BIN -size $binsize_pow2 -disablebitswap -loadbit "up 0x0 $g_output_dir/${g_top_module}.bit" $g_output_dir/${g_top_module}.bin
     puts "BUILDER: Writing debug probes"
     write_debug_probes -force $g_output_dir/${g_top_module}.ltx
     puts "BUILDER: Writing export report"
@@ -189,7 +189,7 @@ proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
 # ---------------------------------------------------
 proc ::vivado_utils::close_batch_project {} {
     variable g_vivado_mode
-    
+
     if [string equal $g_vivado_mode "batch"] {
         puts "BUILDER: Closing project"
         close_project

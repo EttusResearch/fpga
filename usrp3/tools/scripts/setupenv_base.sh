@@ -6,19 +6,24 @@
 #----------------------------------------------------------------------------
 # Global defaults
 #----------------------------------------------------------------------------
-# Vivado specific
-VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
+export VIV_PLATFORM=$(uname -o)
 
-# Modelsim specific
-MODELSIM_BASE_PATH="/opt/mentor/modelsim"
-declare -a MODELSIM_VERSIONS
-MODELSIM_VERSIONS=("DE" "SE")
-declare -A MODELSIM_VER_PATHS
-MODELSIM_VER_PATHS["DE"]="modelsim_dlx"
-MODELSIM_VER_PATHS["SE"]="modeltech"
-declare -A MODELSIM_VER_BITNESS
-MODELSIM_VER_BITNESS["DE"]="32"
-MODELSIM_VER_BITNESS["SE"]="64"
+# Vivado specific
+if [[ $VIV_PLATFORM = "Cygwin" ]]; then
+    VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado"
+    MODELSIM_BASE_PATH="/cygdrive/c/mentor/modelsim"
+else
+    VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
+    MODELSIM_BASE_PATH="/opt/mentor/modelsim"
+fi
+
+function resolve_viv_path {
+    if [[ $VIV_PLATFORM = "Cygwin" ]]; then
+        echo $(cygpath -aw $1)
+    else
+        echo $1
+    fi
+}
 
 #----------------------------------------------------------------------------
 # Validate prerequisites
@@ -85,26 +90,47 @@ fi
 # Go through cmd line options
 MODELSIM_REQUESTED=0
 MODELSIM_FOUND=0
-for i in "$@"
-do
-case $i in
-    -h|--help)
-        help
-        return 0
+PARSE_STATE=""
+for i in "$@"; do
+    case $i in
+        -h|--help)
+            help
+            return 0
+            ;;
+        --vivado-path=*)
+            VIVADO_BASE_PATH="${i#*=}"
+            PARSE_STATE=""
         ;;
-    --vivado-path=*)
-        VIVADO_BASE_PATH="${i#*=}"
-    ;;
-    --modelsim-path=*)
-        MODELSIM_BASE_PATH="${i#*=}"
-        MODELSIM_REQUESTED=1
-    ;;
-    *)
-        echo "ERROR: Unrecognized option: $i"
-        help
-        return 1
-    ;;
-esac
+        --vivado-path)
+            PARSE_STATE="vivado-path"
+        ;;
+        --modelsim-path=*)
+            MODELSIM_BASE_PATH="${i#*=}"
+            MODELSIM_REQUESTED=1
+            PARSE_STATE=""
+        ;;
+        --modelsim-path)
+            PARSE_STATE="modelsim-path"
+        ;;
+        *)
+            case $PARSE_STATE in
+                vivado-path)
+                    VIVADO_BASE_PATH="$i"
+                    PARSE_STATE=""
+                ;;
+                modelsim-path)
+                    MODELSIM_BASE_PATH="$i"
+                    MODELSIM_REQUESTED=1
+                    PARSE_STATE=""
+                ;;
+                *)
+                    echo "ERROR: Unrecognized option: $i"
+                    help
+                    return 1
+                ;;
+            esac
+        ;;
+    esac
 done
 
 # Vivado environment setup
@@ -124,51 +150,63 @@ fi
 
 $VIVADO_PATH/settings${BITNESS}.sh
 $VIVADO_PATH/.settings${BITNESS}-Vivado.sh
-${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
-/opt/Xilinx/DocNav/.settings${BITNESS}-DocNav.sh
+if [[ -e ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh ]]; then
+    ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
+fi
+if [[ -e $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh ]]; then
+    $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh
+fi
 
 #----------------------------------------------------------------------------
 # Prepare Modelsim environment
 #----------------------------------------------------------------------------
-for i in "${MODELSIM_VERSIONS[@]}"
-do
-    if [ -d $MODELSIM_BASE_PATH/${MODELSIM_VER_PATHS[$i]} ]; then
-        export MODELSIM_VER=$i
-        export MODELSIM_PATH=$MODELSIM_BASE_PATH/${MODELSIM_VER_PATHS[$i]}/bin
-        if [ ${MODELSIM_VER_BITNESS[$i]}="64" ]; then
-            export MODELSIM_64BIT=1
-        else
-            export MODELSIM_64BIT=0
-        fi
-        export SIM_COMPLIBDIR=$VIVADO_PATH/modelsim${MODELSIM_VER_BITNESS[$i]}
-        MODELSIM_FOUND=1
-        break;
+if [[ $VIV_PLATFORM = "Cygwin" ]]; then
+    VSIM_PATH=$(find $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*win*/vsim.exe' | head -n 1)
+else
+    VSIM_PATH=$(find $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*linux*/vsim' | head -n 1)
+fi
+if [[ $VSIM_PATH ]]; then
+    if [[ $($VSIM_PATH -version) =~ .*ModelSim[[:space:]](.+)[[:space:]]vsim.* ]]; then 
+        MODELSIM_VER=${BASH_REMATCH[1]} 
+        MODELSIM_PATH=$(dirname $VSIM_PATH)
     fi
-done
+    case $MODELSIM_VER in
+        DE-64|SE-64)
+            export MODELSIM_64BIT=1
+            export SIM_COMPLIBDIR=$VIVADO_PATH/modelsim64
+        ;;
+        DE|SE|PE)
+            export MODELSIM_64BIT=0
+            export SIM_COMPLIBDIR=$VIVADO_PATH/modelsim32
+        ;;
+        *)
+        ;;
+    esac
+fi
 
 function build_simlibs {
     mkdir -p $SIM_COMPLIBDIR
     pushd $SIM_COMPLIBDIR
     CMD_PATH=`mktemp XXXXXXXX.vivado_simgen.tcl`
-    if [ $MODELSIM_64BIT -eq 1 ]; then
+    if [[ $MODELSIM_64BIT -eq 1 ]]; then
         echo "compile_simlib -force -simulator modelsim -family all -language all -library all -directory $SIM_COMPLIBDIR" > $CMD_PATH
     else
         echo "compile_simlib -force -simulator modelsim -family all -language all -library all -32 -directory $SIM_COMPLIBDIR" > $CMD_PATH
     fi
-    vivado -mode batch -source $CMD_PATH -nolog -nojournal
+    vivado -mode batch -source $(resolve_viv_path $CMD_PATH) -nolog -nojournal
     rm -f $CMD_PATH
     popd
 }
 
-if [ $MODELSIM_FOUND -eq 1 ]; then
-    echo "- Modelsim: Found ($MODELSIM_VER, ${MODELSIM_VER_BITNESS[$MODELSIM_VER]}-bit, $MODELSIM_PATH)"
-    if [ -e "$SIM_COMPLIBDIR/modelsim.ini" ]; then
+if [[ $MODELSIM_VER ]]; then
+    echo "- Modelsim: Found ($MODELSIM_VER, $MODELSIM_PATH)"
+    if [[ -e "$SIM_COMPLIBDIR/modelsim.ini" ]]; then
         echo "- Modelsim Compiled Libs: Found ($SIM_COMPLIBDIR)"
     else
         echo "- Modelsim Compiled Libs: Not found! (Run build_simlibs to generate them.)"
     fi
 else
-    if [ $MODELSIM_REQUESTED -eq 1 ]; then
+    if [[ $MODELSIM_REQUESTED -eq 1 ]]; then
         echo "- Modelsim: Not found in $MODELSIM_BASE_PATH (WARNING.. Simulations with vsim will not work)"
     fi
 fi
@@ -193,6 +231,7 @@ done
 #----------------------------------------------------------------------------
 # Define IP management aliases
 #----------------------------------------------------------------------------
+# Vivado specific
 VIV_IP_UTILS=$REPO_BASE_PATH/tools/scripts/viv_ip_utils.tcl
 
 function viv_create_ip {
@@ -221,7 +260,7 @@ function viv_create_ip {
         return 1
     fi
 
-    vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs create $part_name $ip_name $ip_dir $ip_vlnv 
+    vivado -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs create $part_name $ip_name $(resolve_viv_path $ip_dir) $ip_vlnv 
     echo "Generating Makefile..."
     python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
     echo "Done generating IP in $ip_dir/$ip_name"
@@ -243,7 +282,7 @@ function viv_modify_ip {
         return 1
     fi
     if [[ -f $xci_path ]]; then
-        vivado -mode gui -source $VIV_IP_UTILS -nolog -nojournal -tclargs modify $part_name $xci_path
+        vivado -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify $part_name $(resolve_viv_path $xci_path)
     else
         echo "ERROR: IP $xci_path not found."
         return 1
@@ -265,7 +304,7 @@ function viv_ls_ip {
         echo "ERROR: Invalid product name $1. Supported: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
-    vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
+    vivado -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
 }
 
 function viv_upgrade_ip {
@@ -286,7 +325,7 @@ function viv_upgrade_ip {
         if [[ -f $xci_path ]]; then
             echo "Upgrading $xci_path..."
             part_name=$(python $REPO_BASE_PATH/tools/scripts/viv_ip_xci_editor.py read_part $xci_path)
-            vivado -mode batch -source $VIV_IP_UTILS -nolog -nojournal -tclargs upgrade $part_name $xci_path | grep -v -E '(^$|^#|\*\*)'
+            vivado -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs upgrade $part_name $(resolve_viv_path $xci_path) | grep -v -E '(^$|^#|\*\*)'
         else
             echo "ERROR: IP $xci_path not found."
             return 1
@@ -300,11 +339,11 @@ function viv_upgrade_ip {
 VIV_HW_UTILS=$REPO_BASE_PATH/tools/scripts/viv_hardware_utils.tcl
 
 function viv_hw_console {
-    vivado -mode tcl -source $VIV_HW_UTILS -nolog -nojournal
+    vivado -mode tcl -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal
 }
 
 function viv_jtag_list {
-    vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
+    vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
 }
 
 function viv_jtag_program {
@@ -318,9 +357,9 @@ function viv_jtag_program {
         return 1
     fi
     if [ "$2" == "" ]; then
-        vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
+        vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
     else
-        vivado -mode batch -source $VIV_HW_UTILS -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
+        vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
     fi
 }
 
@@ -334,13 +373,6 @@ function probe_bitfile {
     fi
     python $REPO_BASE_PATH/tools/scripts/xil_bitfile_parser.py --info $1
 }
-
-#----------------------------------------------------------------------------
-# Finish up
-#----------------------------------------------------------------------------
-unset MODELSIM_VERSIONS
-unset MODELSIM_VER_PATHS
-unset MODELSIM_VER_BITNESS
 
 echo
 echo "Environment successfully initialized."
