@@ -19,7 +19,7 @@ EOHELP
 function wait_for_lock {
     if [ -d "$ip_dir" ]; then
         remaining=$(($timeout))
-	    trap 'echo"";echo "Waiting for concurrent IP build to finish... (skipped)";break;' SIGINT; \
+	    trap 'echo"";echo "BUILDER: Waiting for concurrent IP build to finish... (skipped)";break;' SIGINT; \
         while [ -f "$ip_dir/.build_lock" ]; do
             if [ $remaining -gt 0 ]; then 
                 echo -ne "Waiting for concurrent IP build to finish... (${remaining}s [Ctrl-C to proceed])\033[0K\r"
@@ -31,7 +31,7 @@ function wait_for_lock {
         done
 	    trap - SIGINT; \
         if [ $remaining -eq 0 ]; then
-            echo "Waiting for concurrent IP build to finish... (timeout)"
+            echo "BUILDER: Waiting for concurrent IP build to finish... (timeout)"
         fi
     fi
 }
@@ -59,12 +59,12 @@ function reserve {
     if [ ! -d "$ip_dir" ]; then
         mkdir -p $ip_dir
     fi
-    echo "Reserving IP location: $ip_dir"
+    echo "BUILDER: Reserving IP location: $ip_dir"
     lock
 }
 
 function release {
-    echo "Releasing IP location: $ip_dir"
+    echo "BUILDER: Releasing IP location: $ip_dir"
     unlock
 }
 
