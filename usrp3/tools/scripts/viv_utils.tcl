@@ -184,6 +184,22 @@ proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
     report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
 }
 
+proc ::vivado_utils::write_netlist_outputs { {suffix ""} } {
+    variable g_output_dir
+    variable g_top_module
+
+    puts "BUILDER: Writing EDIF netlist and XDC"
+    set filename ${g_output_dir}/${g_top_module}
+    if { [expr [string length $suffix] > 0] } {
+        set filename ${filename}_${suffix}
+    }
+    write_edif -force ${filename}.edf
+    write_xdc -no_fixed_only -force ${filename}.xdc
+    puts "BUILDER: Writing export report"
+    report_utilization -omit_locs -file $g_output_dir/build.rpt
+    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
+}
+
 # ---------------------------------------------------
 # Close project
 # ---------------------------------------------------

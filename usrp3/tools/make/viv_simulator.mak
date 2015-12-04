@@ -1,16 +1,10 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2014-2015 Ettus Research
 #
 
 # -------------------------------------------------------------------
 # Mode switches
-
-# Calling with GUI:=1 will launch Vivado GUI for build
-ifeq ($(GUI),1)
-VIVADO_MODE=gui
-else
-VIVADO_MODE=batch
-endif
+# -------------------------------------------------------------------
 
 # Calling with FAST:=1 will switch to using unifast libs
 ifeq ($(FAST),1)
@@ -20,16 +14,12 @@ SIM_FAST=false
 endif
 
 # -------------------------------------------------------------------
-
-# -------------------------------------------------------------------
 # Path variables
+# -------------------------------------------------------------------
 
-SIMLIB_DIR = $(abspath $(BASE_DIR)/../sim)
 ifdef SIM_COMPLIBDIR
 COMPLIBDIR = $(call RESOLVE_PATH,$(SIM_COMPLIBDIR))
 endif
-
-# -------------------------------------------------------------------
 
 # Parse part name from ID
 PART_NAME=$(subst /,,$(PART_ID))
@@ -55,10 +45,8 @@ SETUP_AND_LAUNCH_SIMULATION = \
 
 .SECONDEXPANSION:
 
-check_tool: ; @vivado -version 2>&1 | grep Vivado
-
 ##xsim:       Run the simulation using the Xilinx Vivado Simulator
-xsim: check_tool $(DESIGN_SRCS) $(SIM_SRCS)
+xsim: .check_tool $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
 ##xclean:     Cleanup Xilinx Vivado Simulator intermediate files
@@ -72,7 +60,7 @@ xclean:
 	@rm -f vivado_pid*.str
 
 ##vsim:       Run the simulation using Modelsim
-vsim: check_tool $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
+vsim: .check_tool $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,Modelsim)
 
 ##vclean:     Cleanup Modelsim intermediate files

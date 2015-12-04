@@ -1,5 +1,5 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2014-2015 Ettus Research
 #
 
 # -------------------------------------------------------------------
@@ -16,38 +16,51 @@ endif
 # -------------------------------------------------------------------
 # Project Setup
 # -------------------------------------------------------------------
-BASE_DIR = $(abspath ..)
-IP_DIR = $(abspath ./ip)
-TOOLS_DIR = $(abspath $(BASE_DIR)/../tools)
-SIMULATION = 0
+# Requirement: BASE_DIR must be defined
 
+TOOLS_DIR = $(abspath $(BASE_DIR)/../tools)
+LIB_DIR = $(abspath $(BASE_DIR)/../lib)
+SIMLIB_DIR = $(abspath $(BASE_DIR)/../sim)
+
+ifdef NAME
 BUILD_DIR = $(abspath ./build-$(NAME))
+else
+BUILD_DIR = $(abspath ./build)
+endif
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
 
-include $(TOOLS_DIR)/make/viv_design_builder.mak
+# -------------------------------------------------------------------
+# GUI Mode switch. Calling with GUI:=1 will launch Vivado GUI for build
+# -------------------------------------------------------------------
+ifeq ($(GUI),1)
+VIVADO_MODE=gui
+else
+VIVADO_MODE=batch
+endif
 
 # -------------------------------------------------------------------
 # Toolchain dependency target
 # -------------------------------------------------------------------
-check_tool: ; @vivado -version 2>&1 | grep Vivado
+.check_tool:
+	@echo "BUILDER: Checking tools..."
+	@echo -n "* "; bash --version | grep bash || (echo "ERROR: Bash not found in environment. Please install it"; exit 1;)
+	@echo -n "* "; python --version || (echo "ERROR: Python not found in environment. Please install it"; exit 1;)
+	@echo -n "* "; vivado -version 2>&1 | grep Vivado || (echo "ERROR: Vivado not found in environment. Please run setupenv.sh"; exit 1;)
 
 # -------------------------------------------------------------------
 # Intermediate build dirs 
 # -------------------------------------------------------------------
-build_dirs:
+.build_dirs:
 	@mkdir -p $(BUILD_DIR)
 	@mkdir -p $(IP_BUILD_DIR)
 
-prereqs: check_tool build_dirs
+.prereqs: .check_tool .build_dirs
 
-.PHONY: check_tool build_dirs prereqs
+.PHONY: .check_tool .build_dirs .prereqs
 
 # -------------------------------------------------------------------
 # Validate prerequisites
 # -------------------------------------------------------------------
-ifndef NAME
-	$(error NAME was empty or not set)
-endif
 ifndef PART_ID
 	$(error PART_ID was empty or not set)
 endif

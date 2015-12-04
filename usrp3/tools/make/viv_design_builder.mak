@@ -1,15 +1,9 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2014-2015 Ettus Research
 #
 
-# -------------------------------------------------------------------
-# GUI Mode switch. Calling with GUI:=1 will launch Vivado GUI for build
-# -------------------------------------------------------------------
-ifeq ($(GUI),1)
-VIVADO_MODE=gui
-else
-VIVADO_MODE=batch
-endif
+include $(BASE_DIR)/../tools/make/viv_preamble.mak
+SIMULATION = 0
 
 # -------------------------------------------------------------------
 # Usage: BUILD_VIVADO_DESIGN

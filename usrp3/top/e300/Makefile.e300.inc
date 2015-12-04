@@ -13,20 +13,22 @@ TOP_MODULE = e300
 # Include other makefiles
 ##################################################
 
-include ../../tools/make/viv_preamble.mak
+BASE_DIR = $(abspath ..)
+IP_DIR = $(abspath ./ip)
+include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
-include ip/Makefile.inc
+include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
-include ../../lib/control/Makefile.srcs
-include ../../lib/fifo/Makefile.srcs
-include ../../lib/zynq_fifo/Makefile.srcs
-include ../../lib/control/Makefile.srcs
-include ../../lib/timing/Makefile.srcs
-include ../../lib/packet_proc/Makefile.srcs
-include ../../lib/vita/Makefile.srcs
-include ../../lib/dsp/Makefile.srcs
-include ../../lib/radio/Makefile.srcs
-include ../../lib/io_cap_gen/Makefile.srcs
+include $(LIB_DIR)/control/Makefile.srcs
+include $(LIB_DIR)/fifo/Makefile.srcs
+include $(LIB_DIR)/zynq_fifo/Makefile.srcs
+include $(LIB_DIR)/control/Makefile.srcs
+include $(LIB_DIR)/timing/Makefile.srcs
+include $(LIB_DIR)/packet_proc/Makefile.srcs
+include $(LIB_DIR)/vita/Makefile.srcs
+include $(LIB_DIR)/dsp/Makefile.srcs
+include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 
 ##################################################
 # Sources
@@ -71,7 +73,7 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
-bin: prereqs $$(DESIGN_SRCS) ip
+bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
 .PHONY: bin

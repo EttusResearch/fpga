@@ -104,6 +104,13 @@ for i in "$@"; do
         --vivado-path)
             PARSE_STATE="vivado-path"
         ;;
+        --vivado-version=*)
+            VIVADO_USER_VER="${i#*=}"
+            PARSE_STATE=""
+        ;;
+        --vivado-version)
+            PARSE_STATE="vivado-version"
+        ;;
         --modelsim-path=*)
             MODELSIM_BASE_PATH="${i#*=}"
             MODELSIM_REQUESTED=1
@@ -116,6 +123,10 @@ for i in "$@"; do
             case $PARSE_STATE in
                 vivado-path)
                     VIVADO_BASE_PATH="$i"
+                    PARSE_STATE=""
+                ;;
+                vivado-version)
+                    VIVADO_USER_VER="$i"
                     PARSE_STATE=""
                 ;;
                 modelsim-path)
@@ -134,6 +145,14 @@ for i in "$@"; do
 done
 
 # Vivado environment setup
+if [[ ${VIVADO_VER^^} = "CMDLINE_ARG" ]]; then
+    if [[ -z $VIVADO_USER_VER ]]; then
+        echo "ERROR: The --vivado-version argument must be specified when the env version is \"CMDLINE_ARG\""
+        return 1
+    else
+        VIVADO_VER=$VIVADO_USER_VER
+    fi
+fi
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
 
 echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}..."
@@ -144,7 +163,12 @@ if [ -d "$VIVADO_PATH/bin" ]; then
     echo "- Vivado: Found ($VIVADO_PATH/bin)"
 else
     echo "- Vivado: Version $VIVADO_VER not found in $VIVADO_BASE_PATH (ERROR.. Builds and simulations will not work)"
-    echo "          Use the --vivado-path option to override the search path"
+    if [[ -z $VIVADO_USER_VER ]]; then
+        echo "          Use the --vivado-path option to override the search path"
+    else
+        echo "          Use the --vivado-path option to override the search path or specify the correct --vivado-version"
+    fi
+    unset VIVADO_USER_VER
     return 1
 fi
 
