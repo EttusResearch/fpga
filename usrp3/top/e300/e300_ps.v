@@ -255,16 +255,6 @@ module e300_processing_system (
   assign FCLK_RESET3 = ~processing_system7_FCLK_RESET3_N;
 
   processing_system7 inst_processing_system7 (
-    .ENET0_PTP_DELAY_REQ_RX(),
-    .ENET0_PTP_DELAY_REQ_TX(),
-    .ENET0_PTP_PDELAY_REQ_RX(),
-    .ENET0_PTP_PDELAY_REQ_TX(),
-    .ENET0_PTP_PDELAY_RESP_RX(),
-    .ENET0_PTP_PDELAY_RESP_TX(),
-    .ENET0_PTP_SYNC_FRAME_RX(),
-    .ENET0_PTP_SYNC_FRAME_TX(),
-    .ENET0_SOF_RX(),
-    .ENET0_SOF_TX(),
     // Outward connections to the pins
     .GPIO_I(GPIO_I),
     .GPIO_O(GPIO_O),

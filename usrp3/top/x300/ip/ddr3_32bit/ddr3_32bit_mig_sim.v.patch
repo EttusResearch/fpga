@@ -1,4 +1,4 @@
-74,561c74,76
+74,563c74,76
 < module ddr3_32bit_mig #
 <   (
 < 
@@ -368,6 +368,7 @@
 <    parameter STARVE_LIMIT          = 2,
 <                                      // # = 2,3,4.
 <    parameter REF_CLK_MMCM_IODELAY_CTRL    = "FALSE",
+<       
 < 
 <    //***************************************************************************
 <    // Referece clock frequency parameters
@@ -384,10 +385,12 @@
 <                                      // memory tCK paramter.
 <                                      // # = Clock Period in pS.
 <    parameter nCK_PER_CLK           = 4,
-<                                      // # of memory CKs per fabric CLK
+<    // # of memory CKs per fabric CLK
+<    
 <    parameter DIFF_TERM_SYSCLK      = "TRUE",
 <                                      // Differential Termination for System
 <                                      // clock input pins
+<       
 < 
 <    
 <    //***************************************************************************
@@ -486,37 +489,36 @@
 <                                      // =0 for active high.
 <    )
 <   (
-< 
 ---
 > module ddr3_32bit_mig #(
 >    `include "../../../ddr3_32bit_mig_sim_parameters.vh"
 > ) (
-584,585d98
+593,594d105
 <    // Single-ended iodelayctrl clk (reference clock)
 <    input                                        clk_ref_i,
-587a101,102
+596a108,109
 >    output                                       ui_clk_x2,
 >    output                                       ui_clk_div2,
-689a205,206
+698a212,213
 >   wire                              clk_ref_i;
 >   wire                              clk_ref_i_buf;
-838c355
+856c371
 <       assign clk_ref_in = clk_ref_i;
 ---
 >       assign clk_ref_in = clk_ref_i_buf;
-863a381
+881a397
 >        .pll_locked       (pll_locked),
-917a436
+935a452
 >      .CLKOUT5_DIVIDE     (CLKOUT5_DIVIDE),
-933a453
+951a469
 >        .clk_ref_i        (clk_ref_i),
-938,939c458,459
+956,957c474,475
 <        .ui_addn_clk_0    (),
 <        .ui_addn_clk_1    (),
 ---
 >        .ui_addn_clk_0    (ui_clk_x2),
 >        .ui_addn_clk_1    (ui_clk_div2),
-954c474,477
+972c490,493
 <       
 ---
 > 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VIVADO_VER=2015.2
+VIVADO_VER=2015.4
 DISPLAY_NAME="USRP-E3x0"
 REPO_BASE_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
