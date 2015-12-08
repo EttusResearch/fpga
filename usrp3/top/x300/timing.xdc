@@ -297,14 +297,14 @@ set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max] 
 
 # The data setup and hold values must be modified in order to pass timing in
 # the FPGA. The correct values are 0.270 and 0.090 for setup and hold, respectively.
-# The interface fails by around 350 ps in both directions, so we subtract the failing
+# The interface fails by around 390 ps in both directions, so we subtract the failing
 # amount from the actual amount to get a passing constraint.
 # NOTE: Any changes to the adjustment margin below would need to be validated over
 #       multiple builds, process and temperature. Try not to change it!
 set dac_data_setup      0.270
 set dac_data_hold       0.090
-set dac_setup_adj       0.360
-set dac_hold_adj        0.360
+set dac_setup_adj       0.390
+set dac_hold_adj        0.390
 
 # These are real trace delays from the timing spreadsheet. Note that we are assuming
 # no variability in our clock delay.
