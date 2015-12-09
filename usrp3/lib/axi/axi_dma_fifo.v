@@ -406,7 +406,7 @@ module axi_dma_fifo
       .o_tready(i_tready_i1)
    );
 
-   axi_embed_tlast axi_embed_tlast_i (
+   axi_embed_tlast #(.WIDTH(DWIDTH), .ADD_CHECKSUM(0)) axi_embed_tlast_i (
       .clk(dram_clk),
       .reset(dram_reset),
       .clear(clear),
@@ -557,7 +557,7 @@ module axi_dma_fifo
       .o_tready(o_tready_i3)
    );
 
-    axi_extract_tlast axi_extract_tlast_i (
+    axi_extract_tlast #(.WIDTH(DWIDTH), .VALIDATE_CHECKSUM(0)) axi_extract_tlast_i (
       .clk(dram_clk),
       .reset(dram_reset),
       .clear(clear),
@@ -571,7 +571,7 @@ module axi_dma_fifo
       .o_tvalid(o_tvalid_i4),
       .o_tready(o_tready_i4),
       //
-      .checksum_error_reg()
+      .checksum_error()
    );
 
    // Pipeline flop after tlast extraction logic
