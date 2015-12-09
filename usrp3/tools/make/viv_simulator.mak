@@ -41,7 +41,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 	export VIV_SIM_USER_DO=$(MODELSIM_USER_DO); \
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_SIM_64BIT=$(MODELSIM_64BIT); \
-	vivado -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_sim_project.tcl) -log xsim.log -nojournal
+	vivado -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_sim_project.tcl) -log xsim.log -nojournal 2>&1 | $(TOOLS_DIR)/scripts/viv_colorize.sh
 
 .SECONDEXPANSION:
 

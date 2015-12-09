@@ -181,6 +181,10 @@ if [[ -e $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.s
     $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh
 fi
 
+if [[ -x `which tput` ]] ; then
+    export VIV_COLOR_SCHEME=default
+ fi
+
 #----------------------------------------------------------------------------
 # Prepare Modelsim environment
 #----------------------------------------------------------------------------
