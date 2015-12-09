@@ -6,7 +6,7 @@
 
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
-- [Xilinx Vivado 2015.2](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html) (For 7 Series FPGAs)
+- [Xilinx Vivado 2015.4](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-4.html) (For 7 Series FPGAs)
 - [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For all other FPGAs)
 - [GNU Make 3.6+](https://www.gnu.org/software/make/)
 - [GNU Bash 4.0+](https://www.gnu.org/software/bash/)
@@ -25,7 +25,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 ### Requirements
 
-- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2015_2/ug973-vivado-release-notes-install-license.pdf)
+- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2015_4/ug973-vivado-release-notes-install-license.pdf)
 - [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
 
 ## Build Environment Setup
@@ -73,11 +73,13 @@ The following additional packages are also required and can be selected in the G
 
 ## Build Instructions (Xilinx Vivado only)
 
+### Makefile based Builder
+
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
   + e300: For USRP E310
 
-- To add vivado to the PATH and to setup up the Xilinx build environment run
+- To add vivado to the PATH and to setup up the Ettus Xilinx build environment run
   + `source setupenv.sh` (If Vivado is installed in the default path /opt/Xilinx/Vivado) _OR_
   + `source setupenv.sh --vivado-path=<VIVADO_PATH>` (where VIVADO_PATH is a non-default installation path)
 
@@ -88,7 +90,14 @@ The following additional packages are also required and can be selected in the G
 - The build output will be specific to the product and will be located in the
   `usrp3/top/{project}/build` directory. Run `make help` for more information.
 
+### Environment Utilies
+
+The build environment also defines many ease-of-use utilites. Please use the \subpage md_usrp3_vivado_env_utils "Vivado Utility Reference" page for
+a list and usage information
+
 ## Build Instructions (Xilinx ISE only)
+
+### Makefile based Builder
 
 - To add xtclsh to the PATH and to setup up the Xilinx build environment run
   + `source <install_dir>/Xilinx/14.7/ISE_DS/settings64.sh` (64-bit platform)
@@ -104,6 +113,8 @@ The following additional packages are also required and can be selected in the G
 
 - The build output will be specific to the product and will be located in the
   `usrp3/top/{project}/build` directory. Run `make help` for more information.
+
+## Targets and Outputs
 
 ### B2x0 Targets and Outputs
 
