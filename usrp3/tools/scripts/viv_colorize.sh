@@ -1,14 +1,15 @@
 #/bin/bash
 
-CLR_OFF='tput sgr0'
-
+# VIV_COLOR_SCHEME must be defined in the environment setup script
 case "$VIV_COLOR_SCHEME" in
     default)
+        CLR_OFF='tput sgr0'
         ERR_CLR='tput setaf 1'
         CRIWARN_CLR='tput setaf 1'
         WARN_CLR='tput setaf 3'
         ;;
     *)
+        CLR_OFF=''
         ERR_CLR=$CLR_OFF
         CRIWARN_CLR=$CLR_OFF
         WARN_CLR=$CLR_OFF
@@ -25,13 +26,13 @@ while IFS= read -r line
 do
     case $(trim $line) in
         ERROR:*)
-            $ERR_CLR; echo "$line"; $CLR_OFF;
+            eval $ERR_CLR; echo "$line"; eval $CLR_OFF
             ;;
         CRITICAL[[:space:]]WARNING:*)
-            $CRIWARN_CLR; echo "$line"; $CLR_OFF;
+            eval $CRIWARN_CLR; echo "$line"; eval $CLR_OFF
             ;;
         WARNING:*)
-            $WARN_CLR; echo "$line"; $CLR_OFF;
+            eval $WARN_CLR; echo "$line"; eval $CLR_OFF
             ;;
         *)
             echo "$line"
