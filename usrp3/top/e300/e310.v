@@ -31,6 +31,7 @@ module e300
   inout         DDR_VRP,
   inout         DDR_VRN,
 
+  `ifdef DRAM_TEST
   // PL DDR
   input         PL_DDR3_SYSCLK,
   output        PL_DDR3_RESET_n,
@@ -47,6 +48,8 @@ module e300
   output [0:0]  PL_DDR3_CKE,
   output [1:0]  PL_DDR3_DM,
   output [0:0]  PL_DDR3_ODT,
+
+  `endif
 
   //AVR SPI IO
   input         AVR_CS_R,
