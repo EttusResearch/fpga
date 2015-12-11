@@ -13,7 +13,7 @@ vivado_utils::synthesize_design
 vivado_utils::generate_post_synth_reports
 
 # STEP#3: Run implementation strategy
-vivado_strategies::implement_design [vivado_strategies::get_impl_preset "Default"]
+vivado_strategies::implement_design [vivado_strategies::get_impl_preset "Performance_ExplorePostRoutePhysOpt"]
 
 # STEP#4: Generate reports
 vivado_utils::generate_post_route_reports
