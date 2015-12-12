@@ -13,11 +13,11 @@ def get_options():
     parser.add_argument("--output_dir", type=str, default='.', help="Build directory for IP")
     args = parser.parse_args()
     if not args.action:
-        print 'ERROR: Please specify an action to perform\n'
+        print('ERROR: Please specify an action to perform\n')
         parser.print_help()
         sys.exit(1)
     if not args.xci_filepath:
-        print 'ERROR: Please specify the location for the XCI file to operate on\n'
+        print('ERROR: Please specify the location for the XCI file to operate on\n')
         parser.print_help()
         sys.exit(1)
     if (not os.path.isfile(args.xci_filepath)):
@@ -31,7 +31,7 @@ def get_match_str(item):
 
 def main():
     args = get_options();
-    
+
     # Read XCI File
     with open(args.xci_filepath) as in_file:
         xci_lines = in_file.readlines()
@@ -44,13 +44,13 @@ def main():
             if m is not None:
                  xci_info[m.group(2)] = m.group(3)
         if args.action == 'read_target':
-            print xci_info['ARCHITECTURE'] + '/' + xci_info['DEVICE'] + '/' + xci_info['PACKAGE'] + '/' + xci_info['SPEEDGRADE'];
+            print(xci_info['ARCHITECTURE'] + '/' + xci_info['DEVICE'] + '/' + xci_info['PACKAGE'] + '/' + xci_info['SPEEDGRADE'])
         if args.action == 'read_arch':
-            print xci_info['ARCHITECTURE'];
+            print(xci_info['ARCHITECTURE'])
         if args.action == 'read_partid':
-            print xci_info['DEVICE'] + '/' + xci_info['PACKAGE'] + '/' + xci_info['SPEEDGRADE'];
+            print(xci_info['DEVICE'] + '/' + xci_info['PACKAGE'] + '/' + xci_info['SPEEDGRADE'])
         if args.action == 'read_part':
-            print xci_info['DEVICE'] + xci_info['PACKAGE'] + xci_info['SPEEDGRADE'];
+            print(xci_info['DEVICE'] + xci_info['PACKAGE'] + xci_info['SPEEDGRADE'])
     elif args.action == 'retarget':
         # Write a new XCI file with modified target info
         if (not os.path.isdir(args.output_dir)):
@@ -67,7 +67,7 @@ def main():
         replace_dict = {'ARCHITECTURE': target_tok[0], 'DEVICE': target_tok[1], 'PACKAGE': target_tok[2], 'SPEEDGRADE': target_tok[3], \
                         'C_XDEVICEFAMILY': target_tok[0], 'C_FAMILY': target_tok[0], 'C_XDEVICE': target_tok[1]}
         out_xci_filename = os.path.join(os.path.abspath(args.output_dir), os.path.basename(args.xci_filepath)) 
-        
+
         with open(out_xci_filename, 'w') as out_file:
             for r_line in xci_lines:
                 w_line = r_line
