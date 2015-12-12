@@ -13,11 +13,11 @@ def get_options():
     parser.add_argument('--copright_auth', type=str, default='Ettus Research', help='Copyright author')
     args = parser.parse_args()
     if not args.ip_name:
-        print 'ERROR: Please specify a name for the IP core\n'
+        print('ERROR: Please specify a name for the IP core\n')
         parser.print_help()
         sys.exit(1)
     if not args.dest:
-        print 'ERROR: Please specify the location for the IP core\n'
+        print('ERROR: Please specify the location for the IP core\n')
         parser.print_help()
         sys.exit(1)
     return args
