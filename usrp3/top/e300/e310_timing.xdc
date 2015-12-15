@@ -1,5 +1,5 @@
 ###############################################################################
-# Timing Constraints
+# Timing Constraints for E310 daughter board signals
 ###############################################################################
 
 # CAT_DATA_CLK is the data clock from AD9361, sample rate dependent with a max rate of 61.44 MHz
@@ -17,18 +17,12 @@ create_generated_clock -name CAT_FB_CLK -multiply_by 1 -source [get_pins inst_ca
 create_clock -period 25.000 -name TCXO_CLK [get_nets TCXO_CLK]
 set_input_jitter TCXO_CLK 0.100
 
-# 10MHz / PPS References
-create_clock -period 100.000 -name PPS_EXT_IN [get_nets PPS_EXT_IN]
-create_clock -period 100.000 -name GPS_PPS [get_nets GPS_PPS]
-
 # Asynchronous clock domains
 set_clock_groups -asynchronous \
   -group [get_clocks -include_generated_clocks CAT_DATA_CLK] \
   -group [get_clocks -include_generated_clocks clk_fpga_0] \
   -group [get_clocks -include_generated_clocks *clk_50MHz_in] \
-  -group [get_clocks -include_generated_clocks TCXO_CLK] \
-  -group [get_clocks -include_generated_clocks PPS_EXT_IN] \
-  -group [get_clocks -include_generated_clocks GPS_PPS]
+  -group [get_clocks -include_generated_clocks TCXO_CLK]
 
 # Logically exclusive clocks in catcodec capture interface. These two clocks are the input to a BUFG mux that
 # drives radio_clk, meaning only one of the two can drive radio_clk at a time.
@@ -60,16 +54,9 @@ set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_da
 set_max_delay -datapath_only -to [get_ports TCXO_DAC*] -from [all_registers -edge_triggered] 40
 set_min_delay                -to [get_ports TCXO_DAC*] -from [all_registers -edge_triggered] 1
 
-# User GPIO
-set_max_delay -datapath_only -to   [get_ports PL_GPIO*] -from [all_registers -edge_triggered] [expr 15.0]
-set_min_delay                -to   [get_ports PL_GPIO*] -from [all_registers -edge_triggered] 5.0
-set_max_delay -datapath_only -from [get_ports PL_GPIO*] -to   [all_registers -edge_triggered] [expr 15.0]
-set_min_delay                -from [get_ports PL_GPIO*] -to   [all_registers -edge_triggered] 5.0
-
 ###############################################################################
 ## Asynchronous paths
 ###############################################################################
-set_false_path -from [get_ports ONSWITCH_DB]
 set_false_path -from [get_ports CAT_CTRL_OUT]
 set_false_path -to   [get_ports CAT_RESET]
 set_false_path -to   [get_ports RX*_BANDSEL*]

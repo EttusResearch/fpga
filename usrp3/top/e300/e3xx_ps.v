@@ -254,7 +254,11 @@ module e300_processing_system (
   assign FCLK_CLK3 = processing_system7_FCLK_CLK3;
   assign FCLK_RESET3 = ~processing_system7_FCLK_RESET3_N;
 
-  processing_system7 inst_processing_system7 (
+`ifdef E3XX_SG3
+  processing_system7_3 inst_processing_system7 (
+`else
+  processing_system7_1 inst_processing_system7 (
+`endif
     // Outward connections to the pins
     .GPIO_I(GPIO_I),
     .GPIO_O(GPIO_O),
