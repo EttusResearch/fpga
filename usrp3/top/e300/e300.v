@@ -277,15 +277,16 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
-  // Mux SPI (allows timed SPI commands from radio core)
-  // spi_select: 0 = PS SPI, 1 = radio core SPI
-  wire sen0, sclk0, mosi0;
-  wire miso0 = CAT_MISO;
+  // PS SPI has precedence as its clock is always stable.
+  // To prevent overlapping SPI transactions between the cores, software disables
+  // (via the shutdown settings reg in simple_spi_core.v) the soft spi core
+  // whenever the PS SPI core is in use.
   wire PS_SPI0_SS1, PS_SPI0_SCLK, PS_SPI0_MOSI;
   wire PS_SPI0_MISO = CAT_MISO;
-  assign CAT_CS   = spi_select ? sen0  : PS_SPI0_SS1;
-  assign CAT_SCLK = spi_select ? sclk0 : PS_SPI0_SCLK;
-  assign CAT_MOSI = spi_select ? mosi0 : PS_SPI0_MOSI;
+  wire spi_miso     = CAT_MISO;
+  assign CAT_CS     = ~PS_SPI0_SS1 /* Active low */ ? PS_SPI0_SS1  : spi_sen;
+  assign CAT_SCLK   = ~PS_SPI0_SS1                  ? PS_SPI0_SCLK : spi_sclk;
+  assign CAT_MOSI   = ~PS_SPI0_SS1                  ? PS_SPI0_MOSI : spi_mosi;
 
    // First, make all connections to the PS (ARM+buses)
   axi_interconnect inst_axi_interconnect
@@ -515,7 +516,7 @@ module e300
   assign CAT_TXNRX = 1'b1;
   assign CAT_ENABLE = 1'b1;
 
-  assign CAT_RESET = ~(bus_rst || (CAT_CS & CAT_MOSI));   // Operates active-low, really CAT_RESET_B
+  assign CAT_RESET = ~bus_rst; // Operates active-low, really CAT_RESET_B
   assign CAT_SYNC = 1'b0;
 
   reg [2:0] pps_reg;
@@ -712,7 +713,6 @@ module e300
 
     .fp_gpio0(PL_GPIO),
 
-    .spi_select(spi_select),
     .spi_sen(spi_sen),
     .spi_sclk(spi_sclk),
     .spi_mosi(spi_mosi),

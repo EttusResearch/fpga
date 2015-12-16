@@ -39,7 +39,6 @@ module e300_core
   output [2:0]      leds1,
 
   // SPI from radio core 0
-  output            spi_select,
   output            spi_sen,
   output            spi_sclk,
   output            spi_mosi,
@@ -105,11 +104,10 @@ module e300_core
 
 
   // Global register offsets
-  localparam SR_CORE_READBACK = 11'd0;
-  localparam SR_CORE_MISC     = 11'd4;
-  localparam SR_CORE_TEST     = 11'd28;
-  localparam SR_CORE_XB_LOCAL = 11'd32;
-  localparam SR_CORE_SPI      = 11'd64;
+  localparam SR_CORE_READBACK   = 11'd0;
+  localparam SR_CORE_MISC       = 11'd4;
+  localparam SR_CORE_TEST       = 11'd28;
+  localparam SR_CORE_XB_LOCAL   = 11'd32;
 
   localparam RB32_CORE_MISC     = 5'd1;
   localparam RB32_CORE_COMPAT   = 5'd2;
@@ -183,22 +181,10 @@ module e300_core
     .changed()
   );
 
-  setting_reg
-  #( .my_addr(SR_CORE_SPI),
-     .awidth(11), .width(1),
-     .at_reset(1'b0)
-  ) sr_spi
-  (
-    .clk(bus_clk), .rst(bus_rst),
-    .strobe(set_stb), .addr(set_addr),
-    .in(set_data), .out(spi_select),
-    .changed()
-  );
-
   always @(*)
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
-      RB32_CORE_MISC    : rb_data <= {25'd0, spi_select, tcxo_status, pps_select};
+      RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
       RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'd255, 8'd0};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
@@ -360,11 +346,11 @@ module e300_core
   // Note: In cases where I/O is shared between radio cores (i.e. SPI interface),
   //       radio 0's DB I/O is used.
   assign fp_gpio0      = fp_gpio[0][5:0];
-  assign spi_sen       = sen[0][0];
-  assign spi_sclk      = sclk[0];
-  assign spi_mosi      = mosi[0];
-  assign miso[0]       = spi_mosi;
-  assign miso[1]       = 1'b0;
+  assign spi_sen       = sen[0][0] & sen[1][0];
+  assign spi_sclk      = ~sen[0][0] /* Active low */ ? sclk[0] : sclk[1];
+  assign spi_mosi      = ~sen[0][0]                  ? mosi[0] : mosi[1];
+  assign miso[0]       = spi_miso;
+  assign miso[1]       = spi_miso;
   assign tx_bandsel    = misc_outs[0][2:0];
   assign rx1_bandsel_a = misc_outs[0][5:3];
   assign rx1_bandsel_b = misc_outs[0][7:6];
