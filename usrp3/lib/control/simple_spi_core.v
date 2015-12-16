@@ -74,7 +74,7 @@ module simple_spi_core
     wire [23:0] slave_select;
     wire [5:0] num_bits;
     wire datain_edge, dataout_edge;
-    setting_reg #(.my_addr(BASE+1),.width(32)) config_sr(
+    setting_reg #(.my_addr(BASE+1),.width(32)) ctrl_sr(
         .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
         .out({dataout_edge, datain_edge, num_bits, slave_select}),.changed());
 
@@ -83,6 +83,11 @@ module simple_spi_core
     setting_reg #(.my_addr(BASE+2),.width(32)) data_sr(
         .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
         .out(mosi_data),.changed(trigger_spi));
+
+    wire shutdown;  // Disables SPI core
+    setting_reg #(.my_addr(BASE+3),.width(1),.at_reset(1'b0)) shutdown_sr (
+        .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
+        .out(shutdown),.changed());
 
     localparam WAIT_TRIG = 0;
     localparam PRE_IDLE = 1;
@@ -94,7 +99,7 @@ module simple_spi_core
     reg [2:0] state;
 
     reg ready_reg;
-    assign ready = ready_reg && ~trigger_spi;
+    assign ready = ready_reg && ~trigger_spi && ~shutdown;
 
     //serial clock either idles or is in one of two clock states
     reg sclk_reg;
@@ -150,7 +155,7 @@ module simple_spi_core
             case (state)
 
             WAIT_TRIG: begin
-                if (trigger_spi) state <= PRE_IDLE;
+                if (trigger_spi & ~shutdown) state <= PRE_IDLE;
                 ready_reg <= ~trigger_spi;
                 dataout_reg <= mosi_data;
                 sclk_counter <= 0;
