@@ -29,4 +29,5 @@ filter_bad_sid.v \
 synchronizer_impl.v \
 synchronizer.v \
 ad5662_auto_spi.v \
+s7_icap_wb.v \
 ))
