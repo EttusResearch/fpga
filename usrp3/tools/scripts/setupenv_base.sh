@@ -183,7 +183,8 @@ fi
 
 if [[ -x `which tput 2>/dev/null` ]] ; then
     export VIV_COLOR_SCHEME=default
- fi
+fi
+VIVADO_EXEC=$REPO_BASE_PATH/tools/scripts/launch_vivado.sh
 
 #----------------------------------------------------------------------------
 # Prepare Modelsim environment
@@ -221,7 +222,7 @@ function build_simlibs {
     else
         echo "compile_simlib -force -simulator modelsim -family all -language all -library all -32 -directory $SIM_COMPLIBDIR" > $CMD_PATH
     fi
-    vivado -mode batch -source $(resolve_viv_path $CMD_PATH) -nolog -nojournal
+    $VIVADO_EXEC -mode batch -source $(resolve_viv_path $CMD_PATH) -nolog -nojournal
     rm -f $CMD_PATH
     popd
 }
@@ -288,7 +289,7 @@ function viv_create_ip {
         return 1
     fi
 
-    vivado -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs create $part_name $ip_name $(resolve_viv_path $ip_dir) $ip_vlnv 
+    $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs create $part_name $ip_name $(resolve_viv_path $ip_dir) $ip_vlnv 
     echo "Generating Makefile..."
     python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
     echo "Done generating IP in $ip_dir/$ip_name"
@@ -310,7 +311,7 @@ function viv_modify_ip {
         return 1
     fi
     if [[ -f $xci_path ]]; then
-        vivado -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify $part_name $(resolve_viv_path $xci_path)
+        $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify $part_name $(resolve_viv_path $xci_path)
     else
         echo "ERROR: IP $xci_path not found."
         return 1
@@ -332,7 +333,7 @@ function viv_ls_ip {
         echo "ERROR: Invalid product name $1. Supported: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
-    vivado -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
+    $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
 }
 
 function viv_upgrade_ip {
@@ -353,7 +354,7 @@ function viv_upgrade_ip {
         if [[ -f $xci_path ]]; then
             echo "Upgrading $xci_path..."
             part_name=$(python $REPO_BASE_PATH/tools/scripts/viv_ip_xci_editor.py read_part $xci_path)
-            vivado -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs upgrade $part_name $(resolve_viv_path $xci_path) | grep -v -E '(^$|^#|\*\*)'
+            $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs upgrade $part_name $(resolve_viv_path $xci_path) | grep -v -E '(^$|^#|\*\*)'
         else
             echo "ERROR: IP $xci_path not found."
             return 1
@@ -371,7 +372,7 @@ function viv_hw_console {
 }
 
 function viv_jtag_list {
-    vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
+    $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
 }
 
 function viv_jtag_program {
@@ -385,9 +386,9 @@ function viv_jtag_program {
         return 1
     fi
     if [ "$2" == "" ]; then
-        vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
+        $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
     else
-        vivado -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
+        $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
     fi
 }
 

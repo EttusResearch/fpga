@@ -26,5 +26,4 @@ BUILD_VIVADO_DESIGN = \
 	export VIV_DESIGN_SRCS=$(call RESOLVE_PATHS,$(DESIGN_SRCS)); \
 	export VIV_VERILOG_DEFS="$(VERILOG_DEFS)"; \
 	cd $(BUILD_DIR); \
-	vivado -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(1)) -log build.log -journal $(2).jou 2>&1 | $(TOOLS_DIR)/scripts/viv_colorize.sh
-
+	$(TOOLS_DIR)/scripts/launch_vivado.sh -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(1)) -log build.log -journal $(2).jou

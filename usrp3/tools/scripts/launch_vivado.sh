@@ -1,6 +1,46 @@
 #/bin/bash
 
+#------------------------------------------
+# Parse command line args
+#------------------------------------------
+
+function help {
+    cat <<EOHELP
+
+Usage: $0 [--help|-h] [--no-color] [<vivado args>]
+
+--no-color      : Don't colorize command output
+--help, -h      : Shows this message.
+
+EOHELP
+}
+
+viv_args=""
+colorize=1
+for i in "$@"; do
+    case $i in
+        -h|--help)
+            help
+            exit 0
+            ;;
+        --no-color)
+            colorize=0
+        ;;
+        *)
+            viv_args="$viv_args $i"
+        ;;
+    esac
+done
+
+#------------------------------------------
+# Colorize
+#------------------------------------------
+
 # VIV_COLOR_SCHEME must be defined in the environment setup script
+if [ $colorize -eq 0 ]; then
+    VIV_COLOR_SCHEME=none
+fi
+
 case "$VIV_COLOR_SCHEME" in
     default)
         CLR_OFF='tput sgr0'
@@ -22,7 +62,7 @@ trim() {
     echo -n "$var"
 }
 
-while IFS= read -r line
+vivado $viv_args 2>&1 | while IFS= read -r line
 do
     case $(trim $line) in
         ERROR:*)
@@ -38,3 +78,4 @@ do
             echo "$line"
     esac
 done
+exit ${PIPESTATUS[0]}
