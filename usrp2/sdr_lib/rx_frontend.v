@@ -39,6 +39,12 @@ module rx_frontend
    generate
       if(IQCOMP_EN == 1)
 	begin
+	   reg [17:0] adc_i_ofs_dly, adc_q_ofs_dly;
+	   always @(posedge clk) begin
+	     adc_i_ofs_dly <= adc_i_ofs;
+	     adc_q_ofs_dly <= adc_q_ofs;
+	   end
+
 	   rx_dcoffset #(.WIDTH(18),.ADDR(BASE+3)) rx_dcoffset_i
 	     (.clk(clk),.rst(rst),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .in({adc_i,2'b00}),.out(adc_i_ofs));
@@ -55,12 +61,12 @@ module rx_frontend
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_i
 	     (.clk(clk), .rst(rst), 
-	      .in1({adc_i_ofs,6'd0}), .in2(corr_i[35:12]), .strobe_in(1'b1),
+	      .in1({adc_i_ofs_dly,6'd0}), .in2(corr_i[35:12]), .strobe_in(1'b1),
 	      .sum(i_out), .strobe_out());
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_q
 	     (.clk(clk), .rst(rst), 
-	      .in1({adc_q_ofs,6'd0}), .in2(corr_q[35:12]), .strobe_in(1'b1),
+	      .in1({adc_q_ofs_dly,6'd0}), .in2(corr_q[35:12]), .strobe_in(1'b1),
 	      .sum(q_out), .strobe_out());
 	end // if (IQCOMP_EN == 1)
       else
