@@ -28,6 +28,7 @@ include $(LIB_DIR)/packet_proc/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
+include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 
 ##################################################
@@ -44,8 +45,6 @@ n230.xdc \
 timing.xdc \
 ext_sram.xdc \
 )
-
-B200_RADIO = $(BASE_DIR)/b200/radio_b200.v
 
 USRP2_SPI_SRCS = \
 $(BASE_DIR)/../../usrp2/opencores/spi/rtl/verilog/spi_clgen.v \
@@ -81,7 +80,7 @@ $(VITA_SRCS) \
 $(DSP_SRCS) \
 $(DRAM_SRCS) \
 $(AXI_SRCS) \
-$(B200_RADIO) \
+$(RADIO_LEGACY_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(ZPU_CORE_SRCS) \
 $(ZPU_CONFIG_SRCS) \

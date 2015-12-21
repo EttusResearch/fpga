@@ -655,11 +655,11 @@ module n230_core #(
    wire [63:0]       radio0_debug;
    reg [31:0]       rx0_post_loop;
 
-   // IJB. Note that loopback signal comes from bus_clk. Better to do the loopback entirely inside radio_b200 in radio_clk
+   // IJB. Note that loopback signal comes from bus_clk. Better to do the loopback entirely inside radio_legacy in radio_clk
    always @(posedge radio_clk)
       rx0_post_loop <= loopback ? tx0 : rx0;
 
-   radio_b200 #(
+   radio_legacy #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .NEW_HB_INTERP(1),
       .SOURCE_FLOW_CONTROL(1),
@@ -690,7 +690,7 @@ module n230_core #(
    always @(posedge radio_clk)
      rx1_post_loop <= loopback ? tx1 : rx1;
 
-   radio_b200 #(
+   radio_legacy #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE), .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .NEW_HB_INTERP(1),
       .SOURCE_FLOW_CONTROL(1),

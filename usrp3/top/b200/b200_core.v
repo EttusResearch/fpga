@@ -296,7 +296,7 @@ module b200_core
    wire [31:0] fe0_gpio_out32;
    assign fe0_gpio_out = fe0_gpio_out32[7:0];
 
-   radio_b200 #(
+   radio_legacy #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
       .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .FP_GPIO(1),
@@ -328,7 +328,7 @@ module b200_core
    wire [31:0] fe1_gpio_out32;
    assign fe1_gpio_out = fe1_gpio_out32[7:0];
 
-   radio_b200 #(
+   radio_legacy #(
       .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
       .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
       .FP_GPIO(0),

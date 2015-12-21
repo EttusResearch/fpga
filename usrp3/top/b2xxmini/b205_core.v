@@ -222,7 +222,7 @@ module b205_core
     assign fp_gpio_out = fp_gpio_out10[7:0];
     assign fp_gpio_ddr = fp_gpio_ddr10[7:0];
     
-    radio_b200 #(
+    radio_legacy #(
         .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
         .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
         .FP_GPIO(1),

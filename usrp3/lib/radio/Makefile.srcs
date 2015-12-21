@@ -8,3 +8,7 @@
 RADIO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
 ./radio.v \
 ))
+
+RADIO_LEGACY_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
+./radio_legacy.v \
+))

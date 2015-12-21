@@ -6,7 +6,7 @@
 // radio top level module for b200
 //  Contains all clock-rate DSP components, all radio and hardware controls and settings
 
-module radio_b200
+module radio_legacy
   #(
     parameter RADIO_FIFO_SIZE = 13,
     parameter SAMPLE_FIFO_SIZE = 11,
@@ -479,4 +479,4 @@ endgenerate
     ******************************************************************/
  assign debug = 0;
 
-endmodule // radio_b200
+endmodule // radio_legacy
