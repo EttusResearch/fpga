@@ -41,6 +41,12 @@ module tx_frontend
    generate
       if(IQCOMP_EN==1)
 	begin
+	   reg [23:0] tx_i_dly, tx_q_dly;
+	   always @(posedge clk) begin
+	     tx_i_dly <= tx_i;
+	     tx_q_dly <= tx_q;
+	   end
+
 	   // IQ Balance
 	   MULT18X18S mult_mag_corr
 	     (.P(corr_i), .A(tx_i[23:6]), .B(mag_corr), .C(clk), .CE(1), .R(rst) ); 
@@ -50,12 +56,12 @@ module tx_frontend
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_i
 	     (.clk(clk), .rst(rst), 
-	      .in1(tx_i), .in2(corr_i[35:12]), .strobe_in(1'b1),
+	      .in1(tx_i_dly), .in2(corr_i[35:12]), .strobe_in(1'b1),
 	      .sum(i_bal), .strobe_out());
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_q
 	     (.clk(clk), .rst(rst), 
-	      .in1(tx_q), .in2(corr_q[35:12]), .strobe_in(1'b1),
+	      .in1(tx_q_dly), .in2(corr_q[35:12]), .strobe_in(1'b1),
 	      .sum(q_bal), .strobe_out());
 	end // if (IQCOMP_EN==1)
       else
