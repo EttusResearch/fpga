@@ -30,4 +30,6 @@ synchronizer_impl.v \
 synchronizer.v \
 ad5662_auto_spi.v \
 s7_icap_wb.v \
+bin2gray.v \
+user_settings.v \
 ))
