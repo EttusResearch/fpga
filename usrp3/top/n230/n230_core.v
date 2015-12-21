@@ -131,7 +131,6 @@ module n230_core #(
    //------------------------------------------------------------------
    // External ZBT SRAM FIFO
    //------------------------------------------------------------------
-   `ifdef EXT_SRAM_FIFO
    inout [35:0] RAM_D,
    output [20:0] RAM_A,
    output [3:0] RAM_BWn,
@@ -141,7 +140,6 @@ module n230_core #(
    output RAM_WEn,
    output RAM_CENn,
    output RAM_CE1n,
-   `endif //  `ifdef EXT_SRAM_FIFO
    //------------------------------------------------------------------
    // Delay Control_interface
    //------------------------------------------------------------------
@@ -447,14 +445,13 @@ module n230_core #(
     *   includes Short FIFO on ingress and egress and
     *   32bit <-> 64 bit AXIS conversion
     ******************************************************************/
-  wire [63:0]       tx_tdata_int; wire tx_tlast_int, tx_tvalid_int, tx_tready_int;
-`ifdef EXT_SRAM_FIFO
-   wire [63:0]       tx_tdata_pre64; wire tx_tlast_pre64, tx_tvalid_pre64, tx_tready_pre64;
-   wire [31:0]       tx_tdata_pre32; wire tx_tlast_pre32, tx_tvalid_pre32, tx_tready_pre32;
-   wire [31:0]       tx_tdata_ext32; wire tx_tlast_ext32, tx_tvalid_ext32, tx_tready_ext32;
-   wire [63:0]       tx_tdata_post64; wire tx_tlast_post64, tx_tvalid_post64, tx_tready_post64;
+   wire [63:0] tx_tdata_int; wire tx_tlast_int, tx_tvalid_int, tx_tready_int;
+   wire [63:0] tx_tdata_pre64; wire tx_tlast_pre64, tx_tvalid_pre64, tx_tready_pre64;
+   wire [31:0] tx_tdata_pre32; wire tx_tlast_pre32, tx_tvalid_pre32, tx_tready_pre32;
+   wire [31:0] tx_tdata_ext32; wire tx_tlast_ext32, tx_tvalid_ext32, tx_tready_ext32;
+   wire [63:0] tx_tdata_post64; wire tx_tlast_post64, tx_tvalid_post64, tx_tready_post64;
 
- `ifdef TEST_EXT_SRAM
+`ifdef TEST_EXT_SRAM
    // Isolate EXT SRAM FIFO from functional mode packet path and use BIST circuit to verify.
    wire [63:0]       otest_tdata; wire otest_tlast, otest_tvalid, otest_tready;
    wire [63:0]       itest_tdata; wire itest_tlast, itest_tvalid, itest_tready;
@@ -498,7 +495,7 @@ module n230_core #(
       .i_tdata({otest_tlast, otest_tdata}), .i_tvalid(otest_tvalid), .i_tready(otest_tready),
       .o_tdata({tx_tlast_pre64, tx_tdata_pre64}), .o_tvalid(tx_tvalid_pre64), .o_tready(tx_tready_pre64),
       .space(),.occupied());
- `else // !`ifdef TEST_EXT_SRAM
+`else // !`ifdef TEST_EXT_SRAM
    assign       bist_fail = 0;
    assign       bist_done = 0;
 
@@ -508,7 +505,7 @@ module n230_core #(
       .i_tdata({tx_tlast, tx_tdata}), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
       .o_tdata({tx_tlast_pre64, tx_tdata_pre64}), .o_tvalid(tx_tvalid_pre64), .o_tready(tx_tready_pre64),
       .space(),.occupied());
- `endif // TEST_EXT_SRAM
+`endif // TEST_EXT_SRAM
 
    axi_fifo64_to_fifo32 fifo64_to_fifo32_i0
      (
@@ -565,27 +562,27 @@ module n230_core #(
    wire [31:0]       debug_ext_fifo;
 
    ext_fifo #(.EXT_WIDTH(36),.INT_WIDTH(36),.RAM_DEPTH(18),.FIFO_DEPTH(18))
-     ext_fifo_i1
-       (.int_clk(bus_clk),  // IJB. Revisit clock frequencies, can be slower.
-   .ext_clk(bus_clk),
-   .rst(bus_rst),
-   .RAM_D_pi(RAM_D_pi),
-   .RAM_D_po(RAM_D_po),
-   .RAM_D_poe(RAM_D_poe),
-   .RAM_A(RAM_A[17:0]),
-   .RAM_WEn(RAM_WEn),
-   .RAM_CENn(RAM_CENn),
-   .RAM_LDn(RAM_LDn),
-   .RAM_OEn(RAM_OEn),
-   .RAM_CE1n(RAM_CE1n),
-   .datain({3'h0,tx_tlast_pre32,tx_tdata_pre32}),
-   .src_rdy_i(tx_tvalid_pre32),
-   .dst_rdy_o(tx_tready_pre32),
-   .dataout({unused_ext32,tx_tlast_ext32,tx_tdata_ext32}),
-   .src_rdy_o(tx_tvalid_ext32),
-   .dst_rdy_i(tx_tready_ext32),
-   .debug(debug_ext_fifo),
-   .debug2() );
+      ext_fifo_i1
+        (.int_clk(bus_clk),  // IJB. Revisit clock frequencies, can be slower.
+         .ext_clk(bus_clk),
+         .rst(bus_rst),
+         .RAM_D_pi(RAM_D_pi),
+         .RAM_D_po(RAM_D_po),
+         .RAM_D_poe(RAM_D_poe),
+         .RAM_A(RAM_A[17:0]),
+         .RAM_WEn(RAM_WEn),
+         .RAM_CENn(RAM_CENn),
+         .RAM_LDn(RAM_LDn),
+         .RAM_OEn(RAM_OEn),
+         .RAM_CE1n(RAM_CE1n),
+         .datain({3'h0,tx_tlast_pre32,tx_tdata_pre32}),
+         .src_rdy_i(tx_tvalid_pre32),
+         .dst_rdy_o(tx_tready_pre32),
+         .dataout({unused_ext32,tx_tlast_ext32,tx_tdata_ext32}),
+         .src_rdy_o(tx_tvalid_ext32),
+         .dst_rdy_i(tx_tready_ext32),
+         .debug(debug_ext_fifo),
+         .debug2() );
 
    //
    // Convert 32bit AXIS bus to 64bit
@@ -619,15 +616,6 @@ module n230_core #(
       .space(),.occupied());
  `endif // TEST_EXT_SRAM
 
-`else // !`ifdef EXT_SRAM_FIFO
-   // Small internal FIFO replaces external SRAM FIFO
-    axi_fifo #(.WIDTH(65), .SIZE(EXTRA_TX_BUFF_SIZE)) extra_tx_buff
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({tx_tlast, tx_tdata}), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
-      .o_tdata({tx_tlast_int, tx_tdata_int}), .o_tvalid(tx_tvalid_int), .o_tready(tx_tready_int),
-      .space(),.occupied());
-
-`endif
    /*******************************************************************
     * TX Data mux Routing logic
     ******************************************************************/

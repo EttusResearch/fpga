@@ -45,7 +45,6 @@ phy_clump.v \
 n230_test_jesd204_if.v \
 n230.xdc \
 timing.xdc \
-ext_sram.xdc \
 )
 
 DESIGN_SRCS = \
@@ -54,7 +53,6 @@ $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) \
 $(SIMPLE_GEMAC_SRCS) \
 $(TIMING_SRCS) \
-$(EXTRAM_SRCS) \
 $(WISHBONE_SRCS) \
 $(ETH_SRCS)  \
 $(PACKET_PROC_SRCS) \
@@ -70,7 +68,7 @@ $(WB_SPI_SRCS) \
 $(IP_XCI_SRCS)
 
 # Additional Verilog defs
-EXTRA_DEFS = EXT_SRAM_FIFO DELETE_FORMAT_CONVERSION
+EXTRA_DEFS = DELETE_FORMAT_CONVERSION
 ifeq (1,$(SAFE_MODE))
 EXTRA_DEFS += SAFE_IMAGE
 endif

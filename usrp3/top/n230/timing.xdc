@@ -64,3 +64,30 @@ set_input_delay -clock [get_clocks CODEC_CLK] -min 1.1 [get_ports RX_FRAME_*] -a
 # Loopback signal starts in bus_clk, ends in radio_clk
 set_max_delay -from [get_cells n230_core/sr_loopback/out_reg[*]] -to [get_cells n230_core/rx0_post_loop_reg[*]] -datapath_only 5.0
 set_max_delay -from [get_cells n230_core/sr_loopback/out_reg[*]] -to [get_cells n230_core/rx1_post_loop_reg[*]] -datapath_only 5.0
+
+# We constrain RAM_CLK to work at 125MHz to be conservative
+#
+create_generated_clock -name RAM_CLK -source [get_ports SFPX_CLK_P] -multiply_by 1 [get_ports RAM_CLK]
+# No real path from RAM_CLK to internal clock(s)
+set_clock_groups -group [get_clocks RAM_CLK] -group  [get_clocks bus_clk] -asynchronous
+
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_D*]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_D*]
+set_input_delay -clock [get_clocks RAM_CLK] -max 4.8 [get_ports RAM_D*]
+set_input_delay -clock [get_clocks RAM_CLK] -min -1.5 [get_ports RAM_D*]
+
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_A*]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_A*]
+
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_CENn]
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_WEn]
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_OEn]
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_LDn]
+set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_CE1n]
+
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_CENn]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_WEn]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_OEn]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_LDn]
+set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_CE1n]
+

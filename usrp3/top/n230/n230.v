@@ -296,26 +296,6 @@ module n230 (
  `endif
 );
 
-
-   //------------------------------------------------------------------
-   //
-   // Deal With omitted SRAM controller
-   //
-   //------------------------------------------------------------------
-`ifndef EXT_SRAM_FIFO
-   // IJB Confirm these values leave RAM in safe low power state.
-   assign RAM_D = 36'hzzzzzzzzz;
-   assign RAM_A = 21'h000000;
-   assign RAM_BWn = 4'h0;
-   assign RAM_ZZ = 1'b0;
-   assign RAM_LDn = 1'b1;
-   assign RAM_OEn = 1'b1;
-   assign RAM_WEn = 1'b1;
-   assign RAM_CENn = 1'b1;
-   assign RAM_CE1n = 1'b1;
-   assign RAM_CLK = 1'b0;
-`endif //  `ifndef EXT_SRAM_FIFO
-
    //------------------------------------------------------------------
    wire reset_global = 1'b0; // TODO: connect to something
 
@@ -405,10 +385,8 @@ module n230 (
    // Create RAM clock from bus clock
    // This clock leads the regular bus_clk by 90 degrees phase
    //------------------------------------------------------------------
-   `ifdef EXT_SRAM_FIFO
    ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) ram_clk_out_i
      (.Q(RAM_CLK), .C(bus_clk_270), .CE(1'b1), .D1(1'b1), .D2(1'b0), .R(1'b0), .S(1'b0));
-   `endif
     //------------------------------------------------------------------
     // Create sync reset signals
     //------------------------------------------------------------------
@@ -740,7 +718,6 @@ module n230 (
       //------------------------------------------------------------------
       // External ZBT SRAM FIFO
       //------------------------------------------------------------------
-      `ifdef EXT_SRAM_FIFO
       .RAM_D(RAM_D),
       .RAM_A(RAM_A),
       .RAM_BWn(RAM_BWn),
@@ -750,7 +727,6 @@ module n230 (
       .RAM_WEn(RAM_WEn),
       .RAM_CENn(RAM_CENn),
       .RAM_CE1n(RAM_CE1n),
-      `endif //  `ifdef EXT_SRAM_FIFO
       //------------------------------------------------------------------
       // I/O Delay Control Interface
       //------------------------------------------------------------------
