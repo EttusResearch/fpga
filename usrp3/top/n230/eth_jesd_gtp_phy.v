@@ -5,31 +5,33 @@ module eth_jesd_gtp_phy #(
    parameter ETH_CLK_MASTER_PORT = 0,
    parameter SIM_SPEEDUP = "TRUE"
 ) (
+   //--------------------------------------
+   // IO
+   //--------------------------------------
    // Clock/reset
    input          areset,
    input          independent_clock,
-//   input          jesd_refclk,
-//   input          jesd_refclk_locked,
-   // Clock inputs to the MGT
+   // MGT Reference Clock inputs
    input          gtrefclk0_p, gtrefclk0_n,
-//   input          gtrefclk1_p, gtrefclk1_n,
+   input          gtrefclk1_p, gtrefclk1_n,
    // SFP Transceiver lanes
-   input          sfp0rx_p, sfp0rx_n,
    output         sfp0tx_p, sfp0tx_n,
-   input          sfp1rx_p, sfp1rx_n,
+   input          sfp0rx_p, sfp0rx_n,
    output         sfp1tx_p, sfp1tx_n,
-   // JESD204A Transceiver lanes
-//   output         jesd0tx_p, jesd0tx_n,
-//   output         jesd0frame_p, jesd0_frame_n,
-//   input          jesd0sync_p, jesd0_sync_n,
-//   output         jesd1tx_p, jesd1tx_n,
-//   output         jesd1frame_p, jesd1_frame_n,
-//   input          jesd1sync_p, jesd1_sync_n,
+   input          sfp1rx_p, sfp1rx_n,
+   // JESD Transceiver lanes
+   output         jesd0tx_p, jesd0tx_n,
+   input          jesd0rx_p, jesd0rx_n,    //JESD RX tied to 0
+   output         jesd1tx_p, jesd1tx_n,
+   input          jesd1rx_p, jesd1rx_n,    //JESD RX tied to 0
 
-   //Ethernet Common
+   //--------------------------------------
+   // Gigabit Ethernet
+   //--------------------------------------
+   // Common
    output         eth_gtrefclk_bufg,
    output         gmii_clk,
-   //Eth0 GMII
+   // Eth0 GMII
    input          eth0gmii_tx_en,
    input          eth0gmii_tx_er,
    input [7:0]    eth0gmii_txd,
@@ -37,15 +39,15 @@ module eth_jesd_gtp_phy #(
    output         eth0gmii_rx_dv,
    output         eth0gmii_rx_er,
    output [7:0]   eth0gmii_rxd,
-   //Eth0 MDIO
+   // Eth0 MDIO
    input          eth0mdc,
    input          eth0mdio_i,
    output         eth0mdio_o,
-   //Eth0 Misc
+   // Eth0 Misc
    output [15:0]  eth0status_vector,
    input          eth0signal_detect,
    output         eth0resetdone,
-   //Eth1 GMII
+   // Eth1 GMII
    input          eth1gmii_tx_en,
    input          eth1gmii_tx_er, 
    input [7:0]    eth1gmii_txd,
@@ -53,23 +55,50 @@ module eth_jesd_gtp_phy #(
    output         eth1gmii_rx_dv,
    output         eth1gmii_rx_er, 
    output [7:0]   eth1gmii_rxd,
-   //Eth1 MDIO
+   // Eth1 MDIO
    input          eth1mdc,
    input          eth1mdio_i,
    output         eth1mdio_o, 
-   //Eth1 Misc
+   // Eth1 Misc
    input          eth1signal_detect,
    output [15:0]  eth1status_vector,
-   output         eth1resetdone
+   output         eth1resetdone,
+
+   //--------------------------------------
+   // JESD204
+   //--------------------------------------
+   // Common
+   input          jesd_coreclk,
+   output         jesd_clk,
+   // Ch0 JESD
+   input [31:0]   jesd0txdata,
+   input [3:0]    jesd0txcharisk,
+   output [31:0]  jesd0rxdata,
+   output [3:0]   jesd0rxcharisk,
+   output [3:0]   jesd0rxdisperr,
+   output [3:0]   jesd0rxnotintable,
+   output         jesd0resetdone,
+   // Ch1 JESD
+   input [31:0]   jesd1txdata,
+   input [3:0]    jesd1txcharisk,
+   output [31:0]  jesd1rxdata,
+   output [3:0]   jesd1rxcharisk,
+   output [3:0]   jesd1rxdisperr,
+   output [3:0]   jesd1rxnotintable,
+   output         jesd1resetdone
 );
+   //==========================================================
+   // ETHERNET CHANNELS
+   //==========================================================
+
    //----------------------------------------------------------
    // Synchronize areset (from example design)
 
-   wire eth_pma_reset;
-   gige_phy_resets eth_pma_reset_t (.reset(areset), .independent_clock_bufg(independent_clock), .pma_reset(eth_pma_reset));
+   wire reset_iclk;
+   gige_phy_resets eth_pma_reset_t (.reset(areset), .independent_clock_bufg(independent_clock), .pma_reset(reset_iclk));
 
    //----------------------------------------------------------
-   // Reference clocks for Ethernet
+   // Ethernet Reference Clocks
 
    wire eth0_txoutclk, eth1_txoutclk;
    wire eth_gtrefclk, eth_mmcm_refclk;
@@ -79,8 +108,8 @@ module eth_jesd_gtp_phy #(
    assign gmii_clk = eth_userclk2;
 
    //Reference clock for Ethernet is connected to CLK0 of the GT Quad
-   IBUFDS_GTE2 refbuf0(.CEB(1'b0), .I(gtrefclk0_p), .IB(gtrefclk0_n), .O(eth_gtrefclk), .ODIV2());
-   BUFG erb(.I(eth_gtrefclk), .O(eth_gtrefclk_bufg));
+   IBUFDS_GTE2 grrefclk0_ibuf (.CEB(1'b0), .I(gtrefclk0_p), .IB(gtrefclk0_n), .O(eth_gtrefclk), .ODIV2());
+   BUFG grrefclk0_bufg (.I(eth_gtrefclk), .O(eth_gtrefclk_bufg));
 
    generate if (ETH_CLK_MASTER_PORT == 0) begin
      BUFG eth_mmcm_refclk_buf (.I(eth0_txoutclk), .O(eth_mmcm_refclk));
@@ -112,7 +141,7 @@ module eth_jesd_gtp_phy #(
       .rxuserclk(eth_userclk),            // 62.5 MHz global clock
       .rxuserclk2(eth_userclk),           // 62.5 MHz global clock
       .independent_clock_bufg(independent_clock),
-      .pma_reset(eth_pma_reset),              // reset syncd to system clock
+      .pma_reset(reset_iclk),              // reset syncd to system clock
       .mmcm_locked(eth_mmcm_locked),
       .gmii_txd(eth0gmii_txd),
       .gmii_tx_en(eth0gmii_tx_en),
@@ -137,8 +166,8 @@ module eth_jesd_gtp_phy #(
       .gt0_pll0lock_in(gt_pll0lock),
       .gt0_pll0reset_out(eth0_gt_pll0reset),
       .gt0_pll0refclklost_in(gt_pll0refclklost),
-      .gt0_pll1outclk_in(gt_pll1outclk),           // should be unused
-      .gt0_pll1outrefclk_in(gt_pll1outrefclk)      // should be unused
+      .gt0_pll1outclk_in(1'b0),           // should be unused
+      .gt0_pll1outrefclk_in(1'b0)      // should be unused
    );
 
    //----------------------------------------------------------
@@ -161,7 +190,7 @@ module eth_jesd_gtp_phy #(
       .rxuserclk(eth_userclk),            // 62.5 MHz global clock
       .rxuserclk2(eth_userclk),           // 62.5 MHz global clock
       .independent_clock_bufg(independent_clock),
-      .pma_reset(eth_pma_reset),              // reset syncd to system clock
+      .pma_reset(reset_iclk),              // reset syncd to system clock
       .mmcm_locked(eth_mmcm_locked),
       .gmii_txd(eth1gmii_txd),
       .gmii_tx_en(eth1gmii_tx_en),
@@ -186,8 +215,8 @@ module eth_jesd_gtp_phy #(
       .gt0_pll0lock_in(gt_pll0lock),
       .gt0_pll0reset_out(eth1_gt_pll0reset),
       .gt0_pll0refclklost_in(gt_pll0refclklost),
-      .gt0_pll1outclk_in(gt_pll1outclk), // should be unused
-      .gt0_pll1outrefclk_in(gt_pll1outrefclk)  // should be unused
+      .gt0_pll1outclk_in(1'b0), // should be unused
+      .gt0_pll1outrefclk_in(1'b0)  // should be unused
    );
 
    //----------------------------------------------------------
@@ -265,13 +294,199 @@ module eth_jesd_gtp_phy #(
    // Reset sequence from example design.
    // Addresses AR43482 and some other issues
    wire eth_gtpll0_reset, gt_pll0reset_in;
-   gige_phy_common_reset #( .STABLE_CLOCK_PERIOD(5)) core_gt_common_reset_i (
-      .STABLE_CLOCK               (independent_clock),
-      .SOFT_RESET                 (eth_pma_reset),
-      .COMMON_RESET               (eth_gtpll0_reset)
+   gige_phy_common_reset #(.STABLE_CLOCK_PERIOD(5)) core_gt_common_reset_i (
+      .STABLE_CLOCK(independent_clock),
+      .SOFT_RESET  (reset_iclk),
+      .COMMON_RESET(eth_gtpll0_reset)
    );
    
    assign gt_pll0reset_in = eth_gtpll0_reset || eth0_gt_pll0reset || eth1_gt_pll0reset;
+
+   //==========================================================
+   // JESD CHANNELS
+   //==========================================================
+
+   //----------------------------------------------------------
+   // JESD Reference Clocks
+
+   wire jesd_gtrefclk;
+
+   //Reference clock for JESD is connected to CLK1 of the GT Quad
+   IBUFDS_GTE2 grrefclk1_ibuf (.CEB(1'b0), .I(gtrefclk1_p), .IB(gtrefclk1_n), .O(jesd_gtrefclk), .ODIV2());
+
+   wire gt_pll1reset, gt_pll1lock, gt_pll1refclklost;
+   wire gt_pll1outclk, gt_pll1outrefclk;
+
+
+   //----------------------------------------------------------
+   // JESD MMCM
+
+   wire jesd_mmcm_locked, jesd0_mmcm_reset, jesd1_mmcm_reset;
+   wire jesd_core_clk_mmcm, jesd_clk;
+   wire jesd_user_clk_mmcm, jesd_user_clk;
+
+   MMCME2_ADV #(
+      .BANDWIDTH            ("OPTIMIZED"),
+      .CLKOUT4_CASCADE      ("FALSE"),
+      .COMPENSATION         ("ZHOLD"),
+      .STARTUP_WAIT         ("FALSE"),
+      .DIVCLK_DIVIDE        (1),
+      .CLKFBOUT_MULT_F      (10.000),
+      .CLKFBOUT_PHASE       (0.000),
+      .CLKFBOUT_USE_FINE_PS ("FALSE"),
+      .CLKOUT0_DIVIDE_F     (5.000),
+      .CLKOUT0_PHASE        (0.000),
+      .CLKOUT0_DUTY_CYCLE   (0.500),
+      .CLKOUT0_USE_FINE_PS  ("FALSE"),
+      .CLKIN1_PERIOD        (10.0)
+   ) jesd_mmcm_adv_inst (
+      .CLKFBOUT            (jesd_core_clk_mmcm),
+      .CLKFBOUTB           (),
+      .CLKOUT0             (jesd_user_clk_mmcm),
+      .CLKOUT0B            (),
+      .CLKOUT1             (),
+      .CLKOUT1B            (),
+      .CLKOUT2             (),
+      .CLKOUT2B            (),
+      .CLKOUT3             (),
+      .CLKOUT3B            (),
+      .CLKOUT4             (),
+      .CLKOUT5             (),
+      .CLKOUT6             (),
+      // Input clock control
+      .CLKFBIN             (jesd_clk),
+      .CLKIN1              (jesd_coreclk),
+      .CLKIN2              (1'b0),
+      // Tied to always select the primary input clock
+      .CLKINSEL            (1'b1),
+      // Ports for dynamic reconfiguration
+      .DADDR               (7'h0),
+      .DCLK                (1'b0),
+      .DEN                 (1'b0),
+      .DI                  (16'h0),
+      .DO                  (),
+      .DRDY                (),
+      .DWE                 (1'b0),
+      // Ports for dynamic phase shift
+      .PSCLK               (1'b0),
+      .PSEN                (1'b0),
+      .PSINCDEC            (1'b0),
+      .PSDONE              (),
+      // Other control and status signals
+      .LOCKED              (jesd_mmcm_locked),
+      .CLKINSTOPPED        (),
+      .CLKFBSTOPPED        (),
+      .PWRDWN              (1'b0),
+      .RST                 (jesd0_mmcm_reset || jesd1_mmcm_reset)
+   );
+
+   BUFG jesd_coreclk_buf (.O(jesd_clk), .I(jesd_core_clk_mmcm));
+   BUFG jesd_userclk_buf (.O(jesd_user_clk), .I(jesd_user_clk_mmcm));
+
+   //----------------------------------------------------------
+   // Instantiate JESD PHY0
+
+   wire jesd0_tx_reset_done, jesd0_rx_reset_done;
+   wire jesd0_gt_pll1reset;
+   
+   assign jesd0resetdone = jesd0_tx_reset_done && jesd0_rx_reset_done;
+
+   jesd_phy jesd204_phy_i0 (
+      // Clocks
+      .tx_core_clk            (jesd_clk),
+      .txoutclk               (),
+      .rx_core_clk            (jesd_clk),
+      .rxoutclk               (),
+      .txusrclk               (jesd_user_clk),
+      .rxusrclk               (jesd_user_clk),
+      // System Reset Inputs for each direction
+      .tx_sys_reset           (reset_iclk),
+      .rx_sys_reset           (reset_iclk),
+      // Reset Inputs for each direction
+      .tx_reset_gt            (1'b0),
+      .rx_reset_gt            (1'b0),
+      // Reset Done for each direction
+      .tx_reset_done          (jesd0_tx_reset_done),
+      .rx_reset_done          (jesd0_rx_reset_done),
+      // DRP
+      .drpclk                 (1'b0),
+      .drp_busy               (),
+      // MMCM Ports
+      .mmcm_lock              (jesd_mmcm_locked),
+      .mmcm_reset             (jesd0_mmcm_reset),
+      // Serial ports
+      .rxp_in                 (jesd0rx_p),
+      .rxn_in                 (jesd0rx_n),
+      .txp_out                (jesd0tx_p),
+      .txn_out                (jesd0tx_n),
+      // User Ports
+      .gt0_txdata             (jesd0txdata),
+      .gt0_txcharisk          (jesd0txcharisk),
+      .gt0_rxdata             (jesd0rxdata),
+      .gt0_rxcharisk          (jesd0rxcharisk),
+      .gt0_rxdisperr          (jesd0rxdisperr),
+      .gt0_rxnotintable       (jesd0rxnotintable),
+      .gt_prbssel             (3'b000),
+      .rxencommaalign         (1'b0),
+      // QPLL Ports
+      .common0_pll1_clk_in    (gt_pll1outclk),
+      .common0_pll1_refclk_in (gt_pll1outrefclk),
+      .common0_pll1_reset_out (jesd0_gt_pll1reset),
+      .common0_pll1_lock_in   (gt_pll1lock)
+   );
+
+   wire jesd1_tx_reset_done, jesd1_rx_reset_done;
+   wire jesd1_gt_pll1reset;
+   
+   assign jesd1resetdone = jesd1_tx_reset_done && jesd1_rx_reset_done;
+
+   jesd_phy jesd204_phy_i1 (
+      // Clocks
+      .tx_core_clk            (jesd_clk),
+      .txoutclk               (),
+      .rx_core_clk            (jesd_clk),
+      .rxoutclk               (),
+      .txusrclk               (jesd_user_clk),
+      .rxusrclk               (jesd_user_clk),
+      // System Reset Inputs for each direction
+      .tx_sys_reset           (reset_iclk),
+      .rx_sys_reset           (reset_iclk),
+      // Reset Inputs for each direction
+      .tx_reset_gt            (1'b0),
+      .rx_reset_gt            (1'b0),
+      // Reset Done for each direction
+      .tx_reset_done          (jesd1_tx_reset_done),
+      .rx_reset_done          (jesd1_rx_reset_done),
+      // DRP
+      .drpclk                 (1'b0),
+      .drp_busy               (),
+      // MMCM Ports
+      .mmcm_lock              (jesd_mmcm_locked),
+      .mmcm_reset             (jesd1_mmcm_reset),
+      // Serial ports
+      .rxp_in                 (jesd1rx_p),
+      .rxn_in                 (jesd1rx_n),
+      .txp_out                (jesd1tx_p),
+      .txn_out                (jesd1tx_n),
+      // User Ports
+      .gt0_txdata             (jesd1txdata),
+      .gt0_txcharisk          (jesd1txcharisk),
+      .gt0_rxdata             (jesd1rxdata),
+      .gt0_rxcharisk          (jesd1rxcharisk),
+      .gt0_rxdisperr          (jesd1rxdisperr),
+      .gt0_rxnotintable       (jesd1rxnotintable),
+      .gt_prbssel             (3'b000),
+      .rxencommaalign         (1'b0),
+      // QPLL Ports
+      .common0_pll1_clk_in    (gt_pll1outclk),
+      .common0_pll1_refclk_in (gt_pll1outrefclk),
+      .common0_pll1_reset_out (jesd1_gt_pll1reset),
+      .common0_pll1_lock_in   (gt_pll1lock)
+   );
+
+   //==========================================================
+   // COMMON
+   //==========================================================
 
    //----------------------------------------------------------
    // Instantiate a GTPE2_COMMON block
@@ -289,10 +504,10 @@ module eth_jesd_gtp_phy #(
    wire cpll0_reset_i = cpll0_reset_wait[127];
 
    localparam PLL0_FBDIV_IN      = 4;
-   localparam PLL1_FBDIV_IN      = 1;
    localparam PLL0_FBDIV_45_IN   = 5;
-   localparam PLL1_FBDIV_45_IN   = 4;
    localparam PLL0_REFCLK_DIV_IN = 1;
+   localparam PLL1_FBDIV_IN      = 4;
+   localparam PLL1_FBDIV_45_IN   = 5;
    localparam PLL1_REFCLK_DIV_IN = 1;
 
    GTPE2_COMMON #
@@ -339,13 +554,13 @@ module eth_jesd_gtp_phy #(
       .GTEASTREFCLK1       (1'b0),
       .GTGREFCLK1          (1'b0),
       .GTREFCLK0           (eth_gtrefclk),
-      .GTREFCLK1           (1'b0),
+      .GTREFCLK1           (jesd_gtrefclk),
       .GTWESTREFCLK0       (1'b0),
       .GTWESTREFCLK1       (1'b0),
       .PLL0OUTCLK          (gt_pll0outclk),
       .PLL0OUTREFCLK       (gt_pll0outrefclk),
-      .PLL1OUTCLK          (),
-      .PLL1OUTREFCLK       (),
+      .PLL1OUTCLK          (gt_pll1outclk),
+      .PLL1OUTREFCLK       (gt_pll1outrefclk),
       //------------------------ Common Block - PLL Ports ------------------------
       .PLL0FBCLKLOST       (),
       .PLL0LOCK            (gt_pll0lock),
@@ -353,16 +568,16 @@ module eth_jesd_gtp_phy #(
       .PLL0LOCKEN          (1'b1),
       .PLL0PD              (cpll0_pd_i),
       .PLL0REFCLKLOST      (gt_pll0refclklost),
-      .PLL0REFCLKSEL       (3'b001),
+      .PLL0REFCLKSEL       (3'b001),   //Use GTREFCLK0
       .PLL0RESET           (gt_pll0reset_in || cpll0_reset_i),
       .PLL1FBCLKLOST       (),
-      .PLL1LOCK            (),
+      .PLL1LOCK            (gt_pll1lock),
       .PLL1LOCKDETCLK      (1'b0),
       .PLL1LOCKEN          (1'b1),
-      .PLL1PD              (1'b1),
-      .PLL1REFCLKLOST      (),
-      .PLL1REFCLKSEL       (3'b001),
-      .PLL1RESET           (1'b0),
+      .PLL1PD              (1'b0),
+      .PLL1REFCLKLOST      (gt_pll1refclklost),
+      .PLL1REFCLKSEL       (3'b010),   //Use GTREFCLK1
+      .PLL1RESET           (jesd0_gt_pll1reset || jesd1_gt_pll1reset),
       //-------------------------- Common Block - Ports --------------------------
       .BGRCALOVRDENB       (1'b1),
       .GTGREFCLK0          (1'b0),
@@ -380,6 +595,5 @@ module eth_jesd_gtp_phy #(
       .PMARSVD             (8'b00000000),
       .RCALENB             (1'b1)
    );
-
 
 endmodule

@@ -169,7 +169,17 @@ module n230 (
    output         CODEC_LOOP_CLK_OUT_P, // lvds clock out
    output         CODEC_LOOP_CLK_OUT_N,
    input          CODEC_LOOP_CLK_IN_P, // MGT refclk in
-   input          CODEC_LOOP_CLK_IN_N
+   input          CODEC_LOOP_CLK_IN_N,
+   
+   input          JESD0_RX_P,
+   input          JESD0_RX_N,
+   output         JESD0_TX_P,
+   output         JESD0_TX_N,
+
+   input          JESD1_RX_P,
+   input          JESD1_RX_N,
+   output         JESD1_TX_P,
+   output         JESD1_TX_N
    //------------------------------------------------------------------
    // JESD interface 1 signals
    //------------------------------------------------------------------
@@ -312,15 +322,7 @@ module n230 (
    wire   radio_clk; // Frequency determined by Catalina Programming
    wire   radio_clk_2x; // Double radio_clk freq.
    wire   clk200; // 200MHz fixed frequency clock (For DELAY I/O)
-
-
-   // send the clock off-chip, it comes back in as the reference clock for the jesd GT transceiver
-   // We need to place an ODDR register here to get the clock signal out of the FPGA cleanly.
-   wire   codec_loop_clk_out;
-
-   ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) codec_loop_clk_out_i
-     (.Q(codec_loop_clk_out), .C(radio_clk), .CE(1'b1), .D1(1'b0), .D2(1'b1), .R(1'b0), .S(1'b0));
-   OBUFDS clock_out_OBUFDS_i0 (.I(codec_loop_clk_out), .O(CODEC_LOOP_CLK_OUT_P), .OB(CODEC_LOOP_CLK_OUT_N));
+   wire   clk100; // 100MHz fixed frequency clock looped back as JESD GT refclk
 
    wire catclk_92_16; // TODO:
    assign catclk_92_16 = radio_clk;
@@ -351,10 +353,18 @@ module n230 (
       .clk_out_80mhz_270(bus_clk_270),
       .clk_out_80mhz(bus_clk),
       .clk_out_200mhz(clk200),
+      .clk_out_100mhz(clk100),
       // Status and control signals
       .reset(reset_global),
       .locked(locked)
    );
+   
+   // send the clock off-chip, it comes back in as the reference clock for the jesd GT transceiver
+   // We need to place an ODDR register here to get the clock signal out of the FPGA cleanly.
+   wire   codec_loop_clk_out;
+   ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) codec_loop_clk_out_i
+     (.Q(codec_loop_clk_out), .C(clk100), .CE(1'b1), .D1(1'b0), .D2(1'b1), .R(1'b0), .S(1'b0));
+   OBUFDS clock_out_OBUFDS_i0 (.I(codec_loop_clk_out), .O(CODEC_LOOP_CLK_OUT_P), .OB(CODEC_LOOP_CLK_OUT_N));
 
    //hold-off logic for clocks ready
    reg [15:0] clocks_ready_count;
@@ -763,18 +773,20 @@ module n230 (
    eth_jesd_gtp_phy quad_phy_i (
       .areset(reset_global | sw_rst[0]),
       .independent_clock(bus_clk),
+
       .gtrefclk0_p(SFPX_CLK_P), .gtrefclk0_n(SFPX_CLK_N),
-//      .gtrefclk0_p(), .gtrefclk0_n(),
+      .gtrefclk1_p(CODEC_LOOP_CLK_IN_P), .gtrefclk1_n(CODEC_LOOP_CLK_IN_N),
+
       .sfp0rx_p(SFP0_RX_P), .sfp0rx_n(SFP0_RX_N),
       .sfp0tx_p(SFP0_TX_P), .sfp0tx_n(SFP0_TX_N),
       .sfp1rx_p(SFP1_RX_P), .sfp1rx_n(SFP1_RX_N),
       .sfp1tx_p(SFP1_TX_P), .sfp1tx_n(SFP1_TX_N),
-//   output         jesd0tx_p, jesd0tx_n,
-//   output         jesd0frame_p, jesd0_frame_n,
-//   input          jesd0sync_p, jesd0_sync_n,
-//   output         jesd1tx_p, jesd1tx_n,
-//   output         jesd1frame_p, jesd1_frame_n,
-//   input          jesd1sync_p, jesd1_sync_n,
+
+      .jesd0rx_p(JESD0_RX_P), .jesd0rx_n(JESD0_RX_N),
+      .jesd0tx_p(JESD0_TX_P), .jesd0tx_n(JESD0_TX_N),
+      .jesd1rx_p(JESD1_RX_P), .jesd1rx_n(JESD1_RX_N),
+      .jesd1tx_p(JESD1_TX_P), .jesd1tx_n(JESD1_TX_N),
+
       .eth_gtrefclk_bufg(),
       .gmii_clk(gmii_clk),
 
@@ -808,7 +820,26 @@ module n230 (
 
       .eth1status_vector(gmii_status1),
       .eth1signal_detect(~SFP1_RXLOS),
-      .eth1resetdone(ge_phy_resetdone1)
+      .eth1resetdone(ge_phy_resetdone1),
+      
+      .jesd_coreclk(clk100),
+      .jesd_clk(),
+
+      .jesd0txdata(32'hCCCCCCCC),
+      .jesd0txcharisk(4'b0000),
+      .jesd0rxdata(),
+      .jesd0rxcharisk(),
+      .jesd0rxdisperr(),
+      .jesd0rxnotintable(),
+      .jesd0resetdone(),
+
+      .jesd1txdata(32'h55555555),
+      .jesd1txcharisk(4'b0000),
+      .jesd1rxdata(),
+      .jesd1rxcharisk(),
+      .jesd1rxdisperr(),
+      .jesd1rxnotintable(),
+      .jesd1resetdone()
    );
 
 

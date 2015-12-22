@@ -322,8 +322,18 @@ set_property PACKAGE_PIN      V13         [get_ports CODEC_LOOP_CLK_OUT_P]
 set_property PACKAGE_PIN      V14         [get_ports CODEC_LOOP_CLK_OUT_N]
 set_property IOSTANDARD       LVDS_25     [get_ports CODEC_LOOP_CLK_OUT_*]
 # CPRI - Put these pins back in later.
-#set_property PACKAGE_PIN      F10         [get_ports CODEC_LOOP_CLK_IN_P]
-#set_property PACKAGE_PIN      E10         [get_ports CODEC_LOOP_CLK_IN_N]
+set_property PACKAGE_PIN      F10         [get_ports CODEC_LOOP_CLK_IN_P]
+set_property PACKAGE_PIN      E10         [get_ports CODEC_LOOP_CLK_IN_N]
+
+set_property PACKAGE_PIN      D9          [get_ports JESD0_RX_P]
+set_property PACKAGE_PIN      C9          [get_ports JESD0_RX_N]
+set_property PACKAGE_PIN      D7          [get_ports JESD0_TX_P]
+set_property PACKAGE_PIN      C7          [get_ports JESD0_TX_N]
+
+set_property PACKAGE_PIN      B10         [get_ports JESD1_RX_P]
+set_property PACKAGE_PIN      A10         [get_ports JESD1_RX_N]
+set_property PACKAGE_PIN      B6          [get_ports JESD1_TX_P]
+set_property PACKAGE_PIN      A6          [get_ports JESD1_TX_N]
 
 #
 # Ext SRAM
@@ -453,3 +463,4 @@ set_property IOSTANDARD       LVCMOS25    [get_ports RAM_CE1n]
 set_property DRIVE            8           [get_ports RAM_CLK]
 set_property PACKAGE_PIN      J20         [get_ports RAM_CLK]
 set_property IOSTANDARD       LVCMOS25    [get_ports RAM_CLK]
+

@@ -20,6 +20,7 @@ create_clock -name CODEC_DATA_CLK -period 5.000 -waveform {0.75 3.25} [get_ports
 create_generated_clock -name bus_clk      [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT0}]
 create_generated_clock -name bus_clk_270  [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT1}]
 create_generated_clock -name clk200       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT2}]
+create_generated_clock -name clk100       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT3}]
 
 ## Virtual clocks 
 
@@ -30,10 +31,10 @@ create_clock -name CODEC_CLK -period 5
 # Show which clocks that hand off data are Async
 #
 set_clock_groups -group  [get_clocks sdr_clk] -group  [get_clocks bus_clk] -asynchronous
-set_clock_groups -group  [get_clocks sdr_clk] -group  [get_clocks clkout0] -asynchronous
+set_clock_groups -group  [get_clocks sdr_clk] -group  [get_clocks eth_mmcm_clkout0] -asynchronous
 set_clock_groups -group  [get_clocks sdr_clk_2x] -group  [get_clocks bus_clk] -asynchronous
-set_clock_groups -group  [get_clocks sdr_clk_2x] -group  [get_clocks clkout0] -asynchronous
-set_clock_groups -group  [get_clocks bus_clk] -group  [get_clocks clkout0] -asynchronous
+set_clock_groups -group  [get_clocks sdr_clk_2x] -group  [get_clocks eth_mmcm_clkout0] -asynchronous
+set_clock_groups -group  [get_clocks bus_clk] -group  [get_clocks eth_mmcm_clkout0] -asynchronous
 
 # Delays created to maximize setup/hold window without creating timing violations.
 # In the application we can program delays at all drivers.
