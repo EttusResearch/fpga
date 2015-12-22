@@ -270,10 +270,10 @@ set_property PACKAGE_PIN      A4          [get_ports SFP0_TX_N]
 #
 # SFP1 - Serial Data - Highspeed transceiver signals
 #
-#set_property PACKAGE_PIN      D11         [get_ports SFP1_RX_P]
-#set_property PACKAGE_PIN      C11         [get_ports SFP1_RX_N]
-#set_property PACKAGE_PIN      D5          [get_ports SFP1_TX_P]
-#set_property PACKAGE_PIN      C5          [get_ports SFP1_TX_N]
+set_property PACKAGE_PIN      D11         [get_ports SFP1_RX_P]
+set_property PACKAGE_PIN      C11         [get_ports SFP1_RX_N]
+set_property PACKAGE_PIN      D5          [get_ports SFP1_TX_P]
+set_property PACKAGE_PIN      C5          [get_ports SFP1_TX_N]
 
 #
 # SFP0 - Low speed supporting signals

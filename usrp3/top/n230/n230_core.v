@@ -116,7 +116,6 @@ module n230_core #(
    //------------------------------------------------------------------
    // GMII interface 1 to PHY
    //------------------------------------------------------------------
-   `ifdef ETH1G_PORT1
    input gmii_clk1,
    output [7:0] gmii_txd1,
    output gmii_tx_en1,
@@ -127,7 +126,6 @@ module n230_core #(
    output mdc1,
    output mdio_in1,
    input mdio_out1,
-   `endif
    //------------------------------------------------------------------
    // External ZBT SRAM FIFO
    //------------------------------------------------------------------
@@ -767,7 +765,6 @@ module n230_core #(
       //------------------------------------------------------------------
       // GMII interface 1 to PHY
       //------------------------------------------------------------------
-      `ifdef ETH1G_PORT1
       .gmii_clk1(gmii_clk1),
       .gmii_txd1(gmii_txd1),
       .gmii_tx_en1(gmii_tx_en1),
@@ -778,7 +775,6 @@ module n230_core #(
       .mdc1(mdc1),
       .mdio_in1(mdio_in1),
       .mdio_out1(mdio_out1),
-      `endif
       //------------------------------------------------------------------
       // ETH0 streaming interfaces
       //------------------------------------------------------------------
@@ -869,7 +865,6 @@ module n230_core #(
       .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready),
       .debug());
 
-`ifdef ETH1G_PORT1
    eth_interface #(.BASE(SR_ZPU_ETHINT1)) eth_interface1
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .set_stb(set_zpu_stb), .set_addr(set_zpu_addr), .set_data(set_zpu_data),
@@ -884,21 +879,6 @@ module n230_core #(
       .e2z_tdata(zpui1_tdata), .e2z_tuser(zpui1_tuser), .e2z_tlast(zpui1_tlast), .e2z_tvalid(zpui1_tvalid), .e2z_tready(zpui1_tready),
       .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready),
       .debug());
-`else // !`ifdef ETH1G_PORT1
-   // XO interface
-   assign      e10_tlast = 1'b0;
-   assign      e10_tvalid = 1'b0;
-   assign      e10_tuser = 4'd0;
-   assign      e10_tdata = 64'd0;
-   assign      e01_tready = 1'b1; // Always accept and discard.
-
-   // ZPU Interface
-   assign      zpui1_tuser = 4'd0;
-   assign      zpui1_tdata = 64'd0;
-   assign      zpui1_tlast = 1'b0;
-   assign      zpui1_tvalid = 1'b0;
-   assign      zpuo1_tready = 1'b1; // Always accept and discard.
-`endif
 
    //------------------------------------------------------------------
    // Mux packets from either Eth interface to the ZPU

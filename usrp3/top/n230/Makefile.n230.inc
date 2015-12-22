@@ -43,6 +43,7 @@ zpu_bootram.v \
 zpu_subsystem.v \
 phy_clump.v \
 n230_test_jesd204_if.v \
+eth_jesd_gtp_phy.v \
 n230.xdc \
 timing.xdc \
 )

@@ -72,7 +72,6 @@ module zpu_subsystem #(
    //------------------------------------------------------------------
    // GMII interface 0 to PHY
    //------------------------------------------------------------------
-   `ifdef ETH1G_PORT1
    input gmii_clk1,
    output [7:0] gmii_txd1,
    output gmii_tx_en1,
@@ -83,7 +82,6 @@ module zpu_subsystem #(
    output mdc1,
    output mdio_in1,
    input mdio_out1,
-   `endif
    //------------------------------------------------------------------
    // ETH0 streaming interfaces
    //------------------------------------------------------------------
@@ -101,7 +99,6 @@ module zpu_subsystem #(
    //------------------------------------------------------------------
    // ETH1 streaming interfaces
    //------------------------------------------------------------------
-   `ifdef ETH1G_PORT1
    input [63:0] eth1_tx_tdata,
    input [3:0] eth1_tx_tuser,
    input eth1_tx_tlast,
@@ -111,8 +108,7 @@ module zpu_subsystem #(
    output [3:0] eth1_rx_tuser,
    output eth1_rx_tlast,
    output eth1_rx_tvalid,
-   input eth1_rx_tready,Xilinx_Vivado_Lin_2013.3_1017_1
-   `endif
+   input eth1_rx_tready,
    //------------------------------------------------------------------
    // UARTs
    //------------------------------------------------------------------
@@ -409,7 +405,6 @@ module zpu_subsystem #(
    ////////////////////////////////////////////////////////////////////
    // Etherenet MAC1 -- Slave #5
    ////////////////////////////////////////////////////////////////////
-`ifdef ETH1G_PORT1
    wire      mdio_tri1;
 
    simple_gemac_wrapper #(
@@ -441,9 +436,6 @@ module zpu_subsystem #(
       // Debug
       .debug_tx(), .debug_rx()
    );
-`else // !`ifdef ETH1G_PORT1
-   assign {s5_dat_i, s5_ack} = 33'b0;
-`endif // !`ifdef ETH1G_PORT1
 
    ////////////////////////////////////////////////////////////////////
    // I2C0 -- Slave #6

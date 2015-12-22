@@ -133,12 +133,11 @@ module n230 (
    input          SFP0_RX_N,
    output         SFP0_TX_P, // MGT
    output         SFP0_TX_N,
-   `ifdef ETH1G_PORT1
+
    input          SFP1_RX_P, // MGT
    input          SFP1_RX_N,
    output         SFP1_TX_P, // MGT
    output         SFP1_TX_N,
-   `endif
    //------------------------------------------------------------------
    // SFP (low speed signals)
    //------------------------------------------------------------------
@@ -703,7 +702,6 @@ module n230 (
       //------------------------------------------------------------------
       // GMII interface 1 to PHY
       //------------------------------------------------------------------
-      `ifdef ETH1G_PORT1
       .gmii_clk1(gmii_clk),
       .gmii_txd1(gmii_txd1),
       .gmii_tx_en1(gmii_tx_en1),
@@ -714,7 +712,6 @@ module n230 (
       .mdc1(mdc1),
       .mdio_in1(mdio_in1),
       .mdio_out1(mdio_out1),
-      `endif
       //------------------------------------------------------------------
       // External ZBT SRAM FIFO
       //------------------------------------------------------------------
@@ -757,65 +754,63 @@ module n230 (
       .debug()
    );
 
-   wire [15:0] gmii_status0;   // Debug info useful for chipscope use.
+   wire        ge_phy_resetdone0, ge_phy_resetdone1;
+   wire [15:0] gmii_status0, gmii_status1;   // Debug info useful for chipscope use.
 
    OBUF pin_SFP0_TxDisable (.I(1'b0), .O(SFP0_TXDISABLE));
    OBUF pin_SFP1_TxDisable (.I(1'b0), .O(SFP1_TXDISABLE));
 
-   gige_phy_support gige_phy_support_i (
-      //
-      // Transceiver Interface
-      //----------------------
-      .gtrefclk_p(SFPX_CLK_P),                // 125 MHz differential clock
-      .gtrefclk_n(SFPX_CLK_N),                // 125 MHz differential clock
-      .gtrefclk_out(),              // Very high quality 125MHz clock for GT transceiver.
-      .txp(SFP0_TX_P),                   // Differential +ve of serial transmission from PMA to PMD.
-      .txn(SFP0_TX_N),                   // Differential -ve of serial transmission from PMA to PMD.
-      .rxp(SFP0_RX_P),                   // Differential +ve for serial reception from PMD to PMA.
-      .rxn(SFP0_RX_N),                   // Differential -ve for serial reception from PMD to PMA.
-      .userclk_out(),               // 62.5MHz global clock.
-      .userclk2_out(gmii_clk),              // 125MHz global clock.
-      .rxuserclk_out(),               // 62.5MHz global clock.
-      .rxuserclk2_out(),              // 62.5MHz global clock.
-      .independent_clock_bufg(bus_clk),// 200MHz Independent clock,
-      .pma_reset_out(),             // transceiver PMA reset signal
-      .mmcm_locked_out(),           // MMCM Locked
-      .resetdone(ge_phy_resetdone0), //IJB Connect to core like X300
-      //
-      // GMII Interface
-      //---------------
-      .gmii_txd(gmii_txd0),              // Transmit data from client MAC. [7:0]
-      .gmii_tx_en(gmii_tx_en0),            // Transmit control signal from client MAC.
-      .gmii_tx_er(gmii_tx_er0),            // Transmit control signal from client MAC.
-      .gmii_rxd(gmii_rxd0),              // Received Data to client MAC. [7:0]
-      .gmii_rx_dv(gmii_rx_dv0),            // Received control signal to client MAC.
-      .gmii_rx_er(gmii_rx_er0),            // Received control signal to client MAC.
-      .gmii_isolate(),          // Tristate control to electrically isolate GMII.
-      //
-      // Management: MDIO Interface
-      //---------------------------
+   eth_jesd_gtp_phy quad_phy_i (
+      .areset(reset_global | sw_rst[0]),
+      .independent_clock(bus_clk),
+      .gtrefclk0_p(SFPX_CLK_P), .gtrefclk0_n(SFPX_CLK_N),
+//      .gtrefclk0_p(), .gtrefclk0_n(),
+      .sfp0rx_p(SFP0_RX_P), .sfp0rx_n(SFP0_RX_N),
+      .sfp0tx_p(SFP0_TX_P), .sfp0tx_n(SFP0_TX_N),
+      .sfp1rx_p(SFP1_RX_P), .sfp1rx_n(SFP1_RX_N),
+      .sfp1tx_p(SFP1_TX_P), .sfp1tx_n(SFP1_TX_N),
+//   output         jesd0tx_p, jesd0tx_n,
+//   output         jesd0frame_p, jesd0_frame_n,
+//   input          jesd0sync_p, jesd0_sync_n,
+//   output         jesd1tx_p, jesd1tx_n,
+//   output         jesd1frame_p, jesd1_frame_n,
+//   input          jesd1sync_p, jesd1_sync_n,
+      .eth_gtrefclk_bufg(),
+      .gmii_clk(gmii_clk),
 
-      .mdc(mdc0),                   // Management Data Clock
-      .mdio_i(mdio_in0),                // Management Data In
-      .mdio_o(mdio_out0),                // Management Data Out
-      .mdio_t(mdio_tri0),                // Management Data Tristate
-      .configuration_vector(5'b00000),  // Alternative to MDIO interface. [4:0]
-      .configuration_valid(1'b1),   // Validation signal for Config vector
-      //
-      // General IO's
-      //-------------
-      .status_vector(gmii_status0),         // Core status. [15:0]
-      .reset(reset_global | sw_rst[0]),                 // Asynchronous reset for entire core.
-      // IJB. signal detect has use in optical but not copper apps? See PG047 page 317
-      .signal_detect(1'b1),          // Input from PMD to indicate presence of optical input.
-      .gt0_pll0outclk_out(),
-      .gt0_pll0outrefclk_out(),
-      .gt0_pll1outclk_out(),
-      .gt0_pll1outrefclk_out(),
+      .eth0gmii_txd(gmii_txd0),              // Transmit data from client MAC. [7:0]
+      .eth0gmii_tx_en(gmii_tx_en0),            // Transmit control signal from client MAC.
+      .eth0gmii_tx_er(gmii_tx_er0),            // Transmit control signal from client MAC.
+      .eth0gmii_rxd(gmii_rxd0),              // Received Data to client MAC. [7:0]
+      .eth0gmii_rx_dv(gmii_rx_dv0),            // Received control signal to client MAC.
+      .eth0gmii_rx_er(gmii_rx_er0),            // Received control signal to client MAC.
+      .eth0gmii_isolate(),          // Tristate control to electrically isolate GMII.
 
-      .gt0_pll0lock_out(),
-      .gt0_pll0refclklost_out()
+      .eth0mdc(mdc0),                   // Management Data Clock
+      .eth0mdio_i(mdio_in0),                // Management Data In
+      .eth0mdio_o(mdio_out0),                // Management Data Out
+
+      .eth0status_vector(gmii_status0),
+      .eth0signal_detect(~SFP0_RXLOS),
+      .eth0resetdone(ge_phy_resetdone0),
+
+      .eth1gmii_txd(gmii_txd1),              // Transmit data from client MAC. [7:0]
+      .eth1gmii_tx_en(gmii_tx_en1),            // Transmit control signal from client MAC.
+      .eth1gmii_tx_er(gmii_tx_er1),            // Transmit control signal from client MAC.
+      .eth1gmii_rxd(gmii_rxd1),              // Received Data to client MAC. [7:0]
+      .eth1gmii_rx_dv(gmii_rx_dv1),            // Received control signal to client MAC.
+      .eth1gmii_rx_er(gmii_rx_er1),            // Received control signal to client MAC.
+      .eth1gmii_isolate(),          // Tristate control to electrically isolate GMII.
+
+      .eth1mdc(mdc1),                   // Management Data Clock
+      .eth1mdio_i(mdio_in1),                // Management Data In
+      .eth1mdio_o(mdio_out1),                // Management Data Out
+
+      .eth1status_vector(gmii_status1),
+      .eth1signal_detect(~SFP1_RXLOS),
+      .eth1resetdone(ge_phy_resetdone1)
    );
+
 
    ///////////////////////////////////////////////////////////////////////
    // Debug port
