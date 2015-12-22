@@ -762,7 +762,7 @@ module n230 (
    OBUF pin_SFP0_TxDisable (.I(1'b0), .O(SFP0_TXDISABLE));
    OBUF pin_SFP1_TxDisable (.I(1'b0), .O(SFP1_TXDISABLE));
 
-   gige_sfp0_support gige_sfp0_support_i (
+   gige_phy_support gige_phy_support_i (
       //
       // Transceiver Interface
       //----------------------
