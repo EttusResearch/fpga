@@ -64,7 +64,7 @@ module noc_block_radio_core #(
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     // Misc
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(resp_dst_sid), .resp_out_dst_sid(/* Unused */),
+    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(resp_in_dst_sid), .resp_out_dst_sid(resp_out_dst_sid),
     .debug(debug));
 
   // Disable unused response port
@@ -141,7 +141,8 @@ module noc_block_radio_core #(
         .clk(ce_clk), .reset(ce_rst),
         .src_sid(src_sid[16*i+15:16*i]),
         .dst_sid(next_dst_sid[16*i+15:16*i]),
-        .resp_dst_sid(resp_dst_sid[16*i+15:16*i]),
+        .rx_resp_dst_sid(resp_out_dst_sid[16*i+15:16*i]),
+        .tx_resp_dst_sid(resp_in_dst_sid[16*i+15:16*i]),
         .rx(rx[32*i+31:32*i]), .rx_stb(rx_stb),
         .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb),
         .pps(pps),
