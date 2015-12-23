@@ -13,7 +13,7 @@ module cvita_hdr_parser #(
   output [11:0] seqnum, output [15:0] pkt_len, output [31:0] sid,
   output vita_time_stb,
   output [63:0] vita_time,
-  input [63:0] i_tdata, input i_tlast, input i_tvalid, input i_tready,
+  input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
 

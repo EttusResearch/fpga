@@ -12,7 +12,7 @@ module noc_responder #(
   input clk, input reset, input clear,
   input [31:0] resp_sid,          // Stream ID used with response packets
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
-  input [63:0] i_tdata, input i_tlast, input i_tvalid, input i_tready,
+  input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
   output [63:0] fc_tdata, output fc_tlast, output fc_tvalid, input fc_tready,
   output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready
