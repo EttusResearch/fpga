@@ -37,7 +37,7 @@ set_clock_groups -logically_exclusive \
   -group [get_clocks -include_generated_clocks {clkdv}]
 
 # Setup ADC (AD9361) interface constraints.
-set cat_data_prog_dly               2.4;  # Programmable skew set to delay RX data by 2.4 ns
+set cat_data_prog_dly               4.5;  # Programmable skew in AD9361 set to delay RX data by 4.5 ns
 set cat_data_clk_to_data_out_min    0;
 set cat_data_clk_to_data_out_max    1.2;
 
@@ -46,7 +46,7 @@ set_input_delay -clock [get_clocks CAT_DATA_CLK] -min [expr $cat_data_prog_dly +
 set_input_delay -clock [get_clocks CAT_DATA_CLK] -max [expr $cat_data_prog_dly + $cat_data_clk_to_data_out_max] [get_ports {CAT_P0_D* CAT_RX_FRAME}] -clock_fall -add_delay
 set_input_delay -clock [get_clocks CAT_DATA_CLK] -min [expr $cat_data_prog_dly + $cat_data_clk_to_data_out_min] [get_ports {CAT_P0_D* CAT_RX_FRAME}] -clock_fall -add_delay
 
-set cat_fb_data_prog_dly            4.5;  # Programmable skew set to delay TX data by 4.5 ns
+set cat_fb_data_prog_dly            4.5;  # Programmable skew in AD9361 set to delay TX data by 4.5 ns
 set cat_fb_data_setup               1.0;
 set cat_fb_data_hold                0;
 

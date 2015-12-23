@@ -29,33 +29,32 @@ module e310_io (
 );
 
   // Synchronize asynchronous reset and MIMO
-  wire reset;
-  synchronizer #(.STAGES(3), .INITIAL_VAL(1'b1)) sychronizer_reset (
-    .clk(rx_clk), .rst(areset), .in(1'b0), .out(reset));
+  synchronizer #(.STAGES(3), .INITIAL_VAL(1'b1)) sychronizer_radio_rst (
+    .clk(radio_clk), .rst(areset), .in(1'b0), .out(radio_rst));
 
   wire mimo_sync;
-  synchronizer synchronizer_mimo (.clk(rx_clk), .rst(reset), .in(mimo), .out(mimo_sync));
+  synchronizer synchronizer_mimo (.clk(radio_clk), .rst(rx_rst), .in(mimo), .out(mimo_sync));
 
   /****************************************************************************
   ** RX Capture Interface
   ****************************************************************************/
-  assign radio_rst = reset;
-
-  BUFG bufg_radio_clk (.I(rx_clk), .O(radio_clk));
+  wire rx_clk_bufr; // Capture clock
+  BUFR bufr_rx_clk (.I(rx_clk), .O(rx_clk_bufr));
+  BUFG bufg_radio_clk (.I(rx_clk_bufr), .O(radio_clk));
 
   wire [11:0] rx_i, rx_q;
   genvar n;
   generate
     for (n = 0; n < 12; n = n + 1) begin
       IDDR #(.DDR_CLK_EDGE("SAME_EDGE")) iddr (
-        .C(rx_clk), .CE(1'b1), .R(1'b0), .S(1'b0),
+        .C(rx_clk_bufr), .CE(1'b1), .R(1'b0), .S(1'b0),
         .D(rx_data[n]), .Q1(rx_q[n]), .Q2(rx_i[n]));
     end
   endgenerate
 
   wire rx_frame_rising, rx_frame_falling;
   IDDR #(.DDR_CLK_EDGE("SAME_EDGE")) iddr_frame (
-    .C(rx_clk), .CE(1'b1), .R(1'b0), .S(1'b0),
+    .C(rx_clk_bufr), .CE(1'b1), .R(1'b0), .S(1'b0),
     .D(rx_frame), .Q1(rx_frame_rising), .Q2(rx_frame_falling));
 
   always @(posedge radio_clk or posedge radio_rst) begin
