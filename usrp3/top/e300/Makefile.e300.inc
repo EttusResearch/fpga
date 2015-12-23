@@ -36,6 +36,7 @@ include ../../lib/io_cap_gen/Makefile.srcs
 ##################################################
 TOP_SRCS = e300_ps.v \
            e300_core.v \
+           e300_io.v \
            ppsloop.v \
            spi_slave.v \
            axi_pmu.v \

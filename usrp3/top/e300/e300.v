@@ -476,14 +476,6 @@ module e300
   //------------------------------------------------------------------
   //-- generate clock and reset signals
   //------------------------------------------------------------------
-
-  reset_sync radio_rst_sync
-  (
-    .clk(radio_clk),
-    .reset_in(bus_rst | codec_arst),
-    .reset_out(radio_rst)
-  );
-
   assign bus_clk = fclk_clk0;
   assign bus_rst = fclk_reset0;
 
@@ -492,24 +484,36 @@ module e300
   //------------------------------------------------------------------
   wire mimo;
   wire codec_arst;
+  wire [11:0] rx_i0, rx_q0, rx_i1, rx_q1, tx_i0, tx_q0, tx_i1, tx_q1;
   wire [31:0] rx_data0, rx_data1, tx_data0, tx_data1;
+  assign rx_data0      = {rx_i0,4'd0,rx_q0,4'd0};
+  assign rx_data1      = {rx_i1,4'd0,rx_q1,4'd0};
+  assign {tx_i0,tx_q0} = {tx_data0[31:20],tx_data0[15:4]};
+  assign {tx_i1,tx_q1} = {tx_data1[31:20],tx_data1[15:4]};
 
-  catcodec_ddr_cmos #(
-    .DEVICE("7SERIES"))
-  inst_catcodec_ddr_cmos (
-    .radio_clk(radio_clk),
-    .arst(codec_arst),
-    .mimo(mimo),
-    .rx1(rx_data0),
-    .rx2(rx_data1),
-    .tx1(tx_data0),
-    .tx2(tx_data1),
-    .rx_clk(CAT_DATA_CLK),
-    .rx_frame(CAT_RX_FRAME),
-    .rx_d(CAT_P0_D),
-    .tx_clk(CAT_FB_CLK),
-    .tx_frame(CAT_TX_FRAME),
-    .tx_d(CAT_P1_D));
+  e310_io e310_io (
+  .areset(codec_arst),
+  .mimo(mimo),
+  // Baseband sample interface
+  .radio_clk(radio_clk),
+  .radio_rst(radio_rst),
+  .rx_i0(rx_i0),
+  .rx_q0(rx_q0),
+  .rx_i1(rx_i1),
+  .rx_q1(rx_q1),
+  .rx_stb(rx_stb),
+  .tx_i0(tx_i0),
+  .tx_q0(tx_q0),
+  .tx_i1(tx_i1),
+  .tx_q1(tx_q1),
+  .tx_stb(tx_stb),
+  // AD9361 interface
+  .rx_clk(CAT_DATA_CLK),
+  .rx_frame(CAT_RX_FRAME),
+  .rx_data(CAT_P0_D),
+  .tx_clk(CAT_FB_CLK),
+  .tx_frame(CAT_TX_FRAME),
+  .tx_data(CAT_P1_D));
 
   assign CAT_CTRL_IN = 4'b1;
   assign CAT_ENAGC = 1'b1;
@@ -695,13 +699,13 @@ module e300
     .radio_rst(radio_rst),
     // flip them to match case
     // this is a hack
-    .rx_stb0(1'b1),
+    .rx_stb0(rx_stb),
     .rx_data0(rx_data1),
-    .tx_stb0(1'b1),
+    .tx_stb0(tx_stb),
     .tx_data0(tx_data1),
-    .rx_stb1(1'b1),
+    .rx_stb1(rx_stb),
     .rx_data1(rx_data0),
-    .tx_stb1(1'b1),
+    .tx_stb1(tx_stb),
     .tx_data1(tx_data0),
 
     // flip them, to match
