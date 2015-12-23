@@ -58,11 +58,6 @@ module db_control #(
     .strobe(set_stb_timed), .addr(set_addr_timed), .in(set_data_timed),
     .out(), .changed(sync));
 
-  setting_reg #(.my_addr(SR_LEDS), .width(32)) sr_leds (
-    .clk(clk), .rst(reset),
-    .strobe(set_stb_timed), .addr(set_addr_timed), .in(set_data_timed),
-    .out(leds), .changed());
-
   setting_reg #(.my_addr(SR_CLEAR_CMDS), .width(1)) sr_clear (
     .clk(clk), .rst(reset),
     .strobe(set_stb_timed), .addr(set_addr_timed), .in(set_data_timed),
@@ -85,6 +80,12 @@ module db_control #(
   /********************************************************
   ** GPIO
   ********************************************************/
+  gpio_atr #(.BASE(SR_LEDS), .WIDTH(32), .default_ddr(32'hFFFF_FFFF), .default_idle(32'd0)) leds_gpio_atr (
+    .clk(clk), .reset(reset),
+    .set_stb(set_stb_timed), .set_addr(set_addr_timed), .set_data(set_data_timed),
+    .rx(run_rx), .tx(run_tx),
+    .gpio(leds), .gpio_readback());
+
   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32), .default_ddr(32'hFFFF_FFFF), .default_idle(32'd0)) fp_gpio_atr (
     .clk(clk), .reset(reset),
     .set_stb(set_stb_timed), .set_addr(set_addr_timed), .set_data(set_data_timed),
