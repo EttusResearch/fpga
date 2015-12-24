@@ -65,6 +65,7 @@ module zpu_subsystem #(
    input [7:0] gmii_rxd0,
    input gmii_rx_dv0,
    input gmii_rx_er0,
+   input [15:0] gmii_status0,
    output mdc0,
    output mdio_in0,
    input mdio_out0,
@@ -79,6 +80,7 @@ module zpu_subsystem #(
    input [7:0] gmii_rxd1,
    input gmii_rx_dv1,
    input gmii_rx_er1,
+   input [15:0] gmii_status1,
    output mdc1,
    output mdio_in1,
    input mdio_out1,
@@ -569,10 +571,18 @@ module zpu_subsystem #(
          RB_ZPU_COMPAT : rb_data = { PRODUCT_ID, COMPAT_MAJOR, COMPAT_MINOR };
          RB_ZPU_COUNTER : rb_data = { counter };
          // SFP Interface pins.
-         RB_ZPU_SFP_STATUS0: rb_data = {26'b0,SFP0_ModAbs_chgd,SFP0_TxFault_chgd,SFP0_RxLOS_chgd,
-              SFP0_ModAbs_reg2,SFP0_TxFault_reg2,SFP0_RxLOS_reg2};
-         RB_ZPU_SFP_STATUS1: rb_data = {26'b0,SFP1_ModAbs_chgd,SFP1_TxFault_chgd,SFP1_RxLOS_chgd,
-              SFP1_ModAbs_reg2,SFP1_TxFault_reg2,SFP1_RxLOS_reg2};
+         RB_ZPU_SFP_STATUS0: rb_data = {
+            gmii_status0,
+            10'h0,
+            SFP0_ModAbs_chgd,SFP0_TxFault_chgd,SFP0_RxLOS_chgd,
+            SFP0_ModAbs_reg2,SFP0_TxFault_reg2,SFP0_RxLOS_reg2
+         };
+         RB_ZPU_SFP_STATUS1: rb_data = {
+            gmii_status1,
+            10'h0,
+            SFP1_ModAbs_chgd,SFP1_TxFault_chgd,SFP1_RxLOS_chgd,
+            SFP1_ModAbs_reg2,SFP1_TxFault_reg2,SFP1_RxLOS_reg2
+         };
          // GIT HASH of RTL Source
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.

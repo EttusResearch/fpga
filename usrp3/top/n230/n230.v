@@ -528,7 +528,7 @@ module n230 (
    // LED's on SFPs
    ///////////////////////////////////////////////////////////////////////
    wire [15:0] leds;
-   assign { LED_ACT1, LED_ACT2, LED_LINK1, LED_LINK2} = ~leds[3:0];
+   assign {LED_ACT1, LED_ACT2, LED_LINK1, LED_LINK2} = ~leds[3:0];
 
    ///////////////////////////////////////////////////////////////////////
    // SPI connections
@@ -617,18 +617,20 @@ module n230 (
    wire [7:0]  gmii_rxd0;
    wire        gmii_tx_en0, gmii_tx_er0;
    wire [7:0]  gmii_txd0;
+   wire [15:0] gmii_status0;
    wire        mdc0, mdio_in0, mdio_out0;
 
    wire        gmii_rx_dv1, gmii_rx_er1;
    wire [7:0]  gmii_rxd1;
    wire        gmii_tx_en1, gmii_tx_er1;
    wire [7:0]  gmii_txd1;
+   wire [15:0] gmii_status1;
    wire        mdc1, mdio_in1, mdio_out1;
 
 
    n230_core #(
       .EXTRA_TX_BUFF_SIZE(12),
-      .EXTRA_RX_BUFF_SIZE(12)
+      .EXTRA_RX_BUFF_SIZE(8)
    ) n230_core (
       //------------------------------------------------------------------
       // bus interfaces
@@ -705,6 +707,7 @@ module n230 (
       .gmii_rxd0(gmii_rxd0),
       .gmii_rx_dv0(gmii_rx_dv0),
       .gmii_rx_er0(gmii_rx_er0),
+      .gmii_status0(gmii_status0),
       .mdc0(mdc0),
       .mdio_in0(mdio_in0),
       .mdio_out0(mdio_out0),
@@ -719,6 +722,7 @@ module n230 (
       .gmii_rxd1(gmii_rxd1),
       .gmii_rx_dv1(gmii_rx_dv1),
       .gmii_rx_er1(gmii_rx_er1),
+      .gmii_status1(gmii_status1),
       .mdc1(mdc1),
       .mdio_in1(mdio_in1),
       .mdio_out1(mdio_out1),
@@ -765,7 +769,6 @@ module n230 (
    );
 
    wire        ge_phy_resetdone0, ge_phy_resetdone1;
-   wire [15:0] gmii_status0, gmii_status1;   // Debug info useful for chipscope use.
 
    OBUF pin_SFP0_TxDisable (.I(1'b0), .O(SFP0_TXDISABLE));
    OBUF pin_SFP1_TxDisable (.I(1'b0), .O(SFP1_TXDISABLE));
