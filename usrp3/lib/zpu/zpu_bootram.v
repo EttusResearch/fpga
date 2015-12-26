@@ -3,7 +3,7 @@
 //
 
 
-module dbuf_bootram #(
+module zpu_bootram #(
     parameter ADDR_WIDTH    = 16,
     parameter DATA_WIDTH    = 32,
     parameter MAX_ADDR      = 16'h7FFC

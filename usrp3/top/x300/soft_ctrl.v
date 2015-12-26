@@ -222,7 +222,7 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     // Double buffered system RAM (Slave #0) and Bootloader (Slave #A)
     ////////////////////////////////////////////////////////////////////
-    dbuf_bootram #(.ADDR_WIDTH(aw), .DATA_WIDTH(dw), .MAX_ADDR(16'h7FFC)) sys_ram 
+    zpu_bootram #(.ADDR_WIDTH(aw), .DATA_WIDTH(dw), .MAX_ADDR(16'h7FFC)) sys_ram 
     (
         .clk(clk), .rst(rst),
         .mem_stb(s0_stb), .mem_wea(&({4{s0_we}} & s0_sel)), .mem_acka(s0_ack),

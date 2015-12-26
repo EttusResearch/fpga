@@ -44,7 +44,6 @@ x300_pcie_int.v \
 x300_core.v \
 x300_zpu_config.vhd \
 soft_ctrl.v \
-dbuf_bootram.v \
 capture_ddrlvds.v \
 gen_ddrlvds.v \
 bus_int.v \

@@ -253,63 +253,36 @@ module zpu_subsystem #(
       .sf_dat_i(sf_dat_i),.sf_ack_i(sf_ack),.sf_err_i(1'b0),.sf_rty_i(1'b0)
    );
 
-   //////////////////////////////////////////////////////////////////////////////////////////
-   // Reset Controller
-
-   reg      cpu_bldr_ctrl_state;
-   localparam CPU_BLDR_CTRL_WAIT = 0;
-   localparam CPU_BLDR_CTRL_DONE = 1;
-
-   wire           bldr_done;
-   wire [AW-1:0]  cpu_adr;
-
-   //
-   // Swap lower and upper halves of RAM when in bootloader mode.
-   // Peripheral addressing is consistant in both modes.
-   //
-   assign    m0_adr = (cpu_adr[15] | (cpu_bldr_ctrl_state == CPU_BLDR_CTRL_WAIT)) ?  cpu_adr : cpu_adr ^ 16'h4000;
-
-   reg  zpu_rst;
-   always @(posedge clk)
-      if(rst) begin
-         cpu_bldr_ctrl_state <= CPU_BLDR_CTRL_WAIT;
-         zpu_rst <= 1'b1;
-      end else begin
-         case(cpu_bldr_ctrl_state)
-            CPU_BLDR_CTRL_WAIT: begin
-               zpu_rst <= 1'b0;
-               if (bldr_done == 1'b1) begin //set by the bootloader
-                  cpu_bldr_ctrl_state <= CPU_BLDR_CTRL_DONE;
-                  zpu_rst <= 1'b1;
-               end
-            end
-            CPU_BLDR_CTRL_DONE: begin //stay here forever
-               zpu_rst <= 1'b0;
-            end
-         endcase //cpu_bldr_ctrl_state
-      end
-
    ////////////////////////////////////////////////////////////////////
    // Processor
    ////////////////////////////////////////////////////////////////////
+   wire zpu_rst;
 
    zpu_wb_top #(.dat_w(DW), .adr_w(AW), .sel_w(SW)) zpu_top0 (
       .clk(clk), .rst(zpu_rst), .enb(~zpu_rst),
       // Data Wishbone bus to system bus fabric
-      .we_o(m0_we),.stb_o(m0_stb),.dat_o(m0_dat_i),.adr_o(cpu_adr),
+      .we_o(m0_we),.stb_o(m0_stb),.dat_o(m0_dat_i),.adr_o(m0_adr),
       .dat_i(m0_dat_o),.ack_i(m0_ack),.sel_o(m0_sel),.cyc_o(m0_cyc),
       // Interrupts and exceptions
       .zpu_status(), .interrupt(1'b0)
    );
 
    ////////////////////////////////////////////////////////////////////
-   // System RAM (Slave #0)
+   // Double buffered system RAM (Slave #0) and Bootloader (Slave #A)
    ////////////////////////////////////////////////////////////////////
-   zpu_bootram wb_ram_8kx32_i (
-      .wb_clk_i(clk),
-      .wb_rst_i(zpu_rst),
-      .dwb_adr_i(s0_adr[14:0]), .dwb_dat_i(s0_dat_o), .dwb_dat_o(s0_dat_i),
-      .dwb_we_i(s0_we), .dwb_ack_o(s0_ack), .dwb_stb_i(s0_stb), .dwb_sel_i(s0_sel)
+   zpu_bootram #(.ADDR_WIDTH(AW), .DATA_WIDTH(DW), .MAX_ADDR(16'h7FFC)) sys_ram (
+      .clk(clk), .rst(rst),
+
+      //ram interface
+      .mem_stb(s0_stb), .mem_wea(&({SW{s0_we}} & s0_sel)), .mem_acka(s0_ack),
+      .mem_addra(s0_adr), .mem_dina(s0_dat_o), .mem_douta(s0_dat_i),
+
+      //bootloader interface
+      .ldr_stb(sa_stb), .ldr_wea(&({SW{sa_we}} & sa_sel)), .ldr_acka(sa_ack),
+      .ldr_addra(sa_adr), .ldr_dina(sa_dat_o), 
+
+      //boot reset
+      .zpu_rst(zpu_rst)
    );
 
    ////////////////////////////////////////////////////////////////////
@@ -501,9 +474,8 @@ module zpu_subsystem #(
    );
 
    ////////////////////////////////////////////////////////////////////
-   // Unused -- Slave A-F
+   // Unused -- Slave B-F
    ////////////////////////////////////////////////////////////////////
-   assign {sa_dat_i, sa_ack} = 33'b0;
    assign {sb_dat_i, sb_ack} = 33'b0;
    assign {sc_dat_i, sc_ack} = 33'b0;
    assign {sd_dat_i, sd_ack} = 33'b0;

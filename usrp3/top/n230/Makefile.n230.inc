@@ -39,8 +39,8 @@ include $(LIB_DIR)/wb_spi/Makefile.srcs
 TOP_SRCS = $(abspath \
 n230.v \
 n230_core.v \
-zpu_bootram.v \
 zpu_subsystem.v \
+n230_zpu_config.vhd \
 phy_clump.v \
 n230_test_jesd204_if.v \
 eth_jesd_gtp_phy.v \
@@ -63,7 +63,6 @@ $(AXI_SRCS) \
 $(RADIO_LEGACY_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(ZPU_CORE_SRCS) \
-$(ZPU_CONFIG_SRCS) \
 $(EXTRAM_SRCS) \
 $(WB_SPI_SRCS) \
 $(IP_XCI_SRCS)
