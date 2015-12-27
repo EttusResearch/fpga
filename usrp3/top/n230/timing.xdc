@@ -68,7 +68,7 @@ set_max_delay -from [get_cells n230_core/sr_loopback/out_reg[*]] -to [get_cells 
 
 # We constrain RAM_CLK to work at 125MHz to be conservative
 #
-create_generated_clock -name RAM_CLK -source [get_ports SFPX_CLK_P] -multiply_by 1 [get_ports RAM_CLK]
+create_generated_clock -name RAM_CLK -source [get_pins ext_fifo_i/extram_clk] -multiply_by 1 [get_ports RAM_CLK]
 # No real path from RAM_CLK to internal clock(s)
 set_clock_groups -group [get_clocks RAM_CLK] -group  [get_clocks bus_clk] -asynchronous
 

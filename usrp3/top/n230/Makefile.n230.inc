@@ -40,8 +40,8 @@ TOP_SRCS = $(abspath \
 n230.v \
 n230_core.v \
 zpu_subsystem.v \
+n230_ext_sram_fifo.v \
 n230_zpu_config.vhd \
-phy_clump.v \
 n230_test_jesd204_if.v \
 eth_jesd_gtp_phy.v \
 n230.xdc \

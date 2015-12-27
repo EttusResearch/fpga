@@ -391,14 +391,8 @@ module n230 (
    end
 
    //------------------------------------------------------------------
-   // Create RAM clock from bus clock
-   // This clock leads the regular bus_clk by 90 degrees phase
+   // Create sync reset signals
    //------------------------------------------------------------------
-   ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) ram_clk_out_i
-     (.Q(RAM_CLK), .C(bus_clk_270), .CE(1'b1), .D1(1'b1), .D2(1'b0), .R(1'b0), .S(1'b0));
-    //------------------------------------------------------------------
-    // Create sync reset signals
-    //------------------------------------------------------------------
    wire  bus_rst_pre;
    (* MAX_FANOUT = 200 *) wire  radio_rst_pre;
    (* MAX_FANOUT = 200 *) wire  bus_rst;
@@ -406,6 +400,51 @@ module n230 (
    reset_sync bus_sync_i0(.clk(bus_clk), .reset_in(!clocks_ready), .reset_out(bus_rst));
    reset_sync radio_sync_i0(.clk(radio_clk), .reset_in(!radio_clocks_ready), .reset_out(radio_rst_pre));
    BUFG radio_rst_bufg (.O(radio_rst), .I(radio_rst_pre));
+
+   //------------------------------------------------------------------
+   // Instantiate external RAM FIFO
+   //------------------------------------------------------------------
+   wire [63:0] i_tdata_extfifo;
+   wire        i_tlast_extfifo, i_tvalid_extfifo, i_tready_extfifo;
+   wire [63:0] o_tdata_extfifo;
+   wire        o_tlast_extfifo, o_tvalid_extfifo, o_tready_extfifo;
+   wire        extfifo_bist_done;
+   wire [1:0]  extfifo_bist_error;
+
+   n230_ext_sram_fifo #(
+      .BIST_ENABLED(0), .BIST_REG_BASE(0), .INT_BUF_DEPTH(0)
+   ) ext_fifo_i (
+      //Clocks
+      .extram_clk(bus_clk_270),
+      .user_clk(bus_clk),
+      .user_rst(bus_rst),
+      // IO Interface
+      .RAM_D(RAM_D),
+      .RAM_A(RAM_A),
+      .RAM_BWn(RAM_BWn),
+      .RAM_ZZ(RAM_ZZ),
+      .RAM_LDn(RAM_LDn),
+      .RAM_OEn(RAM_OEn),
+      .RAM_WEn(RAM_WEn),
+      .RAM_CENn(RAM_CENn),
+      .RAM_CE1n(RAM_CE1n),
+      .RAM_CLK(RAM_CLK),
+      // AXI Stream Interface
+      .i_tdata(i_tdata_extfifo),
+      .i_tlast(i_tlast_extfifo),
+      .i_tvalid(i_tvalid_extfifo),
+      .i_tready(i_tready_extfifo),
+      .o_tdata(o_tdata_extfifo),
+      .o_tlast(o_tlast_extfifo),
+      .o_tvalid(o_tvalid_extfifo),
+      .o_tready(o_tready_extfifo),
+      // BIST Control Status Interface
+      .set_stb(1'b0),
+      .set_addr(8'h0),
+      .set_data(32'h0),
+      .bist_done(extfifo_bist_done),
+      .bist_error(extfifo_bist_error)
+   );
 
    //------------------------------------------------------------------
    // Production Test of JESD204 connectors and signals
@@ -627,7 +666,6 @@ module n230 (
    wire [15:0] gmii_status1;
    wire        mdc1, mdio_in1, mdio_out1;
 
-
    n230_core #(
       .EXTRA_TX_BUFF_SIZE(12),
       .EXTRA_RX_BUFF_SIZE(8)
@@ -711,7 +749,6 @@ module n230 (
       .mdc0(mdc0),
       .mdio_in0(mdio_in0),
       .mdio_out0(mdio_out0),
-
       //------------------------------------------------------------------
       // GMII interface 1 to PHY
       //------------------------------------------------------------------
@@ -729,15 +766,16 @@ module n230 (
       //------------------------------------------------------------------
       // External ZBT SRAM FIFO
       //------------------------------------------------------------------
-      .RAM_D(RAM_D),
-      .RAM_A(RAM_A),
-      .RAM_BWn(RAM_BWn),
-      .RAM_ZZ(RAM_ZZ),
-      .RAM_LDn(RAM_LDn),
-      .RAM_OEn(RAM_OEn),
-      .RAM_WEn(RAM_WEn),
-      .RAM_CENn(RAM_CENn),
-      .RAM_CE1n(RAM_CE1n),
+      .i_tdata_extfifo(o_tdata_extfifo),
+      .i_tlast_extfifo(o_tlast_extfifo),
+      .i_tvalid_extfifo(o_tvalid_extfifo),
+      .i_tready_extfifo(o_tready_extfifo),
+      .o_tdata_extfifo(i_tdata_extfifo),
+      .o_tlast_extfifo(i_tlast_extfifo),
+      .o_tvalid_extfifo(i_tvalid_extfifo),
+      .o_tready_extfifo(i_tready_extfifo),
+      .extfifo_bist_done(extfifo_bist_done),
+      .extfifo_bist_error(extfifo_bist_error),
       //------------------------------------------------------------------
       // I/O Delay Control Interface
       //------------------------------------------------------------------

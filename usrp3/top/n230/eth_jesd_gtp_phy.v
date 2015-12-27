@@ -153,7 +153,7 @@ module eth_jesd_gtp_phy #(
       .mdc(eth0mdc),
       .mdio_i(eth0mdio_i),
       .mdio_o(eth0mdio_o),
-      .mdio_t(1'b0),
+      .mdio_t(),
       .configuration_vector(4'b0),
       .configuration_valid(1'b1),
       .status_vector(eth0status_vector),  // Core status.
@@ -202,7 +202,7 @@ module eth_jesd_gtp_phy #(
       .mdc(eth1mdc),
       .mdio_i(eth1mdio_i),
       .mdio_o(eth1mdio_o),
-      .mdio_t(1'b0),
+      .mdio_t(),
       .configuration_vector(4'b0),
       .configuration_valid(1'b1),
       .status_vector(eth1status_vector),  // Core status.
@@ -322,7 +322,7 @@ module eth_jesd_gtp_phy #(
    // JESD MMCM
 
    wire jesd_mmcm_locked, jesd0_mmcm_reset, jesd1_mmcm_reset;
-   wire jesd_core_clk_mmcm, jesd_clk;
+   wire jesd_core_clk_mmcm;
    wire jesd_user_clk_mmcm, jesd_user_clk;
 
    MMCME2_ADV #(

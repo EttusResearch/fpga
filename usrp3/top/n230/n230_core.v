@@ -131,15 +131,18 @@ module n230_core #(
    //------------------------------------------------------------------
    // External ZBT SRAM FIFO
    //------------------------------------------------------------------
-   inout [35:0] RAM_D,
-   output [20:0] RAM_A,
-   output [3:0] RAM_BWn,
-   output RAM_ZZ,
-   output RAM_LDn,
-   output RAM_OEn,
-   output RAM_WEn,
-   output RAM_CENn,
-   output RAM_CE1n,
+   input [63:0] i_tdata_extfifo,
+   input i_tlast_extfifo,
+   input i_tvalid_extfifo,
+   output i_tready_extfifo,
+   output [63:0] o_tdata_extfifo,
+   output o_tlast_extfifo,
+   output o_tvalid_extfifo,
+   input o_tready_extfifo,
+   
+   input extfifo_bist_done,
+   input [1:0] extfifo_bist_error,
+
    //------------------------------------------------------------------
    // Delay Control_interface
    //------------------------------------------------------------------
@@ -309,7 +312,6 @@ module n230_core #(
    reg [63:0]       rb_data;
 
    wire       loopback;
-   wire       bist_fail, bist_done;
 
    wire [63:0]       l0i_ctrl_tdata; wire l0i_ctrl_tlast, l0i_ctrl_tvalid, l0i_ctrl_tready;
 
@@ -381,7 +383,7 @@ module n230_core #(
        //
        RB_CORE_STATUS : rb_data <= { 16'b0, radio_st, gpsdo_st, rb_misc };
        // BIST
-       RB_CORE_BIST : rb_data <= {62'h0,bist_fail,bist_done};
+       RB_CORE_BIST : rb_data <= {62'h0, extfifo_bist_error, extfifo_bist_done};
        // GIT HASH of RTL Source
        // [31:28] = 0xf - Unclean build
        // [27:0] - Abrieviated git hash for RTL.
@@ -435,186 +437,9 @@ module n230_core #(
       .header(tx_ctrl_hdr), .dest(tx_ctrl_dst),
       .i_tdata(e2v0_tdata), .i_tlast(e2v0_tlast), .i_tvalid(e2v0_tvalid), .i_tready(e2v0_tready),
       .o0_tdata(ctrl_tdata), .o0_tlast(ctrl_tlast), .o0_tvalid(ctrl_tvalid), .o0_tready(ctrl_tready),
-      .o1_tdata(tx_tdata), .o1_tlast(tx_tlast), .o1_tvalid(tx_tvalid), .o1_tready(tx_tready),
+      .o1_tdata(o_tdata_extfifo), .o1_tlast(o_tlast_extfifo), .o1_tvalid(o_tvalid_extfifo), .o1_tready(o_tready_extfifo),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1));
-
-
-   /*******************************************************************
-    * External SRAM FIFO.
-    *   includes Short FIFO on ingress and egress and
-    *   32bit <-> 64 bit AXIS conversion
-    ******************************************************************/
-   wire [63:0] tx_tdata_int; wire tx_tlast_int, tx_tvalid_int, tx_tready_int;
-   wire [63:0] tx_tdata_pre64; wire tx_tlast_pre64, tx_tvalid_pre64, tx_tready_pre64;
-   wire [31:0] tx_tdata_pre32; wire tx_tlast_pre32, tx_tvalid_pre32, tx_tready_pre32;
-   wire [31:0] tx_tdata_ext32; wire tx_tlast_ext32, tx_tvalid_ext32, tx_tready_ext32;
-   wire [63:0] tx_tdata_post64; wire tx_tlast_post64, tx_tvalid_post64, tx_tready_post64;
-
-`ifdef TEST_EXT_SRAM
-   // Isolate EXT SRAM FIFO from functional mode packet path and use BIST circuit to verify.
-   wire [63:0]       otest_tdata; wire otest_tlast, otest_tvalid, otest_tready;
-   wire [63:0]       itest_tdata; wire itest_tlast, itest_tvalid, itest_tready;
-   wire       bist_start;
-   wire [7:0]       bist_rx_delay, bist_tx_delay;
-
-   setting_reg #(.my_addr(SR_CORE_BIST1), .awidth(8), .width(17)) sr_bist1
-     (.clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({bist_start,bist_tx_delay[7:0],bist_rx_delay[7:0]}), .changed());
-
-   axi_chdr_test_pattern axi_chdr_test_pattern_i0
-     (
-      .clk(bus_clk),
-      .reset(bus_rst),
-
-      //
-      // CHDR friendly AXI stream input
-      //
-      .i_tdata(otest_tdata),
-      .i_tlast(otest_tlast),
-      .i_tvalid(otest_tvalid),
-      .i_tready(otest_tready),
-      //
-      // CHDR friendly AXI Stream output
-      //
-      .o_tdata(itest_tdata),
-      .o_tlast(itest_tlast),
-      .o_tvalid(itest_tvalid),
-      .o_tready(itest_tready),
-      //
-      // Test flags
-      //
-      .start(bist_start),
-      .control({bist_tx_delay[7:0],bist_rx_delay[7:0]}),
-      .fail(bist_fail),
-      .done(bist_done)
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(0)) pre_ext_fifo_i0
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({otest_tlast, otest_tdata}), .i_tvalid(otest_tvalid), .i_tready(otest_tready),
-      .o_tdata({tx_tlast_pre64, tx_tdata_pre64}), .o_tvalid(tx_tvalid_pre64), .o_tready(tx_tready_pre64),
-      .space(),.occupied());
-`else // !`ifdef TEST_EXT_SRAM
-   assign       bist_fail = 0;
-   assign       bist_done = 0;
-
-   // EXT SRAM FIFO inlcuded in functional mode packet path.
-   axi_fifo #(.WIDTH(65), .SIZE(0)) pre_ext_fifo_i0
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({tx_tlast, tx_tdata}), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
-      .o_tdata({tx_tlast_pre64, tx_tdata_pre64}), .o_tvalid(tx_tvalid_pre64), .o_tready(tx_tready_pre64),
-      .space(),.occupied());
-`endif // TEST_EXT_SRAM
-
-   axi_fifo64_to_fifo32 fifo64_to_fifo32_i0
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata(tx_tdata_pre64), .i_tuser(3'b0/*done care*/), .i_tlast(tx_tlast_pre64),
-      .i_tvalid(tx_tvalid_pre64), .i_tready(tx_tready_pre64),
-      .o_tdata(tx_tdata_pre32), .o_tuser(/*ignored cuz vita has len*/),
-      .o_tlast(tx_tlast_pre32), .o_tvalid(tx_tvalid_pre32), .o_tready(tx_tready_pre32)
-      );
-
-   //
-   // Instantiate IO for Bidirectional bus to SRAM
-   //
-   wire [35:0] RAM_D_pi;
-   wire [35:0] RAM_D_po;
-   wire        RAM_D_poe;
-
-   genvar      i;
-
-   generate
-      for (i=0;i<36;i=i+1)
-        begin : gen_RAM_D_IO
-
-      IOBUF
-        RAM_D_i (
-            .O(RAM_D_pi[i]),
-            .I(RAM_D_po[i]),
-            .IO(RAM_D[i]),
-            .T(RAM_D_poe)
-            );
-   end // block: gen_RAM_D_IO
-   endgenerate
-
-
-   // Drive low so that RAM does not sleep.
-   //   assign       RAM_ZZ = 0;
-   OBUF pin_RAM_ZZ (.I(1'b0),.O(RAM_ZZ));
-
-   // Byte Writes are qualified by the global write enable
-   // Always do 36bit operations to extram.
-   //   assign       RAM_BWn = 4'b0000;
-   OBUF pin_RAM_BW0 (.I(1'b0), .O(RAM_BWn[0]));
-   OBUF pin_RAM_BW1 (.I(1'b0), .O(RAM_BWn[1]));
-   OBUF pin_RAM_BW2 (.I(1'b0), .O(RAM_BWn[2]));
-   OBUF pin_RAM_BW3 (.I(1'b0), .O(RAM_BWn[3]));
-
-   OBUF pin_RAM_A18 (.I(1'b0), .O(RAM_A[18]));
-   OBUF pin_RAM_A19 (.I(1'b0), .O(RAM_A[19]));
-   OBUF pin_RAM_A20 (.I(1'b0), .O(RAM_A[20]));
-
-
-   wire [2:0]       unused_ext32;
-
-   wire [31:0]       debug_ext_fifo;
-
-   ext_fifo #(.EXT_WIDTH(36),.INT_WIDTH(36),.RAM_DEPTH(18),.FIFO_DEPTH(18))
-      ext_fifo_i1
-        (.int_clk(bus_clk),  // IJB. Revisit clock frequencies, can be slower.
-         .ext_clk(bus_clk),
-         .rst(bus_rst),
-         .RAM_D_pi(RAM_D_pi),
-         .RAM_D_po(RAM_D_po),
-         .RAM_D_poe(RAM_D_poe),
-         .RAM_A(RAM_A[17:0]),
-         .RAM_WEn(RAM_WEn),
-         .RAM_CENn(RAM_CENn),
-         .RAM_LDn(RAM_LDn),
-         .RAM_OEn(RAM_OEn),
-         .RAM_CE1n(RAM_CE1n),
-         .datain({3'h0,tx_tlast_pre32,tx_tdata_pre32}),
-         .src_rdy_i(tx_tvalid_pre32),
-         .dst_rdy_o(tx_tready_pre32),
-         .dataout({unused_ext32,tx_tlast_ext32,tx_tdata_ext32}),
-         .src_rdy_o(tx_tvalid_ext32),
-         .dst_rdy_i(tx_tready_ext32),
-         .debug(debug_ext_fifo),
-         .debug2() );
-
-   //
-   // Convert 32bit AXIS bus to 64bit
-   //
-   axi_fifo32_to_fifo64 fifo32_to_fifo64_i0
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata(tx_tdata_ext32), .i_tuser(2'b0/*always 32 bits*/), .i_tlast(tx_tlast_ext32),
-      .i_tvalid(tx_tvalid_ext32), .i_tready(tx_tready_ext32),
-      .o_tdata(tx_tdata_post64), .o_tuser(/*ignored cuz vita has len*/),
-      .o_tlast(tx_tlast_post64), .o_tvalid(tx_tvalid_post64), .o_tready(tx_tready_post64)
-      );
- `ifdef TEST_EXT_SRAM
-   axi_fifo #(.WIDTH(65), .SIZE(0)) post_ext_fifo_i0
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({tx_tlast_post64, tx_tdata_post64}), .i_tvalid(tx_tvalid_post64), .i_tready(tx_tready_post64),
-      .o_tdata({itest_tlast, itest_tdata}), .o_tvalid(itest_tvalid), .o_tready(itest_tready),
-      .space(),.occupied());
-
-   // Test logic includes bypass for functional mode packets around FIFO under test.
-    axi_fifo #(.WIDTH(65), .SIZE(EXTRA_TX_BUFF_SIZE)) extra_tx_buff
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({tx_tlast, tx_tdata}), .i_tvalid(tx_tvalid), .i_tready(tx_tready),
-      .o_tdata({tx_tlast_int, tx_tdata_int}), .o_tvalid(tx_tvalid_int), .o_tready(tx_tready_int),
-      .space(),.occupied());
- `else // TEST_EXT_SRAM
-   axi_fifo #(.WIDTH(65), .SIZE(0)) post_ext_fifo_i0
-     (.clk(bus_clk), .reset(bus_rst),  .clear(1'b0),
-      .i_tdata({tx_tlast_post64, tx_tdata_post64}), .i_tvalid(tx_tvalid_post64), .i_tready(tx_tready_post64),
-      .o_tdata({tx_tlast_int, tx_tdata_int}), .o_tvalid(tx_tvalid_int), .o_tready(tx_tready_int),
-      .space(),.occupied());
- `endif // TEST_EXT_SRAM
 
    /*******************************************************************
     * TX Data mux Routing logic
@@ -630,12 +455,11 @@ module n230_core #(
    axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64), .BUFFER(1)) demux_for_tx
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(tx_hdr), .dest(tx_dst),
-      .i_tdata(tx_tdata_int), .i_tlast(tx_tlast_int), .i_tvalid(tx_tvalid_int), .i_tready(tx_tready_int),
+      .i_tdata(i_tdata_extfifo), .i_tlast(i_tlast_extfifo), .i_tvalid(i_tvalid_extfifo), .i_tready(i_tready_extfifo),
       .o0_tdata(r0_tx_tdata), .o0_tlast(r0_tx_tlast), .o0_tvalid(r0_tx_tvalid), .o0_tready(r0_tx_tready),
       .o1_tdata(r1_tx_tdata), .o1_tlast(r1_tx_tlast), .o1_tvalid(r1_tx_tvalid), .o1_tready(r1_tx_tready),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1));
-
 
    /*******************************************************************
     * Radio 0
@@ -843,7 +667,7 @@ module n230_core #(
       // Debug
       //------------------------------------------------------------------
       .debug(debug)
-      );
+   );
 
 
    //------------------------------------------------------------------

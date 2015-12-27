@@ -32,8 +32,6 @@
 // packed into the IO ring.
 //
 
- //`define NO_EXT_FIFO
-
 module ext_fifo
   #(parameter INT_WIDTH=36,EXT_WIDTH=18,RAM_DEPTH=19,FIFO_DEPTH=19)
     (
@@ -54,9 +52,7 @@ module ext_fifo
      output dst_rdy_o,               // not FULL
      output [INT_WIDTH-1:0] dataout,
      output src_rdy_o,               // not EMPTY
-     input dst_rdy_i,                 // READ
-     output reg [31:0] debug,
-     output reg [31:0] debug2
+     input dst_rdy_i                  // READ
      );
 
    wire [EXT_WIDTH-1:0] write_data;
@@ -75,12 +71,6 @@ module ext_fifo
    assign 		 src_rdy_o = ~empty2;
    assign 		 dst_rdy_o = ~full1;
 
-`ifdef NO_EXT_FIFO
-   assign 		 space_avail = ~full2;
-   assign 		 data_avail = ~empty1;
-   assign 		 read_data = write_data;
-`else
-   
    // External FIFO running at ext clock rate  and 18 or 36 bit width.
    nobl_fifo  #(.WIDTH(EXT_WIDTH),.RAM_DEPTH(RAM_DEPTH),.FIFO_DEPTH(FIFO_DEPTH))
      nobl_fifo_i1
@@ -104,9 +94,7 @@ module ext_fifo
 	   .data_avail(data_avail),
 	   .capacity(capacity)
 	   );
-`endif // !`ifdef NO_EXT_FIFO
 
-   
    generate
       if (EXT_WIDTH == 18 && INT_WIDTH == 36) begin: fifo_g1
 	 // FIFO buffers data from UDP engine into external FIFO clock domain.
@@ -163,7 +151,6 @@ module ext_fifo
 
       end    
    endgenerate
-   
 
    refill_randomizer #(.BITS(7))
      refill_randomizer_i1 (
@@ -172,17 +159,5 @@ module ext_fifo
 			   .full_in(almost_full2),
 			   .full_out(almost_full2_spread)
 			   );
-   
-//   always @ (posedge int_clk)
-//     debug[31:28] <= {empty2,full1,dst_rdy_i,src_rdy_i };
-   
-   always @ (posedge ext_clk)
- //    debug[27:0] <= {RAM_WEn,RAM_CE1n,RAM_A[3:0],read_data[17:0],empty1,space_avail,data_avail,almost_full2 };
-     debug[31:0] <= {7'h0,src_rdy_i,read_input_fifo,write_output_fifo,dst_rdy_i,full2,almost_full2,empty2,full1,empty1,write_data[7:0],read_data[7:0]};
-   
-     
-   always@ (posedge ext_clk)
-     //     debug2[31:0] <= {write_data[15:0],read_data[15:0]};
-     debug2[31:0] <= 0;
    
 endmodule // ext_fifo
