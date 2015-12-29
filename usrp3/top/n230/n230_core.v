@@ -114,16 +114,27 @@ module n230_core #(
    //------------------------------------------------------------------
    // External ZBT SRAM FIFO
    //------------------------------------------------------------------
-   input [63:0]   i_tdata_extfifo,
-   input          i_tlast_extfifo,
-   input          i_tvalid_extfifo,
-   output         i_tready_extfifo,
-   output [63:0]  o_tdata_extfifo,
-   output         o_tlast_extfifo,
-   output         o_tvalid_extfifo,
-   input          o_tready_extfifo,
-   input          extfifo_bist_done,
-   input [1:0]    extfifo_bist_error,
+   input [63:0]   ef0i_tdata,
+   input          ef0i_tlast,
+   input          ef0i_tvalid,
+   output         ef0i_tready,
+   output [63:0]  ef0o_tdata,
+   output         ef0o_tlast,
+   output         ef0o_tvalid,
+   input          ef0o_tready,
+
+   input [63:0]   ef1i_tdata,
+   input          ef1i_tlast,
+   input          ef1i_tvalid,
+   output         ef1i_tready,
+   output [63:0]  ef1o_tdata,
+   output         ef1o_tlast,
+   output         ef1o_tvalid,
+   input          ef1o_tready,
+
+   input          ef_bist_done,
+   input          ef_bist_error,
+
    //------------------------------------------------------------------
    // Delay Control_interface
    //------------------------------------------------------------------
@@ -513,7 +524,7 @@ module n230_core #(
          //
          RB_CORE_STATUS : rb_data <= { 16'b0, radio_st, gpsdo_st, rb_misc };
          // BIST
-         RB_CORE_BIST : rb_data <= {62'h0, extfifo_bist_error, extfifo_bist_done};
+         RB_CORE_BIST : rb_data <= {62'h0, ef_bist_error, ef_bist_done};
          // GIT HASH of RTL Source
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.
@@ -537,9 +548,9 @@ module n230_core #(
    // Control Data MUXing
    //------------------------------------------------------------------
 
-   wire [63:0]    r0di_tdata, r0do_tdata, r1di_tdata, r1do_tdata;
-   wire           r0di_tlast, r0do_tlast, r0di_tvalid, r0do_tvalid, r0di_tready, r0do_tready;
-   wire           r1di_tlast, r1do_tlast, r1di_tvalid, r1do_tvalid, r1di_tready, r1do_tready;
+   wire [63:0]    r0do_tdata, r1do_tdata;
+   wire           r0do_tlast, r0do_tvalid, r0do_tready;
+   wire           r1do_tlast, r1do_tvalid, r1do_tready;
 
    wire [63:0]    r0ci_tdata, r0co_tdata, r1ci_tdata, r1co_tdata;
    wire           r0ci_tlast, r0co_tlast, r0ci_tvalid, r0co_tvalid, r0ci_tready, r0co_tready;
@@ -557,7 +568,7 @@ module n230_core #(
       .header(r0_pkt_hdr), .dest(r0_pkt_dest),
       .i_tdata(r0i_tdata), .i_tlast(r0i_tlast), .i_tvalid(r0i_tvalid), .i_tready(r0i_tready),
       .o0_tdata(r0ci_tdata), .o0_tlast(r0ci_tlast), .o0_tvalid(r0ci_tvalid), .o0_tready(r0ci_tready),
-      .o1_tdata(r0di_tdata), .o1_tlast(r0di_tlast), .o1_tvalid(r0di_tvalid), .o1_tready(r0di_tready),
+      .o1_tdata(ef0o_tdata), .o1_tlast(ef0o_tlast), .o1_tvalid(ef0o_tvalid), .o1_tready(ef0o_tready),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)
    );
@@ -576,7 +587,7 @@ module n230_core #(
       .header(r1_pkt_hdr), .dest(r1_pkt_dest),
       .i_tdata(r1i_tdata), .i_tlast(r1i_tlast), .i_tvalid(r1i_tvalid), .i_tready(r1i_tready),
       .o0_tdata(r1ci_tdata), .o0_tlast(r1ci_tlast), .o0_tvalid(r1ci_tvalid), .o0_tready(r1ci_tready),
-      .o1_tdata(r1di_tdata), .o1_tlast(r1di_tlast), .o1_tvalid(r1di_tvalid), .o1_tready(r1di_tready),
+      .o1_tdata(ef1o_tdata), .o1_tlast(ef1o_tlast), .o1_tvalid(ef1o_tvalid), .o1_tready(ef1o_tready),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)
    );
@@ -613,7 +624,7 @@ module n230_core #(
       .fp_gpio_in(32'h00000000), .fp_gpio_out(), .fp_gpio_ddr(),
 
       .bus_clk(bus_clk), .bus_rst(bus_rst),
-      .tx_tdata(r0di_tdata),   .tx_tlast(r0di_tlast),    .tx_tvalid(r0di_tvalid),   .tx_tready(r0di_tready),
+      .tx_tdata(ef0i_tdata),   .tx_tlast(ef0i_tlast),    .tx_tvalid(ef0i_tvalid),   .tx_tready(ef0i_tready),
       .rx_tdata(r0do_tdata),   .rx_tlast(r0do_tlast),    .rx_tvalid(r0do_tvalid),   .rx_tready(r0do_tready),
       .ctrl_tdata(r0ci_tdata), .ctrl_tlast(r0ci_tlast),  .ctrl_tvalid(r0ci_tvalid), .ctrl_tready(r0ci_tready),
       .resp_tdata(r0co_tdata), .resp_tlast(r0co_tlast),  .resp_tvalid(r0co_tvalid), .resp_tready(r0co_tready),
@@ -643,7 +654,7 @@ module n230_core #(
       .fp_gpio_in(32'h00000000), .fp_gpio_out(), .fp_gpio_ddr(),
 
       .bus_clk(bus_clk), .bus_rst(bus_rst),
-      .tx_tdata(r1di_tdata),   .tx_tlast(r1di_tlast),    .tx_tvalid(r1di_tvalid),   .tx_tready(r1di_tready),
+      .tx_tdata(ef1i_tdata),   .tx_tlast(ef1i_tlast),    .tx_tvalid(ef1i_tvalid),   .tx_tready(ef1i_tready),
       .rx_tdata(r1do_tdata),   .rx_tlast(r1do_tlast),    .rx_tvalid(r1do_tvalid),   .rx_tready(r1do_tready),
       .ctrl_tdata(r1ci_tdata), .ctrl_tlast(r1ci_tlast),  .ctrl_tvalid(r1ci_tvalid), .ctrl_tready(r1ci_tready),
       .resp_tdata(r1co_tdata), .resp_tlast(r1co_tlast),  .resp_tvalid(r1co_tvalid), .resp_tready(r1co_tready),

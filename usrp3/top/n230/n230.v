@@ -404,15 +404,16 @@ module n230 (
    //------------------------------------------------------------------
    // Instantiate external RAM FIFO
    //------------------------------------------------------------------
-   wire [63:0] i_tdata_extfifo;
-   wire        i_tlast_extfifo, i_tvalid_extfifo, i_tready_extfifo;
-   wire [63:0] o_tdata_extfifo;
-   wire        o_tlast_extfifo, o_tvalid_extfifo, o_tready_extfifo;
-   wire        extfifo_bist_done;
-   wire [1:0]  extfifo_bist_error;
+   wire [63:0] ef0i_tdata, ef1i_tdata;
+   wire        ef0i_tlast, ef0i_tvalid, ef0i_tready, ef1i_tlast, ef1i_tvalid, ef1i_tready;
+   wire [63:0] ef0o_tdata, ef1o_tdata;
+   wire        ef0o_tlast, ef0o_tvalid, ef0o_tready, ef1o_tlast, ef1o_tvalid, ef1o_tready;
+   wire        ef_bist_done;
+   wire [1:0]  ef_bist_error;
 
    n230_ext_sram_fifo #(
-      .BIST_ENABLED(0), .BIST_REG_BASE(0), .INT_BUF_DEPTH(0)
+      .EGRESS_BUF_DEPTH(9),
+      .BIST_ENABLED(0), .BIST_REG_BASE(0)
    ) ext_fifo_i (
       //Clocks
       .extram_clk(bus_clk_270),
@@ -429,21 +430,30 @@ module n230 (
       .RAM_CENn(RAM_CENn),
       .RAM_CE1n(RAM_CE1n),
       .RAM_CLK(RAM_CLK),
-      // AXI Stream Interface
-      .i_tdata(i_tdata_extfifo),
-      .i_tlast(i_tlast_extfifo),
-      .i_tvalid(i_tvalid_extfifo),
-      .i_tready(i_tready_extfifo),
-      .o_tdata(o_tdata_extfifo),
-      .o_tlast(o_tlast_extfifo),
-      .o_tvalid(o_tvalid_extfifo),
-      .o_tready(o_tready_extfifo),
+      // Ch0: AXI Stream Interface
+      .i0_tdata(ef0i_tdata),
+      .i0_tlast(ef0i_tlast),
+      .i0_tvalid(ef0i_tvalid),
+      .i0_tready(ef0i_tready),
+      .o0_tdata(ef0o_tdata),
+      .o0_tlast(ef0o_tlast),
+      .o0_tvalid(ef0o_tvalid),
+      .o0_tready(ef0o_tready),
+      // Ch1: AXI Stream Interface
+      .i1_tdata(ef1i_tdata),
+      .i1_tlast(ef1i_tlast),
+      .i1_tvalid(ef1i_tvalid),
+      .i1_tready(ef1i_tready),
+      .o1_tdata(ef1o_tdata),
+      .o1_tlast(ef1o_tlast),
+      .o1_tvalid(ef1o_tvalid),
+      .o1_tready(ef1o_tready),
       // BIST Control Status Interface
       .set_stb(1'b0),
       .set_addr(8'h0),
       .set_data(32'h0),
-      .bist_done(extfifo_bist_done),
-      .bist_error(extfifo_bist_error)
+      .bist_done(ef_bist_done),
+      .bist_error(ef_bist_error)
    );
 
    //------------------------------------------------------------------
@@ -763,16 +773,26 @@ module n230 (
       //------------------------------------------------------------------
       // External ZBT SRAM FIFO
       //------------------------------------------------------------------
-      .i_tdata_extfifo(o_tdata_extfifo),
-      .i_tlast_extfifo(o_tlast_extfifo),
-      .i_tvalid_extfifo(o_tvalid_extfifo),
-      .i_tready_extfifo(o_tready_extfifo),
-      .o_tdata_extfifo(i_tdata_extfifo),
-      .o_tlast_extfifo(i_tlast_extfifo),
-      .o_tvalid_extfifo(i_tvalid_extfifo),
-      .o_tready_extfifo(i_tready_extfifo),
-      .extfifo_bist_done(extfifo_bist_done),
-      .extfifo_bist_error(extfifo_bist_error),
+      .ef0i_tdata(ef0o_tdata),
+      .ef0i_tlast(ef0o_tlast),
+      .ef0i_tvalid(ef0o_tvalid),
+      .ef0i_tready(ef0o_tready),
+      .ef0o_tdata(ef0i_tdata),
+      .ef0o_tlast(ef0i_tlast),
+      .ef0o_tvalid(ef0i_tvalid),
+      .ef0o_tready(ef0i_tready),
+
+      .ef1i_tdata(ef1o_tdata),
+      .ef1i_tlast(ef1o_tlast),
+      .ef1i_tvalid(ef1o_tvalid),
+      .ef1i_tready(ef1o_tready),
+      .ef1o_tdata(ef1i_tdata),
+      .ef1o_tlast(ef1i_tlast),
+      .ef1o_tvalid(ef1i_tvalid),
+      .ef1o_tready(ef1i_tready),
+
+      .ef_bist_done(ef_bist_done),
+      .ef_bist_error(ef_bist_error),
       //------------------------------------------------------------------
       // I/O Delay Control Interface
       //------------------------------------------------------------------
