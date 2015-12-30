@@ -18,6 +18,7 @@ localparam SR_ZPU_SW_RST     = 8'd00;
 localparam SR_ZPU_BOOT_DONE  = 8'd01;
 localparam SR_ZPU_LEDS       = 8'd02;
 localparam SR_ZPU_DEBUG      = 8'd03;
+localparam SR_ZPU_XB_LOCAL   = 8'd04;
 localparam SR_ZPU_JESD204_TEST = 8'd05;
 localparam SR_ZPU_SFP_CTRL0  = 8'd16;
 localparam SR_ZPU_SFP_CTRL1  = 8'd17;

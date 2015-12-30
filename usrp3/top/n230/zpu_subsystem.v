@@ -41,6 +41,13 @@ module zpu_subsystem #(
    output set_stb,
 
    //------------------------------------------------------------------
+   // settings bus interface for crossbar router
+   //------------------------------------------------------------------
+   output [31:0] set_data_xb,
+   output [8:0] set_addr_xb,
+   output set_stb_xb,
+
+   //------------------------------------------------------------------
    // SFP FLags
    //------------------------------------------------------------------
    input SFP0_ModAbs,
@@ -208,8 +215,8 @@ module zpu_subsystem #(
       .s7_addr(8'b1111_0111),.s7_mask(8'b1111_1111),  // 0xf700 - I2C1
       .s8_addr(8'b1111_1000),.s8_mask(8'b1111_1111),  // 0xf800 - ICAP
       .s9_addr(8'b1111_1001),.s9_mask(8'b1111_1111),  // 0xf900 - UART0 (Debug on GPIO)
-      .sa_addr(8'b1111_1010),.sa_mask(8'b1111_1111),  // 0xfa00 - Unused
-      .sb_addr(8'b1111_1011),.sb_mask(8'b1111_1111),  // 0xfb00 - Unused
+      .sa_addr(8'b1111_1010),.sa_mask(8'b1111_1111),  // 0xfa00 - Bootloader
+      .sb_addr(8'b1110_0000),.sb_mask(8'b1111_0000),  // 0xe000 - Settings crossbar
       .sc_addr(8'b1111_1100),.sc_mask(8'b1111_1111),  // 0xfc00 - Unused
       .sd_addr(8'b1111_1101),.sd_mask(8'b1111_1111),  // 0xfd00 - Unused
       .se_addr(8'b1111_1110),.se_mask(8'b1111_1111),  // 0xfe00 - Unused
@@ -474,9 +481,21 @@ module zpu_subsystem #(
    );
 
    ////////////////////////////////////////////////////////////////////
-   // Unused -- Slave B-F
+   // Settings bus for cross bar -- Slave #B
    ////////////////////////////////////////////////////////////////////
-   assign {sb_dat_i, sb_ack} = 33'b0;
+   settings_bus #(.AWIDTH(AW), .DWIDTH(DW), .SWIDTH(9)) settings_bus_xb
+   (
+      .wb_clk(clk), .wb_rst(rst),
+      .wb_adr_i(sb_adr), .wb_dat_i(sb_dat_o),
+      .wb_stb_i(sb_stb), .wb_we_i(sb_we), .wb_ack_o(sb_ack),
+      .strobe(set_stb_xb), .addr(set_addr_xb), .data(set_data_xb)
+   );
+
+   assign sb_dat_i = 32'b0;
+
+   ////////////////////////////////////////////////////////////////////
+   // Unused -- Slave C-F
+   ////////////////////////////////////////////////////////////////////
    assign {sc_dat_i, sc_ack} = 33'b0;
    assign {sd_dat_i, sd_ack} = 33'b0;
    assign {se_dat_i, se_ack} = 33'b0;
