@@ -35,20 +35,14 @@ localparam RB_CORE_BIST      = 3'd3;
 localparam RB_CORE_GIT_HASH  = 3'd4;
 	  
 
-localparam RB_ZPU_COMPAT     = 8'd0;
-localparam RB_ZPU_COUNTER    = 8'd1;
+localparam RB_ZPU_COMPAT      = 8'd0;
+localparam RB_ZPU_COUNTER     = 8'd1;
 localparam RB_ZPU_SFP_STATUS0 = 8'd2;
 localparam RB_ZPU_SFP_STATUS1 = 8'd3;
 localparam RB_ZPU_GIT_HASH    = 8'd4;
 localparam RB_ZPU_JESD204_TEST = 8'd5;
-localparam RB_ZPU_INGRESS_DIFF1L = 8'd8;
-localparam RB_ZPU_INGRESS_DIFF1U = 8'd9;
-localparam RB_ZPU_INGRESS_DIFF2L = 8'd10;
-localparam RB_ZPU_INGRESS_DIFF2U = 8'd11;
-localparam RB_ZPU_EGRESS_DIFF1L = 8'd12;
-localparam RB_ZPU_EGRESS_DIFF1U = 8'd13;
-localparam RB_ZPU_EGRESS_DIFF2L = 8'd14;
-localparam RB_ZPU_EGRESS_DIFF2U = 8'd15;
+localparam RB_ZPU_ETH0_PKT_CNT = 8'd6;
+localparam RB_ZPU_ETH1_PKT_CNT = 8'd7;
 
 
 /*******************************************************************

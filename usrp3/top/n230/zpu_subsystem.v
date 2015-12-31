@@ -509,6 +509,29 @@ module zpu_subsystem #(
       else
          counter <= counter + 1'b1;
 
+   // Ethernet packet counters
+   reg [31:0] eth0_pkt_count, eth1_pkt_count;
+   always @(posedge clk)
+      if (rst)
+         eth0_pkt_count <= 32'd0;
+      else if (eth0_rx_tlast && eth0_rx_tvalid && eth0_rx_tready &&
+               eth0_tx_tlast && eth0_tx_tvalid && eth0_tx_tready)
+         eth0_pkt_count <= eth0_pkt_count + 32'd2;
+      else if (eth0_rx_tlast && eth0_rx_tvalid && eth0_rx_tready)
+         eth0_pkt_count <= eth0_pkt_count + 32'd1;
+      else if (eth0_tx_tlast && eth0_tx_tvalid && eth0_tx_tready)
+         eth0_pkt_count <= eth0_pkt_count + 32'd1;
+
+   always @(posedge clk)
+      if (rst)
+         eth1_pkt_count <= 32'd0;
+      else if (eth1_rx_tlast && eth1_rx_tvalid && eth1_rx_tready &&
+               eth1_tx_tlast && eth1_tx_tvalid && eth1_tx_tready)
+         eth1_pkt_count <= eth1_pkt_count + 32'd2;
+      else if (eth1_rx_tlast && eth1_rx_tvalid && eth1_rx_tready)
+         eth1_pkt_count <= eth1_pkt_count + 32'd1;
+      else if (eth1_tx_tlast && eth1_tx_tvalid && eth1_tx_tready)
+         eth1_pkt_count <= eth1_pkt_count + 32'd1;
    //
    // SW_RST - Bit allocation:
    // [0] - PHY reset
@@ -578,6 +601,9 @@ module zpu_subsystem #(
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.
          RB_ZPU_GIT_HASH: rb_data = 32'h`GIT_HASH;
+         RB_ZPU_ETH0_PKT_CNT: rb_data = eth0_pkt_count;
+         RB_ZPU_ETH1_PKT_CNT: rb_data = eth1_pkt_count;
+
          // Production Test
 `ifdef TEST_JESD204_IF
          RB_ZPU_JESD204_TEST: rb_data <= {15'h0,jesd204_test_done,jesd204_test_status[15:0]};
