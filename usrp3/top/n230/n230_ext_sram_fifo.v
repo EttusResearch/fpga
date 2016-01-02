@@ -3,9 +3,10 @@
 //
 
 module n230_ext_sram_fifo #(
-   parameter EGRESS_BUF_DEPTH = 9,
-   parameter BIST_ENABLED     = 0,
-   parameter BIST_REG_BASE    = 0
+   parameter INGRESS_BUF_DEPTH = 5,
+   parameter EGRESS_BUF_DEPTH  = 5,
+   parameter BIST_ENABLED      = 0,
+   parameter BIST_REG_BASE     = 0
 ) (
    //Clocks
    input          extram_clk,
@@ -93,6 +94,26 @@ module n230_ext_sram_fifo #(
    );
 
    // --------------------------------------------
+   // Ingress buffers
+   // --------------------------------------------
+   wire [63:0] i0_tdata_buf, i1_tdata_buf;
+   wire        i0_tlast_buf, i0_tvalid_buf, i0_tready_buf, i1_tlast_buf, i1_tvalid_buf, i1_tready_buf;
+
+   axi_fifo #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i0 (
+      .clk(user_clk), .reset(user_rst), .clear(1'b0),
+      .i_tdata({i0_tlast, i0_tdata}), .i_tvalid(i0_tvalid), .i_tready(i0_tready),
+      .o_tdata({i0_tlast_buf, i0_tdata_buf}), .o_tvalid(i0_tvalid_buf), .o_tready(i0_tready_buf),
+      .space(), .occupied()
+   );
+
+   axi_fifo #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i1 (
+      .clk(user_clk), .reset(user_rst), .clear(1'b0),
+      .i_tdata({i1_tlast, i1_tdata}), .i_tvalid(i1_tvalid), .i_tready(i1_tready),
+      .o_tdata({i1_tlast_buf, i1_tdata_buf}), .o_tvalid(i1_tvalid_buf), .o_tready(i1_tready_buf),
+      .space(), .occupied()
+   );
+
+   // --------------------------------------------
    // FIFO Logic
    // --------------------------------------------
    wire [63:0] ib_tdata;
@@ -130,8 +151,8 @@ module n230_ext_sram_fifo #(
    // MUX and add source information
    axi_mux4 #(.PRIO(0), .WIDTH(66), .BUFFER(1)) src_mux_i (
       .clk(user_clk), .reset(user_rst),  .clear(1'b0),
-      .i0_tdata({2'd0, i0_tdata}), .i0_tlast(i0_tlast), .i0_tvalid(i0_tvalid), .i0_tready(i0_tready),
-      .i1_tdata({2'd1, i1_tdata}), .i1_tlast(i1_tlast), .i1_tvalid(i1_tvalid), .i1_tready(i1_tready),
+      .i0_tdata({2'd0, i0_tdata_buf}), .i0_tlast(i0_tlast_buf), .i0_tvalid(i0_tvalid_buf), .i0_tready(i0_tready_buf),
+      .i1_tdata({2'd1, i1_tdata_buf}), .i1_tlast(i1_tlast_buf), .i1_tvalid(i1_tvalid_buf), .i1_tready(i1_tready_buf),
       .i2_tdata({2'd2, 64'h0}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
       .i3_tdata({2'd3, ib_tdata}), .i3_tlast(ib_tlast), .i3_tvalid(ib_tvalid), .i3_tready(ib_tready),
       .o_tdata({mux_tdest, mux_tdata}), .o_tlast(mux_tlast), .o_tvalid(mux_tvalid), .o_tready(mux_tready)

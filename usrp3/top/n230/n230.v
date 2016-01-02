@@ -412,7 +412,8 @@ module n230 (
    wire [1:0]  ef_bist_error;
 
    n230_ext_sram_fifo #(
-      .EGRESS_BUF_DEPTH(9),
+      .INGRESS_BUF_DEPTH(10),    //Buffer packets after XB
+      .EGRESS_BUF_DEPTH(5),      //We use the radio ingress to buffer post-fifo
       .BIST_ENABLED(0), .BIST_REG_BASE(0)
    ) ext_fifo_i (
       //Clocks

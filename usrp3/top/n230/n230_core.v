@@ -18,10 +18,7 @@
 /***********************************************************
  * N230 Core Guts
  **********************************************************/
-module n230_core #(
-    parameter RADIO_FIFO_SIZE    = 12,
-    parameter SAMPLE_FIFO_SIZE   = 11
-) (
+module n230_core (
    //------------------------------------------------------------------
    // bus interfaces
    //------------------------------------------------------------------
@@ -600,6 +597,9 @@ module n230_core #(
       .i3_tdata(64'h0), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(r1o_tdata), .o_tlast(r1o_tlast), .o_tvalid(r1o_tvalid), .o_tready(r1o_tready)
    );
+
+   localparam RADIO_FIFO_SIZE  = 11;
+   localparam SAMPLE_FIFO_SIZE = 11;
 
    //------------------------------------------------------------------
    // Radio 0
