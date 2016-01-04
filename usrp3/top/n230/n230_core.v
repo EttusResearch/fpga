@@ -598,7 +598,7 @@ module n230_core (
       .o_tdata(r1o_tdata), .o_tlast(r1o_tlast), .o_tvalid(r1o_tvalid), .o_tready(r1o_tready)
    );
 
-   localparam RADIO_FIFO_SIZE  = 11;
+   localparam RADIO_FIFO_SIZE  = 10;
    localparam SAMPLE_FIFO_SIZE = 11;
 
    //------------------------------------------------------------------

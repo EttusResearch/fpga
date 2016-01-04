@@ -18,9 +18,10 @@ create_clock -name CODEC_DATA_CLK -period 5.000 -waveform {0.75 3.25} [get_ports
 
 ## Derived clocks
 create_generated_clock -name bus_clk      [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT0}]
-create_generated_clock -name bus_clk_270  [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT1}]
-create_generated_clock -name clk200       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT2}]
-create_generated_clock -name clk100       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT3}]
+create_generated_clock -name clk200       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT1}]
+create_generated_clock -name clk100       [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT2}]
+create_generated_clock -name ram_ui_clk   [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT3}]
+create_generated_clock -name ram_io_clk   [get_pins {bus_clk_gen_i/inst/mmcm_adv_inst/CLKOUT4}]
 
 ## Virtual clocks 
 
@@ -66,29 +67,35 @@ set_input_delay -clock [get_clocks CODEC_CLK] -min 1.1 [get_ports RX_FRAME_*] -a
 set_max_delay -from [get_cells n230_core/sr_loopback/out_reg[*]] -to [get_cells n230_core/rx0_post_loop_reg[*]] -datapath_only 5.0
 set_max_delay -from [get_cells n230_core/sr_loopback/out_reg[*]] -to [get_cells n230_core/rx1_post_loop_reg[*]] -datapath_only 5.0
 
-# We constrain RAM_CLK to work at 125MHz to be conservative
+# We constrain RAM_CLK to work at 120MHz to be conservative
 #
 create_generated_clock -name RAM_CLK -source [get_pins ext_fifo_i/ram_clk_out_i/C] -multiply_by 1 [get_ports RAM_CLK]
 # No real path from RAM_CLK to internal clock(s)
 set_clock_groups -group [get_clocks RAM_CLK] -group  [get_clocks bus_clk] -asynchronous
 
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_D*]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_D*]
-set_input_delay -clock [get_clocks RAM_CLK] -max 4.8 [get_ports RAM_D*]
-set_input_delay -clock [get_clocks RAM_CLK] -min -1.5 [get_ports RAM_D*]
+set t_sram_clk_period   [get_property PERIOD [get_clocks RAM_CLK]]
+set t_sram_out_setup    1.500
+set t_sram_out_hold     0.500
+set t_sram_in_setup     [expr 1.500 + 3.500]
+set t_sram_in_hold      1.500
 
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_A*]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_A*]
+# One cycle latency so move setup and hold times back by one period
+set_input_delay -clock  [get_clocks RAM_CLK] -max [expr $t_sram_in_setup - $t_sram_clk_period]  [get_ports RAM_D*]
+set_input_delay -clock  [get_clocks RAM_CLK] -min [expr $t_sram_in_hold - $t_sram_clk_period]   [get_ports RAM_D*]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_D*]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_D*]
 
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_CENn]
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_WEn]
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_OEn]
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_LDn]
-set_output_delay -clock [get_clocks RAM_CLK] -max 1.5 [get_ports RAM_CE1n]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_A*]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_A*]
 
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_CENn]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_WEn]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_OEn]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_LDn]
-set_output_delay -clock [get_clocks RAM_CLK] -min -0.5 [get_ports RAM_CE1n]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_CENn]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_WEn]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_OEn]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_LDn]
+set_output_delay -clock [get_clocks RAM_CLK] -max $t_sram_out_setup                             [get_ports RAM_CE1n]
 
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_CENn]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_WEn]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_OEn]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_LDn]
+set_output_delay -clock [get_clocks RAM_CLK] -min [expr -$t_sram_out_hold]                      [get_ports RAM_CE1n]

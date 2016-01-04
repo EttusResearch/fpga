@@ -318,11 +318,13 @@ module n230 (
    //------------------------------------------------------------------
    // generate clocks from always on codec main clk
    //------------------------------------------------------------------
-   wire   bus_clk, bus_clk_270; // Nominally 100MHz
-   wire   radio_clk; // Frequency determined by Catalina Programming
+   wire   bus_clk;      // Nominally 80MHz
+   wire   radio_clk;    // Frequency determined by Catalina Programming
    wire   radio_clk_2x; // Double radio_clk freq.
-   wire   clk200; // 200MHz fixed frequency clock (For DELAY I/O)
-   wire   clk100; // 100MHz fixed frequency clock looped back as JESD GT refclk
+   wire   clk200;       // 200MHz fixed frequency clock (For DELAY I/O)
+   wire   clk100;       // 100MHz fixed frequency clock looped back as JESD GT refclk
+   wire   ram_ui_clk;
+   wire   ram_io_clk;
 
    wire catclk_92_16; // TODO:
    assign catclk_92_16 = radio_clk;
@@ -336,9 +338,11 @@ module n230 (
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
    //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
    //----------------------------------------------------------------------------
-   // CLK_OUT1____80.000______0.000______50.0______225.156____208.802
-   // CLK_OUT2____80.000____270.000______50.0______225.156____208.802
-   // CLK_OUT3___200.000______0.000______50.0______182.470____208.802
+   // CLK_OUT1____80.000______0.000______50.0______158.221____166.174
+   // CLK_OUT2___200.000______0.000______50.0______137.833____166.174
+   // CLK_OUT3___100.000______0.000______50.0______152.933____166.174
+   // CLK_OUT4___120.000______0.000______50.0______148.771____166.174
+   // CLK_OUT5___120.000____261.000______50.0______148.771____166.174
    //
    //----------------------------------------------------------------------------
    // Input Clock   Freq (MHz)    Input Jitter (UI)
@@ -350,10 +354,11 @@ module n230 (
       // Clock in ports
       .clk_in_40mhz(codec_main_clk),
       // Clock out ports
-      .clk_out_80mhz_270(bus_clk_270),
       .clk_out_80mhz(bus_clk),
       .clk_out_200mhz(clk200),
       .clk_out_100mhz(clk100),
+      .clk_out_120mhz(ram_ui_clk),
+      .clk_out_120mhz_del(ram_io_clk),
       // Status and control signals
       .reset(reset_global),
       .locked(locked)
@@ -413,13 +418,14 @@ module n230 (
 
    n230_ext_sram_fifo #(
       .INGRESS_BUF_DEPTH(10),    //Buffer packets after XB
-      .EGRESS_BUF_DEPTH(5),      //We use the radio ingress to buffer post-fifo
+      .EGRESS_BUF_DEPTH(11),     //16k packet gate FIFO here plus an 8k FIFO in the radio
       .BIST_ENABLED(0), .BIST_REG_BASE(0)
    ) ext_fifo_i (
       //Clocks
-      .extram_clk(bus_clk_270),
-      .user_clk(bus_clk),
-      .user_rst(bus_rst),
+      .bus_clk(bus_clk),
+      .bus_rst(bus_rst),
+      .ram_ui_clk(ram_ui_clk),
+      .ram_io_clk(ram_io_clk),
       // IO Interface
       .RAM_D(RAM_D),
       .RAM_A(RAM_A),

@@ -3,15 +3,16 @@
 //
 
 module n230_ext_sram_fifo #(
-   parameter INGRESS_BUF_DEPTH = 5,
-   parameter EGRESS_BUF_DEPTH  = 5,
+   parameter INGRESS_BUF_DEPTH = 8,
+   parameter EGRESS_BUF_DEPTH  = 8,
    parameter BIST_ENABLED      = 0,
    parameter BIST_REG_BASE     = 0
 ) (
    //Clocks
-   input          extram_clk,
-   input          user_clk,
-   input          user_rst,
+   input          bus_clk,
+   input          bus_rst,
+   input          ram_ui_clk,
+   input          ram_io_clk,
    
    // IO Interface
    inout  [35:0]  RAM_D,
@@ -56,6 +57,11 @@ module n230_ext_sram_fifo #(
    output [1:0]   bist_error
 );
 
+   wire ram_ui_rst;
+   reset_sync radio_reset_sync (
+      .clk(ram_ui_clk), .reset_in(bus_rst), .reset_out(ram_ui_rst)
+   );
+
    // --------------------------------------------
    // Instantiate IO for Bidirectional bus to SRAM
    // --------------------------------------------
@@ -90,27 +96,25 @@ module n230_ext_sram_fifo #(
    // RAM clock from bus clock
    //------------------------------------------------------------------
    ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) ram_clk_out_i (
-      .Q(RAM_CLK), .C(extram_clk), .CE(1'b1), .D1(1'b1), .D2(1'b0), .R(1'b0), .S(1'b0)
+      .Q(RAM_CLK), .C(ram_io_clk), .CE(1'b1), .D1(1'b1), .D2(1'b0), .R(1'b0), .S(1'b0)
    );
 
    // --------------------------------------------
-   // Ingress buffers
+   // Ingress buffer
    // --------------------------------------------
    wire [63:0] i0_tdata_buf, i1_tdata_buf;
    wire        i0_tlast_buf, i0_tvalid_buf, i0_tready_buf, i1_tlast_buf, i1_tvalid_buf, i1_tready_buf;
 
-   axi_fifo #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i0 (
-      .clk(user_clk), .reset(user_rst), .clear(1'b0),
-      .i_tdata({i0_tlast, i0_tdata}), .i_tvalid(i0_tvalid), .i_tready(i0_tready),
-      .o_tdata({i0_tlast_buf, i0_tdata_buf}), .o_tvalid(i0_tvalid_buf), .o_tready(i0_tready_buf),
-      .space(), .occupied()
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i0 (
+      .reset(bus_rst),
+      .i_aclk(bus_clk), .i_tdata({i0_tlast, i0_tdata}), .i_tvalid(i0_tvalid), .i_tready(i0_tready),
+      .o_aclk(ram_ui_clk), .o_tdata({i0_tlast_buf, i0_tdata_buf}), .o_tvalid(i0_tvalid_buf), .o_tready(i0_tready_buf)
    );
 
-   axi_fifo #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i1 (
-      .clk(user_clk), .reset(user_rst), .clear(1'b0),
-      .i_tdata({i1_tlast, i1_tdata}), .i_tvalid(i1_tvalid), .i_tready(i1_tready),
-      .o_tdata({i1_tlast_buf, i1_tdata_buf}), .o_tvalid(i1_tvalid_buf), .o_tready(i1_tready_buf),
-      .space(), .occupied()
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(INGRESS_BUF_DEPTH)) ingress_fifo_i1 (
+      .reset(bus_rst),
+      .i_aclk(bus_clk), .i_tdata({i1_tlast, i1_tdata}), .i_tvalid(i1_tvalid), .i_tready(i1_tready),
+      .o_aclk(ram_ui_clk), .o_tdata({i1_tlast_buf, i1_tdata_buf}), .o_tvalid(i1_tvalid_buf), .o_tready(i1_tready_buf)
    );
 
    // --------------------------------------------
@@ -138,19 +142,22 @@ module n230_ext_sram_fifo #(
    wire        demux_tlast, demux_tvalid, demux_tready;
    wire [1:0]  demux_tdest;
    wire [7:0]  demux_tkeep;
+   wire        demux_terr;
 
    wire [63:0] ob_tdata;
    wire        ob_tlast, ob_tvalid, ob_tready;
 
    wire [63:0] o0_tdata_buf;
    wire        o0_tlast_buf, o0_tvalid_buf, o0_tready_buf;
+   wire        o0_terr_buf;
 
    wire [63:0] o1_tdata_buf;
    wire        o1_tlast_buf, o1_tvalid_buf, o1_tready_buf;
+   wire        o1_terr_buf;
 
    // MUX and add source information
    axi_mux4 #(.PRIO(0), .WIDTH(66), .BUFFER(1)) src_mux_i (
-      .clk(user_clk), .reset(user_rst),  .clear(1'b0),
+      .clk(ram_ui_clk), .reset(ram_ui_rst),  .clear(1'b0),
       .i0_tdata({2'd0, i0_tdata_buf}), .i0_tlast(i0_tlast_buf), .i0_tvalid(i0_tvalid_buf), .i0_tready(i0_tready_buf),
       .i1_tdata({2'd1, i1_tdata_buf}), .i1_tlast(i1_tlast_buf), .i1_tvalid(i1_tvalid_buf), .i1_tready(i1_tready_buf),
       .i2_tdata({2'd2, 64'h0}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
@@ -160,7 +167,7 @@ module n230_ext_sram_fifo #(
 
    // 64 -> 32 conversion
    axi_downsizer_64to32 downsizer_i (
-      .aclk(user_clk), .aresetn(~user_rst),
+      .aclk(ram_ui_clk), .aresetn(~ram_ui_rst),
       .s_axis_tdata(mux_tdata), .s_axis_tdest(mux_tdest), .s_axis_tlast(mux_tlast),
       .s_axis_tvalid(mux_tvalid), .s_axis_tready(mux_tready),
       .m_axis_tdata(fifo_tdata_in), .m_axis_tdest(fifo_tdest_in), .m_axis_tlast(fifo_tlast_in),
@@ -173,9 +180,9 @@ module n230_ext_sram_fifo #(
       .EXT_WIDTH(36), .INT_WIDTH(36),
       .RAM_DEPTH(18), .FIFO_DEPTH(18)
    ) ext_fifo_i (
-      .int_clk    (user_clk),
-      .ext_clk    (user_clk),
-      .rst        (user_rst),
+      .int_clk    (ram_ui_clk),
+      .ext_clk    (ram_ui_clk),
+      .rst        (ram_ui_rst),
       .RAM_D_pi   (RAM_D_pi),
       .RAM_D_po   (RAM_D_po),
       .RAM_D_poe  (RAM_D_poe),
@@ -195,7 +202,7 @@ module n230_ext_sram_fifo #(
 
    // Short buffer for AXI upsizer
    axi_fifo_short #(.WIDTH(35)) upsizer_buf_i (
-      .clk(user_clk), .reset(user_rst), .clear(1'b0),
+      .clk(ram_ui_clk), .reset(ram_ui_rst), .clear(1'b0),
       .i_tdata({fifo_tlast_out, fifo_tdest_out, fifo_tdata_out}), .i_tvalid(fifo_tvalid_out), .i_tready(fifo_tready_out),
       .o_tdata({upbuf_tlast, upbuf_tdest, upbuf_tdata}), .o_tvalid(upbuf_tvalid), .o_tready(upbuf_tready),
       .space(), .occupied()
@@ -203,41 +210,62 @@ module n230_ext_sram_fifo #(
 
    // 32 -> 64 conversion
    axi_upsizer_32to64 upsizer_i (
-      .aclk(user_clk), .aresetn(~user_rst),
+      .aclk(ram_ui_clk), .aresetn(~ram_ui_rst),
       .s_axis_tdata(upbuf_tdata), .s_axis_tdest(upbuf_tdest), .s_axis_tlast(upbuf_tlast),
       .s_axis_tvalid(upbuf_tvalid), .s_axis_tready(upbuf_tready),
       .m_axis_tdata(demux_tdata), .m_axis_tdest(demux_tdest), .m_axis_tlast(demux_tlast),
       .m_axis_tvalid(demux_tvalid), .m_axis_tready(demux_tready), .m_axis_tkeep(demux_tkeep)
    );
+   assign demux_terr = ~(&demux_tkeep);
 
    // DEMUX and split streams based on destination
    wire [65:0] header;
    wire [1:0]  o0_tdest, o1_tdest, ob_tdest;
-   axi_demux4 #(.ACTIVE_CHAN(4'b1011), .WIDTH(66), .BUFFER(1)) dest_demux_i (
-      .clk(user_clk), .reset(user_rst),  .clear(1'b0),
+   wire        ob_terr;
+
+   axi_demux4 #(.ACTIVE_CHAN(4'b1011), .WIDTH(67), .BUFFER(1)) dest_demux_i (
+      .clk(ram_ui_clk), .reset(ram_ui_rst),  .clear(1'b0),
       .header(header), .dest(header[65:64]),
-      .i_tdata({demux_tdest, demux_tdata}), .i_tlast(demux_tlast), .i_tvalid(demux_tvalid), .i_tready(demux_tready),
-      .o0_tdata({o0_tdest, o0_tdata_buf}), .o0_tlast(o0_tlast_buf), .o0_tvalid(o0_tvalid_buf), .o0_tready(o0_tready_buf),
-      .o1_tdata({o1_tdest, o1_tdata_buf}), .o1_tlast(o1_tlast_buf), .o1_tvalid(o1_tvalid_buf), .o1_tready(o1_tready_buf),
+      .i_tdata({demux_terr, demux_tdest, demux_tdata}), .i_tlast(demux_tlast), .i_tvalid(demux_tvalid), .i_tready(demux_tready),
+      .o0_tdata({o0_terr_buf, o0_tdest, o0_tdata_buf}), .o0_tlast(o0_tlast_buf), .o0_tvalid(o0_tvalid_buf), .o0_tready(o0_tready_buf),
+      .o1_tdata({o1_terr_buf, o1_tdest, o1_tdata_buf}), .o1_tlast(o1_tlast_buf), .o1_tvalid(o1_tvalid_buf), .o1_tready(o1_tready_buf),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
-      .o3_tdata({ob_tdest, ob_tdata}), .o3_tlast(ob_tlast), .o3_tvalid(ob_tvalid), .o3_tready(ob_tready)
+      .o3_tdata({ob_terr, ob_tdest, ob_tdata}), .o3_tlast(ob_tlast), .o3_tvalid(ob_tvalid), .o3_tready(ob_tready)
    );
 
    // --------------------------------------------
-   // Egress buffers
+   // Egress buffer and packet gate
    // --------------------------------------------
-   axi_fifo #(.WIDTH(65), .SIZE(EGRESS_BUF_DEPTH)) egress_fifo_i0 (
-      .clk(user_clk), .reset(user_rst), .clear(1'b0),
-      .i_tdata({o0_tlast_buf, o0_tdata_buf}), .i_tvalid(o0_tvalid_buf), .i_tready(o0_tready_buf),
-      .o_tdata({o0_tlast, o0_tdata}), .o_tvalid(o0_tvalid), .o_tready(o0_tready),
-      .space(), .occupied()
+   wire [63:0] o0_tdata_gt;
+   wire        o0_tlast_gt, o0_tvalid_gt, o0_tready_gt;
+   wire        o0_terr_gt;
+
+   wire [63:0] o1_tdata_gt;
+   wire        o1_tlast_gt, o1_tvalid_gt, o1_tready_gt;
+   wire        o1_terr_gt;
+
+   axi_fifo_2clk #(.WIDTH(66), .SIZE(0)) egress_fifo_i0 (
+      .reset(bus_rst),
+      .i_aclk(ram_ui_clk), .i_tdata({o0_terr_buf, o0_tlast_buf, o0_tdata_buf}), .i_tvalid(o0_tvalid_buf), .i_tready(o0_tready_buf),
+      .o_aclk(bus_clk), .o_tdata({o0_terr_gt, o0_tlast_gt, o0_tdata_gt}), .o_tvalid(o0_tvalid_gt), .o_tready(o0_tready_gt)
    );
 
-   axi_fifo #(.WIDTH(65), .SIZE(EGRESS_BUF_DEPTH)) egress_fifo_i1 (
-      .clk(user_clk), .reset(user_rst), .clear(1'b0),
-      .i_tdata({o1_tlast_buf, o1_tdata_buf}), .i_tvalid(o1_tvalid_buf), .i_tready(o1_tready_buf),
-      .o_tdata({o1_tlast, o1_tdata}), .o_tvalid(o1_tvalid), .o_tready(o1_tready),
-      .space(), .occupied()
+   axi_packet_gate #(.WIDTH(64), .SIZE(EGRESS_BUF_DEPTH)) egress_pkt_gate_i0 (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata(o0_tdata_gt), .i_tlast(o0_tlast_gt), .i_terror(o0_terr_gt), .i_tvalid(o0_tvalid_gt), .i_tready(o0_tready_gt),
+      .o_tdata(o0_tdata), .o_tlast(o0_tlast), .o_tvalid(o0_tvalid), .o_tready(o0_tready)
+   );
+
+   axi_fifo_2clk #(.WIDTH(66), .SIZE(0)) egress_fifo_i1 (
+      .reset(bus_rst),
+      .i_aclk(ram_ui_clk), .i_tdata({o1_terr_buf, o1_tlast_buf, o1_tdata_buf}), .i_tvalid(o1_tvalid_buf), .i_tready(o1_tready_buf),
+      .o_aclk(bus_clk), .o_tdata({o1_terr_gt, o1_tlast_gt, o1_tdata_gt}), .o_tvalid(o1_tvalid_gt), .o_tready(o1_tready_gt)
+   );
+
+   axi_packet_gate #(.WIDTH(64), .SIZE(EGRESS_BUF_DEPTH)) egress_pkt_gate_i1 (
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
+      .i_tdata(o1_tdata_gt), .i_tlast(o1_tlast_gt), .i_terror(o1_terr_gt), .i_tvalid(o1_tvalid_gt), .i_tready(o1_tready_gt),
+      .o_tdata(o1_tdata), .o_tlast(o1_tlast), .o_tvalid(o1_tvalid), .o_tready(o1_tready)
    );
 
    // --------------------------------------------
@@ -251,7 +279,7 @@ generate if (BIST_ENABLED == 1) begin
      .BW_COUNTER(0),
      .SR_BASE(BIST_REG_BASE)
    ) axi_chdr_test_pattern_i (
-      .clk(user_clk), .reset(user_rst),
+      .clk(ram_ui_clk), .reset(ram_ui_rst),
       .i_tdata(ib_tdata), .i_tlast(ib_tlast), .i_tvalid(ib_tvalid), .i_tready(ib_tready),
       .o_tdata(ob_tdata), .o_tlast(ob_tlast), .o_tvalid(ob_tvalid), .o_tready(ob_tready),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
