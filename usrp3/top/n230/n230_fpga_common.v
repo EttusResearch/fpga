@@ -50,10 +50,12 @@ localparam RB_ZPU_ETH1_PKT_CNT = 8'd7;
  *******************************************************************/
 localparam PRODUCT_ID = 8'h01;
 `ifdef SAFE_IMAGE
-   localparam COMPAT_MAJOR = 8'hFF;
+   // Decrement safe image compat number
+   localparam COMPAT_MAJOR = 8'hF0;
    localparam COMPAT_MINOR = 16'hFFFF;
 `else
-   localparam COMPAT_MAJOR = 8'h02;
+   // Increment non-safe image compat number
+   localparam COMPAT_MAJOR = 8'h20;
    localparam COMPAT_MINOR = 16'h0000;
 `endif
 
