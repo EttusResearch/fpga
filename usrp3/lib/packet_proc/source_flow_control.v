@@ -42,15 +42,19 @@ module source_flow_control #(
 
    reg         go;
    reg         window_reseting;
+   reg [11:0]  window_reset_cnt; //Counter to make reset tolerant to bubble cycles
    reg [1:0]   sfc_state;
    
    always @(posedge clk) begin
-      if (reset | clear)
-         window_reseting <= 1'b0;
-      else if (window_reset)                   //Reset start
-         window_reseting <= 1'b1;
-      else if (window_reseting & ~in_tvalid)   //Reset end
-         window_reseting <= 1'b0;
+      if (reset | clear) begin
+         window_reseting  <= 1'b0;
+      end else if (window_reset) begin                  //Reset start
+         window_reseting  <= 1'b1;
+         window_reset_cnt <= 12'd0;
+      end else if (window_reseting & ~in_tvalid) begin  //Reset end
+         window_reset_cnt <= window_reset_cnt + 12'd1;
+         window_reseting  <= (window_reset_cnt == 12'hFFF);
+      end
    end
    
    localparam SFC_HEAD = 2'd0;
