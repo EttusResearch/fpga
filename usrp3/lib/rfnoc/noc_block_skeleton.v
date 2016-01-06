@@ -18,12 +18,11 @@ module noc_block_skeleton #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  localparam SR_READBACK = 255;
-
   wire [31:0] set_data;
   wire [7:0]  set_addr;
   wire        set_stb;
   reg  [63:0] rb_data;
+  wire [7:0]  rb_addr;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -31,19 +30,23 @@ module noc_block_skeleton #(
   wire [63:0] str_sink_tdata, str_src_tdata;
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
+  wire [15:0] src_sid;
+  wire [15:0] next_dst_sid, resp_out_dst_sid;
+  wire [15:0] resp_in_dst_sid;
+
   wire        clear_tx_seqnum;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
-  inst_noc_shell (
+  noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(rb_data),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -51,8 +54,13 @@ module noc_block_skeleton #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum),
-    .debug(debug));
+    // Stream IDs set by host 
+    .src_sid(src_sid),                   // SID of this block
+    .next_dst_sid(next_dst_sid),         // Next destination SID
+    .resp_in_dst_sid(resp_in_dst_sid),   // Response destination SID for input stream responses / errors
+    .resp_out_dst_sid(resp_out_dst_sid), // Response destination SID for output stream responses / errors
+    // Misc
+    .clear_tx_seqnum(clear_tx_seqnum), .debug(debug));
 
   ////////////////////////////////////////////////////////////
   //
@@ -60,8 +68,6 @@ module noc_block_skeleton #(
   // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-  localparam NUM_AXI_CONFIG_BUS = 1;
-
   wire [31:0] m_axis_data_tdata;
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
@@ -72,30 +78,12 @@ module noc_block_skeleton #(
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
 
-  wire [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata;
-  wire [NUM_AXI_CONFIG_BUS-1:0]    m_axis_config_tvalid;
-  wire [NUM_AXI_CONFIG_BUS-1:0]    m_axis_config_tready;
-
-  localparam AXI_WRAPPER_BASE    = 128;
-  localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
-  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
-  localparam SR_USER_REG_BASE    = SR_AXI_CONFIG_BASE + 2*NUM_AXI_CONFIG_BUS;
-
-  // Set next destination in chain
-  wire [15:0] next_dst;
-  setting_reg #(
-    .my_addr(SR_NEXT_DST), .width(16))
-  sr_next_dst(
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(next_dst), .changed());
-
   axi_wrapper #(
-    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
-  inst_axi_wrapper (
+    .SIMPLE_MODE(1))
+  axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
-    .next_dst(next_dst),
+    .next_dst(next_dst_sid),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
@@ -109,10 +97,10 @@ module noc_block_skeleton #(
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
     .s_axis_data_tuser(),
-    .m_axis_config_tdata(m_axis_config_tdata),
+    .m_axis_config_tdata(),
     .m_axis_config_tlast(),
-    .m_axis_config_tvalid(m_axis_config_tvalid),
-    .m_axis_config_tready(m_axis_config_tready),
+    .m_axis_config_tvalid(),
+    .m_axis_config_tready(),
     .m_axis_pkt_len_tdata(),
     .m_axis_pkt_len_tvalid(),
     .m_axis_pkt_len_tready());
@@ -122,6 +110,7 @@ module noc_block_skeleton #(
   // User code
   //
   ////////////////////////////////////////////////////////////
+  localparam SR_USER_REG_BASE = 128;
 
   // Control Source Unused
   assign cmdout_tdata  = 64'd0;
@@ -148,19 +137,10 @@ module noc_block_skeleton #(
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(test_reg_1), .changed());
 
   // Readback registers
-  localparam RB_ADDR_WIDTH = 1;
-  wire [RB_ADDR_WIDTH-1:0] rb_addr;
-
-  setting_reg #(
-    .my_addr(SR_READBACK), .awidth(8), .width(RB_ADDR_WIDTH))
-  sr_rdback (
-    .clk(ce_clk), .rst(ce_rst),
-    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(rb_addr), .changed());
-
   always @*
     case(rb_addr)
-      1'd0    : rb_data <= {32'd0, test_reg_0};
-      1'd1    : rb_data <= {32'd0, test_reg_1};
+      8'd0    : rb_data <= {32'd0, test_reg_0};
+      8'd1    : rb_data <= {32'd0, test_reg_1};
       default : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
 
