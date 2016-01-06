@@ -6,7 +6,6 @@ source $::env(VIV_TOOLS_DIR)/scripts/viv_utils.tcl
 source $::env(VIV_TOOLS_DIR)/scripts/viv_strategies.tcl
 
 set safe_image $env(SAFE_MODE)
-set test_image $env(TEST_MODE)
 
 # STEP#1: Create project, add sources, refresh IP
 vivado_utils::initialize_project

@@ -42,7 +42,6 @@ n230_core.v \
 zpu_subsystem.v \
 n230_ext_sram_fifo.v \
 n230_zpu_config.vhd \
-n230_test_jesd204_if.v \
 eth_jesd_gtp_phy.v \
 n230.xdc \
 timing.xdc \
@@ -72,9 +71,6 @@ EXTRA_DEFS = DELETE_FORMAT_CONVERSION
 ifeq (1,$(SAFE_MODE))
 EXTRA_DEFS += SAFE_IMAGE
 endif
-ifeq (1,$(TEST_MODE))
-EXTRA_DEFS += TEST_JESD204_IF
-endif
 
 # Git Hash
 SHORT_HASH=$(addprefix GIT_HASH=,$(shell $(BASE_DIR)/../tools/scripts/git-hash.sh))
@@ -86,7 +82,6 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell $(BASE_DIR)/../tools/scripts/git-hash.s
 
 VERILOG_DEFS=$(EXTRA_DEFS) $(SHORT_HASH)
 export SAFE_MODE=$(SAFE_MODE)
-export TEST_MODE=$(TEST_MODE)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip

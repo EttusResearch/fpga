@@ -171,138 +171,63 @@ module n230 (
    input          CODEC_LOOP_CLK_IN_P, // MGT refclk in
    input          CODEC_LOOP_CLK_IN_N,
    
-   input          JESD0_RX_P,
-   input          JESD0_RX_N,
-   output         JESD0_TX_P,
-   output         JESD0_TX_N,
+   input          RD1_ET_RXNC_P,
+   input          RD1_ET_RXNC_N,
+   output         RD1_ET_ENV0_P,
+   output         RD1_ET_ENV0_N,
 
-   input          JESD1_RX_P,
-   input          JESD1_RX_N,
-   output         JESD1_TX_P,
-   output         JESD1_TX_N
+   input          RD2_ET_RXNC_P,
+   input          RD2_ET_RXNC_N,
+   output         RD2_ET_ENV0_P,
+   output         RD2_ET_ENV0_N,
    //------------------------------------------------------------------
-   // JESD interface 1 signals
+   // MiniSAS interface 1 signals
    //------------------------------------------------------------------
-   //output RD1_ET_FRAME_CLKp,
-   //output RD1_ET_FRAME_CLKn,
-   //input RD1_ET_SYNCp,
-   //input RD1_ET_SYNCn,
-   // High Speed Data
-   //output RD1_ET_ENV0p, // MGT Tx
-   //output RD1_ET_ENV0n, // MGT Tx
-   // SPI
-   //output RD1_ET_SPI_SCLK,
-   //output RD1_ET_SPI_SDIN,
-   //input RD1_ET_SPI_SDOUT,
-   //output RD1_ET_SPI_SDEN,
-   // Modulator (PIC) Reset
-   //output RD1_ET_RESET,
-   // Alarm interupt
-   //input RD1_ET_ALARM,
-   // Warning interupt
-   //input RD1_ET_WARNING,
-   // Sleep mode
-   //output RD1_SLEEP,
-   // Modulator Ready
-   //input RD1_P_READY,
-   // PIC Program/Debug
-   //output RD1_ICSP_CLK,
-   //inout RD1_ICSP_DAT,
-   // Set the loopback from PA to RX
-   //output RD1_RX_TX_LOOPBACK,
-   // Temperature Sensor
-   //inout RD1_TEMP_SDA,
-   //output RD1_TEMP_SCL,
-   //
-   //output RD1_RFPWR_CONV,
-   //input RD1_RFPWR_SDO,
-   //output RD1_RFPWR_SCLK,
-   `ifdef TEST_JESD204_IF
-   //
-   // WARNING! Pin directions in this section are purely for use on the production test stand
-   // for loopback testing using a standard Molex cable. The could be *DESTRUCTIVE* to connected
-   // hardware
-   //
-   , // Continue last signal declaration with comma
-  (* IOB = "TRUE" *)    inout RD1_ET_SPI_SCLK,     // A5 1.8V
-  (* IOB = "TRUE" *)    inout RD1_ET_SPI_SDIN,     // A6 1.8V
-  (* IOB = "TRUE" *)    input RD1_ET_FRAME_CLKp,    // B5 2.5V
-  (* IOB = "TRUE" *)    input RD1_ET_FRAME_CLKn,    // B6 2.5V
-  (* IOB = "TRUE" *)    inout RD1_RX_TX_LOOPBACK,  // A8 3.3V
-  (* IOB = "TRUE" *)    inout RD1_TEMP_SDA,        // A9 3.3V
-  (* IOB = "TRUE" *)    input RD1_RFPWR_SDO,        // B8 3.3V
-  (* IOB = "TRUE" *)    input RD1_RFPWR_SCLK,       // B9 3.3V
-  (* IOB = "TRUE" *)    inout RD1_ET_SPI_SDOUT,    // A13 1.8V
-  (* IOB = "TRUE" *)    inout RD1_ET_SPI_SDEN,     // A14 1.8V
-  (* IOB = "TRUE" *)    input RD1_ET_ALARM,         // B13 1.8V
-  (* IOB = "TRUE" *)    input RD1_ET_WARNING,       // B14 1.8V
-  (* IOB = "TRUE" *)    inout RD1_ICSP_CLK,        // A16 1.8V
-  (* IOB = "TRUE" *)    inout RD1_ICSP_DAT,        // A17 1.8V
-  (* IOB = "TRUE" *)    input RD1_SLEEP,            // B16 1.8V
-  (* IOB = "TRUE" *)    input RD1_P_READY,          // B17 1.8V
-
- `endif
+   inout          RD1_ET_SPI_SCLK,
+   inout          RD1_ET_SPI_SDIN,
+   inout          RD1_ET_SYNCp,
+   inout          RD1_ET_SYNCn,
+   inout          RD1_ET_FRAME_CLKp,
+   inout          RD1_ET_FRAME_CLKn,
+   inout          RD1_RX_TX_LOOPBACK,
+   inout          RD1_TEMP_SDA,
+   inout          RD1_TEMP_SCL,
+   inout          RD1_RFPWR_CONV,
+   inout          RD1_RFPWR_SDO,
+   inout          RD1_RFPWR_SCLK,
+   inout          RD1_ET_SPI_SDOUT,
+   inout          RD1_ET_SPI_SDEN,
+   inout          RD1_ET_RESET,
+   inout          RD1_ET_ALARM,
+   inout          RD1_ET_WARNING,
+   inout          RD1_ICSP_CLK,
+   inout          RD1_ICSP_DAT,
+   inout          RD1_SLEEP,
+   inout          RD1_P_READY,
    //------------------------------------------------------------------
-   // JESD interface 2 signals
+   // MiniSAS interface 2 signals
    //------------------------------------------------------------------
-   //output RD2_ET_FRAME_CLKp,
-   //output RD2_ET_FRAME_CLKn,
-   //input RD2_ET_SYNCp,
-   //input RD2_ET_SYNCn,
-   // High Speed Data
-   //output RD2_ET_ENV0p, // MGT Tx
-   //output RD2_ET_ENV0n,  // MGT Tx
-   // SPI
-   //output RD2_ET_SPI_SCLK,
-   //output RD2_ET_SPI_SDIN,
-   //input RD2_ET_SPI_SDOUT,
-   //output RD2_ET_SPI_SDEN,
-   // Modulator (PIC) Reset
-   //output RD2_ET_RESET,
-   // Alarm interupt
-   //input RD2_ET_ALARM,
-   // Warning interupt
-   //input RD2_ET_WARNING,
-   // Sleep mode
-   //output RD2_SLEEP,
-   // Modulator Ready
-   //input RD2_P_READY,
-   // PIC Program/Debug
-   //output RD2_ICSP_CLK,
-   //inout RD2_ICSP_DAT,
-   // Set the loopback from PA to RX
-   //output RD2_RX_TX_LOOPBACK,
-   // Temperature Sensor
-   //inout RD2_TEMP_SDA,
-   //output RD2_TEMP_SCL,
-   //
-   //output RD2_RFPWR_CONV,
-   //input RD2_RFPWR_SDO,
-   //output RD2_RFPWR_SCLK
-    `ifdef TEST_JESD204_IF
-   //
-   // WARNING! Pin directions in this section are purely for use on the production test stand
-   // for loopback testing using a standard Molex cable. The could be *DESTRUCTIVE* to connected
-   // hardware
-   //
-  (* IOB = "TRUE" *)    inout RD2_ET_SPI_SCLK,     // A5 1.8V
-  (* IOB = "TRUE" *)    inout RD2_ET_SPI_SDIN,     // A6 1.8V
-  (* IOB = "TRUE" *)    input RD2_ET_FRAME_CLKp,    // B5 2.5V
-  (* IOB = "TRUE" *)    input RD2_ET_FRAME_CLKn,    // B6 2.5V
-  (* IOB = "TRUE" *)    inout RD2_RX_TX_LOOPBACK,  // A8 3.3V
-  (* IOB = "TRUE" *)    inout RD2_TEMP_SDA,        // A9 3.3V
-  (* IOB = "TRUE" *)    input RD2_RFPWR_SDO,        // B8 3.3V
-  (* IOB = "TRUE" *)    input RD2_RFPWR_SCLK,       // B9 3.3V
-  (* IOB = "TRUE" *)    inout RD2_ET_SPI_SDOUT,    // A13 1.8V
-  (* IOB = "TRUE" *)    inout RD2_ET_SPI_SDEN,     // A14 1.8V
-  (* IOB = "TRUE" *)    input RD2_ET_ALARM,         // B13 1.8V
-  (* IOB = "TRUE" *)    input RD2_ET_WARNING,       // B14 1.8V
-  (* IOB = "TRUE" *)    inout RD2_ICSP_CLK,        // A16 1.8V
-  (* IOB = "TRUE" *)    inout RD2_ICSP_DAT,        // A17 1.8V
-  (* IOB = "TRUE" *)    input RD2_SLEEP,            // B16 1.8V
-  (* IOB = "TRUE" *)    input RD2_P_READY          // B17 1.8V
-
- `endif
+   inout          RD2_ET_SPI_SCLK,
+   inout          RD2_ET_SPI_SDIN,
+   inout          RD2_ET_SYNCp,
+   inout          RD2_ET_SYNCn,
+   inout          RD2_ET_FRAME_CLKp,
+   inout          RD2_ET_FRAME_CLKn,
+   inout          RD2_RX_TX_LOOPBACK,
+   inout          RD2_TEMP_SDA,
+   inout          RD2_TEMP_SCL,
+   inout          RD2_RFPWR_CONV,
+   inout          RD2_RFPWR_SDO,
+   inout          RD2_RFPWR_SCLK,
+   inout          RD2_ET_SPI_SDOUT,
+   inout          RD2_ET_SPI_SDEN,
+   inout          RD2_ET_RESET,
+   inout          RD2_ET_ALARM,
+   inout          RD2_ET_WARNING,
+   inout          RD2_ICSP_CLK,
+   inout          RD2_ICSP_DAT,
+   inout          RD2_SLEEP,
+   inout          RD2_P_READY
 );
 
    //------------------------------------------------------------------
@@ -464,59 +389,6 @@ module n230 (
    );
 
    //------------------------------------------------------------------
-   // Production Test of JESD204 connectors and signals
-   //------------------------------------------------------------------
-   `ifdef TEST_JESD204_IF
-
-   wire  jesd204_test_run;
-   wire  jesd204_test_done;
-   wire [15:0] jesd204_test_status;
-
-
-   n230_test_jesd204_if  n230_test_jesd204_if
-     (
-      .clk(bus_clk),
-      .reset(bus_rst),
-      .run(jesd204_test_run),
-      .done(jesd204_test_done),
-      .status(jesd204_test_status),
-      .RD1_ET_SPI_SCLK(RD1_ET_SPI_SCLK ),     // A5 1.8V
-      .RD1_ET_SPI_SDIN(RD1_ET_SPI_SDIN ),     // A6 1.8V
-      .RD1_ET_FRAME_CLKp(RD1_ET_FRAME_CLKp ),    // B5 2.5V
-      .RD1_ET_FRAME_CLKn(RD1_ET_FRAME_CLKn ),    // B6 2.5V
-      .RD1_RX_TX_LOOPBACK(RD1_RX_TX_LOOPBACK ),  // A8 3.3V
-      .RD1_TEMP_SDA(RD1_TEMP_SDA ),        // A9 3.3V
-      .RD1_RFPWR_SDO(RD1_RFPWR_SDO ),        // B8 3.3V
-      .RD1_RFPWR_SCLK(RD1_RFPWR_SCLK ),       // B9 3.3V
-      .RD1_ET_SPI_SDOUT(RD1_ET_SPI_SDOUT ),    // A13 1.8V
-      .RD1_ET_SPI_SDEN(RD1_ET_SPI_SDEN ),     // A14 1.8V
-      .RD1_ET_ALARM(RD1_ET_ALARM ),         // B13 1.8V
-      .RD1_ET_WARNING(RD1_ET_WARNING ),       // B14 1.8V
-      .RD1_ICSP_CLK(RD1_ICSP_CLK ),        // A16 1.8V
-      .RD1_ICSP_DAT(RD1_ICSP_DAT ),        // A17 1.8V
-      .RD1_SLEEP(RD1_SLEEP ),            // B16 1.8V
-      .RD1_P_READY(RD1_P_READY ),          // B17 1.8V
-
-      .RD2_ET_SPI_SCLK(RD2_ET_SPI_SCLK ),     // A5 1.8V
-      .RD2_ET_SPI_SDIN(RD2_ET_SPI_SDIN ),     // A6 1.8V
-      .RD2_ET_FRAME_CLKp(RD2_ET_FRAME_CLKp ),    // B5 2.5V
-      .RD2_ET_FRAME_CLKn(RD2_ET_FRAME_CLKn ),    // B6 2.5V
-      .RD2_RX_TX_LOOPBACK(RD2_RX_TX_LOOPBACK ),  // A8 3.3V
-      .RD2_TEMP_SDA(RD2_TEMP_SDA ),        // A9 3.3V
-      .RD2_RFPWR_SDO(RD2_RFPWR_SDO ),        // B8 3.3V
-      .RD2_RFPWR_SCLK(RD2_RFPWR_SCLK ),       // B9 3.3V
-      .RD2_ET_SPI_SDOUT(RD2_ET_SPI_SDOUT ),    // A13 1.8V
-      .RD2_ET_SPI_SDEN(RD2_ET_SPI_SDEN ),     // A14 1.8V
-      .RD2_ET_ALARM(RD2_ET_ALARM ),         // B13 1.8V
-      .RD2_ET_WARNING(RD2_ET_WARNING ),       // B14 1.8V
-      .RD2_ICSP_CLK(RD2_ICSP_CLK ),        // A16 1.8V
-      .RD2_ICSP_DAT(RD2_ICSP_DAT ),        // A17 1.8V
-      .RD2_SLEEP(RD2_SLEEP ),            // B16 1.8V
-      .RD2_P_READY(RD2_P_READY )          // B17 1.8V
-      );
- `endif
-
-   //------------------------------------------------------------------
    // CODEC capture/gen
    //------------------------------------------------------------------
    wire [4:0] ctrl_clk_delay, ctrl_data_delay;
@@ -666,7 +538,7 @@ module n230 (
    );
 
    ///////////////////////////////////////////////////////////////////////
-   // Helium core - TODO pinout
+   // N230 core
    ///////////////////////////////////////////////////////////////////////
 
    wire        gmii_rx_dv0, gmii_rx_er0;
@@ -682,6 +554,9 @@ module n230 (
    wire [7:0]  gmii_txd1;
    wire [15:0] gmii_status1;
    wire        mdc1, mdio_in1, mdio_out1;
+   
+   wire [31:0] ms0_gpio_in, ms0_gpio_out, ms0_gpio_ddr;
+   wire [31:0] ms1_gpio_in, ms1_gpio_out, ms1_gpio_ddr;
 
    n230_core n230_core (
       //------------------------------------------------------------------
@@ -801,6 +676,15 @@ module n230 (
       .ef_bist_done(ef_bist_done),
       .ef_bist_error(ef_bist_error),
       //------------------------------------------------------------------
+      // MiniSAS GPIO
+      //------------------------------------------------------------------
+      .ms0_gpio_in(ms0_gpio_in),
+      .ms0_gpio_out(ms0_gpio_out),
+      .ms0_gpio_ddr(ms0_gpio_ddr),
+      .ms1_gpio_in(ms1_gpio_in),
+      .ms1_gpio_out(ms1_gpio_out),
+      .ms1_gpio_ddr(ms1_gpio_ddr),
+      //------------------------------------------------------------------
       // I/O Delay Control Interface
       //------------------------------------------------------------------
       .ctrl_data_delay(ctrl_data_delay),
@@ -812,19 +696,15 @@ module n230 (
       //------------------------------------------------------------------
       .leds(leds),
       //------------------------------------------------------------------
-      // Production test signals
-      //------------------------------------------------------------------
- `ifdef TEST_JESD204_IF
-      .jesd204_test_run(jesd204_test_run),
-      .jesd204_test_done(jesd204_test_done),
-      .jesd204_test_status(jesd204_test_status),
- `endif
-      //------------------------------------------------------------------
       // debug UART
       //------------------------------------------------------------------
       .debug_txd(FPGA_TXD0),
       .debug_rxd(FPGA_RXD0)
    );
+
+   ///////////////////////////////////////////////////////////////////////
+   // Ethernet and JESD PHY
+   ///////////////////////////////////////////////////////////////////////
 
    wire        ge_phy_resetdone0, ge_phy_resetdone1;
 
@@ -843,10 +723,10 @@ module n230 (
       .sfp1rx_p(SFP1_RX_P), .sfp1rx_n(SFP1_RX_N),
       .sfp1tx_p(SFP1_TX_P), .sfp1tx_n(SFP1_TX_N),
 
-      .jesd0rx_p(JESD0_RX_P), .jesd0rx_n(JESD0_RX_N),
-      .jesd0tx_p(JESD0_TX_P), .jesd0tx_n(JESD0_TX_N),
-      .jesd1rx_p(JESD1_RX_P), .jesd1rx_n(JESD1_RX_N),
-      .jesd1tx_p(JESD1_TX_P), .jesd1tx_n(JESD1_TX_N),
+      .jesd0rx_p(RD1_ET_RXNC_P), .jesd0rx_n(RD1_ET_RXNC_N),
+      .jesd0tx_p(RD1_ET_ENV0_P), .jesd0tx_n(RD1_ET_ENV0_N),
+      .jesd1rx_p(RD2_ET_RXNC_P), .jesd1rx_n(RD2_ET_RXNC_N),
+      .jesd1tx_p(RD2_ET_ENV0_P), .jesd1tx_n(RD2_ET_ENV0_N),
 
       .eth_gtrefclk_bufg(),
       .gmii_clk(gmii_clk),
@@ -903,15 +783,76 @@ module n230 (
       .jesd1resetdone()
    );
 
+   ///////////////////////////////////////////////////////////////////////
+   // MiniSAS GPIO
+   ///////////////////////////////////////////////////////////////////////
+
+   gpio_atr_io #(.WIDTH(17)) ms0_gpio_inst (
+      .clk(bus_clk), .gpio_pins({
+         RD1_TEMP_SDA, RD1_TEMP_SCL,
+         RD1_RFPWR_CONV, RD1_RFPWR_SDO, RD1_RFPWR_SCLK,
+         RD1_ET_SPI_SDOUT, RD1_ET_SPI_SDEN, RD1_ET_SPI_SCLK, RD1_ET_SPI_SDIN,
+         RD1_RX_TX_LOOPBACK, RD1_ET_RESET, RD1_ET_ALARM, RD1_ET_WARNING,
+         RD1_SLEEP, RD1_P_READY, RD1_ICSP_CLK, RD1_ICSP_DAT
+      }),
+      .gpio_ddr(ms0_gpio_ddr[16:0]), .gpio_out(ms0_gpio_out[16:0]), .gpio_in(ms0_gpio_in[16:0])
+   );
+
+   IOBUFDS #(
+      .DIFF_TERM("TRUE"), .IOSTANDARD("LVDS_25")
+   ) RD1_ET_SYNC_buf (
+      .IO   (RD1_ET_SYNCp),
+      .IOB  (RD1_ET_SYNCn),
+      .O    (ms0_gpio_out[17]),
+      .I    (ms0_gpio_in[17]),
+      .T    (~ms0_gpio_ddr[17])
+   );
+
+   IOBUFDS #(
+      .DIFF_TERM("TRUE"), .IOSTANDARD("LVDS_25")
+   ) RD1_ET_FRAME_CLK_buf (
+      .IO   (RD1_ET_FRAME_CLKp),
+      .IOB  (RD1_ET_FRAME_CLKn),
+      .O    (ms0_gpio_out[18]),
+      .I    (ms0_gpio_in[18]),
+      .T    (~ms0_gpio_ddr[18])
+   );
+
+   gpio_atr_io #(.WIDTH(17)) ms1_gpio_inst (
+      .clk(bus_clk), .gpio_pins({
+         RD2_TEMP_SDA, RD2_TEMP_SCL,
+         RD2_RFPWR_CONV, RD2_RFPWR_SDO, RD2_RFPWR_SCLK,
+         RD2_ET_SPI_SDOUT, RD2_ET_SPI_SDEN, RD2_ET_SPI_SCLK, RD2_ET_SPI_SDIN,
+         RD2_RX_TX_LOOPBACK, RD2_ET_RESET, RD2_ET_ALARM, RD2_ET_WARNING,
+         RD2_SLEEP, RD2_P_READY, RD2_ICSP_CLK, RD2_ICSP_DAT
+      }),
+      .gpio_ddr(ms1_gpio_ddr[16:0]), .gpio_out(ms1_gpio_out[16:0]), .gpio_in(ms1_gpio_in[16:0])
+   );
+
+   IOBUFDS #(
+      .DIFF_TERM("TRUE"), .IOSTANDARD("LVDS_25")
+   ) RD2_ET_SYNC_buf (
+      .IO   (RD2_ET_SYNCp),
+      .IOB  (RD2_ET_SYNCn),
+      .O    (ms1_gpio_out[17]),
+      .I    (ms1_gpio_in[17]),
+      .T    (~ms1_gpio_ddr[17])
+   );
+
+   IOBUFDS #(
+      .DIFF_TERM("TRUE"), .IOSTANDARD("LVDS_25")
+   ) RD2_ET_FRAME_CLK_buf (
+      .IO   (RD2_ET_FRAME_CLKp),
+      .IOB  (RD2_ET_FRAME_CLKn),
+      .O    (ms1_gpio_out[18]),
+      .I    (ms1_gpio_in[18]),
+      .T    (~ms1_gpio_ddr[18])
+   );
 
    ///////////////////////////////////////////////////////////////////////
    // Debug port
    ///////////////////////////////////////////////////////////////////////
-   assign DEBUG = {rx_i1[11:4], rx_q0[11:0], rx_i0[11:0]};
-   //assign DEBUG_CLK[1:0] = 2'b0;
-   ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) dbg_clk_out_i0
-     (.Q(DEBUG_CLK[0]), .C(bus_clk), .CE(1'b1), .D1(1'b0), .D2(1'b1), .R(1'b0), .S(1'b0));
-   ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) dbg_clk_out_i1
-     (.Q(DEBUG_CLK[1]), .C(radio_clk), .CE(1'b1), .D1(1'b0), .D2(1'b1), .R(1'b0), .S(1'b0));
+   assign DEBUG     = 32'h0;
+   assign DEBUG_CLK =  2'b0;
 
 endmodule // N230

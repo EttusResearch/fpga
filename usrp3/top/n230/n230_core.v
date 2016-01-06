@@ -131,7 +131,15 @@ module n230_core (
 
    input          ef_bist_done,
    input          ef_bist_error,
-
+   //------------------------------------------------------------------
+   // MiniSAS GPIO
+   //------------------------------------------------------------------
+   input [31:0]   ms0_gpio_in,
+   output [31:0]  ms0_gpio_out,
+   output [31:0]  ms0_gpio_ddr,
+   input [31:0]   ms1_gpio_in,
+   output [31:0]  ms1_gpio_out,
+   output [31:0]  ms1_gpio_ddr,
    //------------------------------------------------------------------
    // Delay Control_interface
    //------------------------------------------------------------------
@@ -143,14 +151,6 @@ module n230_core (
    // LED's
    //------------------------------------------------------------------
    output [15:0]  leds,
-   //------------------------------------------------------------------
-   // Production Test
-   //------------------------------------------------------------------
-   `ifdef TEST_JESD204_IF
-   output         jesd204_test_run,
-   input          jesd204_test_done,
-   input [15:0]   jesd204_test_status,
-   `endif
    //------------------------------------------------------------------
    // debug UART
    //------------------------------------------------------------------
@@ -320,14 +320,6 @@ module n230_core (
       .sw_rst(sw_rst),
       .leds(leds),
       //------------------------------------------------------------------
-      // Production test signals
-      //------------------------------------------------------------------
- `ifdef TEST_JESD204_IF
-      .jesd204_test_run(jesd204_test_run),
-      .jesd204_test_done(jesd204_test_done),
-      .jesd204_test_status(jesd204_test_status),
- `endif
-      //------------------------------------------------------------------
       // Debug
       //------------------------------------------------------------------
       .debug(debug)
@@ -442,6 +434,8 @@ module n230_core (
 
    wire [7:0]     gpsdo_st, radio_st;
 
+   wire [31:0]    ms0_gpio_rb, ms1_gpio_rb;
+
    wire [2:0]     rb_addr;
    reg [63:0]     rb_data;
 
@@ -511,6 +505,20 @@ module n230_core (
       .debug()
    );
 
+   gpio_atr #(.BASE(SR_CORE_MS0_GPIO), .WIDTH(32), .DEFAULT_DDR(32'h0)) ms0_gpio_atr (
+      .clk(bus_clk),.reset(bus_rst),
+      .set_stb(set_gc_stb), .set_addr(set_gc_addr), .set_data(set_gc_data),
+      .rx(1'b0), .tx(1'b0),
+      .gpio_in(ms0_gpio_in), .gpio_out(ms0_gpio_out), .gpio_ddr(ms0_gpio_ddr), .gpio_sw_rb(ms0_gpio_rb)
+   );
+
+   gpio_atr #(.BASE(SR_CORE_MS1_GPIO), .WIDTH(32), .DEFAULT_DDR(32'h0)) ms1_gpio_atr (
+      .clk(bus_clk),.reset(bus_rst),
+      .set_stb(set_gc_stb), .set_addr(set_gc_addr), .set_data(set_gc_data),
+      .rx(1'b0), .tx(1'b0),
+      .gpio_in(ms1_gpio_in), .gpio_out(ms1_gpio_out), .gpio_ddr(ms1_gpio_ddr), .gpio_sw_rb(ms1_gpio_rb)
+   );
+
    // Readback Mux
    always @* begin
       case (rb_addr)
@@ -526,6 +534,9 @@ module n230_core (
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.
          RB_CORE_GIT_HASH : rb_data <= {32'h0,32'h`GIT_HASH};
+         
+         RB_CORE_MS0_GPIO : rb_data <= ms0_gpio_rb;
+         RB_CORE_MS1_GPIO : rb_data <= ms1_gpio_rb;
 
          default : rb_data <= 64'd0;
       endcase // case (rb_addr)

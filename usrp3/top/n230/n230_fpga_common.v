@@ -13,6 +13,8 @@ localparam SR_CORE_COMPAT    = 8'd24;
 localparam SR_CORE_READBACK  = 8'd32;
 localparam SR_CORE_GPSDO_ST  = 8'd40;
 localparam SR_CORE_PPS_SEL   = 8'd48;
+localparam SR_CORE_MS0_GPIO  = 8'd50;
+localparam SR_CORE_MS1_GPIO  = 8'd58;
 
 localparam SR_ZPU_SW_RST     = 8'd00;
 localparam SR_ZPU_BOOT_DONE  = 8'd01;
@@ -33,14 +35,15 @@ localparam RB_CORE_SPI       = 3'd1;
 localparam RB_CORE_STATUS    = 3'd2;
 localparam RB_CORE_BIST      = 3'd3;
 localparam RB_CORE_GIT_HASH  = 3'd4;
-	  
+localparam RB_CORE_MS0_GPIO  = 3'd5;
+localparam RB_CORE_MS1_GPIO  = 3'd6;
 
 localparam RB_ZPU_COMPAT      = 8'd0;
 localparam RB_ZPU_COUNTER     = 8'd1;
 localparam RB_ZPU_SFP_STATUS0 = 8'd2;
 localparam RB_ZPU_SFP_STATUS1 = 8'd3;
 localparam RB_ZPU_GIT_HASH    = 8'd4;
-localparam RB_ZPU_JESD204_TEST = 8'd5;
+//localparam RB_ZPU_UNCLAIMED = 8'd5;
 localparam RB_ZPU_ETH0_PKT_CNT = 8'd6;
 localparam RB_ZPU_ETH1_PKT_CNT = 8'd7;
 

@@ -147,14 +147,6 @@ module zpu_subsystem #(
    output [15:0] leds,
 
    //------------------------------------------------------------------
-   // Production Test
-   //------------------------------------------------------------------
-`ifdef TEST_JESD204_IF
-   output jesd204_test_run,
-   input jesd204_test_done,
-   input [15:0] jesd204_test_status,
-`endif
-   //------------------------------------------------------------------
    // Debug
    //------------------------------------------------------------------
    output [31:0] debug
@@ -570,15 +562,6 @@ module zpu_subsystem #(
       .out(debug_reg),.changed()
    );
 
-   // Production Test Enable for JESD204 conector
-`ifdef TEST_JESD204_IF
-   setting_reg #(.my_addr(SR_ZPU_JESD204_TEST), .awidth(SB_ADDRW), .width(1)) set_jesd204_test (
-      .clk(clk), .rst(rst),
-      .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(jesd204_test_run),.changed()
-   );
-`endif
-
    // Readback Mux
    always @*
       case(rb_addr)
@@ -604,10 +587,6 @@ module zpu_subsystem #(
          RB_ZPU_ETH0_PKT_CNT: rb_data = eth0_pkt_count;
          RB_ZPU_ETH1_PKT_CNT: rb_data = eth1_pkt_count;
 
-         // Production Test
-`ifdef TEST_JESD204_IF
-         RB_ZPU_JESD204_TEST: rb_data <= {15'h0,jesd204_test_done,jesd204_test_status[15:0]};
-`endif
          default : rb_data = 32'd0;
       endcase // case (rb_addr)
 

@@ -33,16 +33,12 @@ post_build = @\
 all:      N230 ##(Default target)
 
 N230:  ##USRP N230 default production image
-	$(call vivado_build,SAFE_MODE=0 TEST_MODE=0)
+	$(call vivado_build,SAFE_MODE=0)
 	$(call post_build,)
 
 N230_SAFE:  ##USRP N230 failsafe image
-	$(call vivado_build,SAFE_MODE=1 TEST_MODE=0)
+	$(call vivado_build,SAFE_MODE=1)
 	$(call post_build,_SAFE)
-
-N230_TEST:  ##USRP N230 test image
-	$(call vivado_build,SAFE_MODE=0 TEST_MODE=1)
-	$(call post_build,_TEST)
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."
@@ -63,4 +59,4 @@ help:     ##Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI. 
 
-.PHONY: all clean cleanall help N230 N230_SAFE N230_TEST
+.PHONY: all clean cleanall help N230 N230_SAFE
