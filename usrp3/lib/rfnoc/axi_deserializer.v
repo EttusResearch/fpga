@@ -50,7 +50,7 @@ module axi_deserializer #(
 
   assign flop_tdata_int = reverse_output ? flop_tdata_reverse : flop_tdata;
 
-  axi_fifo_flop #(.WIDTH(WIDTH)) axi_fifo_flop (
+  axi_fifo_flop2 #(.WIDTH(WIDTH)) axi_fifo_flop (
     .clk(clk), .reset(rst), .clear(1'b0),
     .i_tdata({flop_tlast,flop_tdata_int}), .i_tvalid(flop_tvalid), .i_tready(i_tready),
     .o_tdata({o_tlast,o_tdata}),       .o_tvalid(o_tvalid),    .o_tready(o_tready),

@@ -73,7 +73,7 @@ module complex_to_mag_approx #(
   assign pipeline_i_tvalid[0] = i_tvalid;
   assign pipeline_o_tready[0] = pipeline_i_tready[1];
 
-  axi_fifo_flop #(.WIDTH(SAMP_WIDTH*2+1))
+  axi_fifo_flop2 #(.WIDTH(SAMP_WIDTH*2+1))
   pipeline0_axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({pipeline_i_tlast[0],pipeline_i_tdata[0]}), .i_tvalid(pipeline_i_tvalid[0]), .i_tready(pipeline_i_tready[0]),
@@ -93,7 +93,7 @@ module complex_to_mag_approx #(
   assign pipeline_i_tvalid[1] = (LATENCY == 2) ? i_tvalid             : pipeline_o_tvalid[0];
   assign pipeline_o_tready[1] = pipeline_i_tready[2];
 
-  axi_fifo_flop #(.WIDTH(SAMP_WIDTH*2+1))
+  axi_fifo_flop2 #(.WIDTH(SAMP_WIDTH*2+1))
   pipeline1_axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({pipeline_i_tlast[1],pipeline_i_tdata[1]}), .i_tvalid(pipeline_i_tvalid[1]), .i_tready(pipeline_i_tready[1]),
@@ -113,7 +113,7 @@ module complex_to_mag_approx #(
   assign pipeline_i_tvalid[2] = (LATENCY == 1) ? i_tvalid : pipeline_o_tvalid[1];
   assign pipeline_o_tready[2] = o_tready;
 
-  axi_fifo_flop #(.WIDTH(SAMP_WIDTH+1))
+  axi_fifo_flop2 #(.WIDTH(SAMP_WIDTH+1))
   pipeline2_axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({pipeline_i_tlast[2],pipeline_i_tdata[2][SAMP_WIDTH-1:0]}), .i_tvalid(pipeline_i_tvalid[2]), .i_tready(pipeline_i_tready[2]),

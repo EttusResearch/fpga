@@ -19,7 +19,7 @@ module cvita_hdr_parser #(
 
   generate
     if (REGISTER) begin
-      axi_fifo_flop #(.WIDTH(65)) axi_fifo_flop (
+      axi_fifo_flop2 #(.WIDTH(65)) axi_fifo_flop (
         .clk(clk), .reset(reset), .clear(clear),
         .i_tdata({i_tlast,i_tdata}), .i_tvalid(i_tvalid), .i_tready(i_tready),
         .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),

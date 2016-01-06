@@ -341,7 +341,7 @@ module noc_block_conv_encoder_qpsk #(
   assign bit_lower = ^(g_lower & conv_shift_reg & k_mask);
   assign bit_tdata = {bit_upper,bit_lower};
 
-  axi_fifo_flop #(.WIDTH(2)) axi_fifo_flop_conv_encoder (
+  axi_fifo_flop2 #(.WIDTH(2)) axi_fifo_flop_conv_encoder (
     .clk(ce_clk), .reset(ce_rst | user_reset), .clear(1'b0),
     .i_tdata(bit_tdata),     .i_tvalid(bit_tvalid),     .i_tready(bit_tready),
     .o_tdata(bit_reg_tdata), .o_tvalid(bit_reg_tvalid), .o_tready(bit_reg_tready),
@@ -411,13 +411,13 @@ module noc_block_conv_encoder_qpsk #(
     .clkb(ce_clk), .enb(sample_tready & symbol_tvalid), .web(1'b0),
     .addrb(symbol_tdata), .dib(), .dob(sample));
 
-  axi_fifo_flop #(.WIDTH(1)) axi_fifo_flop_delay_tvalid (
+  axi_fifo_flop2 #(.WIDTH(1)) axi_fifo_flop_delay_tvalid (
     .clk(ce_clk), .reset(ce_rst | user_reset), .clear(1'b0),
     .i_tdata(1'b0), .i_tvalid(symbol_tvalid),     .i_tready(),
     .o_tdata(),     .o_tvalid(symbol_tvalid_dly), .o_tready(symbol_tready),
     .space(), .occupied());
 
-  axi_fifo_flop #(.WIDTH(32)) axi_fifo_flop_sample (
+  axi_fifo_flop2 #(.WIDTH(32)) axi_fifo_flop_sample (
     .clk(ce_clk), .reset(ce_rst | user_reset), .clear(1'b0),
     .i_tdata(sample), .i_tvalid(symbol_tvalid_dly), .i_tready(symbol_tready),
     .o_tdata(sample_tdata),  .o_tvalid(sample_tvalid),    .o_tready(sample_tready),

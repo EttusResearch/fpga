@@ -94,7 +94,7 @@ module packet_error_responder #(
 
   // Drop packet on error by masking input valid with error status. User can override using policy continue.
   // Need to use separate error and error_hold signals to ensure we drop the first and subsequent lines of the packet.
-  axi_fifo_flop #(.WIDTH(65)) axi_fifo_flop (
+  axi_fifo_flop2 #(.WIDTH(65)) axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({int_tlast, int_tdata}), .i_tvalid(int_tvalid & (~(error_stb | error_hold) | policy_continue)), .i_tready(int_tready),
     .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),

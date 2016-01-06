@@ -100,7 +100,7 @@ module axi_wrapper
    wire [15:0] m_axis_pkt_len_flop_tdata;
    wire m_axis_pkt_len_flop_tvalid;
    wire load_m_axis_pkt_len = sof_in & m_axis_pkt_len_flop_tvalid;
-   axi_fifo_flop #(.WIDTH(16)) axi_fifo_flop_pkt_len (
+   axi_fifo_flop2 #(.WIDTH(16)) axi_fifo_flop_pkt_len (
      .clk(clk), .reset(reset), .clear(1'b0),
      .i_tdata(m_axis_pkt_len_tdata), .i_tvalid(m_axis_pkt_len_tvalid), .i_tready(m_axis_pkt_len_tready),
      .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len),
