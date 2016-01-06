@@ -94,7 +94,6 @@ module noc_block_fft_tb();
     repeat (10) @(posedge bus_clk);
 
     // Send 1/8th sample rate sine wave
-    tb_next_dst = sid_noc_block_fft;
     forever begin
       for (int i = 0; i < (FFT_SIZE/8); i = i + 1) begin
         tb_axis_data.push_word({ 16'd32767,     16'd0},0);
