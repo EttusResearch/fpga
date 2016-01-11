@@ -190,9 +190,9 @@ VIVADO_EXEC=$REPO_BASE_PATH/tools/scripts/launch_vivado.sh
 # Prepare Modelsim environment
 #----------------------------------------------------------------------------
 if [[ $VIV_PLATFORM = "Cygwin" ]]; then
-    VSIM_PATH=$(find $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*win*/vsim.exe' | head -n 1)
+    VSIM_PATH=$(find -L $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*win*/vsim.exe' | head -n 1)
 else
-    VSIM_PATH=$(find $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*linux*/vsim' | head -n 1)
+    VSIM_PATH=$(find -L $MODELSIM_BASE_PATH -maxdepth 3 -wholename '*linux*/vsim' | head -n 1)
 fi
 if [[ $VSIM_PATH ]]; then
     if [[ $($VSIM_PATH -version) =~ .*ModelSim[[:space:]](.+)[[:space:]]vsim.* ]]; then 
