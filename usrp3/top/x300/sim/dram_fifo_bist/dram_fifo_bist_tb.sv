@@ -9,9 +9,9 @@
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
-`include "sim_cvita_lib.sv"
-`include "sim_axi4_lib.sv"
-`include "sim_set_rb_lib.sv"
+`include "sim_cvita_lib.svh"
+`include "sim_axi4_lib.svh"
+`include "sim_set_rb_lib.svh"
 
 module dram_fifo_bist_tb();
   `TEST_BENCH_INIT("dram_fifo_bist_tb",`NUM_TEST_CASES,`NS_PER_TICK)

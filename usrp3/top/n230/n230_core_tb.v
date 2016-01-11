@@ -131,7 +131,7 @@ module n230_core_tb
    // Simulation specific testbench is included here
    //
    //------------------------------------------------------------------
-//`include "task_library.v"
+//`include "task_library.vh"
 `include "math.v"
 `include "n230_tasks.v"
 `include "simulation_script.v"

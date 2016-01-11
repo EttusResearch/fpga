@@ -9,9 +9,9 @@
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
-`include "sim_cvita_lib.sv"
-`include "sim_axi4_lib.sv"
-`include "sim_set_rb_lib.sv"
+`include "sim_cvita_lib.svh"
+`include "sim_axi4_lib.svh"
+`include "sim_set_rb_lib.svh"
 
 //`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
 //`define USE_SRAM_MIG      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory

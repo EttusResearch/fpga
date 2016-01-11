@@ -2,7 +2,7 @@
 // Copyright 2015 Ettus Research LLC
 //
 
-`include "sim_axis_lib.sv"
+`include "sim_axis_lib.svh"
 
 typedef enum logic [1:0] {
   DATA=2'b00, FC=2'b01, CMD=2'b10, RESP=2'b11
