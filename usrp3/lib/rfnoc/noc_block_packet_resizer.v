@@ -34,7 +34,7 @@ module noc_block_packet_resizer #(
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
-  inst_noc_shell (
+  noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),

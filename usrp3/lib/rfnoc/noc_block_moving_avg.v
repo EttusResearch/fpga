@@ -121,7 +121,7 @@ module noc_block_moving_avg #(
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
-  noc_shell_inst (
+  noc_shell (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .i_tdata(i_tdata),
