@@ -10,6 +10,7 @@ module radio_core #(
   parameter RADIO_NUM = 0
 )(
   input clk, input reset,
+  input clear_rx, input clear_tx,
   input [15:0] src_sid,             // Source stream ID of this block
   input [15:0] dst_sid,             // Destination stream ID destination of downstream block
   input [15:0] rx_resp_dst_sid,     // Destination stream ID for TX errors / response packets (i.e. host PC)
@@ -125,7 +126,7 @@ module radio_core #(
   wire [127:0] txresp_tuser;
   wire txresp_tlast, txresp_tvalid, txresp_tready;
   tx_control_gen3 #(.SR_ERROR_POLICY(SR_TX_CTRL_ERROR_POLICY)) tx_control_gen3 (
-    .clk(clk), .reset(reset), .clear(1'b0),
+    .clk(clk), .reset(reset), .clear(clear_tx),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .vita_time(vita_time), .resp_sid({src_sid, tx_resp_dst_sid}),
     .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready), .tx_tuser(tx_tuser),
@@ -150,7 +151,7 @@ module radio_core #(
     .SR_RX_CTRL_HALT(SR_RX_CTRL_HALT),
     .SR_RX_CTRL_MAXLEN(SR_RX_CTRL_MAXLEN))
   rx_control_gen3 (
-    .clk(clk), .reset(reset), .clear(1'b0),
+    .clk(clk), .reset(reset), .clear(clear_rx),
     .vita_time(vita_time), .sid({src_sid, dst_sid}), .resp_sid({src_sid, rx_resp_dst_sid}),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .rx_tdata(rx_tdata), .rx_tlast(rx_tlast), .rx_tvalid(rx_tvalid), .rx_tready(rx_tready), .rx_tuser(rx_tuser),

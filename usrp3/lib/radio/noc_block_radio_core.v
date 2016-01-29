@@ -139,6 +139,7 @@ module noc_block_radio_core #(
         .RADIO_NUM(i))
       radio_core (
         .clk(ce_clk), .reset(ce_rst),
+        .clear_rx(clear_tx_seqnum[i]), .clear_tx(clear_tx_seqnum[i]),
         .src_sid(src_sid[16*i+15:16*i]),
         .dst_sid(next_dst_sid[16*i+15:16*i]),
         .rx_resp_dst_sid(resp_out_dst_sid[16*i+15:16*i]),
