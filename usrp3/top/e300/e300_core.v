@@ -69,16 +69,6 @@ module e300_core
   // codec async reset
   output            codec_arst,
 
-  // TX band select lines, controlled by radio 0
-  output [2:0]      tx_bandsel,
-  // RX band select lines, 1 set per radio
-  output [2:0]      rx1_bandsel_a,
-  output [1:0]      rx1_bandsel_b,
-  output [1:0]      rx1_bandsel_c,
-  output [2:0]      rx2_bandsel_a,
-  output [1:0]      rx2_bandsel_b,
-  output [1:0]      rx2_bandsel_c,
-
   // front panel (internal) gpio
   inout [5:0]       fp_gpio0,
 
@@ -352,13 +342,6 @@ module e300_core
   assign spi_mosi      = ~sen[0][0]                  ? mosi[0] : mosi[1];
   assign miso[0]       = spi_miso;
   assign miso[1]       = spi_miso;
-  assign tx_bandsel    = misc_outs[0][2:0];
-  assign rx1_bandsel_a = misc_outs[0][5:3];
-  assign rx1_bandsel_b = misc_outs[0][7:6];
-  assign rx1_bandsel_c = misc_outs[0][9:8];
-  assign rx2_bandsel_a = misc_outs[1][5:3];
-  assign rx2_bandsel_b = misc_outs[1][7:6];
-  assign rx2_bandsel_c = misc_outs[1][9:8];
   assign db_gpio0      = db_gpio[0];
   assign db_gpio1      = db_gpio[1];
   assign leds0         = leds[0][2:0];

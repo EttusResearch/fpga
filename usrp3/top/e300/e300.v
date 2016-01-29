@@ -277,16 +277,16 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
-  // PS SPI has precedence as its clock is always stable.
-  // To prevent overlapping SPI transactions between the cores, software disables
-  // (via the shutdown settings reg in simple_spi_core.v) the soft spi core
-  // whenever the PS SPI core is in use.
+  // Warning: PS SPI does not deassert slave select after transactions. (This appears to be 
+  // a kernel driver issue). Therefore, the radio SPI slave select is used as the mux
+  // select and software must take care not have overlapping SPI transactions on both SPI cores.
   wire PS_SPI0_SS1, PS_SPI0_SCLK, PS_SPI0_MOSI;
   wire PS_SPI0_MISO = CAT_MISO;
   wire spi_miso     = CAT_MISO;
-  assign CAT_CS     = ~PS_SPI0_SS1 /* Active low */ ? PS_SPI0_SS1  : spi_sen;
-  assign CAT_SCLK   = ~PS_SPI0_SS1                  ? PS_SPI0_SCLK : spi_sclk;
-  assign CAT_MOSI   = ~PS_SPI0_SS1                  ? PS_SPI0_MOSI : spi_mosi;
+  wire spi_sen;
+  assign CAT_CS     = spi_sen /* Active low */ ? PS_SPI0_SS1  : spi_sen;
+  assign CAT_SCLK   = spi_sen                  ? PS_SPI0_SCLK : spi_sclk;
+  assign CAT_MOSI   = spi_sen                  ? PS_SPI0_MOSI : spi_mosi;
 
    // First, make all connections to the PS (ARM+buses)
   axi_interconnect inst_axi_interconnect
@@ -537,18 +537,28 @@ module e300
   //-- radio core from x300 for super fast bring up
   //------------------------------------------------------------------
 
-  wire [31:0] gpio0, gpio1;
+  wire [31:0] db_gpio0, db_gpio1;
   wire [2:0]  leds0, leds1;
+  wire [2:0] TX1_BANDSEL, TX2_BANDSEL;
 
   assign {LED_RX1_RX, LED_TXRX1_TX, LED_TXRX1_RX} = leds0;
-  assign { VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
-           TX_ENABLE1B, TX_ENABLE1A //2
-         } = gpio0[15:10];
+  assign { VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, // 4
+           TX_ENABLE1B, TX_ENABLE1A, // 2
+           RX1C_BANDSEL, RX1B_BANDSEL, RX1_BANDSEL, // 7
+           TX1_BANDSEL // 3
+         } = db_gpio0[15:0];
 
   assign {LED_RX2_RX, LED_TXRX2_TX, LED_TXRX2_RX} = leds1;
   assign { VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
-           TX_ENABLE2B, TX_ENABLE2A //2
-         } = gpio1[15:10];
+           TX_ENABLE2B, TX_ENABLE2A, // 2
+           RX2C_BANDSEL, RX2B_BANDSEL, RX2_BANDSEL, // 7
+           TX2_BANDSEL // 3
+         } = db_gpio1[15:0];
+
+  // It is okay to OR here as the both channels must be set to the same freq.
+  // This is needed so software does not have to set properties of radio core 0
+  // when only using radio core 1.
+  assign TX_BANDSEL = TX1_BANDSEL | TX2_BANDSEL;
 
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.
@@ -710,8 +720,8 @@ module e300
 
     // flip them, to match
     // case ... this is a hack
-    .db_gpio0(gpio1),
-    .db_gpio1(gpio0),
+    .db_gpio0(db_gpio1),
+    .db_gpio1(db_gpio0),
     .leds0(leds1),
     .leds1(leds0),
 
@@ -741,13 +751,6 @@ module e300
     .lock_signals(CAT_CTRL_OUT[7:6]),
     .mimo(mimo),
     .codec_arst(codec_arst),
-    .tx_bandsel(TX_BANDSEL),
-    .rx1_bandsel_a(RX1_BANDSEL),
-    .rx1_bandsel_b(RX1B_BANDSEL),
-    .rx1_bandsel_c(RX1C_BANDSEL),
-    .rx2_bandsel_a(RX2_BANDSEL),
-    .rx2_bandsel_b(RX2B_BANDSEL),
-    .rx2_bandsel_c(RX2C_BANDSEL),
 `ifdef DRAM_TEST
     .debug(),
     .debug_in(debug)
