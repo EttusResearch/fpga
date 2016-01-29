@@ -57,7 +57,7 @@ module simple_spi_core
         output ready,
 
         //spi interface, slave selects, clock, data in, data out
-        output reg [WIDTH-1:0] sen,
+        output [WIDTH-1:0] sen,
         output sclk,
         output reg mosi,
         input miso,
@@ -110,10 +110,14 @@ module simple_spi_core
     wire sen_is_idle = (state == WAIT_TRIG) || (state == IDLE_SEN);
     wire [23:0] sen24 = (sen_is_idle)? SEN_IDLE : (SEN_IDLE ^ slave_select);
     reg [WIDTH-1:0] sen_reg;
-    always @(posedge clock) 
-      sen_reg <= sen24[WIDTH-1:0];
-    always @(posedge clock) 
-      sen <= sen_reg;
+    always @(posedge clock or posedge reset) begin
+      if (reset) begin
+        sen_reg <= SEN_IDLE;
+      end else begin
+        sen_reg <= sen24[WIDTH-1:0];
+      end
+    end
+    assign sen = sen_reg;
 
     //data output shift register
    // IJB. One pipeline stage to break critical path from register in I/O pads.
