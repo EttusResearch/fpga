@@ -96,7 +96,7 @@ module radio_core #(
     .SR_TIME_LO(SR_TIME_LO),
     .SR_TIME_CTRL(SR_TIME_CTRL))
   timekeeper (
-    .clk(clk), .reset(reset), .pps(pps),
+    .clk(clk), .reset(reset), .pps(pps), .strobe(rx_stb),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
