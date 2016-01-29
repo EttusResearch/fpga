@@ -5,7 +5,7 @@
 `timescale 1ns/1ps
 
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 7
+`define NUM_TEST_CASES 14
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.vh"
@@ -386,11 +386,32 @@ module noc_block_radio_core_tb;
     end
   endtask
 
+  task automatic tb_flush_rx;
+    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    begin
+      cvita_hdr_t header;
+      cvita_pkt_t response;
+      integer pkt_cnt = 0;
+      header.eob = 1'b0;
+      while (radio_num == 0 ? tb_cvita_data.s_cvita.axis.tvalid : tb2_cvita_data.s_cvita.axis.tvalid) begin
+        if (radio_num == 0) begin
+          tb_cvita_data.pull_pkt(response);
+        end else begin
+          tb2_cvita_data.pull_pkt(response);
+        end
+        extract_chdr(response, header);
+        pkt_cnt = pkt_cnt + 1;
+      end
+      $display("Radio %2d: Flushed %3d RX packets", radio_num, pkt_cnt);
+    end
+  endtask
+
   task automatic tb_check_rx;
     input [$clog2(NUM_RADIOS)-1:0] radio_num;
     begin
       cvita_hdr_t header;
       cvita_pkt_t response;
+      int payload_length = 0;
       $display("Radio %2d: Receiving RX packet", radio_num);
       if (radio_num == 0) begin
         tb_cvita_data.pull_pkt(response);
@@ -399,7 +420,7 @@ module noc_block_radio_core_tb;
       end
       extract_chdr(response, header);
       $display("Radio %2d: Checking received RX packet", radio_num);
-      for (int k = 1; k < PKT_SIZE/8; k = k + 1) begin
+      for (int k = 1; k < response.size(); k = k + 1) begin
         `ASSERT_FATAL(response[k] == {response[k-1][63:48]+16'd4, response[k-1][47:32]+16'd4, response[k-1][31:16]+16'd4, response[k-1][15:0]+16'd4},
           $sformatf("Incorrect RX input! Received: %8x Expected: %8x", response[k],
           {response[k-1][63:48]+16'd4, response[k-1][47:32]+16'd4, response[k-1][31:16]+16'd4, response[k-1][15:0]+16'd4}));
@@ -451,6 +472,7 @@ module noc_block_radio_core_tb;
     //       `RFNOC_ADD_TESTBENCH_BLOCK() above.
     `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb2,1,noc_block_radio_core,1,PKT_SIZE);
     `RFNOC_CONNECT_BLOCK_PORT(noc_block_radio_core,1,noc_block_tb2,1,PKT_SIZE);
+
     // Read NOC ID
     tb_read_radio_reg(0, noc_block_radio_core.noc_shell.RB_NOC_ID, noc_id);
     $display("Read NOC ID: %16x",noc_id);
@@ -463,8 +485,8 @@ module noc_block_radio_core_tb;
     ********************************************************/
     `TEST_CASE_START("Settings Register Loopback");
     // Read number of radios
-    tb_read_radio_reg(0, noc_block_radio_core.noc_shell.RB_BLOCK_PORT_PARAMS, resp);
-    num_radios = resp[19:16];
+    tb_read_radio_reg(0, noc_block_radio_core.noc_shell.RB_GLOBAL_PARAMS, resp);
+    num_radios = resp[3:0]; // Use number of output ports for number of radios
     $display("Found %2d Radio cores",num_radios);
     `ASSERT_FATAL(num_radios == noc_block_radio_core.NUM_RADIOS, "Incorrect Number of Radio Cores");
 
@@ -473,15 +495,15 @@ module noc_block_radio_core_tb;
       // Set test register
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_TEST, 32'hDEADBEEF, resp);
       // Readback test register
-      tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_RX, resp);
+      tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TEST, resp);
       `ASSERT_FATAL(resp[31:0] == 32'hDEADBEEF, "Failed loopback test word #1");
       // Second test word
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_TEST, 32'hFEEDFACE, resp);
-      tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_RX, resp);
+      tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TEST, resp);
       `ASSERT_FATAL(resp[31:0] == 32'hFEEDFACE, "Failed loopback test word #2");
     end
     `TEST_CASE_DONE(1);
-
+ 
     /********************************************************
     ** Test 4 -- RX/TX loopback
     **           Set TX CODEC / idle register and loopback
@@ -724,19 +746,17 @@ module noc_block_radio_core_tb;
     `TEST_CASE_START("RX Overrun");
     for (int i = 0; i < num_radios; i++) begin
       tb_start_rx(i,PKT_SIZE/4,1,1);
-      // Wait for overrun packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_OVERRUN[63:32]);
-      
+      // Wait for an overflow
+      #1000000;
+      @(negedge ce_clk);
+      // Check first RX packet to make sure it has not been corrupted
       tb_check_rx(i);
-      // Clear TX flow control
-      tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.SR_CLEAR_TX_FC, 32'h00C1_EA12, resp);
-      // Clear RX window buffer
-      if (i == 0) begin
-        tb_send_cmd({sid_noc_block_tb+1}, noc_block_radio_core.noc_shell.SR_CLEAR_RX_FC, 32'h00C1_EA12, resp);
-      end else begin
-        tb_send_cmd({sid_noc_block_tb2+1}, noc_block_radio_core.noc_shell.SR_CLEAR_RX_FC, 32'h00C1_EA12, resp);
-      end
-      // Normal RX packet should work without any issues
+      // Clear out remaining RX packets
+      $display("Radio %2d: Flush remaining RX packets", i);
+      tb_flush_rx(i);
+      // Check overflow packet
+      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_OVERRUN);
+      // Normal RX should work without any issues
       tb_start_rx(i,PKT_SIZE/4,0,0);
       tb_check_rx(i);
     end
@@ -752,8 +772,8 @@ module noc_block_radio_core_tb;
       // Start RX at VITA time/2, i.e. send a late command
       tb_start_rx_timed(i,PKT_SIZE/4,0,0,resp/2);
       // Wait for late command error packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_LATECMD[63:32]);
-      // Normal RX packet should work without any issues
+      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_LATECMD);
+      // Normal RX should work without any issues
       tb_start_rx(i,PKT_SIZE/4,0,0);
       tb_check_rx(i);
     end
@@ -769,10 +789,10 @@ module noc_block_radio_core_tb;
       // Start RX with chain commands option, but don't send additional commands which will 'break' the chain
       tb_start_rx(i,PKT_SIZE/4,1,0);
       // Wait for broken chain error packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_BROKENCHAIN[63:32]);
+      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_BROKENCHAIN);
       // Output should still be correct
       tb_check_rx(i);
-      // Normal RX packet should work without any issues
+      // Normal RX should work without any issues
       tb_start_rx(i,PKT_SIZE/4,0,0);
       tb_check_rx(i);
     end
