@@ -5,7 +5,8 @@
 
 module chdr_framer
   #(parameter SIZE=10,
-    parameter WIDTH=32)  // 32 or 64 only! TODO: Extend to other widths.
+    parameter WIDTH=32,       // 32 or 64 only! TODO: Extend to other widths.
+    parameter USE_SEQ_NUM=0)  // Use provided seq number in tuser
    (input clk, input reset, input clear,
     input [WIDTH-1:0] i_tdata, input [127:0] i_tuser, input i_tlast, input i_tvalid, output i_tready,
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
@@ -112,7 +113,7 @@ module chdr_framer
    
    assign o_tvalid = (chdr_state == ST_HEAD) | (chdr_state == ST_TIME) | (body_o_tvalid & (chdr_state == ST_BODY));
    assign o_tlast = (chdr_state == ST_BODY) & body_o_tlast;
-   assign o_tdata = (chdr_state == ST_HEAD) ? {header_o_tdata[127:124], seqnum, out_length, header_o_tdata[95:64] } :
+   assign o_tdata = (chdr_state == ST_HEAD) ? {header_o_tdata[127:124], (USE_SEQ_NUM ? header_o_tdata[123:112] : seqnum), out_length, header_o_tdata[95:64] } :
 		    (chdr_state == ST_TIME) ? header_o_tdata[63:0] :
 		    body_o_tdata;
    assign body_o_tready = (chdr_state == ST_BODY) & o_tready;

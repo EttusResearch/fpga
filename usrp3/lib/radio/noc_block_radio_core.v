@@ -108,10 +108,12 @@ module noc_block_radio_core #(
       //
       ////////////////////////////////////////////////////////////
       axi_wrapper #(
-        .SIMPLE_MODE(0))
+        .MTU(10),
+        .SIMPLE_MODE(0), // Use sequence number in rx_control_gen3.v
+        .USE_SEQ_NUM(1)) // Use manually generated sequence number in s_axis_data_tuser
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
-        .clear_tx_seqnum(clear_tx_seqnum[i]), // Note: +1 due to block port 0 is for frontend control
+        .clear_tx_seqnum(clear_tx_seqnum[i]),
         .next_dst(next_dst_sid[16*i+15:16*i]),
         .set_stb(1'b0), .set_addr(8'd0), .set_data(32'd0),
         .i_tdata(str_sink_tdata[64*i+63:64*i]), .i_tlast(str_sink_tlast[i]), .i_tvalid(str_sink_tvalid[i]), .i_tready(str_sink_tready[i]),

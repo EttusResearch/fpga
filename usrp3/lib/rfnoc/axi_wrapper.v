@@ -22,10 +22,12 @@
 //  [ 63: 0] == timestamp
 
 module axi_wrapper
-  #(parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
+  #(parameter MTU=10,
+    parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
     parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
+    parameter USE_SEQ_NUM=0,            // 0 = Frame will automatically handle sequence number, 1 = Use sequence number provided in s_axis_data_tuser
     parameter RESIZE_INPUT_PACKET=0,    // 0 = Do not resize, packet length determined by i_tlast, 1 = Generate m_axis_data_tlast based on user input m_axis_pkt_len_tdata
     parameter RESIZE_OUTPUT_PACKET=0)   // 0 = Do not resize, packet length determined by s_axis_data_tlast, 1 = Use packet length from user header (s_axis_data_tuser)
    (input clk, input reset,
@@ -182,7 +184,7 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Output side handling, chdr_framer
-   chdr_framer #(.SIZE(10)) chdr_framer
+   chdr_framer #(.SIZE(MTU), .USE_SEQ_NUM(USE_SEQ_NUM)) chdr_framer
      (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
       .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast_int), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
