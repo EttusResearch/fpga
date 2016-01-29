@@ -1,5 +1,5 @@
 //
-// Copyright 2015 Ettus Research
+// Copyright 2016 Ettus Research
 //
 // Converts strobed sample data from radio frontend to the AXI-Stream bus
 // Outputs an error packet if an overrun, late timed command, or empty command fifo error occurs.
@@ -15,7 +15,8 @@ module rx_control_gen3 #(
   parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
   parameter SR_RX_CTRL_MAXLEN = 4       // Packet length
 )(
-  input clk, input reset, input clear,
+  input clk, input reset,
+  input clear, // Resets state machine and clear output FIFO.
   input [63:0] vita_time, input [31:0] sid, input [31:0] resp_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
@@ -25,6 +26,13 @@ module rx_control_gen3 #(
   // From radio frontend
   output run, input [31:0] sample, input strobe
 );
+
+  reg [31:0] rx_reg_tdata, error;
+  reg rx_reg_tlast, rx_reg_tvalid;
+  wire rx_reg_tready;
+  reg [127:0] rx_reg_tuser, error_tuser;
+
+  wire overflow = rx_reg_tvalid & ~rx_reg_tready;
 
   wire [31:0] command_i;
   wire [63:0] time_i;
@@ -40,6 +48,7 @@ module rx_control_gen3 #(
 
   reg chain_sav, reload_sav;
   reg clear_halt;
+  reg clear_overflow;
   reg halt;
   wire set_halt;
   wire [15:0] maxlen;
@@ -73,7 +82,7 @@ module rx_control_gen3 #(
       halt <= set_halt;
 
   axi_fifo_short #(.WIDTH(96)) commandfifo (
-    .clk(clk),.reset(reset),.clear(clear | clear_halt),
+    .clk(clk),.reset(reset),.clear(clear | clear_halt | clear_overflow),
     .i_tdata({command_i,time_i}), .i_tvalid(store_command), .i_tready(),
     .o_tdata({send_imm,chain,reload,stop,numlines,rcvtime}),
     .o_tvalid(command_valid), .o_tready(command_ready),
@@ -84,118 +93,170 @@ module rx_control_gen3 #(
     .time_now(vita_time), .trigger_time(rcvtime), .now(now), .early(early), .late(late), .too_early());
 
   // State machine states
-  localparam IBS_IDLE               = 0;
-  localparam IBS_RUNNING            = 1;
-  localparam IBS_ERR_WAIT_FOR_READY = 2;
+  localparam IBS_IDLE                = 0;
+  localparam IBS_RUNNING             = 1;
+  localparam IBS_ERR_FINISH_PKT      = 2;
+  localparam IBS_ERR_SEND_PKT        = 3;
 
   // Error codes
-  localparam ERR_OVERRUN      = {32'd8,32'd0};
-  localparam ERR_BROKENCHAIN  = {32'd4,32'd0};
-  localparam ERR_LATECMD      = {32'd2,32'd0};
-
-  wire [127:0] error_header = {2'b11, 1'b1, 1'b1, 12'd0 /* don't care */, 16'd0 /* don't care */, resp_sid, vita_time};
+  localparam ERR_OVERRUN      = 32'd8;
+  localparam ERR_BROKENCHAIN  = 32'd4;
+  localparam ERR_LATECMD      = 32'd2;
 
   reg [2:0] ibs_state;
   reg [27:0] lines_left, repeat_lines;
   reg [15:0] lines_left_pkt;
 
+  reg [11:0] seqnum_cnt;
   always @(posedge clk) begin
     if (reset | clear) begin
-      ibs_state <= IBS_IDLE;
-      lines_left <= 'd0;
+      seqnum_cnt <= 'd0;
+    end else begin
+      // Increment sequence number on every packet except on an error packet
+      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid & (ibs_state != IBS_ERR_SEND_PKT)) begin
+        seqnum_cnt <= seqnum_cnt + 1'b1;
+      end
+    end
+  end
+
+  wire [127:0] error_header = {2'b11, 1'b1, 1'b1, seqnum_cnt,                  16'h24, resp_sid,  vita_time};
+  wire [127:0] rx_header    = {2'b00, 1'b1,  eob, seqnum_cnt, 16'h0 /* len ignored */,      sid, start_time};
+
+  always @(posedge clk) begin
+    if (reset | clear) begin
+      ibs_state      <= IBS_IDLE;
+      lines_left     <= 'd0;
       lines_left_pkt <= 'd0;
-      repeat_lines <= 'd0;
-      start_time <= 'd0;
-      chain_sav <= 1'b0;
-      reload_sav <= 1'b0;
-      clear_halt <= 1'b0;
-      resp_tdata <= 'd0;
-      resp_tlast <= 1'b0;
-      resp_tvalid <= 1'b0;
-      resp_tuser <= 'd0;
+      repeat_lines   <= 'd0;
+      start_time     <= 'd0;
+      chain_sav      <= 1'b0;
+      reload_sav     <= 1'b0;
+      clear_halt     <= 1'b0;
+      rx_reg_tdata   <= 'd0;
+      rx_reg_tlast   <= 1'b0;
+      rx_reg_tvalid  <= 1'b0;
+      rx_reg_tuser   <= 'd0;
+      resp_tdata     <= 'd0;
+      resp_tlast     <= 1'b0;
+      resp_tvalid    <= 1'b0;
+      resp_tuser     <= 'd0;
+      command_ready  <= 1'b0;
+      clear_overflow <= 1'b0;
     end else begin
       case (ibs_state)
         IBS_IDLE : begin
-          clear_halt <= 1'b0; // Incase we got here through a HALT.
-          if (command_valid) begin
-            // There is a valid command to pop from FIFO.
+          rx_reg_tlast   <= 1'b0;
+          rx_reg_tvalid  <= 1'b0;
+          command_ready  <= 1'b0;
+          clear_overflow <= 1'b0;
+          clear_halt     <= 1'b0; // Incase we got here through a HALT.
+          if (command_valid & rx_reg_tready) begin
+            // There is a valid command to pop from FIFO
             if (stop) begin
               // Stop bit set in this command, go idle.
-              ibs_state <= IBS_IDLE;
+              command_ready <= 1'b1;
+              ibs_state     <= IBS_IDLE;
             end else if (late & ~send_imm) begin
               // Got this command later than its execution time.
-              resp_tvalid <= 1'b1;
-              resp_tlast <= 1'b1;
-              resp_tuser <= error_header;
-              resp_tdata <= ERR_LATECMD;
-              ibs_state <= IBS_ERR_WAIT_FOR_READY;
+              command_ready <= 1'b1;
+              rx_reg_tuser  <= error_header;
+              rx_reg_tvalid <= 1'b1;
+              rx_reg_tlast  <= 1'b0;
+              rx_reg_tdata  <= ERR_LATECMD;
+              ibs_state     <= IBS_ERR_SEND_PKT;
             end else if (now | send_imm) begin
               // Either its time to run this command or it should run immediately without a time.
-              ibs_state <= IBS_RUNNING;
-              lines_left <= numlines;
-              repeat_lines <= numlines;
-              chain_sav <= chain;
-              reload_sav <= reload;
+              command_ready  <= 1'b1;
+              lines_left     <= numlines;
+              repeat_lines   <= numlines;
+              chain_sav      <= chain;
+              reload_sav     <= reload;
               lines_left_pkt <= maxlen;
+              ibs_state      <= IBS_RUNNING;
             end
           end
         end
 
         IBS_RUNNING : begin
+          command_ready <= 1'b0;
           if (strobe) begin
-            if (~rx_tready) begin // Framing FIFO is full and we have just overrun.
-              resp_tvalid <= 1'b1;
-              resp_tlast <= 1'b1;
-              resp_tuser <= error_header;
-              resp_tdata <= ERR_OVERRUN;
-              ibs_state <= IBS_ERR_WAIT_FOR_READY;
+            rx_reg_tvalid <= 1'b1;
+            rx_reg_tlast  <= eob | (lines_left_pkt == 1);
+            rx_reg_tuser  <= rx_header;
+            rx_reg_tdata  <= sample;
+            if (lines_left_pkt == 1) begin
+              lines_left_pkt <= maxlen;
             end else begin
-              if (lines_left_pkt == 1) begin
-                lines_left_pkt <= maxlen;
-              end else begin
-                lines_left_pkt <= lines_left_pkt - 1;
-              end
-              if (lines_left_pkt == maxlen) begin
-                start_time <= vita_time;
-              end
-              if (lines_left == 1) begin
-                if (halt) begin // Provide Halt mechanism used to bring RX into known IDLE state at re-initialization.
-                  ibs_state <= IBS_IDLE;
-                  clear_halt <= 1'b1;
-                end else if (chain_sav) begin // If chain_sav is true then execute the next command now this one finished.
-                  if (command_valid) begin
-                    lines_left <= numlines;
-                    repeat_lines <= numlines;
-                    chain_sav <= chain;
-                    reload_sav <= reload;
-                    if (stop) begin // If the new command includes stop then go idle.
-                      ibs_state <= IBS_IDLE;
-                    end
-                  end else if (reload_sav) begin // There is no new command to pop from FIFO so re-run previous command.
-                    lines_left <= repeat_lines;
-                  end else begin // Chain has been broken, no commands left in FIFO and reload not set.
-                    resp_tvalid <= 1'b1;
-                    resp_tlast <= 1'b1;
-                    resp_tuser <= error_header;
-                    resp_tdata <= ERR_BROKENCHAIN;
-                    ibs_state <= IBS_ERR_WAIT_FOR_READY;
-                  end
-                end else begin // Chain is not true, so don't look for new command, instead go idle.
-                  ibs_state <= IBS_IDLE;
-                end
-              end else begin // Still counting down lines in current command.
-                lines_left <= lines_left - 28'd1;
-              end
+              lines_left_pkt <= lines_left_pkt - 1;
             end
+            if (lines_left_pkt == maxlen) begin
+              start_time <= vita_time;
+            end
+            if (lines_left == 1) begin
+              if (halt) begin // Provide Halt mechanism used to bring RX into known IDLE state at re-initialization.
+                ibs_state <= IBS_IDLE;
+                clear_halt <= 1'b1;
+              end else if (chain_sav) begin // If chain_sav is true then execute the next command now this one finished.
+                if (command_valid) begin
+                  command_ready <= 1'b1;
+                  lines_left    <= numlines;
+                  repeat_lines  <= numlines;
+                  chain_sav     <= chain;
+                  reload_sav    <= reload;
+                  if (stop) begin // If the new command includes stop then go idle.
+                    ibs_state <= IBS_IDLE;
+                  end
+                end else if (reload_sav) begin // There is no new command to pop from FIFO so re-run previous command.
+                  lines_left <= repeat_lines;
+                end else begin // Chain has been broken, no commands left in FIFO and reload not set.
+                  error_tuser   <= error_header;
+                  error         <= ERR_BROKENCHAIN;
+                  ibs_state     <= IBS_ERR_FINISH_PKT;
+                end
+              end else begin // Chain is not true, so don't look for new command, instead go idle.
+                ibs_state <= IBS_IDLE;
+              end
+            end else begin // Still counting down lines in current command.
+              lines_left <= lines_left - 28'd1;
+            end
+          end else begin
+            rx_reg_tvalid <= 1'b0;  // Sample consumed, drop tvalid
+          end
+          // Overflow condition -- can occur regardless of strobe state
+          if (overflow) begin
+            clear_overflow <= 1'b1;      // Clear out command FIFO
+            rx_reg_tvalid  <= 1'b1;
+            rx_reg_tlast   <= 1'b1;      // End packet
+            rx_reg_tuser   <= rx_header; // Update tuser with EOB set
+            error_tuser    <= error_header;
+            error          <= ERR_OVERRUN;
+            ibs_state      <= IBS_ERR_FINISH_PKT;
           end
         end
 
-        // Error occured from idle state, wait for error packet to be consumed
-        IBS_ERR_WAIT_FOR_READY : begin
-          if (resp_tready) begin
-            resp_tvalid <= 1'b0;
-            resp_tlast <= 1'b0;
-            ibs_state <= IBS_IDLE;
+        // Finish off short packet with EOB set
+        IBS_ERR_FINISH_PKT : begin
+          command_ready  <= 1'b0;
+          clear_overflow <= 1'b0;
+          if (rx_reg_tready) begin
+            rx_reg_tvalid <= 1'b1;
+            rx_reg_tlast  <= 1'b0;
+            rx_reg_tdata  <= error;
+            rx_reg_tuser  <= error_tuser;
+            ibs_state     <= IBS_ERR_SEND_PKT;
+          end
+        end
+
+        IBS_ERR_SEND_PKT : begin
+          command_ready <= 1'b0;
+          if (rx_reg_tready) begin
+            rx_reg_tvalid <= 1'b1;
+            rx_reg_tlast  <= 1'b1;
+            rx_reg_tdata  <= 'd0;
+            if (rx_reg_tlast) begin
+              rx_reg_tvalid <= 1'b0;
+              ibs_state     <= IBS_IDLE;
+            end
           end
         end
 
@@ -206,19 +267,14 @@ module rx_control_gen3 #(
 
   assign run = (ibs_state == IBS_RUNNING);
 
-  always @* begin
-    case(ibs_state)
-      IBS_IDLE    : command_ready <= stop | late | now | send_imm;
-      IBS_RUNNING : command_ready <= strobe & (lines_left == 1) & chain_sav;
-      default     : command_ready <= 1'b0;
-    endcase // case (ibs_state)
-  end
+  assign eob = (lines_left == 1) & ( !chain_sav | (command_valid & stop) | (!command_valid & !reload_sav) | halt) | overflow;
 
-  assign eob = (strobe && (lines_left == 1) && ( !chain_sav || (command_valid && stop) || (!command_valid && !reload_sav) || halt));
+  // Register output
+  axi_fifo_flop2 #(.WIDTH(161))
+  axi_fifo_flop2 (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({rx_reg_tlast, rx_reg_tdata, rx_reg_tuser}), .i_tvalid(rx_reg_tvalid), .i_tready(rx_reg_tready),
+    .o_tdata({rx_tlast, rx_tdata, rx_tuser}), .o_tvalid(rx_tvalid), .o_tready(rx_tready),
+    .space(), .occupied());
 
-  assign rx_tdata = sample;
-  assign rx_tlast = eob | (lines_left_pkt == 1);
-  assign rx_tvalid = run & strobe;
-  assign rx_tuser = { 3'b001 /*Data w/Time*/, eob, 12'h0 /*seqnum ignored*/, 16'h0 /*len ignored */, sid, start_time };
-
-endmodule // new_rx_control
+endmodule
