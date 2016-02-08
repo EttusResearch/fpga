@@ -87,6 +87,8 @@ module noc_block_radio_core #(
   wire [NUM_RADIOS*64-1:0]  resp_tdata;
   wire [NUM_RADIOS-1:0]     resp_tlast, resp_tvalid, resp_tready;
 
+  localparam BASE = 128;
+
   ////////////////////////////////////////////////////////////
   //
   // Radio Cores
@@ -98,6 +100,20 @@ module noc_block_radio_core #(
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
     .o_tdata(cmdout_tdata), .o_tlast(cmdout_tlast), .o_tvalid(cmdout_tvalid), .o_tready(cmdout_tready));
+
+  // VITA time
+  localparam SR_TIME_HI   = BASE + 8'd0;
+  localparam SR_TIME_LO   = BASE + 8'd1;
+  localparam SR_TIME_CTRL = BASE + 8'd2;
+  wire [63:0] vita_time, vita_time_lastpps;
+  timekeeper #(
+    .SR_TIME_HI(SR_TIME_HI),
+    .SR_TIME_LO(SR_TIME_LO),
+    .SR_TIME_CTRL(SR_TIME_CTRL))
+  timekeeper (
+    .clk(ce_clk), .reset(ce_rst), .pps(pps), .strobe(rx_stb),
+    .set_stb(|set_stb), .set_addr(set_addr), .set_data(set_data),
+    .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
   genvar i;
   generate
@@ -139,7 +155,7 @@ module noc_block_radio_core #(
         .m_axis_config_tready(1'b0));
 
       radio_core #(
-        .BASE(128), // Offset to user register addr space
+        .BASE(BASE), // Offset to user register addr space
         .RADIO_NUM(i))
       radio_core (
         .clk(ce_clk), .reset(ce_rst),
@@ -150,6 +166,7 @@ module noc_block_radio_core #(
         .tx_resp_dst_sid(resp_in_dst_sid[16*i+15:16*i]),
         .rx(rx[32*i+31:32*i]), .rx_stb(rx_stb),
         .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb),
+        .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
         .pps(pps),
         .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]), .sync(sync[i]),
         .fp_gpio(fp_gpio[32*i+31:32*i]), .db_gpio(db_gpio[32*i+31:32*i]), .leds(leds[32*i+31:32*i]),

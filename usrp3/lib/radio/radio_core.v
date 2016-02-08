@@ -18,6 +18,8 @@ module radio_core #(
   // Interface to the physical radio (ADC, DAC, controls)
   input [31:0] rx, input rx_stb,
   output [31:0] tx, input tx_stb,
+  // VITA time
+  input [63:0] vita_time, input [63:0] vita_time_lastpps,
   // Interfaces to front panel and daughter board
   input pps,
   input [31:0] misc_ins, output [31:0] misc_outs, output sync,
@@ -59,7 +61,6 @@ module radio_core #(
   /********************************************************
   ** Settings Bus / Readback Registers
   ********************************************************/
-  wire [63:0] vita_time, vita_time_lastpps;
   wire        loopback;
   wire [31:0] test_readback;
   wire db_rb_stb;
@@ -89,18 +90,6 @@ module radio_core #(
   setting_reg #(.my_addr(SR_TEST), .width(32)) sr_test (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(test_readback), .changed());
-
-  /********************************************************
-  ** VITA Time
-  ********************************************************/
-  timekeeper #(
-    .SR_TIME_HI(SR_TIME_HI),
-    .SR_TIME_LO(SR_TIME_LO),
-    .SR_TIME_CTRL(SR_TIME_CTRL))
-  timekeeper (
-    .clk(clk), .reset(reset), .pps(pps), .strobe(rx_stb),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
   /********************************************************
   ** Daughter board control
