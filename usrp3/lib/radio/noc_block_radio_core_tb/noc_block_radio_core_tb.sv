@@ -72,7 +72,9 @@ module noc_block_radio_core_tb;
 
   logic set_rx = 1'b0;
   logic [31:0] set_rx_val[0:NUM_RADIOS-1];
+  integer ramp_val;
   initial begin
+    ramp_val = 0;
     rx_stb_int = 1'b1;
     tx_stb = 1'b1;
     rx_int = {NUM_RADIOS{32'h00000001}};
@@ -81,8 +83,9 @@ module noc_block_radio_core_tb;
       tx_stb = 1'b1;
       for (int i = 0; i < NUM_RADIOS; i++) begin 
         // Fixed value or ramp
-        rx_int[32*i +: 32] = set_rx ? set_rx_val[i] : {rx_int[32*i +: 32]+32'h00020002};
+        rx_int[32*i +: 32] = set_rx ? set_rx_val[i] : {ramp_val[15:0],ramp_val[15:0]+1'b1};
       end
+      ramp_val += 2;
       @(posedge radio_clk);
       rx_stb_int = 1'b0;
       tx_stb = 1'b0;
@@ -104,7 +107,7 @@ module noc_block_radio_core_tb;
   ********************************************************/
   localparam PKT_SIZE = 1024;   // In bytes
   localparam [31:0] TX_VERIF_WORD = 32'h12345678;
-  logic [11:0] data_seqnum[NUM_RADIOS-1:0] = '{NUM_RADIOS{12'd0}};
+  logic [11:0] data_seq_num[NUM_RADIOS-1:0] = '{NUM_RADIOS{12'd0}};
 
   task automatic tb_send_cmd;
     input [15:0] dst_sid;
@@ -197,7 +200,7 @@ module noc_block_radio_core_tb;
       end
       $display("Radio %2d: Send TX burst, %5d samples",radio_num,num_samples);
       if (radio_num == 0) begin
-        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seqnum[radio_num], length:{8 + 8*payload.size() + has_time*8},
+        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seq_num[radio_num], length:{8 + 8*payload.size() + has_time*8},
                 src_sid:{sid_noc_block_tb+1}, dst_sid:{sid_noc_block_radio_core + radio_num}, timestamp:timestamp};
         if (has_time) begin
           tb_cvita_data.push_pkt({hdr[127:64],hdr[63:0],payload});
@@ -206,7 +209,7 @@ module noc_block_radio_core_tb;
         end
       $display("Radio %2d: TX burst sent",radio_num);
       end else begin
-        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seqnum[radio_num], length:{8 + 8*payload.size() + has_time*8},
+        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seq_num[radio_num], length:{8 + 8*payload.size() + has_time*8},
                 src_sid:{sid_noc_block_tb2+1}, dst_sid:{sid_noc_block_radio_core + radio_num}, timestamp:timestamp};
         if (has_time) begin
           tb2_cvita_data.push_pkt({hdr[127:64],hdr[63:0],payload});
@@ -215,7 +218,7 @@ module noc_block_radio_core_tb;
         end
       end
       // Increment sequence number
-      ++data_seqnum[radio_num];
+      ++data_seq_num[radio_num];
     end
   endtask
 
@@ -279,17 +282,16 @@ module noc_block_radio_core_tb;
     end
   endtask
 
-  task automatic tb_check_tx_resp;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+  task automatic tb_check_resp;
     input has_time;
     input eob;
+    input [15:0] src_sid;
     input [31:0] expected_resp_code;
     begin
       automatic logic [63:0] payload[$];
       automatic cvita_hdr_t header;
       automatic cvita_pkt_t response;
       tb_cvita_ack.pull_pkt(response);
-      $display("Radio %2d: Checking TX response packet", radio_num);
       payload = response;
       extract_chdr(payload, header);
       `ASSERT_FATAL(header.pkt_type == cvita_pkt_type_t'(RESP),
@@ -300,42 +302,22 @@ module noc_block_radio_core_tb;
         $sformatf("Incorrect response packet 'has time' value! Received: %1b Expected: %1b", header.has_time, has_time));
       `ASSERT_FATAL(header.length == 8*response.size(),
         $sformatf("Incorrect packet length! Received: %5d Expected: %5d", header.length, 8*response.size()));
-      `ASSERT_FATAL(header.src_sid == {sid_noc_block_radio_core + radio_num},
-        $sformatf("Incorrect source SID! Received: %4x Expected: %4x", header.src_sid, {sid_noc_block_radio_core + radio_num}));
+      `ASSERT_FATAL(header.src_sid == src_sid,
+        $sformatf("Incorrect source SID! Received: %4x Expected: %4x", header.src_sid, src_sid));
       `ASSERT_FATAL(payload[0][63:32] == expected_resp_code,
         $sformatf("Incorrect response packet code! Received: %8x Expected: %8x", payload[0][63:32], expected_resp_code));
-      `ASSERT_FATAL(payload[0][11:0] == data_seqnum[radio_num]-12'd1,
-        $sformatf("Incorrect response sequence number! Received: %4d Expected: %4d", payload[0][11:0], data_seqnum[radio_num]-12'd1));
-      $display("Radio %2d: TX response packet correct", radio_num);
     end
   endtask
 
-  task automatic tb_check_rx_resp;
+  task automatic tb_check_radio_resp;
     input [$clog2(NUM_RADIOS)-1:0] radio_num;
     input has_time;
     input eob;
     input [31:0] expected_resp_code;
     begin
-      automatic logic [63:0] payload[$];
-      automatic cvita_hdr_t header;
-      automatic cvita_pkt_t response;
-      tb_cvita_ack.pull_pkt(response);
-      $display("Radio %2d: Checking RX response packet", radio_num);
-      payload = response;
-      extract_chdr(payload, header);
-      `ASSERT_FATAL(header.pkt_type == cvita_pkt_type_t'(RESP),
-        $sformatf("Incorrect response packet type! Received: 2'b%2b Expected: 2'b%2b", header.pkt_type, cvita_pkt_type_t'(RESP)));
-      `ASSERT_FATAL(header.eob == eob,
-        $sformatf("Incorrect response packet EOB value! Received: %1b Expected: %1b", header.eob, eob));
-      `ASSERT_FATAL(header.has_time == has_time,
-        $sformatf("Incorrect response packet 'has time' value! Received: %1b Expected: %1b", header.has_time, has_time));
-      `ASSERT_FATAL(header.length == 8*response.size(),
-        $sformatf("Incorrect packet length! Received: %5d Expected: %5d", header.length, 8*response.size()));
-      `ASSERT_FATAL(header.src_sid == {sid_noc_block_radio_core + radio_num},
-        $sformatf("Incorrect source SID! Received: %4x Expected: %4x", header.src_sid, {sid_noc_block_radio_core + radio_num}));
-      `ASSERT_FATAL(payload[0][63:32] == expected_resp_code,
-        $sformatf("Incorrect response packet code! Received: %8x Expected: %8x", payload[0][63:32], expected_resp_code));
-      $display("Radio %2d: RX response packet correct", radio_num);
+      $display("Radio %2d: Checking radio response packet", radio_num);
+      tb_check_resp(has_time, eob, (sid_noc_block_radio_core + radio_num), expected_resp_code);
+      $display("Radio %2d: Radio response packet correct", radio_num);
     end
   endtask
 
@@ -445,7 +427,7 @@ module noc_block_radio_core_tb;
     rxtx_loopback = 0;
     set_rx = 0;
     for (int i = 0; i < NUM_RADIOS; i++) begin
-      data_seqnum[i] = 0;
+      data_seq_num[i] = 0;
     end
 
     /********************************************************
@@ -473,6 +455,11 @@ module noc_block_radio_core_tb;
     `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb2,1,noc_block_radio_core,1,PKT_SIZE);
     `RFNOC_CONNECT_BLOCK_PORT(noc_block_radio_core,1,noc_block_tb2,1,PKT_SIZE);
 
+    // Disable sequence error checks. Solves issues with inline overrun / late command 
+    // error packets causing sequence number gaps in rx data packets.
+    tb_send_cmd({sid_noc_block_tb + 1'b1}, noc_block_tb.noc_shell.SR_ERROR_POLICY, 4'b0010, resp);
+    tb_send_cmd({sid_noc_block_tb2 + 1'b1}, noc_block_tb.noc_shell.SR_ERROR_POLICY, 4'b0010, resp);
+
     // Read NOC ID
     tb_read_radio_reg(0, noc_block_radio_core.noc_shell.RB_NOC_ID, noc_id);
     $display("Read NOC ID: %16x",noc_id);
@@ -496,11 +483,12 @@ module noc_block_radio_core_tb;
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_TEST, 32'hDEADBEEF, resp);
       // Readback test register
       tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TEST, resp);
-      `ASSERT_FATAL(resp[31:0] == 32'hDEADBEEF, "Failed loopback test word #1");
+      `ASSERT_FATAL(resp[31:0] == 32'hDEADBEEF, $sformatf("Radio %2d: Failed loopback test word #1",i));
       // Second test word
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_TEST, 32'hFEEDFACE, resp);
       tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TEST, resp);
-      `ASSERT_FATAL(resp[31:0] == 32'hFEEDFACE, "Failed loopback test word #2");
+      `ASSERT_FATAL(resp[31:0] == 32'hFEEDFACE, $sformatf("Radio %2d: Failed loopback test word #2",i));
+      $display("Radio %2d: Passed register loopback test", i);
     end
     `TEST_CASE_DONE(1);
  
@@ -519,13 +507,13 @@ module noc_block_radio_core_tb;
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_CODEC_IDLE, 32'hCAFEF00D, resp);
       // Readback TX output and RX input. Both should be the test word due to loopback.
       tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TXRX, resp);
-      `ASSERT_FATAL(resp[63:32] == 32'hCAFEF00D, "Incorrect TX idle word #1");
-      `ASSERT_FATAL(resp[31:0] == 32'hCAFEF00D, "Incorrect RX loopback word #1");
+      `ASSERT_FATAL(resp[63:32] == 32'hCAFEF00D, $sformatf("Radio %2d: Incorrect TX idle word #1", i));
+      `ASSERT_FATAL(resp[31:0] == 32'hCAFEF00D, $sformatf("Radio %2d: Incorrect RX loopback word #1", i));
       // Second test word
       tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_CODEC_IDLE, 32'h00C0FFEE, resp);
       tb_read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_core.RB_TXRX, resp);
-      `ASSERT_FATAL(resp[63:32] == 32'h00C0FFEE, "Incorrect TX idle word #2");
-      `ASSERT_FATAL(resp[31:0] == 32'h00C0FFEE, "Incorrect RX loopback word #2");
+      `ASSERT_FATAL(resp[63:32] == 32'h00C0FFEE, $sformatf("Radio %2d: Incorrect TX idle word #2", i));
+      `ASSERT_FATAL(resp[31:0] == 32'h00C0FFEE, $sformatf("Radio %2d: Incorrect RX loopback word #2", i));
       // Disable loopback mode
       tb_send_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_LOOPBACK, 32'h0, resp);
     end
@@ -543,7 +531,7 @@ module noc_block_radio_core_tb;
       begin
         tb_send_tx_packet(i,PKT_SIZE/4 /* 4 bytes per samples */,0 /* Has time */,1 /* EOB */,0);
         // Check for EOB ACK
-        tb_check_tx_resp(i,1 /* Has time */,0 /* EOB */,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1 /* Has time */,0 /* EOB */,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -563,7 +551,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,0,0);
-        tb_check_tx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_UNDERRUN[63:32]);
+        tb_check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_UNDERRUN[63:32]);
       end
       begin
         // Even with an underflow, TX output should still be valid.
@@ -574,7 +562,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -602,10 +590,10 @@ module noc_block_radio_core_tb;
                     {4'b0101}, // Set continue on next packet & send error packets
                     resp);
         // Erroneously increment sequence number 
-        data_seqnum[i] = data_seqnum[i] + 1;
+        data_seq_num[i] = data_seq_num[i] + 1;
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
         // Check for seqnum error packet
-        tb_check_tx_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
       end
       begin
         tb_check_tx_idle(i);
@@ -615,7 +603,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -628,9 +616,9 @@ module noc_block_radio_core_tb;
         tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b1001}, // Set continue on next burst & send error packets
                     resp);
-        data_seqnum[i] = data_seqnum[i] + 1;
+        data_seq_num[i] = data_seq_num[i] + 1;
         tb_send_tx_packet(i,PKT_SIZE/4,0,0,0); // EOB specifically NOT set
-        tb_check_tx_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
       end
       begin
         tb_check_tx_idle(i);
@@ -651,7 +639,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -664,11 +652,11 @@ module noc_block_radio_core_tb;
         tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b0011}, // Set always continue & send error packets
                     resp);
-        data_seqnum[i] = data_seqnum[i] + 1;
+        data_seq_num[i] = data_seq_num[i] + 1;
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
         // We expect to get two responses: Sequence number error and EOB ACK 
-        tb_check_tx_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         // Even though there was a sequence number error, packet should still be passed through
@@ -684,7 +672,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -710,7 +698,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,1,1,resp/2);  // VITA time/2, that is one late packet!
-        tb_check_tx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_TIME_ERROR[63:32]);
+        tb_check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_TIME_ERROR[63:32]);
       end
       begin
         // We don't send out packets that are late
@@ -721,7 +709,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
-        tb_check_tx_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        tb_check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         tb_check_tx_burst(i,PKT_SIZE/4);
@@ -755,7 +743,7 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Flush remaining RX packets", i);
       tb_flush_rx(i);
       // Check overflow packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_OVERRUN);
+      tb_check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_OVERRUN);
       // Normal RX should work without any issues
       tb_start_rx(i,PKT_SIZE/4,0,0);
       tb_check_rx(i);
@@ -772,7 +760,7 @@ module noc_block_radio_core_tb;
       // Start RX at VITA time/2, i.e. send a late command
       tb_start_rx_timed(i,PKT_SIZE/4,0,0,resp/2);
       // Wait for late command error packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_LATECMD);
+      tb_check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_LATECMD);
       // Normal RX should work without any issues
       tb_start_rx(i,PKT_SIZE/4,0,0);
       tb_check_rx(i);
@@ -789,7 +777,7 @@ module noc_block_radio_core_tb;
       // Start RX with chain commands option, but don't send additional commands which will 'break' the chain
       tb_start_rx(i,PKT_SIZE/4,1,0);
       // Wait for broken chain error packet
-      tb_check_rx_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_BROKENCHAIN);
+      tb_check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_BROKENCHAIN);
       // Output should still be correct
       tb_check_rx(i);
       // Normal RX should work without any issues
