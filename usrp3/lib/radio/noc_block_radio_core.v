@@ -42,7 +42,7 @@ module noc_block_radio_core #(
   wire [NUM_RADIOS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire [NUM_RADIOS-1:0]         clear_tx_seqnum;
-  wire [16*NUM_RADIOS-1:0]      src_sid, next_dst_sid, resp_dst_sid;
+  wire [16*NUM_RADIOS-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
