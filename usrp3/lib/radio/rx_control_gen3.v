@@ -13,7 +13,8 @@ module rx_control_gen3 #(
   parameter SR_RX_CTRL_TIME_HI = 1,     // Command execute time (high word)
   parameter SR_RX_CTRL_TIME_LO = 2,     // Command execute time (low word)
   parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
-  parameter SR_RX_CTRL_MAXLEN = 4       // Packet length
+  parameter SR_RX_CTRL_MAXLEN = 4,      // Packet length
+  parameter SR_RX_CTRL_CLEAR_CMDS = 5   // Packet length
 )(
   input clk, input reset,
   input clear, // Resets state machine and clear output FIFO.
@@ -48,12 +49,12 @@ module rx_control_gen3 #(
 
   reg chain_sav, reload_sav;
   reg clear_halt;
-  reg clear_overflow;
   reg halt;
   wire set_halt;
   wire [15:0] maxlen;
   wire eob;
   reg [63:0] start_time;
+  wire clear_cmds;
 
   setting_reg #(.my_addr(SR_RX_CTRL_COMMAND)) sr_cmd (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -75,14 +76,18 @@ module rx_control_gen3 #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(maxlen),.changed());
 
+  setting_reg #(.my_addr(SR_RX_CTRL_CLEAR_CMDS)) sr_clear_cmds (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+    .in(set_data),.out(),.changed(clear_cmds));
+
   always @(posedge clk)
-    if (reset | clear | clear_halt)
+    if (reset | clear | clear_halt | clear_cmds)
       halt <= 1'b0;
     else
       halt <= set_halt;
 
   axi_fifo_short #(.WIDTH(96)) commandfifo (
-    .clk(clk),.reset(reset),.clear(clear | clear_halt | clear_overflow),
+    .clk(clk),.reset(reset),.clear(clear | clear_halt | clear_cmds),
     .i_tdata({command_i,time_i}), .i_tvalid(store_command), .i_tready(),
     .o_tdata({send_imm,chain,reload,stop,numlines,rcvtime}),
     .o_tvalid(command_valid), .o_tready(command_ready),
@@ -141,14 +146,12 @@ module rx_control_gen3 #(
       resp_tvalid    <= 1'b0;
       resp_tuser     <= 'd0;
       command_ready  <= 1'b0;
-      clear_overflow <= 1'b0;
     end else begin
       case (ibs_state)
         IBS_IDLE : begin
           rx_reg_tlast   <= 1'b0;
           rx_reg_tvalid  <= 1'b0;
           command_ready  <= 1'b0;
-          clear_overflow <= 1'b0;
           clear_halt     <= 1'b0; // Incase we got here through a HALT.
           if (command_valid & rx_reg_tready) begin
             // There is a valid command to pop from FIFO
@@ -224,9 +227,8 @@ module rx_control_gen3 #(
           end
           // Overflow condition -- can occur regardless of strobe state
           if (overflow) begin
-            clear_overflow <= 1'b1;      // Clear out command FIFO
-            rx_reg_tvalid  <= 1'b1;
-            rx_reg_tlast   <= 1'b1;      // End packet
+            rx_reg_tvalid  <= 1'b1;      // Send final sample
+            rx_reg_tlast   <= 1'b1;      // ... and end packet
             rx_reg_tuser   <= rx_header; // Update tuser with EOB set
             error_tuser    <= error_header;
             error          <= ERR_OVERRUN;
@@ -237,7 +239,6 @@ module rx_control_gen3 #(
         // Finish off short packet with EOB set
         IBS_ERR_FINISH_PKT : begin
           command_ready  <= 1'b0;
-          clear_overflow <= 1'b0;
           if (rx_reg_tready) begin
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b0;
