@@ -33,7 +33,7 @@ module window
    counter #(.WIDTH(MAX_LOG2_OF_WINDOW_SIZE)) addr_gen
      (.clk(clk), .reset(reset), .clear(clear),
       .max(max),
-      .i_tlast(n1_tlast), .i_tvalid(n1_tvalid), .i_tready(n1_tready),
+      .i_tlast(1'b0), .i_tvalid(n1_tvalid), .i_tready(n1_tready),
       .o_tdata(n2_tdata), .o_tlast(n2_tlast), .o_tvalid(n2_tvalid), .o_tready(n2_tready));
 
    ram_to_fifo #(.DWIDTH(COEFF_WIDTH), .AWIDTH(MAX_LOG2_OF_WINDOW_SIZE)) window_coeffs
