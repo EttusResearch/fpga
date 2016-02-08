@@ -26,7 +26,7 @@ module noc_shell
     
     // Control Sink
     output [31:0] set_data, output [7:0] set_addr, output [BLOCK_PORTS-1:0] set_stb, output [63:0] set_time,
-    output [BLOCK_PORTS*8-1:0] rb_addr, input [BLOCK_PORTS*64-1:0] rb_data,
+    input [BLOCK_PORTS-1:0] rb_stb, output [BLOCK_PORTS*8-1:0] rb_addr, input [BLOCK_PORTS*64-1:0] rb_data,
 
     // Control Source
     input [63:0] cmdout_tdata, input cmdout_tlast, input cmdout_tvalid, output cmdout_tready,
@@ -124,44 +124,53 @@ module noc_shell
    ///////////////////////////////////////////////////////////////////////////////////////
    // Control Sink (required)
    ///////////////////////////////////////////////////////////////////////////////////////
+   localparam RB_AWIDTH = 3;
    wire [BLOCK_PORTS*64-1:0] rb_data_flat;
-   cmd_pkt_proc #(.NUM_SR_BUSES(BLOCK_PORTS)) cmd_pkt_proc
-     (.clk(clk), .reset(reset), .clear(1'b0),
-      .cmd_tdata(cmdin_tdata), .cmd_tlast(cmdin_tlast), .cmd_tvalid(cmdin_tvalid), .cmd_tready(cmdin_tready),
-      .resp_tdata(ackout_tdata), .resp_tlast(ackout_tlast), .resp_tvalid(ackout_tvalid), .resp_tready(ackout_tready),
-      .vita_time(64'd0),
-      .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
-      .ready(1'b1), .readback(rb_data_flat));
+   reg [BLOCK_PORTS-1:0] rb_stb_int;
+   wire [(RB_AWIDTH*BLOCK_PORTS)-1:0] rb_addr_noc_shell;
+   cmd_pkt_proc #(
+     .SR_AWIDTH(8),
+     .SR_DWIDTH(32),
+     .RB_AWIDTH(RB_AWIDTH),
+     .RB_USER_AWIDTH(8),
+     .RB_DWIDTH(64),
+     .USE_TIME(1), // TODO: Need means to hook up VITA time into NoC Shell or remove this option
+     .NUM_SR_BUSES(BLOCK_PORTS),
+     .SR_RB_ADDR(SR_RB_ADDR),
+     .SR_RB_ADDR_USER(SR_RB_ADDR_USER),
+     .FIFO_SIZE(5))
+   cmd_pkt_proc (
+     .clk(clk), .reset(reset), .clear(1'b0),
+     .cmd_tdata(cmdin_tdata), .cmd_tlast(cmdin_tlast), .cmd_tvalid(cmdin_tvalid), .cmd_tready(cmdin_tready),
+     .resp_tdata(ackout_tdata), .resp_tlast(ackout_tlast), .resp_tvalid(ackout_tvalid), .resp_tready(ackout_tready),
+     .vita_time(64'd0),
+     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
+     .rb_stb(rb_stb_int), .rb_data(rb_data_flat), .rb_addr(rb_addr_noc_shell), .rb_addr_user(rb_addr));
 
    wire [INPUT_PORTS-1:0] clear_rx_fc;
    wire [OUTPUT_PORTS-1:0] clear_tx_fc;
-   wire [2:0] rb_addr_noc_shell[0:BLOCK_PORTS-1];
 
    genvar k;
    generate
      for (k = 0; k < BLOCK_PORTS; k = k + 1) begin
-       setting_reg #(.my_addr(SR_RB_ADDR), .width(3), .at_reset(0)) sr_rb_addr
-         (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
-          .in(set_data),.out(rb_addr_noc_shell[k]),.changed());
-       setting_reg #(.my_addr(SR_RB_ADDR_USER), .width(8), .at_reset(0)) sr_rb_addr_user
-         (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr),
-          .in(set_data),.out(rb_addr[8*k+7:8*k]),.changed());
-
+       // Mux NoC Shell and user readback registers
        reg [63:0] rb_data_gen;
        always @(posedge clk) begin
          if (reset) begin
-           rb_data_gen <= 64'd0;
+           rb_stb_int[k] <= 1'b0;
+           rb_data_gen   <= 64'd0;
          end else begin
-           case(rb_addr_noc_shell[k])
-             RB_NOC_ID                : rb_data_gen <= NOC_ID;
-             RB_GLOBAL_PARAMS         : rb_data_gen <= {56'd0, INPUT_PORTS[4:0], OUTPUT_PORTS[4:0]};
-             RB_FIFOSIZE              : rb_data_gen <= k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0;
-             RB_MTU                   : rb_data_gen <= k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0;
-             RB_BLOCK_PORT_SIDS       : rb_data_gen <= {src_sid[16*k+15:16*k],
-                                                        k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
-                                                        k < INPUT_PORTS  ? resp_in_dst_sid[16*k+15:16*k]  : 16'd0,
-                                                        k < OUTPUT_PORTS ? resp_out_dst_sid[16*k+15:16*k] : 16'd0};
-             RB_USER_RB_DATA          : rb_data_gen <= rb_data[64*k+63:64*k];
+           case(rb_addr_noc_shell[RB_AWIDTH*(k+1)-1:RB_AWIDTH*k])
+             RB_NOC_ID          : {rb_stb_int[k], rb_data_gen} <= {     1'b1, NOC_ID};
+             RB_GLOBAL_PARAMS   : {rb_stb_int[k], rb_data_gen} <= {     1'b1, {54'd0, INPUT_PORTS[4:0], OUTPUT_PORTS[4:0]}};
+             RB_FIFOSIZE        : {rb_stb_int[k], rb_data_gen} <= {     1'b1, {k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0}};
+             RB_MTU             : {rb_stb_int[k], rb_data_gen} <= {     1'b1, {k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0}};
+             RB_BLOCK_PORT_SIDS : {rb_stb_int[k], rb_data_gen} <= {     1'b1, {src_sid[16*k+15:16*k],
+                                                                                k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
+                                                                                k < INPUT_PORTS  ? resp_in_dst_sid[16*k+15:16*k]  : 16'd0,
+                                                                                k < OUTPUT_PORTS ? resp_out_dst_sid[16*k+15:16*k] : 16'd0}};
+             RB_USER_RB_DATA    : {rb_stb_int[k], rb_data_gen} <= {rb_stb[k], rb_data[64*k+63:64*k]};
+             default            : {rb_stb_int[k], rb_data_gen} <= {     1'b1, 64'h0BADC0DE0BADC0DE};
            endcase
          end
        end

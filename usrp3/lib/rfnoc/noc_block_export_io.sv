@@ -62,7 +62,7 @@ module noc_block_export_io
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_bus.data), .set_addr(set_bus.addr), .set_stb({set_bus.stb,unused_set_stb}), .set_time(),
-    .rb_data({rb_bus.data,64'd0}), .rb_addr({rb_bus.addr,unused_rb_addr}),
+    .rb_stb(2'b11), .rb_data({rb_bus.data,64'd0}), .rb_addr({rb_bus.addr,unused_rb_addr}),
     // Control Source
     .cmdout_tdata(cvita_cmd.tdata), .cmdout_tlast(cvita_cmd.tlast), .cmdout_tvalid(cvita_cmd.tvalid), .cmdout_tready(cvita_cmd.tready),
     .ackin_tdata(cvita_ack.tdata), .ackin_tlast(cvita_ack.tlast), .ackin_tvalid(cvita_ack.tvalid), .ackin_tready(cvita_ack.tready),

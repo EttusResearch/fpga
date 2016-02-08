@@ -24,7 +24,8 @@ module radio_core #(
   inout [31:0] fp_gpio, inout [31:0] db_gpio, output [31:0] leds,
   output [7:0] sen, output sclk, output mosi, input miso,
   // Interface to the NoC Shell
-  input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time, input [7:0] rb_addr, output reg [63:0] rb_data,
+  input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time,
+  output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data,
   input [31:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready, input [127:0] tx_tuser,
   output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
   output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready
@@ -61,19 +62,20 @@ module radio_core #(
   wire [63:0] vita_time, vita_time_lastpps;
   wire        loopback;
   wire [31:0] test_readback;
+  wire db_rb_stb;
   wire [63:0] db_rb_data;
   always @(posedge clk) begin
     if (reset) begin
       rb_data <= 64'd0;
     end else begin
       case (rb_addr)
-        RB_VITA_TIME    : rb_data <= vita_time;
-        RB_VITA_LASTPPS : rb_data <= vita_time_lastpps;
-        RB_TEST         : rb_data <= {rx, test_readback};
-        RB_TXRX         : rb_data <= {tx, rx};
-        RB_RADIO_NUM    : rb_data <= {32'd0, RADIO_NUM[31:0]};
+        RB_VITA_TIME    : {rb_stb, rb_data} <= {1'b1, vita_time};
+        RB_VITA_LASTPPS : {rb_stb, rb_data} <= {1'b1, vita_time_lastpps};
+        RB_TEST         : {rb_stb, rb_data} <= {1'b1, {rx, test_readback}};
+        RB_TXRX         : {rb_stb, rb_data} <= {1'b1, {tx, rx}};
+        RB_RADIO_NUM    : {rb_stb, rb_data} <= {1'b1, {32'd0, RADIO_NUM[31:0]}};
         // All others default to daughter board control readback data
-        default         : rb_data <= db_rb_data;
+        default         : {rb_stb, rb_data} <= {db_rb_stb, db_rb_data};
       endcase
     end
   end
@@ -106,7 +108,7 @@ module radio_core #(
   db_control #(.SR_BASE(SR_DB_CONTROL_BASE), .RB_BASE(RB_DB_CONTROL_BASE)) db_control (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
-    .rb_addr(rb_addr), .rb_data(db_rb_data),
+    .rb_stb(db_rb_stb), .rb_addr(rb_addr), .rb_data(db_rb_data),
     .vita_time(vita_time), .run_rx(run_rx), .run_tx(run_tx),
     .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
     .fp_gpio(fp_gpio), .db_gpio(db_gpio),

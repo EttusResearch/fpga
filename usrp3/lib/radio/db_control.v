@@ -8,7 +8,8 @@ module db_control #(
 (
   // Commands from Radio Core
   input clk, input reset,
-  input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time, input [7:0] rb_addr, output reg [63:0] rb_data,
+  input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time,
+  output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data,
   input [63:0] vita_time, input run_rx, input run_tx,
   // Frontend / Daughterboard I/O
   input [31:0] misc_ins, output [31:0] misc_outs, output sync,
@@ -68,12 +69,12 @@ module db_control #(
   wire [31:0] fp_gpio_readback, db_gpio_readback, leds_readback;
   always @* begin
     case(rb_addr)
-      RB_MISC_IO  : rb_data <= {misc_ins, misc_outs};
-      RB_SPI      : rb_data <= {31'd0, spi_ready, 24'd0, spi_readback};
-      RB_LEDS     : rb_data <= {32'd0, leds};
-      RB_DB_GPIO  : rb_data <= {32'd0, db_gpio_readback};
-      RB_FP_GPIO  : rb_data <= {32'd0, fp_gpio_readback};
-      default     : rb_data <= 64'h0BADC0DE0BADC0DE;
+      RB_MISC_IO  : {rb_stb, rb_data} <= {     1'b1, {misc_ins, misc_outs}};
+      RB_SPI      : {rb_stb, rb_data} <= {spi_ready, {31'd0, spi_ready, spi_readback}};
+      RB_LEDS     : {rb_stb, rb_data} <= {     1'b1, {32'd0, leds}};
+      RB_DB_GPIO  : {rb_stb, rb_data} <= {     1'b1, {32'd0, db_gpio_readback}};
+      RB_FP_GPIO  : {rb_stb, rb_data} <= {     1'b1, {32'd0, fp_gpio_readback}};
+      default     : {rb_stb, rb_data} <= {     1'b1, {64'h0BADC0DE0BADC0DE}};
     endcase
   end
 

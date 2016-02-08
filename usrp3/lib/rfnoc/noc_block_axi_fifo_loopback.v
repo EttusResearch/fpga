@@ -41,7 +41,8 @@ module noc_block_axi_fifo_loopback #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0), .rb_addr(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),

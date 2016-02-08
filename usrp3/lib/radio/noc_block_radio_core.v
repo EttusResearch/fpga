@@ -33,6 +33,7 @@ module noc_block_radio_core #(
   wire [63:0]                   set_time;
   wire [8*NUM_RADIOS-1:0]       rb_addr;
   wire [64*NUM_RADIOS-1:0]      rb_data;
+  wire [NUM_RADIOS-1:0] rb_stb;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -55,7 +56,8 @@ module noc_block_radio_core #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time), .rb_addr(rb_addr), .rb_data(rb_data),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time),
+    .rb_stb(rb_stb), .rb_addr(rb_addr), .rb_data(rb_data),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -152,7 +154,8 @@ module noc_block_radio_core #(
         .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]), .sync(sync[i]),
         .fp_gpio(fp_gpio[32*i+31:32*i]), .db_gpio(db_gpio[32*i+31:32*i]), .leds(leds[32*i+31:32*i]),
         .sen(sen[8*i+7:8*i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i]),
-        .set_stb(set_stb[i]), .set_addr(set_addr), .set_data(set_data), .set_time(set_time), .rb_addr(rb_addr[8*i+7:8*i]), .rb_data(rb_data[64*i+63:64*i]),
+        .set_stb(set_stb[i]), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
+        .rb_stb(rb_stb[i]), .rb_addr(rb_addr[8*i+7:8*i]), .rb_data(rb_data[64*i+63:64*i]),
         .tx_tdata(m_axis_data_tdata[i]), .tx_tlast(m_axis_data_tlast[i]), .tx_tvalid(m_axis_data_tvalid[i]), .tx_tready(m_axis_data_tready[i]), .tx_tuser(m_axis_data_tuser[i]),
         .rx_tdata(s_axis_data_tdata[i]), .rx_tlast(s_axis_data_tlast[i]), .rx_tvalid(s_axis_data_tvalid[i]), .rx_tready(s_axis_data_tready[i]), .rx_tuser(s_axis_data_tuser[i]),
         .resp_tdata(resp_tdata[64*i+63:64*i]), .resp_tlast(resp_tlast[i]), .resp_tvalid(resp_tvalid[i]), .resp_tready(resp_tready[i]));

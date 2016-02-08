@@ -139,6 +139,7 @@ module noc_block_moving_avg #(
     .set_data(set_data),
     .set_addr(set_addr),
     .set_stb(set_stb),
+    .rb_stb(1'b1),
     .rb_data(rb_data),
     .rb_addr(rb_addr),
     // Control Source
