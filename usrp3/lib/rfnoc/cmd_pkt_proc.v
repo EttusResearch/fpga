@@ -67,7 +67,7 @@ module cmd_pkt_proc #(
   wire set_rb_addr      = cmd_fifo_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR[SR_AWIDTH-1:0];
   wire set_rb_addr_user = cmd_fifo_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR_USER[SR_AWIDTH-1:0];
 
-  (* mark_debug = "true", dont_touch = "true" *) reg [3:0] rc_state;
+  reg [3:0] state;
 
   reg [11:0] seqnum_reg;
   reg [15:0] src_sid_reg, dst_sid_reg;
