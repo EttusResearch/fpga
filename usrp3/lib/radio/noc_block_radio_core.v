@@ -127,8 +127,7 @@ module noc_block_radio_core #(
       ////////////////////////////////////////////////////////////
       axi_wrapper #(
         .MTU(10),
-        .SIMPLE_MODE(0), // Use sequence number in rx_control_gen3.v
-        .USE_SEQ_NUM(1)) // Use manually generated sequence number in s_axis_data_tuser
+        .SIMPLE_MODE(0))
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
