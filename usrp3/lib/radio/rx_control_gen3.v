@@ -100,7 +100,7 @@ module rx_control_gen3 #(
   // State machine states
   localparam IBS_IDLE                = 0;
   localparam IBS_RUNNING             = 1;
-  localparam IBS_ERR_FINISH_PKT      = 2;
+  localparam IBS_ERR_WAIT_FOR_READY  = 2;
   localparam IBS_ERR_SEND_PKT        = 3;
 
   // Error codes
@@ -117,8 +117,7 @@ module rx_control_gen3 #(
     if (reset | clear) begin
       seqnum_cnt <= 'd0;
     end else begin
-      // Increment sequence number on every packet except on an error packet
-      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid & (ibs_state != IBS_ERR_SEND_PKT)) begin
+      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid) begin
         seqnum_cnt <= seqnum_cnt + 1'b1;
       end
     end
@@ -162,11 +161,8 @@ module rx_control_gen3 #(
             end else if (late & ~send_imm) begin
               // Got this command later than its execution time.
               command_ready <= 1'b1;
-              rx_reg_tuser  <= error_header;
-              rx_reg_tvalid <= 1'b1;
-              rx_reg_tlast  <= 1'b0;
-              rx_reg_tdata  <= ERR_LATECMD;
-              ibs_state     <= IBS_ERR_SEND_PKT;
+              error         <= ERR_LATECMD;
+              ibs_state     <= IBS_ERR_WAIT_FOR_READY;
             end else if (now | send_imm) begin
               // Either its time to run this command or it should run immediately without a time.
               command_ready  <= 1'b1;
@@ -212,9 +208,8 @@ module rx_control_gen3 #(
                 end else if (reload_sav) begin // There is no new command to pop from FIFO so re-run previous command.
                   lines_left <= repeat_lines;
                 end else begin // Chain has been broken, no commands left in FIFO and reload not set.
-                  error_tuser   <= error_header;
                   error         <= ERR_BROKENCHAIN;
-                  ibs_state     <= IBS_ERR_FINISH_PKT;
+                  ibs_state     <= IBS_ERR_WAIT_FOR_READY;
                 end
               end else begin // Chain is not true, so don't look for new command, instead go idle.
                 ibs_state <= IBS_IDLE;
@@ -230,20 +225,18 @@ module rx_control_gen3 #(
             rx_reg_tvalid  <= 1'b1;      // Send final sample
             rx_reg_tlast   <= 1'b1;      // ... and end packet
             rx_reg_tuser   <= rx_header; // Update tuser with EOB set
-            error_tuser    <= error_header;
             error          <= ERR_OVERRUN;
-            ibs_state      <= IBS_ERR_FINISH_PKT;
+            ibs_state      <= IBS_ERR_WAIT_FOR_READY;
           end
         end
 
-        // Finish off short packet with EOB set
-        IBS_ERR_FINISH_PKT : begin
+        // Wait for output to be ready
+        IBS_ERR_WAIT_FOR_READY : begin
           command_ready  <= 1'b0;
           if (rx_reg_tready) begin
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b0;
             rx_reg_tdata  <= error;
-            rx_reg_tuser  <= error_tuser;
             ibs_state     <= IBS_ERR_SEND_PKT;
           end
         end
@@ -254,8 +247,10 @@ module rx_control_gen3 #(
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b1;
             rx_reg_tdata  <= 'd0;
+            rx_reg_tuser  <= error_header;
             if (rx_reg_tlast) begin
               rx_reg_tvalid <= 1'b0;
+              rx_reg_tlast  <= 1'b0;
               ibs_state     <= IBS_IDLE;
             end
           end
@@ -268,7 +263,7 @@ module rx_control_gen3 #(
 
   assign run = (ibs_state == IBS_RUNNING);
 
-  assign eob = (lines_left == 1) & ( !chain_sav | (command_valid & stop) | (!command_valid & !reload_sav) | halt) | overflow;
+  assign eob = ((lines_left == 1) & ( !chain_sav | (command_valid & stop) | (!command_valid & !reload_sav) | halt)) | overflow;
 
   // Register output
   axi_fifo_flop2 #(.WIDTH(161))
