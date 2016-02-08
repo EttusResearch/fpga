@@ -49,6 +49,7 @@ module radio_core #(
   localparam SR_RX_CTRL_TIME_LO      = BASE + 8'd50;
   localparam SR_RX_CTRL_HALT         = BASE + 8'd51;
   localparam SR_RX_CTRL_MAXLEN       = BASE + 8'd52;
+  localparam SR_RX_CTRL_CLEAR_CMDS   = BASE + 8'd53;
   localparam SR_DB_CONTROL_BASE      = BASE + 8'd64;  // 64 - 127 Reserved for db control
 
   localparam RB_VITA_TIME            = 8'd0;
@@ -140,7 +141,8 @@ module radio_core #(
     .SR_RX_CTRL_TIME_HI(SR_RX_CTRL_TIME_HI),
     .SR_RX_CTRL_TIME_LO(SR_RX_CTRL_TIME_LO),
     .SR_RX_CTRL_HALT(SR_RX_CTRL_HALT),
-    .SR_RX_CTRL_MAXLEN(SR_RX_CTRL_MAXLEN))
+    .SR_RX_CTRL_MAXLEN(SR_RX_CTRL_MAXLEN),
+    .SR_RX_CTRL_CLEAR_CMDS(SR_RX_CTRL_CLEAR_CMDS))
   rx_control_gen3 (
     .clk(clk), .reset(reset), .clear(clear_rx),
     .vita_time(vita_time), .sid({src_sid, dst_sid}), .resp_sid({src_sid, rx_resp_dst_sid}),
