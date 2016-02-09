@@ -120,15 +120,16 @@ module small_hb_dec
      else if(go_d3)
        accum <= accum + prod_acc_rnd;
    
-   wire [WIDTH:0] 	 accum_rnd;
+   wire [ACCWIDTH-2:0] 	 accum_clip;
    wire [WIDTH-1:0] 	 accum_rnd_clip;
    
    wire 	 stb_round;
    
-   round_sd #(.WIDTH_IN(ACCWIDTH),.WIDTH_OUT(WIDTH+1)) round_acc 
-     (.clk(clk), .reset(rst), .in(accum), .strobe_in(go_d4), .out(accum_rnd), .strobe_out(stb_round));
+   clip #(.bits_in(ACCWIDTH),.bits_out(ACCWIDTH-1)) clip (.in(accum), .out(accum_clip));
 
-   clip #(.bits_in(WIDTH+1),.bits_out(WIDTH)) clip (.in(accum_rnd), .out(accum_rnd_clip));
+   round_sd #(.WIDTH_IN(ACCWIDTH-1),.WIDTH_OUT(WIDTH)) round_acc
+     (.clk(clk), .reset(rst), .in(accum_clip), .strobe_in(go_d4), .out(accum_rnd_clip), .strobe_out(stb_round));
+
    
    // Output
    always @(posedge clk)
