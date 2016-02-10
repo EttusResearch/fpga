@@ -172,6 +172,9 @@ module noc_shell
              RB_USER_RB_DATA    : {rb_stb_int[k], rb_data_gen} <= {rb_stb[k], rb_data[64*k+63:64*k]};
              default            : {rb_stb_int[k], rb_data_gen} <= {     1'b1, 64'h0BADC0DE0BADC0DE};
            endcase
+           // Always clear strobe after settings bus transaction to avoid using stale readback data.
+           // Note: This is necessary because we are registering the readback mux output.
+           if (set_stb[k]) rb_stb_int[k] <= 1'b0;
          end
        end
 
