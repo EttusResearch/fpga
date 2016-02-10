@@ -1,6 +1,8 @@
 ###############################################################################
 # Timing Constraints
 ###############################################################################
+# Pack all I/O registers
+set_property IOB TRUE "[all_inputs] [all_outputs]"
 
 # CAT_DATA_CLK is the data clock from AD9361, sample rate dependent with a max rate of 61.44 MHz
 set cat_data_clk_period             16.276;
@@ -56,8 +58,18 @@ set_output_delay -clock CAT_FB_CLK -max [expr $cat_fb_data_prog_dly + $cat_fb_da
 set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_data_hold]  [get_ports {CAT_P1_D* CAT_TX_FRAME}] -clock_fall -add_delay;
 
 # CAT SPI, max SPI clock of 4 MHz
-set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 20.000
-set_max_delay -from [get_ports CAT_MISO] 20.000
+set_property IOB FALSE [get_ports {CAT_CS CAT_SCLK CAT_MOSI CAT_MISO}] # Cannot pack IOB due to SPI mux
+set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 6.000
+set_min_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 1.000
+set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 6.000
+set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 6.000
+set_min_delay -from [get_ports CAT_MISO] 1.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 6.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 6.000
+set_min_delay -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 1.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 6.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 6.000
+set_min_delay -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 1.000
 
 # TCXO DAC SPI
 # 12 MHz SPI clock rate
