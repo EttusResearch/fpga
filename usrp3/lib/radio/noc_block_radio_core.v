@@ -12,8 +12,8 @@ module noc_block_radio_core #(
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
   // Ports connected to radio front end
-  input  [NUM_RADIOS*32-1:0] rx, input rx_stb,
-  output [NUM_RADIOS*32-1:0] tx, input tx_stb,
+  input  [NUM_RADIOS*32-1:0] rx, input [NUM_RADIOS-1:0] rx_stb,
+  output [NUM_RADIOS*32-1:0] tx, input [NUM_RADIOS-1:0] tx_stb,
   // Interfaces to front panel and daughter board
   input pps, output [NUM_RADIOS-1:0] sync,
   input [NUM_RADIOS*32-1:0] misc_ins, output [NUM_RADIOS*32-1:0] misc_outs,
@@ -163,8 +163,8 @@ module noc_block_radio_core #(
         .dst_sid(next_dst_sid[16*i+15:16*i]),
         .rx_resp_dst_sid(resp_out_dst_sid[16*i+15:16*i]),
         .tx_resp_dst_sid(resp_in_dst_sid[16*i+15:16*i]),
-        .rx(rx[32*i+31:32*i]), .rx_stb(rx_stb),
-        .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb),
+        .rx(rx[32*i+31:32*i]), .rx_stb(rx_stb[i]),
+        .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb[i]),
         .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
         .pps(pps),
         .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]), .sync(sync[i]),
