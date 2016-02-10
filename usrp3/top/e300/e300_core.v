@@ -42,7 +42,7 @@ module e300_core
   output            spi_sen,
   output            spi_sclk,
   output            spi_mosi,
-  output            spi_miso,
+  input             spi_miso,
 
   // settings bus to control global registers
   input [31:0]      set_data,
