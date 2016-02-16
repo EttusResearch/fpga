@@ -117,7 +117,8 @@ module rx_control_gen3 #(
     if (reset | clear) begin
       seqnum_cnt <= 'd0;
     end else begin
-      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid) begin
+      // Do not increment sequence number on error packets
+      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid & (rx_reg_tuser[127:126] != 2'b11)) begin
         seqnum_cnt <= seqnum_cnt + 1'b1;
       end
     end
@@ -237,6 +238,7 @@ module rx_control_gen3 #(
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b0;
             rx_reg_tdata  <= error;
+            rx_reg_tuser  <= error_header;
             ibs_state     <= IBS_ERR_SEND_PKT;
           end
         end
@@ -247,7 +249,6 @@ module rx_control_gen3 #(
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b1;
             rx_reg_tdata  <= 'd0;
-            rx_reg_tuser  <= error_header;
             if (rx_reg_tlast) begin
               rx_reg_tvalid <= 1'b0;
               rx_reg_tlast  <= 1'b0;
