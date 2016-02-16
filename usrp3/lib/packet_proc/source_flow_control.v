@@ -90,8 +90,26 @@ module source_flow_control
    assign in_tready = go ? out_tready : 1'b0;
    assign out_tvalid = go ? in_tvalid : 1'b0;
 
+   // TODO: Fix to increment sequence number only on data packets.
+   reg first_line = 1'b1;
+   reg is_data_pkt;
+   always @(posedge clk) begin
+     if (reset) begin
+       first_line  <= 1'b1;
+       is_data_pkt <= 1'b0;
+     end else begin
+       if (in_tvalid & in_tready & first_line) begin
+         first_line  <= 1'b0;
+         is_data_pkt <= (in_tdata[63:62] == 2'b0);
+       end
+       if (in_tvalid & in_tready & in_tlast) begin
+         first_line  <= 1'b1;
+       end
+     end
+   end
+
    //
-   // Each time we recieve the end of an IF data packet increment the current_seqnum.
+   // Each time we receive the end of an IF data packet increment the current_seqnum.
    // We bravely assume that no packets go missing...or at least that they will be detected elsewhere
    // and then handled appropriately.
    // The SEQNUM needs to be initialized every time we start a new stream. In new_rx_framer this is done
@@ -103,7 +121,7 @@ module source_flow_control
    always @(posedge clk)
      if(reset | clear | window_reset)
        current_seqnum <= 0;
-     else if (in_tvalid && in_tready && in_tlast)
+     else if (in_tvalid && in_tready && in_tlast && is_data_pkt)
        current_seqnum <= current_seqnum + 1;
 
    always @(posedge clk)
