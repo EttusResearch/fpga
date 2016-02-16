@@ -12,23 +12,25 @@ set sim_top         $::env(VIV_SIM_TOP)
 set part_name       $::env(VIV_PART_NAME)
 set sim_runtime     $::env(VIV_SIM_RUNTIME)
 set sim_fast        $::env(VIV_SIM_FAST)
-set sim_complibdir  $::env(VIV_SIM_COMPLIBDIR)
-set sim_user_do     $::env(VIV_SIM_USER_DO)
-set sim_64bit       $::env(VIV_SIM_64BIT)
 set vivado_mode     $::env(VIV_MODE)
 set working_dir     [pwd]
 
 set sim_fileset "sim_1"
 set project_name "[string tolower $simulator]_proj"
 
-if {[expr [file isdirectory $sim_complibdir] == 0]} {
-    set sim_complibdir  ""
-    if [expr [string equal $simulator "XSim"] == 0] {
-        puts "BUILDER: \[ERROR\]: Could not resolve the location for the compiled simulation libraries."
-        puts "                  Please build libraries for chosen simulator and set the env or"
-        puts "                  makefile variable SIM_COMPLIBDIR to point to the location."
-        exit 1
+if [info exists ::env(VIV_SIM_COMPLIBDIR) ] {
+    set sim_complibdir  $::env(VIV_SIM_COMPLIBDIR)
+    if [expr [file isdirectory $sim_complibdir] == 0] {
+        set sim_complibdir  ""
     }
+} else {
+    set sim_complibdir  ""
+}
+if [expr ([string equal $simulator "XSim"] == 0) && ([string length $sim_complibdir] == 0)] {
+    puts "BUILDER: \[ERROR\]: Could not resolve the location for the compiled simulation libraries."
+    puts "                  Please build libraries for chosen simulator and set the env or"
+    puts "                  makefile variable SIM_COMPLIBDIR to point to the location."
+    exit 1
 }
 
 # ---------------------------------------
@@ -88,16 +90,22 @@ set_property xsim.elaborate.debug_level "all" -objects [get_filesets $sim_filese
 set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
 
 # Modelsim specific settings
-set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
-# Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
-# See: http://www.xilinx.com/support/answers/62210.html
-set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
-set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.vsim.more_options -value {-c} -objects [get_filesets $sim_fileset]
-set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
-set_property modelsim.simulate.custom_udo -value "${sim_user_do}" -objects [get_filesets $sim_fileset]
+if [expr [string equal $simulator "Modelsim"] == 1] {
+    set sim_64bit       $::env(VIV_SIM_64BIT)
+
+    set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
+    # Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
+    # See: http://www.xilinx.com/support/answers/62210.html
+    set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.runtime "${sim_runtime}ns" -objects [get_filesets $sim_fileset]
+    set_property modelsim.elaborate.acc "true" -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.log_all_signals "true" -objects [get_filesets $sim_fileset]
+    set_property modelsim.simulate.vsim.more_options -value "-c" -objects [get_filesets $sim_fileset]
+    set_property modelsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
+    if [info exists ::env(VIV_SIM_USER_DO) ] {
+        set_property modelsim.simulate.custom_udo -value "$::env(VIV_SIM_USER_DO)" -objects [get_filesets $sim_fileset]
+    }
+}
 
 # Launch simulation
 launch_simulation

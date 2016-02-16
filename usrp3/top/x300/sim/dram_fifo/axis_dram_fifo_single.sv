@@ -64,18 +64,17 @@ module axis_dram_fifo_single
   always @(posedge ddr3_axi_clk)
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
-  axi_dram_fifo #(
-    .BASE('h0), 
-    .SIZE(18), 
-    .TIMEOUT(280), 
+  axi_dma_fifo #(
+    .DEFAULT_BASE(30'h00040000),
+    .DEFAULT_MASK(30'hFFFC0000),
+    .DEFAULT_TIMEOUT(280),
     .SR_BASE(SR_BASE),
     .EXT_BIST(1)
-  ) axi_dram_fifo_i0 (
+  ) axi_dma_fifo_i0 (
     //
     // Clocks and reset
     .bus_clk                    (bus_clk),
     .bus_reset                  (bus_rst),
-    .clear                      (1'b0),
     .dram_clk                   (ddr3_axi_clk_x2),
     .dram_reset                 (ddr3_axi_rst),
     //

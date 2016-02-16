@@ -13,28 +13,30 @@ TOP_MODULE = x300
 # Include other makefiles
 ##################################################
 
-include ../../tools/make/viv_preamble.mak
+BASE_DIR = $(abspath ..)
+IP_DIR = $(abspath ./ip)
+include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
-include ip/Makefile.inc
+include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
-include ../../lib/ip/Makefile.inc
-include ../../lib/hls/Makefile.inc
-include ../../lib/control/Makefile.srcs
-include ../../lib/fifo/Makefile.srcs
-include ../../lib/simple_gemac/Makefile.srcs
-include ../../lib/timing/Makefile.srcs
-include ../../lib/zpu/Makefile.srcs
-include ../../lib/wishbone/Makefile.srcs
-include ../../lib/packet_proc/Makefile.srcs
-include ../../lib/vita/Makefile.srcs
-include ../../lib/xge/Makefile.srcs
-include ../../lib/xge_interface/Makefile.srcs
-include ../../lib/dsp/Makefile.srcs
-include ../../lib/io_port2/Makefile.srcs
-include ../../lib/axi/Makefile.srcs
-include ../../lib/radio/Makefile.srcs
-include ../../lib/io_cap_gen/Makefile.srcs
-include ../../lib/rfnoc/Makefile.srcs
+include $(LIB_DIR)/ip/Makefile.inc
+include $(LIB_DIR)/hls/Makefile.inc
+include $(LIB_DIR)/control/Makefile.srcs
+include $(LIB_DIR)/fifo/Makefile.srcs
+include $(LIB_DIR)/simple_gemac/Makefile.srcs
+include $(LIB_DIR)/timing/Makefile.srcs
+include $(LIB_DIR)/zpu/Makefile.srcs
+include $(LIB_DIR)/wishbone/Makefile.srcs
+include $(LIB_DIR)/packet_proc/Makefile.srcs
+include $(LIB_DIR)/vita/Makefile.srcs
+include $(LIB_DIR)/xge/Makefile.srcs
+include $(LIB_DIR)/xge_interface/Makefile.srcs
+include $(LIB_DIR)/dsp/Makefile.srcs
+include $(LIB_DIR)/io_port2/Makefile.srcs
+include $(LIB_DIR)/axi/Makefile.srcs
+include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/io_cap_gen/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
 
 ##################################################
 # Sources
@@ -45,7 +47,6 @@ x300_pcie_int.v \
 x300_core.v \
 x300_zpu_config.vhd \
 soft_ctrl.v \
-dbuf_bootram.v \
 capture_ddrlvds.v \
 gen_ddrlvds.v \
 bus_int.v \
@@ -80,7 +81,7 @@ else
 HLS_IP_GEN_SRCS =
 endif
 
-SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
+DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
@@ -96,10 +97,8 @@ $(RFNOC_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 ##################################################
 .SECONDEXPANSION:
 
-export VIV_SOURCE_FILES=$(SOURCES)
-export VIV_VERILOG_DEFS=$(EXTRA_DEFS)
-
-bin: prereqs $$(SOURCES) ip lib_ip
+# DESIGN_SRCS and VERILOG_DEFS must be defined
+bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
 hls: prereqs hls_ip bin

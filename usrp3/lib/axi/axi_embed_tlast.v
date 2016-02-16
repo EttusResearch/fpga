@@ -16,9 +16,10 @@
 // 0xDEADBEEFFEEDCAFE 0x0000000000000000 0xDEADBEEFFEEDCAFE
 //
 
-module axi_embed_tlast
-   #(parameter WIDTH=64)
-  (
+module axi_embed_tlast #(
+  parameter WIDTH=64,
+  parameter ADD_CHECKSUM=0
+) (
    input clk,
    input reset,
    input clear,
@@ -31,8 +32,7 @@ module axi_embed_tlast
    output reg [WIDTH-1:0] o_tdata,
    output o_tvalid,
    input o_tready
-   
-   );
+);
 
    localparam PASS = 0;
    localparam ZERO = 1;
@@ -49,78 +49,74 @@ module axi_embed_tlast
    reg [1:0]  select;
 
    reg [31:0] checksum;
-   
+   generate if (ADD_CHECKSUM == 1) begin
+      always @(posedge clk) begin
+         if (reset | clear) begin
+            checksum <= 0;
+         end else if (i_tready && i_tvalid && i_tlast) begin
+            checksum <= 0;
+         end else if (i_tready && i_tvalid) begin
+            checksum <= checksum ^ i_tdata[31:0] ^ i_tdata[63:32];
+         end
+      end
+   end else begin
+      always @* checksum = 32'h0;
+   end endgenerate
+
    always @(posedge clk) 
-     if (reset | clear) begin
-	checksum <= 0;
-     end else if (i_tready && i_tvalid && i_tlast) begin
-	checksum <= 0;
-     end else if (i_tready && i_tvalid) begin
-	checksum <= checksum + i_tdata[31:0] + i_tdata[63:32];
-     end 
-   
-   always @(posedge clk) 
-     if (reset | clear) begin
-	state <= IDLE;
-     end else begin if (o_tready)
-	state <= next_state;
-     end 
-   
+      if (reset | clear) begin
+         state <= IDLE;
+      end else begin if (o_tready)
+         state <= next_state;
+      end 
+
    always @(*) begin
       case(state)
-	IDLE: begin
-	   if (i_tlast && i_tvalid)
-	     begin
-		next_state = LAST;
-		select = ESCAPE;
-	     end
-	   else if ((i_tdata == 64'hDEADBEEFFEEDCAFE) && i_tvalid)
-	     begin
-		next_state = ESC;
-		select = ESCAPE;
-	     end
-	   else
-	     begin
-		next_state = IDLE;
-		select = PASS;
-	     end
-	end // case: IDLE
-	//
-	//
-	LAST: begin
-	   select = ONE;
-	   next_state = FINISH;
-	end
-	//
-	//
-	ESC: begin
-	   select = ZERO;
-	   next_state = FINISH;
-	end
-	//
-	//
-	FINISH: begin
-	   select = PASS;
-	   if (i_tvalid)
-	     next_state = IDLE;
-	   else
-	     next_state = FINISH;
-	end
+         IDLE: begin
+            if (i_tlast && i_tvalid) begin
+               next_state = LAST;
+               select = ESCAPE;
+            end else if ((i_tdata == 64'hDEADBEEFFEEDCAFE) && i_tvalid) begin
+               next_state = ESC;
+               select = ESCAPE;
+            end else begin
+               next_state = IDLE;
+               select = PASS;
+            end
+         end // case: IDLE
+
+         LAST: begin
+            select = ONE;
+            next_state = FINISH;
+         end
+
+         ESC: begin
+            select = ZERO;
+            next_state = FINISH;
+         end
+
+         FINISH: begin
+            select = PASS;
+            if (i_tvalid)
+               next_state = IDLE;
+            else
+               next_state = FINISH;
+         end
       endcase // case(state)
    end // always @ (*)
-   	      
+
    //
    // Muxes
    //
    always @*
-     begin
-	case(select)
-	  PASS:   o_tdata = i_tdata;	  
-	  ZERO:   o_tdata = 0;
-	  ONE:    o_tdata = {checksum[31:0],32'h1};
-	  ESCAPE: o_tdata = 64'hDEADBEEFFEEDCAFE;
-	endcase // case(select)
-     end
+      begin
+         case(select)
+            PASS:   o_tdata = i_tdata;
+            ZERO:   o_tdata = 0;
+            ONE:    o_tdata = {checksum[31:0],32'h1};
+            ESCAPE: o_tdata = 64'hDEADBEEFFEEDCAFE;
+         endcase // case(select)
+      end
 
    assign o_tvalid = (select == PASS) ? i_tvalid : 1'b1;
    assign i_tready = (select == PASS) ? o_tready : 1'b0;

@@ -3,70 +3,81 @@
 // Copyright 2011 Ettus Research LLC
 //
 
+module gpio_atr #(
+  parameter BASE          = 0,
+  parameter WIDTH         = 32,
+  parameter DEFAULT_DDR   = 0,
+  parameter DEFAULT_IDLE  = 0
+) (
+  input clk, input reset,                                       //Clock and reset
+  input set_stb, input [7:0] set_addr, input [31:0] set_data,   //Settings control interface
+  input rx, input tx,                                           //Run signals that indicate tx and rx operation
+  input      [WIDTH-1:0]  gpio_in,                              //GPIO input state
+  output reg [WIDTH-1:0]  gpio_out,                             //GPIO output state
+  output reg [WIDTH-1:0]  gpio_ddr,                             //GPIO direction (0=input, 1=output)
+  output reg [WIDTH-1:0]  gpio_sw_rb                            //Readback value for software
+);
+  genvar i;
 
+  wire [WIDTH-1:0]   in_idle, in_tx, in_rx, in_fdx, ddr_reg, atr_disable;
+  reg [WIDTH-1:0]    ogpio, igpio;
 
-module gpio_atr
-  #(parameter BASE = 0,
-    parameter WIDTH = 32,
-    parameter default_ddr = 0,
-    parameter default_idle = 0)
-   (input clk, input reset,
-    input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    input rx, input tx,
-    inout [WIDTH-1:0] gpio,
-    output reg [31:0] gpio_readback
-    );
-   
-   wire [WIDTH-1:0]   ddr, in_idle, in_tx, in_rx, in_fdx;
-   reg [WIDTH-1:0]    rgpio, igpio;
-   reg [WIDTH-1:0]    gpio_pipe;
-   
-   
-   setting_reg #(.my_addr(BASE+0), .width(WIDTH), .at_reset(default_idle)) reg_idle
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
-      .out(in_idle),.changed());
+  setting_reg #(.my_addr(BASE+0), .width(WIDTH), .at_reset(DEFAULT_IDLE)) reg_idle (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(in_idle),.changed());
 
-   setting_reg #(.my_addr(BASE+1), .width(WIDTH)) reg_rx
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
-      .out(in_rx),.changed());
+  setting_reg #(.my_addr(BASE+1), .width(WIDTH)) reg_rx (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(in_rx),.changed());
 
-   setting_reg #(.my_addr(BASE+2), .width(WIDTH)) reg_tx
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
-      .out(in_tx),.changed());
+  setting_reg #(.my_addr(BASE+2), .width(WIDTH)) reg_tx (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(in_tx),.changed());
 
-   setting_reg #(.my_addr(BASE+3), .width(WIDTH)) reg_fdx
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
-      .out(in_fdx),.changed());
+  setting_reg #(.my_addr(BASE+3), .width(WIDTH)) reg_fdx (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(in_fdx),.changed());
 
-   setting_reg #(.my_addr(BASE+4), .width(WIDTH), .at_reset(default_ddr)) reg_ddr
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
-      .out(ddr),.changed());
+  setting_reg #(.my_addr(BASE+4), .width(WIDTH), .at_reset(DEFAULT_DDR)) reg_ddr (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(ddr_reg),.changed());
 
-   // Delay rx and tx signals by 2 cycles, giving them enough time to get to the IOBUFs
-   //  and not cause timing or fanout problems (hopefully)
-   reg [1:0] 	      rx_d, tx_d;
-   always @(posedge clk) rx_d <= {rx_d[0],rx};
-   always @(posedge clk) tx_d <= {tx_d[0],tx};
-   
-   always @(posedge clk)
-     case({tx_d[1],rx_d[1]})
-       2'b00: rgpio <= in_idle;
-       2'b01: rgpio <= in_rx;
-       2'b10: rgpio <= in_tx;
-       2'b11: rgpio <= in_fdx;
-     endcase // case ({tx,rx})
-   
-   integer 	      n;
-   always @*
-     for(n=0;n<WIDTH;n=n+1)
-       igpio[n] <= ddr[n] ? rgpio[n] : 1'bz;
+  setting_reg #(.my_addr(BASE+5), .width(WIDTH)) reg_atr_disable (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+    .out(atr_disable),.changed());
 
-   assign     gpio = igpio;
+  //Pipeline rx and tx signals for easier timing closure
+  reg rx_d, tx_d;
+  always @(posedge clk)
+    {rx_d, tx_d} <= {rx, tx};
 
-   // Double pipeline stage for timing, first flop is in IOB, second in core logic.
-   always @(posedge clk) begin
-      gpio_pipe <= gpio;
-      gpio_readback <= gpio_pipe;
-   end
-   
+  //ATR selection MUX
+  generate for (i=0; i<WIDTH; i=i+1) begin: gpio_mux_gen
+    always @(posedge clk) begin
+      case({atr_disable[i], tx_d, rx_d})
+        3'b000:   ogpio[i] <= in_idle[i];
+        3'b001:   ogpio[i] <= in_rx[i];
+        3'b010:   ogpio[i] <= in_tx[i];
+        3'b011:   ogpio[i] <= in_fdx[i];
+        default:  ogpio[i] <= in_idle[i];   //If ATR mode is disabled, always use IDLE value
+      endcase
+    end
+  end endgenerate
+
+  //Pipeline input, output and direction
+  always @(posedge clk)
+    gpio_out <= ogpio;
+
+  always @(posedge clk)
+    igpio <= gpio_in;
+
+  always @(posedge clk)
+    gpio_ddr <= ddr_reg;
+
+  //Generate software readback state
+  generate for (i=0; i<WIDTH; i=i+1) begin: gpio_rb_gen
+    always @(posedge clk)
+      gpio_sw_rb[i] <= gpio_ddr[i] ? gpio_out[i] : igpio[i];
+  end endgenerate
+
 endmodule // gpio_atr

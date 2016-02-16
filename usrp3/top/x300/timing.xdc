@@ -297,14 +297,14 @@ set_output_delay -clock VIRT_DAC_CLK -max [expr 1.25 - $dac1_dci_out_delay_max] 
 
 # The data setup and hold values must be modified in order to pass timing in
 # the FPGA. The correct values are 0.270 and 0.090 for setup and hold, respectively.
-# The interface fails by around 350 ps in both directions, so we subtract the failing
+# The interface fails by around 390 ps in both directions, so we subtract the failing
 # amount from the actual amount to get a passing constraint.
 # NOTE: Any changes to the adjustment margin below would need to be validated over
 #       multiple builds, process and temperature. Try not to change it!
 set dac_data_setup      0.270
 set dac_data_hold       0.090
-set dac_setup_adj       0.360
-set dac_hold_adj        0.360
+set dac_setup_adj       0.390
+set dac_hold_adj        0.390
 
 # These are real trace delays from the timing spreadsheet. Note that we are assuming
 # no variability in our clock delay.
@@ -553,27 +553,14 @@ set_min_delay 0.500 -to [get_pins -hier -filter {NAME =~ */pps_sync_tbclk_inst/s
 #*******************************************************************************
 ## Miscellaneous Interfaces
 
-# Dboard GPIO Interface 
-# We assume that these signals are sampled by a 200MHz clock so
-# we guarantee a 2.5ns valid window
-set_max_delay  6.250 -datapath_only \
-                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/gpio_atr/*/out_reg*}] \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  3.750 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_max_delay  6.250 -datapath_only \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-set_min_delay  3.750 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
-
-# Front-panel GPIO
-# We assume that these signals are sampled by a 100MHz clock so
-# we guarantee a 5ns valid window
-set_max_delay 12.500 -datapath_only \
-                     -from [get_cells -hier -filter {NAME =~ x300_core/radio*/fp_gpio_atr/*/out_reg*}] \
-                     -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
-set_min_delay  7.500 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
-set_max_delay 12.500 -datapath_only \
-                     -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
-set_min_delay  7.500 -from [get_ports * -filter {(DIRECTION == IN || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+# Dboard and Front-Panel GPIO Interfaces 
+# We force the registers closest to the PADs into the IOB to achieve lowest skew between individual bits
+# in the parallel bus. However, as a sanity check we add the following constraints that will fail if the 
+# registers don't get placed in the IOB for whatever reason.
+set_max_delay 6.000 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_max_delay 3.000 -from [get_ports * -filter {(DIRECTION == IN  || DIRECTION == INOUT) && NAME =~ "DB*_*X_IO*"}]
+set_max_delay 6.000 -to   [get_ports * -filter {(DIRECTION == OUT || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
+set_max_delay 3.000 -from [get_ports * -filter {(DIRECTION == IN  || DIRECTION == INOUT) && NAME =~ "FrontPanelGpio[*]"}]
 
 # SPI Lines
 set_max_delay 10.000 -datapath_only \

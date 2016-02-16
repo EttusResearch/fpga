@@ -1,0 +1,13 @@
+#
+# Copyright 2010 Ettus Research LLC
+#
+
+##################################################
+# Extram Sources
+##################################################
+EXTRAM_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/extramfifo/, \
+ext_fifo.v \
+nobl_if.v \
+nobl_fifo.v \
+refill_randomizer.v \
+))

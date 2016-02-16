@@ -1,0 +1,9 @@
+*.swp
+*.swo
+vprj
+.Xil
+*.log
+*.jou
+build-N230*
+build-ip
+build

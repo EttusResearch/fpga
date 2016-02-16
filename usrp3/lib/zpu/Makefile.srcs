@@ -13,6 +13,7 @@ wishbone/zpu_system.vhd \
 wishbone/zpu_wb_bridge.vhd \
 core/zpu_core.vhd \
 core/zpupkg.vhd \
+zpu_bootram.v \
 ))
 
 ZPU_CONFIG_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/zpu/, \

@@ -8,6 +8,6 @@
 SIM_GENERAL_SRCS = $(abspath $(addprefix $(BASE_DIR)/../sim/general/, \
 sim_clks_rsts.vh \
 sim_exec_report.vh \
-sim_math.v \
-sim_file_io.sv \
+sim_math.vh \
+sim_file_io.svh \
 ))

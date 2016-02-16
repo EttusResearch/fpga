@@ -1,35 +1,25 @@
 
-module x300_core
-  (
+module x300_core (
+   //Clocks and resets
    input radio_clk,
    input radio_rst,
    input bus_clk,
    input bus_rst,
    output [3:0] sw_rst,
    // Radio 0
-   inout [31:0] fp_gpio,
-   input [31:0] rx0,
-   output [31:0] tx0,
-   inout [31:0] db_gpio0,
-   output [7:0] sen0,
-   output sclk0,
-   output mosi0,
-   input miso0,
+   input [31:0] rx0, output [31:0] tx0,
+   input [31:0] db0_gpio_in, output [31:0] db0_gpio_out, output [31:0] db0_gpio_ddr,
+   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
+   output [7:0] sen0, output sclk0, output mosi0, input miso0,
    output [2:0] radio_led0,
-   output reg [15:0] radio0_misc_out,
-   input [15:0] radio0_misc_in,
+   output reg [15:0] radio0_misc_out, input [15:0] radio0_misc_in,
    output sync_dacs_radio0,
    // Radio 1
-   input [31:0] rx1,
-   output [31:0] tx1,
-   inout [31:0] db_gpio1,
-   output [7:0] sen1,
-   output sclk1,
-   output mosi1,
-   input miso1,
+   input [31:0] rx1, output [31:0] tx1,
+   input [31:0] db1_gpio_in, output [31:0] db1_gpio_out, output [31:0] db1_gpio_ddr,
+   output [7:0] sen1, output sclk1, output mosi1, input miso1,
    output [2:0] radio_led1,
-   output reg [15:0] radio1_misc_out,
-   input [15:0] radio1_misc_in,
+   output reg [15:0] radio1_misc_out, input [15:0] radio1_misc_in,
    output sync_dacs_radio1,
    // Radio shared misc
    inout db_scl,
@@ -354,7 +344,7 @@ module x300_core
    wire         set_stb;
    wire [7:0]   set_addr;
    wire [31:0]  set_data;
-   
+
    wire [31:0]  dram_fifo0_rb_data, dram_fifo1_rb_data;
 
    //////////////////////////////////////////////////////////////////////////////////////////////
@@ -372,6 +362,13 @@ module x300_core
    `else
      localparam NUM_CE = 0;
    `endif
+
+   /////////////////////////////////////////////////////////////////////////////////
+   // Internal time synchronization
+   /////////////////////////////////////////////////////////////////////////////////
+   wire time_sync, time_sync_r;
+    synchronizer time_sync_synchronizer
+     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
 
    /////////////////////////////////////////////////////////////////////////////////
    // PPS synchronization logic
@@ -402,7 +399,7 @@ module x300_core
       .SFPP1_RS0(SFPP1_RS0), .SFPP1_RS1(SFPP1_RS1),
       //clocky locky misc
       .clock_status({misc_clock_status, pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
-      .clock_control({clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
+      .clock_control({time_sync, clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
       // Eth0
       .eth0_tx_tdata(eth0_tx_tdata), .eth0_tx_tuser(eth0_tx_tuser), .eth0_tx_tlast(eth0_tx_tlast),
       .eth0_tx_tvalid(eth0_tx_tvalid), .eth0_tx_tready(eth0_tx_tready),
@@ -460,15 +457,26 @@ module x300_core
       .dram_fifo1_rb_data(dram_fifo1_rb_data),
 
       // Debug
-      .fifo_flags({r0_tx_tready_bo,r0_tx_tready_bi,r1_tx_tready_bo,r1_tx_tready_bi}),
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
-   // Radio 0
+   // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
 
+   localparam MSG_FIFO_SIZE    = 9;
+`ifndef NO_DRAM_FIFOS
+   localparam TX_PRE_FIFO_SIZE = 14;
+   localparam DATA_FIFO_SIZE   = 12;
+`else
+   localparam TX_PRE_FIFO_SIZE = 0;
+   localparam DATA_FIFO_SIZE   = 10;
+`endif
+
+   //------------------------------------
+   // Radio 0
+   //------------------------------------
 `ifndef DELETE_DSP0
  `define DELETE_DSP0 0
 `endif
@@ -477,11 +485,14 @@ module x300_core
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP0),
       .RADIO_NUM(0),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), .db_gpio(db_gpio0), .fp_gpio(fp_gpio),
+      .rx(rx0), .tx(tx0), 
+      .db_gpio_in(db0_gpio_in), .db_gpio_out(db0_gpio_out), .db_gpio_ddr(db0_gpio_ddr),
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .sen(sen0), .sclk(sclk0), .mosi(mosi0), .miso(miso0),
       .misc_outs(misc_outs0), .misc_ins({16'h0, misc_ins0}), .leds(radio_led0),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -491,7 +502,7 @@ module x300_core
       .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
       .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
       .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_rclk), .sync_dacs(sync_dacs_radio0),
+      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio0),
       .debug()
    );
 
@@ -500,12 +511,9 @@ module x300_core
       misc_ins0       <= radio0_misc_in;
    end
 
-   /////////////////////////////////////////////////////////////////////////////////////////////
-   //
+   //------------------------------------
    // Radio 1
-   //
-   /////////////////////////////////////////////////////////////////////////////////////////////
-
+   //------------------------------------
 `ifndef DELETE_DSP1
  `define DELETE_DSP1 0
 `endif
@@ -514,11 +522,14 @@ module x300_core
       .CHIPSCOPE(0),
       .DELETE_DSP(`DELETE_DSP1),
       .RADIO_NUM(1),
-      .DATA_FIFO_SIZE(10),
-      .MSG_FIFO_SIZE(9)
+      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
+      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
+      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
    ) radio1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1), .db_gpio(db_gpio1), .fp_gpio(),
+      .rx(rx1), .tx(tx1),
+      .db_gpio_in(db1_gpio_in), .db_gpio_out(db1_gpio_out), .db_gpio_ddr(db1_gpio_ddr),
+      .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(),
       .sen(sen1), .sclk(sclk1), .mosi(mosi1), .miso(miso1),
       .misc_outs(misc_outs1), .misc_ins({16'h0, misc_ins1}), .leds(radio_led1),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -528,7 +539,7 @@ module x300_core
       .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
       .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
       .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_rclk), .sync_dacs(sync_dacs_radio1),
+      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio1),
       .debug()
    );
 
@@ -830,21 +841,20 @@ module x300_core
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   localparam EXTENDED_DRAM_BIST = 1;  //Prune out additional BIST features for production
+   localparam EXTENDED_DRAM_BIST = 0;  //Prune out additional BIST features for production
 
-   axi_dram_fifo #(
-      .BASE('h0),
-      .SIZE(24),
-      .TIMEOUT(280),
+   axi_dma_fifo #(
+      .DEFAULT_BASE(30'h00000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd72),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i0 (
+   ) axi_dma_fifo_i0 (
       //
       // Clocks and reset
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //
@@ -933,19 +943,18 @@ module x300_core
       .debug()
    );
 
-   axi_dram_fifo #(
-      .BASE('h2000000),
-      .SIZE(24),
-      .TIMEOUT(280),
+   axi_dma_fifo #(
+      .DEFAULT_BASE(30'h02000000),
+      .DEFAULT_MASK(30'hFE000000),
+      .DEFAULT_TIMEOUT(280),
       .SR_BASE(8'd80),
       .EXT_BIST(EXTENDED_DRAM_BIST)
-   ) axi_dram_fifo_i1 (
+   ) axi_dma_fifo_i1 (
       //
       // Clocks and reset
       //
       .bus_clk(bus_clk),
       .bus_reset(bus_rst),
-      .clear(1'b0),
       .dram_clk(ddr3_axi_clk_x2),
       .dram_reset(ddr3_axi_rst),
       //
@@ -1017,7 +1026,7 @@ module x300_core
       //
       // CHDR friendly AXI Stream output
       //
-      
+
       .o_tdata(r1_tx_tdata_bi),
       .o_tlast(r1_tx_tlast_bi),
       .o_tvalid(r1_tx_tvalid_bi),

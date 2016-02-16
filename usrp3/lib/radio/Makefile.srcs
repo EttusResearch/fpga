@@ -14,3 +14,7 @@ rx_control_gen3.v \
 tx_control_gen3.v \
 noc_block_radio_core.v \
 ))
+
+RADIO_LEGACY_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
+./radio_legacy.v \
+))

@@ -50,6 +50,12 @@ module rx_frontend
    generate
       if(IQCOMP_EN == 1)
 	begin
+	   reg [23:0] adc_i_ofs_dly, adc_q_ofs_dly;
+	   always @(posedge clk) begin
+	     adc_i_ofs_dly <= adc_i_ofs;
+	     adc_q_ofs_dly <= adc_q_ofs;
+	   end
+
 	   MULT18X18S mult_mag_corr
 	     (.P(corr_i), .A(adc_i_ofs[23:6]), .B(mag_corr), .C(clk), .CE(1'b1), .R(rst) ); 
 	   
@@ -58,12 +64,12 @@ module rx_frontend
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_i
 	     (.clk(clk), .rst(rst), 
-	      .in1(adc_i_ofs), .in2(corr_i[35:12]), .strobe_in(1'b1),
+	      .in1(adc_i_ofs_dly), .in2(corr_i[35:12]), .strobe_in(1'b1),
 	      .sum(i_out), .strobe_out());
 	   
 	   add2_and_clip_reg #(.WIDTH(24)) add_clip_q
 	     (.clk(clk), .rst(rst), 
-	      .in1(adc_q_ofs), .in2(corr_q[35:12]), .strobe_in(1'b1),
+	      .in1(adc_q_ofs_dly), .in2(corr_q[35:12]), .strobe_in(1'b1),
 	      .sum(q_out), .strobe_out());
 	end // if (IQCOMP_EN == 1)
       else

@@ -93,7 +93,7 @@ module b200 (
    // Only present on Rev6 and later boards...these pins unused on Rev5 and earlier.
    // NOTE: These pins are allocated from complimentry pairs and could potentially be used
    // as differential style I/O.
-  `ifdef B210
+  `ifdef TARGET_B210
    inout [7:0] 	 fp_gpio,
   `endif
    // Misc Hardware Control
@@ -234,74 +234,105 @@ module b200 (
    assign fx3_miso = 1'bZ;    //Safe state because we cannot guarantee the
                               //direction of this pin in the FX3
 
-    ///////////////////////////////////////////////////////////////////////
-    // bus signals
-    ///////////////////////////////////////////////////////////////////////
-    wire [63:0] ctrl_tdata, resp_tdata, rx_tdata, tx_tdata;
-    wire ctrl_tlast, resp_tlast, rx_tlast, tx_tlast;
-    wire ctrl_tvalid, resp_tvalid, rx_tvalid, tx_tvalid;
-    wire ctrl_tready, resp_tready, rx_tready, tx_tready;
+   ///////////////////////////////////////////////////////////////////////
+   // bus signals
+   ///////////////////////////////////////////////////////////////////////
+   wire [63:0] ctrl_tdata, resp_tdata, rx_tdata, tx_tdata;
+   wire ctrl_tlast, resp_tlast, rx_tlast, tx_tlast;
+   wire ctrl_tvalid, resp_tvalid, rx_tvalid, tx_tvalid;
+   wire ctrl_tready, resp_tready, rx_tready, tx_tready;
 
 
-    ///////////////////////////////////////////////////////////////////////
-    // frontend assignments
-    // Most B2x0's have frontends swapped (radio0 to FE2), but some hardware revisions do not.
-    // The ATR pins are mapped from radio to frontend here based on the swap_atr_n bit.
-    ///////////////////////////////////////////////////////////////////////
-    wire swap_atr_n;
-    wire [31:0] radio0_fe_atr, radio1_fe_atr;
-    assign {tx_enable1, SFDX1_RX, SFDX1_TX, SRX1_RX, SRX1_TX, LED_RX1, LED_TXRX1_RX, LED_TXRX1_TX} = swap_atr_n ? radio1_fe_atr[7:0] : radio0_fe_atr[7:0];
-    assign {tx_enable2, SFDX2_RX, SFDX2_TX, SRX2_RX, SRX2_TX, LED_RX2, LED_TXRX2_RX, LED_TXRX2_TX} = swap_atr_n ? radio0_fe_atr[7:0] : radio1_fe_atr[7:0];
+   ///////////////////////////////////////////////////////////////////////
+   // frontend assignments
+   // Most B2x0's have frontends swapped (radio0 to FE2), but some hardware revisions do not.
+   // The ATR pins are mapped from radio to frontend here based on the swap_atr_n bit.
+   ///////////////////////////////////////////////////////////////////////
+   wire swap_atr_n;
+   wire [7:0] radio0_gpio, radio1_gpio;
+   reg [7:0] fe0_gpio, fe1_gpio;
+   always @(posedge radio_clk) begin //Registers in the IOB
+      fe0_gpio <= swap_atr_n ? radio1_gpio : radio0_gpio;
+      fe1_gpio <= swap_atr_n ? radio0_gpio : radio1_gpio;
+   end
+   assign {tx_enable1, SFDX1_RX, SFDX1_TX, SRX1_RX, SRX1_TX, LED_RX1, LED_TXRX1_RX, LED_TXRX1_TX} = fe0_gpio;
+   assign {tx_enable2, SFDX2_RX, SFDX2_TX, SRX2_RX, SRX2_TX, LED_RX2, LED_TXRX2_RX, LED_TXRX2_TX} = fe1_gpio;
 
-    wire [31:0] misc_outs; reg [31:0] misc_outs_r;
-   
-    always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
-   
-    wire 	spare_signal; // WAS codec_arst...now obselete, this bit can be reused when UHD doesn't contain codec_arst code.
-   
-    assign { swap_atr_n, tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, spare_signal, mimo, ref_sel } = misc_outs_r[8:0];
+   wire [31:0] misc_outs; reg [31:0] misc_outs_r;
 
-    assign codec_ctrl_in = 4'b1;
-    assign codec_en_agc = 1'b1;
-    assign codec_txrx = 1'b1;
-    assign codec_enable = 1'b1;
-    assign codec_reset = !reset_global;   // Codec Reset // RESETB // Operates active-low
-    assign codec_sync = 1'b0;
+   always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
 
-    ///////////////////////////////////////////////////////////////////////
-    // b200 core
-    ///////////////////////////////////////////////////////////////////////
+   wire spare_signal; // WAS codec_arst...now obselete, this bit can be reused when UHD doesn't contain codec_arst code.
+
+   assign { swap_atr_n, tx_bandsel_a, tx_bandsel_b, rx_bandsel_a, rx_bandsel_b, rx_bandsel_c, spare_signal, mimo, ref_sel } = misc_outs_r[8:0];
+
+   assign codec_ctrl_in = 4'b1;
+   assign codec_en_agc = 1'b1;
+   assign codec_txrx = 1'b1;
+   assign codec_enable = 1'b1;
+   assign codec_reset = !reset_global;   // Codec Reset // RESETB // Operates active-low
+   assign codec_sync = 1'b0;
+
+   ///////////////////////////////////////////////////////////////////////
+   // b200 core
+   ///////////////////////////////////////////////////////////////////////
+   wire [9:0] fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
 
    b200_core #(.EXTRA_BUFF_SIZE(12)) b200_core
-    (
-        .bus_clk(bus_clk), .bus_rst(bus_rst),
-        .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
-        .rx_tdata(rx_tdata), .rx_tlast(rx_tlast),  .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
-        .ctrl_tdata(ctrl_tdata), .ctrl_tlast(ctrl_tlast),  .ctrl_tvalid(ctrl_tvalid), .ctrl_tready(ctrl_tready),
-        .resp_tdata(resp_tdata), .resp_tlast(resp_tlast),  .resp_tvalid(resp_tvalid), .resp_tready(resp_tready),
+   (
+      .bus_clk(bus_clk), .bus_rst(bus_rst),
+      .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
+      .rx_tdata(rx_tdata), .rx_tlast(rx_tlast),  .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
+      .ctrl_tdata(ctrl_tdata), .ctrl_tlast(ctrl_tlast),  .ctrl_tvalid(ctrl_tvalid), .ctrl_tready(ctrl_tready),
+      .resp_tdata(resp_tdata), .resp_tlast(resp_tlast),  .resp_tvalid(resp_tvalid), .resp_tready(resp_tready),
 
-        .radio_clk(radio_clk), .radio_rst(radio_rst),
-        .rx0(rx_data0), .rx1(rx_data1),
-        .tx0(tx_data0), .tx1(tx_data1),
-        .fe_atr0(radio0_fe_atr), .fe_atr1(radio1_fe_atr),
-`ifdef B210
-        .fp_gpio(fp_gpio),
+      .radio_clk(radio_clk), .radio_rst(radio_rst),
+      .rx0(rx_data0), .rx1(rx_data1),
+      .tx0(tx_data0), .tx1(tx_data1),
+      .fe0_gpio_out(radio0_gpio), .fe1_gpio_out(radio1_gpio),
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
+
+      .pps_int(PPS_IN_INT), .pps_ext(PPS_IN_EXT),
+
+      .rxd(gps_txd), .txd(gps_rxd),
+      .sclk(sclk), .sen(sen), .mosi(mosi), .miso(miso),
+      .rb_misc({31'b0, pll_lock}), .misc_outs(misc_outs),
+
+      .debug_scl(GPIF_CTL8), .debug_sda(GPIF_CTL6),
+`ifdef DEBUG_UART
+      .debug_txd(FPGA_TXD0), .debug_rxd(FPGA_RXD0),
+`else
+      .debug_txd(), .debug_rxd(1'b0),
 `endif
-        .pps_int(PPS_IN_INT), .pps_ext(PPS_IN_EXT),
 
-        .rxd(gps_txd), .txd(gps_rxd),
-        .sclk(sclk), .sen(sen), .mosi(mosi), .miso(miso),
-        .rb_misc({31'b0, pll_lock}), .misc_outs(misc_outs),
+      .lock_signals(codec_ctrl_out[7:6]),
+      .debug()
+   );
 
-       .debug_scl(GPIF_CTL8), .debug_sda(GPIF_CTL6),
-       .debug_txd(FPGA_TXD0), .debug_rxd(FPGA_RXD0),
-
-        .lock_signals(codec_ctrl_out[7:6]),
-
-        .debug()
-    );
-
-
+`ifdef TARGET_B210
+   `ifdef DEBUG_UART
+      gpio_atr_io #(.WIDTH(8)) gpio_atr_io_inst (   // B210 with UART
+         .clk(radio_clk), .gpio_pins(fp_gpio),
+         .gpio_ddr(fp_gpio_ddr[7:0]), .gpio_out(fp_gpio_out[7:0]), .gpio_in(fp_gpio_in[7:0])
+      );
+      assign fp_gpio_in[9:8] = 2'b00;
+   `else
+      gpio_atr_io #(.WIDTH(10)) gpio_atr_io_inst (  // B210 no UART
+         .clk(radio_clk), .gpio_pins({FPGA_RXD0, FPGA_TXD0, fp_gpio}),
+         .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
+      );
+   `endif
+`else
+   `ifdef DEBUG_UART
+      assign fp_gpio_in = 10'h000;                  // B200 with UART
+   `else
+      gpio_atr_io #(.WIDTH(2)) gpio_atr_io_inst (   // B200 no UART
+         .clk(radio_clk), .gpio_pins({FPGA_RXD0, FPGA_TXD0}),
+         .gpio_ddr(fp_gpio_ddr[9:8]), .gpio_out(fp_gpio_out[9:8]), .gpio_in(fp_gpio_in[9:8])
+      );
+      assign fp_gpio_in[7:0] = 8'h00;
+   `endif
+`endif
 
     ///////////////////////////////////////////////////////////////////////
     // GPIF2

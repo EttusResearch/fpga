@@ -52,7 +52,7 @@ module axi_crossbar_tb;
    //
    // Simulation specific testbench is included here
    //
-`include "task_library.v"
+`include "task_library.vh"
 `include "simulation_script.v"
 
    

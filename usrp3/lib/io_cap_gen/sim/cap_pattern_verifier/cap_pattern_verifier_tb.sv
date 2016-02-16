@@ -9,7 +9,7 @@
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
-`include "sim_axi4_lib.sv"
+`include "sim_axi4_lib.svh"
 
 
 module cap_pattern_verifier_tb();

@@ -2,8 +2,7 @@
 # Copyright 2015 Ettus Research
 #
 
-TOOLS_DIR = $(BASE_DIR)/../tools
-IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
+include $(BASE_DIR)/../tools/make/viv_preamble.mak
 SIMULATION = 1
 
 all:
