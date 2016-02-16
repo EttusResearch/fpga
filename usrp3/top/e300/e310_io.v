@@ -84,7 +84,7 @@ module e310_io (
   ** TX Output Interface
   ****************************************************************************/
   reg [11:0] tx_i, tx_q;
-  reg tx_frame_int;
+  reg tx_frame_int = 1'b1;
   generate
     for (n = 0; n < 12; n = n + 1) begin
       ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) oddr (
@@ -102,20 +102,23 @@ module e310_io (
     .C(radio_clk), .CE(1'b1), .R(1'b0), .S(1'b0),
     .D1(1'b1), .D2(1'b0), .Q(tx_clk));
 
+  reg [11:0] tx_i1_hold, tx_q1_hold;
   always @(posedge radio_clk or posedge radio_rst) begin
     if (radio_rst) begin
       tx_stb       <= 1'b0;
-      tx_frame_int <= 1'b0;
+      tx_frame_int <= 1'b1;
     end else begin
       if (mimo_sync) begin
         tx_stb       <= ~tx_stb;
         tx_frame_int <= tx_stb;
         if (tx_stb) begin
-          tx_i <= tx_i0;
-          tx_q <= tx_q0;
+          tx_i       <= tx_i0;
+          tx_q       <= tx_q0;
+          tx_i1_hold <= tx_i1;
+          tx_q1_hold <= tx_q1;
         end else begin
-          tx_i <= tx_i1;
-          tx_q <= tx_q1;
+          tx_i       <= tx_i1_hold;
+          tx_q       <= tx_q1_hold;
         end
       end else begin
         tx_stb       <= 1'b1;
