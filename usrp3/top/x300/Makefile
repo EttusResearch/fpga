@@ -31,7 +31,7 @@ HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO
 XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 
 # vivado_build($1=Target, $2=Device, $3=Definitions)
-vivado_build = make -f Makefile.x300.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$2/ffg900/-2 $3 VERILOG_DEFS="$3"
+vivado_build = make -f Makefile.x300.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 VERILOG_DEFS="$3"
 
 post_build = @\
 	mkdir -p build; \

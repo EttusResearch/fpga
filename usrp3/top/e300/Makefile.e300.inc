@@ -84,7 +84,7 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(PS7_SRCS) \
           $(RFNOC_SRCS) \
           $(LIB_IP_XCI_SRCS) \
-          $(HLS_IP_GEN_SRCS
+          $(HLS_IP_GEN_SRCS)
 
 ##################################################
 # Git Hash

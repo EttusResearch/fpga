@@ -392,7 +392,7 @@ module axi_dma_fifo
       .rd_data_count()  // output [9 : 0] rd_data_count
    );
 
-   axi_fifo_flop2 #(.WIDTH(WIDTH+1)) input_pipe_i0
+   axi_fifo_flop2 #(.WIDTH(DWIDTH+1)) input_pipe_i0
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -512,7 +512,7 @@ module axi_dma_fifo
    );
 
    // Place FLops straight after SRAM read access for timing.
-   axi_fifo_flop2 #(.WIDTH(WIDTH)) output_pipe_i0
+   axi_fifo_flop2 #(.WIDTH(DWIDTH)) output_pipe_i0
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -530,7 +530,7 @@ module axi_dma_fifo
    // Read suppression logic
    // The CL part of this exists between these
    // axi_flops 
-   axi_fifo_flop2 #(.WIDTH(WIDTH)) output_pipe_i1
+   axi_fifo_flop2 #(.WIDTH(DWIDTH)) output_pipe_i1
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -546,7 +546,7 @@ module axi_dma_fifo
    );
 
    // Pipeline flop before tlast extraction logic
-   axi_fifo_flop2 #(.WIDTH(WIDTH)) output_pipe_i2
+   axi_fifo_flop2 #(.WIDTH(DWIDTH)) output_pipe_i2
      (
       .clk(dram_clk), 
       .reset(dram_reset), 
@@ -579,7 +579,7 @@ module axi_dma_fifo
    );
 
    // Pipeline flop after tlast extraction logic
-   axi_fifo_flop2 #(.WIDTH(WIDTH+1)) output_pipe_i3
+   axi_fifo_flop2 #(.WIDTH(DWIDTH+1)) output_pipe_i3
      (
       .clk(dram_clk), 
       .reset(dram_reset), 

@@ -69,10 +69,10 @@ module e310_core
   // codec async reset
   output            codec_arst,
 
-  // front panel (internal) gpio
-  input [5:0]       fp_gpio_in,
-  output [5:0]      fp_gpio_out,
-  output [5:0]      fp_gpio_ddr,
+  // front panel (internal) gpio, uses fp gpio from radio channel 0
+  input [5:0]       fp_gpio_in0,
+  output [5:0]      fp_gpio_out0,
+  output [5:0]      fp_gpio_ddr0,
 
   // signals for ad9361 pll locks
   input [1:0]       lock_signals,
@@ -321,8 +321,9 @@ module e310_core
   ////////////////////////////////////////////////////////////////////
   // Daughter board I/O is replicated per radio, some of it is unused
   localparam NUM_RADIOS = 2;
-  wire [31:0] misc_outs[0:NUM_RADIOS-1], leds[0:NUM_RADIOS-1];
-  wire [31:0] fp_gpio[0:NUM_RADIOS-1], db_gpio[0:NUM_RADIOS-1];
+  wire [31:0] leds[0:NUM_RADIOS-1];
+  wire [31:0] fp_gpio_in[0:NUM_RADIOS-1], fp_gpio_out[0:NUM_RADIOS-1], fp_gpio_ddr[0:NUM_RADIOS-1];
+  wire [31:0] db_gpio_out[0:NUM_RADIOS-1];
   wire [7:0] sen[0:NUM_RADIOS-1];
   wire sclk[0:NUM_RADIOS-1], mosi[0:NUM_RADIOS-1], miso[0:NUM_RADIOS-1];
   noc_block_radio_core #(
@@ -338,23 +339,26 @@ module e310_core
     .tx({tx_data1,tx_data0}), .tx_stb({tx_stb1,tx_stb0}),
     // Interfaces to front panel and daughter board
     .pps(pps), .sync(),
-    .misc_ins('d0), .misc_outs({misc_outs[1],misc_outs[0]}),
-    .fp_gpio({fp_gpio[1],fp_gpio[0]}), .db_gpio({db_gpio[1],db_gpio[0]}), .leds({leds[1],leds[0]}),
+    .misc_ins('d0), .misc_outs(),
+    .fp_gpio_in({fp_gpio_in[1],fp_gpio_in[0]}), .fp_gpio_out({fp_gpio_out[1],fp_gpio_out[0]}), .fp_gpio_ddr({fp_gpio_ddr[1],fp_gpio_ddr[0]}),
+    .db_gpio_in('d0), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr(),
+    .leds({leds[1],leds[0]}),
     .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
     .debug());
 
   // Connect daughter board I/O
-  // Note: In cases where I/O is shared between radio cores (i.e. SPI interface),
-  //       radio 0's DB I/O is used.
-  assign fp_gpio0      = fp_gpio[0][5:0];
-  assign spi_sen       = sen[0][0] & sen[1][0];
-  assign spi_sclk      = ~sen[0][0] /* Active low */ ? sclk[0] : sclk[1];
-  assign spi_mosi      = ~sen[0][0]                  ? mosi[0] : mosi[1];
-  assign miso[0]       = spi_miso;
-  assign miso[1]       = spi_miso;
-  assign db_gpio0      = db_gpio[0];
-  assign db_gpio1      = db_gpio[1];
-  assign leds0         = leds[0][2:0];
-  assign leds1         = leds[1][2:0];
+  assign fp_gpio_in[0]      = {26'd0,fp_gpio_in0};
+  assign fp_gpio_out0       = fp_gpio_out[0][5:0];
+  assign fp_gpio_ddr0       = fp_gpio_ddr[0][5:0];
+  assign fp_gpio_in[1]      = 32'd0; // Note: Unused, but could split fp gpio between both channels
+  assign spi_sen            = sen[0][0] & sen[1][0];
+  assign spi_sclk           = ~sen[0][0] /* Active low */ ? sclk[0] : sclk[1];
+  assign spi_mosi           = ~sen[0][0]                  ? mosi[0] : mosi[1];
+  assign miso[0]            = spi_miso;
+  assign miso[1]            = spi_miso;
+  assign db_gpio0           = db_gpio_out[0];
+  assign db_gpio1           = db_gpio_out[1];
+  assign leds0              = leds[0][2:0];
+  assign leds1              = leds[1][2:0];
 
 endmodule // e300_core

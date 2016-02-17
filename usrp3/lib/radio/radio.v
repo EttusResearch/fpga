@@ -250,8 +250,12 @@ module radio #(
       .rx(run_rx), .tx(run_tx),
       .gpio_in(3'b000), .gpio_out(leds), .gpio_ddr(/*assumed outs*/), .gpio_sw_rb());
 
-   timekeeper #(.BASE(SR_TIME)) timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
+   timekeeper 
+    #(.SR_TIME_HI(SR_TIME),
+      .SR_TIME_LO(SR_TIME+1),
+      .SR_TIME_CTRL(SR_TIME+2))
+   timekeeper
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync), .strobe(1'b1),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 

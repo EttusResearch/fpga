@@ -23,7 +23,9 @@ module radio_core #(
   // Interfaces to front panel and daughter board
   input pps,
   input [31:0] misc_ins, output [31:0] misc_outs, output sync,
-  inout [31:0] fp_gpio, inout [31:0] db_gpio, output [31:0] leds,
+  input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
+  input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr,
+  output [31:0] leds,
   output [7:0] sen, output sclk, output mosi, input miso,
   // Interface to the NoC Shell
   input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time,
@@ -101,7 +103,8 @@ module radio_core #(
     .rb_stb(db_rb_stb), .rb_addr(rb_addr), .rb_data(db_rb_data),
     .vita_time(vita_time), .run_rx(run_rx), .run_tx(run_tx),
     .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
-    .fp_gpio(fp_gpio), .db_gpio(db_gpio),
+    .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
+    .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
     .leds(leds),
     .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso));
 

@@ -480,14 +480,6 @@ module e300
   //------------------------------------------------------------------
   //-- generate clock and reset signals
   //------------------------------------------------------------------
-
-  reset_sync radio_rst_sync
-  (
-    .clk(radio_clk),
-    .reset_in(bus_rst | codec_arst),
-    .reset_out(radio_rst)
-  );
-
   assign bus_clk = fclk_clk0;
   assign bus_rst = fclk_reset0;
 
@@ -542,7 +534,7 @@ module e300
   wire [31:0] db_gpio0, db_gpio1;
   wire [2:0]  leds0, leds1;
   wire [2:0] TX1_BANDSEL, TX2_BANDSEL;
-  wire [5:0]  fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
+  wire [5:0]  fp_gpio_in0, fp_gpio_out0, fp_gpio_ddr0;
 
   assign {LED_RX1_RX, LED_TXRX1_TX, LED_TXRX1_RX} = leds0;
   assign { VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, // 4
@@ -562,6 +554,11 @@ module e300
   // This is needed so software does not have to set properties of radio core 0
   // when only using radio core 1.
   assign TX_BANDSEL = TX1_BANDSEL | TX2_BANDSEL;
+
+  gpio_atr_io #(.WIDTH(6)) fp_gpio_atr_inst0 (
+    .clk(radio_clk), .gpio_pins(PL_GPIO),
+    .gpio_ddr(fp_gpio_ddr0), .gpio_out(fp_gpio_out0), .gpio_in(fp_gpio_in0)
+  );
 
   //------------------------------------------------------------------
   //-- Zynq system interface, DMA, control channels, etc.
@@ -729,9 +726,9 @@ module e300
     .leds0(leds1),
     .leds1(leds0),
 
-    .fp_gpio_in(fp_gpio_in),
-    .fp_gpio_out(fp_gpio_out),
-    .fp_gpio_ddr(fp_gpio_ddr),
+    .fp_gpio_in0(fp_gpio_in0),
+    .fp_gpio_out0(fp_gpio_out0),
+    .fp_gpio_ddr0(fp_gpio_ddr0),
 
     .spi_sen(spi_sen),
     .spi_sclk(spi_sclk),

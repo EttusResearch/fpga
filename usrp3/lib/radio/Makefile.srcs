@@ -6,6 +6,7 @@
 # radio library
 ##################################################
 RADIO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
+radio.v \
 radio_core.v \
 db_control.v \
 rx_frontend_gen3.v \

@@ -17,7 +17,9 @@ module noc_block_radio_core #(
   // Interfaces to front panel and daughter board
   input pps, output [NUM_RADIOS-1:0] sync,
   input [NUM_RADIOS*32-1:0] misc_ins, output [NUM_RADIOS*32-1:0] misc_outs,
-  inout [NUM_RADIOS*32-1:0] fp_gpio, inout [NUM_RADIOS*32-1:0] db_gpio, output [NUM_RADIOS*32-1:0] leds,
+  input [NUM_RADIOS*32-1:0] fp_gpio_in, output [NUM_RADIOS*32-1:0] fp_gpio_out, output [NUM_RADIOS*32-1:0] fp_gpio_ddr,
+  input [NUM_RADIOS*32-1:0] db_gpio_in, output [NUM_RADIOS*32-1:0] db_gpio_out, output [NUM_RADIOS*32-1:0] db_gpio_ddr,
+  output [NUM_RADIOS*32-1:0] leds,
   output [NUM_RADIOS*8-1:0] sen, output [NUM_RADIOS-1:0] sclk, output [NUM_RADIOS-1:0] mosi, input [NUM_RADIOS-1:0] miso,
   output [63:0] debug
 );
@@ -168,7 +170,9 @@ module noc_block_radio_core #(
         .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
         .pps(pps),
         .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]), .sync(sync[i]),
-        .fp_gpio(fp_gpio[32*i+31:32*i]), .db_gpio(db_gpio[32*i+31:32*i]), .leds(leds[32*i+31:32*i]),
+        .fp_gpio_in(fp_gpio_in[32*i+31:32*i]), .fp_gpio_out(fp_gpio_out[32*i+31:32*i]), .fp_gpio_ddr(fp_gpio_ddr[32*i+31:32*i]),
+        .db_gpio_in(db_gpio_in[32*i+31:32*i]), .db_gpio_out(db_gpio_out[32*i+31:32*i]), .db_gpio_ddr(db_gpio_ddr[32*i+31:32*i]),
+        .leds(leds[32*i+31:32*i]),
         .sen(sen[8*i+7:8*i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i]),
         .set_stb(set_stb[i]), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
         .rb_stb(rb_stb[i]), .rb_addr(rb_addr[8*i+7:8*i]), .rb_data(rb_data[64*i+63:64*i]),
