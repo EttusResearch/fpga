@@ -288,9 +288,9 @@ module e300
   wire PS_SPI0_MISO = CAT_MISO;
   wire spi_miso     = CAT_MISO;
   wire spi_sen;
-  assign CAT_CS     = spi_sen /* Active low */ ? PS_SPI0_SS1  : spi_sen;
-  assign CAT_SCLK   = spi_sen                  ? PS_SPI0_SCLK : spi_sclk;
-  assign CAT_MOSI   = spi_sen                  ? PS_SPI0_MOSI : spi_mosi;
+  assign CAT_CS = 1'b0;
+  MUXF7 CAT_SCLK_MUX (.I0(spi_sclk), .I1(PS_SPI0_SCLK), .S(spi_sen), .O(CAT_SCLK));
+  MUXF7 CAT_MOSI_MUX (.I0(spi_mosi), .I1(PS_SPI0_MOSI), .S(spi_sen), .O(CAT_MOSI));
 
    // First, make all connections to the PS (ARM+buses)
   axi_interconnect inst_axi_interconnect
