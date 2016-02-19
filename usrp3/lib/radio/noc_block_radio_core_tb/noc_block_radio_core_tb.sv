@@ -5,7 +5,7 @@
 `timescale 1ns/1ps
 
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 14
+`define NUM_TEST_CASES 15
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.vh"
@@ -38,7 +38,8 @@ module noc_block_radio_core_tb;
   logic [NUM_RADIOS*32-1:0] misc_outs, leds;
   logic [NUM_RADIOS-1:0] fp_gpio_tri = 'd0;
   logic [NUM_RADIOS-1:0] db_gpio_tri = 'd0;
-  logic [NUM_RADIOS*32-1:0] fp_gpio_in, db_gpio_in;
+  logic [NUM_RADIOS*32-1:0] fp_gpio_in = 'd0;
+  logic [NUM_RADIOS*32-1:0] db_gpio_in = 'd0;
   tri   [NUM_RADIOS*32-1:0] fp_gpio, db_gpio;
   logic [NUM_RADIOS*8-1:0] sen;
   logic [NUM_RADIOS-1:0] sclk, mosi, miso = 'd0;
@@ -50,8 +51,8 @@ module noc_block_radio_core_tb;
     .ce_clk(radio_clk), .ce_rst(radio_rst),
     .i_tdata(xbar_m_cvita[0].tdata), .i_tlast(xbar_m_cvita[0].tlast), .i_tvalid(xbar_m_cvita[0].tvalid), .i_tready(xbar_m_cvita[0].tready),
     .o_tdata(xbar_s_cvita[0].tdata), .o_tlast(xbar_s_cvita[0].tlast), .o_tvalid(xbar_s_cvita[0].tvalid), .o_tready(xbar_s_cvita[0].tready),
-    .rx_stb(rx_stb), .rx(rx),
-    .tx_stb(tx_stb), .tx(tx),
+    .rx_stb({NUM_RADIOS{rx_stb}}), .rx(rx),
+    .tx_stb({NUM_RADIOS{tx_stb}}), .tx(tx),
     .pps(pps),
     .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
     .fp_gpio(fp_gpio), .db_gpio(db_gpio), .leds(leds),
@@ -111,17 +112,28 @@ module noc_block_radio_core_tb;
   localparam [31:0] TX_VERIF_WORD = 32'h12345678;
   logic [11:0] data_seq_num[NUM_RADIOS-1:0] = '{NUM_RADIOS{12'd0}};
 
-  task automatic tb_send_cmd;
+  task automatic tb_write_reg;
     input [15:0] dst_sid;
     input [7:0] addr;
     input [31:0] data;
+    output [63:0] response;
+    begin
+      tb_write_reg_timed(dst_sid,addr,data,64'd0,response);
+    end
+  endtask
+
+  task automatic tb_write_reg_timed;
+    input [15:0] dst_sid;
+    input [7:0] addr;
+    input [31:0] data;
+    input [63:0] vita_time;
     output [63:0] response;
     begin
       automatic cvita_hdr_t hdr;
       automatic cvita_pkt_t pkt_resp;
       //$display("Send Command - Addr: 0x%2x (%3d) Data: 0x%08x (%d)",addr, addr, data, data);
       hdr = flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'd0, length:8,
-                                 src_sid:sid_noc_block_tb, dst_sid:dst_sid, timestamp:64'h0});
+                                 src_sid:sid_noc_block_tb, dst_sid:dst_sid, timestamp:vita_time});
       tb_cvita_cmd.push_pkt({hdr, {24'd0, addr, data}});
       tb_cvita_ack.pull_pkt(pkt_resp);
       // Remove header from packet
@@ -131,13 +143,24 @@ module noc_block_radio_core_tb;
     end
   endtask
 
+  task automatic tb_send_radio_cmd_timed;
+    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input [7:0] addr;
+    input [31:0] data;
+    input [63:0] vita_time;
+    output [63:0] response;
+    begin
+      tb_write_reg_timed({sid_noc_block_radio_core + radio_num},addr,data,vita_time,response);
+    end
+  endtask
+
   task automatic tb_send_radio_cmd;
     input [$clog2(NUM_RADIOS)-1:0] radio_num;
     input [7:0] addr;
     input [31:0] data;
     output [63:0] response;
     begin
-      tb_send_cmd({sid_noc_block_radio_core + radio_num},addr,data,response);
+      tb_write_reg({sid_noc_block_radio_core + radio_num},addr,data,response);
     end
   endtask
 
@@ -148,7 +171,7 @@ module noc_block_radio_core_tb;
     begin
       automatic logic [63:0] dummy_response;
       // Set user readback mux
-      tb_send_cmd(dst_sid, noc_block_radio_core.noc_shell.SR_RB_ADDR_USER, addr, dummy_response);
+      tb_write_reg(dst_sid, noc_block_radio_core.noc_shell.SR_RB_ADDR_USER, addr, dummy_response);
       tb_read_reg(dst_sid, noc_block_radio_core.noc_shell.RB_USER_RB_DATA, response);
     end
   endtask
@@ -160,7 +183,7 @@ module noc_block_radio_core_tb;
     output [63:0] response;
     begin
       // Set NoC Shell readback mux, response packet will have readback data
-      tb_send_cmd(dst_sid, noc_block_radio_core.noc_shell.SR_RB_ADDR, addr, response);
+      tb_write_reg(dst_sid, noc_block_radio_core.noc_shell.SR_RB_ADDR, addr, response);
     end
   endtask
 
@@ -323,6 +346,34 @@ module noc_block_radio_core_tb;
     end
   endtask
 
+  task automatic tb_check_tx;
+    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input [15:0] num_samples;
+    begin
+      $display("Radio %2d: Checking TX output",radio_num);
+      if (tx[32*radio_num +: 32] != TX_VERIF_WORD) begin
+        while(tx[32*radio_num +: 32] != TX_VERIF_WORD) @(negedge radio_clk);
+      end
+      while(tx[32*radio_num +: 32] == TX_VERIF_WORD) begin
+        // Using negedge so we align to the middle of the strobed TX output. Avoids false errors when checking TX output
+        // and it transitions after radio_clk posedge.
+        @(negedge radio_clk);
+        while (~tx_stb) @(negedge radio_clk);
+      end
+      // Check ramp pattern
+      for (int i = 0; i < num_samples; i++) begin
+        `ASSERT_FATAL(tx[32*radio_num +: 32] == {16'(2*i), 16'(2*i+1)},
+          $sformatf("Incorrect TX output! Received: %8x Expected: %8x",tx[32*radio_num +: 32],{16'(2*i), 16'(2*i+1)}));
+        @(negedge radio_clk);
+        while (~tx_stb) @(negedge radio_clk);
+      end
+      `ASSERT_FATAL(tx[32*radio_num +: 32] == TX_VERIF_WORD,
+        $sformatf("Incorrect TX idle output! Received: %8x Expected: %8x",tx[32*radio_num +: 32],TX_VERIF_WORD));
+      @(posedge radio_clk);
+      $display("Radio %2d: TX output correct",radio_num);
+    end
+  endtask
+
   task automatic tb_check_tx_burst;
     input [$clog2(NUM_RADIOS)-1:0] radio_num;
     input [15:0] num_samples;
@@ -377,7 +428,7 @@ module noc_block_radio_core_tb;
       cvita_pkt_t response;
       integer pkt_cnt = 0;
       header.eob = 1'b0;
-      while (radio_num == 0 ? tb_cvita_data.s_cvita.axis.tvalid : tb2_cvita_data.s_cvita.axis.tvalid) begin
+      while (~header.eob) begin // radio_num == 0 ? tb_cvita_data.s_cvita.axis.tvalid : tb2_cvita_data.s_cvita.axis.tvalid) begin
         if (radio_num == 0) begin
           tb_cvita_data.pull_pkt(response);
         end else begin
@@ -417,6 +468,7 @@ module noc_block_radio_core_tb;
   ** Test Bench Misc
   ********************************************************/
   logic [63:0] resp;
+  logic [31:0] rand32;
 
   /********************************************************
   ** Test Bench Main Thread
@@ -459,8 +511,6 @@ module noc_block_radio_core_tb;
 
     // Disable sequence error checks. Solves issues with inline overrun / late command 
     // error packets causing sequence number gaps in rx data packets.
-    tb_send_cmd({sid_noc_block_tb + 1'b1}, noc_block_tb.noc_shell.SR_ERROR_POLICY, 4'b0010, resp);
-    tb_send_cmd({sid_noc_block_tb2 + 1'b1}, noc_block_tb.noc_shell.SR_ERROR_POLICY, 4'b0010, resp);
 
     // Read NOC ID
     tb_read_radio_reg(0, noc_block_radio_core.noc_shell.RB_NOC_ID, noc_id);
@@ -517,7 +567,7 @@ module noc_block_radio_core_tb;
       `ASSERT_FATAL(resp[63:32] == 32'h00C0FFEE, $sformatf("Radio %2d: Incorrect TX idle word #2", i));
       `ASSERT_FATAL(resp[31:0] == 32'h00C0FFEE, $sformatf("Radio %2d: Incorrect RX loopback word #2", i));
       // Disable loopback mode
-      tb_send_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_LOOPBACK, 32'h0, resp);
+      tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.SR_LOOPBACK, 32'h0, resp);
     end
     rxtx_loopback = 0;
     `TEST_CASE_DONE(1);
@@ -910,6 +960,26 @@ module noc_block_radio_core_tb;
     /********************************************************
     ** Test 18 -- Timed Commands (SPI, GPIO)
     ********************************************************/
+    `TEST_CASE_START("GPIO Timed Command");
+    for (int i = 0; i < num_radios; i++) begin
+      $display("Radio %2d: Clear FP GPIO", i);
+      // Make sure GPIO is cleared
+      tb_send_radio_cmd(i, SR_FP_GPIO, 32'd0, resp);
+      `ASSERT_FATAL(fp_gpio[32*i +: 32] == 32'd0, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, 32'd0, fp_gpio[32*i +: 32]));
+      // Get current VITA time
+      tb_read_radio_core_reg(i, RB_VITA_TIME, resp);
+      // Set GPIO at future time
+      rand32 = $random();
+      $display("Radio %2d: Send timed command to set FP GPIO", i);
+      tb_send_radio_cmd_timed(i, SR_FP_GPIO /* Set idle register */, rand32,
+                              resp+64'd200 /* Set GPIO 200 clock cycles in the future */, resp);
+      $display("Radio %2d: Check FP GPIO has not changed before timed command epoch", i);
+      `ASSERT_FATAL(fp_gpio[32*i +: 32] == rand32, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, rand32, fp_gpio[32*i +: 32]));
+      repeat(200) @(posedge radio_clk);
+      $display("Radio %2d: Check FP GPIO has changed after timed command epoch", i);
+      `ASSERT_FATAL(fp_gpio[32*i +: 32] == rand32, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, rand32, fp_gpio[32*i +: 32]));
+    end
+    `TEST_CASE_DONE(1);
     $display("DONE!");
     while(1) @(posedge radio_clk);
   end
