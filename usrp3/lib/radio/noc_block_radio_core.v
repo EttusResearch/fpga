@@ -1,11 +1,15 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research LLC
 //
+// Note: Register addresses defined radio_core_regs.vh
 
 module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
-  parameter NUM_RADIOS = 1
+  parameter NUM_RADIOS = 1,
+  // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
+  // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
+  parameter USE_SPI_CLK = 0
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -20,22 +24,23 @@ module noc_block_radio_core #(
   input [NUM_RADIOS*32-1:0] fp_gpio_in, output [NUM_RADIOS*32-1:0] fp_gpio_out, output [NUM_RADIOS*32-1:0] fp_gpio_ddr,
   input [NUM_RADIOS*32-1:0] db_gpio_in, output [NUM_RADIOS*32-1:0] db_gpio_out, output [NUM_RADIOS*32-1:0] db_gpio_ddr,
   output [NUM_RADIOS*32-1:0] leds,
+  input spi_clk, input spi_rst,
   output [NUM_RADIOS*8-1:0] sen, output [NUM_RADIOS-1:0] sclk, output [NUM_RADIOS-1:0] mosi, input [NUM_RADIOS-1:0] miso,
   output [63:0] debug
 );
 
-  /////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////
   //
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire [31:0]                   set_data;
-  wire [7:0]                    set_addr;
+  wire [NUM_RADIOS*32-1:0]      set_data;
+  wire [NUM_RADIOS*8-1:0]       set_addr;
   wire [NUM_RADIOS-1:0]         set_stb;
-  wire [63:0]                   set_time;
+  wire [NUM_RADIOS*64-1:0]      set_time;
   wire [8*NUM_RADIOS-1:0]       rb_addr;
   wire [64*NUM_RADIOS-1:0]      rb_data;
-  wire [NUM_RADIOS-1:0] rb_stb;
+  wire [NUM_RADIOS-1:0]         rb_stb;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -43,6 +48,7 @@ module noc_block_radio_core #(
   wire [64*NUM_RADIOS-1:0]      str_sink_tdata, str_src_tdata;
   wire [NUM_RADIOS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
+  wire [63:0]                   vita_time;
   wire [NUM_RADIOS-1:0]         clear_tx_seqnum;
   wire [16*NUM_RADIOS-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
 
@@ -50,7 +56,9 @@ module noc_block_radio_core #(
     .NOC_ID(NOC_ID),
     .INPUT_PORTS(NUM_RADIOS),
     .OUTPUT_PORTS(NUM_RADIOS),
-    .STR_SINK_FIFOSIZE({NUM_RADIOS{STR_SINK_FIFOSIZE[7:0]}}))
+    .STR_SINK_FIFOSIZE({NUM_RADIOS{STR_SINK_FIFOSIZE[7:0]}}),
+    .USE_TIMED_CMDS(1), // Settings bus transactions will occur at the vita time specified in the command packet
+    .CMD_FIFO_SIZE({NUM_RADIOS{8'd6}})) // Up to 64 commands in flight per radio
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -68,7 +76,8 @@ module noc_block_radio_core #(
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     // Misc
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(resp_in_dst_sid), .resp_out_dst_sid(resp_out_dst_sid),
+    .vita_time(vita_time), .clear_tx_seqnum(clear_tx_seqnum),
+    .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(resp_in_dst_sid), .resp_out_dst_sid(resp_out_dst_sid),
     .debug(debug));
 
   // Disable unused response port
@@ -103,18 +112,29 @@ module noc_block_radio_core #(
     .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
     .o_tdata(cmdout_tdata), .o_tlast(cmdout_tlast), .o_tvalid(cmdout_tvalid), .o_tready(cmdout_tready));
 
-  // VITA time
-  localparam SR_TIME_HI   = BASE + 8'd0;
-  localparam SR_TIME_LO   = BASE + 8'd1;
-  localparam SR_TIME_CTRL = BASE + 8'd2;
-  wire [63:0] vita_time, vita_time_lastpps;
+  // Mux settings buses for any resources shared between radio cores
+  wire                     set_stb_mux;
+  wire [7:0]               set_addr_mux;
+  wire [31:0]              set_data_mux;
+  settings_bus_mux #(
+    .AWIDTH(8),
+    .DWIDTH(32),
+    .NUM_BUSES(NUM_RADIOS))
+  settings_bus_mux (
+    .clk(ce_clk), .reset(ce_rst),
+    .in_set_stb(set_stb), .in_set_addr(set_addr), .in_set_data(set_data),
+    .out_set_stb(set_stb_mux), .out_set_addr(set_addr_mux), .out_set_data(set_data_mux), .ready(1'b1));
+
+  // VITA time is shared between radio cores
+  `include "radio_core_regs.vh"
+  wire [63:0] vita_time_lastpps;
   timekeeper #(
     .SR_TIME_HI(SR_TIME_HI),
     .SR_TIME_LO(SR_TIME_LO),
     .SR_TIME_CTRL(SR_TIME_CTRL))
   timekeeper (
     .clk(ce_clk), .reset(ce_rst), .pps(pps), .strobe(rx_stb),
-    .set_stb(|set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(set_stb_mux), .set_addr(set_addr_mux), .set_data(set_data_mux),
     .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
   genvar i;
@@ -129,7 +149,8 @@ module noc_block_radio_core #(
       ////////////////////////////////////////////////////////////
       axi_wrapper #(
         .MTU(10),
-        .SIMPLE_MODE(0))
+        .SIMPLE_MODE(0),
+        .USE_SEQ_NUM(1))
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
@@ -156,7 +177,6 @@ module noc_block_radio_core #(
         .m_axis_config_tready(1'b0));
 
       radio_core #(
-        .BASE(BASE), // Offset to user register addr space
         .RADIO_NUM(i))
       radio_core (
         .clk(ce_clk), .reset(ce_rst),
@@ -173,13 +193,12 @@ module noc_block_radio_core #(
         .fp_gpio_in(fp_gpio_in[32*i+31:32*i]), .fp_gpio_out(fp_gpio_out[32*i+31:32*i]), .fp_gpio_ddr(fp_gpio_ddr[32*i+31:32*i]),
         .db_gpio_in(db_gpio_in[32*i+31:32*i]), .db_gpio_out(db_gpio_out[32*i+31:32*i]), .db_gpio_ddr(db_gpio_ddr[32*i+31:32*i]),
         .leds(leds[32*i+31:32*i]),
-        .sen(sen[8*i+7:8*i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i]),
-        .set_stb(set_stb[i]), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
+        .spi_clk(spi_clk), .spi_rst(spi_rst), .sen(sen[8*i+7:8*i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i]),
+        .set_stb(set_stb[i]), .set_addr(set_addr[8*i+7:8*i]), .set_data(set_data[32*i+31:32*i]),
         .rb_stb(rb_stb[i]), .rb_addr(rb_addr[8*i+7:8*i]), .rb_data(rb_data[64*i+63:64*i]),
         .tx_tdata(m_axis_data_tdata[i]), .tx_tlast(m_axis_data_tlast[i]), .tx_tvalid(m_axis_data_tvalid[i]), .tx_tready(m_axis_data_tready[i]), .tx_tuser(m_axis_data_tuser[i]),
         .rx_tdata(s_axis_data_tdata[i]), .rx_tlast(s_axis_data_tlast[i]), .rx_tvalid(s_axis_data_tvalid[i]), .rx_tready(s_axis_data_tready[i]), .rx_tuser(s_axis_data_tuser[i]),
         .resp_tdata(resp_tdata[64*i+63:64*i]), .resp_tlast(resp_tlast[i]), .resp_tvalid(resp_tvalid[i]), .resp_tready(resp_tready[i]));
     end
   endgenerate
-
 endmodule

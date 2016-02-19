@@ -328,7 +328,8 @@ module e310_core
   wire sclk[0:NUM_RADIOS-1], mosi[0:NUM_RADIOS-1], miso[0:NUM_RADIOS-1];
   noc_block_radio_core #(
     .NUM_RADIOS(NUM_RADIOS),
-    .STR_SINK_FIFOSIZE(13))
+    .STR_SINK_FIFOSIZE(13),
+    .USE_SPI_CLK(1))
   noc_block_radio_core (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(radio_clk), .ce_rst(radio_rst),
@@ -343,6 +344,7 @@ module e310_core
     .fp_gpio_in({fp_gpio_in[1],fp_gpio_in[0]}), .fp_gpio_out({fp_gpio_out[1],fp_gpio_out[0]}), .fp_gpio_ddr({fp_gpio_ddr[1],fp_gpio_ddr[0]}),
     .db_gpio_in('d0), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr(),
     .leds({leds[1],leds[0]}),
+    .spi_clk(bus_clk), .spi_rst(bus_rst),
     .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
     .debug());
 

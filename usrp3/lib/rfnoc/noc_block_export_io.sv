@@ -44,7 +44,8 @@ module noc_block_export_io
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire unused_set_stb;
-  wire [7:0] unused_rb_addr;
+  wire [31:0] unused_set_data;
+  wire [7:0] unused_set_addr, unused_rb_addr;
 
   // Block port 0 -> AXI Wrapper
   // Block port 1 -> Export to user
@@ -61,7 +62,7 @@ module noc_block_export_io
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_bus.data), .set_addr(set_bus.addr), .set_stb({set_bus.stb,unused_set_stb}), .set_time(),
+    .set_data({set_bus.data,unused_set_data}), .set_addr({set_bus.addr,unused_set_addr}), .set_stb({set_bus.stb,unused_set_stb}), .set_time(),
     .rb_stb(2'b11), .rb_data({rb_bus.data,64'd0}), .rb_addr({rb_bus.addr,unused_rb_addr}),
     // Control Source
     .cmdout_tdata(cvita_cmd.tdata), .cmdout_tlast(cvita_cmd.tlast), .cmdout_tvalid(cvita_cmd.tvalid), .cmdout_tready(cvita_cmd.tready),

@@ -52,6 +52,7 @@ module simple_spi_core
 
         //32-bit data readback
         output [31:0] readback,
+        output reg readback_stb,
 
         //read is high when spi core can begin another transaction
         output ready,
@@ -154,12 +155,14 @@ module simple_spi_core
             state <= WAIT_TRIG;
             sclk_reg <= CLK_IDLE;
             ready_reg <= 0;
+            readback_stb <= 1'b0;
         end
         else begin
             case (state)
 
             WAIT_TRIG: begin
                 if (trigger_spi & ~shutdown) state <= PRE_IDLE;
+                readback_stb <= 1'b0;
                 ready_reg <= ~trigger_spi;
                 dataout_reg <= mosi_data;
                 sclk_counter <= 0;
@@ -201,7 +204,10 @@ module simple_spi_core
             end
 
             IDLE_SEN: begin
-                if (sclk_counter_done) state <= WAIT_TRIG;
+                if (sclk_counter_done) begin
+                  readback_stb <= 1'b1;
+                  state <= WAIT_TRIG;
+                end
                 sclk_counter <= sclk_counter_next;
                 sclk_reg <= CLK_IDLE;
             end

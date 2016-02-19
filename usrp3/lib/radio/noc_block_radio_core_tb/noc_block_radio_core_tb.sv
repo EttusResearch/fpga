@@ -1,5 +1,5 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research LLC
 //
 
 `timescale 1ns/1ps
@@ -15,14 +15,15 @@ module noc_block_radio_core_tb;
   ** RFNoC Initialization
   ********************************************************/
   `TEST_BENCH_INIT("noc_block_rado_core_tb",`NUM_TEST_CASES,`NS_PER_TICK);
-  `RFNOC_SIM_INIT(2, 50, 61.44);
-  `DEFINE_CLK(radio_clk, 61.44, 50);
+  `RFNOC_SIM_INIT(2, 20, 20);
+  `DEFINE_CLK(radio_clk, 16.27, 50);
   `DEFINE_RESET(radio_rst, 0, 1000);
   `RFNOC_ADD_TESTBENCH_BLOCK(tb2,1); // Add additional test bench block to test second radio core
 
   /********************************************************
   ** DUT, due to non-standard I/O we cannot use `RFNOC_ADD_BLOCK()
   ********************************************************/
+  `include "radio_core_regs.vh"
   localparam NUM_RADIOS = 2;
   localparam BYPASS_TX_DC_OFFSET_CORR = 1;
   localparam BYPASS_RX_DC_OFFSET_CORR = 1;
@@ -42,7 +43,8 @@ module noc_block_radio_core_tb;
   logic [NUM_RADIOS*8-1:0] sen;
   logic [NUM_RADIOS-1:0] sclk, mosi, miso = 'd0;
   noc_block_radio_core #(
-    .NUM_RADIOS(NUM_RADIOS))
+    .NUM_RADIOS(NUM_RADIOS),
+    .USE_SPI_CLK(1))
   noc_block_radio_core (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(radio_clk), .ce_rst(radio_rst),
@@ -53,7 +55,7 @@ module noc_block_radio_core_tb;
     .pps(pps),
     .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
     .fp_gpio(fp_gpio), .db_gpio(db_gpio), .leds(leds),
-    .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
+    .spi_clk(bus_clk), .spi_rst(bus_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
     .debug());
 
   // Tristate outputs

@@ -1,13 +1,15 @@
 //
-// Copyright 2015 Ettus Research
+// Copyright 2016 Ettus Research
 //
 // radio_core
 //   Contains all clock-rate DSP components, all radio and hardware controls and settings
 //   Designed to connect to a noc_shell
+//
+// Note: Register addresses defined radio_core_regs.vh
 
 module radio_core #(
-  parameter BASE = 0,
-  parameter RADIO_NUM = 0
+  parameter RADIO_NUM = 0,
+  parameter USE_SPI_CLK = 0  // Drive SPI core with input spi_clk. WARNING: This adds a clock crossing FIFO!
 )(
   input clk, input reset,
   input clear_rx, input clear_tx,
@@ -26,40 +28,16 @@ module radio_core #(
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr,
   output [31:0] leds,
-  output [7:0] sen, output sclk, output mosi, input miso,
+  input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso,
   // Interface to the NoC Shell
-  input set_stb, input [7:0] set_addr, input [31:0] set_data, input [63:0] set_time,
+  input set_stb, input [7:0] set_addr, input [31:0] set_data,
   output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data,
   input [31:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready, input [127:0] tx_tuser,
   output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
   output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready
 );
 
-  /********************************************************
-  ** Settings Bus Register Addresses
-  ********************************************************/
-  localparam SR_TIME_HI              = BASE + 8'd0;
-  localparam SR_TIME_LO              = BASE + 8'd1;
-  localparam SR_TIME_CTRL            = BASE + 8'd2;
-  localparam SR_LOOPBACK             = BASE + 8'd3;
-  localparam SR_TEST                 = BASE + 8'd4;
-  localparam SR_CODEC_IDLE           = BASE + 8'd5;
-  // TX / RX Control
-  localparam SR_TX_CTRL_ERROR_POLICY = BASE + 8'd32;
-  localparam SR_RX_CTRL_COMMAND      = BASE + 8'd48;
-  localparam SR_RX_CTRL_TIME_HI      = BASE + 8'd49;
-  localparam SR_RX_CTRL_TIME_LO      = BASE + 8'd50;
-  localparam SR_RX_CTRL_HALT         = BASE + 8'd51;
-  localparam SR_RX_CTRL_MAXLEN       = BASE + 8'd52;
-  localparam SR_RX_CTRL_CLEAR_CMDS   = BASE + 8'd53;
-  localparam SR_DB_CONTROL_BASE      = BASE + 8'd64;  // 64 - 127 Reserved for db control
-
-  localparam RB_VITA_TIME            = 8'd0;
-  localparam RB_VITA_LASTPPS         = 8'd1;
-  localparam RB_TEST                 = 8'd2;
-  localparam RB_TXRX                 = 8'd3;
-  localparam RB_RADIO_NUM            = 8'd4;
-  localparam RB_DB_CONTROL_BASE      = 8'd16; // 16 - 32 reserved for db control
+  `include "radio_core_regs.vh"
 
   /********************************************************
   ** Settings Bus / Readback Registers
@@ -97,16 +75,18 @@ module radio_core #(
   /********************************************************
   ** Daughter board control
   ********************************************************/
-  db_control #(.SR_BASE(SR_DB_CONTROL_BASE), .RB_BASE(RB_DB_CONTROL_BASE)) db_control (
+  db_control #(
+    .USE_SPI_CLK(USE_SPI_CLK))
+  db_control (
     .clk(clk), .reset(reset),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(set_time),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .rb_stb(db_rb_stb), .rb_addr(rb_addr), .rb_data(db_rb_data),
-    .vita_time(vita_time), .run_rx(run_rx), .run_tx(run_tx),
+    .run_rx(run_rx), .run_tx(run_tx),
     .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
     .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
     .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
     .leds(leds),
-    .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso));
+    .spi_clk(spi_clk), .spi_rst(spi_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso));
 
   /********************************************************
   ** TX Chain
