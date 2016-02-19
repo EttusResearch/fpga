@@ -15,6 +15,8 @@ module noc_block_radio_core #(
   input ce_clk, input ce_rst,
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
+  // Output timed settings bus, one per radio
+  output [NUM_RADIOS-1:0] ext_set_stb, output [NUM_RADIOS*8-1:0] ext_set_addr, output [NUM_RADIOS*32-1:0] ext_set_data,
   // Ports connected to radio front end
   input  [NUM_RADIOS*32-1:0] rx, input [NUM_RADIOS-1:0] rx_stb,
   output [NUM_RADIOS*32-1:0] tx, input [NUM_RADIOS-1:0] tx_stb,
@@ -136,6 +138,11 @@ module noc_block_radio_core #(
     .clk(ce_clk), .reset(ce_rst), .pps(pps), .strobe(rx_stb),
     .set_stb(set_stb_mux), .set_addr(set_addr_mux), .set_data(set_data_mux),
     .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
+
+  // Expose settings bus externally
+  assign ext_set_stb  = set_stb;
+  assign ext_set_addr = set_addr;
+  assign ext_set_data = set_data;
 
   genvar i;
   generate
