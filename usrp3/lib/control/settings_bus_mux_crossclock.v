@@ -22,10 +22,10 @@ module settings_bus_mux_crossclock #(
   genvar i;
   generate
     for (i = 0; i < NUM_BUSES; i = i + 1) begin
-      settings_bus_crossclock #(.FLOW_CTRL(0), .AWIDTH(AWIDTH), .DWIDTH(DWIDTH))
+      settings_bus_crossclock #(.FLOW_CTRL(0), .SR_AWIDTH(AWIDTH), .SR_DWIDTH(DWIDTH))
       settings_bus_crossclock (
-        .clk_i(in_clk[i]), .rst_i(in_rst[i]), .set_stb_i(in_set_stb[i]), .set_addr_i(in_set_addr[i]), .set_data_i(in_set_data[i]),
-        .clk_o(out_clk), .rst_o(out_clk), .set_stb_o(set_stb_sync[i]), .set_addr_o(set_addr_sync[i]), .set_data_o(set_data_sync[i]), .blocked(1'b0));
+        .clk_a(in_clk[i]), .rst_a(in_rst[i]), .set_stb_a(in_set_stb[i]), .set_addr_a(in_set_addr[i]), .set_data_a(in_set_data[i]),
+        .clk_b(out_clk), .rst_b(out_clk), .set_stb_b(set_stb_sync[i]), .set_addr_b(set_addr_sync[i]), .set_data_b(set_data_sync[i]), .set_ready(1'b1));
     end
   endgenerate
 

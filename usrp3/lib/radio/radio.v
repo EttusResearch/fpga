@@ -196,11 +196,11 @@ module radio #(
    settings_bus_crossclock
      #(.FLOW_CTRL(0))
        settings_bus_crossclock
-       (.clk_i(radio_clk), .rst_i(radio_rst),
-	.set_stb_i(set_stb), .set_addr_i(set_addr), .set_data_i(set_data),
-	.clk_o(bus_clk), .rst_o(bus_rst),
-	.set_stb_o(set_stb_b), .set_addr_o(set_addr_b), .set_data_o(set_data_b),
-	.blocked(1'b0));
+       (.clk_a(radio_clk), .rst_a(radio_rst),
+	.set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
+	.clk_b(bus_clk), .rst_b(bus_rst),
+	.set_stb_b(set_stb_b), .set_addr_b(set_addr_b), .set_data_b(set_data_b),
+	.set_ready(1'b1));
 
    // Write this register with any value to create DAC sync operation
    setting_reg #(.my_addr(SR_DACSYNC), .awidth(8), .width(1)) sr_dacsync
