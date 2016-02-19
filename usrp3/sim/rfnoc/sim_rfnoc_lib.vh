@@ -88,14 +88,14 @@
   //
   // Usage: `RFNOC_SIM_INIT()
   // where
-  //   - num_rfnoc_blocks:           Number of RFNoC blocks in simulation. Max 14.
-  //   - bus_clk_freq, ce_clk_freq:  Bus, RFNoC block clock frequencies
+  //   - num_rfnoc_blocks:              Number of RFNoC blocks in simulation. Max 14.
+  //   - bus_clk_period, ce_clk_period: Bus, RFNoC block clock frequencies
   //
-  `define RFNOC_SIM_INIT(num_rfnoc_blocks, bus_clk_freq, ce_clk_freq) \
+  `define RFNOC_SIM_INIT(num_rfnoc_blocks, bus_clk_period, ce_clk_period) \
      // Setup clock, reset \
-    `DEFINE_CLK(bus_clk, bus_clk_freq, 50); \
+    `DEFINE_CLK(bus_clk, bus_clk_period, 50); \
     `DEFINE_RESET(bus_rst, 0, 1000); \
-    `DEFINE_CLK(ce_clk, ce_clk_freq, 50); \
+    `DEFINE_CLK(ce_clk, ce_clk_period, 50); \
     `DEFINE_RESET(ce_rst, 0, 1000); \
     `RFNOC_ADD_AXI_CROSSBAR(0, num_rfnoc_blocks+2); \
     `RFNOC_ADD_TESTBENCH_BLOCK(tb,num_rfnoc_blocks); \
