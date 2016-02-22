@@ -85,7 +85,7 @@ module cmd_pkt_proc #(
   wire set_rb_addr_user = int_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR_USER[SR_AWIDTH-1:0];
 
   reg [63:0] resp_time;
-  wire [63:0] resp_header = {4'hE, seqnum, 16'd24, dst_sid, src_sid};
+  wire [63:0] resp_header = {2'b11, USE_TIME[0], 1'b0, seqnum, (USE_TIME[0] ? 16'd24 : 16'd16), dst_sid, src_sid};
 
   reg [63:0] rb_data_hold;
   integer k;
