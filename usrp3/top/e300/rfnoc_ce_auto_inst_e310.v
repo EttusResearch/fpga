@@ -1,4 +1,4 @@
-  localparam NUM_CE = 3;  // Must be no more than 13 (3 ports taken by radios & PS-PL DMA).
+  localparam NUM_CE = 7;  // Must be no more than 14 (2 ports taken by radio core & PS-PL DMA).
 
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
@@ -37,3 +37,31 @@
     .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
     .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
     .debug(ce_debug[2]));
+
+  noc_block_fosphor inst_noc_block_fosphor (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(ce_clk), .ce_rst(ce_rst),
+    .i_tdata(ce_o_tdata[3]), .i_tlast(ce_o_tlast[3]), .i_tvalid(ce_o_tvalid[3]), .i_tready(ce_o_tready[3]),
+    .o_tdata(ce_i_tdata[3]), .o_tlast(ce_i_tlast[3]), .o_tvalid(ce_i_tvalid[3]), .o_tready(ce_i_tready[3]),
+    .debug(ce_debug[3]));
+
+  noc_block_keep_one_in_n inst_noc_block_keep_one_in_n (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(ce_clk), .ce_rst(ce_rst),
+    .i_tdata(ce_o_tdata[4]), .i_tlast(ce_o_tlast[4]), .i_tvalid(ce_o_tvalid[4]), .i_tready(ce_o_tready[4]),
+    .o_tdata(ce_i_tdata[4]), .o_tlast(ce_i_tlast[4]), .o_tvalid(ce_i_tvalid[4]), .o_tready(ce_i_tready[4]),
+    .debug(ce_debug[4]));
+
+  noc_block_vector_iir inst_noc_block_vector_iir (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(ce_clk), .ce_rst(ce_rst),
+    .i_tdata(ce_o_tdata[5]), .i_tlast(ce_o_tlast[5]), .i_tvalid(ce_o_tvalid[5]), .i_tready(ce_o_tready[5]),
+    .o_tdata(ce_i_tdata[5]), .o_tlast(ce_i_tlast[5]), .o_tvalid(ce_i_tvalid[5]), .o_tready(ce_i_tready[5]),
+    .debug(ce_debug[5]));
+
+  noc_block_fir_filter inst_noc_block_fir_filter (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
+    .ce_clk(ce_clk), .ce_rst(ce_rst),
+    .i_tdata(ce_o_tdata[6]), .i_tlast(ce_o_tlast[6]), .i_tvalid(ce_o_tvalid[6]), .i_tready(ce_o_tready[6]),
+    .o_tdata(ce_i_tdata[6]), .o_tlast(ce_i_tlast[6]), .o_tvalid(ce_i_tvalid[6]), .o_tready(ce_i_tready[6]),
+    .debug(ce_debug[6]));
