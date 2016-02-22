@@ -184,7 +184,8 @@ module noc_block_radio_core #(
         .m_axis_config_tready(1'b0));
 
       radio_core #(
-        .RADIO_NUM(i))
+        .RADIO_NUM(i),
+        .USE_SPI_CLK(USE_SPI_CLK))
       radio_core (
         .clk(ce_clk), .reset(ce_rst),
         .clear_rx(clear_tx_seqnum[i]), .clear_tx(clear_tx_seqnum[i]),
