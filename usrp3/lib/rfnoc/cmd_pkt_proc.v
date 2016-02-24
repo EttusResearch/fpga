@@ -15,6 +15,29 @@
 //
 // TODO: Should long command packets have one readback per settings bus transaction?
 //       Should the response be a 'long' reponse packet or one packet per transaction?
+//
+// Settings register bus:
+// - The settings register bus is a simple strobed interface.
+// - Transactions include both a write and a readback.
+// - The write occurs when set_stb is asserted.
+//   The settings register with the address matching set_addr will
+//   be loaded with the data on set_data.
+// - Readback occurs when rb_stb is asserted. The read back strobe
+//   must assert at least one clock cycle after set_stb asserts /
+//   rb_stb is ignored if asserted on the same clock cycle of set_stb.
+//   Example valid and invalid timing:
+//              __    __    __    __
+//   clk     __|  |__|  |__|  |__|  |__
+//               _____
+//   set_stb ___|     |________________
+//                    _____
+//   rb_stb  ________|     |___________     (Valid)
+//                           _____
+//   rb_stb  _______________|     |____     (Valid)
+//           __________________________
+//   rb_stb                                 (Valid if readback data is a constant)
+//               _____
+//   rb_stb  ___|     |________________     (Invalid / ignored, same cycle as set_stb)
 
 module cmd_pkt_proc #(
   parameter SR_AWIDTH = 8,
