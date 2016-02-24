@@ -52,7 +52,6 @@ include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 include $(LIB_IP_DIR)/axi_fft/Makefile.inc
 include $(LIB_IP_DIR)/complex_to_magphase/Makefile.inc
 include $(LIB_IP_DIR)/complex_multiplier/Makefile.inc
-include $(LIB_IP_DIR)/divide_int16_int32/Makefile.inc
 include $(LIB_IP_DIR)/divide_int24/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
