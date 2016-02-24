@@ -849,9 +849,9 @@ module noc_block_radio_core_tb;
       begin
         // Set slk divider
         tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.db_control.SR_SPI, 10, resp);
-        // Set SPI parameters {dataout_edge[0], datain_edge[0], num_bits[5:0], slave_select[23:0]}
+        // Set SPI parameters
         tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.db_control.SR_SPI+1,
-                          {1'b1, 1'b1, 6'd8, 24'd1},
+                          {1'b1, 1'b1, 6'd8, 24'd1}, // {dataout_edge[0], datain_edge[0], num_bits[5:0], slave_select[23:0]}
                           resp);
         // Set SPI output and trigger SPI transaction
         tb_send_radio_cmd(i, noc_block_radio_core.gen[0].radio_core.db_control.SR_SPI+2, {<<{spi_test_word}} /* Reverse bits */, resp);
@@ -972,9 +972,9 @@ module noc_block_radio_core_tb;
       rand32 = $random();
       $display("Radio %2d: Send timed command to set FP GPIO", i);
       tb_send_radio_cmd_timed(i, SR_FP_GPIO /* Set idle register */, rand32,
-                              resp+64'd200 /* Set GPIO 200 clock cycles in the future */, resp);
+                              resp+64'd1000 /* Set GPIO 1000 clock cycles in the future */, resp);
       $display("Radio %2d: Check FP GPIO has not changed before timed command epoch", i);
-      `ASSERT_FATAL(fp_gpio[32*i +: 32] == rand32, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, rand32, fp_gpio[32*i +: 32]));
+      `ASSERT_FATAL(fp_gpio[32*i +: 32] == 32'd0, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, 32'd0, fp_gpio[32*i +: 32]));
       repeat(200) @(posedge radio_clk);
       $display("Radio %2d: Check FP GPIO has changed after timed command epoch", i);
       `ASSERT_FATAL(fp_gpio[32*i +: 32] == rand32, $sformatf("Radio %2d: Incorrect FP GPIO output! Expected: %d, Actual: %d", i, rand32, fp_gpio[32*i +: 32]));
