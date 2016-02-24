@@ -1,10 +1,11 @@
 //
-// Copyright 2014-2015 Ettus Research LLC
+// Copyright 2014-2016 Ettus Research LLC
 //
 
 module noc_block_fosphor #(
   parameter NOC_ID = 64'h666f_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 11)
+  parameter STR_SINK_FIFOSIZE = 11,
+  parameter MTU = 11)
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -41,7 +42,8 @@ module noc_block_fosphor #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_data(64'd0), .rb_addr(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -74,7 +76,8 @@ module noc_block_fosphor #(
   localparam AXI_WRAPPER_BASE    = 128;
 
   axi_wrapper #(
-    .SIMPLE_MODE(0))
+    .SIMPLE_MODE(0),
+    .MTU(MTU))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
