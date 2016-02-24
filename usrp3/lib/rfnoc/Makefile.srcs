@@ -11,6 +11,7 @@ cvita_hdr_parser.v \
 chdr_framer.v \
 chdr_deframer.v \
 noc_shell.v \
+noc_shell_regs.vh \
 axi_packet_mux.v \
 axi_wrapper.v \
 axi_bit_reduce.v \

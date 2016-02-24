@@ -61,28 +61,7 @@ module noc_shell
     output [63:0] debug
     );
 
-   localparam SR_FLOW_CTRL_CYCS_PER_ACK      = 0;
-   localparam SR_FLOW_CTRL_PKTS_PER_ACK      = 1;
-   localparam SR_FLOW_CTRL_WINDOW_SIZE       = 2;
-   localparam SR_FLOW_CTRL_WINDOW_EN         = 3;
-   localparam SR_ERROR_POLICY                = 4;
-   localparam SR_SRC_SID                     = 5;
-   localparam SR_NEXT_DST_SID                = 6;
-   localparam SR_RESP_IN_DST_SID             = 7;
-   localparam SR_RESP_OUT_DST_SID            = 8;
-   localparam SR_CLEAR_CMDS                  = 123;
-   localparam SR_RB_ADDR_USER                = 124;
-   localparam SR_CLEAR_RX_FC                 = 125;
-   localparam SR_CLEAR_TX_FC                 = 126;
-   localparam SR_RB_ADDR                     = 127;
-   
-   localparam RB_NOC_ID                      = 0;
-   localparam RB_GLOBAL_PARAMS               = 1;
-   localparam RB_FIFOSIZE                    = 2;
-   localparam RB_MTU                         = 3;
-   localparam RB_BLOCK_PORT_SIDS             = 4;
-   localparam RB_USER_RB_DATA                = 5;
-   // Allocate all regs 128-255 to user device
+   `include "noc_shell_regs.vh"
    
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
 		  cmdin_tdata,  ackout_tdata;
@@ -135,7 +114,6 @@ module noc_shell
 
    wire [INPUT_PORTS-1:0]  clear_rx_fc;
    wire [OUTPUT_PORTS-1:0] clear_tx_fc;
-   wire [BLOCK_PORTS-1:0]  clear_cmds;
 
    wire [64*BLOCK_PORTS-1:0] cmdin_ports_tdata;
    wire [BLOCK_PORTS-1:0]    cmdin_ports_tvalid, cmdin_ports_tready, cmdin_ports_tlast;
@@ -177,7 +155,7 @@ module noc_shell
          .SR_RB_ADDR_USER(SR_RB_ADDR_USER),
          .FIFO_SIZE(CMD_FIFO_SIZE[8*k+7:8*k]))
        cmd_pkt_proc (
-         .clk(clk), .reset(reset), .clear(clear_cmds[k]),
+         .clk(clk), .reset(reset), .clear(1'b0),
          .cmd_tdata(cmdin_ports_tdata[64*k+63:64*k]), .cmd_tlast(cmdin_ports_tlast[k]), .cmd_tvalid(cmdin_ports_tvalid[k]), .cmd_tready(cmdin_ports_tready[k]),
          .resp_tdata(ackout_ports_tdata[64*k+63:64*k]), .resp_tlast(ackout_ports_tlast[k]), .resp_tvalid(ackout_ports_tvalid[k]), .resp_tready(ackout_ports_tready[k]),
          .vita_time(vita_time),
@@ -212,10 +190,6 @@ module noc_shell
        setting_reg #(.my_addr(SR_SRC_SID), .width(16), .at_reset(0)) sr_block_sid
          (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
           .in(set_data[32*k+31:32*k]),.out(src_sid[16*k+15:16*k]),.changed());
-
-       setting_reg #(.my_addr(SR_CLEAR_CMDS), .width(1), .at_reset(0)) sr_clear_cmds
-         (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-          .in(set_data[32*k+31:32*k]),.out(),.changed(clear_cmds[k]));
 
        if (k < INPUT_PORTS) begin
          setting_reg #(.my_addr(SR_CLEAR_RX_FC), .at_reset(0)) sr_clear_rx_fc
