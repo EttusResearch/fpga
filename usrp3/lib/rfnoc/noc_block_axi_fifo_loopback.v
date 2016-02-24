@@ -1,10 +1,11 @@
 //
-// Copyright 2014-2015 Ettus Research LLC
+// Copyright 2014-2016 Ettus Research LLC
 //
 
 module noc_block_axi_fifo_loopback #(
   parameter NOC_ID = 64'hF1F0_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 11)
+  parameter STR_SINK_FIFOSIZE = 11,
+  parameter FIFOSIZE = 5)
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -106,7 +107,7 @@ module noc_block_axi_fifo_loopback #(
   assign ackin_tready = 1'b1;
 
   axi_fifo #(
-    .WIDTH(33), .SIZE(2))
+    .WIDTH(33), .SIZE(FIFOSIZE))
   inst_axi_fifo (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .i_tdata({m_axis_data_tlast,m_axis_data_tdata}), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
