@@ -6,12 +6,12 @@
 //   INPUT_PORTS          Number of input ports, min 1
 //   OUTPUT_PORTS         Number of output ports, min 1
 //   USE_TIMED_CMDS       Use vita time in command packets for timing settings bus transactions
-//   STR_SINK_FIFOSIZE    Vector of each block port's window sizes (8-bits per port)
-//   MTU                  Vector of maximum output packet sizes (sizes FIFO used with packet gate, 8-bits per port)
+//   STR_SINK_FIFOSIZE    Vector of each block port's window sizes (size is power of 2, 8-bits per port)
+//   MTU                  Vector of maximum output packet sizes (power of 2 size for FIFO used with packet gate, 8-bits per port)
 //   USE_GATE_MASK        Bit mask enabling AXI gate per block port (i.e. 3'b101, enable packet gate on block ports 0 & 2.)
-//                        Note: AXI gate is only needed ports not using AXI wrapper
+//                        Note: AXI gate is only needed for block ports not using AXI wrapper
 //
-// Expert parameters:
+// Advanced user parameters (generally leave at default values):
 //   CMD_FIFO_SIZE        Vector of the depth of each block port's command packet FIFO. (8-bits per port)
 //   BLOCK_PORTS          max(INPUT_PORTS, OUTPUT_PORTS), DO NOT OVERRIDE! Workaround to properly size port widths.
 
