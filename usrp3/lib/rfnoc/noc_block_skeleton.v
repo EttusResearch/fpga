@@ -1,5 +1,5 @@
 //
-// Copyright 2015 Ettus Research
+// Copyright 2016 Ettus Research
 //
 
 module noc_block_skeleton #(
@@ -23,6 +23,7 @@ module noc_block_skeleton #(
   wire        set_stb;
   reg  [63:0] rb_data;
   wire [7:0]  rb_addr;
+  reg         rb_stb;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -47,7 +48,7 @@ module noc_block_skeleton #(
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
-    .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
+    .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -111,6 +112,8 @@ module noc_block_skeleton #(
   // User code
   //
   ////////////////////////////////////////////////////////////
+  // NoC Shell registers 0 - 127,
+  // User register address space starts at 128
   localparam SR_USER_REG_BASE = 128;
 
   // Control Source Unused
@@ -120,6 +123,29 @@ module noc_block_skeleton #(
   assign ackin_tready  = 1'b1;
 
   // Settings registers
+  //
+  // - The settings register bus is a simple strobed interface.
+  // - Transactions include both a write and a readback.
+  // - The write occurs when set_stb is asserted.
+  //   The settings register with the address matching set_addr will
+  //   be loaded with the data on set_data.
+  // - Readback occurs when rb_stb is asserted. The read back strobe
+  //   must assert at least one clock cycle after set_stb asserts /
+  //   rb_stb is ignored if asserted on the same clock cycle of set_stb.
+  //   Example valid and invalid timing:
+  //              __    __    __    __
+  //   clk     __|  |__|  |__|  |__|  |__
+  //               _____
+  //   set_stb ___|     |________________
+  //                    _____
+  //   rb_stb  ________|     |___________     (Valid)
+  //                           _____
+  //   rb_stb  _______________|     |____     (Valid)
+  //           __________________________
+  //   rb_stb                                 (Valid if readback data is a constant)
+  //               _____
+  //   rb_stb  ___|     |________________     (Invalid / ignored, same cycle as set_stb)
+  //
   localparam [7:0] SR_TEST_REG_0 = SR_USER_REG_BASE;
   localparam [7:0] SR_TEST_REG_1 = SR_USER_REG_BASE + 8'd1;
 
@@ -138,12 +164,17 @@ module noc_block_skeleton #(
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(test_reg_1), .changed());
 
   // Readback registers
-  always @*
+  always @(posedge clk) begin
     case(rb_addr)
-      8'd0    : rb_data <= {32'd0, test_reg_0};
-      8'd1    : rb_data <= {32'd0, test_reg_1};
-      default : rb_data <= 64'h0BADC0DE0BADC0DE;
-  endcase
+      // Due to the register delay, we can use set_stb to assert rb_stb. Without
+      // the register, rb_stb would assert on the same cycle as set_stb and it
+      // would be ignored (see above explanation).
+      8'd0    : {rb_stb, rb_data} <= {set_stb, {32'd0, test_reg_0}};
+      8'd1    : {rb_stb, rb_data} <= {set_stb, {32'd0, test_reg_1}};
+      // Since our default readback data is constant, we can leave rb_stb asserted
+      default : {rb_stb, rb_data} <= {1'b1, 64'h0BADC0DE0BADC0DE};
+    endcase
+  end
 
   /* Simple Loopback */
   assign m_axis_data_tready = s_axis_data_tready;
