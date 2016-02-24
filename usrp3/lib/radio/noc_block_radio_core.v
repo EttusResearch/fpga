@@ -6,6 +6,7 @@
 module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
+  parameter MTU = 11,
   parameter NUM_RADIOS = 1,
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
@@ -155,7 +156,7 @@ module noc_block_radio_core #(
       //
       ////////////////////////////////////////////////////////////
       axi_wrapper #(
-        .MTU(10),
+        .MTU(MTU),
         .SIMPLE_MODE(0),
         .USE_SEQ_NUM(1))
       axi_wrapper (

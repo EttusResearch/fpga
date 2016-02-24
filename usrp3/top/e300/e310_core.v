@@ -328,13 +328,16 @@ module e310_core
   wire sclk[0:NUM_RADIOS-1], mosi[0:NUM_RADIOS-1], miso[0:NUM_RADIOS-1];
   noc_block_radio_core #(
     .NUM_RADIOS(NUM_RADIOS),
-    .STR_SINK_FIFOSIZE(13),
+    .STR_SINK_FIFOSIZE(13),  // Tuned value, verify throughput if changing
+    .MTU(10),                // Tuned value
     .USE_SPI_CLK(1))
   noc_block_radio_core (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(radio_clk), .ce_rst(radio_rst),
     .i_tdata(ro_tdata), .i_tlast(ro_tlast), .i_tvalid(ro_tvalid), .i_tready(ro_tready),
     .o_tdata(ri_tdata), .o_tlast(ri_tlast), .o_tvalid(ri_tvalid), .o_tready(ri_tready),
+    // Output timed settings bus, one per radio
+    .ext_set_stb(), .ext_set_addr(), .ext_set_data(),
     // Ports connected to radio front end
     .rx({rx_data1,rx_data0}), .rx_stb({rx_stb1,rx_stb0}),
     .tx({tx_data1,tx_data0}), .tx_stb({tx_stb1,tx_stb0}),
@@ -363,4 +366,4 @@ module e310_core
   assign leds0              = leds[0][2:0];
   assign leds1              = leds[1][2:0];
 
-endmodule // e300_core
+endmodule // e310_core
