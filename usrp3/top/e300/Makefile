@@ -91,4 +91,4 @@ help: ## Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI.
 
-.PHONY: all clean cleanall E310 E310_sg3 E310_RFNOC E310_RFNOC_sg3 E310_RFNOC_HLS E310_RFNOC_HLS_sg3 E3XX_idle E3XX_idle_SG3 help
+.PHONY: all clean cleanall E310 E310_sg3 E310_RFNOC E310_RFNOC_sg3 E310_RFNOC_HLS E310_RFNOC_HLS_sg3 E3XX_idle E3XX_idle_sg3 help
