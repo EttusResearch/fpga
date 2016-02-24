@@ -1,9 +1,6 @@
 ###############################################################################
 # Timing Constraints for E310 daughter board signals
 ###############################################################################
-# Pack all I/O registers
-set_property IOB TRUE "[all_inputs] [all_outputs]"
-
 # CAT_DATA_CLK is the data clock from AD9361, sample rate dependent with a max rate of 61.44 MHz
 set cat_data_clk_period             16.276;
 set cat_data_clk_duty_cycle_var     [expr $cat_data_clk_period * (0.55 - 0.45)];
@@ -13,7 +10,7 @@ create_clock -period $cat_data_clk_period -name CAT_DATA_CLK [get_ports CAT_DATA
 set_input_jitter CAT_DATA_CLK [expr $cat_data_clk_duty_cycle_var + $tcxo_jitter]
 
 # Generate DAC output clock
-create_generated_clock -name CAT_FB_CLK -multiply_by 1 -source [get_pins inst_catcodec_ddr_cmos/catgen/oddr_clk/C] [get_ports CAT_FB_CLK]
+create_generated_clock -name CAT_FB_CLK -multiply_by 1 -source [get_pins e310_io/oddr_clk/C] [get_ports CAT_FB_CLK]
 
 # TCXO clock 40 MHz
 create_clock -period 25.000 -name TCXO_CLK [get_nets TCXO_CLK]
@@ -51,19 +48,15 @@ set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_da
 set_output_delay -clock CAT_FB_CLK -max [expr $cat_fb_data_prog_dly + $cat_fb_data_setup] [get_ports {CAT_P1_D* CAT_TX_FRAME}] -clock_fall -add_delay;
 set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_data_hold]  [get_ports {CAT_P1_D* CAT_TX_FRAME}] -clock_fall -add_delay;
 
-# CAT SPI, max SPI clock of 4 MHz
+# CAT SPI, path is segmented due to mux between PS SPI and PL soft SPI.
+# 8.333 MHz PL SPI clock rate
 set_property IOB FALSE [get_ports {CAT_CS CAT_SCLK CAT_MOSI CAT_MISO}] # Cannot pack IOB due to SPI mux
-set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 6.000
+set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 10.000
 set_min_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 1.000
-set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 6.000
-set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 6.000
-set_min_delay -from [get_ports CAT_MISO] 1.000
-set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 6.000
-set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 6.000
-set_min_delay -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 1.000
-set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 6.000
-set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 6.000
-set_min_delay -to [get_pins {CAT_MOSI_MUX/I0 CAT_MOSI_MUX/I1 CAT_MOSI_MUX/S}] 1.000
+set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 10.000
+set_min_delay -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 1.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 10.000
+set_min_delay -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 1.000
 
 # TCXO DAC SPI
 # 12 MHz SPI clock rate
