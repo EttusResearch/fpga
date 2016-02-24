@@ -38,7 +38,8 @@
     .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
     .debug(ce_debug[2]));
 
-  noc_block_fosphor inst_noc_block_fosphor (
+  noc_block_fosphor #(.MTU(13) /* Increase output FIFO size to smooth out bursts */)
+  inst_noc_block_fosphor (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[3]), .i_tlast(ce_o_tlast[3]), .i_tvalid(ce_o_tvalid[3]), .i_tready(ce_o_tready[3]),
