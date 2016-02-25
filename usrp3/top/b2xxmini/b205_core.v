@@ -189,7 +189,7 @@ module b205_core
         .out(rb_addr), .changed()
     );
 
-    setting_reg #(.my_addr(SR_CORE_SYNC), .awidth(8), .width(2)) sr_sync
+    setting_reg #(.my_addr(SR_CORE_SYNC), .awidth(8), .width(3)) sr_sync
     (
         .clk(bus_clk), .rst(bus_rst), .strobe(set_stb), .addr(set_addr), .in(set_data),
         .out({time_sync,pps_select}), .changed()
