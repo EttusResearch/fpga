@@ -1,5 +1,5 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research LLC
 //
 // Mux multiple settings buses
 
@@ -7,10 +7,10 @@ module settings_bus_mux #(
   parameter PRIO=0, // 0 = Round robin, 1 = Lower ports get priority (see axi_mux)
   parameter AWIDTH=8,
   parameter DWIDTH=32,
-  parameter BUFFER=1,
+  parameter FIFO_SIZE=1,
   parameter NUM_BUSES=2)
 (
-  input clk, input reset,
+  input clk, input reset, input clear,
   input [NUM_BUSES-1:0] in_set_stb, input [NUM_BUSES*AWIDTH-1:0] in_set_addr, input [NUM_BUSES*DWIDTH-1:0] in_set_data,
   output out_set_stb, output [AWIDTH-1:0] out_set_addr, output [DWIDTH-1:0] out_set_data, input ready
 );
@@ -24,10 +24,15 @@ module settings_bus_mux #(
     end
   endgenerate
 
-  axi_mux #(.PRIO(PRIO), .WIDTH(AWIDTH+DWIDTH), .BUFFER(BUFFER), .SIZE(NUM_BUSES))
+  axi_mux #(
+    .PRIO(PRIO),
+    .WIDTH(AWIDTH+DWIDTH),
+    .PRE_FIFO_SIZE($clog2(NUM_BUSES)),
+    .POST_FIFO_SIZE(FIFO_SIZE),
+    .SIZE(NUM_BUSES))
   axi_mux (
-    .clk(clk), .reset(reset), .clear(1'b0),
-    .i_tdata(i_tdata), .i_tlast(1'b0), .i_tvalid(in_set_stb), .i_tready(),
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata(i_tdata), .i_tlast({NUM_BUSES{1'b1}}), .i_tvalid(in_set_stb), .i_tready(),
     .o_tdata({out_set_addr,out_set_data}), .o_tlast(), .o_tvalid(out_set_stb), .o_tready(ready));
 
 endmodule
