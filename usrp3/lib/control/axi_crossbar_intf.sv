@@ -3,8 +3,8 @@
 //
 // Wraps AXI crossbar and exposes cvita_stream_t and settings_bus_t interfaces 
 
-`include "sim_cvita_lib.sv"
-`include "sim_set_rb_lib.sv"
+`include "sim_cvita_lib.svh"
+`include "sim_set_rb_lib.svh"
 
 module axi_crossbar_intf
 #(

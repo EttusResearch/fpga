@@ -4,8 +4,8 @@
 // Special NoC Block where the internal NoC Shell / AXI Wrapper interfaces are exposed via ports.
 // Created for use with RFNoC test benches.
 
-`include "sim_cvita_lib.sv"
-`include "sim_set_rb_lib.sv"
+`include "sim_cvita_lib.svh"
+`include "sim_set_rb_lib.svh"
 
 module noc_block_export_io
 #(
