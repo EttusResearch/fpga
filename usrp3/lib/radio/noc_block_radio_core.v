@@ -109,7 +109,7 @@ module noc_block_radio_core #(
   //
   ////////////////////////////////////////////////////////////
   // Radio response packet mux
-  axi_mux  #(.WIDTH(64), .BUFFER(1), .SIZE(NUM_RADIOS))
+  axi_mux  #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(NUM_RADIOS))
   axi_mux_cmd (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
