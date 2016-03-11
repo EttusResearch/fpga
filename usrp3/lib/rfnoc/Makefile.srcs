@@ -8,6 +8,7 @@
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 cmd_pkt_proc.v \
 cvita_hdr_parser.v \
+chdr_fifo_large.v \
 chdr_framer.v \
 chdr_deframer.v \
 noc_shell.v \

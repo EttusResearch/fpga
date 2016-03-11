@@ -23,11 +23,10 @@ module noc_input_port #(
   // Receive window / buffer
   wire [63:0] int_tdata;
   wire int_tlast, int_tvalid, int_tready;
-  axi_fifo_cascade #(.WIDTH(65), .SIZE(STR_SINK_FIFOSIZE)) axi_fifo_receive_window (
+  chdr_fifo_large #(.SIZE(STR_SINK_FIFOSIZE)) axi_fifo_receive_window (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({i_tlast,i_tdata}), .i_tvalid(i_tvalid), .i_tready(i_tready),
-    .o_tdata({int_tlast,int_tdata}), .o_tvalid(int_tvalid), .o_tready(int_tready),
-    .space(), .occupied());
+    .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+    .o_tdata(int_tdata), .o_tlast(int_tlast), .o_tvalid(int_tvalid), .o_tready(int_tready));
 
   // Flow control and error packet handling
   wire [63:0] fc_int_tdata, resp_int_tdata;
