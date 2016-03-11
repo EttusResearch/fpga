@@ -12,15 +12,13 @@ module x300_core (
    input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
    output [7:0] sen0, output sclk0, output mosi0, input miso0,
    output [2:0] radio_led0,
-   output reg [15:0] radio0_misc_out, input [15:0] radio0_misc_in,
-   output sync_dacs_radio0,
+   output reg [31:0] radio0_misc_out, input [31:0] radio0_misc_in,
    // Radio 1
    input [31:0] rx1, output [31:0] tx1,
    input [31:0] db1_gpio_in, output [31:0] db1_gpio_out, output [31:0] db1_gpio_ddr,
    output [7:0] sen1, output sclk1, output mosi1, input miso1,
    output [2:0] radio_led1,
-   output reg [15:0] radio1_misc_out, input [15:0] radio1_misc_in,
-   output sync_dacs_radio1,
+   output reg [31:0] radio1_misc_out, input [31:0] radio1_misc_in,
    // Radio shared misc
    inout db_scl,
    inout db_sda,
@@ -204,13 +202,6 @@ module x300_core (
    wire        r0_tx_tlast_bi, r0_tx_tlast_bo, r1_tx_tlast_bi, r1_tx_tlast_bo;
    wire        r0_tx_tvalid_bi, r0_tx_tvalid_bo, r1_tx_tvalid_bi, r1_tx_tvalid_bo;
    wire        r0_tx_tready_bi, r0_tx_tready_bo, r1_tx_tready_bi, r1_tx_tready_bo;
-
-   // Radio Misc outputs before pipeline.
-   wire [31:0]  misc_outs0, misc_outs1;
-   reg [15:0]  misc_ins0, misc_ins1;
-
-   // assign eth1_tx_tready = 1'b1;
-   //  assign eth1_rx_tvalid = 1'b0;
 
 `ifndef NO_DRAM_FIFOS
    //////////////////////////////////////////////////////////
@@ -459,93 +450,171 @@ module x300_core (
       // Debug
       .debug0(debug0), .debug1(debug1), .debug2(debug2));
 
+
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
 
-   localparam MSG_FIFO_SIZE    = 9;
-`ifndef NO_DRAM_FIFOS
-   localparam TX_PRE_FIFO_SIZE = 14;
-   localparam DATA_FIFO_SIZE   = 12;
-`else
-   localparam TX_PRE_FIFO_SIZE = 0;
-   localparam DATA_FIFO_SIZE   = 10;
-`endif
+   // Daughter board I/O
+   wire [31:0] leds[0:3];
+   wire [31:0] fp_gpio_r_in[0:3], fp_gpio_r_out[0:3], fp_gpio_r_ddr[0:3];
+   wire [31:0] db_gpio_in[0:3], db_gpio_out[0:3], db_gpio_ddr[0:3];
+   wire [31:0] misc_outs[0:3];
+   reg  [31:0] misc_ins[0:3];
+   wire [7:0]  sen[0:3];
+   wire        sclk[0:3], mosi[0:3], miso[0:3];
+
+   // Data
+   wire [31:0] rx_data_in[0:3], rx_data[0:3], tx_data[0:3], tx_data_out[0:3];
+   wire        rx_stb[0:3], tx_stb[0:3];
+   wire        ext_set_stb[0:3];
+   wire [7:0]  ext_set_addr[0:3];
+   wire [31:0] ext_set_data[0:3];
 
    //------------------------------------
-   // Radio 0
+   // Radio 0,1 (XB Radio Port 0)
    //------------------------------------
-`ifndef DELETE_DSP0
- `define DELETE_DSP0 0
-`endif
-
-   radio #(
-      .CHIPSCOPE(0),
-      .DELETE_DSP(`DELETE_DSP0),
-      .RADIO_NUM(0),
-      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
-      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
-      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
-   ) radio0 (
-      .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx0), .tx(tx0), 
-      .db_gpio_in(db0_gpio_in), .db_gpio_out(db0_gpio_out), .db_gpio_ddr(db0_gpio_ddr),
-      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
-      .sen(sen0), .sclk(sclk0), .mosi(mosi0), .miso(miso0),
-      .misc_outs(misc_outs0), .misc_ins({16'h0, misc_ins0}), .leds(radio_led0),
+   noc_block_radio_core #(
+      .NUM_RADIOS(2),
+      .STR_SINK_FIFOSIZE(15),
+      .MTU(13),
+      .USE_SPI_CLK(1))
+   noc_block_radio_core_i0 (
+      //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
-      .in_tdata(r0i_tdata), .in_tlast(r0i_tlast), .in_tvalid(r0i_tvalid), .in_tready(r0i_tready),
-      .out_tdata(r0o_tdata), .out_tlast(r0o_tlast), .out_tvalid(r0o_tvalid), .out_tready(r0o_tready),
-      .tx_tdata_bo(r0_tx_tdata_bo), .tx_tlast_bo(r0_tx_tlast_bo),
-      .tx_tvalid_bo(r0_tx_tvalid_bo), .tx_tready_bo(r0_tx_tready_bo),
-      .tx_tdata_bi(r0_tx_tdata_bi), .tx_tlast_bi(r0_tx_tlast_bi),
-      .tx_tvalid_bi(r0_tx_tvalid_bi), .tx_tready_bi(r0_tx_tready_bi),
-      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio0),
+      .ce_clk(radio_clk), .ce_rst(radio_rst),
+      //AXIS data to/from crossbar
+      .i_tdata(r0i_tdata), .i_tlast(r0i_tlast), .i_tvalid(r0i_tvalid), .i_tready(r0i_tready),
+      .o_tdata(r0o_tdata), .o_tlast(r0o_tlast), .o_tvalid(r0o_tvalid), .o_tready(r0o_tready),
+      // Data ports connected to radio front end
+      .rx({rx_data[1],rx_data[0]}), .rx_stb({rx_stb[1],rx_stb[0]}),
+      .tx({tx_data[1],tx_data[0]}), .tx_stb({tx_stb[1],tx_stb[0]}),
+      // Ctrl ports connected to radio front end
+      .ext_set_stb({ext_set_stb[1],ext_set_stb[0]}), .ext_set_addr({ext_set_addr[1],ext_set_addr[0]}), .ext_set_data({ext_set_data[1],ext_set_data[0]}),
+      // Interfaces to front panel and daughter board
+      .pps(pps_rclk), .sync(time_sync_r),
+      .misc_ins({misc_ins[1], misc_ins[0]}), .misc_outs({misc_outs[1], misc_outs[0]}),
+      .fp_gpio_in({fp_gpio_r_in[1],fp_gpio_r_in[0]}), .fp_gpio_out({fp_gpio_r_out[1],fp_gpio_r_out[0]}), .fp_gpio_ddr({fp_gpio_r_ddr[1],fp_gpio_r_ddr[0]}),
+      .db_gpio_in({db_gpio_in[1],db_gpio_in[0]}), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr({db_gpio_ddr[1],db_gpio_ddr[0]}),
+      .leds({leds[1],leds[0]}),
+      .spi_clk(radio_clk), .spi_rst(radio_rst),
+      .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
+      //Debug
+      .debug()
+   );
+   
+   //------------------------------------
+   // Radio 2,3 (XB Radio Port 1)
+   //------------------------------------
+   noc_block_radio_core #(
+      .NUM_RADIOS(2),
+      .STR_SINK_FIFOSIZE(15),
+      .MTU(13),
+      .USE_SPI_CLK(1))
+   noc_block_radio_core_i1 (
+      //Clocks
+      .bus_clk(bus_clk), .bus_rst(bus_rst),
+      .ce_clk(radio_clk), .ce_rst(radio_rst),
+      //AXIS data to/from crossbar
+      .i_tdata(r1i_tdata), .i_tlast(r1i_tlast), .i_tvalid(r1i_tvalid), .i_tready(r1i_tready),
+      .o_tdata(r1o_tdata), .o_tlast(r1o_tlast), .o_tvalid(r1o_tvalid), .o_tready(r1o_tready),
+      // Ports connected to radio front end
+      .rx({rx_data[3],rx_data[2]}), .rx_stb({rx_stb[3],rx_stb[2]}),
+      .tx({tx_data[3],tx_data[2]}), .tx_stb({tx_stb[3],tx_stb[2]}),
+      // Ctrl ports connected to radio front end
+      .ext_set_stb({ext_set_stb[3],ext_set_stb[2]}), .ext_set_addr({ext_set_addr[3],ext_set_addr[2]}), .ext_set_data({ext_set_data[3],ext_set_data[2]}),
+      // Interfaces to front panel and daughter board
+      .pps(pps_rclk), .sync(time_sync_r),
+      .misc_ins({misc_ins[3], misc_ins[2]}), .misc_outs({misc_outs[3], misc_outs[2]}),
+      .fp_gpio_in({fp_gpio_r_in[3],fp_gpio_r_in[2]}), .fp_gpio_out({fp_gpio_r_out[3],fp_gpio_r_out[2]}), .fp_gpio_ddr({fp_gpio_r_ddr[3],fp_gpio_r_ddr[2]}),
+      .db_gpio_in({db_gpio_in[3],db_gpio_in[2]}), .db_gpio_out({db_gpio_out[3],db_gpio_out[2]}), .db_gpio_ddr({db_gpio_ddr[3],db_gpio_ddr[2]}),
+      .leds({leds[3],leds[2]}),
+      .spi_clk(radio_clk), .spi_rst(radio_rst),
+      .sen({sen[3],sen[2]}), .sclk({sclk[3],sclk[2]}), .mosi({mosi[3],mosi[2]}), .miso({miso[3],miso[2]}),
+      //Debug
       .debug()
    );
 
-   always @(posedge radio_clk) begin
-      radio0_misc_out <= misc_outs0[15:0];
-      misc_ins0       <= radio0_misc_in;
-   end
+   //------------------------------------
+   // Frontend Correction
+   //------------------------------------
+
+   localparam SET_TX_FE_BASE = 224;
+   localparam SET_RX_FE_BASE = 232;
+   genvar i;
+   generate for (i=0; i<4; i=i+1) begin
+      tx_frontend_gen3 #(
+         .SR_OFFSET_I(SET_TX_FE_BASE + 0), .SR_OFFSET_Q(SET_TX_FE_BASE + 1),.SR_MAG_CORRECTION(SET_TX_FE_BASE + 2),
+         .SR_PHASE_CORRECTION(SET_TX_FE_BASE + 3), .SR_MUX(SET_TX_FE_BASE + 4),
+         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0),
+         .DEVICE("7SERIES")
+      ) tx_fe_corr_i (
+         .clk(radio_clk), .reset(radio_rst),
+         .set_stb(ext_set_stb[i]), .set_addr(ext_set_addr[i]), .set_data(ext_set_data[i]),
+         .tx_stb(tx_stb[i]), .tx_i(tx_data[i][31:16]), .tx_q(tx_data[i][15:0]),
+         .dac_stb(), .dac_i(tx_data_out[i][31:16]), .dac_q(tx_data_out[i][15:0])
+      );
+
+      rx_frontend_gen3 #(
+         .SR_MAG_CORRECTION(SET_RX_FE_BASE + 0), .SR_PHASE_CORRECTION(SET_RX_FE_BASE + 1), .SR_OFFSET_I(SET_RX_FE_BASE + 2),
+         .SR_OFFSET_Q(SET_RX_FE_BASE + 3), .SR_IQ_MAPPING(SET_RX_FE_BASE + 4),
+         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0),
+         .DEVICE("7SERIES")
+      ) rx_fe_corr_i (
+         .clk(radio_clk), .reset(radio_rst),
+         .set_stb(ext_set_stb[i]), .set_addr(ext_set_addr[i]), .set_data(ext_set_data[i]),
+         .adc_stb(1'b1), .adc_i(rx_data_in[i][31:16]), .adc_q(rx_data_in[i][15:0]),
+         .rx_stb(rx_stb[i]), .rx_i(rx_data[i][31:16]), .rx_q(rx_data[i][15:0])
+      );
+   end endgenerate
 
    //------------------------------------
-   // Radio 1
+   // Radio to ADC,DAC and IO Mapping
    //------------------------------------
-`ifndef DELETE_DSP1
- `define DELETE_DSP1 0
-`endif
 
-   radio #(
-      .CHIPSCOPE(0),
-      .DELETE_DSP(`DELETE_DSP1),
-      .RADIO_NUM(1),
-      .TX_PRE_FIFO_SIZE(TX_PRE_FIFO_SIZE),
-      .DATA_FIFO_SIZE(DATA_FIFO_SIZE),
-      .MSG_FIFO_SIZE(MSG_FIFO_SIZE)
-   ) radio1 (
-      .radio_clk(radio_clk), .radio_rst(radio_rst),
-      .rx(rx1), .tx(tx1),
-      .db_gpio_in(db1_gpio_in), .db_gpio_out(db1_gpio_out), .db_gpio_ddr(db1_gpio_ddr),
-      .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(),
-      .sen(sen1), .sclk(sclk1), .mosi(mosi1), .miso(miso1),
-      .misc_outs(misc_outs1), .misc_ins({16'h0, misc_ins1}), .leds(radio_led1),
-      .bus_clk(bus_clk), .bus_rst(bus_rst),
-      .in_tdata(r1i_tdata), .in_tlast(r1i_tlast), .in_tvalid(r1i_tvalid), .in_tready(r1i_tready),
-      .out_tdata(r1o_tdata), .out_tlast(r1o_tlast), .out_tvalid(r1o_tvalid), .out_tready(r1o_tready),
-      .tx_tdata_bo(r1_tx_tdata_bo), .tx_tlast_bo(r1_tx_tlast_bo),
-      .tx_tvalid_bo(r1_tx_tvalid_bo), .tx_tready_bo(r1_tx_tready_bo),
-      .tx_tdata_bi(r1_tx_tdata_bi), .tx_tlast_bi(r1_tx_tlast_bi),
-      .tx_tvalid_bi(r1_tx_tvalid_bi), .tx_tready_bi(r1_tx_tready_bi),
-      .pps(pps_rclk), .time_sync(time_sync_r), .sync_dacs(sync_dacs_radio1),
-      .debug()
-   );
+   // Data
+   assign {rx_data_in[1], rx_data_in[0]} = {rx0, rx0};
+   assign {rx_data_in[3], rx_data_in[2]} = {rx1, rx1};
 
+   assign tx0 = tx_data_out[0];   //tx_data_out[1] unused
+   assign tx1 = tx_data_out[2];   //tx_data_out[3] unused
+   assign tx_stb[0] = 1'b1;
+   assign tx_stb[1] = 1'b0;
+   assign tx_stb[2] = 1'b1;
+   assign tx_stb[3] = 1'b0;
+   
+   //Daughter board GPIO
+   assign {db_gpio_in[1], db_gpio_in[0]} = {32'b0, db0_gpio_in};
+   assign {db_gpio_in[3], db_gpio_in[2]} = {32'b0, db1_gpio_in};
+   assign db0_gpio_out = db_gpio_out[0];  //db_gpio_out[1] unused
+   assign db1_gpio_out = db_gpio_out[2];  //db_gpio_out[3] unused
+   assign db0_gpio_ddr = db_gpio_ddr[0];  //db_gpio_ddr[1] unused
+   assign db1_gpio_ddr = db_gpio_ddr[2];  //db_gpio_out[3] unused
+
+   //Front-panel board GPIO
+   assign {fp_gpio_r_in[1], fp_gpio_r_in[0]} = {32'b0, fp_gpio_in};
+   assign {fp_gpio_r_in[3], fp_gpio_r_in[2]} = {32'b0, 32'b0};
+   assign fp_gpio_out = fp_gpio_r_out[0];  //fp_gpio_r_out[1,2,3] unused
+   assign fp_gpio_ddr = fp_gpio_r_ddr[0];  //fp_gpio_ddr[1,2,3] unused
+
+   //SPI
+   assign {sen0, sclk0, mosi0} = {sen[0], sclk[0], mosi[0]};   //*[1] unused
+   assign {miso[1], miso[0]}   = {1'b0, miso0};
+   assign {sen1, sclk1, mosi1} = {sen[2], sclk[2], mosi[2]};   //*[3] unused
+   assign {miso[3], miso[2]}   = {1'b0, miso1};
+   
+   //LEDs
+   assign radio_led0 = leds[0][2:0];    //Other other led bits unused in leds[0,1]
+   assign radio_led1 = leds[2][2:0];    //Other other led bits unused in leds[2,3]
+   
+   //Misc ins and outs
    always @(posedge radio_clk) begin
-      radio1_misc_out <= misc_outs1[15:0];
-      misc_ins1       <= radio1_misc_in;
+      radio0_misc_out   <= misc_outs[0];
+      radio1_misc_out   <= misc_outs[2];
+      misc_ins[0]       <= radio0_misc_in;
+      misc_ins[2]       <= radio1_misc_in;
    end
 
    /////////////////////////////////////////////////////////////////////////////////////////////
@@ -1053,163 +1122,6 @@ module x300_core (
       ddr3_running_radio_clk_pre <= ddr3_running;
       ddr3_running_radio_clk <= ddr3_running_radio_clk_pre;
    end
-
-
-`else //  `ifndef NO_DRAM_FIFOS
-
-   //
-   // Alternate smaller internal SRAM based FIFO's for Tx when DRAM not compiled into FPGA.
-   // Short FIFO's added for ease of timing closure since large FIFO's spread all over die.
-   //
-   wire [63:0] r0_tx_tdata_bos; wire r0_tx_tlast_bos, r0_tx_tvalid_bos, r0_tx_tready_bos;
-   wire [63:0] r0_tx_tdata_0; wire r0_tx_tlast_0, r0_tx_tvalid_0, r0_tx_tready_0;
-   wire [63:0] r0_tx_tdata_0s; wire r0_tx_tlast_0s, r0_tx_tvalid_0s, r0_tx_tready_0s;
-   wire [63:0] r0_tx_tdata_1; wire r0_tx_tlast_1, r0_tx_tvalid_1, r0_tx_tready_1;
-   wire [63:0] r0_tx_tdata_1s; wire r0_tx_tlast_1s, r0_tx_tvalid_1s, r0_tx_tready_1s;
-   wire [63:0] r0_tx_tdata_2; wire r0_tx_tlast_2, r0_tx_tvalid_2, r0_tx_tready_2;
-   wire [63:0] r0_tx_tdata_2s; wire r0_tx_tlast_2s, r0_tx_tvalid_2s, r0_tx_tready_2s;
-   wire [63:0] r0_tx_tdata_bis; wire r0_tx_tlast_bis, r0_tx_tvalid_bis, r0_tx_tready_bis;
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo0_bos
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_bo,r0_tx_tdata_bo}), .i_tvalid(r0_tx_tvalid_bo), .i_tready(r0_tx_tready_bo),
-      .o_tdata({r0_tx_tlast_bos,r0_tx_tdata_bos}), .o_tvalid(r0_tx_tvalid_bos), .o_tready(r0_tx_tready_bos),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-3)) tx_fifo0_0
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_bos,r0_tx_tdata_bos}), .i_tvalid(r0_tx_tvalid_bos), .i_tready(r0_tx_tready_bos),
-      .o_tdata({r0_tx_tlast_0,r0_tx_tdata_0}), .o_tvalid(r0_tx_tvalid_0), .o_tready(r0_tx_tready_0),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo0_0s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_0,r0_tx_tdata_0}), .i_tvalid(r0_tx_tvalid_0), .i_tready(r0_tx_tready_0),
-      .o_tdata({r0_tx_tlast_0s,r0_tx_tdata_0s}), .o_tvalid(r0_tx_tvalid_0s), .o_tready(r0_tx_tready_0s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-3)) tx_fifo0_1
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_0s,r0_tx_tdata_0s}), .i_tvalid(r0_tx_tvalid_0s), .i_tready(r0_tx_tready_0s),
-      .o_tdata({r0_tx_tlast_1,r0_tx_tdata_1}), .o_tvalid(r0_tx_tvalid_1), .o_tready(r0_tx_tready_1),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo0_1s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_1,r0_tx_tdata_1}), .i_tvalid(r0_tx_tvalid_1), .i_tready(r0_tx_tready_1),
-      .o_tdata({r0_tx_tlast_1s,r0_tx_tdata_1s}), .o_tvalid(r0_tx_tvalid_1s), .o_tready(r0_tx_tready_1s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_2
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_1s,r0_tx_tdata_1s}), .i_tvalid(r0_tx_tvalid_1s), .i_tready(r0_tx_tready_1s),
-      .o_tdata({r0_tx_tlast_2,r0_tx_tdata_2}), .o_tvalid(r0_tx_tvalid_2), .o_tready(r0_tx_tready_2),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo0_2s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_2,r0_tx_tdata_2}), .i_tvalid(r0_tx_tvalid_2), .i_tready(r0_tx_tready_2),
-      .o_tdata({r0_tx_tlast_2s,r0_tx_tdata_2s}), .o_tvalid(r0_tx_tvalid_2s), .o_tready(r0_tx_tready_2s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo0_3
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_2s,r0_tx_tdata_2s}), .i_tvalid(r0_tx_tvalid_2s), .i_tready(r0_tx_tready_2s),
-      .o_tdata({r0_tx_tlast_bis,r0_tx_tdata_bis}), .o_tvalid(r0_tx_tvalid_bis), .o_tready(r0_tx_tready_bis),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo0_bis
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r0_tx_tlast_bis,r0_tx_tdata_bis}), .i_tvalid(r0_tx_tvalid_bis), .i_tready(r0_tx_tready_bis),
-      .o_tdata({r0_tx_tlast_bi,r0_tx_tdata_bi}), .o_tvalid(r0_tx_tvalid_bi), .o_tready(r0_tx_tready_bi),
-      .space(), .occupied()
-      );
-
-   assign dram_fifo0_rb_data = 32'h0;
-
-   wire [63:0] r1_tx_tdata_bos; wire r1_tx_tlast_bos, r1_tx_tvalid_bos, r1_tx_tready_bos;
-   wire [63:0] r1_tx_tdata_0; wire r1_tx_tlast_0, r1_tx_tvalid_0, r1_tx_tready_0;
-   wire [63:0] r1_tx_tdata_0s; wire r1_tx_tlast_0s, r1_tx_tvalid_0s, r1_tx_tready_0s;
-   wire [63:0] r1_tx_tdata_1; wire r1_tx_tlast_1, r1_tx_tvalid_1, r1_tx_tready_1;
-   wire [63:0] r1_tx_tdata_1s; wire r1_tx_tlast_1s, r1_tx_tvalid_1s, r1_tx_tready_1s;
-   wire [63:0] r1_tx_tdata_2; wire r1_tx_tlast_2, r1_tx_tvalid_2, r1_tx_tready_2;
-   wire [63:0] r1_tx_tdata_2s; wire r1_tx_tlast_2s, r1_tx_tvalid_2s, r1_tx_tready_2s;
-   wire [63:0] r1_tx_tdata_bis; wire r1_tx_tlast_bis, r1_tx_tvalid_bis, r1_tx_tready_bis;
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo1_bos
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_bo,r1_tx_tdata_bo}), .i_tvalid(r1_tx_tvalid_bo), .i_tready(r1_tx_tready_bo),
-      .o_tdata({r1_tx_tlast_bos,r1_tx_tdata_bos}), .o_tvalid(r1_tx_tvalid_bos), .o_tready(r1_tx_tready_bos),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-3)) tx_fifo1_0
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_bos,r1_tx_tdata_bos}), .i_tvalid(r1_tx_tvalid_bos), .i_tready(r1_tx_tready_bos),
-      .o_tdata({r1_tx_tlast_0,r1_tx_tdata_0}), .o_tvalid(r1_tx_tvalid_0), .o_tready(r1_tx_tready_0),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo1_0s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_0,r1_tx_tdata_0}), .i_tvalid(r1_tx_tvalid_0), .i_tready(r1_tx_tready_0),
-      .o_tdata({r1_tx_tlast_0s,r1_tx_tdata_0s}), .o_tvalid(r1_tx_tvalid_0s), .o_tready(r1_tx_tready_0s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-3)) tx_fifo1_1
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_0s,r1_tx_tdata_0s}), .i_tvalid(r1_tx_tvalid_0s), .i_tready(r1_tx_tready_0s),
-      .o_tdata({r1_tx_tlast_1,r1_tx_tdata_1}), .o_tvalid(r1_tx_tvalid_1), .o_tready(r1_tx_tready_1),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo1_1s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_1,r1_tx_tdata_1}), .i_tvalid(r1_tx_tvalid_1), .i_tready(r1_tx_tready_1),
-      .o_tdata({r1_tx_tlast_1s,r1_tx_tdata_1s}), .o_tvalid(r1_tx_tvalid_1s), .o_tready(r1_tx_tready_1s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_2
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_1s,r1_tx_tdata_1s}), .i_tvalid(r1_tx_tvalid_1s), .i_tready(r1_tx_tready_1s),
-      .o_tdata({r1_tx_tlast_2,r1_tx_tdata_2}), .o_tvalid(r1_tx_tvalid_2), .o_tready(r1_tx_tready_2),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo1_2s
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_2,r1_tx_tdata_2}), .i_tvalid(r1_tx_tvalid_2), .i_tready(r1_tx_tready_2),
-      .o_tdata({r1_tx_tlast_2s,r1_tx_tdata_2s}), .o_tvalid(r1_tx_tvalid_2s), .o_tready(r1_tx_tready_2s),
-      .space(), .occupied()
-      );
-
-   axi_fifo #(.WIDTH(65), .SIZE(`SRAM_FIFO_SIZE-2)) tx_fifo1_3
-     (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_2s,r1_tx_tdata_2s}), .i_tvalid(r1_tx_tvalid_2s), .i_tready(r1_tx_tready_2s),
-      .o_tdata({r1_tx_tlast_bis,r1_tx_tdata_bis}), .o_tvalid(r1_tx_tvalid_bis), .o_tready(r1_tx_tready_bis),
-      .space(), .occupied());
-
-   axi_fifo_short #(.WIDTH(65)) tx_fifo1_bis
-     (
-      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({r1_tx_tlast_bis,r1_tx_tdata_bis}), .i_tvalid(r1_tx_tvalid_bis), .i_tready(r1_tx_tready_bis),
-      .o_tdata({r1_tx_tlast_bi,r1_tx_tdata_bi}), .o_tvalid(r1_tx_tvalid_bi), .o_tready(r1_tx_tready_bi),
-      .space(), .occupied()
-      );
-
-   assign dram_fifo1_rb_data = 32'h0;
 
 `endif //  `ifndef NO_DRAM_FIFOS
 

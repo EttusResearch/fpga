@@ -7,7 +7,7 @@ module rx_frontend_gen3 #(
   parameter SR_PHASE_CORRECTION = 1,
   parameter SR_OFFSET_I = 2,
   parameter SR_OFFSET_Q = 3,
-  parameter SR_SWAP_IQ = 4,
+  parameter SR_IQ_MAPPING = 4,
   parameter BYPASS_DC_OFFSET_CORR = 0,
   parameter BYPASS_IQ_COMP = 0,
   parameter DEVICE = "7SERIES"
@@ -22,6 +22,9 @@ module rx_frontend_gen3 #(
   wire               swap_iq;
   wire               invert_i;
   wire               invert_q;
+  wire               hetmode;
+  wire               bypass_all;
+  wire [1:0]         iq_map_reserved;
   wire [17:0]        scale_factor;
   wire [17:0]        mag_corr, phase_corr;
 
@@ -33,6 +36,7 @@ module rx_frontend_gen3 #(
   reg  [23:0]        adc_i_ofs_dly, adc_q_ofs_dly;
   reg                adc_mux_stb;
   reg  [15:0]        adc_i_mux, adc_q_mux;
+  wire [15:0]        rx_i_out, rx_q_out;
 
   /********************************************************
   ** Settings Bus Registers
@@ -45,9 +49,9 @@ module rx_frontend_gen3 #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(phase_corr),.changed());
 
-  setting_reg #(.my_addr(SR_SWAP_IQ), .width(4)) sr_mux_sel (
+  setting_reg #(.my_addr(SR_IQ_MAPPING), .width(8)) sr_mux_sel (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-    .in(set_data),.out({invert_i,invert_q,realmode,swap_iq}),.changed());
+    .in(set_data),.out({bypass_all,iq_map_reserved,hetmode,invert_i,invert_q,realmode,swap_iq}),.changed());
 
   /********************************************************
   ** DSP
@@ -66,7 +70,7 @@ module rx_frontend_gen3 #(
   
   // DC offset correction
   generate
-    if (BYPASS_DC_OFFSET_CORR == 1) begin
+    if (BYPASS_DC_OFFSET_CORR == 0) begin
       rx_dcoffset #(.WIDTH(24),.ADDR(SR_OFFSET_I)) rx_dcoffset_i (
         .clk(clk),.rst(reset),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
         .in_stb(adc_mux_stb),.in({adc_i_mux,8'd0}),
@@ -84,7 +88,7 @@ module rx_frontend_gen3 #(
 
   // I/Q compensation
   generate
-    if (BYPASS_IQ_COMP == 1) begin
+    if (BYPASS_IQ_COMP == 0) begin
 
       MULT_MACRO #(
         .DEVICE(DEVICE), .LATENCY(1),
@@ -134,8 +138,11 @@ module rx_frontend_gen3 #(
 
   // Round to short complex (sc16)
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_i (
-    .clk(clk),.reset(reset), .in(adc_i_comp),.strobe_in(adc_comp_stb), .out(rx_i), .strobe_out(rx_stb));
+    .clk(clk),.reset(reset), .in(adc_i_comp),.strobe_in(adc_comp_stb), .out(rx_i_out), .strobe_out(rx_stb));
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_q (
-    .clk(clk),.reset(reset), .in(adc_q_comp),.strobe_in(adc_comp_stb), .out(rx_q), .strobe_out());
+    .clk(clk),.reset(reset), .in(adc_q_comp),.strobe_in(adc_comp_stb), .out(rx_q_out), .strobe_out());
+    
+  assign rx_i = bypass_all ? adc_i : rx_i_out;
+  assign rx_q = bypass_all ? adc_q : rx_q_out;
 
 endmodule

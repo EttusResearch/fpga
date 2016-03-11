@@ -58,7 +58,7 @@ module tx_frontend_gen3 #(
   ********************************************************/
   // I/Q compensation with option to bypass
   generate
-    if (BYPASS_IQ_COMP == 1) begin
+    if (BYPASS_IQ_COMP == 0) begin
 
       MULT_MACRO #(
         .DEVICE(DEVICE), .LATENCY(1),
@@ -110,7 +110,7 @@ module tx_frontend_gen3 #(
 
   // DC offset correction
   generate
-    if (BYPASS_DC_OFFSET_CORR == 1) begin
+    if (BYPASS_DC_OFFSET_CORR == 0) begin
       add2_and_clip_reg #(.WIDTH(24)) add_dco_i (
         .clk(clk), .rst(reset), .in1(i_dco), .in2(tx_i_comp), .strobe_in(tx_comp_stb), .sum(tx_i_ofs), .strobe_out(tx_ofs_stb));
       add2_and_clip_reg #(.WIDTH(24)) add_dco_q (

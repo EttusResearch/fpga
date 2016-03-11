@@ -334,7 +334,6 @@ module x300
    por_gen por_gen(.clk(bus_clk), .reset_out(global_rst));
 
    //////////////////////////////////////////////////////////////////////
-   wire sync_dacs_radio0, sync_dacs_radio1;
    wire [31:0] rx0, rx1;
    wire [31:0] tx0, tx1;
    wire        sclk0, mosi0, miso0, sclk1, mosi1, miso1;
@@ -495,8 +494,8 @@ module x300
           (~DB1_DAC_SEN & db_dac_miso);
 
 
-   wire [15:0] radio0_misc_out, radio1_misc_out;
-   wire [15:0] radio0_misc_in, radio1_misc_in;
+   wire [31:0] radio0_misc_out, radio1_misc_out;
+   wire [31:0] radio0_misc_in, radio1_misc_in;
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -565,7 +564,7 @@ module x300
       .tx_d_n({DB0_DAC_D7_N,DB0_DAC_D6_N,DB0_DAC_D5_N,DB0_DAC_D4_N,DB0_DAC_D3_N,DB0_DAC_D2_N,DB0_DAC_D1_N,DB0_DAC_D0_N}),
       .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk), .tx_dci_clk(dac_dci_clk),
       .i(~tx0[31:16]), .q(~tx0[15:0]), // invert b/c Analog diff pairs are swapped for layout
-      .sync_dacs(sync_dacs_radio0|sync_dacs_radio1)
+      .sync_dacs(radio0_misc_out[10]|radio1_misc_out[10])
       );
 
 
@@ -578,7 +577,7 @@ module x300
       .tx_d_n({DB1_DAC_D7_N,DB1_DAC_D6_N,DB1_DAC_D5_N,DB1_DAC_D4_N,DB1_DAC_D3_N,DB1_DAC_D2_N,DB1_DAC_D1_N,DB1_DAC_D0_N}),
       .tx_clk_2x(radio_clk_2x), .tx_clk_1x(radio_clk), .tx_dci_clk(dac_dci_clk),
       .i(~tx1[31:16]), .q(~tx1[15:0]), // invert b/c Analog diff pairs are swapped for layout
-      .sync_dacs(sync_dacs_radio0|sync_dacs_radio1)
+      .sync_dacs(radio0_misc_out[10]|radio1_misc_out[10])
       );
 
 
@@ -1274,13 +1273,11 @@ module x300
       .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .sen0(sen0), .sclk0(sclk0), .mosi0(mosi0), .miso0(miso0),
       .radio_led0(led0), .radio0_misc_out(radio0_misc_out), .radio0_misc_in(radio0_misc_in),
-      .sync_dacs_radio0(sync_dacs_radio0),
       // Radio1 signals
       .rx1(rx1), .tx1(tx1),
       .db1_gpio_in(db1_gpio_in), .db1_gpio_out(db1_gpio_out), .db1_gpio_ddr(db1_gpio_ddr),
       .sen1(sen1), .sclk1(sclk1), .mosi1(mosi1), .miso1(miso1),
       .radio_led1(led1), .radio1_misc_out(radio1_misc_out), .radio1_misc_in(radio1_misc_in),
-      .sync_dacs_radio1(sync_dacs_radio1),
       // I2C bus
       .db_scl(DB_SCL), .db_sda(DB_SDA),
       // External clock gen
