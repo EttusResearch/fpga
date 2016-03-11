@@ -126,7 +126,7 @@ module noc_shell
    genvar k;
    generate
      // Demux command packets to each block port's command packet processor
-     axi_demux #(.WIDTH(64), .SIZE(INPUT_PORTS)) axi_demux (
+     axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
        .clk(clk), .reset(reset), .clear(1'b0),
        .header(cmd_header), .dest(cmd_header[3:0]),
        .i_tdata(cmdin_tdata), .i_tlast(cmdin_tlast), .i_tvalid(cmdin_tvalid), .i_tready(cmdin_tready),
@@ -261,7 +261,7 @@ module noc_shell
          .clk(clk), .reset(reset), .clear(1'b0),
          .i_tdata(dataout_ports_tdata), .i_tlast(dataout_ports_tlast), .i_tvalid(dataout_ports_tvalid), .i_tready(dataout_ports_tready),
          .o_tdata(dataout_tdata), .o_tlast(dataout_tlast), .o_tvalid(dataout_tvalid), .o_tready(dataout_tready));
-       axi_demux #(.WIDTH(64), .SIZE(OUTPUT_PORTS)) axi_demux (
+       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_demux (
          .clk(clk), .reset(reset), .clear(1'b0),
          .header(header_fcin), .dest(header_fcin[3:0]),
          .i_tdata(fcin_tdata), .i_tlast(fcin_tlast), .i_tvalid(fcin_tvalid), .i_tready(fcin_tready),
@@ -313,7 +313,7 @@ module noc_shell
            .fc_tdata(fcout_ports_tdata[64*j+63:64*j]), .fc_tlast(fcout_ports_tlast[j]),
            .fc_tvalid(fcout_ports_tvalid[j]), .fc_tready(fcout_ports_tready[j]));
        end
-       axi_demux #(.WIDTH(64), .SIZE(INPUT_PORTS)) axi_demux (
+       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
          .clk(clk), .reset(reset), .clear(1'b0),
          .header(header_datain), .dest(header_datain[3:0]),
          .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
