@@ -94,4 +94,6 @@ fosphor/axi_logpwr.v \
 noc_block_logpwr.v \
 noc_block_fosphor.v \
 noc_block_moving_avg.v \
+cvita_hdr_encoder.v \
+cvita_hdr_decoder.v \
 ))
