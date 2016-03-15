@@ -46,7 +46,7 @@ module noc_input_port #(
     .fc_tdata(fc_int_tdata), .fc_tlast(fc_int_tlast), .fc_tvalid(fc_int_tvalid), .fc_tready(fc_int_tready),
     .resp_tdata(resp_int_tdata), .resp_tlast(resp_int_tlast), .resp_tvalid(resp_int_tvalid), .resp_tready(resp_int_tready));
 
-  axi_mux #(.PRIO(0), .WIDTH(64), .BUFFER(0), .SIZE(2)) axi_mux (
+  axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(2)) axi_mux (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({fc_int_tdata, resp_int_tdata}), .i_tlast({fc_int_tlast, resp_int_tlast}),
     .i_tvalid({fc_int_tvalid, resp_int_tvalid}), .i_tready({fc_int_tready, resp_int_tready}),
