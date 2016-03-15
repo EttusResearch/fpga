@@ -14,7 +14,7 @@ module rx_control_gen3 #(
   parameter SR_RX_CTRL_TIME_LO = 2,     // Command execute time (low word)
   parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
   parameter SR_RX_CTRL_MAXLEN = 4,      // Packet length
-  parameter SR_RX_CTRL_CLEAR_CMDS = 5   // Packet length
+  parameter SR_RX_CTRL_CLEAR_CMDS = 5   // Clear command FIFO
 )(
   input clk, input reset,
   input clear, // Resets state machine and clear output FIFO.
@@ -22,7 +22,7 @@ module rx_control_gen3 #(
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
   output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
-  // Error packets
+  // Error packets, Note: Currently unused as error packets must come inline with data.
   output reg [63:0] resp_tdata, output reg [127:0] resp_tuser, output reg resp_tlast, output reg resp_tvalid, input resp_tready,
   // From radio frontend
   output run, input [31:0] sample, input strobe
