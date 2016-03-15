@@ -91,6 +91,12 @@ module cmd_pkt_proc #(
   wire is_cmd_pkt = pkt_type == 2'b10;
   reg is_long_cmd_pkt;
 
+  wire now, late;
+  wire go = now | late;
+  time_compare time_compare (
+    .clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(pkt_vita_time),
+    .now(now), .early(), .late(late), .too_early());
+
   reg [3:0] state;
   localparam S_CMD_HEAD         = 4'd0;
   localparam S_CMD_TIME         = 4'd1;
@@ -113,11 +119,6 @@ module cmd_pkt_proc #(
   reg [63:0] rb_data_hold;
   integer k;
 
-  reg [63:0] pkt_vita_time_minus2;
-  always @(posedge clk) begin
-    pkt_vita_time_minus2 <= pkt_vita_time - 2'd2;
-  end
-
   // State machine
   always @(posedge clk) begin
     if (reset) begin
@@ -137,6 +138,7 @@ module cmd_pkt_proc #(
       is_long_cmd_pkt <= 1'b0;
     end else begin
       case (state)
+        // Wait for packet header to arrive
         S_CMD_HEAD : begin
           int_tready      <= 1'b1;
           resp_tvalid     <= 1'b0;
@@ -160,6 +162,7 @@ module cmd_pkt_proc #(
           end
         end
 
+        // Consume packet time
         S_CMD_TIME : begin
           if (int_tvalid & int_tready) begin
             if (int_tlast) begin
@@ -167,31 +170,22 @@ module cmd_pkt_proc #(
               int_tready   <= 1'b0;
               state        <= S_DROP;
             end else begin
-              set_time     <= pkt_vita_time;
-              if (USE_TIME) begin
-                int_tready <= 1'b0;
-                state      <= S_CMD_TIMED_DATA;
-              end else begin
-                int_tready <= 1'b1;
-                state      <= S_CMD_DATA;
-              end
+              int_tready <= 1'b0;
+              state      <= S_CMD_DATA;
             end
           end
         end
 
-        S_CMD_TIMED_DATA : begin
-          // Offset vita time by 2 to account for register delays
-          if (vita_time >= pkt_vita_time_minus2) begin
-            int_tready <= 1'b1;
-            state      <= S_CMD_DATA;
-          end
-        end
-
+        // Write to settings bus using addr & data from packet payload.
+        // If timed, wait in this state until time to 'go'.
+        // Note: Output of timed settings bus transactions will be delayed by
+        //       one clock cycle due to registered outputs.
         S_CMD_DATA : begin
-          if (int_tvalid & int_tready) begin
+          if (int_tvalid & (~USE_TIME[0] | (USE_TIME[0] & go))) begin
             is_long_cmd_pkt <= ~int_tlast;
             set_addr        <= int_tdata[SR_AWIDTH-1+32:32];
             set_data        <= int_tdata[SR_DWIDTH-1:0];
+            set_time        <= pkt_vita_time;
             // Update rb_addr on same clock cycle as asserting set_stb
             if (set_rb_addr) begin
               rb_addr       <= int_tdata[RB_AWIDTH-1:0];
@@ -200,7 +194,7 @@ module cmd_pkt_proc #(
             end
             set_stb         <= 1'b1;
             if (int_tlast) begin
-              int_tready    <= 1'b0;
+              int_tready    <= 1'b1;
               state         <= S_SET_WAIT;
             // Long command packet support
             end else begin
@@ -212,8 +206,9 @@ module cmd_pkt_proc #(
 
         // Wait a clock cycle to allow settings register to output
         S_SET_WAIT : begin
-          set_stb <= 1'b0;
-          state   <= S_READBACK;
+          int_tready <= 1'b0;
+          set_stb    <= 1'b0;
+          state      <= S_READBACK;
         end
 
         // Wait for readback data
@@ -231,7 +226,7 @@ module cmd_pkt_proc #(
         S_RESP_HEAD : begin
           if (resp_tvalid & resp_tready) begin
             resp_tvalid <= 1'b1;
-            if (USE_TIME) begin
+            if (USE_TIME[0]) begin
               resp_tlast <= 1'b0;
               resp_tdata <= resp_time;
               state      <= S_RESP_TIME;
