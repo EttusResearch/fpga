@@ -90,7 +90,7 @@ module noc_block_split_stream #(
   generate
     for (i=0; i<NUM_OUTPUTS; i=i+1) begin
       chdr_framer #(.SIZE(MTU)) chdr_framer (
-        .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[j]),
+        .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]),
         .i_tdata(out_tdata[i]), .i_tuser(out_tuser[i]), .i_tlast(out_tlast[i]), .i_tvalid(out_tvalid[i]), .i_tready(out_tready[i]),
         .o_tdata(str_src_tdata[i]), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
     end
