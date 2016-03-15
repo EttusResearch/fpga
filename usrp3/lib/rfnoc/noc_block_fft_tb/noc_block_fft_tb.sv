@@ -5,18 +5,20 @@
 `define SIM_RUNTIME_US 1000
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 2
-
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.vh"
 
 module noc_block_fft_tb();
   `TEST_BENCH_INIT("noc_block_fft_tb",`NUM_TEST_CASES,`NS_PER_TICK);
+  localparam BUS_CLK_PERIOD = $ceil(1e6/166.67e6);
+  localparam CE_CLK_PERIOD  = $ceil(1e6/200e6);
+  localparam NUM_CE         = 1;
   // Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst),
   // AXI crossbar, and test bench signals to interact with RFNoC
-  // (tb_cvita_*, tb_axis_*, tb_next_dst, etc).
-  `RFNOC_SIM_INIT(1,166.67,200);
+  // (tb_cvita_*, tb_axis_*, etc).
+  `RFNOC_SIM_INIT(NUM_CE, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   // Instantiate FFT RFNoC block
-  `RFNOC_ADD_BLOCK(noc_block_fft,0);
+  `RFNOC_ADD_BLOCK(noc_block_fft, 0 /* xbar port 0 */);
 
   // FFT specific settings
   localparam [15:0] FFT_SIZE = 256;

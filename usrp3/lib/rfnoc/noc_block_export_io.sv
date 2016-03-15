@@ -88,6 +88,10 @@ module noc_block_export_io
   localparam SR_NEXT_DST         = AXI_WRAPPER_BASE;
   localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
+  wire [127:0] s_axis_data_tuser = {2'd0 /* Data */, 1'b0 /* No time */, 1'b0 /* No EOB */,
+                                    28'd0 /* Seq num & length automatically handled */ ,
+                                    src_sid[15:0], next_dst_sid[15:0], 64'd0};
+
   axi_wrapper #(
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(1),
@@ -108,7 +112,7 @@ module noc_block_export_io
     .s_axis_data_tlast(s_axis_data.tlast),
     .s_axis_data_tvalid(s_axis_data.tvalid),
     .s_axis_data_tready(s_axis_data.tready),
-    .s_axis_data_tuser({32'd0,src_sid[15:0],next_dst_sid[15:0],64'd0}),
+    .s_axis_data_tuser(s_axis_data_tuser),
     .m_axis_config_tdata(m_axis_config.tdata),
     .m_axis_config_tlast(m_axis_config.tlast),
     .m_axis_config_tvalid(m_axis_config.tvalid),
