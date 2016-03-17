@@ -37,13 +37,13 @@ module db_control #(
 
   // Readback
   wire spi_ready_sync;
-  wire [7:0] spi_readback_sync;
+  wire [31:0] spi_readback_sync;
   wire [31:0] fp_gpio_readback, db_gpio_readback, leds_readback;
   always @* begin
     case(rb_addr)
       RB_MISC_IO  : {rb_stb, rb_data} <= {          1'b1, {misc_ins, misc_outs}};
       // Use spi ready (instead of a strobe) so delayed readbacks after a SPI transaction will work
-      RB_SPI      : {rb_stb, rb_data} <= {spi_ready_sync, {32'd0, 24'd0, spi_readback_sync}};
+      RB_SPI      : {rb_stb, rb_data} <= {spi_ready_sync, {32'd0, spi_readback_sync}};
       RB_LEDS     : {rb_stb, rb_data} <= {          1'b1, {32'd0, leds}};
       RB_DB_GPIO  : {rb_stb, rb_data} <= {          1'b1, {32'd0, db_gpio_readback}};
       RB_FP_GPIO  : {rb_stb, rb_data} <= {          1'b1, {32'd0, fp_gpio_readback}};
@@ -78,7 +78,7 @@ module db_control #(
   wire spi_set_stb, spi_ready;
   wire [7:0] spi_set_addr;
   wire [31:0] spi_set_data;
-  wire [7:0] spi_readback;
+  wire [31:0] spi_readback;
   wire spi_clk_int, spi_rst_int;
   genvar i;
   generate
@@ -91,17 +91,17 @@ module db_control #(
       settings_bus_crossclock (
         .clk_a(clk), .rst_a(reset),
         .set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
-        .rb_stb_a(), .rb_addr_a('d0), .rb_data_a(),
+        .rb_stb_a(), .rb_addr_a(8'd0), .rb_data_a(),
         .rb_ready(1'b1),
         .clk_b(spi_clk), .rst_b(spi_rst),
         .set_stb_b(spi_set_stb), .set_addr_b(spi_set_addr), .set_data_b(spi_set_data),
         .rb_stb_b(), .rb_addr_b(), .rb_data_b(),
         .set_ready(spi_ready));
 
-      synchronizer #(.STAGES(3), .INITIAL_VAL(1'b0)) synchronizer_spi_ready (
+      synchronizer #(.STAGES(2), .INITIAL_VAL(1'b0)) synchronizer_spi_ready (
         .clk(clk), .rst(reset), .in(spi_ready), .out(spi_ready_sync));
-      for (i = 0; i < 8; i = i + 1) begin
-        synchronizer #(.STAGES(3), .INITIAL_VAL(1'b0)) synchronizer_spi_readback (
+      for (i = 0; i < 32; i = i + 1) begin
+        synchronizer #(.STAGES(2), .INITIAL_VAL(1'b0)) synchronizer_spi_readback (
           .clk(clk), .rst(reset), .in(spi_readback[i]), .out(spi_readback_sync[i]));
       end
 
