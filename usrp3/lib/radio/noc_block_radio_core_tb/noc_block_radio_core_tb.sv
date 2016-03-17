@@ -15,10 +15,14 @@ module noc_block_radio_core_tb;
   ** RFNoC Initialization
   ********************************************************/
   `TEST_BENCH_INIT("noc_block_rado_core_tb",`NUM_TEST_CASES,`NS_PER_TICK);
-  `RFNOC_SIM_INIT(2 /* NUM CEs, Radio + Extra TB block */ , 20 /* 50 MHz bus_clk */, 20 /* 50 MHz ce_clk */);
-  `DEFINE_CLK(radio_clk, 16.27 /* 56 MHz */, 50);
+  localparam BUS_CLK_PERIOD   = $ceil(1e9/50e6);
+  localparam CE_CLK_PERIOD    = $ceil(1e9/50e6);
+  localparam RADIO_CLK_PERIOD = $ceil(1e9/56e6);
+  localparam NUM_CE           = 1;
+  localparam NUM_TB_STREAMS   = 2;
+  `RFNOC_SIM_INIT_EXTENDED(NUM_CE, NUM_TB_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
+  `DEFINE_CLK(radio_clk, RADIO_CLK_PERIOD, 50);
   `DEFINE_RESET(radio_rst, 0, 1000);
-  `RFNOC_ADD_TESTBENCH_BLOCK(tb2, 1 /* xbar port 1 */); // Add additional test bench block to test second radio core
 
   /********************************************************
   ** DUT, due to non-standard I/O we cannot use `RFNOC_ADD_BLOCK()
@@ -30,6 +34,7 @@ module noc_block_radio_core_tb;
   logic rx_stb, tx_stb, rx_stb_int;
   logic [32*NUM_RADIOS-1:0] rx, tx, rx_int;
   logic pps = 1'b0;
+  logic time_sync = 1'b0;
   logic [NUM_RADIOS-1:0] sync;
   logic [NUM_RADIOS*32-1:0] misc_ins = 'd0;
   logic [NUM_RADIOS*32-1:0] misc_outs, leds;
@@ -46,10 +51,11 @@ module noc_block_radio_core_tb;
     .ce_clk(radio_clk), .ce_rst(radio_rst),
     .i_tdata(xbar_m_cvita[0].tdata), .i_tlast(xbar_m_cvita[0].tlast), .i_tvalid(xbar_m_cvita[0].tvalid), .i_tready(xbar_m_cvita[0].tready),
     .o_tdata(xbar_s_cvita[0].tdata), .o_tlast(xbar_s_cvita[0].tlast), .o_tvalid(xbar_s_cvita[0].tvalid), .o_tready(xbar_s_cvita[0].tready),
+    .ext_set_stb(), .ext_set_addr(), .ext_set_data(),
     .rx_stb({NUM_RADIOS{rx_stb}}), .rx(rx),
     .tx_stb({NUM_RADIOS{tx_stb}}), .tx(tx),
-    .pps(pps),
-    .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
+    .pps(pps), .time_sync(time_sync), .sync(sync),
+    .misc_ins(misc_ins), .misc_outs(misc_outs),
     .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
     .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
     .leds(leds),
@@ -91,7 +97,6 @@ module noc_block_radio_core_tb;
   ********************************************************/
   localparam PKT_SIZE = 1024;   // In bytes
   localparam [31:0] TX_VERIF_WORD = 32'h12345678;
-  logic [11:0] data_seq_num[NUM_RADIOS-1:0] = '{NUM_RADIOS{12'd0}};
 
   task automatic tb_write_reg;
     input [15:0] dst_sid;
@@ -135,7 +140,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_send_radio_cmd_timed;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [7:0] addr;
     input [31:0] data;
     input [63:0] vita_time;
@@ -146,7 +151,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_send_radio_cmd;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [7:0] addr;
     input [31:0] data;
     output [63:0] response;
@@ -179,7 +184,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_read_radio_reg;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [7:0] addr;
     output [63:0] response;
     begin
@@ -188,7 +193,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_read_radio_core_reg;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [7:0] addr;
     output [63:0] response;
     begin
@@ -197,7 +202,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_send_tx_packet;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [15:0] num_samples;
     input has_time;
     input eob;
@@ -215,31 +220,23 @@ module noc_block_radio_core_tb;
         payload.push_back({16'(4*k), 16'(4*k+1), 16'(4*k+2), 16'(4*k+3)});
       end
       $display("Radio %2d: Send TX burst, %5d samples",radio_num,num_samples);
-      if (radio_num == 0) begin
-        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seq_num[radio_num], length:{8 + 8*payload.size() + has_time*8},
-                src_sid:{sid_noc_block_tb+1}, dst_sid:{sid_noc_block_radio_core + radio_num}, timestamp:timestamp};
-        if (has_time) begin
-          tb_cvita_data.push_pkt({hdr[127:64],hdr[63:0],payload});
-        end else begin
-          tb_cvita_data.push_pkt({flatten_chdr_no_ts(hdr),payload});
-        end
-      $display("Radio %2d: TX burst sent",radio_num);
+      hdr = '{pkt_type:DATA, has_time:has_time, eob:eob,
+              seqno:0 /* Don't care, automatically handled in noc_block_tb */, 
+              length:{8 + 8*payload.size() + has_time*8},
+              src_sid:{sid_noc_block_tb + radio_num},
+              dst_sid:{sid_noc_block_radio_core + radio_num},
+              timestamp:timestamp};
+      if (has_time) begin
+        tb_cvita_data[radio_num].push_pkt({hdr[127:64],hdr[63:0],payload});
       end else begin
-        hdr = '{pkt_type:DATA, has_time:has_time, eob:eob, seqno:data_seq_num[radio_num], length:{8 + 8*payload.size() + has_time*8},
-                src_sid:{sid_noc_block_tb2+1}, dst_sid:{sid_noc_block_radio_core + radio_num}, timestamp:timestamp};
-        if (has_time) begin
-          tb2_cvita_data.push_pkt({hdr[127:64],hdr[63:0],payload});
-        end else begin
-          tb2_cvita_data.push_pkt({flatten_chdr_no_ts(hdr),payload});
-        end
+        tb_cvita_data[radio_num].push_pkt({flatten_chdr_no_ts(hdr),payload});
       end
-      // Increment sequence number
-      ++data_seq_num[radio_num];
+      $display("Radio %2d: TX burst sent",radio_num);
     end
   endtask
 
   task automatic tb_start_rx;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [15:0] num_samples;
     input chain_commands;
     input reload;
@@ -263,7 +260,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_start_rx_timed;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [15:0] num_samples;
     input chain_commands;
     input reload;
@@ -289,7 +286,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_stop_rx;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     begin
       $display("Radio %2d: Stop RX",radio_num);
       tb_send_radio_cmd(radio_num, SR_RX_CTRL_COMMAND,
@@ -326,7 +323,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_check_radio_resp;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input has_time;
     input eob;
     input [31:0] expected_resp_code;
@@ -338,7 +335,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_check_tx;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [15:0] num_samples;
     begin
       $display("Radio %2d: Checking TX output",radio_num);
@@ -366,7 +363,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_check_tx_burst;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     input [15:0] num_samples;
     begin
       $display("Radio %2d: Checking TX output",radio_num);
@@ -396,7 +393,7 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_check_tx_idle;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     begin
       // Check that output does not change
       $display("Radio %2d: Checking TX output",radio_num);
@@ -413,18 +410,14 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_flush_rx;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     begin
       cvita_hdr_t header;
       cvita_pkt_t response;
       integer pkt_cnt = 0;
       header.eob = 1'b0;
-      while (~header.eob) begin // radio_num == 0 ? tb_cvita_data.s_cvita.axis.tvalid : tb2_cvita_data.s_cvita.axis.tvalid) begin
-        if (radio_num == 0) begin
-          tb_cvita_data.pull_pkt(response);
-        end else begin
-          tb2_cvita_data.pull_pkt(response);
-        end
+      while (~header.eob) begin
+        tb_cvita_data[radio_num].pull_pkt(response);
         extract_chdr(response, header);
         pkt_cnt = pkt_cnt + 1;
       end
@@ -433,17 +426,13 @@ module noc_block_radio_core_tb;
   endtask
 
   task automatic tb_check_rx;
-    input [$clog2(NUM_RADIOS)-1:0] radio_num;
+    input integer radio_num;
     begin
       cvita_hdr_t header;
       cvita_pkt_t response;
       int payload_length = 0;
       $display("Radio %2d: Receiving RX packet", radio_num);
-      if (radio_num == 0) begin
-        tb_cvita_data.pull_pkt(response);
-      end else begin
-        tb2_cvita_data.pull_pkt(response);
-      end
+      tb_cvita_data[radio_num].pull_pkt(response);
       extract_chdr(response, header);
       $display("Radio %2d: Checking received RX packet", radio_num);
       for (int k = 1; k < response.size(); k = k + 1) begin
@@ -471,9 +460,6 @@ module noc_block_radio_core_tb;
     /* Initialization */
     rxtx_loopback = 0;
     set_rx = 0;
-    for (int i = 0; i < NUM_RADIOS; i++) begin
-      data_seq_num[i] = 0;
-    end
 
     /********************************************************
     ** Test 1 -- Reset
@@ -488,22 +474,15 @@ module noc_block_radio_core_tb;
     **           Check for correct NoC ID
     ********************************************************/
     `TEST_CASE_START("Setup RFNoC");
-    // Setup RFNoC connection: Test bench -> Radio Core 0 -> Test bench
-    // Note: We want to be able to specify the packet header, so we use block port 1
-    //       of the test bench block which corresponds to the tb_cvita_* signals.
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,1,noc_block_radio_core,0,PKT_SIZE);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_radio_core,0,noc_block_tb,1,PKT_SIZE);
-    // Setup RFNoC connection: Test bench 2 -> Radio Core 1 -> Test bench 2
-    // Note: We are hooking up the second radio core to an additional test bench
-    //       block (i.e. noc_block_export_io) that was added with 
-    //       `RFNOC_ADD_TESTBENCH_BLOCK() above.
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb2,1,noc_block_radio_core,1,PKT_SIZE);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_radio_core,1,noc_block_tb2,1,PKT_SIZE);
-
-    // Disable sequence error checks. Solves issues with inline overrun / late command 
-    // error packets causing sequence number gaps in rx data packets.
+    // For each radio, setup RFNoC connection: Test bench -> Radio Core -> Test bench
+    // - Test bench has one stream per radio channel (or technically noc_block_tb has one block port per stream)
+    for (int i = 0; i < NUM_RADIOS; i++) begin
+      `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,i,noc_block_radio_core,i,PKT_SIZE);
+      `RFNOC_CONNECT_BLOCK_PORT(noc_block_radio_core,i,noc_block_tb,i,PKT_SIZE);
+    end
 
     // Read NOC ID
+    $display("Read NOC ID");
     tb_read_radio_reg(0, RB_NOC_ID, noc_id);
     $display("Read NOC ID: %16x",noc_id);
     `ASSERT_FATAL(noc_id == noc_block_radio_core.NOC_ID, "Incorrect NOC ID");
@@ -632,8 +611,8 @@ module noc_block_radio_core_tb;
         tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b0101}, // Set continue on next packet & send error packets
                     resp);
-        // Erroneously increment sequence number 
-        data_seq_num[i] = data_seq_num[i] + 1;
+        // Forcibly reset expected RX sequence number which will cause a sequence number gap
+        tb_send_radio_cmd(i, SR_CLEAR_RX_FC, 0, resp);
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
         // Check for seqnum error packet
         tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
@@ -659,7 +638,7 @@ module noc_block_radio_core_tb;
         tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b1001}, // Set continue on next burst & send error packets
                     resp);
-        data_seq_num[i] = data_seq_num[i] + 1;
+        tb_send_radio_cmd(i, SR_CLEAR_RX_FC, 0, resp);
         tb_send_tx_packet(i,PKT_SIZE/4,0,0,0); // EOB specifically NOT set
         tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
       end
@@ -695,7 +674,7 @@ module noc_block_radio_core_tb;
         tb_send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b0011}, // Set always continue & send error packets
                     resp);
-        data_seq_num[i] = data_seq_num[i] + 1;
+        tb_send_radio_cmd(i, SR_CLEAR_RX_FC, 0, resp);
         tb_send_tx_packet(i,PKT_SIZE/4,0,1,0);
         // We expect to get two responses: Sequence number error and EOB ACK 
         tb_check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
@@ -778,7 +757,7 @@ module noc_block_radio_core_tb;
     for (int i = 0; i < num_radios; i++) begin
       tb_start_rx(i,PKT_SIZE/4,1,1);
       // Wait for an overflow
-      #1000000;
+      #(100*RADIO_CLK_PERIOD*PKT_SIZE/4);
       @(negedge ce_clk);
       // Check first RX packet to make sure it has not been corrupted
       tb_check_rx(i);

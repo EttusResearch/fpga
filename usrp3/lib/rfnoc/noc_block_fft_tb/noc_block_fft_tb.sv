@@ -10,8 +10,8 @@
 
 module noc_block_fft_tb();
   `TEST_BENCH_INIT("noc_block_fft_tb",`NUM_TEST_CASES,`NS_PER_TICK);
-  localparam BUS_CLK_PERIOD = $ceil(1e6/166.67e6);
-  localparam CE_CLK_PERIOD  = $ceil(1e6/200e6);
+  localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
+  localparam CE_CLK_PERIOD  = $ceil(1e9/200e6);
   localparam NUM_CE         = 1;
   // Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst),
   // AXI crossbar, and test bench signals to interact with RFNoC

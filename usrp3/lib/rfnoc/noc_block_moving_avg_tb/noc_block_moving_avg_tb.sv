@@ -13,7 +13,10 @@
 
 module noc_block_moving_avg_tb;
   `TEST_BENCH_INIT("noc_block_moving_avg_tb", `NUM_TEST_CASES, `NS_PER_TICK);
-  `RFNOC_SIM_INIT(1, 166.67, 200);
+  localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
+  localparam CE_CLK_PERIOD  = $ceil(1e9/200e6);
+  localparam NUM_CE         = 1;
+  `RFNOC_SIM_INIT(NUM_CE, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   `RFNOC_ADD_BLOCK(noc_block_moving_avg, 0);
 
   localparam PACKET_SIZE = 16;
