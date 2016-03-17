@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research LLC
 //
+`ifndef INCLUDED_SIM_AXIS_LIB
+`define INCLUDED_SIM_AXIS_LIB
 
 interface axis_t #(parameter DWIDTH = 32)(input clk);
   logic [DWIDTH-1:0] tdata;
@@ -28,7 +30,7 @@ class axis_master #(parameter DWIDTH = 32);
 
   function new(virtual axis_t #(.DWIDTH(DWIDTH)) axis);
     this.axis = axis;
-    this.axis.tdata = 'd0;
+    this.axis.tdata = {DWIDTH{1'b0}};
     this.axis.tvalid = 1'b0;
     this.axis.tlast = 1'b0;
   endfunction
@@ -231,3 +233,5 @@ class axis_bus #(parameter DWIDTH = 32);
   endtask
 
 endclass
+
+`endif

@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research LLC
 //
+`ifndef INCLUDED_SIM_CVITA_LIB
+`define INCLUDED_SIM_CVITA_LIB
 
 `include "sim_axis_lib.svh"
 
@@ -367,3 +369,5 @@ class cvita_bus #(parameter DWIDTH = 64);
   endtask
 
 endclass
+
+`endif
