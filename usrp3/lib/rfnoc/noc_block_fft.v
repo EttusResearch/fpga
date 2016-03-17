@@ -1,5 +1,5 @@
 //
-// Copyright 2014-2015 Ettus Research LLC
+// Copyright 2014-2016 Ettus Research
 //
 
 module noc_block_fft #(
@@ -47,7 +47,7 @@ module noc_block_fft #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -56,7 +56,9 @@ module noc_block_fft #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
+    // Misc
+    .vita_time(64'd0), .clear_tx_seqnum(clear_tx_seqnum),
+    .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   ////////////////////////////////////////////////////////////
@@ -168,7 +170,7 @@ module noc_block_fft #(
   axi_setting_reg #(
     .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH($clog2(MAX_FFT_SIZE_LOG2)))
   sr_fft_size_log2 (
-    .clk(ce_clk), .reset(ce_rst),
+    .clk(ce_clk), .reset(ce_rst), .error_stb(),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(fft_size_log2_tdata), .o_tlast(), .o_tvalid(fft_size_log2_tvalid), .o_tready(fft_size_log2_tready));
 
@@ -185,7 +187,14 @@ module noc_block_fft #(
     .m_axis_data_tuser(fft_data_o_tuser), // FFT index
     .s_axis_config_tdata(m_axis_config_tdata[23:0]),
     .s_axis_config_tvalid(m_axis_config_tvalid),
-    .s_axis_config_tready(m_axis_config_tready));
+    .s_axis_config_tready(m_axis_config_tready),
+    // Unused
+    .event_frame_started(),
+    .event_tlast_unexpected(),
+    .event_tlast_missing(),
+    .event_status_channel_halt(),
+    .event_data_in_channel_halt(),
+    .event_data_out_channel_halt());
 
   // Mux control signals
   assign fft_shift_o_tready     = (magnitude_out == MAG_OUT)    ? fft_mag_i_tready         :
