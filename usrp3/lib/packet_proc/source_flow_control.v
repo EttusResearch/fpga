@@ -1,10 +1,10 @@
-
-// source_flow_control.v
+//
+// Copyright 2014-2016 Ettus Research
 //
 //  This block passes the in_* AXI port to the out_* AXI port only when it has
-//   enough flow control credits.  Data is held when there are not enough credits.
+//  enough flow control credits. Data is held when there are not enough credits.
 //  Credits are replenished with extension context packets which update the 
-//   last_consumed packet register.  Max credits are controlled by settings regs.
+//  last_consumed packet register. Max credits are controlled by settings regs.
 //  The 2nd line of the packet contains the sequence number in the low 12 bits.
 //  These packets should not have a time value, but if they do it will be ignored.
 
