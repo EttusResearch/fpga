@@ -22,7 +22,7 @@ module noc_block_radio_core #(
   input  [NUM_RADIOS*32-1:0] rx, input [NUM_RADIOS-1:0] rx_stb,
   output [NUM_RADIOS*32-1:0] tx, input [NUM_RADIOS-1:0] tx_stb,
   // Interfaces to front panel and daughter board
-  input pps, output [NUM_RADIOS-1:0] sync,
+  input pps, input time_sync, output [NUM_RADIOS-1:0] sync,
   input [NUM_RADIOS*32-1:0] misc_ins, output [NUM_RADIOS*32-1:0] misc_outs,
   input [NUM_RADIOS*32-1:0] fp_gpio_in, output [NUM_RADIOS*32-1:0] fp_gpio_out, output [NUM_RADIOS*32-1:0] fp_gpio_ddr,
   input [NUM_RADIOS*32-1:0] db_gpio_in, output [NUM_RADIOS*32-1:0] db_gpio_out, output [NUM_RADIOS*32-1:0] db_gpio_ddr,
@@ -124,7 +124,7 @@ module noc_block_radio_core #(
     .DWIDTH(32),
     .NUM_BUSES(NUM_RADIOS))
   settings_bus_mux (
-    .clk(ce_clk), .reset(ce_rst),
+    .clk(ce_clk), .reset(ce_rst), .clear(|clear_tx_seqnum),
     .in_set_stb(set_stb), .in_set_addr(set_addr), .in_set_data(set_data),
     .out_set_stb(set_stb_mux), .out_set_addr(set_addr_mux), .out_set_data(set_data_mux), .ready(1'b1));
 
@@ -136,7 +136,7 @@ module noc_block_radio_core #(
     .SR_TIME_LO(SR_TIME_LO),
     .SR_TIME_CTRL(SR_TIME_CTRL))
   timekeeper (
-    .clk(ce_clk), .reset(ce_rst), .pps(pps), .strobe(rx_stb),
+    .clk(ce_clk), .reset(ce_rst), .pps(pps), .sync(time_sync), .strobe(rx_stb[0]),
     .set_stb(set_stb_mux), .set_addr(set_addr_mux), .set_data(set_data_mux),
     .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
