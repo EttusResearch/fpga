@@ -290,7 +290,7 @@ module noc_shell
          .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
        noc_input_port (
          .clk(clk), .reset(reset), .clear(clear_rx_fc),
-         .resp_sid({src_sid,resp_dst_sid}),
+         .resp_sid({src_sid,resp_in_dst_sid}),
          .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
          .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
          .o_tdata(str_sink_tdata), .o_tlast(str_sink_tlast), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
