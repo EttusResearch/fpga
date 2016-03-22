@@ -473,7 +473,7 @@ module e300
   reset_sync radio_rst_sync
   (
     .clk(radio_clk),
-    .reset_in(bus_rst | codec_arst),
+    .reset_in(bus_rst),
     .reset_out(radio_rst)
   );
 
