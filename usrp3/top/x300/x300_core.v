@@ -477,6 +477,7 @@ module x300_core (
    // Radio 0,1 (XB Radio Port 0)
    //------------------------------------
    noc_block_radio_core #(
+      .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_RADIOS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
@@ -509,6 +510,7 @@ module x300_core (
    // Radio 2,3 (XB Radio Port 1)
    //------------------------------------
    noc_block_radio_core #(
+      .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_RADIOS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
