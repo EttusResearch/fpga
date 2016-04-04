@@ -4,128 +4,120 @@
 `ifndef INCLUDED_SIM_SET_RB_LIB
 `define INCLUDED_SIM_SET_RB_LIB
 
-interface settings_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 32)(input clk);
-  logic               stb;
-  logic [AWIDTH-1:0]  addr;
-  logic [DWIDTH-1:0]  data;
-
-  modport master (output stb, output addr, output data);
-  modport slave (input stb, input addr, input data);
-
-endinterface
-
-interface readback_bus_t #(parameter AWIDTH = 8, parameter DWIDTH = 64)(input clk);
-  logic               stb;
-  logic [AWIDTH-1:0]  addr;
-  logic [DWIDTH-1:0]  data;
-
-  modport master (output stb, input addr, output data);
-  modport slave (input stb, output addr, input data);
-
-endinterface
-
-class settings_bus_master #(
-  parameter SR_AWIDTH  = 8,
-  parameter SR_DWIDTH  = 32,
-  parameter RB_AWIDTH  = 8,
-  parameter RB_DWIDTH  = 64,
-  parameter TIMEOUT    = 65535 // read() timeout
+interface settings_bus_t #(
+  parameter SR_AWIDTH = 8,
+  parameter SR_DWIDTH = 32,
+  parameter RB_AWIDTH = 8,
+  parameter RB_DWIDTH = 64,
+  parameter NUM_BUSES = 1
+)(
+  input clk
 );
+  logic [NUM_BUSES-1:0]           set_stb;
+  logic [NUM_BUSES*SR_AWIDTH-1:0] set_addr;
+  logic [NUM_BUSES*SR_DWIDTH-1:0] set_data;
+  logic [NUM_BUSES-1:0]           rb_stb;
+  logic [NUM_BUSES*RB_AWIDTH-1:0] rb_addr;
+  logic [NUM_BUSES*RB_DWIDTH-1:0] rb_data;
 
-  virtual settings_bus_t #(.AWIDTH(SR_AWIDTH), .DWIDTH(SR_DWIDTH)) settings_bus;
-  virtual readback_bus_t #(.AWIDTH(RB_AWIDTH), .DWIDTH(RB_DWIDTH)) rb_bus;
+  modport master (output set_stb, output set_addr, output set_data,
+                  input rb_stb, output rb_addr, input rb_data);
+  modport slave (input set_stb, input set_addr, input set_data,
+                  output rb_stb, input rb_addr, output rb_data);
+endinterface
 
-  function new (
-    virtual settings_bus_t #(.AWIDTH(SR_AWIDTH), .DWIDTH(SR_DWIDTH)) settings_bus,
-    virtual readback_bus_t #(.AWIDTH(RB_AWIDTH), .DWIDTH(RB_DWIDTH)) rb_bus
-  );
-    this.settings_bus      = settings_bus;
-    this.rb_bus            = rb_bus;
-    this.settings_bus.stb  = 1'b0;
-    this.settings_bus.addr = {SR_AWIDTH{1'b0}};
-    this.settings_bus.data = {SR_DWIDTH{1'b0}};
-  endfunction
+interface settings_bus_master #(
+  parameter SR_AWIDTH = 8,
+  parameter SR_DWIDTH = 32,
+  parameter RB_AWIDTH = 8,
+  parameter RB_DWIDTH = 64,
+  parameter NUM_BUSES = 1,
+  parameter TIMEOUT   = 65535 // readback() timeout
+)(
+  input clk
+);
+  settings_bus_t #(
+    .SR_AWIDTH(SR_AWIDTH), .SR_DWIDTH(SR_DWIDTH),
+    .RB_AWIDTH(RB_AWIDTH), .RB_DWIDTH(RB_DWIDTH),
+    .NUM_BUSES(NUM_BUSES))
+  settings_bus (.clk(clk));
+
+  // Reset signals / properties used by this interface
+  task automatic reset;
+    settings_bus.set_stb = 0;
+    settings_bus.set_addr = 0;
+    settings_bus.set_data = 0;
+    settings_bus.rb_addr = 0;
+  endtask
 
   // Push a transaction onto the settings bus
   // Args:
   // - set_addr: Settings bus address
   // - set_data: Settings bus data
   // - rb_addr:  Readback bus address
-  task write;
-    input  [SR_AWIDTH-1:0] set_addr;
-    input  [SR_DWIDTH-1:0] set_data;
-    input  [RB_AWIDTH-1:0] rb_addr = {RB_AWIDTH{1'b0}}; // Optional
+  task automatic write (
+    input logic [SR_AWIDTH-1:0] set_addr,
+    input logic [SR_DWIDTH-1:0] set_data,
+    input logic [RB_AWIDTH-1:0] rb_addr = 'd0,
+    input int bus = 0); // Optional
     begin
-      @(negedge settings_bus.clk);
-      settings_bus.stb  = 1'b1;
-      settings_bus.addr = set_addr;
-      settings_bus.data = set_data;
-      rb_bus.addr       = rb_addr;
-      @(negedge settings_bus.clk);
-      settings_bus.stb  = 1'b0;
-      settings_bus.addr = {SR_AWIDTH{1'b0}};
-      settings_bus.data = {SR_DWIDTH{1'b0}};
-      rb_bus.addr       = {RB_AWIDTH{1'b0}};
+      if (clk) @(negedge clk);
+      settings_bus.set_stb[bus]  = 1'b1;
+      settings_bus.set_addr[SR_AWIDTH*bus +: SR_AWIDTH] = set_addr;
+      settings_bus.set_data[SR_DWIDTH*bus +: SR_DWIDTH] = set_data;
+      settings_bus.rb_addr[RB_AWIDTH*bus +: RB_AWIDTH]  = rb_addr;
+      @(negedge clk);
+      settings_bus.set_stb[bus]  = 1'b0;
+      settings_bus.set_addr[SR_AWIDTH*bus +: SR_AWIDTH] = 'd0;
+      settings_bus.set_data[SR_DWIDTH*bus +: SR_DWIDTH] = 'd0;
+      settings_bus.rb_addr[RB_AWIDTH*bus +: RB_AWIDTH]  = 'd0;
     end
   endtask
 
   // Pull a transaction from the readback bus. Typically called immediately after write().
   // Args:
   // - rb_data: Readback data
-  task read;
-    output [RB_DWIDTH-1:0] rb_data;
+  task automatic readback (
+    output logic [RB_DWIDTH-1:0] rb_data,
+    input int bus = 0);
     begin
-      while (~rb_bus.stb) begin
-        automatic integer timeout_counter = 0;
-        @(negedge rb_bus.clk);
+      integer timeout_counter = 0;
+      if (clk & ~settings_bus.rb_stb[bus]) @(negedge clk);
+      while (~settings_bus.rb_stb[bus]) begin
         if (timeout_counter < TIMEOUT) begin
           timeout_counter++;
         end else begin
-          $error("settings_bus_master::read(): Timeout waiting for readback strobe!");
+          $error("settings_bus_t::readback(): Timeout waiting for readback strobe!");
           break;
         end
+        @(negedge clk);
       end
-      rb_data = rb_bus.data;
-      @(negedge rb_bus.clk);
+      rb_data = settings_bus.rb_data[RB_DWIDTH*bus +: RB_DWIDTH];
     end
   endtask
 
-endclass
+endinterface
 
-class settings_bus_slave #(
-  parameter SR_AWIDTH  = 8,
-  parameter SR_DWIDTH  = 32,
-  parameter RB_AWIDTH  = 8,
-  parameter RB_DWIDTH  = 64,
-  parameter TIMEOUT    = 65535 // read() timeout
+interface settings_bus_slave #(
+  parameter SR_AWIDTH = 8,
+  parameter SR_DWIDTH = 32,
+  parameter RB_AWIDTH = 8,
+  parameter RB_DWIDTH = 64,
+  parameter NUM_BUSES = 1,
+  parameter TIMEOUT   = 65535 // read() timeout
+)(
+  input clk
 );
+  settings_bus_t #(
+    .SR_AWIDTH(SR_AWIDTH), .SR_DWIDTH(SR_DWIDTH),
+    .RB_AWIDTH(RB_AWIDTH), .RB_DWIDTH(RB_DWIDTH),
+    .NUM_BUSES(NUM_BUSES))
+  settings_bus (.clk(clk));
 
-  virtual settings_bus_t #(.AWIDTH(SR_AWIDTH), .DWIDTH(SR_DWIDTH)) settings_bus;
-  virtual readback_bus_t #(.AWIDTH(RB_AWIDTH), .DWIDTH(RB_DWIDTH)) rb_bus;
-
-  function new (
-    virtual settings_bus_t #(.AWIDTH(SR_AWIDTH), .DWIDTH(SR_DWIDTH)) settings_bus,
-    virtual readback_bus_t #(.AWIDTH(RB_AWIDTH), .DWIDTH(RB_DWIDTH)) rb_bus
-  );
-    this.settings_bus = settings_bus;
-    this.rb_bus       = rb_bus;
-    this.rb_bus.stb   = 1'b0;
-    this.rb_bus.data  = {RB_DWIDTH{1'b0}};
-  endfunction
-
-  // Push a transaction onto the readback bus
-  // Args:
-  // - rb_data: Readback data
-  task write;
-    input [RB_AWIDTH-1:0] rb_data;
-    begin
-      @(negedge settings_bus.clk);
-      rb_bus.stb   = 1'b1;
-      rb_bus.data  = rb_data;
-      @(negedge settings_bus.clk);
-      rb_bus.stb   = 1'b0;
-      rb_bus.data  = {RB_DWIDTH{1'b0}};
-    end
+  // Reset signals / properties used by this interface
+  task automatic reset;
+    settings_bus.rb_stb = 0;
+    settings_bus.rb_data = 0;
   endtask
 
   // Pull a transaction from the settings bus
@@ -133,28 +125,45 @@ class settings_bus_slave #(
   // - set_addr: Settings bus address
   // - set_data: Settings bus data
   // - rb_addr:  Readback bus address
-  task read;
-    output [SR_AWIDTH-1:0] set_addr;
-    output [SR_DWIDTH-1:0] set_data;
-    output [RB_AWIDTH-1:0] rb_addr;
+  task automatic read (
+    output logic [SR_AWIDTH-1:0] set_addr,
+    output logic [SR_DWIDTH-1:0] set_data,
+    output logic [RB_AWIDTH-1:0] rb_addr,
+    input int bus = 0);
     begin
-      automatic integer timeout_counter = 0;
-      while (~settings_bus.stb) begin
-        @(negedge rb_bus.clk);
+      integer timeout_counter = 0;
+      while (~settings_bus.set_stb[bus]) begin
+        @(negedge clk);
         if (timeout_counter < TIMEOUT) begin
           timeout_counter++;
         end else begin
-          $error("settings_bus_master::read(): Timeout waiting for settings bus strobe!");
+          $error("settings_bus_t::read(): Timeout waitling for settings bus strobe!");
           break;
         end
       end
-      set_addr = settings_bus.addr;
-      set_data = settings_bus.data;
-      rb_addr  = rb_bus.addr;
-      @(negedge rb_bus.clk);
+      set_addr = settings_bus.set_addr[SR_AWIDTH*bus +: SR_AWIDTH];
+      set_data = settings_bus.set_data[SR_DWIDTH*bus +: SR_DWIDTH];
+      rb_addr  = settings_bus.rb_addr[RB_AWIDTH*bus +: RB_AWIDTH];
+      @(negedge clk);
     end
   endtask
 
-endclass
+  // Push a transaction onto the readback bus, typically called immediately after read()
+  // Args:
+  // - rb_data: Readback data
+  task writeback (
+    input logic [RB_AWIDTH-1:0] rb_data,
+    input int bus = 0);
+    begin
+      if (clk & ~settings_bus.set_stb[bus]) @(negedge clk);
+      settings_bus.rb_stb[bus] = 1'b1;
+      settings_bus.rb_data[RB_DWIDTH*bus +: RB_DWIDTH] = rb_data;
+      @(negedge clk);
+      settings_bus.rb_stb[bus] = 1'b0;
+      settings_bus.rb_data[RB_DWIDTH*bus +: RB_DWIDTH] = 'd0;
+    end
+  endtask
+
+endinterface
 
 `endif

@@ -51,18 +51,11 @@ $(IP_FIFO_SHORT_2CLK_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/general/Makefile.srcs
-include $(BASE_DIR)/../sim/axi/Makefile.srcs
-
 # Define only one toplevel module
 SIM_TOP = x300_pcie_int_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 20
 
 SIM_SRCS = \
-$(abspath x300_pcie_int_tb.sv) \
-$(SIM_GENERAL_SRCS) \
-$(SIM_AXI_SRCS)
+$(abspath x300_pcie_int_tb.sv)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

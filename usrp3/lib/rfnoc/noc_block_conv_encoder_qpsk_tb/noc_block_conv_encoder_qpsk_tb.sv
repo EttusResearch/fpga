@@ -35,8 +35,6 @@ module noc_block_conv_encoder_qpsk_tb();
 
   localparam PKT_SIZE = 1024; // Bytes
 
-  cvita_pkt_t  pkt;
-  logic [63:0] header;
   logic [15:0] real_val;
   logic [15:0] cplx_val;
   logic last;
@@ -87,7 +85,6 @@ module noc_block_conv_encoder_qpsk_tb();
 
     repeat (10) @(posedge bus_clk);
 
-    tb_next_dst = sid_noc_block_conv_encoder_qpsk;
     forever begin
       for (int i = 0; i < (PKT_SIZE/8); i = i + 1) begin
         tb_axis_data.push_word({32'b1111_1111_1111_1111_0101_0101_0101_0101},0);

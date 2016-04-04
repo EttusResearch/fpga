@@ -126,13 +126,13 @@ module noc_shell
    genvar k;
    generate
      // Demux command packets to each block port's command packet processor
-     axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
+     axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(BLOCK_PORTS)) axi_demux (
        .clk(clk), .reset(reset), .clear(1'b0),
        .header(cmd_header), .dest(cmd_header[3:0]),
        .i_tdata(cmdin_tdata), .i_tlast(cmdin_tlast), .i_tvalid(cmdin_tvalid), .i_tready(cmdin_tready),
        .o_tdata(cmdin_ports_tdata), .o_tlast(cmdin_ports_tlast), .o_tvalid(cmdin_ports_tvalid), .o_tready(cmdin_ports_tready));
      // Mux responses from each command packet processor
-     axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_mux (
+     axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(BLOCK_PORTS)) axi_mux (
        .clk(clk), .reset(reset), .clear(1'b0),
        .i_tdata(ackout_ports_tdata), .i_tlast(ackout_ports_tlast), .i_tvalid(ackout_ports_tvalid), .i_tready(ackout_ports_tready),
        .o_tdata(ackout_tdata), .o_tlast(ackout_tlast), .o_tvalid(ackout_tvalid), .o_tready(ackout_tready));
@@ -237,7 +237,7 @@ module noc_shell
          .PORT_NUM(0), .MTU(MTU), .USE_GATE(USE_GATE_MASK))
        noc_output_port (
          .clk(clk), .reset(reset), .clear(clear_tx_fc),
-         .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+         .set_stb(set_stb[0]), .set_addr(set_addr[7:0]), .set_data(set_data[31:0]),
          .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
          .fcin_tdata(fcin_tdata), .fcin_tlast(fcin_tlast), .fcin_tvalid(fcin_tvalid), .fcin_tready(fcin_tready),
          .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
@@ -290,8 +290,8 @@ module noc_shell
          .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
        noc_input_port (
          .clk(clk), .reset(reset), .clear(clear_rx_fc),
-         .resp_sid({src_sid,resp_in_dst_sid}),
-         .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+         .resp_sid({src_sid[15:0],resp_in_dst_sid[15:0]}),
+         .set_stb(set_stb[0]), .set_addr(set_addr[7:0]), .set_data(set_data[31:0]),
          .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
          .o_tdata(str_sink_tdata), .o_tlast(str_sink_tlast), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
          .fc_tdata(fcout_tdata), .fc_tlast(fcout_tlast), .fc_tvalid(fcout_tvalid), .fc_tready(fcout_tready));

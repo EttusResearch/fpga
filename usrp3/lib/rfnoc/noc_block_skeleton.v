@@ -1,7 +1,3 @@
-//
-// Copyright 2016 Ettus Research
-//
-
 module noc_block_skeleton #(
   parameter NOC_ID = 64'h1234_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
@@ -23,7 +19,6 @@ module noc_block_skeleton #(
   wire        set_stb;
   reg  [63:0] rb_data;
   wire [7:0]  rb_addr;
-  reg         rb_stb;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -48,7 +43,7 @@ module noc_block_skeleton #(
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
-    .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
+    .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -62,7 +57,8 @@ module noc_block_skeleton #(
     .resp_in_dst_sid(resp_in_dst_sid),   // Response destination SID for input stream responses / errors
     .resp_out_dst_sid(resp_out_dst_sid), // Response destination SID for output stream responses / errors
     // Misc
-    .clear_tx_seqnum(clear_tx_seqnum), .debug(debug));
+    .vita_time('d0), .clear_tx_seqnum(clear_tx_seqnum),
+    .debug(debug));
 
   ////////////////////////////////////////////////////////////
   //
@@ -158,21 +154,18 @@ module noc_block_skeleton #(
 
   wire [31:0] test_reg_1;
   setting_reg #(
-    .my_addr(SR_TEST_REG_0), .awidth(8), .width(32))
+    .my_addr(SR_TEST_REG_1), .awidth(8), .width(32))
   sr_test_reg_1 (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(test_reg_1), .changed());
 
   // Readback registers
-  always @(posedge clk) begin
+  // rb_stb set to 1'b1 on NoC Shell
+  always @(posedge ce_clk) begin
     case(rb_addr)
-      // Due to the register delay, we can use set_stb to assert rb_stb. Without
-      // the register, rb_stb would assert on the same cycle as set_stb and it
-      // would be ignored (see above explanation).
-      8'd0    : {rb_stb, rb_data} <= {set_stb, {32'd0, test_reg_0}};
-      8'd1    : {rb_stb, rb_data} <= {set_stb, {32'd0, test_reg_1}};
-      // Since our default readback data is constant, we can leave rb_stb asserted
-      default : {rb_stb, rb_data} <= {1'b1, 64'h0BADC0DE0BADC0DE};
+      8'd0 : rb_data <= {32'd0, test_reg_0};
+      8'd1 : rb_data <= {32'd0, test_reg_1};
+      default : rb_data <= 64'h0BADC0DE0BADC0DE;
     endcase
   end
 

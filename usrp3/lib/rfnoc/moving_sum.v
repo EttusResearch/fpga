@@ -1,45 +1,77 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
 
-module moving_sum
-  #(parameter MAX_LEN_LOG2=10,
-    parameter WIDTH=16)
-   (input clk, input reset, input clear,
-    input [15:0] len,
-    input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-    output [WIDTH+MAX_LEN_LOG2-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
+module moving_sum #(
+  parameter MAX_LEN = 1023,
+  parameter WIDTH   = 16
+)(
+  input clk, input reset, input clear,
+  input [$clog2(MAX_LEN+1)-1:0] len,
+  input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
+  output [WIDTH+$clog2(MAX_LEN+1)-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
+);
 
-   reg [WIDTH+MAX_LEN_LOG2-1:0]     sum;
-   reg [15:0] 			    full_count;
-   wire 			    full = full_count == len;
+  wire signed [WIDTH+$clog2(MAX_LEN+1)-1:0] sum;
+  reg signed [WIDTH+$clog2(MAX_LEN+1)-1:0] sum_reg;
+  reg [$clog2(MAX_LEN+1)-1:0] full_count, len_reg;
+  reg len_changed;
 
-   wire 			    do_op = i_tvalid & o_tready;
+  wire full  = (full_count == len_reg);
+  wire do_op = (i_tvalid & i_tready);
 
-   assign i_tready = o_tready;
-   assign o_tvalid = i_tvalid;
+  wire i_tready_int, i_tvalid_int;
+  wire fifo_tvalid, fifo_tready;
+  wire [WIDTH-1:0] fifo_tdata;
 
-   wire [WIDTH-1:0] 		    fifo_out;
-   
-   axi_fifo #(.WIDTH(WIDTH), .SIZE(MAX_LEN_LOG2)) sample_fifo
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(i_tdata), .i_tvalid(do_op), .i_tready(),
-      .o_tdata(fifo_out), .o_tvalid(), .o_tready(do_op&full));
+  axi_fifo #(.WIDTH(WIDTH), .SIZE(WIDTH)) axi_fifo (
+    .clk(clk), .reset(reset | len_changed), .clear(clear),
+    .i_tdata(i_tdata), .i_tvalid(do_op), .i_tready(),
+    .o_tdata(fifo_tdata), .o_tvalid(fifo_tvalid), .o_tready(fifo_tready),
+    .occupied(), .space());
 
-   always @(posedge clk)
-     if(reset | clear)
-       full_count <= 0;
-     else
-       if(do_op & ~full)
-	 full_count <= full_count + 1;     // FIXME careful if len changes during operation you must clear
-   
-   always @(posedge clk)
-     if(reset | clear)
-       sum <= 0;
-     else if(do_op)
-       sum <= sum + { {MAX_LEN_LOG2{i_tdata[WIDTH-1]}}, i_tdata } - (full ? {{MAX_LEN_LOG2{fifo_out[WIDTH-1]}}, fifo_out} : 0);
+  assign fifo_tready = i_tvalid & i_tready_int & full;
 
-   assign o_tdata = sum;
-   assign o_tlast = i_tlast;
-   
+  always @(posedge clk) begin
+    if (reset | clear | len_changed) begin
+       full_count <= 'd0;
+    end else begin
+      if (do_op & ~full) begin
+        full_count <= full_count + 1;
+      end
+    end
+  end
+
+  assign sum = sum_reg + $signed(i_tdata) - (full ? $signed(fifo_tdata) : 0);
+
+  always @(posedge clk) begin
+    if (reset | clear) begin
+      sum_reg     <= 'd0;
+      len_reg     <= 1;
+      len_changed <= 1'b0;
+    end else begin
+      len_reg <= (len == 0) ? 1 : len;
+      if (len_reg != len) begin
+        len_changed <= 1'b1;
+      end else begin
+        len_changed <= 1'b0;
+      end
+      if (len_changed) begin
+        sum_reg <= 'd0;
+      end else if (do_op) begin
+        sum_reg <= sum;
+      end
+    end
+  end
+
+  // Output register
+  axi_fifo_flop2 #(.WIDTH(WIDTH+$clog2(MAX_LEN+1)+1)) axi_fifo_flop2 (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({i_tlast,sum}), .i_tvalid(i_tvalid_int), .i_tready(i_tready_int),
+    .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
+    .occupied(), .space());
+
+  assign i_tready     = (~full | (fifo_tvalid & full)) & i_tready_int & ~len_changed;
+  assign i_tvalid_int = (~full | (fifo_tvalid & full)) & i_tvalid     & ~len_changed;
+
 endmodule // moving_sum

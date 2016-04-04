@@ -13,8 +13,8 @@ module axi_fifo_bram
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
     output i_tready,
-    output reg [WIDTH-1:0] o_tdata,
-    output reg o_tvalid,
+    output reg [WIDTH-1:0] o_tdata = 'd0,
+    output reg o_tvalid = 1'b0,
     input o_tready,
     
     output reg [15:0] space,

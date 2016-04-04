@@ -22,7 +22,7 @@ mig_7series_0/example_design/rtl/traffic_gen/mig_7series_v2_4_tg.v \
 )
 
 IP_MIG_7SERIES_0_SIM_OUTS = $(addprefix $(IP_BUILD_DIR)/mig_7series_0/, \
-mig_7series_0/example_design/sim/ddr3_model.v \
+mig_7series_0/example_design/sim/ddr3_model.sv \
 mig_7series_0/example_design/sim/ddr3_model_parameters.vh \
 )
 

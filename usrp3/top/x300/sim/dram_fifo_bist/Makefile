@@ -54,22 +54,13 @@ $(IP_AXI4_BRAM_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/general/Makefile.srcs
-include $(BASE_DIR)/../sim/control/Makefile.srcs
-include $(BASE_DIR)/../sim/axi/Makefile.srcs
-
 # Define only one toplevel module
 SIM_TOP = dram_fifo_bist_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 3000
 
 SIM_SRCS = \
 $(abspath dram_fifo_bist_tb.sv) \
 $(abspath ../dram_fifo/axis_dram_fifo_single.sv) \
-$(IP_DDR3_32BIT_SIM_OUTS) \
-$(SIM_GENERAL_SRCS) \
-$(SIM_CONTROL_SRCS) \
-$(SIM_AXI_SRCS)
+$(IP_DDR3_32BIT_SIM_OUTS)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

@@ -9,8 +9,12 @@
 // - Logging to console
 // - Test execution tracking
 // - Gathering test results
-// - Bounding execution time based on the SIM_RUNTIME_US vdef
-//
+// - Bounding execution time based on the SIM_TIMEOUT_US vdef
+
+`ifndef SIM_TIMEOUT_US
+`define SIM_TIMEOUT_US 100000 // Default: 100 ms
+`endif
+
 // Usage: `TEST_BENCH_INIT(test_name,min_tc_run_count,ns_per_tick)
 // where
 //  - tb_name:          Name of the testbench. (Only used during reporting)
@@ -18,23 +22,34 @@
 //  - ns_per_tick:      The time_unit_base from the timescale declaration
 //
 `define TEST_BENCH_INIT(tb_name, min_tc_run_count, ns_per_tick) \
+  localparam sim_time_increment = 100; \
   reg tc_running = 0; \
   reg tc_failed = 0; \
+  reg tc_all_done = 0; \
+  real sim_time = 0.0; \
   integer tc_run_count = 0; \
   integer tc_pass_count = 0; \
   \
   initial begin : tb_timekeeper \
+    #0; \
+    $timeformat(-9, 0, " ns", 10); \
     $display("========================================================"); \
     $display("TESTBENCH STARTED: %s", tb_name); \
     $display("========================================================"); \
+    if (1000.0*`SIM_TIMEOUT_US < sim_time_increment) begin \
+      $error("Total simulation time less than simulation step size!"); \
+    end \
     tc_running = 0; \
     tc_failed = 0; \
     tc_run_count = 0; \
     tc_pass_count = 0; \
-    #((1000.0*`SIM_RUNTIME_US)/ns_per_tick); \
+    while (~tc_all_done & sim_time < 1000.0*`SIM_TIMEOUT_US) begin \
+       #(sim_time_increment); \
+       sim_time += sim_time_increment; \
+    end \
     $display("========================================================"); \
     $display("TESTBENCH FINISHED: %s", tb_name); \
-    $display(" - Time elapsed:   %0d ticks (%0dns/tick)", (1000.0*`SIM_RUNTIME_US)/ns_per_tick, ns_per_tick); \
+    $display(" - Time elapsed:   %0t%s", $realtime(), (sim_time >= 1000.0*`SIM_TIMEOUT_US) ? " (Timed out!)" : ""); \
     $display(" - Tests Expected: %0d", min_tc_run_count); \
     $display(" - Tests Run:      %0d", tc_run_count); \
     $display(" - Tests Passed:   %0d", tc_pass_count); \
@@ -42,6 +57,11 @@
     $display("========================================================"); \
     $finish; \
   end
+
+// Ends test bench. Place after final test.
+//
+// Usage: `TEST_BENCH_DONE
+`define TEST_BENCH_DONE tc_all_done = 1;
 
 // Indicates the start of a test case
 // This macro *must be* called inside the primary initial block
@@ -51,6 +71,7 @@
 //  - test_name:        The name of the test.
 //
 `define TEST_CASE_START(test_name) \
+  #0; \
   tc_running = 1; \
   tc_failed = 0; \
   tc_run_count = tc_run_count + 1; \
@@ -67,6 +88,7 @@
 //  - test_result:  User specified outcome
 //
 `define TEST_CASE_DONE(result) \
+  #0; \
   tc_running = 0; \
   $display("[TEST CASE %3d] (t=%09d) DONE... %s", tc_run_count, $time, ((((result)===1'b1)&~tc_failed)?"Passed":"FAILED")); \
   if (((result)===1'b1)&~tc_failed) tc_pass_count = tc_pass_count + 1;

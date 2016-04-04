@@ -1,22 +1,20 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
 `timescale 1ns/1ps
-`define SIM_RUNTIME_US 1000
+`define SIM_RUNTIME_US 100
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 2
 `include "sim_exec_report.vh"
-`include "sim_rfnoc_lib.vh"
+`include "sim_rfnoc_lib.svh"
 
 module noc_block_fft_tb();
   `TEST_BENCH_INIT("noc_block_fft_tb",`NUM_TEST_CASES,`NS_PER_TICK);
   localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
   localparam CE_CLK_PERIOD  = $ceil(1e9/200e6);
   localparam NUM_CE         = 1;
-  // Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst),
-  // AXI crossbar, and test bench signals to interact with RFNoC
-  // (tb_cvita_*, tb_axis_*, etc).
-  `RFNOC_SIM_INIT(NUM_CE, BUS_CLK_PERIOD, CE_CLK_PERIOD);
+  localparam NUM_STREAMS    = 1;
+  `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   // Instantiate FFT RFNoC block
   `RFNOC_ADD_BLOCK(noc_block_fft, 0 /* xbar port 0 */);
 
@@ -29,8 +27,6 @@ module noc_block_fft_tb();
   // Padding of the control word depends on the FFT options enabled
   wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
 
-  cvita_pkt_t  pkt;
-  logic [63:0] header;
   logic [15:0] real_val;
   logic [15:0] cplx_val;
   logic last;
@@ -47,7 +43,7 @@ module noc_block_fft_tb();
     `TEST_CASE_START("Receive & check FFT data");
     for (int l = 0; l < 10; l = l + 1) begin
       for (int k = 0; k < FFT_SIZE; k = k + 1) begin
-        tb_axis_data.pull_word({real_val,cplx_val},last);
+        tb_streamer.pull_word({real_val,cplx_val},last);
         if (k == FFT_BIN) begin
           // Assert that for the special case of a 1/8th sample rate sine wave input, 
           // the real part of the corresponding 1/8th sample rate FFT bin should always be greater than 0 and
@@ -68,6 +64,7 @@ module noc_block_fft_tb();
       end
     end
     `TEST_CASE_DONE(1);
+    `TEST_BENCH_DONE;
 
   end
 
@@ -81,31 +78,27 @@ module noc_block_fft_tb();
     repeat (10) @(posedge bus_clk);
 
     // Test bench -> FFT -> Test bench
-    `RFNOC_CONNECT(noc_block_tb,noc_block_fft,FFT_SIZE*4);
-    `RFNOC_CONNECT(noc_block_fft,noc_block_tb,FFT_SIZE*4);
+    `RFNOC_CONNECT(noc_block_tb /* From */, noc_block_fft /* To */, SC16 /* Type */, FFT_SIZE /* Samples per packet */);
+    `RFNOC_CONNECT(noc_block_fft,noc_block_tb,SC16,FFT_SIZE);
 
     // Setup FFT
-    header = flatten_chdr_no_ts('{pkt_type:CMD, has_time:0, eob:0, seqno:12'h0, length:8, src_sid:sid_noc_block_tb, dst_sid:sid_noc_block_fft, timestamp:64'h0});
-    tb_cvita_cmd.push_pkt({header, {SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word}}});                                // Configure FFT core
-    tb_cvita_ack.drop_pkt();    // Don't care about response
-    tb_cvita_cmd.push_pkt({header, {24'd0, noc_block_fft.SR_FFT_SIZE_LOG2, {24'd0, fft_size_log2}}});             // Set FFT size register
-    tb_cvita_ack.drop_pkt();
-    tb_cvita_cmd.push_pkt({header, {24'd0, noc_block_fft.SR_MAGNITUDE_OUT, {30'd0, noc_block_fft.MAG_SQ_OUT}}});  // Enable magnitude out
-    tb_cvita_ack.drop_pkt();
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable real/imag out
 
     repeat (10) @(posedge bus_clk);
 
     // Send 1/8th sample rate sine wave
     forever begin
       for (int i = 0; i < (FFT_SIZE/8); i = i + 1) begin
-        tb_axis_data.push_word({ 16'd32767,     16'd0},0);
-        tb_axis_data.push_word({ 16'd23170, 16'd23170},0);
-        tb_axis_data.push_word({     16'd0, 16'd32767},0);
-        tb_axis_data.push_word({-16'd23170, 16'd23170},0);
-        tb_axis_data.push_word({-16'd32767,     16'd0},0);
-        tb_axis_data.push_word({-16'd23170,-16'd23170},0);
-        tb_axis_data.push_word({     16'd0,-16'd32767},0);
-        tb_axis_data.push_word({ 16'd23170,-16'd23170},(i == (FFT_SIZE/8)-1)); // Assert tlast on final word
+        tb_streamer.push_word({ 16'd32767,     16'd0},0);
+        tb_streamer.push_word({ 16'd23170, 16'd23170},0);
+        tb_streamer.push_word({     16'd0, 16'd32767},0);
+        tb_streamer.push_word({-16'd23170, 16'd23170},0);
+        tb_streamer.push_word({-16'd32767,     16'd0},0);
+        tb_streamer.push_word({-16'd23170,-16'd23170},0);
+        tb_streamer.push_word({     16'd0,-16'd32767},0);
+        tb_streamer.push_word({ 16'd23170,-16'd23170},(i == (FFT_SIZE/8)-1)); // Assert tlast on final word
       end
     end
   end

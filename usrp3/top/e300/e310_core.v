@@ -320,14 +320,14 @@ module e310_core
   // radio instantiation
   ////////////////////////////////////////////////////////////////////
   // Daughter board I/O is replicated per radio, some of it is unused
-  localparam NUM_RADIOS = 2;
-  wire [31:0] leds[0:NUM_RADIOS-1];
-  wire [31:0] fp_gpio_in[0:NUM_RADIOS-1], fp_gpio_out[0:NUM_RADIOS-1], fp_gpio_ddr[0:NUM_RADIOS-1];
-  wire [31:0] db_gpio_out[0:NUM_RADIOS-1];
-  wire [7:0] sen[0:NUM_RADIOS-1];
-  wire sclk[0:NUM_RADIOS-1], mosi[0:NUM_RADIOS-1], miso[0:NUM_RADIOS-1];
+  localparam NUM_CHANNELS = 2;
+  wire [31:0] leds[0:NUM_CHANNELS-1];
+  wire [31:0] fp_gpio_in[0:NUM_CHANNELS-1], fp_gpio_out[0:NUM_CHANNELS-1], fp_gpio_ddr[0:NUM_CHANNELS-1];
+  wire [31:0] db_gpio_out[0:NUM_CHANNELS-1];
+  wire [7:0] sen[0:NUM_CHANNELS-1];
+  wire sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
   noc_block_radio_core #(
-    .NUM_RADIOS(NUM_RADIOS),
+    .NUM_CHANNELS(NUM_CHANNELS),
     .STR_SINK_FIFOSIZE(13),  // Tuned value, verify throughput if changing
     .MTU(10),                // Tuned value
     .USE_SPI_CLK(1))

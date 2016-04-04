@@ -8,6 +8,7 @@
 set simulator       $::env(VIV_SIMULATOR)
 set design_srcs     $::env(VIV_DESIGN_SRCS)
 set sim_srcs        $::env(VIV_SIM_SRCS)
+set inc_srcs        $::env(VIV_INC_SRCS)
 set sim_top         $::env(VIV_SIM_TOP)
 set part_name       $::env(VIV_PART_NAME)
 set sim_runtime     $::env(VIV_SIM_RUNTIME)
@@ -69,6 +70,11 @@ foreach sim_src $sim_srcs {
     add_files -fileset $sim_fileset -norecurse $sim_src
 }
 
+foreach inc_src $inc_srcs {
+    puts "BUILDER: Adding Inc Src : $inc_src"
+    add_files -fileset $sim_fileset -norecurse $inc_src
+}
+
 # Simulator independent config
 set_property top $sim_top [get_filesets $sim_fileset]
 set_property default_lib work [current_project]
@@ -79,15 +85,17 @@ set_property target_simulator $simulator [current_project]
 
 # Vivado quirk when passing options to external simulators
 if [expr [string equal $simulator "XSim"] == 1] {
-    set_property verilog_define "SIM_RUNTIME_US=$sim_runtime WORKING_DIR=\"$working_dir\"" [get_filesets $sim_fileset]
+    set_property verilog_define "WORKING_DIR=\"$working_dir\"" [get_filesets $sim_fileset]
 } else {
-    set_property verilog_define "SIM_RUNTIME_US=$sim_runtime WORKING_DIR=$working_dir" [get_filesets $sim_fileset]
+    set_property verilog_define "WORKING_DIR=$working_dir" [get_filesets $sim_fileset]
 }
 
 # XSim specific settings
 set_property xsim.simulate.runtime "${sim_runtime}us" -objects [get_filesets $sim_fileset]
 set_property xsim.elaborate.debug_level "all" -objects [get_filesets $sim_fileset]
 set_property xsim.elaborate.unifast $sim_fast -objects [get_filesets $sim_fileset]
+# Set default timescale to prevent bogus warnings
+set_property xsim.elaborate.xelab.more_options -value {-timescale 1ns/1ns} -objects [get_filesets $sim_fileset]
 
 # Modelsim specific settings
 if [expr [string equal $simulator "Modelsim"] == 1] {

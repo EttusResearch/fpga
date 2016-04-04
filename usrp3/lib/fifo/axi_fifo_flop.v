@@ -9,14 +9,14 @@
 
 module axi_fifo_flop
   #(parameter WIDTH=32)
-   (input clk, 
-    input reset, 
+   (input clk,
+    input reset,
     input clear,
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
     output i_tready,
-    output reg [WIDTH-1:0] o_tdata,
-    output reg o_tvalid,
+    output reg [WIDTH-1:0] o_tdata = 'd0,
+    output reg o_tvalid = 1'b0,
     input o_tready,
     output space,
     output occupied);

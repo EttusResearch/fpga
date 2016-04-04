@@ -23,8 +23,10 @@ module axi_fifo_flop2 #(
   output [1:0] space,
   output [1:0] occupied);
 
-  reg [WIDTH-1:0] i_tdata_pipe, i_tdata_reg;
-  reg             i_tvalid_pipe, i_tvalid_reg;
+  reg [WIDTH-1:0] i_tdata_pipe  = 'd0;
+  reg [WIDTH-1:0] i_tdata_reg   = 'd0;
+  reg             i_tvalid_pipe = 1'b0;
+  reg             i_tvalid_reg  = 1'b0;
 
   // Steady state data flow is typically: i_tdata -> i_tdata_reg -> o_tdata
   // but can change to: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata

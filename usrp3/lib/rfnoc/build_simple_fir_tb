@@ -1,1 +1,0 @@
-iverilog -o simple_fir_tb -y . -y ../control/ -y ../fifo/ simple_fir_tb.v -y /opt/Xilinx/14.4/ISE_DS/ISE/verilog/src/unisims/ -Wall

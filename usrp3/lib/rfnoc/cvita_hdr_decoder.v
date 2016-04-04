@@ -1,12 +1,13 @@
 //
 // Copyright 2016 Ettus Research
 //
-// Decodes header word into individual CVITA packet header fields
+// Decoder header word into CVITA header fields
 
 module cvita_hdr_decoder (
   input [127:0] header,
   output [1:0] pkt_type, output eob, output has_time,
-  output [11:0] seqnum, output [15:0] pkt_len, output [31:0] sid,
+  output [11:0] seqnum, output [15:0] length,
+  output [15:0] src_sid, output [15:0] dst_sid,
   output [63:0] vita_time
 );
 
@@ -18,8 +19,9 @@ module cvita_hdr_decoder (
   assign has_time  = hdr[0][61];
   assign eob       = hdr[0][60];
   assign seqnum    = hdr[0][59:48];
-  assign pkt_len   = hdr[0][47:32];
-  assign sid       = hdr[0][31:0];
+  assign length    = hdr[0][47:32];
+  assign src_sid   = hdr[0][31:16];
+  assign dst_sid   = hdr[0][15:0];
   assign vita_time = hdr[1];
 
 endmodule

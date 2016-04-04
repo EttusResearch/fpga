@@ -68,33 +68,37 @@ module cmd_pkt_proc #(
     .o_tdata({cmd_fifo_tlast,cmd_fifo_tdata}), .o_tvalid(cmd_fifo_tvalid), .o_tready(cmd_fifo_tready),
     .space(), .occupied());
 
+  wire hdr_stb, vita_time_stb;
   wire [63:0] pkt_vita_time;
   wire [1:0] pkt_type;
-  wire has_time;
+  wire has_time, eob;
   wire [11:0] seqnum;
-  wire [31:0] sid;
+  wire [15:0] src_sid, dst_sid;
+  reg [63:0] pkt_vita_time_hold;
+  reg has_time_hold;
+  reg [11:0] seqnum_hold;
+  reg [15:0] src_sid_hold, dst_sid_hold;
   wire [63:0] int_tdata;
   reg int_tready;
   wire int_tlast, int_tvalid;
-  // Extracts header fields and also acts as a register stage latching the header fields until the next packet
-  cvita_hdr_parser #(.REGISTER(1)) cvita_hdr_parser (
+  // Extracts header fields
+  cvita_hdr_parser #(.REGISTER(0)) cvita_hdr_parser (
     .clk(clk), .reset(reset), .clear(clear),
-    .hdr_stb(),
-    .pkt_type(pkt_type), .eob(), .has_time(has_time),
-    .seqnum(seqnum), .pkt_len(), .sid(sid),
-    .vita_time_stb(), .vita_time(pkt_vita_time),
+    .hdr_stb(hdr_stb),
+    .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
+    .seqnum(seqnum), .length(),
+    .src_sid(src_sid), .dst_sid(dst_sid),
+    .vita_time_stb(vita_time_stb), .vita_time(pkt_vita_time),
     .i_tdata(cmd_fifo_tdata), .i_tlast(cmd_fifo_tlast), .i_tvalid(cmd_fifo_tvalid), .i_tready(cmd_fifo_tready),
     .o_tdata(int_tdata), .o_tlast(int_tlast), .o_tvalid(int_tvalid), .o_tready(int_tready));
 
-  wire [15:0] src_sid = sid[31:16];
-  wire [15:0] dst_sid = sid[15:0];
-  wire is_cmd_pkt = pkt_type == 2'b10;
+  wire is_cmd_pkt = {pkt_type,eob} == 3'b100;
   reg is_long_cmd_pkt;
 
   wire now, late;
   wire go = now | late;
   time_compare time_compare (
-    .clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(pkt_vita_time),
+    .clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(pkt_vita_time_hold),
     .now(now), .early(), .late(late), .too_early());
 
   reg [3:0] state;
@@ -113,8 +117,16 @@ module cmd_pkt_proc #(
   wire set_rb_addr      = int_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR[SR_AWIDTH-1:0];
   wire set_rb_addr_user = int_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR_USER[SR_AWIDTH-1:0];
 
+  wire [127:0] header;
+  cvita_hdr_encoder cvita_hdr_encoder (
+    .header(header),
+    .pkt_type(2'b11), .has_time(USE_TIME[0]), .eob(1'b0),
+    .seqnum(seqnum_hold), .length(USE_TIME[0] ? 16'd24 : 16'd16),
+    .src_sid(dst_sid_hold), .dst_sid(src_sid_hold), // Flip dst / src sids
+    .vita_time(pkt_vita_time_hold));
+
   reg [63:0] resp_time;
-  wire [63:0] resp_header = {2'b11, USE_TIME[0], 1'b0, seqnum, (USE_TIME[0] ? 16'd24 : 16'd16), dst_sid, src_sid};
+  wire [63:0] resp_header = header[127:64];
 
   reg [63:0] rb_data_hold;
   integer k;
@@ -122,20 +134,25 @@ module cmd_pkt_proc #(
   // State machine
   always @(posedge clk) begin
     if (reset) begin
-      state           <= S_CMD_HEAD;
-      int_tready      <= 1'b0;
-      resp_tvalid     <= 1'b0;
-      resp_tlast      <= 1'b0;
-      resp_tdata      <= 'd0;
-      resp_time       <= 'd0;
-      set_stb         <= 'd0;
-      set_data        <= 'd0;
-      set_addr        <= 'd0;
-      set_time        <= 'd0;
-      rb_addr         <= 'd0;
-      rb_addr_user    <= 'd0;
-      rb_data_hold    <= 'd0;
-      is_long_cmd_pkt <= 1'b0;
+      state               <= S_CMD_HEAD;
+      int_tready          <= 1'b0;
+      resp_tvalid         <= 1'b0;
+      resp_tlast          <= 1'b0;
+      resp_tdata          <= 'd0;
+      resp_time           <= 'd0;
+      set_stb             <= 'd0;
+      set_data            <= 'd0;
+      set_addr            <= 'd0;
+      set_time            <= 'd0;
+      rb_addr             <= 'd0;
+      rb_addr_user        <= 'd0;
+      rb_data_hold        <= 'd0;
+      is_long_cmd_pkt     <= 1'b0;
+      pkt_vita_time_hold  <= 'd0;
+      has_time_hold       <= 'd0;
+      seqnum_hold         <= 'd0;
+      src_sid_hold        <= 'd0;
+      dst_sid_hold        <= 'd0;
     end else begin
       case (state)
         // Wait for packet header to arrive
@@ -145,8 +162,14 @@ module cmd_pkt_proc #(
           resp_tlast      <= 1'b0;
           set_stb         <= 'd0;
           if (int_tvalid & int_tready) begin
+            // Register packet header fields for later use
+            has_time_hold <= USE_TIME[0] ? has_time : 1'b0;
+            seqnum_hold   <= seqnum;
+            src_sid_hold  <= src_sid;
+            dst_sid_hold  <= dst_sid;
             // Packet must be of correct type and for an existing block port
-            if (is_cmd_pkt) begin
+            // and this must be the header.
+            if (is_cmd_pkt & hdr_stb) begin
               if (has_time) begin
                 state    <= S_CMD_TIME;
               end else begin
@@ -165,13 +188,14 @@ module cmd_pkt_proc #(
         // Consume packet time
         S_CMD_TIME : begin
           if (int_tvalid & int_tready) begin
-            if (int_tlast) begin
+            if (int_tlast | ~vita_time_stb) begin
               // Command packet with time but missing command? Drop it.
-              int_tready   <= 1'b0;
-              state        <= S_DROP;
+              int_tready          <= 1'b0;
+              state               <= S_DROP;
             end else begin
-              int_tready <= 1'b0;
-              state      <= S_CMD_DATA;
+              pkt_vita_time_hold  <= pkt_vita_time;
+              int_tready          <= 1'b0;
+              state               <= S_CMD_DATA;
             end
           end
         end
@@ -181,11 +205,11 @@ module cmd_pkt_proc #(
         // Note: Output of timed settings bus transactions will be delayed by
         //       one clock cycle due to registered outputs.
         S_CMD_DATA : begin
-          if (int_tvalid & (~USE_TIME[0] | (USE_TIME[0] & go))) begin
+          if (int_tvalid & (~has_time_hold | (USE_TIME[0] & go))) begin
             is_long_cmd_pkt <= ~int_tlast;
             set_addr        <= int_tdata[SR_AWIDTH-1+32:32];
             set_data        <= int_tdata[SR_DWIDTH-1:0];
-            set_time        <= pkt_vita_time;
+            set_time        <= has_time_hold ? pkt_vita_time_hold : 'd0;
             // Update rb_addr on same clock cycle as asserting set_stb
             if (set_rb_addr) begin
               rb_addr       <= int_tdata[RB_AWIDTH-1:0];

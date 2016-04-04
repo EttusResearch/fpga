@@ -42,7 +42,7 @@ module noc_block_axi_fifo_loopback #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -51,7 +51,14 @@ module noc_block_axi_fifo_loopback #(
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
-    .clear_tx_seqnum(clear_tx_seqnum), .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
+    // Stream IDs set by host 
+    .src_sid(),                     // SID of this block
+    .next_dst_sid(next_dst_sid),    // Next destination SID
+    .resp_in_dst_sid(),             // Response destination SID for input stream responses / errors
+    .resp_out_dst_sid(),            // Response destination SID for output stream responses / errors
+    // Misc
+    .vita_time(64'd0),
+    .clear_tx_seqnum(clear_tx_seqnum),
     .debug(debug));
 
   ////////////////////////////////////////////////////////////
@@ -91,7 +98,7 @@ module noc_block_axi_fifo_loopback #(
     .s_axis_data_tready(s_axis_data_tready),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
-    .m_axis_config_tvalid(), 
+    .m_axis_config_tvalid(),
     .m_axis_config_tready());
 
   ////////////////////////////////////////////////////////////

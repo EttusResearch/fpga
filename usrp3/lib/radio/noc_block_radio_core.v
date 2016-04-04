@@ -7,7 +7,7 @@ module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
   parameter MTU = 11,
-  parameter NUM_RADIOS = 1,
+  parameter NUM_CHANNELS = 1,
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
   parameter USE_SPI_CLK = 0
@@ -17,18 +17,18 @@ module noc_block_radio_core #(
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
   // Output timed settings bus, one per radio
-  output [NUM_RADIOS-1:0] ext_set_stb, output [NUM_RADIOS*8-1:0] ext_set_addr, output [NUM_RADIOS*32-1:0] ext_set_data,
+  output [NUM_CHANNELS-1:0] ext_set_stb, output [NUM_CHANNELS*8-1:0] ext_set_addr, output [NUM_CHANNELS*32-1:0] ext_set_data,
   // Ports connected to radio front end
-  input  [NUM_RADIOS*32-1:0] rx, input [NUM_RADIOS-1:0] rx_stb,
-  output [NUM_RADIOS*32-1:0] tx, input [NUM_RADIOS-1:0] tx_stb,
+  input  [NUM_CHANNELS*32-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb,
+  output [NUM_CHANNELS*32-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb,
   // Interfaces to front panel and daughter board
-  input pps, input time_sync, output [NUM_RADIOS-1:0] sync,
-  input [NUM_RADIOS*32-1:0] misc_ins, output [NUM_RADIOS*32-1:0] misc_outs,
-  input [NUM_RADIOS*32-1:0] fp_gpio_in, output [NUM_RADIOS*32-1:0] fp_gpio_out, output [NUM_RADIOS*32-1:0] fp_gpio_ddr,
-  input [NUM_RADIOS*32-1:0] db_gpio_in, output [NUM_RADIOS*32-1:0] db_gpio_out, output [NUM_RADIOS*32-1:0] db_gpio_ddr,
-  output [NUM_RADIOS*32-1:0] leds,
+  input pps, input time_sync, output [NUM_CHANNELS-1:0] sync,
+  input [NUM_CHANNELS*32-1:0] misc_ins, output [NUM_CHANNELS*32-1:0] misc_outs,
+  input [NUM_CHANNELS*32-1:0] fp_gpio_in, output [NUM_CHANNELS*32-1:0] fp_gpio_out, output [NUM_CHANNELS*32-1:0] fp_gpio_ddr,
+  input [NUM_CHANNELS*32-1:0] db_gpio_in, output [NUM_CHANNELS*32-1:0] db_gpio_out, output [NUM_CHANNELS*32-1:0] db_gpio_ddr,
+  output [NUM_CHANNELS*32-1:0] leds,
   input spi_clk, input spi_rst,
-  output [NUM_RADIOS*8-1:0] sen, output [NUM_RADIOS-1:0] sclk, output [NUM_RADIOS-1:0] mosi, input [NUM_RADIOS-1:0] miso,
+  output [NUM_CHANNELS*8-1:0] sen, output [NUM_CHANNELS-1:0] sclk, output [NUM_CHANNELS-1:0] mosi, input [NUM_CHANNELS-1:0] miso,
   output [63:0] debug
 );
 
@@ -37,31 +37,31 @@ module noc_block_radio_core #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire [NUM_RADIOS*32-1:0]      set_data;
-  wire [NUM_RADIOS*8-1:0]       set_addr;
-  wire [NUM_RADIOS-1:0]         set_stb;
-  wire [NUM_RADIOS*64-1:0]      set_time;
-  wire [8*NUM_RADIOS-1:0]       rb_addr;
-  wire [64*NUM_RADIOS-1:0]      rb_data;
-  wire [NUM_RADIOS-1:0]         rb_stb;
+  wire [NUM_CHANNELS*32-1:0]      set_data;
+  wire [NUM_CHANNELS*8-1:0]       set_addr;
+  wire [NUM_CHANNELS-1:0]         set_stb;
+  wire [NUM_CHANNELS*64-1:0]      set_time;
+  wire [8*NUM_CHANNELS-1:0]       rb_addr;
+  wire [64*NUM_CHANNELS-1:0]      rb_data;
+  wire [NUM_CHANNELS-1:0]         rb_stb;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
 
-  wire [64*NUM_RADIOS-1:0]      str_sink_tdata, str_src_tdata;
-  wire [NUM_RADIOS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [64*NUM_CHANNELS-1:0]      str_sink_tdata, str_src_tdata;
+  wire [NUM_CHANNELS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire [63:0]                   vita_time;
-  wire [NUM_RADIOS-1:0]         clear_tx_seqnum;
-  wire [16*NUM_RADIOS-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
+  wire [NUM_CHANNELS-1:0]         clear_tx_seqnum;
+  wire [16*NUM_CHANNELS-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
-    .INPUT_PORTS(NUM_RADIOS),
-    .OUTPUT_PORTS(NUM_RADIOS),
-    .STR_SINK_FIFOSIZE({NUM_RADIOS{STR_SINK_FIFOSIZE[7:0]}}),
+    .INPUT_PORTS(NUM_CHANNELS),
+    .OUTPUT_PORTS(NUM_CHANNELS),
+    .STR_SINK_FIFOSIZE({NUM_CHANNELS{STR_SINK_FIFOSIZE[7:0]}}),
     .USE_TIMED_CMDS(1), // Settings bus transactions will occur at the vita time specified in the command packet
-    .CMD_FIFO_SIZE({NUM_RADIOS{8'd6}})) // Up to 64 commands in flight per radio
+    .CMD_FIFO_SIZE({NUM_CHANNELS{8'd6}})) // Up to 64 commands in flight per radio
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -86,20 +86,20 @@ module noc_block_radio_core #(
   // Disable unused response port
   assign ackin_tready        = 1'b1;
 
-  wire [31:0]               m_axis_data_tdata[0:NUM_RADIOS-1];
-  wire [127:0]              m_axis_data_tuser[0:NUM_RADIOS-1];
-  wire [NUM_RADIOS-1:0]     m_axis_data_tlast;
-  wire [NUM_RADIOS-1:0]     m_axis_data_tvalid;
-  wire [NUM_RADIOS-1:0]     m_axis_data_tready;
+  wire [31:0]               m_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [127:0]              m_axis_data_tuser[0:NUM_CHANNELS-1];
+  wire [NUM_CHANNELS-1:0]     m_axis_data_tlast;
+  wire [NUM_CHANNELS-1:0]     m_axis_data_tvalid;
+  wire [NUM_CHANNELS-1:0]     m_axis_data_tready;
 
-  wire [31:0]               s_axis_data_tdata[0:NUM_RADIOS-1];
-  wire [127:0]              s_axis_data_tuser[0:NUM_RADIOS-1];
-  wire [NUM_RADIOS-1:0]     s_axis_data_tlast;
-  wire [NUM_RADIOS-1:0]     s_axis_data_tvalid;
-  wire [NUM_RADIOS-1:0]     s_axis_data_tready;
+  wire [31:0]               s_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [127:0]              s_axis_data_tuser[0:NUM_CHANNELS-1];
+  wire [NUM_CHANNELS-1:0]     s_axis_data_tlast;
+  wire [NUM_CHANNELS-1:0]     s_axis_data_tvalid;
+  wire [NUM_CHANNELS-1:0]     s_axis_data_tready;
 
-  wire [NUM_RADIOS*64-1:0]  resp_tdata;
-  wire [NUM_RADIOS-1:0]     resp_tlast, resp_tvalid, resp_tready;
+  wire [NUM_CHANNELS*64-1:0]  resp_tdata;
+  wire [NUM_CHANNELS-1:0]     resp_tlast, resp_tvalid, resp_tready;
 
   localparam BASE = 128;
 
@@ -109,7 +109,7 @@ module noc_block_radio_core #(
   //
   ////////////////////////////////////////////////////////////
   // Radio response packet mux
-  axi_mux  #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(NUM_RADIOS))
+  axi_mux  #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(NUM_CHANNELS))
   axi_mux_cmd (
     .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
@@ -122,7 +122,7 @@ module noc_block_radio_core #(
   settings_bus_mux #(
     .AWIDTH(8),
     .DWIDTH(32),
-    .NUM_BUSES(NUM_RADIOS))
+    .NUM_BUSES(NUM_CHANNELS))
   settings_bus_mux (
     .clk(ce_clk), .reset(ce_rst), .clear(|clear_tx_seqnum),
     .in_set_stb(set_stb), .in_set_addr(set_addr), .in_set_data(set_data),
@@ -147,7 +147,7 @@ module noc_block_radio_core #(
 
   genvar i;
   generate
-    for (i = 0; i < NUM_RADIOS; i = i + 1) begin : gen
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin : gen
       ////////////////////////////////////////////////////////////
       //
       // AXI Wrapper

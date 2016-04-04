@@ -38,5 +38,6 @@ priority_encoder_one_hot.v \
 ad5662_auto_spi.v \
 s7_icap_wb.v \
 bin2gray.v \
+gray2bin.v \
 user_settings.v \
 ))

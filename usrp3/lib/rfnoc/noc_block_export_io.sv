@@ -28,7 +28,6 @@ module noc_block_export_io
   /* Export user signals */
   // NoC Shell
   settings_bus_t.master settings_bus[0:NUM_PORTS-1],
-  readback_bus_t.slave readback_bus[0:NUM_PORTS-1],
   // CVITA command and response interfaces, interfaces directly to NoC Shell
   axis_t.slave cvita_cmd,
   axis_t.master cvita_ack,
@@ -130,12 +129,12 @@ module noc_block_export_io
         .m_axis_pkt_len_tvalid(),
         .m_axis_pkt_len_tready());
 
-      assign settings_bus[i].stb   = set_stb[i];
-      assign settings_bus[i].data  = set_data[32*i+31:32*i];
-      assign settings_bus[i].addr  = set_addr[8*i+7:8*i];
-      assign rb_addr[8*i+7:8*i]    = readback_bus[i].addr;
-      assign rb_stb[i]             = readback_bus[i].stb;
-      assign rb_data[64*i+63:64*i] = readback_bus[i].data;
+      assign settings_bus[i].set_stb   = set_stb[i];
+      assign settings_bus[i].set_data  = set_data[32*i+31:32*i];
+      assign settings_bus[i].set_addr  = set_addr[8*i+7:8*i];
+      assign settings_bus[i].rb_addr   = rb_addr[8*i+7:8*i];
+      assign rb_stb[i]                 = 1'b1; // settings_bus[i].rb_stb;
+      assign rb_data[64*i+63:64*i]     = settings_bus[i].rb_data;
 
       // Demux input stream into either CVITA inteface, AXI stream interface, or both depend on their tready state
       // - Wait until header comes in then select whether to output on via AXI Wrapper or CVITA interface

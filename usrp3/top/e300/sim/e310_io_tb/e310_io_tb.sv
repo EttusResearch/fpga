@@ -4,6 +4,7 @@
 // Test bench for E310 I/O interface to AD9361.
 
 `timescale 1ns/1ps
+`define SIM_TIMEOUT_US 20
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 6
 
@@ -223,6 +224,7 @@ module e310_io_tb();
       end
     join
     `TEST_CASE_DONE(1);
+    `TEST_BENCH_DONE;
   end
 
 endmodule

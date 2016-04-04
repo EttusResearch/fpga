@@ -18,7 +18,6 @@ module noc_block_moving_avg #(
   //----------------------------------------------------------------------------
 
   // Settings registers addresses
-  localparam SR_AXI_CONFIG = 129;
   localparam SR_SUM_LEN    = 192;
   localparam SR_DIVISOR    = 193;
 
@@ -71,13 +70,19 @@ module noc_block_moving_avg #(
   wire qsum_tlast, qsum_tvalid, qsum_tready;
 
   // I average
-  wire [47:0] iavg_tdata;
+  wire [47:0] iavg_uncorrected_tdata;
+  wire signed [46:0] iavg_tdata;
   wire iavg_tlast, iavg_tvalid, iavg_tready;
+  wire [15:0] iavg_rnd_tdata;
+  wire iavg_rnd_tlast, iavg_rnd_tvalid, iavg_rnd_tready;
   wire idivisor_tready, idividend_tready;
 
   // Q average
-  wire [47:0] qavg_tdata;
+  wire [47:0] qavg_uncorrected_tdata;
+  wire signed [46:0] qavg_tdata;
   wire qavg_tlast, qavg_tvalid, qavg_tready;
+  wire [15:0] qavg_rnd_tdata;
+  wire qavg_rnd_tlast, qavg_rnd_tvalid, qavg_rnd_tready;
   wire qdivisor_tready, qdividend_tready;
 
   //----------------------------------------------------------------------------
@@ -139,6 +144,7 @@ module noc_block_moving_avg #(
     .set_data(set_data),
     .set_addr(set_addr),
     .set_stb(set_stb),
+    .set_time(),
     .rb_stb(1'b1),
     .rb_data(rb_data),
     .rb_addr(rb_addr),
@@ -162,6 +168,7 @@ module noc_block_moving_avg #(
     .str_src_tvalid(str_src_tvalid),
     .str_src_tready(str_src_tready),
     .clear_tx_seqnum(clear_tx_seqnum),
+    .vita_time(),
     .src_sid(),
     .next_dst_sid(next_dst_sid),
     .resp_in_dst_sid(),
@@ -169,17 +176,16 @@ module noc_block_moving_avg #(
     .debug(debug));
 
   // AXI Wrapper - Convert RFNoC Shell interface into AXI stream interface
-  axi_wrapper #(
-    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG))
-  axi_wrapper_inst (
+  axi_wrapper
+  axi_wrapper (
     .clk(ce_clk),
     .reset(ce_rst),
     // RFNoC Shell
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
-    .set_stb(set_stb),
-    .set_addr(set_addr),
-    .set_data(set_data),
+    .set_stb(),
+    .set_addr(),
+    .set_data(),
     .i_tdata(str_sink_tdata),
     .i_tlast(str_sink_tlast),
     .i_tvalid(str_sink_tvalid),
@@ -190,18 +196,22 @@ module noc_block_moving_avg #(
     .o_tready(str_src_tready),
     // Internal AXI streams
     .m_axis_data_tdata(m_axis_data_tdata),
-    .m_axis_data_tuser(m_axis_data_tuser),
     .m_axis_data_tlast(m_axis_data_tlast),
     .m_axis_data_tvalid(m_axis_data_tvalid),
     .m_axis_data_tready(m_axis_data_tready),
+    .m_axis_data_tuser(m_axis_data_tuser),
     .s_axis_data_tdata(s_axis_data_tdata),
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
+    .s_axis_data_tuser(),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
     .m_axis_config_tvalid(),
-    .m_axis_config_tready(1'b1));
+    .m_axis_config_tready(),
+    .m_axis_pkt_len_tdata(),
+    .m_axis_pkt_len_tvalid(),
+    .m_axis_pkt_len_tready());
 
   // Split incoming data into I and Q parts
   split_complex #(
@@ -223,13 +233,13 @@ module noc_block_moving_avg #(
 
   // Accumulate I values
   moving_sum #(
-    .MAX_LEN_LOG2(8),
+    .MAX_LEN(255),
     .WIDTH(16))
   moving_isum_inst (
     .clk(ce_clk),
     .reset(ce_rst),
     .clear(sum_len_changed),
-    .len({8'h00, sum_len}),
+    .len(sum_len),
     .i_tdata(ipart_tdata),
     .i_tlast(ipart_tlast),
     .i_tvalid(ipart_tvalid),
@@ -241,13 +251,13 @@ module noc_block_moving_avg #(
 
   // Accumulate Q values
   moving_sum #(
-    .MAX_LEN_LOG2(8),
+    .MAX_LEN(255),
     .WIDTH(16))
   moving_qsum_inst (
     .clk(ce_clk),
     .reset(ce_rst),
     .clear(sum_len_changed),
-    .len({8'h00, sum_len}),
+    .len(sum_len),
     .i_tdata(qpart_tdata),
     .i_tlast(qpart_tlast),
     .i_tvalid(qpart_tvalid),
@@ -273,7 +283,9 @@ module noc_block_moving_avg #(
     .m_axis_dout_tready(iavg_tready),
     .m_axis_dout_tuser(),
     .m_axis_dout_tlast(iavg_tlast),
-    .m_axis_dout_tdata(iavg_tdata));
+    .m_axis_dout_tdata(iavg_uncorrected_tdata));
+  // Xilinx divider separates integer and fraction parts. Combine into fixed point value Q23.23.
+  assign iavg_tdata = $signed({iavg_uncorrected_tdata[47:24],23'd0}) + $signed(iavg_uncorrected_tdata[23:0]);
 
   // Divide Q part by divisor from settings register
   divide_int24 divide_q_inst (
@@ -291,20 +303,39 @@ module noc_block_moving_avg #(
     .m_axis_dout_tready(qavg_tready),
     .m_axis_dout_tuser(),
     .m_axis_dout_tlast(qavg_tlast),
-    .m_axis_dout_tdata(qavg_tdata));
+    .m_axis_dout_tdata(qavg_uncorrected_tdata));
+  assign qavg_tdata = $signed({qavg_uncorrected_tdata[47:24],23'd0}) + $signed(qavg_uncorrected_tdata[23:0]);
+
+  axi_round_and_clip #(
+    .WIDTH_IN(47),
+    .WIDTH_OUT(16),
+    .CLIP_BITS(8))
+  axi_round_and_clip_i (
+    .clk(ce_clk), .reset(ce_rst),
+    .i_tdata(iavg_tdata), .i_tlast(iavg_tlast), .i_tvalid(iavg_tvalid), .i_tready(iavg_tready),
+    .o_tdata(iavg_rnd_tdata), .o_tlast(iavg_rnd_tlast), .o_tvalid(iavg_rnd_tvalid), .o_tready(iavg_rnd_tready));
+
+  axi_round_and_clip #(
+    .WIDTH_IN(47),
+    .WIDTH_OUT(16),
+    .CLIP_BITS(8))
+  axi_round_and_clip_q (
+    .clk(ce_clk), .reset(ce_rst),
+    .i_tdata(qavg_tdata), .i_tlast(qavg_tlast), .i_tvalid(qavg_tvalid), .i_tready(qavg_tready),
+    .o_tdata(qavg_rnd_tdata), .o_tlast(qavg_rnd_tlast), .o_tvalid(qavg_rnd_tvalid), .o_tready(qavg_rnd_tready));
 
   // Concatenate I and Q part again
   join_complex #(
     .WIDTH(16))
   join_complex_inst (
-    .ii_tdata(iavg_tdata[39:24]), // we only take 16 integer bits
-    .ii_tlast(iavg_tlast),
-    .ii_tvalid(iavg_tvalid),
-    .ii_tready(iavg_tready),
-    .iq_tdata(qavg_tdata[39:24]), // we only take 16 integer bits
-    .iq_tlast(qavg_tlast),
-    .iq_tvalid(qavg_tvalid),
-    .iq_tready(qavg_tready),
+    .ii_tdata(iavg_rnd_tdata),
+    .ii_tlast(iavg_rnd_tlast),
+    .ii_tvalid(iavg_rnd_tvalid),
+    .ii_tready(iavg_rnd_tready),
+    .iq_tdata(qavg_rnd_tdata),
+    .iq_tlast(qavg_rnd_tlast),
+    .iq_tvalid(qavg_rnd_tvalid),
+    .iq_tready(qavg_rnd_tready),
     .o_tdata(s_axis_data_tdata),
     .o_tlast(s_axis_data_tlast),
     .o_tvalid(s_axis_data_tvalid),

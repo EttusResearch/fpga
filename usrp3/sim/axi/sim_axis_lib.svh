@@ -1,14 +1,14 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
 `ifndef INCLUDED_SIM_AXIS_LIB
 `define INCLUDED_SIM_AXIS_LIB
 
-interface axis_t #(parameter DWIDTH = 32)(input clk);
-  logic [DWIDTH-1:0] tdata;
-  logic              tvalid;
-  logic              tlast;
-  logic              tready;
+interface axis_t #(parameter DWIDTH = 32, parameter NUM_STREAMS = 1)(input clk);
+  logic [NUM_STREAMS*DWIDTH-1:0] tdata;
+  logic [NUM_STREAMS-1:0]        tvalid;
+  logic [NUM_STREAMS-1:0]        tlast;
+  logic [NUM_STREAMS-1:0]        tready;
 
   modport master (
     output tdata,
@@ -23,56 +23,72 @@ interface axis_t #(parameter DWIDTH = 32)(input clk);
     output tready);
 endinterface
 
+// Interface to push data onto a master AXI-stream bus
+interface axis_master #(parameter DWIDTH = 32, parameter NUM_STREAMS = 1)(input clk);
+  axis_t #(.DWIDTH(DWIDTH), .NUM_STREAMS(NUM_STREAMS)) axis(.clk(clk));
 
-class axis_master #(parameter DWIDTH = 32);
-
-  virtual axis_t #(.DWIDTH(DWIDTH)) axis;
-
-  function new(virtual axis_t #(.DWIDTH(DWIDTH)) axis);
-    this.axis = axis;
-    this.axis.tdata = {DWIDTH{1'b0}};
-    this.axis.tvalid = 1'b0;
-    this.axis.tlast = 1'b0;
+  // Check that stream is actually in use
+  function void check_stream(int stream);
+    assert (stream < NUM_STREAMS) else
+      $error("axis_master::check_stream(): Tried to perform operation on unused stream %0d", stream);
   endfunction
+
+  // Reset signals / properties used by this interface
+  task automatic reset;
+    begin
+      axis.tvalid = 0;
+      axis.tlast  = 0;
+      axis.tdata  = 0;
+    end
+  endtask
 
   // Push a word onto the AXI-Stream bus and wait for it to transfer
   // Args:
   // - word: The data to push onto the bus
   // - eop (optional): End of packet (asserts tlast)
-  task automatic push_word;
-    input logic [DWIDTH-1:0] word;
-    input logic eop;
+  // - stream: Stream to use (Optional)
+  task automatic push_word (
+    input logic [DWIDTH-1:0] word,
+    input logic eop = 1'b0,
+    input int stream = 0);
     begin
-      this.axis.tvalid = 1;
-      this.axis.tlast  = eop;
-      this.axis.tdata  = word;
-      @(posedge this.axis.clk);                                //Put sample on data bus
-      while(~this.axis.tready) @(posedge this.axis.clk);    //Wait until receiver ready
-      @(negedge this.axis.clk);                                //Put sample on data bus
-      this.axis.tvalid = 0;
-      this.axis.tlast  = 0;
+      check_stream(stream);
+      if (clk) @(negedge clk);                // Align with negative edge
+      axis.tvalid[stream] = 1;
+      axis.tlast[stream] = eop;
+      axis.tdata[DWIDTH*stream +: DWIDTH] = word;
+      @(posedge clk);                             // Put sample on data bus
+      while(~axis.tready[stream]) @(posedge clk); // Wait until receiver ready
+      @(negedge clk);                             // Put sample on data bus
+      axis.tvalid[stream] = 0;
+      axis.tlast[stream] = 0;
     end
   endtask
 
   // Push a bubble cycle onto the AXI-Stream bus
-  task automatic push_bubble;
+  // Args:
+  // - stream: Stream to use (Optional)
+  task automatic push_bubble (input int stream = 0);
     begin
-      this.axis.tvalid = 0;
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      axis.tvalid[stream] = 0;
+      @(negedge clk);
     end
   endtask
 
   // Push a packet with random data onto to the AXI Stream bus
   // Args:
   // - num_samps: Packet size.
-  task automatic push_rand_pkt;
-    input integer num_samps;
+  task automatic push_rand_pkt (
+    input int num_samps,
+    input int stream = 0);
     begin
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      if (clk) @(negedge clk);
       repeat(num_samps-1) begin
-        this.push_word({(((DWIDTH-1)/32)+1){$random}}, 0);
+        push_word({(((DWIDTH-1)/32)+1){$random}}, 0, stream);
       end
-      this.push_word({(((DWIDTH-1)/32)+1){$random}}, 1);
+      push_word({(((DWIDTH-1)/32)+1){$random}}, 1, stream);
     end
   endtask
 
@@ -81,48 +97,63 @@ class axis_master #(parameter DWIDTH = 32);
   // - num_samps: Packet size.
   // - ramp_start: Start value for the ramp
   // - ramp_inc: Increment per clock cycle
-  task automatic push_ramp_pkt;
-    input integer num_samps;
-    input [DWIDTH-1:0] ramp_start;
-    input [DWIDTH-1:0] ramp_inc;
+  // - stream: Stream to use (Optional)
+  task automatic push_ramp_pkt (
+    input integer num_samps,
+    input [DWIDTH-1:0] ramp_start,
+    input [DWIDTH-1:0] ramp_inc,
+    input int stream = 0);
     begin
       automatic integer counter = 0;
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      if (clk) @(negedge clk);
       repeat(num_samps-1) begin
-        this.push_word(ramp_start+(counter*ramp_inc), 0);
+        push_word(ramp_start+(counter*ramp_inc), 0, stream);
         counter = counter + 1;
       end
-      this.push_word(ramp_start+(counter*ramp_inc), 1);
+      push_word(ramp_start+(counter*ramp_inc), 1, stream);
     end
   endtask
 
-endclass
+endinterface
 
 
-class axis_slave #(parameter DWIDTH = 32);
+// Interface to push data onto a master AXI-stream bus
+interface axis_slave #(parameter DWIDTH = 32, parameter NUM_STREAMS = 1)(input clk);
+  axis_t #(.DWIDTH(DWIDTH), .NUM_STREAMS(NUM_STREAMS)) axis(.clk(clk));
 
-  virtual axis_t #(.DWIDTH(DWIDTH)) axis;
-
-  function new(virtual axis_t #(.DWIDTH(DWIDTH)) axis);
-    this.axis = axis;
-    this.axis.tready = 1'b0;
+  // Check that stream is actually in use
+  function void check_stream(int stream);
+    assert (stream < NUM_STREAMS) else
+      $error("axis_slave::check_stream(): Tried to perform operation on unused stream %0d", stream);
   endfunction
 
-  // Accept a sample on the AXI Stream bus and
+  // Reset signals / properties used by this interface
+  task automatic reset;
+    begin
+      axis.tready = 0;
+    end
+  endtask
+
+  // Pull a word from the AXI Stream bus and
   // return the data and last
   // Args:
   // - word: The data pulled from the bus
   // - eop: End of packet (tlast)
-  task automatic pull_word;
-    output logic [DWIDTH-1:0] word;
-    output logic eop;
+  // - stream: Stream to use (Optional)
+  task automatic pull_word (
+    output logic [DWIDTH-1:0] word,
+    output logic eop,
+    input int stream = 0);
     begin
-      this.axis.tready = 1;
-      while(~this.axis.tvalid) @(posedge this.axis.clk);
-      word = this.axis.tdata;
-      eop = this.axis.tlast;
-      @(negedge this.axis.clk);
-      this.axis.tready = 0;
+      check_stream(stream);
+      if (clk) @(negedge clk);
+      axis.tready[stream] = 1;
+      while(~axis.tvalid[stream]) @(posedge clk);
+      word = axis.tdata[DWIDTH*stream +: DWIDTH];
+      eop = axis.tlast[stream];
+      @(negedge clk);
+      axis.tready[stream] = 0;
     end
   endtask
 
@@ -133,105 +164,56 @@ class axis_slave #(parameter DWIDTH = 32);
   // Args:
   // - word: The data pulled from the bus
   // - eop: End of packet (tlast)
-  task automatic copy_word;
-    output logic [DWIDTH-1:0] word;
-    output logic eop;
+  // - stream: Stream to use (Optional)
+  task automatic copy_word (
+    output logic [DWIDTH-1:0] word,
+    output logic eop,
+    input int stream = 0);
     begin
-      while(~(this.axis.tready&this.axis.tvalid)) @(posedge this.axis.clk);  // Wait until sample is transferred
-      word = this.axis.tdata;
-      eop = this.axis.tlast;
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      while(~(axis.tready[stream]&axis.tvalid[stream])) @(posedge clk);  // Wait until sample is transferred
+      word = axis.tdata[DWIDTH*stream +: DWIDTH];
+      eop = axis.tlast[stream];
+      @(negedge clk);
     end
   endtask
 
   // Wait for a bubble cycle on the AXI Stream bus
-  task automatic wait_for_bubble;
+  // Args:
+  // - stream: Stream to use (Optional)
+  task automatic wait_for_bubble (
+    input int stream = 0);
     begin
-      while(this.axis.tready&this.axis.tvalid) @(posedge this.axis.clk);
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      while(axis.tready[stream]&axis.tvalid[stream]) @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
   // Wait for a packet to finish on the bus
-  task automatic wait_for_pkt;
+  // Args:
+  // - stream: Stream to use (Optional)
+  task automatic wait_for_pkt (
+    input int stream = 0);
     begin
-      while(~(this.axis.tready&this.axis.tvalid&this.axis.tlast)) @(posedge this.axis.clk);
-      @(negedge this.axis.clk);
+      check_stream(stream);
+      while(~(axis.tready[stream]&axis.tvalid[stream]&axis.tlast[stream])) @(posedge clk);
+      @(negedge clk);
     end
   endtask
 
-endclass
-
-
-class axis_bus #(parameter DWIDTH = 32);
-
-  axis_master #(.DWIDTH(DWIDTH)) m_axis;
-  axis_slave #(.DWIDTH(DWIDTH)) s_axis;
-
-  function new(virtual axis_t #(.DWIDTH(DWIDTH)) m_axis, virtual axis_t #(.DWIDTH(DWIDTH)) s_axis);
-    this.m_axis = new(m_axis);
-    this.s_axis = new(s_axis);
-  endfunction
-
-  // Class tasks from base classes
-  task automatic push_word;
-    input logic [DWIDTH-1:0] word;
-    input logic eop;
+  // Drop a word on the bus
+  // Args:
+  // - stream:  Stream to use (Optional)
+  task automatic drop_word (
+    input int stream = 0);
     begin
-      this.m_axis.push_word(word, eop);
+      logic [DWIDTH-1:0] dropped_word;
+      logic dropped_eop;
+      s_cvita_data.pull_word(dropped_word, dropped_eop, stream);
     end
   endtask
 
-  task automatic push_bubble;
-    begin
-      this.m_axis.push_bubble();
-    end
-  endtask
-
-  task automatic push_rand_pkt;
-    input integer num_samps;
-    begin
-      this.m_axis.push_rand_pkt(num_samps);
-    end
-  endtask
-
-  task automatic push_ramp_pkt;
-    input integer num_samps;
-    input [DWIDTH-1:0] ramp_start;
-    input [DWIDTH-1:0] ramp_inc;
-    begin
-      this.m_axis.push_ramp_pkt(num_samps, ramp_start, ramp_inc);
-    end
-  endtask
-
-  task automatic pull_word;
-    output logic [DWIDTH-1:0] word;
-    output logic eop;
-    begin
-      this.s_axis.pull_word(word, eop);
-    end
-  endtask
-
-  task automatic copy_word;
-    output logic [DWIDTH-1:0] word;
-    output logic eop;
-    begin
-      this.s_axis.copy_word(word, eop);
-    end
-  endtask
-
-  task automatic wait_for_bubble;
-    begin
-      this.s_axis.wait_for_bubble();
-    end
-  endtask
-
-  task automatic wait_for_pkt;
-    begin
-      this.s_axis.wait_for_pkt();
-    end
-  endtask
-
-endclass
+endinterface
 
 `endif

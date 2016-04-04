@@ -36,7 +36,8 @@ module packet_error_responder #(
     .clk(clk), .reset(reset), .clear(clear),
     .hdr_stb(hdr_stb),
     .pkt_type(), .eob(eob), .has_time(),
-    .seqnum(seqnum), .pkt_len(), .sid(),
+    .seqnum(seqnum), .length(),
+    .src_sid(), .dst_sid(),
     .vita_time_stb(), .vita_time(vita_time),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(int_tdata), .o_tlast(int_tlast), .o_tvalid(int_tvalid), .o_tready(int_tready));

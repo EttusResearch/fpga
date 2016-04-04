@@ -10,7 +10,8 @@ module cvita_hdr_parser #(
   input clk, input reset, input clear,
   output hdr_stb,
   output [1:0] pkt_type, output eob, output has_time,
-  output [11:0] seqnum, output [15:0] pkt_len, output [31:0] sid,
+  output [11:0] seqnum, output [15:0] length,
+  output [15:0] src_sid, output [15:0] dst_sid,
   output vita_time_stb,
   output [63:0] vita_time,
   input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -74,8 +75,9 @@ module cvita_hdr_parser #(
   assign has_time  = hdr[61];
   assign eob       = hdr[60];
   assign seqnum    = hdr[59:48];
-  assign pkt_len   = hdr[47:32];
-  assign sid       = hdr[31:0];
+  assign length    = hdr[47:32];
+  assign src_sid   = hdr[31:16];
+  assign dst_sid   = hdr[15:0];
 
   assign vita_time_stb = read_time & o_tvalid & o_tready;
   assign vita_time     = hdr_vita_time;

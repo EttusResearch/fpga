@@ -25,16 +25,11 @@ DESIGN_SRCS = $(abspath ../../e310_io.v) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/general/Makefile.srcs
-
 # Define only one toplevel module
 SIM_TOP = e310_io_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 20
 
 SIM_SRCS = \
-$(abspath e310_io_tb.sv) \
-$(SIM_GENERAL_SRCS)
+$(abspath e310_io_tb.sv)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

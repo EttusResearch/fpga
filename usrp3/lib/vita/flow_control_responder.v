@@ -31,14 +31,16 @@ module flow_control_responder #(
 
   wire hdr_stb;
   wire [11:0] seqnum;
-  wire [31:0] sid;
+  wire [15:0] src_sid;
+  wire [15:0] dst_sid;
   wire [63:0] vita_time;
   // Extract header fields and also acts as a register stage
   cvita_hdr_parser #(.REGISTER(1)) cvita_hdr_parser (
     .clk(clk), .reset(reset), .clear(clear),
     .hdr_stb(hdr_stb),
     .pkt_type(), .eob(), .has_time(),
-    .seqnum(seqnum), .pkt_len(), .sid(sid),
+    .seqnum(seqnum), .length(),
+    .src_sid(src_sid), .dst_sid(dst_sid),
     .vita_time_stb(), .vita_time(vita_time),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
@@ -97,7 +99,7 @@ module flow_control_responder #(
   end
 
   assign flow_ctrl_tdata = {32'h0, seqnum_hold};
-  assign flow_ctrl_tuser = {2'b01, USE_TIME[0], 1'b0, 12'd0 /* handled by chdr framer */, 16'd0 /* here too */, {sid[15:0], sid[31:16]}, vita_time};
+  assign flow_ctrl_tuser = {2'b01, USE_TIME[0], 1'b0, 12'd0 /* handled by chdr framer */, 16'd0 /* here too */, {dst_sid, src_sid} /* Reverse SID */, vita_time};
   assign flow_ctrl_tlast = 1'b1;
 
   // Create flow control packets

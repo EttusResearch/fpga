@@ -22,7 +22,7 @@ module axi_round
    assign round_corr_nearest = i_tdata[WIDTH_IN-WIDTH_OUT-1];
 
    assign round_corr_nearest_safe =  (WIDTH_IN-WIDTH_OUT > 1) ? 
-                                     ((~i_tdata[WIDTH_IN-1] & (&i_tdata[WIDTH_IN-2:WIDTH_OUT])) ? 1'b0 : round_corr_nearest) :
+                                     ((~i_tdata[WIDTH_IN-1] & (&i_tdata[WIDTH_IN-2:WIDTH_IN-WIDTH_OUT])) ? 1'b0 : round_corr_nearest) :
                                      round_corr_nearest;
 
    assign round_corr = round_to_nearest ? round_corr_nearest_safe :

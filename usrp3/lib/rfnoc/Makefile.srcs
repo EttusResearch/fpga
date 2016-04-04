@@ -7,7 +7,6 @@
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 cmd_pkt_proc.v \
-cvita_hdr_parser.v \
 chdr_fifo_large.v \
 chdr_framer.v \
 chdr_deframer.v \
@@ -28,7 +27,7 @@ noc_block_addsub.v \
 noc_block_window.v \
 noc_block_keep_one_in_n.v \
 noc_block_pfb.v \
-noc_block_export_io.sv \
+noc_block_export_io.v \
 noc_block_conv_encoder_qpsk.v \
 pfb.v \
 pfb_stage.v \
@@ -95,6 +94,8 @@ fosphor/axi_logpwr.v \
 noc_block_logpwr.v \
 noc_block_fosphor.v \
 noc_block_moving_avg.v \
+cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
+cvita_hdr_modify.v \
 ))

@@ -373,7 +373,7 @@ module x300_core (
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
    /////////////////////////////////////////////////////////////////////////////////
-   bus_int #(.NUM_CE(NUM_CE)) bus_int (
+   bus_int #(.NUM_CE(NUM_CE+NUM_RADIOS)) bus_int (
       .clk(bus_clk), .reset(bus_rst),
       .sen(LMK_SEN), .sclk(LMK_SCLK), .mosi(LMK_MOSI), .miso(1'b0),
       .scl0(SFPP0_SCL), .sda0(SFPP0_SDA),
@@ -457,6 +457,8 @@ module x300_core (
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
 
+   localparam NUM_RADIOS = 2;
+
    // Daughter board I/O
    wire [31:0] leds[0:3];
    wire [31:0] fp_gpio_r_in[0:3], fp_gpio_r_out[0:3], fp_gpio_r_ddr[0:3];
@@ -478,7 +480,7 @@ module x300_core (
    //------------------------------------
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
-      .NUM_RADIOS(2),
+      .NUM_CHANNELS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
       .USE_SPI_CLK(1))
@@ -511,7 +513,7 @@ module x300_core (
    //------------------------------------
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
-      .NUM_RADIOS(2),
+      .NUM_CHANNELS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
       .USE_SPI_CLK(1))

@@ -6,5 +6,5 @@
 # Simulation Libraries/Headers for AXI based interfaces
 ##################################################
 SIM_RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../sim/rfnoc/, \
-sim_rfnoc_lib.vh \
+sim_rfnoc_lib.svh \
 ))

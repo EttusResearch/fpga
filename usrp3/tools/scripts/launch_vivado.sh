@@ -65,13 +65,13 @@ trim() {
 vivado $viv_args 2>&1 | while IFS= read -r line
 do
     case $(trim $line) in
-        ERROR:*)
+        *ERROR:*|*Error:*)
             eval $ERR_CLR; echo "$line"; eval $CLR_OFF
             ;;
-        CRITICAL[[:space:]]WARNING:*)
+        *CRITICAL[[:space:]]WARNING:*|*Crtical[[:space:]]Warning:*)
             eval $CRIWARN_CLR; echo "$line"; eval $CLR_OFF
             ;;
-        WARNING:*)
+        *WARNING:*|*Warning:*)
             eval $WARN_CLR; echo "$line"; eval $CLR_OFF
             ;;
         *)
