@@ -98,4 +98,5 @@ cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
 cvita_hdr_modify.v \
+cordic.v \
 ))
