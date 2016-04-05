@@ -32,45 +32,44 @@ module axi_fifo_flop2 #(
   // but can change to: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
   // depending on i_tvalid / o_tready combinations
   always @(posedge clk) begin
+    // Always accept new data if there is space in the pipeline
+    if (i_tready) begin
+      i_tdata_reg  <= i_tdata;
+      i_tvalid_reg <= i_tvalid;
+    end
+    if (o_tready) begin
+      if (i_tready) begin
+        // Only useful when data flow is i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
+        i_tdata_pipe <= i_tdata_reg;
+        if (i_tvalid_pipe) begin
+          // Switch from: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
+          // to:          i_tdata -> i_tdata_reg -> o_tdata
+          // will occur if i_tvalid_reg = 0
+          i_tvalid_pipe <= i_tvalid_reg;
+        end
+      // Input is throttled
+      end else begin
+        i_tdata_pipe  <= i_tdata_reg;
+        i_tvalid_pipe <= i_tvalid_reg;
+        i_tvalid_reg  <= 1'b0; // Since i_tready = 0, we know we will not get new data this cycle
+      end
+    // Output is throttled
+    end else begin
+      // Space available in i_tdata_pipe to store i_tdata_reg.
+      // This is the case where data flow will change
+      // from: i_tdata -> i_tdata_reg -> o_tdata
+      // to:   i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
+      // if i_tvalid_reg = 1
+      if (~i_tvalid_pipe) begin
+        i_tvalid_pipe <= i_tvalid_reg;
+        i_tdata_pipe  <= i_tdata_reg;
+      end
+    end
+    // This module will be used very often, so only reset
+    // tvalid paths to save on fanout.
     if (reset | clear) begin
       i_tvalid_reg  <= 1'b0;
       i_tvalid_pipe <= 1'b0;
-      i_tdata_reg   <= {WIDTH{1'b0}};
-      i_tdata_pipe  <= {WIDTH{1'b0}};
-    end else begin
-      // Always accept new data if there is space in the pipeline
-      if (i_tready) begin
-        i_tdata_reg  <= i_tdata;
-        i_tvalid_reg <= i_tvalid;
-      end
-      if (o_tready) begin
-        if (i_tready) begin
-          // Only useful when data flow is i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-          i_tdata_pipe <= i_tdata_reg;
-          if (i_tvalid_pipe) begin
-            // Switch from: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-            // to:          i_tdata -> i_tdata_reg -> o_tdata
-            // will occur if i_tvalid_reg = 0
-            i_tvalid_pipe <= i_tvalid_reg;
-          end
-        // Input is throttled
-        end else begin
-          i_tdata_pipe  <= i_tdata_reg;
-          i_tvalid_pipe <= i_tvalid_reg;
-          i_tvalid_reg  <= 1'b0; // Since i_tready = 0, we know we will not get new data this cycle
-        end
-      // Output is throttled
-      end else begin
-        // Space available in i_tdata_pipe to store i_tdata_reg.
-        // This is the case where data flow will change
-        // from: i_tdata -> i_tdata_reg -> o_tdata
-        // to:   i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-        // if i_tvalid_reg = 1
-        if (~i_tvalid_pipe) begin
-          i_tvalid_pipe <= i_tvalid_reg;
-          i_tdata_pipe  <= i_tdata_reg;
-        end
-      end
     end
   end
 

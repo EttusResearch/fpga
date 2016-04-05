@@ -90,6 +90,8 @@ module axi_fifo_short
          o_tvalid <= 1'b0;
       end else if (int_tready) begin
          o_tvalid <= ~empty;
+      end
+      if (int_tready) begin
          o_tdata <= int_tdata;
       end
    end
