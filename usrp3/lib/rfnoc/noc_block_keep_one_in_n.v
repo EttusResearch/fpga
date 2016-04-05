@@ -1,9 +1,8 @@
 //
-// Copyright 2014-2015 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
 
 module noc_block_keep_one_in_n #(
-  parameter VECTOR = 1,
   parameter NOC_ID = 64'h0246_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
 (
@@ -42,7 +41,7 @@ module noc_block_keep_one_in_n #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -72,15 +71,13 @@ module noc_block_keep_one_in_n #(
   wire         s_axis_data_tready;
   wire [127:0] s_axis_data_tuser;
 
-  localparam AXI_WRAPPER_BASE    = 128;
-
   axi_wrapper #(
     .SIMPLE_MODE(0))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(), .set_addr(), .set_data(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),
@@ -96,7 +93,10 @@ module noc_block_keep_one_in_n #(
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
     .m_axis_config_tvalid(),
-    .m_axis_config_tready());
+    .m_axis_config_tready(),
+    .m_axis_pkt_len_tdata(),
+    .m_axis_pkt_len_tvalid(),
+    .m_axis_pkt_len_tready());
 
   ////////////////////////////////////////////////////////////
   //
@@ -110,31 +110,47 @@ module noc_block_keep_one_in_n #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready  = 1'b1;
 
-  localparam [7:0] SR_N = 129;
+  localparam [7:0] SR_N           = 129;
+  localparam [7:0] SR_VECTOR_MODE = 130;
 
   wire [15:0] n;
-
   setting_reg #(
     .my_addr(SR_N), .awidth(8), .width(16))
   sr_n (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(n), .changed());
 
-  // Output CHDR packet header data, same as input except SRC / DST SID fields.
-  assign s_axis_data_tuser = {m_axis_data_tuser[127:96],src_sid,next_dst_sid,m_axis_data_tuser[63:0]};
+  wire vector_mode;
+  setting_reg #(
+    .my_addr(SR_VECTOR_MODE), .awidth(8), .width(1), .at_reset(1) /* Drop vectors by default */)
+  sr_vector_mode (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(vector_mode), .changed());
 
-  generate
-    if (VECTOR) begin
-      keep_one_in_n_vec #(
-        .WIDTH(32))
-      inst_keep_one_in_n_vec (
-        .clk(ce_clk), .reset(ce_rst),
-        .n(n),
-        .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-        .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));
-    end else begin
-      // TODO: Add sample based keep one in n
-    end
-  endgenerate
+  // Modify packet header data, same as input except SRC / DST SID fields.
+  cvita_hdr_modify cvita_hdr_modify (
+    .header_in(m_axis_data_tuser),
+    .header_out(s_axis_data_tuser),
+    .use_pkt_type(1'b0),  .pkt_type(),
+    .use_has_time(1'b0),  .has_time(),
+    .use_eob(1'b0),       .eob(),
+    .use_seqnum(1'b0),    .seqnum(),
+    .use_length(1'b0),    .length(),
+    .use_src_sid(1'b1),   .src_sid(src_sid),
+    .use_dst_sid(1'b1),   .dst_sid(next_dst_sid),
+    .use_vita_time(1'b0), .vita_time());
+
+  // Note: When dropping samples (i.e. vector_mode = 0), unless this block receives a multiple
+  //       of N packets (where N is the decimation rate), there will be a partial formed output
+  //       packet. This partial formed packet must be cleared before restarting the block. We
+  //       can use clear_tx_seqnum for that purpose as it is strobed at block initialization.
+  keep_one_in_n #(
+    .WIDTH(32))
+  keep_one_in_n (
+    .clk(ce_clk),
+    .reset(ce_rst | clear_tx_seqnum),
+    .vector_mode(vector_mode), .n(n),
+    .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
+    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));
 
 endmodule
