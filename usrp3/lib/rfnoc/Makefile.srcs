@@ -94,6 +94,7 @@ fosphor/axi_logpwr.v \
 noc_block_logpwr.v \
 noc_block_fosphor.v \
 noc_block_moving_avg.v \
+noc_block_ddc.v \
 cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
@@ -101,5 +102,6 @@ cvita_hdr_modify.v \
 axi_rate_change.v \
 axi_packet_resizer.v \
 cordic.v \
+ddc.v \
 cic_decimate.v \
 ))

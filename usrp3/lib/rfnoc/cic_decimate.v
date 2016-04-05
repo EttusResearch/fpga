@@ -122,7 +122,7 @@ module cic_decimate #(
   integer k;
   initial begin
     for (k = 1; k <= MAX_RATE; k = k + 1) begin
-      shift[k] = $rtoi($ceil(N*$log10(k)/$log10(2)));
+      shift[k] = $ceil(N*$log10(k)/$log10(2));
     end
   end
 
