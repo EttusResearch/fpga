@@ -2,88 +2,108 @@
 // Copyright 2014 Ettus Research LLC
 //
 `timescale 1ns/1ps
+`define NS_PER_TICK 1
+`define NUM_TEST_CASES 5
+
+`include "sim_exec_report.vh"
+`include "sim_clks_rsts.vh"
+`include "sim_rfnoc_lib.svh"
 
 module noc_block_vector_iir_tb();
-  // rfnoc_sim_lib options
-  `define NUM_CE 1          // Redefined to correct value
-  `define RFNOC_SIM_LIB_INC_AXI_WRAPPER
-  `define SIMPLE_MODE 0
-  `include "rfnoc_sim_lib.v" 
+  `TEST_BENCH_INIT("noc_block_vector_iir",`NUM_TEST_CASES,`NS_PER_TICK);
+  localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
+  localparam CE_CLK_PERIOD  = $ceil(1e9/200e6);
+  localparam NUM_CE         = 1;  // Number of Computation Engines / User RFNoC blocks to simulate
+  localparam NUM_STREAMS    = 1;  // Number of test bench streams
+  `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
+  `RFNOC_ADD_BLOCK(noc_block_vector_iir, 0);
 
-  /*********************************************
-  ** DUT
-  *********************************************/
-  noc_block_vector_iir inst_noc_block_vector_iir (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(ce_clk), .ce_rst(ce_rst),
-    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-    .debug());
+  localparam SPP         = 256; // Samples per packet
+  localparam NUM_PASSES  = 10;
+  // Vector IIR settings
+  localparam VECTOR_SIZE = SPP;
+  localparam ALPHA       = int'($floor(1.0*(2**31-1)));
+  localparam BETA        = int'($floor(1.0*(2**31-1)));
 
-  localparam [ 3:0] VECTOR_IIR_XBAR_PORT = 4'd0;
-  localparam [15:0] VECTOR_IIR_SID       = {XBAR_ADDR, VECTOR_IIR_XBAR_PORT, 4'd0};
+  /********************************************************
+  ** Verification
+  ********************************************************/
+  initial begin : tb_main
+    string s;
+    logic [63:0] readback;
 
-  localparam [15:0] VECTOR_SIZE = 8;
-  
-  wire signed [31:0] ALPHA = $floor(1.0*(2**31-1));
-  wire signed [31:0] BETA  = $floor(1.0*(2**31-1));
+    /********************************************************
+    ** Test 1 -- Reset
+    ********************************************************/
+    `TEST_CASE_START("Wait for Reset");
+    while (bus_rst) @(posedge bus_clk);
+    while (ce_rst) @(posedge ce_clk);
+    `TEST_CASE_DONE(~bus_rst & ~ce_rst);
 
-  integer i;
-  reg [31:0] payload = 32'd0;
+    /********************************************************
+    ** Test 2 -- Check for correct NoC IDs
+    ********************************************************/
+    `TEST_CASE_START("Check NoC ID");
+    // Read NOC IDs
+    tb_streamer.read_reg(sid_noc_block_vector_iir, RB_NOC_ID, readback);
+    $display("Read Vector IIR NOC ID: %16x", readback);
+    `ASSERT_ERROR(readback == noc_block_vector_iir.NOC_ID, "Incorrect NOC ID");
+    `TEST_CASE_DONE(1);
 
-  initial begin
-    @(negedge ce_rst);
-    @(posedge ce_clk);
-    
-    // Setup Vector IIR
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});                  // Command packet to set up flow control
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});                   // Command packet to set up source control window size
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                     // Command packet to set up source control window enable
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, SR_NEXT_DST_BASE, {16'd0, TESTBENCH_SID}});                       // Set next destination
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, inst_noc_block_vector_iir.SR_VECTOR_LEN, {16'd0, VECTOR_SIZE}});  // Set Vector length register
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, inst_noc_block_vector_iir.SR_ALPHA, ALPHA});
-    SendCtrlPacket(VECTOR_IIR_SID, {24'd0, inst_noc_block_vector_iir.SR_BETA, BETA});
-    #1000;
+    /********************************************************
+    ** Test 3 -- Connect RFNoC blocks
+    ********************************************************/
+    `TEST_CASE_START("Connect RFNoC blocks");
+    `RFNOC_CONNECT(noc_block_tb,noc_block_vector_iir,SC16,SPP);
+    `RFNOC_CONNECT(noc_block_vector_iir,noc_block_tb,SC16,SPP);
+    `TEST_CASE_DONE(1);
 
-    tb_next_dst = VECTOR_IIR_SID;
-    @(posedge ce_clk);
-    forever begin
-      for (i = 0; i < VECTOR_SIZE; i = i + 1) begin
-        payload[31:16] = 2*i;
-        payload[15: 0] = 2*i+1;
-        SendAxi(payload,(i == VECTOR_SIZE-1)); // Assert tlast on final word
+    /********************************************************
+    ** Test 4 -- Setup Vector IIR
+    ********************************************************/
+    `TEST_CASE_START("Setup Vector IIR");
+    tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_VECTOR_LEN, VECTOR_SIZE);
+    tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_ALPHA, ALPHA);
+    tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_BETA, BETA);
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 5 -- Test vectors
+    ********************************************************/
+    `TEST_CASE_START("Send test vectors");
+    // Send 1/8th sample rate sine wave
+    fork
+    begin
+      logic [31:0] send_word;
+      for (int n = 0; n < NUM_PASSES; n++) begin
+        $display("Sending test vector %0d", n);
+        for (int k = 0; k < VECTOR_SIZE; k++) begin
+          send_word[31:16] = 16'(2*k);
+          send_word[15:0]  = 16'(2*k+1);
+          tb_streamer.push_word(send_word,(k == VECTOR_SIZE-1));
+        end
       end
     end
-  end
-
-  // Assertions
-  integer k, l;
-  reg [31:0] expected_payload[0:VECTOR_SIZE-1];
-  reg [31:0] received_payload;
-  reg last;
-  localparam NUM_PASSES = 20;
-  initial begin
-    // Initialize local verification vector to 0
-    for (k = 0; k < VECTOR_SIZE; k = k + 1) begin
-      expected_payload[k] = 32'd0;
-    end
-    @(negedge ce_rst);
-    @(posedge ce_clk);
-    $display("*****************************************************");
-    $display("**              Begin Assertion Tests              **");
-    $display("*****************************************************");
-    for (l = 0; l < NUM_PASSES; l = l + 1) begin
-      for (k = 0; k < VECTOR_SIZE; k = k + 1) begin
-        RecvAxi(received_payload,last);
-        expected_payload[k][31:16] = expected_payload[k][31:16] + 2*k;
-        expected_payload[k][15: 0] = expected_payload[k][15: 0] + 2*k+1;
-        assert(expected_payload[k] == received_payload) else begin $error("Vector IIR output incorrect! Received: %x Expected: %x",received_payload,expected_payload); $stop(); end
-        assert((k != VECTOR_SIZE-1) == (last == 1'b0)) else begin $error("Detected early tlast!"); $stop(); end
-        assert((k == VECTOR_SIZE-1) == (last == 1'b1)) else begin $error("Detected late tlast!"); $stop(); end
+    begin
+      logic [31:0] received_payload;
+      logic [31:0] expected_payload[0:VECTOR_SIZE-1] = '{VECTOR_SIZE{'d0}};
+      logic last;
+      for (int n = 0; n < NUM_PASSES; n++) begin
+        $display("Checking test vector %0d", n);
+        for (int k = 0; k < VECTOR_SIZE; k++) begin
+          tb_streamer.pull_word(received_payload,last);
+          expected_payload[k][31:16] = expected_payload[k][31:16] + 2*k;
+          expected_payload[k][15: 0] = expected_payload[k][15: 0] + 2*k+1;
+          $sformat(s, "Vector IIR output incorrect! Received: %08x Expected: %08x", received_payload, expected_payload[k]);
+          `ASSERT_FATAL(expected_payload[k] == received_payload, s);
+          `ASSERT_FATAL((k != VECTOR_SIZE-1) == (last == 1'b0), "Detected early tlast!");
+          `ASSERT_FATAL((k == VECTOR_SIZE-1) == (last == 1'b1), "Detected late tlast!")
+        end
       end
-      $display("Test loop %d PASSED!",l);
     end
-    $display("All tests PASSED!");
-  end
+    join
+    `TEST_CASE_DONE(1);
+    `TEST_BENCH_DONE;
 
+  end
 endmodule
