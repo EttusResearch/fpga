@@ -114,21 +114,45 @@ interface rfnoc_block_streamer #(
   cvita_slave #(.DWIDTH(CVITA_DWIDTH), .NUM_STREAMS(NUM_STREAMS)) s_cvita_data(.clk(clk));
   axis_master #(.DWIDTH(AXIS_DWIDTH), .NUM_STREAMS(NUM_STREAMS)) m_axis_data(.clk(clk));
   axis_slave #(.DWIDTH(AXIS_DWIDTH), .NUM_STREAMS(NUM_STREAMS)) s_axis_data(.clk(clk));
-  localparam bytes_per_cvita_line            = CVITA_DWIDTH/8;
-  logic [15:0] src_sid[0:NUM_STREAMS-1]      = '{NUM_STREAMS{16'd0}};
-  logic [15:0] dst_sid[0:NUM_STREAMS-1]      = '{NUM_STREAMS{16'd0}};
-  logic [11:0] cmd_seqnum                    = 12'd0;
-  logic [11:0] data_seqnum[0:NUM_STREAMS-1]  = '{NUM_STREAMS{12'd0}};
-  int spp[0:NUM_STREAMS-1]                   = '{NUM_STREAMS{0}};
-  int ticks_per_word[0:NUM_STREAMS-1]        = '{NUM_STREAMS{1}};
+  localparam bytes_per_cvita_line               = CVITA_DWIDTH/8;
+  logic [15:0] src_sid[0:NUM_STREAMS-1]         = '{NUM_STREAMS{16'd0}};
+  logic [15:0] dst_sid[0:NUM_STREAMS-1]         = '{NUM_STREAMS{16'd0}};
+  logic [11:0] cmd_seqnum                       = 12'd0;
+  logic [11:0] data_seqnum[0:NUM_STREAMS-1]     = '{NUM_STREAMS{12'd0}};
+  int unsigned spp[0:NUM_STREAMS-1]             = '{NUM_STREAMS{0}};
+  int unsigned ticks_per_word[0:NUM_STREAMS-1]  = '{NUM_STREAMS{1}};
+  bit upstream_connected[0:NUM_STREAMS-1]       = '{NUM_STREAMS{0}};
+  bit downstream_connected[0:NUM_STREAMS-1]     = '{NUM_STREAMS{0}};
   cvita_data_type_t data_type[0:NUM_STREAMS-1];
 
-  function void check_stream(int stream);
-    assert (stream < NUM_STREAMS) else
-      $error("rfnoc_block_streamer::check_stream(): Tried to perform operation on unused stream %0d", stream);
+  function void check_upstream(int unsigned stream);
+    check_stream(stream);
+    assert (upstream_connected[stream] != 0) else begin
+      $error("rfnoc_block_streamer::check_upstream(): Stream %0d: upstream is not connected! Check for missing RFNOC_CONNECT().", stream);
+      $finish(0);
+    end
   endfunction
 
-  function void set_src_sid(input logic [15:0] _src_sid, input int stream = 0);
+  function void check_downstream(int unsigned stream);
+    check_stream(stream);
+    assert (downstream_connected[stream] != 0) else begin
+      $error("rfnoc_block_streamer::check_downstream(): Stream %0d: downstream is not connected! Check for missing RFNOC_CONNECT().", stream);
+      $finish(0);
+    end
+    assert (spp[stream] > 0) else begin
+      $error("rfnoc_block_streamer::check_downstream(): Stream %0d: SPP cannot be 0!", stream);
+      $finish(0);
+    end
+  endfunction
+
+  function void check_stream(int unsigned stream);
+    assert (stream < NUM_STREAMS) else begin
+      $error("rfnoc_block_streamer::check_stream(): Stream %0d: Tried to perform operation on non-existent stream!", stream);
+      $finish(0);
+    end
+  endfunction
+
+  function void set_src_sid(input logic [15:0] _src_sid, input int unsigned stream = 0);
     check_stream(stream);
     src_sid[stream] = _src_sid;
   endfunction
@@ -138,28 +162,28 @@ interface rfnoc_block_streamer #(
     return(src_sid[stream]);
   endfunction
 
-  function void set_dst_sid(input logic [15:0] _dst_sid, input int stream = 0);
+  function void set_dst_sid(input logic [15:0] _dst_sid, input int unsigned stream = 0);
     check_stream(stream);
     dst_sid[stream] = _dst_sid;
     data_seqnum[stream] = 12'd0;
   endfunction
 
-  function logic [15:0] get_dst_sid(int stream = 0);
+  function logic [15:0] get_dst_sid(input int unsigned stream = 0);
     check_stream(stream);
     return(dst_sid[stream]);
   endfunction
 
-  function void set_seqnum(input logic [11:0] _seqnum, input int stream = 0);
+  function void set_seqnum(input logic [11:0] _seqnum, input int unsigned stream = 0);
     check_stream(stream);
     data_seqnum[stream] = _seqnum;
   endfunction
 
-  function logic [11:0] get_seqnum(input int stream);
+  function logic [11:0] get_seqnum(input int unsigned stream);
     check_stream(stream);
     return(data_seqnum[stream]);
   endfunction
 
-  function void clear_seqnum(input int stream);
+  function void clear_seqnum(input int unsigned stream);
     check_stream(stream);
     data_seqnum[stream] = 12'd0;
   endfunction
@@ -176,34 +200,58 @@ interface rfnoc_block_streamer #(
     cmd_seqnum = 12'd0;
   endfunction
 
-  function void set_spp(input int _spp, input int stream = 0);
+  function void set_spp(input int unsigned _spp, input int unsigned stream = 0);
     check_stream(stream);
     spp[stream] = _spp;
   endfunction
 
-  function int get_spp(input int stream = 0);
+  function int unsigned get_spp(input int unsigned stream = 0);
     check_stream(stream);
     return(spp[stream]);
   endfunction
 
-  function void set_ticks_per_word(input int _ticks_per_word, input int stream = 0);
+  function void set_ticks_per_word(input int unsigned _ticks_per_word, input int unsigned stream = 0);
     check_stream(stream);
     ticks_per_word[stream] = _ticks_per_word;
   endfunction
 
-  function int get_ticks_per_word(input int stream = 0);
+  function int unsigned get_ticks_per_word(input int unsigned stream = 0);
     check_stream(stream);
     return(ticks_per_word[stream]);
   endfunction
 
-  function void set_data_type(input cvita_data_type_t _data_type, input int stream = 0);
+  function void set_data_type(input cvita_data_type_t _data_type, input int unsigned stream = 0);
     check_stream(stream);
     data_type[stream] = _data_type;
   endfunction
 
-  function cvita_data_type_t get_data_type(input int stream = 0);
+  function cvita_data_type_t get_data_type(input int unsigned stream = 0);
     check_stream(stream);
     return(data_type[stream]);
+  endfunction
+
+  function void connect_upstream(input int unsigned stream);
+    upstream_connected[stream] = 1;
+  endfunction
+
+  function void disconnect_upstream(input int unsigned stream);
+    upstream_connected[stream] = 0;
+  endfunction
+
+  function bit get_upstream_connected(input int unsigned stream);
+    return(upstream_connected[stream]);
+  endfunction
+
+  function void connect_downstream(input int unsigned stream);
+    downstream_connected[stream] = 1;
+  endfunction
+
+  function void disconnect_downstream(input int unsigned stream);
+    downstream_connected[stream] = 0;
+  endfunction
+
+  function bit get_downstream_connected(input int unsigned stream);
+    return(downstream_connected[stream]);
   endfunction
 
   // Reset state of all signals / properties
@@ -221,6 +269,8 @@ interface rfnoc_block_streamer #(
       cmd_seqnum = 12'd0;
       data_seqnum[0:NUM_STREAMS-1] = '{NUM_STREAMS{12'd0}};
       spp[0:NUM_STREAMS-1] = '{NUM_STREAMS{0}};
+      upstream_connected = '{NUM_STREAMS{0}};
+      downstream_connected = '{NUM_STREAMS{0}};
     end
   endtask
 
@@ -235,25 +285,25 @@ interface rfnoc_block_streamer #(
   task automatic send (
     input cvita_payload_t payload,
     input cvita_metadata_t metadata = '{eob:1'b0, has_time:1'b0, timestamp:64'd0},
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
       cvita_pkt_t pkt;
-      int bytes_per_word;
-      int lines_per_pkt;
-      int num_pkts;
+      int unsigned bytes_per_word;
+      int unsigned lines_per_pkt;
+      int unsigned num_pkts;
       logic [63:0] timestamp[$];
 
-      check_stream(stream);
+      check_downstream(stream);
 
       bytes_per_word = data_type[stream].bytes_per_word;
       lines_per_pkt  = spp[stream]*bytes_per_word/bytes_per_cvita_line;
       num_pkts       = $ceil(real'(payload.size())/lines_per_pkt);
       // Increment timestamps
-      for (int i = 0; i < num_pkts; i++) begin
+      for (int unsigned i = 0; i < num_pkts; i++) begin
         timestamp.push_back(metadata.timestamp + i*ticks_per_word[stream]*(bytes_per_word/bytes_per_cvita_line));
       end
       // Break up payload across multiple packets
-      for (int i = 0; i < num_pkts; i++) begin
+      for (int unsigned i = 0; i < num_pkts; i++) begin
         if (i == num_pkts-1) begin
           pkt.payload = payload[i*lines_per_pkt:payload.size-1];
           pkt.hdr = '{pkt_type:DATA, has_time:metadata.has_time, eob:metadata.eob /* Set EOB on final packet */,
@@ -284,10 +334,10 @@ interface rfnoc_block_streamer #(
   task automatic recv (
     output cvita_payload_t payload,
     output cvita_metadata_t metadata,
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
       cvita_pkt_t pkt;
-      check_stream(stream);
+      check_upstream(stream);
       pull_pkt(pkt, stream);
       payload = pkt.payload;
       metadata.eob = pkt.hdr.eob;
@@ -304,9 +354,9 @@ interface rfnoc_block_streamer #(
   // - stream:  Stream to send packet on (Optional)
   task automatic push_pkt (
     input cvita_pkt_t pkt,
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
-      check_stream(stream);
+      check_downstream(stream);
       m_cvita_data.push_pkt(pkt, stream);
     end
   endtask
@@ -319,9 +369,9 @@ interface rfnoc_block_streamer #(
   task automatic push_word (
     input logic [AXIS_DWIDTH-1:0] word,
     input logic eop = 1'b0,
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
-      check_stream(stream);
+      check_downstream(stream);
       m_axis_data.push_word(word, eop, stream);
     end
   endtask
@@ -332,9 +382,9 @@ interface rfnoc_block_streamer #(
   // - stream:  Stream to use (Optional)
   task automatic pull_pkt (
     output cvita_pkt_t pkt,
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
-      check_stream(stream);
+      check_upstream(stream);
       s_cvita_data.pull_pkt(pkt, stream);
     end
   endtask
@@ -348,9 +398,9 @@ interface rfnoc_block_streamer #(
   task automatic pull_word (
     output logic [AXIS_DWIDTH-1:0] word,
     output logic eop,
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
-      check_stream(stream);
+      check_upstream(stream);
       s_axis_data.pull_word(word, eop, stream);
     end
   endtask
@@ -359,10 +409,11 @@ interface rfnoc_block_streamer #(
   // Args:
   // - stream:  Stream to use (Optional)
   task automatic drop_pkt (
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
       cvita_pkt_t dropped_pkt;
-      s_cvita_data.pull_pkt(dropped_pkt, stream);
+      check_upstream(stream);
+      pull_pkt(dropped_pkt, stream);
     end
   endtask
 
@@ -370,11 +421,12 @@ interface rfnoc_block_streamer #(
   // Args:
   // - stream:  Stream to use (Optional)
   task automatic drop_word (
-    input int stream = 0);
+    input int unsigned stream = 0);
     begin
       logic [AXIS_DWIDTH-1:0] dropped_word;
       logic dropped_eop;
-      s_cvita_data.pull_word(dropped_word, dropped_eop, stream);
+      check_upstream(stream);
+      pull_word(dropped_word, dropped_eop, stream);
     end
   endtask
 
@@ -454,7 +506,7 @@ interface rfnoc_block_streamer #(
     input logic [7:0] addr,
     input logic [31:0] data,
     output logic [63:0] readback,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       push_cmd(_dst_sid+block_port, {24'd0,addr,data}, readback);
     end
@@ -476,7 +528,7 @@ interface rfnoc_block_streamer #(
     input logic [31:0] data,
     input logic [63:0] timestamp,
     output logic [63:0] readback,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       cvita_metadata_t md;
       md.has_time = 1;
@@ -495,7 +547,7 @@ interface rfnoc_block_streamer #(
     input logic [15:0] _dst_sid = dst_sid[0],
     input logic [7:0] addr,
     input logic [31:0] data,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       logic [63:0] readback;
       write_reg_readback(_dst_sid, addr, data, readback, block_port);
@@ -516,7 +568,7 @@ interface rfnoc_block_streamer #(
     input logic [7:0] addr,
     input logic [31:0] data,
     input logic [63:0] timestamp,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       logic [63:0] readback;
       write_reg_readback_timed(_dst_sid, addr, data, timestamp, readback, block_port);
@@ -533,7 +585,7 @@ interface rfnoc_block_streamer #(
     input logic [15:0] _dst_sid = dst_sid[0],
     input logic [7:0] addr,
     input logic [31:0] data,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       write_reg(_dst_sid, addr, data, block_port);
     end
@@ -553,7 +605,7 @@ interface rfnoc_block_streamer #(
     input logic [7:0] addr,
     input logic [31:0] data,
     input logic [63:0] timestamp,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       write_reg_timed(_dst_sid, addr, data, timestamp, block_port);
     end
@@ -569,7 +621,7 @@ interface rfnoc_block_streamer #(
     input logic [15:0] _dst_sid = dst_sid[0],
     input logic [7:0] addr, // Only 128 user registers (128-255)
     output logic [63:0] readback,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       // Set user readback mux
       write_reg(_dst_sid, SR_RB_ADDR_USER, addr, block_port);
@@ -587,7 +639,7 @@ interface rfnoc_block_streamer #(
     input logic [15:0] _dst_sid = dst_sid[0],
     input logic [7:0] addr,
     output logic [63:0] readback,
-    input int block_port = 0);
+    input int unsigned block_port = 0);
     begin
       // Set NoC Shell readback mux, response packet will have readback data
       write_reg_readback(_dst_sid, SR_RB_ADDR, addr, readback, block_port);
@@ -756,7 +808,7 @@ endinterface
   rfnoc_block_streamer #(.NUM_STREAMS(num_streams)) ``name``_streamer(.clk(ce_clk)); \
   initial begin \
     ``name``_streamer.reset(); \
-    for (int k = 0; k < num_streams; k++) begin \
+    for (int unsigned k = 0; k < num_streams; k++) begin \
       name``_streamer.set_src_sid(16'(sid_noc_block_``name + k), k); \
     end \
   end \
@@ -936,6 +988,10 @@ endinterface
     tb_streamer.set_dst_sid(16'(sid_``to_noc_block_name + to_block_port), from_block_port); \
     tb_streamer.set_spp(spp, from_block_port); \
     tb_streamer.set_data_type(data_type, from_block_port); \
+    tb_streamer.connect_downstream(from_block_port); \
+  end \
+  if (sid_``to_noc_block_name == sid_noc_block_tb) begin \
+    tb_streamer.connect_upstream(to_block_port); \
   end \
   // Send a flow control response packet on every received packet \
   tb_config.write_reg(sid_``to_noc_block_name,   SR_FLOW_CTRL_PKTS_PER_ACK, 32'h8000_0001, from_block_port); \
