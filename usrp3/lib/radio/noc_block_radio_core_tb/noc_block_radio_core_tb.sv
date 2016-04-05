@@ -4,9 +4,9 @@
 
 `timescale 1ns/1ps
 
+`define SIM_TIMEOUT_US 10000
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 15
-`define SIM_RUNTIME_US 10000
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.svh"
