@@ -66,7 +66,7 @@ vsim: .check_tool $(COMPLIBDIR) $(DESIGN_SRCS) $(SIM_SRCS) $(INC_SRCS)
 
 ##vlint:	  Run verilog compiler to lint files.
 vlint: .check_tool
-	@vlog $(SIM_SRCS) +incdir+../../../sim/axi +incdir+../../../sim/general +incdir+../../../sim/control +incdir+../../../sim/rfnoc +incdir+../ +incdir+../../rfnoc/ +define+SIM_RUNTIME_US=1000
+	@vlog $(SIM_SRCS) +incdir+$(BASE_DIR)/../sim/axi +incdir+$(BASE_DIR)/../sim/general +incdir+$(BASE_DIR)/../sim/control +incdir+$(BASE_DIR)/../sim/rfnoc +incdir+$(BASE_DIR)/../lib/rfnoc
 
 ##vclean:     Cleanup Modelsim intermediate files
 vclean:

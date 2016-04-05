@@ -210,7 +210,7 @@ interface axis_slave #(parameter DWIDTH = 32, parameter NUM_STREAMS = 1)(input c
     begin
       logic [DWIDTH-1:0] dropped_word;
       logic dropped_eop;
-      s_cvita_data.pull_word(dropped_word, dropped_eop, stream);
+      pull_word(dropped_word, dropped_eop, stream);
     end
   endtask
 
