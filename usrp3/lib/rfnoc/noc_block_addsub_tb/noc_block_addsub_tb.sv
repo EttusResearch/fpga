@@ -1,78 +1,97 @@
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
+
 `timescale 1ns/1ps
+`define NS_PER_TICK 1
+`define NUM_TEST_CASES 4
+
+`include "sim_exec_report.vh"
+`include "sim_clks_rsts.vh"
+`include "sim_rfnoc_lib.svh"
 
 module noc_block_addsub_tb();
-  // rfnoc_sim_lib options
-  `define NUM_CE 1          // Redefined to correct value
-  `define RFNOC_SIM_LIB_INC_AXI_WRAPPER
-  `define SIMPLE_MODE 0
-  `include "rfnoc_sim_lib.v"
+  `TEST_BENCH_INIT("noc_block_addsub",`NUM_TEST_CASES,`NS_PER_TICK);
+  localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
+  localparam CE_CLK_PERIOD  = $ceil(1e9/200e6);
+  localparam NUM_CE         = 1;  // Number of Computation Engines / User RFNoC blocks to simulate
+  localparam NUM_STREAMS    = 2;  // Number of test bench streams
+  `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
+  `RFNOC_ADD_BLOCK(noc_block_addsub, 0);
 
-  /*********************************************
-  ** DUT
-  *********************************************/
-  noc_block_addsub inst_noc_block_addsub (
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
-    .ce_clk(ce_clk), .ce_rst(ce_rst),
-    .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-    .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-    .debug());
+  localparam SPP = 256; // Samples per packet
 
-  localparam [ 3:0] ADDSUB_XBAR_PORT = 4'd0;
-  localparam [15:0] ADDSUB_SID       = {XBAR_ADDR, ADDSUB_XBAR_PORT, 4'd0};
+  /********************************************************
+  ** Verification
+  ********************************************************/
+  initial begin : tb_main
+    string s;
+    logic [31:0] random_word;
+    logic [63:0] readback;
 
-  initial begin
-    @(negedge ce_rst);
-    @(posedge ce_clk);
+    /********************************************************
+    ** Test 1 -- Reset
+    ********************************************************/
+    `TEST_CASE_START("Wait for Reset");
+    while (bus_rst) @(posedge bus_clk);
+    while (ce_rst) @(posedge ce_clk);
+    `TEST_CASE_DONE(~bus_rst & ~ce_rst);
 
-    // Configure Block Port 0
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE, 32'h8000_0001});              // Command packet to set up flow control
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE, 32'h0000_0FFF});               // Command packet to set up source control window size
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE, 32'h0000_0001});                 // Command packet to set up source control window enable
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_NEXT_DST_BASE, {16'd0, TESTBENCH_SID}});                   // Set next destination
-    #10000;
-    // Configure Block Port 1
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_PKTS_PER_ACK_BASE+1, 32'h8000_0001});              // Command packet to set up flow control
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_WINDOW_SIZE_BASE+1, 32'h0000_0FFF});               // Command packet to set up source control window size
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_FLOW_CTRL_WINDOW_EN_BASE+1, 32'h0000_0001});                 // Command packet to set up source control window enable
-    SendCtrlPacket(ADDSUB_SID, {24'd0, SR_NEXT_DST_BASE+1, {16'd0, TESTBENCH_SID}});                 // Set next destination
-    
-    #10000;
-    @(posedge ce_clk);
-    // Send to block port 0
-    tb_next_dst = ADDSUB_SID;
-    SendAxi({16'd1,16'd2},0);
-    SendAxi({16'd3,16'd4},1);
-    // Send to block port 1
-    tb_next_dst = ADDSUB_SID+1;
-    SendAxi({16'd1,16'd2},0);
-    SendAxi({-16'd3,-16'd4},1);
+    /********************************************************
+    ** Test 2 -- Check for correct NoC IDs
+    ********************************************************/
+    `TEST_CASE_START("Check NoC ID");
+    // Read NOC IDs
+    tb_streamer.read_reg(sid_noc_block_addsub, RB_NOC_ID, readback);
+    $display("Read AddSub NOC ID: %16x", readback);
+    `ASSERT_ERROR(readback == noc_block_addsub.NOC_ID, "Incorrect NOC ID");
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 3 -- Connect RFNoC blocks
+    ********************************************************/
+    `TEST_CASE_START("Connect RFNoC blocks");
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,0,noc_block_addsub,0,SC16,SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,1,noc_block_addsub,1,SC16,SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_addsub,0,noc_block_tb,0,SC16,SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_addsub,1,noc_block_tb,1,SC16,SPP);
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 4 -- Test adding and subtracting ramps
+    ********************************************************/
+    `TEST_CASE_START("Test adding and subtracting ramps");
+    fork
+      begin
+        cvita_payload_t send_payload;
+        cvita_metadata_t tx_md;
+        for (int i = 0; i < SPP/2; i++) begin
+          send_payload.push_back({16'(2*i+SPP),16'(2*i),16'(2*i+1+SPP),16'(2*i+1)});
+        end
+        tx_md.eob = 1'b1;
+        tb_streamer.send(send_payload,tx_md,0);
+        tb_streamer.send(send_payload,tx_md,1);
+      end
+      begin
+        cvita_payload_t recv_payload[0:1];
+        cvita_metadata_t rx_md[0:1];
+        logic [63:0] expected_value, recv_value;
+        tb_streamer.recv(recv_payload[0],rx_md[0],0);
+        tb_streamer.recv(recv_payload[1],rx_md[1],1);
+        for (int i = 0; i < SPP/2; i++) begin
+          expected_value = 2*{16'(2*i+SPP),16'(2*i),16'(2*i+1+SPP),16'(2*i+1)};
+          recv_value = recv_payload[0][i];
+          $sformat(s, "Incorrect value received on add output! Expected: %0d, Received: %0d", expected_value, recv_value);
+         `ASSERT_ERROR(recv_value == expected_value, s);
+          expected_value = 'd0;
+          recv_value = recv_payload[1][i];
+          $sformat(s, "Incorrect value received on subtract output! Expected: %0d, Received: %0d", expected_value, recv_value);
+         `ASSERT_ERROR(recv_value == expected_value, s);
+        end
+      end
+    join
+    `TEST_CASE_DONE(1);
+    `TEST_BENCH_DONE;
+
   end
-
-  // Assertions
-  reg [64:0] payload;
-  reg last;
-  initial begin
-    @(negedge ce_rst);
-    @(posedge ce_clk);
-    $display("*****************************************************");
-    $display("**              Begin Assertion Tests              **");
-    $display("*****************************************************");
-    RecvAxi(payload[64:32],last);
-    assert(last == 1'b0) else begin $error("Detected early tlast!"); $stop(); end
-    RecvAxi(payload[31:0],last);
-    assert(last == 1'b1) else begin $error("Detected late tlast!"); $stop(); end
-    assert(payload == 64'h0002000400000000) else begin $error("Addition result incorrect!"); $stop(); end
-    $display("Addition test PASSED!");
-    RecvAxi(payload[64:32],last);
-    assert(last == 1'b0) else begin $error("Detected early tlast!"); $stop(); end
-    RecvAxi(payload[31:0],last);
-    assert(last == 1'b1) else begin $error("Detected late tlast!"); $stop(); end
-    assert(payload == 64'h0000000000060008) else begin $error("Subtraction result incorrect!"); $stop(); end
-    $display("Subtraction test PASSED!");
-    $display("All tests PASSED!");
-  end
-
 endmodule

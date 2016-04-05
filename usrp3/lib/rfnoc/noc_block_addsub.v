@@ -21,9 +21,6 @@ module noc_block_addsub #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire [31:0]   set_data;
-  wire [7:0]    set_addr;
-  wire [1:0]    set_stb;
 
   wire [63:0]   cmdout_tdata, ackin_tdata;
   wire          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -47,15 +44,15 @@ module noc_block_addsub #(
     .STR_SINK_FIFOSIZE({2{STR_SINK_FIFOSIZE[7:0]}}),
     .INPUT_PORTS(2),
     .OUTPUT_PORTS(2))
-  inst_noc_shell (
+  noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
-    .rb_stb(1'b1), .rb_data('d0), .rb_addr(),
+    .set_data(), .set_addr(), .set_stb(),
+    .rb_stb(2'b11), .rb_data(128'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
