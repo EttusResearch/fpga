@@ -218,7 +218,7 @@ module cmd_pkt_proc #(
             end
             set_stb         <= 1'b1;
             if (int_tlast) begin
-              int_tready    <= 1'b1;
+              int_tready    <= 1'b0;
               state         <= S_SET_WAIT;
             // Long command packet support
             end else begin
