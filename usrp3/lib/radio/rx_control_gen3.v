@@ -114,7 +114,7 @@ module rx_control_gen3 #(
 
   reg [11:0] seqnum_cnt;
   always @(posedge clk) begin
-    if (reset | clear) begin
+    if (reset | clear | clear_halt) begin
       seqnum_cnt <= 'd0;
     end else begin
       // Do not increment sequence number on error packets
