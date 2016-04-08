@@ -101,6 +101,6 @@ $(RFNOC_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
-hls: prereqs hls_ip bin
+hls: .prereqs hls_ip bin
 
 .PHONY: bin hls

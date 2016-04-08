@@ -33,6 +33,7 @@ XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_F
 # vivado_build($1=Target, $2=Device, $3=Definitions)
 vivado_build = make -f Makefile.x300.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 VERILOG_DEFS="$3"
 
+# vivado_build($1=Device, $2=Option)
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream files..."; \
@@ -93,19 +94,19 @@ X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
 
 X310_RFNOC_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
 	$(call vivado_build,bin,X310,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1)
-	$(call post_build,X310_RFNOC,HGS)
+	$(call post_build,X310,RFNOC_HGS)
 
 X300_RFNOC_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
 	$(call vivado_build,bin,X300,$(HYBRID_SRAM_DEFS) RFNOC=1 X300=1)
-	$(call post_build,X300_RFNOC,HGS)
+	$(call post_build,X300,RFNOC_HGS)
 
 X310_RFNOC_HLS_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC + Vivado HLS enabled.
 	$(call vivado_build,hls,X310,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1 HLS=1)
-	$(call post_build,X310_RFNOC_HLS,HGS)
+	$(call post_build,X310,RFNOC_HLS_HGS)
 
 X300_RFNOC_HLS_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC + Vivado HLS enabled.
 	$(call vivado_build,hls,X300,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1 HLS=1)
-	$(call post_build,X300_RFNOC_HLS,HGS)
+	$(call post_build,X300,RFNOC_HLS_HGS)
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."
