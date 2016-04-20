@@ -24,13 +24,13 @@ module cic_decimate #(
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] differentiator [0:N-1];
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] pipeline [0:N-1];
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] sampler;
-  (* dont_touch = "true", mark_debug = "true" *) reg  [N-1:0]             last_integ;
-  (* dont_touch = "true", mark_debug = "true" *) reg                      last_integ_hold;
-  (* dont_touch = "true", mark_debug = "true" *) reg  [N-1:0]             last_diff;
-  (* dont_touch = "true", mark_debug = "true" *) reg                      last_sampler;
-  (* dont_touch = "true", mark_debug = "true" *) reg  [N-1:0]             strobe_integ;
-  (* dont_touch = "true", mark_debug = "true" *) reg                      strobe_sampler;
-  (* dont_touch = "true", mark_debug = "true" *) reg  [N-1:0]             strobe_diff;
+  reg  [N-1:0] last_integ;
+  reg          last_integ_hold;
+  reg  [N-1:0] last_diff;
+  reg          last_sampler;
+  reg  [N-1:0] strobe_integ;
+  reg          strobe_sampler;
+  reg  [N-1:0] strobe_diff;
 
   integer i;
 
@@ -117,21 +117,12 @@ module cic_decimate #(
     end
   end
 
-  // Adjust gain
-  integer shift[1:MAX_RATE];
-  integer k;
-  initial begin
-    for (k = 1; k <= MAX_RATE; k = k + 1) begin
-      shift[k] = $ceil(N*$log10(k)/$log10(2));
-    end
-  end
-
   genvar l;
   wire [WIDTH-1:0] signal_out_shifted[0:MAX_RATE];
   generate
     for (l = 1; l <= MAX_RATE; l = l + 1) begin
       // N*log2(rate), $clog2(rate) = ceil(log2(rate)) which rounds to nearest shift without overflow
-      assign signal_out_shifted[l] = pipeline[N-1][shift[l] +: WIDTH-1];
+      assign signal_out_shifted[l] = pipeline[N-1][$clog2(l**N)+WIDTH-1:$clog2(l**N)];
     end
   endgenerate
   assign signal_out_shifted[0] = pipeline[N-1][WIDTH-1:0];
