@@ -101,6 +101,7 @@ cvita_hdr_decoder.v \
 cvita_hdr_modify.v \
 axi_rate_change.v \
 axi_packet_resizer.v \
+axi_drop_packet.v \
 cordic.v \
 ddc.v \
 cic_decimate.v \
