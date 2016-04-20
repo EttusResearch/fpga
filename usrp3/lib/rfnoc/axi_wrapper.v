@@ -62,7 +62,7 @@ module axi_wrapper
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
    chdr_deframer chdr_deframer
-     (.clk(clk), .reset(reset), .clear(1'b0),
+     (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
 
@@ -72,7 +72,7 @@ module axi_wrapper
 
    // Only store header once per packet
    always @(posedge clk)
-     if(reset)
+     if(reset | clear_tx_seqnum)
        sof_in     <= 1'b1;
      else
        if(m_axis_data_tvalid & m_axis_data_tready)
@@ -87,7 +87,7 @@ module axi_wrapper
          begin
             // FIFO 
             axi_fifo_short #(.WIDTH(128)) header_fifo
-            (.clk(clk), .reset(reset), .clear(1'b0),
+            (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
              .i_tdata(header_fifo_i_tdata),
              .i_tvalid(header_fifo_i_tvalid), .i_tready(),
              .o_tdata(s_axis_data_tuser_int), .o_tvalid(), .o_tready(s_axis_data_tlast_int & s_axis_data_tvalid & s_axis_data_tready),
@@ -103,7 +103,7 @@ module axi_wrapper
    wire m_axis_pkt_len_flop_tvalid;
    wire load_m_axis_pkt_len = sof_in & m_axis_pkt_len_flop_tvalid;
    axi_fifo_flop2 #(.WIDTH(16)) axi_fifo_flop_pkt_len (
-     .clk(clk), .reset(reset), .clear(1'b0),
+     .clk(clk), .reset(reset), .clear(clear_tx_seqnum),
      .i_tdata(m_axis_pkt_len_tdata), .i_tvalid(m_axis_pkt_len_tvalid), .i_tready(m_axis_pkt_len_tready),
      .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len),
      .occupied(), .space());
@@ -113,7 +113,7 @@ module axi_wrapper
        reg m_axis_data_tlast_reg;
        reg [15:0] m_axis_pkt_cnt;
        always @(posedge clk) begin
-         if (reset) begin
+         if (reset | clear_tx_seqnum) begin
            m_axis_data_tlast_reg <= 1'b0;
            m_axis_pkt_cnt        <= 4;
            m_axis_pkt_len_reg    <= 8;
@@ -154,7 +154,7 @@ module axi_wrapper
        reg [15:0] s_axis_pkt_cnt;
        reg [15:0] s_axis_pkt_len;
        always @(posedge clk) begin
-         if (reset) begin
+         if (reset | clear_tx_seqnum) begin
            s_axis_data_tlast_reg <= 1'b0;
            s_axis_pkt_cnt        <= 4;
            s_axis_pkt_len        <= 0;
@@ -199,7 +199,7 @@ module axi_wrapper
    generate
       for (k = 0; k < NUM_AXI_CONFIG_BUS; k = k + 1) begin
          axi_fifo #(.WIDTH(33), .SIZE(CONFIG_BUS_FIFO_DEPTH)) config_stream
-           (.clk(clk), .reset(reset), .clear(1'b0),
+           (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
             .i_tdata({(set_addr == (SR_AXI_CONFIG_BASE+2*k+1)),set_data}),
             .i_tvalid(set_stb & ((set_addr == (SR_AXI_CONFIG_BASE+2*k))|(set_addr == (SR_AXI_CONFIG_BASE+2*k+1)))),
             .i_tready(),
