@@ -115,7 +115,7 @@ module noc_block_keep_one_in_n #(
 
   wire [15:0] n;
   setting_reg #(
-    .my_addr(SR_N), .awidth(8), .width(16))
+    .my_addr(SR_N), .awidth(8), .width(16), .at_reset(1))
   sr_n (
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(n), .changed());
@@ -145,7 +145,8 @@ module noc_block_keep_one_in_n #(
   //       packet. This partial formed packet must be cleared before restarting the block. We
   //       can use clear_tx_seqnum for that purpose as it is strobed at block initialization.
   keep_one_in_n #(
-    .WIDTH(32))
+    .WIDTH(32),
+    .MAX_N(2**16-1))
   keep_one_in_n (
     .clk(ce_clk),
     .reset(ce_rst | clear_tx_seqnum),
