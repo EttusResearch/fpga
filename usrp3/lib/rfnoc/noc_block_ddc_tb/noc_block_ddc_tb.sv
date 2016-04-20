@@ -4,7 +4,7 @@
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US 100000000
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 5
+`define NUM_TEST_CASES 4
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.svh"
@@ -28,10 +28,9 @@ module noc_block_ddc_tb();
   wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
 
   // DDC
-  wire [7:0] SR_RATE             = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_RATE;
-  wire [7:0] SR_CONFIG           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_CONFIG;
-  wire [7:0] SR_PKT_SIZE         = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_PKT_SIZE;
-  wire [7:0] SR_DROP_PARTIAL_PKT = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_DROP_PARTIAL_PKT;
+  wire [7:0] SR_N_ADDR           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_N_ADDR;
+  wire [7:0] SR_M_ADDR           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_M_ADDR;
+  wire [7:0] SR_CONFIG_ADDR      = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_CONFIG_ADDR;
   wire [7:0] SR_RX_FREQ          = noc_block_ddc.gen_ddc_chains[0].ddc.BASE;
   wire [7:0] SR_RX_SCALE_IQ      = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+1;
   wire [7:0] SR_RX_DECIM         = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+2;
@@ -72,7 +71,7 @@ module noc_block_ddc_tb();
       $display("Set decimation to %0d", decim_rate);
       $display("- Number of enabled HBs: %0d", hb_enables);
       $display("- CIC Rate:              %0d", cic_rate);
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RATE, decim_rate);                       // Set decimation rate in AXI rate change
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_N_ADDR, decim_rate);                     // Set decimation rate in AXI rate change
       tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_DECIM, {hb_enables,cic_rate});        // Enable HBs, set CIC rate
 
     end
@@ -86,11 +85,10 @@ module noc_block_ddc_tb();
     begin
       set_decim_rate(decim_rate);
 
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG, 32'd3);                          // Enable clear EOB and inject zeros
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_PKT_SIZE, PKT_SIZE_BYTES);               // Set packet size (in bytes)
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_DROP_PARTIAL_PKT, drop_partial_packet);  // Enable / disable dropping partial packets
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_FREQ, 32'd0);                         // CORDIC phase increment
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_SCALE_IQ, (1 << 14) + 3515);          // Scaling, set to 1
+      // Setup DDC
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);            // Enable clear EOB
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_FREQ, 32'd0);                // CORDIC phase increment
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_SCALE_IQ, (1 << 14) + 3515); // Scaling, set to 1
 
       // Send a short ramp, should pass through unchanged
       fork
@@ -133,9 +131,10 @@ module noc_block_ddc_tb();
           for (int i = 0; i < PKT_SIZE_BYTES/8; i++) begin
             samples = recv_payload[i];
             for (int j = 0; j < 4; j++) begin
-              $sformat(s, "Ramp word %0d invalid! Expected: %0d, %0d, or %0d, Received: %0d", 2*i,
-                  samples_old[16*j +: 16], samples_old[16*j +: 16]+16'd1, samples_old[16*j +: 16]+16'd2, samples[16*j +: 16]);
-              `ASSERT_ERROR((samples_old[16*j +: 16]+16'd2 >= samples[16*j +: 16]) && (samples >= samples_old[16*j +: 16]), s);
+              // Need to check a range of values due to imperfect gain compensation
+              $sformat(s, "Ramp word %0d invalid! Expected: %0d-%0d, Received: %0d", 2*i,
+                  samples_old[16*j +: 16], samples_old[16*j +: 16]+16'd4, samples[16*j +: 16]);
+              `ASSERT_ERROR((samples_old[16*j +: 16]+16'd4 >= samples[16*j +: 16]) && (samples >= samples_old[16*j +: 16]), s);
             end
             samples_old = samples;
           end
@@ -160,9 +159,7 @@ module noc_block_ddc_tb();
       `RFNOC_CONNECT(noc_block_fft, noc_block_tb, SC16, SPP);
 
       // Setup DDC
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG, 32'd3);                 // Enable clear EOB and inject zeros
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_PKT_SIZE, PKT_SIZE_BYTES);      // Set packet size (in bytes)
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_DROP_PARTIAL_PKT, 1'b0);        // Enable / disable dropping partial packets
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);            // Enable clear EOB
       tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_FREQ, 32'd0);                // CORDIC phase increment
       tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_SCALE_IQ, (1 << 14) + 3515); // Scaling, set to 1
       // Setup FFT
@@ -250,6 +247,7 @@ module noc_block_ddc_tb();
     `RFNOC_CONNECT(noc_block_tb, noc_block_ddc, SC16, SPP);
     `RFNOC_CONNECT(noc_block_ddc, noc_block_tb, SC16, SPP);
     // List of rates to catch most issues
+    
     send_ramp(1);    // HBs enabled: 0, CIC rate: 1
     send_ramp(2);    // HBs enabled: 1, CIC rate: 1
     send_ramp(3);    // HBs enabled: 0, CIC rate: 3
@@ -261,26 +259,20 @@ module noc_block_ddc_tb();
     send_ramp(16);   // HBs enabled: 3, CIC rate: 2
     send_ramp(24);   // HBs enabled: 3, CIC rate: 3
     send_ramp(40);   // HBs enabled: 3, CIC rate: 5
+    send_ramp(200); // HBs enabled: 3, CIC rate: 25
     send_ramp(255);  // HBs enabled: 0, CIC rate: 255
     send_ramp(2040); // HBs enabled: 3, CIC rate: 255
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 4 -- Test dropping a partial packet
+    ** Test 4 -- Test passing through a partial packet
     ********************************************************/
-    `TEST_CASE_START("Decimate by 2, drop partial packet");
-    send_ramp(2,1,4);
-    `TEST_CASE_DONE(1);
-
-    /********************************************************
-    ** Test 5 -- Test passing through a partial packet
-    ********************************************************/
-    `TEST_CASE_START("Decimate by 2, pass through partial packet");
+    //`TEST_CASE_START("Decimate by 2, pass through partial packet");
     send_ramp(2,0,4);
-    `TEST_CASE_DONE(1);
+    //`TEST_CASE_DONE(1);
 
     // Calculate frequency response of filters
-    // calc_freq_resp('{1,2,3,4,5,6,7,8,9,10});
+    //calc_freq_resp('{1,2,3,4,5,6,7,8,9,10});
     `TEST_BENCH_DONE;
   end
 endmodule

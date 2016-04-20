@@ -37,8 +37,10 @@ SIM_TOP = noc_block_ddc_tb
 
 # Add test bench, user design under test, and
 # additional user created files
-SIM_SRCS = \
-$(abspath noc_block_ddc_tb.sv)
+SIM_SRCS = $(abspath \
+./noc_block_ddc_tb.sv \
+../noc_block_ddc.v \
+)
 
 MODELSIM_USER_DO = $(abspath wave.do)
 
