@@ -21,8 +21,6 @@ SIM_TOP = noc_block_addsub_tb
 SIM_SRCS = \
 $(abspath noc_block_addsub_tb.sv)
 
-MODELSIM_USER_DO = $(abspath wave.do)
-
 #-------------------------------------------------
 # Bottom-of-Makefile
 #-------------------------------------------------
