@@ -263,8 +263,8 @@ module ddc #(
 
   // Each filter will accept N-1 samples before outputting
   // a sample. This logic "preloads" the pipeline with 0s
-  // so the first sample in is the first sample out.
-  integer hb1_cnt, hb2_cnt, hb3_cnt;
+  // so the first sample in pushes out a sample.
+  reg [5:0] hb1_cnt, hb2_cnt, hb3_cnt;
   reg hb1_en, hb2_en, hb3_en, hb1_rdy, hb2_rdy, hb3_rdy;
   generate
     if (PRELOAD_HBS) begin
@@ -281,28 +281,34 @@ module ddc #(
           hb3_rdy <= 1'b0;
         end else begin
           if (hb1_en & rfd1) begin
-            if (hb1_cnt < 46) begin
+            if (hb1_cnt < 47) begin
               hb1_cnt <= hb1_cnt + 1;
             end else begin
-              hb1_rdy <= 1'b1;
               hb1_en  <= 1'b0;
             end
           end
+          if (data_valid1) begin
+            hb1_rdy   <= 1'b1;
+          end
           if (hb2_en & rfd2) begin
-            if (hb2_cnt < 46) begin
+            if (hb2_cnt < 47) begin
               hb2_cnt <= hb2_cnt + 1;
             end else begin
-              hb2_rdy <= 1'b1;
               hb2_en  <= 1'b0;
             end
           end
+          if (data_valid2) begin
+            hb2_rdy   <= 1'b1;
+          end
           if (hb3_en & rfd3) begin
-            if (hb3_cnt < 62) begin
+            if (hb3_cnt < 63) begin
               hb3_cnt <= hb3_cnt + 1;
             end else begin
-              hb3_rdy <= 1'b1;
               hb3_en  <= 1'b0;
             end
+          end
+          if (data_valid3) begin
+            hb3_rdy   <= 1'b1;
           end
         end
       end
@@ -320,9 +326,9 @@ module ddc #(
 
   assign sample_in_rdy = hb1_rdy & hb2_rdy & hb3_rdy;
 
-  assign strobe_hb1 = data_valid1 & ~hb1_en;
-  assign strobe_hb2 = data_valid2 & ~hb2_en;
-  assign strobe_hb3 = data_valid3 & ~hb3_en;
+  assign strobe_hb1 = data_valid1 & hb1_rdy;
+  assign strobe_hb2 = data_valid2 & hb2_rdy;
+  assign strobe_hb3 = data_valid3 & hb3_rdy;
   assign nd1 = strobe_cic | hb1_en;
   assign nd2 = strobe_hb1 | hb2_en;
   assign nd3 = strobe_hb2 | hb3_en;
