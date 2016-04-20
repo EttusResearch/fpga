@@ -41,7 +41,7 @@ module axi_packet_resizer #(
   wire eob_in;
   cvita_hdr_decoder cvita_hdr_decoder (
     .header(i_tuser), .pkt_type(), .eob(eob_in),
-    .has_time(), .seqnum(), .length(),
+    .has_time(), .seqnum(), .length(), .payload_length(),
     .src_sid(), .dst_sid(), .vita_time());
 
   wire i_tlast_int;

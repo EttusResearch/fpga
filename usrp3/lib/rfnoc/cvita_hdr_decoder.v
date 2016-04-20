@@ -6,7 +6,7 @@
 module cvita_hdr_decoder (
   input [127:0] header,
   output [1:0] pkt_type, output eob, output has_time,
-  output [11:0] seqnum, output [15:0] length,
+  output [11:0] seqnum, output [15:0] length, output [15:0] payload_length,
   output [15:0] src_sid, output [15:0] dst_sid,
   output [63:0] vita_time
 );
@@ -23,5 +23,7 @@ module cvita_hdr_decoder (
   assign src_sid   = hdr[0][31:16];
   assign dst_sid   = hdr[0][15:0];
   assign vita_time = hdr[1];
+
+  assign payload_length = has_time ? length - 16'd16 : length - 16'd8;
 
 endmodule
