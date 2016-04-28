@@ -73,7 +73,7 @@ module axi_fifo_flop2 #(
     end
   end
 
-  assign i_tready = ~(i_tvalid_reg & i_tvalid_pipe);
+  assign i_tready = ~reset & ~(i_tvalid_reg & i_tvalid_pipe);
 
   assign o_tvalid = i_tvalid_pipe ? 1'b1         : i_tvalid_reg;
   assign o_tdata  = i_tvalid_pipe ? i_tdata_pipe : i_tdata_reg;
