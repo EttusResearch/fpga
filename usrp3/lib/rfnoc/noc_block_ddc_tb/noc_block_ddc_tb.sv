@@ -4,7 +4,7 @@
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US 100000000
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 4
+`define NUM_TEST_CASES 3
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.svh"
@@ -267,9 +267,14 @@ module noc_block_ddc_tb();
     /********************************************************
     ** Test 4 -- Test passing through a partial packet
     ********************************************************/
-    //`TEST_CASE_START("Decimate by 2, pass through partial packet");
+    `TEST_CASE_START("Pass through partial packet");
     send_ramp(2,0,4);
-    //`TEST_CASE_DONE(1);
+    send_ramp(3,0,4);
+    send_ramp(4,0,4);
+    send_ramp(8,0,4);
+    send_ramp(13,0,4);
+    send_ramp(24,0,4);
+    `TEST_CASE_DONE(1);
 
     // Calculate frequency response of filters
     //calc_freq_resp('{1,2,3,4,5,6,7,8,9,10});
