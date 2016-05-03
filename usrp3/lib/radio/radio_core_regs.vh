@@ -17,6 +17,7 @@ localparam [7:0] SR_RX_CTRL_TIME_LO      = 154;
 localparam [7:0] SR_RX_CTRL_HALT         = 155;
 localparam [7:0] SR_RX_CTRL_MAXLEN       = 156;
 localparam [7:0] SR_RX_CTRL_CLEAR_CMDS   = 157;
+localparam [7:0] SR_RX_CTRL_OUTPUT_FORMAT = 158;
 /* Daughter board control settings bus register */
 localparam [7:0] SR_MISC_OUTS            = 160;
 localparam [7:0] SR_SYNC                 = 161;

@@ -14,7 +14,8 @@ module rx_control_gen3 #(
   parameter SR_RX_CTRL_TIME_LO = 2,     // Command execute time (low word)
   parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
   parameter SR_RX_CTRL_MAXLEN = 4,      // Packet length
-  parameter SR_RX_CTRL_CLEAR_CMDS = 5   // Clear command FIFO
+  parameter SR_RX_CTRL_CLEAR_CMDS = 5,   // Clear command FIFO
+  parameter SR_RX_CTRL_OUTPUT_FORMAT = 6   // Output format (use timestamps)
 )(
   input clk, input reset,
   input clear, // Resets state machine and clear output FIFO.
@@ -42,6 +43,7 @@ module rx_control_gen3 #(
   wire send_imm, chain, reload, stop;
   wire [27:0] numlines;
   wire [63:0] rcvtime;
+  wire use_timestamps;
 
   wire now, early, late;
   wire command_valid;
@@ -79,6 +81,10 @@ module rx_control_gen3 #(
   setting_reg #(.my_addr(SR_RX_CTRL_CLEAR_CMDS)) sr_clear_cmds (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(),.changed(clear_cmds));
+
+  setting_reg #(.my_addr(SR_RX_CTRL_OUTPUT_FORMAT), .width(1), .at_reset(1'b1)) sr_output_format (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+    .in(set_data),.out(use_timestamps),.changed());
 
   always @(posedge clk)
     if (reset | clear | clear_halt | clear_cmds)
@@ -124,8 +130,8 @@ module rx_control_gen3 #(
     end
   end
 
-  wire [127:0] error_header = {2'b11, 1'b1, 1'b1, seqnum_cnt,                  16'h24, resp_sid,  vita_time};
-  wire [127:0] rx_header    = {2'b00, 1'b1,  eob, seqnum_cnt, 16'h0 /* len ignored */,      sid, start_time};
+  wire [127:0] error_header = {2'b11, 1'b1,           1'b1, seqnum_cnt,                  16'h24, resp_sid,  vita_time};
+  wire [127:0] rx_header    = {2'b00, use_timestamps,  eob, seqnum_cnt, 16'h0 /* len ignored */,      sid, start_time};
 
   always @(posedge clk) begin
     if (reset | clear) begin
