@@ -15,7 +15,6 @@
 //  the setting was sent.
 //
 // Note -- if t0 is the requested time, the actual send time on the setting bus is t0 + 1 cycle.
-// Note 2 -- if t1 is the actual time the setting bus, t1+2 is the reported time.
 
 module radio_ctrl_proc
   (input clk, input reset, input clear,
@@ -131,12 +130,16 @@ module radio_ctrl_proc
    assign set_addr = ctrl_tdata[39:32];
    assign set_data = ctrl_tdata[31:0];
 
+   always @(posedge clk)
+      if (set_stb)
+         cmd_time <= vita_time;
+
    always @*
      case (rc_state)
        RC_RESP_HEAD : { resp_tlast, resp_tdata } <= {1'b0, 4'hE, seqnum, 16'd24, sid[15:0], sid[31:16] };
-       RC_RESP_TIME : { resp_tlast, resp_tdata } <= {1'b0, vita_time};
+       RC_RESP_TIME : { resp_tlast, resp_tdata } <= {1'b0, cmd_time};
        RC_RESP_DATA : { resp_tlast, resp_tdata } <= {1'b1, readback};
-       default : { resp_tlast, resp_tdata } <= 65'h0;
+       default :      { resp_tlast, resp_tdata } <= 65'h0;
      endcase // case (rc_state)
    
    assign resp_tvalid = (rc_state == RC_RESP_HEAD) | (rc_state == RC_RESP_TIME) | (rc_state == RC_RESP_DATA);

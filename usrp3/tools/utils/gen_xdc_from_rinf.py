@@ -152,7 +152,7 @@ def parse_rinf(rinf_path, suppress_warnings):
         state = '<UNDEF>'
         line_num = 0
         for line in iter(rinf_f.readlines()):
-            tokens = collapse_tokens(line.strip().split('  '))
+            tokens = collapse_tokens(line.strip().split())
             line_num = line_num + 1
             if tokens:
                 if tokens[0].startswith('.'):
@@ -200,9 +200,9 @@ def filter_fpga_pins(ref_des, terminal_db, fpga_pin_db, max_level):
                 sec_terms = terminal_db.get_terminals(next_comp)
                 if len(sec_terms) == 2: #Check for branch
                     term = sec_terms[1] if sec_terms[0].name == term.name else sec_terms[0]
-                    break 
+                    break
         # At this point we either found a valid net of we reached the max_depth
-        # Check again before approving this as a valid connection 
+        # Check again before approving this as a valid connection
         if term.name and (not term.name.startswith('$')) and fpga_pin_db.is_iface_pin(fpga_term.pin):
             iotype = fpga_pin_db.get_pin_attr(fpga_term.pin, 'I/O Type')
             bank = fpga_pin_db.get_pin_attr(fpga_term.pin, 'Bank')

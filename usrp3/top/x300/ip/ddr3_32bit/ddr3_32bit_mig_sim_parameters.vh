@@ -162,8 +162,10 @@ parameter CLKFBOUT_MULT         = 12,
                                   // write PLL VCO multiplier
 parameter DIVCLK_DIVIDE         = 1,
                                   // write PLL VCO divisor
-parameter CLKOUT0_PHASE         = 337.5,
+parameter CLKOUT0_PHASE         = 315,
                                   // Phase for PLL output clock (CLKOUT0)
+                                  // TODO: Update this to the original value 337.5 after the following
+                                  // MIG issue is resolved: http://www.xilinx.com/support/answers/65986.html
 parameter CLKOUT0_DIVIDE        = 2,
                                   // VCO output divisor for PLL output clock (CLKOUT0)
 parameter CLKOUT1_DIVIDE        = 2,
