@@ -31,15 +31,15 @@ module axi_drop_packet #(
   reg  int_tlast = 1'b0, int_tvalid;
   wire int_tready;
 
-  reg [$clog2(MAX_PKT_SIZE+1)-1:0] wr_addr, prev_wr_addr, rd_addr;
-  reg [$clog2(MAX_PKT_SIZE+1)-1:0] in_pkt_cnt, out_pkt_cnt;
+  reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr;
+  reg [$clog2(MAX_PKT_SIZE)-1:0] in_pkt_cnt, out_pkt_cnt;
   reg full, empty;
 
-  reg [WIDTH:0] mem[0:2**($clog2(MAX_PKT_SIZE+1))-1];
+  reg [WIDTH:0] mem[0:2**($clog2(MAX_PKT_SIZE))-1];
   // Initialize RAM to all zeros
   integer i;
   initial begin
-    for (i = 0; i < (1 << $clog2(MAX_PKT_SIZE+1)); i = i + 1) begin
+    for (i = 0; i < (1 << $clog2(MAX_PKT_SIZE)); i = i + 1) begin
       mem[i] = 'd0;
     end
   end
