@@ -447,8 +447,8 @@ module x300_core (
 
       rx_frontend_gen3 #(
          .SR_MAG_CORRECTION(SET_RX_FE_BASE + 0), .SR_PHASE_CORRECTION(SET_RX_FE_BASE + 1), .SR_OFFSET_I(SET_RX_FE_BASE + 2),
-         .SR_OFFSET_Q(SET_RX_FE_BASE + 3), .SR_IQ_MAPPING(SET_RX_FE_BASE + 4),
-         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0),
+         .SR_OFFSET_Q(SET_RX_FE_BASE + 3), .SR_IQ_MAPPING(SET_RX_FE_BASE + 4), .SR_HET_PHASE_INCR(SET_RX_FE_BASE + 5),
+         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0), .BYPASS_REALMODE_DSP(0),
          .DEVICE("7SERIES")
       ) rx_fe_corr_i (
          .clk(radio_clk), .reset(radio_rst),
