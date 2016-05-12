@@ -85,6 +85,7 @@ module noc_block_siggen #(
   wire        packet_resizer_tvalid;
   wire        packet_resizer_tready;
   wire [127:0] modified_header;
+  wire enable;
 
 
   axi_wrapper #(
@@ -167,10 +168,19 @@ module noc_block_siggen #(
   assign cmdout_tlast  = 1'b0;
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready  = 1'b1;
+  
+  //Start/stop functionality
+  //settings bus for start/stop
+  setting_reg #(
+    .my_addr(SR_ENABLE), .awidth(8), .width(1)) 
+  set_enable (
+    .clk(ce_clk), .rst(ce_reset),
+    .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(enable), .changed());
 
   //Sine tone block
-  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN), .SR_AMP_ADDR(SR_AMPLITUDE), .SR_ENABLE_ADDR(SR_ENABLE)) sine_tone_inst
-      (.clk(ce_clk), .reset(ce_rst), .clear(0),
+  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN), .SR_AMP_ADDR(SR_AMPLITUDE)) sine_tone_inst
+      (.clk(ce_clk), .reset(ce_rst), .clear(0), .enable(enable),
        .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr), 
        .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));	
   //FIXME: Cordic directly connected with AXI wrapper. Insert a mux in between. 

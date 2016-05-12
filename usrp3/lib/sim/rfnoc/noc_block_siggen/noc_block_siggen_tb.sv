@@ -35,7 +35,7 @@ module noc_block_siggen_tb();
   integer sample_rate = 100; // (In Msps)
  
   assign phase = 16'($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5));
-  assign phase2 = 16'($floor(((2.0**13) * ((2.0*freq*2.0)/sample_rate)) + 0.5));
+  assign phase2 = 16'($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
   assign phase_real = real'((phase/(2.0**13))* pi);
   assign cartesian = {16'b0,16'($floor((2.0**13) * (1.0/1.65)))};
   assign pkt_size = 140;
@@ -147,7 +147,7 @@ module noc_block_siggen_tb();
     end
 
     //Setting Phase value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ + 1,phase );
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ + 1,phase2 );
     
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);

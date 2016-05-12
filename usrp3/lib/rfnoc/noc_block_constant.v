@@ -161,7 +161,7 @@ module noc_block_constant #(
   localparam SR_FREQ = 128;
   localparam SR_CARTESIAN = 130;
   localparam SR_AMPLITUDE = 138;
-  localparam SR_ENABLE = 142;
+  localparam SR_ENABLE = 132;
 
 
   // Control Source Unused

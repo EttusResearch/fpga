@@ -7,10 +7,9 @@ module sine_tone #(
   parameter WIDTH = 32,
   parameter SR_FREQ_ADDR = 128,
   parameter SR_CARTESIAN_ADDR = 130,
-  parameter SR_ENABLE_ADDR = 132,
   parameter SR_AMP_ADDR = 138)
 ( 
-  input clk, input reset, input clear, //Clear needed?
+  input clk, input reset, input clear, input enable,
   input set_stb, input [WIDTH-1:0] set_data, input [7:0] set_addr, 
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
@@ -37,21 +36,21 @@ module sine_tone #(
   wire sine_out_tvalid;
   wire sine_out_tready;
   
-  //Start/stop functionality
-  //settings bus for start/stop
-  setting_reg #(
-    .my_addr(SR_ENABLE_ADDR), .awidth(8), .width(1)) 
-  set_enable (
-    .clk(clk), .rst(reset),
-    .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(enable), .changed());
+//  //Start/stop functionality
+//  //settings bus for start/stop
+//  setting_reg #(
+//    .my_addr(SR_ENABLE_ADDR), .awidth(8), .width(1)) 
+//  set_enable (
+//    .clk(clk), .rst(reset),
+//    .strobe(set_stb), .addr(set_addr), .in(set_data),
+//    .out(enable), .changed());
 
 //AXI settings bus for phase values
   axi_setting_reg #(
     .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1) ) //Generalize these?
   set_phase_acc (
     .clk(clk), .reset(reset),
-    .set_stb(enable & set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(phase_in_tdata), .o_tlast(phase_in_tlast), .o_tvalid(phase_in_tvalid), .o_tready(phase_in_tready));
 
 //AXI settings bus for cartestian values
@@ -59,7 +58,7 @@ module sine_tone #(
     .ADDR(SR_CARTESIAN_ADDR), .AWIDTH(8), .WIDTH(32), .REPEATS(1)) //Generalize these?
   set_axis_cartesian (
     .clk(clk), .reset(reset),
-    .set_stb(enable & set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(cartesian_tdata), .o_tlast(), .o_tvalid(cartesian_tvalid), .o_tready(cartesian_tready));
 
    assign cartesian_tlast = 1; 
