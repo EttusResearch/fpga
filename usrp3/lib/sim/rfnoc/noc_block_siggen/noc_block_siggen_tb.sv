@@ -127,8 +127,8 @@ module noc_block_siggen_tb();
     ** Test 5 -- Test sequence
     ********************************************************/
     `TEST_CASE_START("Test sequence");
-    //Setting Enable value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
+    //Setting Enable value = 0
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b0 );
     //Packet Size should be set first
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.inst_packet_resizer.SR_PKT_SIZE, pkt_size);
     //FIXME: Cartersian should be programmed before the phase. Need to be fixed in the RTL
@@ -136,6 +136,8 @@ module noc_block_siggen_tb();
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_CARTESIAN,cartesian );
     //Setting Phase value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ + 1,phase );
+    //Setting Enable value
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
     
 
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
