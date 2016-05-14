@@ -16,25 +16,25 @@ module sine_tone #(
  
 //FIXME: Implement functionality of 'clear'
 
-  (* mark_debug = "true" *) wire [15:0] phase_in_tdata;
-  (* mark_debug = "true" *) wire phase_in_tlast;
-  (* mark_debug = "true" *) wire phase_in_tvalid ;
-  (* mark_debug = "true" *) wire phase_in_tready;
+  (* dont_touch = "true" , mark_debug = "true" *) wire [15:0] phase_in_tdata;
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tlast;
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tvalid ;
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tready;
 
-  (* mark_debug = "true" *) wire [15:0] phase_out_tdata; // No need to initialize it as 32 bit?
-  (* mark_debug = "true" *) wire phase_out_tlast;
-  (* mark_debug = "true" *) wire phase_out_tvalid;
-  (* mark_debug = "true" *) wire phase_out_tready;
+  (* dont_touch = "true" , mark_debug = "true" *) wire [15:0] phase_out_tdata; // No need to initialize it as 32 bit?
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tlast;
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tvalid;
+  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tready;
   
-  (* mark_debug = "true" *) wire [WIDTH-1:0] cartesian_tdata;
-  (* mark_debug = "true" *) wire cartesian_tlast;
-  (* mark_debug = "true" *) wire cartesian_tvalid;
-  (* mark_debug = "true" *) wire cartesian_tready;
+  (* dont_touch = "true" , mark_debug = "true" *) wire [WIDTH-1:0] cartesian_tdata;
+  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tlast;
+  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tvalid;
+  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tready;
   
-  (* mark_debug = "true" *) wire [WIDTH-1:0] sine_out_tdata;
-  (* mark_debug = "true" *) wire sine_out_tlast;
-  (* mark_debug = "true" *) wire sine_out_tvalid;
-  (* mark_debug = "true" *) wire sine_out_tready;
+  (* dont_touch = "true" , mark_debug = "true" *) wire [WIDTH-1:0] sine_out_tdata;
+  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tlast;
+  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tvalid;
+  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tready;
   
 //AXI settings bus for phase values
   axi_setting_reg #(
@@ -58,7 +58,7 @@ module sine_tone #(
    phase_accum phase_acc
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(phase_in_tdata), .i_tlast(phase_in_tlast), .i_tvalid(1'b1), .i_tready(phase_in_tready),
-      .o_tdata(phase_out_tdata), .o_tlast(phase_out_tlast), .o_tvalid(phase_out_tvalid), .o_tready(sine_out_tready));
+      .o_tdata(phase_out_tdata), .o_tlast(phase_out_tlast), .o_tvalid(phase_out_tvalid), .o_tready(phase_out_tready));
 
 //Cordic
    cordic_rotator cordic_inst

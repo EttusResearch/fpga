@@ -51,10 +51,11 @@ module sine_tone_tb();
   assign o_tlast = tb_axis.axis.tlast;
   assign o_tvalid = tb_axis.axis.tvalid;
   assign o_tready = tb_axis.axis.tready;
+  wire enable;
 
   //Module Instantiation
   sine_tone #(.WIDTH(32)) sine_tone_inst
-      (.clk(clk), .reset(rst), .clear(0),
+      (.clk(clk), .reset(rst), .clear(0), .enable(enable),
        .set_stb(set_bus.settings_bus.set_stb), .set_data(set_bus.settings_bus.set_data), .set_addr(set_bus.settings_bus.set_addr), 
        .o_tdata(tb_axis.axis.tdata), .o_tlast(tb_axis.axis.tlast), .o_tvalid(tb_axis.axis.tvalid), .o_tready(tb_axis.axis.tready));
     
@@ -70,6 +71,7 @@ module sine_tone_tb();
   assign phase2 = 16'($floor(((2**13) * ((2.0*freq)/(0.5*sample_rate)) + 0.5)));
   assign phase_real2 = real'((phase2/(2.0**13))* pi);
   assign cartesian2 = {16'b0,16'($floor((2**13) * (1/1.65)))};
+  assign enable = 1;
 
 
   task automatic check_wave;
@@ -82,6 +84,12 @@ module sine_tone_tb();
         `ASSERT_ERROR(error != 1'b1, "Sine wave incorrectly generated");
      end
   endtask
+  //setting_reg #(
+  //  .my_addr(132), .awidth(8), .width(1)) 
+  //set_enable (
+  //  .clk(clk), .rst(reset),
+  //  .strobe(set_stb), .addr(set_addr), .in(set_data),
+  //  .out(enable), .changed());
   
   /********************************************************
   ** Verification
@@ -97,7 +105,7 @@ module sine_tone_tb();
     
     `TEST_CASE_START("Check sine wave generation");
     //Enable
-    set_bus.write(132,1'b1,0);
+    //set_bus.write(132,1'b1,0);
     
     //Set the phase value
     set_bus.write(129,phase,0);
@@ -114,18 +122,18 @@ module sine_tone_tb();
     end
     
     //Enable
-    set_bus.write(132,1'b0,0);
+    //set_bus.write(132,1'b0,0);
   
     repeat (100) @(posedge clk);
   
     //Enable
-    set_bus.write(132,1'b1,0);
+    //set_bus.write(132,1'b1,0);
     
     //Set the phase value
-    set_bus.write(129,phase2,0);
+    //set_bus.write(129,phase2,0);
 
     //Set the cartesian value
-    set_bus.write(130,cartesian2,0);
+    //set_bus.write(130,cartesian2,0);
    
     //Receive data from AXI slave
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
