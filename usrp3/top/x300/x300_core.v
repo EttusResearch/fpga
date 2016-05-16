@@ -373,7 +373,7 @@ module x300_core (
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
    /////////////////////////////////////////////////////////////////////////////////
-   bus_int #(.NUM_CE(NUM_CE+NUM_RADIOS)) bus_int (
+   bus_int #(.NUM_CE(NUM_CE)) bus_int (
       .clk(bus_clk), .reset(bus_rst),
       .sen(LMK_SEN), .sclk(LMK_SCLK), .mosi(LMK_MOSI), .miso(1'b0),
       .scl0(SFPP0_SCL), .sda0(SFPP0_SDA),
@@ -456,8 +456,6 @@ module x300_core (
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
-
-   localparam NUM_RADIOS = 2;
 
    // Daughter board I/O
    wire [31:0] leds[0:3];
