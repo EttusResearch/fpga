@@ -26,7 +26,7 @@ module axi_count_packets_in_fifo
    localparam WAIT_EOF = 1;
    
    localparam WAIT_FULL = 0;
-   localparam DELAY_TO_EOF = 0;
+   localparam DELAY_TO_EOF = 1;
    localparam WAIT_SPACE = 2;
    
    
