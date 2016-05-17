@@ -36,10 +36,10 @@ module phase_accum #(
         accum_next  <= $signed(i_tdata);
         phase_inc   <= $signed(i_tdata);
       end else begin
-        if (accum >= POS_ROLLOVER) begin
+        if (accum_next >= POS_ROLLOVER) begin
           accum_next <= accum_next + phase_inc - 2*POS_ROLLOVER;
           accum      <= accum + phase_inc - 2*POS_ROLLOVER;
-        end else if (accum <= NEG_ROLLOVER) begin
+        end else if (accum_next <= NEG_ROLLOVER) begin
           accum_next <= accum_next + phase_inc - 2*NEG_ROLLOVER;
           accum      <= accum + phase_inc - 2*NEG_ROLLOVER;
         end else begin
