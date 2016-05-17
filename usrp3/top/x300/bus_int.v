@@ -91,15 +91,8 @@ module bus_int
     output s5_we,
     input s5_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
-    output        set_stb_ext,
-    output [7:0]  set_addr_ext,
-    output [31:0] set_data_ext,
-
     input [15:0] eth0_phy_status,
     input [15:0] eth1_phy_status,
-
-    input [31:0] dram_fifo0_rb_data,
-    input [31:0] dram_fifo1_rb_data,
 
    // Debug
     output [31:0] debug0,
@@ -118,10 +111,9 @@ module bus_int
    localparam SR_SPI          = 8'd32;
    localparam SR_ETHINT0      = 8'd40;
    localparam SR_ETHINT1      = 8'd56;
+   //localparam SR_NEXT_ADDR    = 8'd72;
    // Sets the readback bus address dedicated to the xbar
    localparam SR_RB_ADDR_XBAR = 8'd64;
-   localparam SR_DRAM_FIFO0   = 8'd72;    //External to bus_int.v
-   localparam SR_DRAM_FIFO1   = 8'd80;    //External to bus_int.v
 
 
    localparam RB_COUNTER      = 8'd00;
@@ -134,8 +126,6 @@ module bus_int
    localparam RB_NUM_CE       = 8'd07;
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
-   localparam RB_DRAM_FIFO0   = 8'd10;
-   localparam RB_DRAM_FIFO1   = 8'd11;
    localparam RB_CROSSBAR     = 8'd64;
 
    localparam COMPAT_MAJOR    = 16'd1000;
@@ -275,11 +265,6 @@ module bus_int
       .debug1()
       );
 
-   //The main settings bus also goes outside the hierarchy to connect to control
-   //various components
-   //TODO: We should re-think the ownership of this bus master
-   assign {set_stb_ext, set_addr_ext, set_data_ext} = {set_stb, set_addr, set_data};
-
    setting_reg #(.my_addr(SR_LEDS), .awidth(SR_AWIDTH), .width(8)) set_leds
      (.clk(clk), .rst(reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -344,8 +329,6 @@ module bus_int
 `else
        RB_ETH_TYPE1: rb_data = {32'h0};
 `endif
-       RB_DRAM_FIFO0: rb_data = dram_fifo0_rb_data;
-       RB_DRAM_FIFO1: rb_data = dram_fifo1_rb_data;
 
        RB_CROSSBAR: rb_data = rb_data_crossbar;
 
