@@ -113,7 +113,7 @@ module bus_int
    localparam SR_ETHINT1      = 8'd56;
    //localparam SR_NEXT_ADDR    = 8'd72;
    // Sets the readback bus address dedicated to the xbar
-   localparam SR_RB_ADDR_XBAR = 8'd64;
+   localparam SR_RB_ADDR_XBAR = 8'd128;
 
 
    localparam RB_COUNTER      = 8'd00;
@@ -126,7 +126,7 @@ module bus_int
    localparam RB_NUM_CE       = 8'd07;
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
-   localparam RB_CROSSBAR     = 8'd64;
+   localparam RB_CROSSBAR     = 8'd128;
 
    localparam COMPAT_MAJOR    = 16'd1000;
    localparam COMPAT_MINOR    = 16'd0000;
