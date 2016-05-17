@@ -18,17 +18,17 @@ module noc_block_siggen #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  (* mark_debug = "true" *) wire [31:0] set_data;
-  (* mark_debug = "true" *) wire [7:0]  set_addr;
-  (* mark_debug = "true" *) wire        set_stb;
+  wire [31:0] set_data;
+  wire [7:0]  set_addr;
+  wire        set_stb;
   reg  [63:0] rb_data;
   wire [7:0]  rb_addr;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
 
-  (* mark_debug = "true" *) wire [63:0] str_sink_tdata, str_src_tdata;
-  (* mark_debug = "true" *) wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [63:0] str_sink_tdata, str_src_tdata;
+  wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire [15:0] src_sid;
   wire [15:0] next_dst_sid, resp_out_dst_sid;
@@ -75,17 +75,17 @@ module noc_block_siggen #(
 
   localparam NUM_AXI_CONFIG_BUS = 1;
   
-  (* mark_debug = "true" *) wire [31:0] s_axis_data_tdata;
+  wire [31:0] s_axis_data_tdata;
   wire [127:0] s_axis_data_tuser;
-  (* mark_debug = "true" *) wire        s_axis_data_tlast;
-  (* mark_debug = "true" *) wire        s_axis_data_tvalid;
-  (* mark_debug = "true" *) wire        s_axis_data_tready;
-  (* mark_debug = "true" *) wire [31:0] packet_resizer_tdata;
-  (* mark_debug = "true" *) wire        packet_resizer_tlast;
-  (* mark_debug = "true" *) wire        packet_resizer_tvalid;
-  (* mark_debug = "true" *) wire        packet_resizer_tready;
+  wire        s_axis_data_tlast;
+  wire        s_axis_data_tvalid;
+  wire        s_axis_data_tready;
+  wire [31:0] packet_resizer_tdata;
+  wire        packet_resizer_tlast;
+  wire        packet_resizer_tvalid;
+  wire        packet_resizer_tready;
   wire [127:0] modified_header;
-  (* mark_debug = "true" *) wire enable;
+  wire enable;
 
 
   axi_wrapper #(

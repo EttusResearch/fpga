@@ -6,8 +6,7 @@
 module sine_tone #(
   parameter WIDTH = 32,
   parameter SR_FREQ_ADDR = 128,
-  parameter SR_CARTESIAN_ADDR = 130,
-  parameter SR_AMP_ADDR = 138)
+  parameter SR_CARTESIAN_ADDR = 130)
 ( 
   input clk, input reset, input clear, input enable,
   input set_stb, input [WIDTH-1:0] set_data, input [7:0] set_addr, 
@@ -16,25 +15,25 @@ module sine_tone #(
  
 //FIXME: Implement functionality of 'clear'
 
-  (* dont_touch = "true" , mark_debug = "true" *) wire [15:0] phase_in_tdata;
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tlast;
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tvalid ;
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_in_tready;
+  wire [15:0] phase_in_tdata;
+  wire phase_in_tlast;
+  wire phase_in_tvalid ;
+  wire phase_in_tready;
 
-  (* dont_touch = "true" , mark_debug = "true" *) wire [15:0] phase_out_tdata; // No need to initialize it as 32 bit?
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tlast;
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tvalid;
-  (* dont_touch = "true" , mark_debug = "true" *) wire phase_out_tready;
+  wire [15:0] phase_out_tdata; // No need to initialize it as 32 bit?
+  wire phase_out_tlast;
+  wire phase_out_tvalid;
+  wire phase_out_tready;
   
-  (* dont_touch = "true" , mark_debug = "true" *) wire [WIDTH-1:0] cartesian_tdata;
-  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tlast;
-  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tvalid;
-  (* dont_touch = "true" , mark_debug = "true" *) wire cartesian_tready;
+  wire [WIDTH-1:0] cartesian_tdata;
+  wire cartesian_tlast;
+  wire cartesian_tvalid;
+  wire cartesian_tready;
   
-  (* dont_touch = "true" , mark_debug = "true" *) wire [WIDTH-1:0] sine_out_tdata;
-  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tlast;
-  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tvalid;
-  (* dont_touch = "true" , mark_debug = "true" *) wire sine_out_tready;
+  wire [WIDTH-1:0] sine_out_tdata;
+  wire sine_out_tlast;
+  wire sine_out_tvalid;
+  wire sine_out_tready;
   
 //AXI settings bus for phase values
   axi_setting_reg #(

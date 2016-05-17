@@ -3,13 +3,13 @@
 //
 
 module noc_block_siggen_mux #(
-   parameter NOC_ID = 64'h5166_3110_0000_0000,   //FIXME: NOC ID?
+   parameter NOC_ID = 64'h5166_3110_0000_0000,   
   parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
-  (* dont_touch = "true", mark_debug = "true" *) input ce_clk, input ce_rst,
-  (* dont_touch = "true", mark_debug = "true" *) input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
-  (* dont_touch = "true", mark_debug = "true" *) output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
+  input ce_clk, input ce_rst,
+  input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
+  output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
   output [63:0] debug
 );
 
@@ -18,17 +18,17 @@ module noc_block_siggen_mux #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  (* dont_touch = "true", mark_debug = "true" *) wire [31:0] set_data;
-  (* dont_touch = "true", mark_debug = "true" *) wire [7:0]  set_addr;
-  (* dont_touch = "true", mark_debug = "true" *) wire        set_stb;
+  wire [31:0] set_data;
+  wire [7:0]  set_addr;
+  wire        set_stb;
   reg  [63:0] rb_data;
   wire [7:0]  rb_addr;
 
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
 
-  (* dont_touch = "true", mark_debug = "true" *) wire [63:0] str_sink_tdata, str_src_tdata;
-  (* dont_touch = "true", mark_debug = "true" *) wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [63:0] str_sink_tdata, str_src_tdata;
+  wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire [15:0] src_sid;
   wire [15:0] next_dst_sid, resp_out_dst_sid;
@@ -75,11 +75,11 @@ module noc_block_siggen_mux #(
 
   localparam NUM_AXI_CONFIG_BUS = 1;
   
-  (* dont_touch = "true", mark_debug = "true" *) wire [31:0] s_axis_data_tdata;
-  (* dont_touch = "true", mark_debug = "true" *) wire [127:0] s_axis_data_tuser;
-  (* dont_touch = "true", mark_debug = "true" *) wire        s_axis_data_tlast;
-  (* dont_touch = "true", mark_debug = "true" *) wire        s_axis_data_tvalid;
-  (* dont_touch = "true", mark_debug = "true" *) wire        s_axis_data_tready;
+  wire [31:0] s_axis_data_tdata;
+  wire [127:0] s_axis_data_tuser;
+  wire        s_axis_data_tlast;
+  wire        s_axis_data_tvalid;
+  wire        s_axis_data_tready;
   wire [31:0] s_axis_const_tdata;
   wire [127:0] s_axis_const_tuser;
   wire        s_axis_const_tlast;
@@ -96,7 +96,8 @@ module noc_block_siggen_mux #(
   wire        packet_resizer_tready;
   wire [127:0] packet_resizer_tuser;
   wire [127:0] modified_header;
-  (* dont_touch = "true", mark_debug = "true" *) wire 	      enable;
+  wire [2:0] wave_type;
+  wire 	      enable;
 
 
   axi_wrapper #(
@@ -132,10 +133,8 @@ module noc_block_siggen_mux #(
   // Signal Generator Block
   //
   ////////////////////////////////////////////////////////////
-  // User register
-  localparam SR_PKT_SIZE         = 140;
-  wire [2:0] wave_type;
       
+  localparam SR_PKT_SIZE = 140;
   
   cvita_hdr_encoder cvita_hdr_encoder (
     .pkt_type(2'b0), .eob(0), .has_time(0),
@@ -168,11 +167,10 @@ module noc_block_siggen_mux #(
   ////////////////////////////////////////////////////////////
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
-  localparam SR_USER_REG_BASE = 128;
-  //localparam SR_WAVE = 128;
+
   localparam SR_FREQ = 128;
-  localparam SR_ENABLE = 132;
   localparam SR_CARTESIAN = 130;
+  localparam SR_ENABLE = 132;
   localparam SR_AMPLITUDE = 138;
   localparam SR_WAVEFORM = 142;
 
@@ -205,6 +203,7 @@ module noc_block_siggen_mux #(
   
   assign s_axis_sine_tready = (wave_type == 3'b001) ? s_axis_data_tready : 1'b0;
   assign s_axis_const_tready = (wave_type == 3'b000) ? s_axis_data_tready : 1'b0;
+
   ////////////////////////////////////////////////////////////
   //
   // Sine_tone Block
@@ -212,7 +211,7 @@ module noc_block_siggen_mux #(
   ////////////////////////////////////////////////////////////
   
   //Sine tone block instance
-  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN), .SR_AMP_ADDR(SR_AMPLITUDE)) sine_tone_inst
+  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst
       (.clk(ce_clk), .reset(ce_rst), .clear(0), .enable(enable),
        .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr), 
        .o_tdata(s_axis_sine_tdata), .o_tlast(s_axis_sine_tlast), .o_tvalid(s_axis_sine_tvalid), .o_tready(s_axis_sine_tready));	
@@ -226,7 +225,7 @@ module noc_block_siggen_mux #(
   // AXI settings bus for AMPLITUDE values
   axi_setting_reg #(
     .ADDR(SR_AMPLITUDE), .AWIDTH(8), .WIDTH(32), .USE_LAST(1), .REPEATS(1) ) 
-  set_amplitude (
+  const_block (
     .clk(ce_clk), .reset(ce_reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(s_axis_const_tdata), .o_tlast(s_axis_const_tlast), .o_tvalid(s_axis_const_tvalid), .o_tready(s_axis_const_tready));
