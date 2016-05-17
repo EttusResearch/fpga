@@ -45,7 +45,7 @@ module eth_dispatch
     input clear,
     // Setting register interface
     input set_stb,
-    input [15:0] set_addr,
+    input [7:0] set_addr,
     input [31:0] set_data,
     // Input 68bit AXI-Stream interface (from MAC)
     input [63:0] in_tdata,
@@ -145,10 +145,10 @@ module eth_dispatch
     // This value is used to determine if the packet is meant 
     // for this device should be consumed
     wire [47:0]      my_mac;
-    setting_reg #(.my_addr(BASE), .awidth(16), .width(32)) sr_my_mac_lsb
+    setting_reg #(.my_addr(BASE), .awidth(8), .width(32)) sr_my_mac_lsb
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out(my_mac[31:0]),.changed());
-    setting_reg #(.my_addr(BASE+1), .awidth(16), .width(16)) sr_my_mac_msb
+    setting_reg #(.my_addr(BASE+1), .awidth(8), .width(16)) sr_my_mac_msb
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out(my_mac[47:32]),.changed());
 
@@ -156,13 +156,13 @@ module eth_dispatch
     // This value is used to determine if the packet is addressed
     // to this device 
     wire [31:0]      my_ip;
-    setting_reg #(.my_addr(BASE+2), .awidth(16), .width(32)) sr_my_ip
+    setting_reg #(.my_addr(BASE+2), .awidth(8), .width(32)) sr_my_ip
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out(my_ip[31:0]),.changed());
 
     // This module supports two destination ports
     wire [15:0]      my_port0, my_port1;
-    setting_reg #(.my_addr(BASE+3), .awidth(16), .width(32)) sr_udp_port
+    setting_reg #(.my_addr(BASE+3), .awidth(8), .width(32)) sr_udp_port
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out({my_port1[15:0],my_port0[15:0]}),.changed());
 
@@ -170,13 +170,13 @@ module eth_dispatch
     //                does not match "my_mac"
     // forward_bcast: Forward broadcasts to crossover path
     wire forward_ndest, forward_bcast;
-    setting_reg #(.my_addr(BASE+4), .awidth(16), .width(2)) sr_forward_ctrl
+    setting_reg #(.my_addr(BASE+4), .awidth(8), .width(2)) sr_forward_ctrl
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out({forward_ndest, forward_bcast}),.changed());
 
     //ICMP Type and Code to forward packet to ZPU
     wire [7:0] my_icmp_type, my_icmp_code;
-    setting_reg #(.my_addr(BASE+5), .awidth(16), .width(16)) sr_icmp_ctrl
+    setting_reg #(.my_addr(BASE+5), .awidth(8), .width(16)) sr_icmp_ctrl
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
         .in(set_data),.out({my_icmp_type, my_icmp_code}),.changed());
 
