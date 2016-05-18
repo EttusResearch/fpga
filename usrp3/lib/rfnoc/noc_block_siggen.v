@@ -3,7 +3,7 @@
 //
 
 module noc_block_siggen #(
-   parameter NOC_ID = 64'hFFF0_0000_0000_0000,   //FIXME: NOC ID?
+   parameter NOC_ID = 64'h5166_3110_0000_0000,   
   parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
@@ -80,12 +80,24 @@ module noc_block_siggen #(
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
+  wire [31:0] s_axis_const_tdata;
+  wire [127:0] s_axis_const_tuser;
+  wire        s_axis_const_tlast;
+  wire        s_axis_const_tvalid;
+  wire        s_axis_const_tready;
+  wire [31:0] s_axis_sine_tdata;
+  wire [127:0] s_axis_sine_tuser;
+  wire        s_axis_sine_tlast;
+  wire        s_axis_sine_tvalid;
+  wire        s_axis_sine_tready;
   wire [31:0] packet_resizer_tdata;
   wire        packet_resizer_tlast;
   wire        packet_resizer_tvalid;
   wire        packet_resizer_tready;
+  wire [127:0] packet_resizer_tuser;
   wire [127:0] modified_header;
-  wire enable;
+  wire [2:0] wave_type;
+  wire 	      enable;
 
 
   axi_wrapper #(
@@ -106,7 +118,7 @@ module noc_block_siggen #(
     .s_axis_data_tlast(packet_resizer_tlast),
     .s_axis_data_tvalid(packet_resizer_tvalid),
     .s_axis_data_tready(packet_resizer_tready),
-    .s_axis_data_tuser(modified_header),
+    .s_axis_data_tuser(packet_resizer_tuser),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
     .m_axis_config_tvalid(),
@@ -121,9 +133,8 @@ module noc_block_siggen #(
   // Signal Generator Block
   //
   ////////////////////////////////////////////////////////////
-  // User register
-  localparam SR_PKT_SIZE         = 140;
       
+  localparam SR_PKT_SIZE = 140;
   
   cvita_hdr_encoder cvita_hdr_encoder (
     .pkt_type(2'b0), .eob(0), .has_time(0),
@@ -143,7 +154,7 @@ module noc_block_siggen #(
     .i_tvalid(s_axis_data_tvalid),
     .i_tready(s_axis_data_tready),
     .o_tdata(packet_resizer_tdata),
-    .o_tuser(),
+    .o_tuser(packet_resizer_tuser),
     .o_tlast(packet_resizer_tlast),
     .o_tvalid(packet_resizer_tvalid),
     .o_tready(packet_resizer_tready));
@@ -156,18 +167,26 @@ module noc_block_siggen #(
   ////////////////////////////////////////////////////////////
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
-  localparam SR_USER_REG_BASE = 128;
-  //localparam SR_WAVE = 128;
+
   localparam SR_FREQ = 128;
-  localparam SR_ENABLE = 132;
   localparam SR_CARTESIAN = 130;
+  localparam SR_ENABLE = 132;
   localparam SR_AMPLITUDE = 138;
+  localparam SR_WAVEFORM = 142;
 
  // Control Source Unused
   assign cmdout_tdata  = 64'd0;
   assign cmdout_tlast  = 1'b0;
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready  = 1'b1;
+
+  //settings bus for selecting wave type 
+  setting_reg #(
+    .my_addr(SR_WAVEFORM), .awidth(8), .width(3)) 
+  set_wave (
+    .clk(ce_clk), .rst(ce_reset),
+    .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(wave_type), .changed());
   
   //Start/stop functionality
   //settings bus for start/stop
@@ -177,13 +196,39 @@ module noc_block_siggen #(
     .clk(ce_clk), .rst(ce_reset),
     .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(enable), .changed());
+  
+  assign s_axis_data_tdata  = (wave_type == 3'b001) ? s_axis_sine_tdata : s_axis_const_tdata ;
+  assign s_axis_data_tvalid = ((wave_type == 3'b001) ? s_axis_sine_tvalid : s_axis_const_tvalid) & enable;
+  assign s_axis_data_tlast  = (wave_type == 3'b001) ? s_axis_sine_tlast : s_axis_const_tlast;
+  
+  assign s_axis_sine_tready = (wave_type == 3'b001) ? s_axis_data_tready : 1'b0;
+  assign s_axis_const_tready = (wave_type == 3'b000) ? s_axis_data_tready : 1'b0;
 
-  //Sine tone block
-  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN), .SR_AMP_ADDR(SR_AMPLITUDE)) sine_tone_inst
+  ////////////////////////////////////////////////////////////
+  //
+  // Sine_tone Block
+  //
+  ////////////////////////////////////////////////////////////
+  
+  //Sine tone block instance
+  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst
       (.clk(ce_clk), .reset(ce_rst), .clear(0), .enable(enable),
        .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr), 
-       .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));	
-  //FIXME: Cordic directly connected with AXI wrapper. Insert a mux in between. 
+       .o_tdata(s_axis_sine_tdata), .o_tlast(s_axis_sine_tlast), .o_tvalid(s_axis_sine_tvalid), .o_tready(s_axis_sine_tready));	
+
+  ////////////////////////////////////////////////////////////
+  //
+  // Constant Block
+  //
+  ////////////////////////////////////////////////////////////
+
+  // AXI settings bus for CONSTANT values
+  axi_setting_reg #(
+    .ADDR(SR_AMPLITUDE), .AWIDTH(8), .WIDTH(32), .USE_LAST(1), .REPEATS(1) ) 
+  const_block (
+    .clk(ce_clk), .reset(ce_reset),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(s_axis_const_tdata), .o_tlast(s_axis_const_tlast), .o_tvalid(s_axis_const_tvalid), .o_tready(s_axis_const_tready));
 
 
 endmodule

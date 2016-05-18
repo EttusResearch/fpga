@@ -37,7 +37,7 @@ SIM_TOP = noc_block_siggen_tb
 # additional user created files
 SIM_SRCS = \
 $(abspath noc_block_siggen_tb.sv) \
-$(abspath ../../../rfnoc/noc_block_siggen.v)
+$(abspath ../../../rfnoc/noc_block_siggen_mux.v)
 
 MODELSIM_USER_DO = $(abspath wave.do)
 

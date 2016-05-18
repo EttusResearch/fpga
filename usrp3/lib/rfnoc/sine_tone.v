@@ -20,7 +20,7 @@ module sine_tone #(
   wire phase_in_tvalid ;
   wire phase_in_tready;
 
-  wire [15:0] phase_out_tdata; // No need to initialize it as 32 bit?
+  wire [15:0] phase_out_tdata;
   wire phase_out_tlast;
   wire phase_out_tvalid;
   wire phase_out_tready;
@@ -37,7 +37,7 @@ module sine_tone #(
   
 //AXI settings bus for phase values
   axi_setting_reg #(
-    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1) ) //Generalize these?
+    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1) ) 
   set_phase_acc (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -45,7 +45,7 @@ module sine_tone #(
 
 //AXI settings bus for cartestian values
   axi_setting_reg #(
-    .ADDR(SR_CARTESIAN_ADDR), .AWIDTH(8), .WIDTH(32), .REPEATS(1)) //Generalize these?
+    .ADDR(SR_CARTESIAN_ADDR), .AWIDTH(8), .WIDTH(32), .REPEATS(1)) 
   set_axis_cartesian (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -53,7 +53,7 @@ module sine_tone #(
 
    assign cartesian_tlast = 1; 
 
-//Phase Accumulator //FIXME: Always valid input?
+//Phase Accumulator 
    phase_accum phase_acc
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(phase_in_tdata), .i_tlast(phase_in_tlast), .i_tvalid(1'b1), .i_tready(phase_in_tready),
@@ -63,7 +63,7 @@ module sine_tone #(
    cordic_rotator cordic_inst
      (.aclk(clk), .aresetn(~reset),
       .s_axis_phase_tdata(phase_out_tdata),
-      .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable), //TODO: Confirm this
+      .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable), 
       .s_axis_phase_tready(phase_out_tready),
       .s_axis_cartesian_tdata(cartesian_tdata),
       .s_axis_cartesian_tlast(cartesian_tlast),
