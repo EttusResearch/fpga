@@ -13,6 +13,9 @@ module noc_block_siggen #(
   output [63:0] debug
 );
 
+parameter CONST = 3'b000;
+parameter SINE = 3'b001;
+
   ////////////////////////////////////////////////////////////
   //
   // RFNoC Shell
@@ -73,8 +76,6 @@ module noc_block_siggen #(
   //
   ////////////////////////////////////////////////////////////
 
-  localparam NUM_AXI_CONFIG_BUS = 1;
-  
   wire [31:0] s_axis_data_tdata;
   wire [127:0] s_axis_data_tuser;
   wire        s_axis_data_tlast;
@@ -184,7 +185,7 @@ module noc_block_siggen #(
   setting_reg #(
     .my_addr(SR_WAVEFORM), .awidth(8), .width(3)) 
   set_wave (
-    .clk(ce_clk), .rst(ce_reset),
+    .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(wave_type), .changed());
   
@@ -193,16 +194,16 @@ module noc_block_siggen #(
   setting_reg #(
     .my_addr(SR_ENABLE), .awidth(8), .width(1)) 
   set_enable (
-    .clk(ce_clk), .rst(ce_reset),
+    .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(enable), .changed());
   
-  assign s_axis_data_tdata  = (wave_type == 3'b001) ? s_axis_sine_tdata : s_axis_const_tdata ;
-  assign s_axis_data_tvalid = ((wave_type == 3'b001) ? s_axis_sine_tvalid : s_axis_const_tvalid) & enable;
-  assign s_axis_data_tlast  = (wave_type == 3'b001) ? s_axis_sine_tlast : s_axis_const_tlast;
+  assign s_axis_data_tdata  = (wave_type == SINE) ? s_axis_sine_tdata : s_axis_const_tdata ;
+  assign s_axis_data_tvalid = ((wave_type == SINE) ? s_axis_sine_tvalid : s_axis_const_tvalid) & enable;
+  assign s_axis_data_tlast  = (wave_type == SINE) ? s_axis_sine_tlast : s_axis_const_tlast;
   
-  assign s_axis_sine_tready = (wave_type == 3'b001) ? s_axis_data_tready : 1'b0;
-  assign s_axis_const_tready = (wave_type == 3'b000) ? s_axis_data_tready : 1'b0;
+  assign s_axis_sine_tready = ((wave_type == SINE) ? s_axis_data_tready : 1'b0 ) & enable;
+  assign s_axis_const_tready =((wave_type == CONST) ? s_axis_data_tready : 1'b0 ) & enable;
 
   ////////////////////////////////////////////////////////////
   //
@@ -212,7 +213,7 @@ module noc_block_siggen #(
   
   //Sine tone block instance
   sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst
-      (.clk(ce_clk), .reset(ce_rst), .clear(0), .enable(enable),
+      (.clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum), .enable(enable),
        .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr), 
        .o_tdata(s_axis_sine_tdata), .o_tlast(s_axis_sine_tlast), .o_tvalid(s_axis_sine_tvalid), .o_tready(s_axis_sine_tready));	
 
@@ -226,7 +227,7 @@ module noc_block_siggen #(
   axi_setting_reg #(
     .ADDR(SR_AMPLITUDE), .AWIDTH(8), .WIDTH(32), .USE_LAST(1), .REPEATS(1) ) 
   const_block (
-    .clk(ce_clk), .reset(ce_reset),
+    .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(s_axis_const_tdata), .o_tlast(s_axis_const_tlast), .o_tvalid(s_axis_const_tvalid), .o_tready(s_axis_const_tready));
 

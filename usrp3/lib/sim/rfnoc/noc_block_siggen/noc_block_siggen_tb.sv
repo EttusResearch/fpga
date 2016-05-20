@@ -40,7 +40,8 @@ module noc_block_siggen_tb();
   assign phase2 = 16'($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
   assign phase_real = real'((phase/(2.0**13))* pi);
   assign phase_real2 = real'((phase2/(2.0**13))* pi);
-  assign cartesian = {16'b0,16'($floor((2.0**13) * (1.0/1.65)))};
+  //assign cartesian = {16'($floor(((2.0**14) * (0.707)) + 0.5)),16'($floor(((2.0**14) * (0.707))+0.5)};
+  assign cartesian = {16'($floor((2.0**14) * (0.606))),16'($floor(0*(2.0**14) * (0.606)))};
   assign pkt_size = 140;
 
 
@@ -179,8 +180,6 @@ module noc_block_siggen_tb();
  
     //Setting WaveForm type
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM ,3'b000 );
-    //Setting Enable value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
        if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid) ;

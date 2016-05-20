@@ -1,4 +1,6 @@
 //
+// Copyright 2016 Ettus Research
+//
 // Sine Tone generator
 //
 `timescale 1ns/1ps
@@ -13,8 +15,6 @@ module sine_tone #(
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
  
-//FIXME: Implement functionality of 'clear'
-
   wire [15:0] phase_in_tdata;
   wire phase_in_tlast;
   wire phase_in_tvalid ;
@@ -37,11 +37,11 @@ module sine_tone #(
   
 //AXI settings bus for phase values
   axi_setting_reg #(
-    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1) ) 
+    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1)) 
   set_phase_acc (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .o_tdata(phase_in_tdata), .o_tlast(phase_in_tlast), .o_tvalid(phase_in_tvalid), .o_tready(phase_in_tready));
+    .o_tdata(phase_in_tdata), .o_tlast(phase_in_tlast), .o_tvalid(phase_in_tvalid), .o_tready(phase_in_tready & enable));
 
 //AXI settings bus for cartestian values
   axi_setting_reg #(
@@ -49,30 +49,30 @@ module sine_tone #(
   set_axis_cartesian (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .o_tdata(cartesian_tdata), .o_tlast(), .o_tvalid(cartesian_tvalid), .o_tready(cartesian_tready));
+    .o_tdata(cartesian_tdata), .o_tlast(), .o_tvalid(cartesian_tvalid), .o_tready(cartesian_tready & enable));
 
    assign cartesian_tlast = 1; 
 
 //Phase Accumulator 
-   phase_accum phase_acc
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(phase_in_tdata), .i_tlast(phase_in_tlast), .i_tvalid(1'b1), .i_tready(phase_in_tready),
-      .o_tdata(phase_out_tdata), .o_tlast(phase_out_tlast), .o_tvalid(phase_out_tvalid), .o_tready(phase_out_tready));
+   phase_accum phase_acc (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata(phase_in_tdata), .i_tlast(phase_in_tlast), .i_tvalid(1'b1), .i_tready(phase_in_tready),
+    .o_tdata(phase_out_tdata), .o_tlast(phase_out_tlast), .o_tvalid(phase_out_tvalid), .o_tready(phase_out_tready & enable));
 
 //Cordic
-   cordic_rotator cordic_inst
-     (.aclk(clk), .aresetn(~reset),
-      .s_axis_phase_tdata(phase_out_tdata),
-      .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable), 
-      .s_axis_phase_tready(phase_out_tready),
-      .s_axis_cartesian_tdata(cartesian_tdata),
-      .s_axis_cartesian_tlast(cartesian_tlast),
-      .s_axis_cartesian_tvalid(phase_out_tvalid & cartesian_tvalid & enable),
-      .s_axis_cartesian_tready(cartesian_tready),
-      .m_axis_dout_tdata(sine_out_tdata),
-      .m_axis_dout_tlast(sine_out_tlast),
-      .m_axis_dout_tvalid(sine_out_tvalid),
-      .m_axis_dout_tready(sine_out_tready));
+   cordic_rotator cordic_inst (
+    .aclk(clk), .aresetn(~(reset|clear)),
+    .s_axis_phase_tdata(phase_out_tdata),
+    .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable), 
+    .s_axis_phase_tready(phase_out_tready),
+    .s_axis_cartesian_tdata(cartesian_tdata),
+    .s_axis_cartesian_tlast(cartesian_tlast),
+    .s_axis_cartesian_tvalid(phase_out_tvalid & cartesian_tvalid & enable),
+    .s_axis_cartesian_tready(cartesian_tready),
+    .m_axis_dout_tdata(sine_out_tdata),
+    .m_axis_dout_tlast(sine_out_tlast),
+    .m_axis_dout_tvalid(sine_out_tvalid),
+    .m_axis_dout_tready(sine_out_tready & enable));
 
   assign o_tdata = sine_out_tdata;
   assign o_tlast = sine_out_tlast;
