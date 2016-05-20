@@ -3,7 +3,7 @@
 //
 
 module noc_block_siggen #(
-   parameter NOC_ID = 64'h5166_3110_0000_0000,   
+  parameter NOC_ID = 64'h5166_3110_0000_0000,   
   parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
@@ -13,8 +13,8 @@ module noc_block_siggen #(
   output [63:0] debug
 );
 
-parameter CONST = 3'b000;
-parameter SINE = 3'b001;
+  localparam CONST = 3'b000;
+  localparam SINE = 3'b001;
 
   ////////////////////////////////////////////////////////////
   //
@@ -170,6 +170,7 @@ parameter SINE = 3'b001;
   // User register address space starts at 128
 
   localparam SR_FREQ = 128;
+  localparam SR_FREQ_TLAST = SR_FREQ + 1; //To keep tlast asserted
   localparam SR_CARTESIAN = 130;
   localparam SR_ENABLE = 132;
   localparam SR_AMPLITUDE = 138;

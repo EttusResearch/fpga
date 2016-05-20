@@ -11,10 +11,6 @@ BASE_DIR = $(abspath ../../../../top)
 include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 
 #-------------------------------------------------
-# Design Specific
-#-------------------------------------------------
-
-#-------------------------------------------------
 # IP Specific
 #-------------------------------------------------
 # If simulation contains IP, define the IP_DIR and point
@@ -28,6 +24,8 @@ include $(LIB_IP_DIR)/cordic_rotator/Makefile.inc
 DESIGN_SRCS += $(abspath \
 $(LIB_IP_CORDIC_ROTATOR_SRCS)\
 )
+
+#-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
