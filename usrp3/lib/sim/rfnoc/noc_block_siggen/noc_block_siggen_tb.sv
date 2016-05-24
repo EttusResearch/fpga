@@ -38,11 +38,11 @@ module noc_block_siggen_tb();
   integer freq = 1; // (In MHz)
   integer sample_rate = 100; // (In Msps)
  
-  assign phase = ($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5));
-  assign phase2 = ($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
+  assign phase = 16'(($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5)));
+  assign phase2 = 16'(($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5)));
   assign phase_real = real'((phase/(2.0**13))* pi);
   assign phase_real2 = real'((phase2/(2.0**13))* pi);
-  assign cartesian = {16'(int'($floor((2.0**14) * (0.606)))),16'(int'($floor(0*(2.0**14) * (0.606))))};
+  assign cartesian = {16'(($floor((2.0**14) * (0.606)))),16'(($floor(0*(2.0**14) * (0.606))))};
   assign pkt_size = 364;
 
 
