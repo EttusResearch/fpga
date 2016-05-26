@@ -9,12 +9,12 @@ module sine_tone #(
   parameter WIDTH = 32,
   parameter SR_FREQ_ADDR = 128,
   parameter SR_CARTESIAN_ADDR = 130)
-( 
+(
   input clk, input reset, input clear, input enable,
-  input set_stb, input [WIDTH-1:0] set_data, input [7:0] set_addr, 
+  input set_stb, input [WIDTH-1:0] set_data, input [7:0] set_addr,
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
- 
+
   wire [15:0] phase_in_tdata;
   wire phase_in_tlast;
   wire phase_in_tvalid ;
@@ -24,20 +24,20 @@ module sine_tone #(
   wire phase_out_tlast;
   wire phase_out_tvalid;
   wire phase_out_tready;
-  
+
   wire [WIDTH-1:0] cartesian_tdata;
   wire cartesian_tlast;
   wire cartesian_tvalid;
   wire cartesian_tready;
-  
+
   wire [WIDTH-1:0] sine_out_tdata;
   wire sine_out_tlast;
   wire sine_out_tvalid;
   wire sine_out_tready;
-  
+
 //AXI settings bus for phase values
   axi_setting_reg #(
-    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1)) 
+    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1))
   set_phase_acc (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -45,16 +45,16 @@ module sine_tone #(
 
 //AXI settings bus for cartestian values
   axi_setting_reg #(
-    .ADDR(SR_CARTESIAN_ADDR), .AWIDTH(8), .WIDTH(32), .REPEATS(1)) 
+    .ADDR(SR_CARTESIAN_ADDR), .AWIDTH(8), .WIDTH(32), .REPEATS(1))
   set_axis_cartesian (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(cartesian_tdata), .o_tlast(), .o_tvalid(cartesian_tvalid), .o_tready(cartesian_tready & enable));
 
-   assign cartesian_tlast = 1; 
+  assign cartesian_tlast = 1;
 
-//Phase Accumulator 
-   phase_accum phase_acc (
+//Phase Accumulator
+  phase_accum phase_acc (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata(phase_in_tdata), .i_tlast(phase_in_tlast), .i_tvalid(1'b1), .i_tready(phase_in_tready),
     .o_tdata(phase_out_tdata), .o_tlast(phase_out_tlast), .o_tvalid(phase_out_tvalid), .o_tready(phase_out_tready & enable));
@@ -63,7 +63,7 @@ module sine_tone #(
    cordic_rotator cordic_inst (
     .aclk(clk), .aresetn(~(reset|clear)),
     .s_axis_phase_tdata(phase_out_tdata),
-    .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable), 
+    .s_axis_phase_tvalid(phase_out_tvalid & cartesian_tvalid & enable),
     .s_axis_phase_tready(phase_out_tready),
     .s_axis_cartesian_tdata(cartesian_tdata),
     .s_axis_cartesian_tlast(cartesian_tlast),
@@ -78,5 +78,5 @@ module sine_tone #(
   assign o_tlast = sine_out_tlast;
   assign o_tvalid = sine_out_tvalid;
   assign sine_out_tready = o_tready;
-	 
+
 endmodule  //sine_tone

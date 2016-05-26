@@ -26,7 +26,7 @@ module noc_block_siggen_tb();
   wire [31:0] cartesian;
   wire [31:0] pkt_size;
 
-  logic error = 0;   
+  logic error = 0;
   real pi = $acos(-1);
   real gain_correction = 0.699;
   real expected_sine, expected_cosine;
@@ -112,7 +112,8 @@ module noc_block_siggen_tb();
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_LAST,phase );
     //Setting Enable value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_GAIN, 16'h4000 );
+    //Setting Gain value
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_GAIN, 16'h7FFF );
 
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);

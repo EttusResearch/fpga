@@ -233,7 +233,7 @@ module noc_block_siggen #(
   ////////////////////////////////////////////////////////////
   sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst (
     .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum), .enable(1'b1),
-    .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr), 
+    .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr),
     .o_tdata(s_axis_sine_tdata), .o_tlast(), .o_tvalid(s_axis_sine_tvalid), .o_tready(s_axis_sine_tready));
 
   ////////////////////////////////////////////////////////////
