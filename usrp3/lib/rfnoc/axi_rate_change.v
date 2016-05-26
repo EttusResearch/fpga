@@ -434,7 +434,7 @@ module axi_rate_change #(
   wire eob_out_int = (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m)) ? eob_out : 1'b0;
   cvita_hdr_encoder cvita_hdr_encoder (
     .pkt_type(2'd0), .eob(eob_out_int), .has_time(has_time_out),
-    .seqnum(12'd0), .length(16'd0), // Not needed, handled by AXI Wrapper
+    .seqnum(12'd0), .payload_length(16'd0), // Not needed, handled by AXI Wrapper
     .src_sid(src_sid), .dst_sid(dst_sid),
     .vita_time(first_pkt_out ? vita_time_out : vita_time_reg),
     .header(o_reg_tuser));

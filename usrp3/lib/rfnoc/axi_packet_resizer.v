@@ -118,7 +118,7 @@ module axi_packet_resizer #(
       wire [127:0] set_eob_header, o_tuser_int;
       cvita_hdr_encoder cvita_hdr_encoder (
         .pkt_type(2'd0), .eob(eob_out & drop), .has_time(1'b0),
-        .seqnum(12'd0), .length(16'd0),
+        .seqnum(12'd0), .payload_length(16'd0),
         .src_sid(16'd0), .dst_sid(16'd0),
         .vita_time(64'd0),
         .header(set_eob_header));

@@ -121,7 +121,7 @@ module cmd_pkt_proc #(
   cvita_hdr_encoder cvita_hdr_encoder (
     .header(header),
     .pkt_type(2'b11), .has_time(USE_TIME[0]), .eob(1'b0),
-    .seqnum(seqnum_hold), .length(USE_TIME[0] ? 16'd24 : 16'd16),
+    .seqnum(seqnum_hold), .payload_length(16'd8),
     .src_sid(dst_sid_hold), .dst_sid(src_sid_hold), // Flip dst / src sids
     .vita_time(pkt_vita_time_hold));
 

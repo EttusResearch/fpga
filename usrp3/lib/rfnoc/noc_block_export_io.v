@@ -179,7 +179,7 @@ module noc_block_export_io
       wire hdr_stb, vita_time_stb;
       wire [1:0] pkt_type;
       wire eob, has_time;
-      wire [15:0] length;
+      wire [15:0] payload_length;
       wire [15:0] src_sid;
       wire [15:0] dst_sid;
       wire [63:0] vita_time;
@@ -201,7 +201,7 @@ module noc_block_export_io
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]),
         .hdr_stb(hdr_stb),
         .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
-        .seqnum(), .length(length),
+        .seqnum(), .length(), .payload_length(payload_length),
         .src_sid(src_sid), .dst_sid(dst_sid),
         .vita_time_stb(vita_time_stb), .vita_time(vita_time),
         .i_tdata(str_src_tdata_mux), .i_tlast(str_src_tlast_mux), .i_tvalid(str_src_tvalid_mux), .i_tready(str_src_tready_mux),
@@ -210,7 +210,7 @@ module noc_block_export_io
       wire [127:0] modified_header;
       cvita_hdr_encoder cvita_hdr_encoder (
         .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
-        .seqnum(tx_seqnum_cnt), .length(length),
+        .seqnum(tx_seqnum_cnt), .payload_length(payload_length),
         .src_sid(src_sid), .dst_sid(dst_sid),
         .vita_time(vita_time),
         .header(modified_header));

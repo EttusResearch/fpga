@@ -10,7 +10,7 @@ module cvita_hdr_parser #(
   input clk, input reset, input clear,
   output hdr_stb,
   output [1:0] pkt_type, output eob, output has_time,
-  output [11:0] seqnum, output [15:0] length,
+  output [11:0] seqnum, output [15:0] length, output [15:0] payload_length,
   output [15:0] src_sid, output [15:0] dst_sid,
   output vita_time_stb,
   output [63:0] vita_time,
@@ -67,19 +67,20 @@ module cvita_hdr_parser #(
 
   // REGISTER = 0: Always use o_tdata, output only valid when hdr_stb = 1
   // REGISTER = 1: Mux to make sure header output is available immediately and also registered for rest of packet.
-  assign hdr           = (hdr_stb       | (REGISTER == 0)) ? o_tdata : hdr_reg;
-  assign hdr_vita_time = (vita_time_stb | (REGISTER == 0)) ? o_tdata : vita_time_reg;
+  assign hdr            = (hdr_stb       | (REGISTER == 0)) ? o_tdata : hdr_reg;
+  assign hdr_vita_time  = (vita_time_stb | (REGISTER == 0)) ? o_tdata : vita_time_reg;
 
-  assign hdr_stb   = first_line & o_tvalid & o_tready;
-  assign pkt_type  = hdr[63:62];
-  assign has_time  = hdr[61];
-  assign eob       = hdr[60];
-  assign seqnum    = hdr[59:48];
-  assign length    = hdr[47:32];
-  assign src_sid   = hdr[31:16];
-  assign dst_sid   = hdr[15:0];
+  assign hdr_stb        = first_line & o_tvalid & o_tready;
+  assign pkt_type       = hdr[63:62];
+  assign has_time       = hdr[61];
+  assign eob            = hdr[60];
+  assign seqnum         = hdr[59:48];
+  assign length         = hdr[47:32];
+  assign payload_length = length - (has_time ? 16'd16 : 16'd8);
+  assign src_sid        = hdr[31:16];
+  assign dst_sid        = hdr[15:0];
 
-  assign vita_time_stb = read_time & o_tvalid & o_tready;
-  assign vita_time     = hdr_vita_time;
+  assign vita_time_stb  = read_time & o_tvalid & o_tready;
+  assign vita_time      = hdr_vita_time;
 
 endmodule
