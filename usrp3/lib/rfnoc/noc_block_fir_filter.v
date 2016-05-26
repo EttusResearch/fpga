@@ -43,7 +43,7 @@ module noc_block_fir_filter #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -53,7 +53,13 @@ module noc_block_fir_filter #(
     // Stream Source
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     .clear_tx_seqnum(clear_tx_seqnum), .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
-    .debug(debug));
+    .vita_time(), .debug(debug));
+
+  // Control Source Unused
+  assign cmdout_tdata = 64'd0;
+  assign cmdout_tlast = 1'b0;
+  assign cmdout_tvalid = 1'b0;
+  assign ackin_tready = 1'b1;
 
   ////////////////////////////////////////////////////////////
   //
@@ -61,8 +67,6 @@ module noc_block_fir_filter #(
   // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-  localparam NUM_AXI_CONFIG_BUS = 2;
-
   wire [31:0] m_axis_data_tdata;
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
@@ -73,33 +77,8 @@ module noc_block_fir_filter #(
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
 
-  wire [95:0] s_axis_fir_tdata;
-  wire        s_axis_fir_tlast;
-  wire        s_axis_fir_tvalid;
-  wire        s_axis_fir_tready;
-
-  wire [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata;
-  wire [31:0] m_axis_config_tdata_array[0:NUM_AXI_CONFIG_BUS-1];
-  wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast;
-  wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tvalid;
-  wire [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tready;
-
-  // Create an array of configuration busses
-  genvar k;
-  generate
-    for (k = 0; k < NUM_AXI_CONFIG_BUS; k = k + 1) begin
-        assign m_axis_config_tdata_array[k] = m_axis_config_tdata[k*32+31:k*32];
-    end
-  endgenerate
-
-  localparam AXI_WRAPPER_BASE    = 128;
-  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
-
   axi_wrapper #(
-    .SIMPLE_MODE(1),
-    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS),
-    .CONFIG_BUS_FIFO_DEPTH(8)) // Need deeper FIFO to prevent overflow when configuring coefficients
+    .SIMPLE_MODE(1))
   inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
@@ -115,47 +94,80 @@ module noc_block_fir_filter #(
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
-    .m_axis_config_tdata(m_axis_config_tdata),
-    .m_axis_config_tlast(m_axis_config_tlast),
-    .m_axis_config_tvalid(m_axis_config_tvalid),
-    .m_axis_config_tready(m_axis_config_tready));
+    .m_axis_pkt_len_tdata(),
+    .m_axis_pkt_len_tvalid(),
+    .m_axis_pkt_len_tready(),
+    .m_axis_config_tdata(),
+    .m_axis_config_tlast(),
+    .m_axis_config_tvalid(),
+    .m_axis_config_tready());
 
   ////////////////////////////////////////////////////////////
   //
-  // User code
+  // FIR Filter Implementation
   //
   ////////////////////////////////////////////////////////////
+  wire [79:0] s_axis_fir_tdata;
+  wire        s_axis_fir_tlast;
+  wire        s_axis_fir_tvalid;
+  wire        s_axis_fir_tready;
+  wire [15:0] m_axis_fir_reload_tdata;
+  wire        m_axis_fir_reload_tvalid, m_axis_fir_reload_tready, m_axis_fir_reload_tlast;
+  wire [7:0]  m_axis_fir_config_tdata;
+  wire        m_axis_fir_config_tvalid, m_axis_fir_config_tready;
 
-  // Control Source Unused
-  assign cmdout_tdata = 64'd0;
-  assign cmdout_tlast = 1'b0;
-  assign cmdout_tvalid = 1'b0;
-  assign ackin_tready = 1'b1;
+  localparam SR_RELOAD       = 128;
+  localparam SR_RELOAD_LAST  = 129;
+  localparam SR_CONFIG       = 130;
+  localparam RB_NUM_TAPS     = 0;
 
   localparam NUM_TAPS = 41;
 
   // Readback register for number of FIR filter taps
   always @*
     case(rb_addr)
-      8'd0    : rb_data <= {NUM_TAPS};
-      default : rb_data <= 64'h0BADC0DE0BADC0DE;
+      RB_NUM_TAPS : rb_data <= {NUM_TAPS};
+      default     : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
 
-  // AXI configuration bus 0
-  wire [31:0] m_axis_fir_reload_tdata  = m_axis_config_tdata_array[0];
-  wire        m_axis_fir_reload_tvalid = m_axis_config_tvalid[0];
-  wire        m_axis_fir_reload_tready;
-  assign      m_axis_config_tready[0]  = m_axis_fir_reload_tready;
-  wire        m_axis_fir_reload_tlast  = m_axis_config_tlast[0];
+  // FIR filter coefficient reload bus
+  // (see Xilinx FIR Filter Compiler documentation)
+  axi_setting_reg #(
+    .ADDR(SR_RELOAD),
+    .WIDTH(16),
+    .USE_FIFO(1),
+    .FIFO_SIZE(7),
+    .USE_LAST(1))
+  set_coeff (
+    .clk(ce_clk),
+    .reset(ce_rst),
+    .set_stb(set_stb),
+    .set_addr(set_addr),
+    .set_data(set_data),
+    .o_tdata(m_axis_fir_reload_tdata),
+    .o_tlast(m_axis_fir_reload_tlast),
+    .o_tvalid(m_axis_fir_reload_tvalid),
+    .o_tready(m_axis_fir_reload_tready));
 
-  // AXI configuration bus 1
-  wire [7:0]  m_axis_fir_config_tdata  = m_axis_config_tdata_array[1][7:0];
-  wire        m_axis_fir_config_tvalid = m_axis_config_tvalid[1];
-  wire        m_axis_fir_config_tready;
-  assign      m_axis_config_tready[1]  = m_axis_fir_config_tready;
+  // FIR filter config bus
+  // (see Xilinx FIR Filter Compiler documentation)
+  axi_setting_reg #(
+    .ADDR(SR_CONFIG),
+    .WIDTH(8))
+  set_config (
+    .clk(ce_clk),
+    .reset(ce_rst),
+    .set_stb(set_stb),
+    .set_addr(set_addr),
+    .set_data(set_data),
+    .o_tdata(m_axis_fir_config_tdata),
+    .o_tlast(),
+    .o_tvalid(m_axis_fir_config_tvalid),
+    .o_tready(m_axis_fir_config_tready));
 
+  // Xilinx FIR Filter IP Core
   axi_fir inst_axi_fir (
-    .aresetn(~ce_rst), .aclk(ce_clk),
+    .aresetn(~(ce_rst | clear_tx_seqnum)), .aclk(ce_clk),
     .s_axis_data_tdata(m_axis_data_tdata),
     .s_axis_data_tlast(m_axis_data_tlast),
     .s_axis_data_tvalid(m_axis_data_tvalid),
@@ -172,13 +184,14 @@ module noc_block_fir_filter #(
     .s_axis_reload_tready(m_axis_fir_reload_tready),
     .s_axis_reload_tlast(m_axis_fir_reload_tlast));
 
+  // Clip extra bits for bit growth and round
   axi_round_and_clip_complex #(
-    .WIDTH_IN(48),
+    .WIDTH_IN(38),
     .WIDTH_OUT(16),
-    .CLIP_BITS(7))
+    .CLIP_BITS(6))
   inst_axi_round_and_clip (
-    .clk(ce_clk), .reset(ce_rst),
-    .i_tdata({s_axis_fir_tdata[95:48],s_axis_fir_tdata[47:0]}),
+    .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum),
+    .i_tdata({s_axis_fir_tdata[77:40],s_axis_fir_tdata[37:0]}),
     .i_tlast(s_axis_fir_tlast),
     .i_tvalid(s_axis_fir_tvalid),
     .i_tready(s_axis_fir_tready),
