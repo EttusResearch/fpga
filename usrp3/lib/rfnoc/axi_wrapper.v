@@ -99,15 +99,6 @@ module axi_wrapper
 
    // RESIZE INPUT PACKET
    // Size input packets based on m_axis_pkt_len_tdata (RESIZE_INPUT_PACKET=1) or based on i_tdata
-   wire [15:0] m_axis_pkt_len_flop_tdata;
-   wire m_axis_pkt_len_flop_tvalid;
-   wire load_m_axis_pkt_len = sof_in & m_axis_pkt_len_flop_tvalid;
-   axi_fifo_flop2 #(.WIDTH(16)) axi_fifo_flop_pkt_len (
-     .clk(clk), .reset(reset), .clear(clear_tx_seqnum),
-     .i_tdata(m_axis_pkt_len_tdata), .i_tvalid(m_axis_pkt_len_tvalid), .i_tready(m_axis_pkt_len_tready),
-     .o_tdata(m_axis_pkt_len_flop_tdata), .o_tvalid(m_axis_pkt_len_flop_tvalid), .o_tready(load_m_axis_pkt_len),
-     .occupied(), .space());
-
    generate
      if (RESIZE_INPUT_PACKET) begin
        reg m_axis_data_tlast_reg;
@@ -119,16 +110,16 @@ module axi_wrapper
            m_axis_pkt_len_reg    <= 8;
          end else begin
            // Only update packet length at the beginning of a new packet
-           if (load_m_axis_pkt_len) begin
-             m_axis_pkt_len_reg <= m_axis_pkt_len_flop_tdata;
+           if (m_axis_pkt_len_tvalid & m_axis_pkt_len_tready) begin
+             m_axis_pkt_len_reg <= m_axis_pkt_len_tdata;
            end
            if (m_axis_data_tvalid & m_axis_data_tready) begin
-             if (m_axis_pkt_cnt == m_axis_pkt_len_reg) begin
+             if (m_axis_pkt_cnt >= m_axis_pkt_len_reg) begin
                m_axis_pkt_cnt        <= 4;
              end else begin
                m_axis_pkt_cnt        <= m_axis_pkt_cnt + 4;
              end
-             if (m_axis_pkt_cnt == m_axis_pkt_len_reg-4) begin
+             if (m_axis_pkt_cnt >= m_axis_pkt_len_reg-4) begin
                m_axis_data_tlast_reg <= 1'b1;
              end else begin
                m_axis_data_tlast_reg <= 1'b0;
@@ -136,9 +127,11 @@ module axi_wrapper
            end
          end
        end
-       assign m_axis_data_tlast = m_axis_data_tlast_reg;
+       assign m_axis_data_tlast     = m_axis_data_tlast_reg;
+       assign m_axis_pkt_len_tready = sof_in;
      end else begin
-       assign m_axis_data_tlast = m_axis_data_tlast_int;
+       assign m_axis_data_tlast     = m_axis_data_tlast_int;
+       assign m_axis_pkt_len_tready = 1'b0;
      end
    endgenerate
 
@@ -150,32 +143,25 @@ module axi_wrapper
    //       occur by design.
    generate
      if (RESIZE_OUTPUT_PACKET) begin
-       reg s_axis_data_tlast_reg;
        reg [15:0] s_axis_pkt_cnt;
        reg [15:0] s_axis_pkt_len;
        always @(posedge clk) begin
          if (reset | clear_tx_seqnum) begin
-           s_axis_data_tlast_reg <= 1'b0;
            s_axis_pkt_cnt        <= 4;
            s_axis_pkt_len        <= 0;
          end else begin
            // Remove header
            s_axis_pkt_len <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
            if (s_axis_data_tvalid & s_axis_data_tready) begin
-             if (s_axis_pkt_cnt == s_axis_pkt_len) begin
+             if (s_axis_pkt_cnt >= s_axis_pkt_len) begin
                s_axis_pkt_cnt        <= 4;
              end else begin
                s_axis_pkt_cnt        <= s_axis_pkt_cnt + 4;
              end
-             if (s_axis_pkt_cnt == s_axis_pkt_len-4) begin
-               s_axis_data_tlast_reg <= 1'b1;
-             end else begin
-               s_axis_data_tlast_reg <= 1'b0;
-             end
            end
          end
        end
-       assign s_axis_data_tlast_int = s_axis_data_tlast_reg;
+       assign s_axis_data_tlast_int = (s_axis_pkt_cnt >= s_axis_pkt_len);
      end else begin
        // chdr_framer will automatically fill in the packet length based on user provided tlast
        assign s_axis_data_tlast_int = s_axis_data_tlast;
