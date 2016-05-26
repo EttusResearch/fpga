@@ -3,7 +3,7 @@
 //
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 4
+`define NUM_TEST_CASES 6
 
 `include "sim_exec_report.vh"
 `include "sim_clks_rsts.vh"
@@ -16,8 +16,6 @@ module noc_block_siggen_tb();
   localparam NUM_CE         = 1;  // Number of Computation Engines / User RFNoC blocks to simulate
   localparam NUM_STREAMS    = 1;  // Number of test bench streams
   localparam TEST_LENGTH    = 2000;
-  localparam CONST          = 3'b000;
-  localparam SINE           = 3'b001;
 
   `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   `RFNOC_ADD_BLOCK(noc_block_siggen, 0);
@@ -27,7 +25,7 @@ module noc_block_siggen_tb();
   wire [15:0] phase2 ;
   wire [31:0] cartesian;
   wire [31:0] pkt_size;
-  
+
   logic error = 0;   
   real pi = $acos(-1);
   real gain_correction = 0.699;
@@ -37,12 +35,12 @@ module noc_block_siggen_tb();
   real phase_real2, expected_sine_real2, expected_cosine_real2;
   integer freq = 1; // (In MHz)
   integer sample_rate = 100; // (In Msps)
- 
-  assign phase = 16'(($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5)));
-  assign phase2 = 16'(($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5)));
+
+  assign phase = ($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5));
+  assign phase2 = ($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
   assign phase_real = real'((phase/(2.0**13))* pi);
   assign phase_real2 = real'((phase2/(2.0**13))* pi);
-  assign cartesian = {16'(($floor((2.0**14) * (0.606)))),16'(($floor(0*(2.0**14) * (0.606))))};
+  assign cartesian = {16'(int'($floor((2.0**14) * (0.606)))),16'(int'($floor(0*(2.0**14) * (0.606))))};
   assign pkt_size = 364;
 
 
@@ -50,7 +48,7 @@ module noc_block_siggen_tb();
      input real actual;
      input real expected;
      begin
-        if (expected > 0) 
+        if (expected > 0)
            error = (actual > expected) ? (((actual - expected)/expected) > 0.05) : (((expected - actual)/expected) > 0.05) ;
         //`ASSERT_FATAL(error != 1'b1, "Sine wave incorrectly generated");
      end
@@ -76,12 +74,6 @@ module noc_block_siggen_tb();
     `TEST_CASE_START("Wait for Reset");
     while (bus_rst) @(posedge bus_clk);
     while (ce_rst) @(posedge ce_clk);
-    //Setting Enable value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b0 );
-    //Setting Waveform value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM ,CONST );
-    //Setting Constant value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_AMPLITUDE , 2 );
     `TEST_CASE_DONE(~bus_rst & ~ce_rst);
 
     /********************************************************
@@ -103,63 +95,75 @@ module noc_block_siggen_tb();
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 4 -- Test sequence
+    ** Test 4 -- Test Sine Wave
     ********************************************************/
-    `TEST_CASE_START("Test sequence");
+    `TEST_CASE_START("Test Sine Wave");
 
     //TEST PHASE 1 FOR SINE_WAVE
     //Setting Enable value = 0
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b0 );
     //Setting WaveForm type
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM , SINE );
-    //Packet Size should be set first
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.inst_packet_resizer.SR_PKT_SIZE, pkt_size);
-    //Cartersian should be programmed before the phase. 
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM , noc_block_siggen.SINE );
+    //Packet Size should be set before enabling output
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_PKT_SIZE, pkt_size);
     //Setting Cartesian Value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_CARTESIAN,cartesian );
     //Setting Phase value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_TLAST,phase );
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_LAST,phase );
     //Setting Enable value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
-    
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_GAIN, 16'h4000 );
 
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
        expected_sine_real = $sin((i)*phase_real);
        expected_sine = $floor((gain_correction * ((2.0**13)* expected_sine_real)) + 0.5);
-       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid) 
+       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid)
          check_wave(real_val, expected_sine);
     end
 
     //TEST PHASE 2 FOR SINE_WAVE
     //Setting Phase value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_TLAST, phase2 );
-    
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_LAST, phase2 );
+
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
        expected_sine_real2 = $sin((i)*phase_real2);
        expected_sine2 = $floor((gain_correction * ((2.0**13)* expected_sine_real2)) + 0.5);
-       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid) 
+       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid)
          check_wave(real_val, expected_sine2);
     end
-   
-    //TEST CONSTANT AMPLITUDE FOR CONSTANT
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 5 -- Test Constant
+    ********************************************************/
+    `TEST_CASE_START("Test Constant");
     //Setting Constant value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_AMPLITUDE , 10 );
- 
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_CONSTANT , {16'h7FFF,16'h4000} );
+
     //Setting WaveForm type
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM , CONST );
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM , noc_block_siggen.CONST );
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
-       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid) ;
+       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid);
+          //`ASSERT_ERROR(real_val == 10, "Constant incorrectly generated")
+    end
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 6 -- Test Noise
+    ********************************************************/
+    `TEST_CASE_START("Test Noise");
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_WAVEFORM , noc_block_siggen.NOISE );
+    for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
+       tb_streamer.pull_word({real_val,cplx_val},last);
+       if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid);
           //`ASSERT_ERROR(real_val == 10, "Constant incorrectly generated")
     end
 
-   
-    
     `TEST_CASE_DONE(1);
     `TEST_BENCH_DONE;
 
   end
 endmodule
-
