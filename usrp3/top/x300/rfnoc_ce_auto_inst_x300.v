@@ -17,7 +17,7 @@
   wire ce_clk = radio_clk;
   wire ce_rst = radio_rst;
 
-  noc_block_logpwr inst_noc_block_logpwr (
+  noc_block_siggen inst_noc_block_siggen (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
