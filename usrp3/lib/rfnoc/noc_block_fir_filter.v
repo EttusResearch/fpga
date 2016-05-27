@@ -134,10 +134,11 @@ module noc_block_fir_filter #(
   // (see Xilinx FIR Filter Compiler documentation)
   axi_setting_reg #(
     .ADDR(SR_RELOAD),
+    .USE_ADDR_LAST(1),
+    .ADDR_LAST(SR_RELOAD_LAST),
     .WIDTH(16),
     .USE_FIFO(1),
-    .FIFO_SIZE(7),
-    .USE_LAST(1))
+    .FIFO_SIZE(7))
   set_coeff (
     .clk(ce_clk),
     .reset(ce_rst),

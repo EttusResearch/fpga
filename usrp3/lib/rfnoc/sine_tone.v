@@ -37,7 +37,7 @@ module sine_tone #(
 
 //AXI settings bus for phase values
   axi_setting_reg #(
-    .ADDR(SR_FREQ_ADDR), .AWIDTH(8), .WIDTH(16), .USE_LAST(1))
+    .ADDR(SR_FREQ_ADDR), .ADDR_LAST(SR_FREQ_ADDR+1), .AWIDTH(8), .WIDTH(16), .USE_ADDR_LAST(1))
   set_phase_acc (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
