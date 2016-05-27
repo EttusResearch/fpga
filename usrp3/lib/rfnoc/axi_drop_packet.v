@@ -32,7 +32,7 @@ module axi_drop_packet #(
   wire int_tready;
 
   reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr;
-  reg [$clog2(MAX_PKT_SIZE)-1:0] in_pkt_cnt, out_pkt_cnt;
+  reg [$clog2(MAX_PKT_SIZE):0] in_pkt_cnt, out_pkt_cnt; // Extra bit to for wrap around
   reg full, empty;
 
   reg [WIDTH:0] mem[0:2**($clog2(MAX_PKT_SIZE))-1];

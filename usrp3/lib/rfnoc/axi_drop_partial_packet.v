@@ -37,7 +37,7 @@ module axi_drop_partial_packet #(
       end
     end
     if (clear | ~active) begin
-      pkt_size <= (pkt_size_sr == 1) ? 1 : pkt_size_sr;
+      pkt_size <= (pkt_size_sr == 0) ? 1 : pkt_size_sr;
     end
   end
 
