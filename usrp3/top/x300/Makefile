@@ -1,5 +1,5 @@
 #
-# Copyright 2012-2014 Ettus Research LLC
+# Copyright 2012-2016 Ettus Research LLC
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
@@ -16,9 +16,6 @@
 ## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
 # Debug Options
-# Uncomment the following lines to build radio's with no DSP's (experimental!)
-#OPTIONS += DELETE_DSP0=1
-#OPTIONS += DELETE_DSP1=1
 # Uncomment the following line to add a debug UART on GPIO 10 & 11
 #OPTIONS += DEBUG_UART=1
 
@@ -27,8 +24,6 @@ CREATE_LVBITX=python ../../lib/io_port2/create-lvbitx.py
 GIGE_DEFS=BUILD_1G=1 $(OPTIONS)
 HYBRID_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 $(OPTIONS)
 XGIGE_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 $(OPTIONS)
-HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
-XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
 
 # vivado_build($1=Target, $2=Device, $3=Definitions)
 vivado_build = make -f Makefile.x300.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 VERILOG_DEFS="$3"
@@ -50,63 +45,55 @@ post_build = @\
 ##Supported Targets
 ##-----------------
 
-all:      X300_HGS X310_HGS ##(Default target)
+all:      X300_HG X310_HG ##(Default target)
 
-X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO. (experimental!)
 	$(call vivado_build,bin,X310,$(GIGE_DEFS))
 	$(call post_build,X310,1G)
 
-X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO. (experimental!)
 	$(call vivado_build,bin,X300,$(GIGE_DEFS))
 	$(call post_build,X300,1G)
 
-X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
+X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
 	$(call vivado_build,bin,X310,$(HYBRID_DEFS))
 	$(call post_build,X310,HG)
 
-X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
+X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
 	$(call vivado_build,bin,X300,$(HYBRID_DEFS))
 	$(call post_build,X300,HG)
 
-X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO.
 	$(call vivado_build,bin,X310,$(XGIGE_DEFS))
 	$(call post_build,X310,XG)
 
-X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO.
 	$(call vivado_build,bin,X300,$(XGIGE_DEFS))
 	$(call post_build,X300,XG)
 
-X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(HYBRID_SRAM_DEFS))
-	$(call post_build,X310,HGS)
+X310_RFNOC_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC enabled.
+	$(call vivado_build,bin,X310,$(HYBRID_DEFS) RFNOC=1 X310=1)
+	$(call post_build,X310,RFNOC_HG)
 
-X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(HYBRID_SRAM_DEFS))
-	$(call post_build,X300,HGS)
+X300_RFNOC_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC enabled.
+	$(call vivado_build,bin,X300,$(HYBRID_DEFS) RFNOC=1 X300=1)
+	$(call post_build,X300,RFNOC_HG)
 
-X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(XGIGE_SRAM_DEFS))
-	$(call post_build,X310,XGS)
+X310_RFNOC_XG: ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO. RFNoC enabled.
+	$(call vivado_build,bin,X310,$(XGIGE_DEFS) RFNOC=1 X310=1)
+	$(call post_build,X310,RFNOC_XG)
 
-X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(XGIGE_SRAM_DEFS))
-	$(call post_build,X300,XGS)
+X300_RFNOC_XG: ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO. RFNoC enabled.
+	$(call vivado_build,bin,X300,$(XGIGE_DEFS) RFNOC=1 X300=1)
+	$(call post_build,X300,RFNOC_XG)
 
-X310_RFNOC_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
-	$(call vivado_build,bin,X310,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1)
-	$(call post_build,X310,RFNOC_HGS)
+X310_RFNOC_HLS_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC + Vivado HLS enabled.
+	$(call vivado_build,hls,X310,$(HYBRID_DEFS) RFNOC=1 X310=1 HLS=1)
+	$(call post_build,X310,RFNOC_HLS_HG)
 
-X300_RFNOC_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC enabled.
-	$(call vivado_build,bin,X300,$(HYBRID_SRAM_DEFS) RFNOC=1 X300=1)
-	$(call post_build,X300,RFNOC_HGS)
-
-X310_RFNOC_HLS_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC + Vivado HLS enabled.
-	$(call vivado_build,hls,X310,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1 HLS=1)
-	$(call post_build,X310,RFNOC_HLS_HGS)
-
-X300_RFNOC_HLS_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO. RFNoC + Vivado HLS enabled.
-	$(call vivado_build,hls,X300,$(HYBRID_SRAM_DEFS) RFNOC=1 X310=1 HLS=1)
-	$(call post_build,X300,RFNOC_HLS_HGS)
+X300_RFNOC_HLS_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC + Vivado HLS enabled.
+	$(call vivado_build,hls,X300,$(HYBRID_DEFS) RFNOC=1 X310=1 HLS=1)
+	$(call post_build,X300,RFNOC_HLS_HG)
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."

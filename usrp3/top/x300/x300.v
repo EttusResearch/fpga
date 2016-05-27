@@ -5,9 +5,6 @@
 //
 // ETH10G_PORT0 - Ethernet Port0 is configured for 10G (default is 1G)
 // ETH10G_PORT1 - Ethernet Port1 is configured for 10G (default is 1G)
-// NO_DRAM_FIFOS - All DRAM I/F logic, supporting AXI4 and VFIFOs' replaced by internal SRAM FIFOs.
-// DELETE_DSP0 - Deletes DUC and DDC from Radio0
-// DELETE_DSP1 - Deletes DUC and DDC from Radio1
 // DEBUG_UART - Adds 115kbaud UART to GPIO pins 10 & 11 for firmware debug
 //
 ///////////////////////////////////
@@ -50,7 +47,6 @@ module x300
    // DRAM Interface
    //
    ///////////////////////////////////
-`ifndef NO_DRAM_FIFOS
    inout [31:0] ddr3_dq,     // Data pins. Input for Reads, Output for Writes.
    inout [3:0] ddr3_dqs_n,   // Data Strobes. Input for Reads, Output for Writes.
    inout [3:0] ddr3_dqs_p,
@@ -69,7 +65,6 @@ module x300
    output [0:0] ddr3_odt,    // On-Die termination enable.
    //
    input sys_clk_i,          // 100MHz clock source to generate DDR3 clocking.
-`endif
    ///////////////////////////////////
    //
    // IOPORT2
@@ -1069,8 +1064,6 @@ module x300
    synchronizer #(.INITIAL_VAL(1'b0)) adc_idlyctrl_rdy_sync_inst (
       .clk(bus_clk), .rst(1'b0 /* no reset */), .in(adc_idlyctrl_rdy), .out(adc_idlyctrl_rdy_sync));
 
-`ifndef NO_DRAM_FIFOS
-
    ///////////////////////////////////////////////////////////////////////////////////
    //
    // Xilinx DDR3 Controller and PHY.
@@ -1219,7 +1212,6 @@ module x300
       .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
    );
 
-`endif //  `ifndef NO_DRAM_FIFOS
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1348,7 +1340,6 @@ module x300
       // Misc.
       .led_misc(leds),
       .debug0(), .debug1(), .debug2(),
-`ifndef NO_DRAM_FIFOS
       // DRAM signals.
       .ddr3_axi_clk              (ddr3_axi_clk),
       .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
@@ -1396,7 +1387,6 @@ module x300
       .ddr3_axi_rlast            (s_axi_rlast),
       .ddr3_axi_rvalid           (s_axi_rvalid),
       .ddr3_axi_rready           (s_axi_rready),
-`endif //  `ifndef NO_DRAM_FIFOS
       // IoPort2 Message FIFOs
       .o_iop2_msg_tdata          (o_iop2_msg_tdata),
       .o_iop2_msg_tvalid         (o_iop2_msg_tvalid),
