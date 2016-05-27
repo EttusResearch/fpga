@@ -21,8 +21,8 @@ module noc_block_siggen_tb();
   `RFNOC_ADD_BLOCK(noc_block_siggen, 0);
 
   localparam SPP = 16; // Samples per packet
-  wire [15:0] phase ;
-  wire [15:0] phase2 ;
+  wire [15:0] phase_inc;
+  wire [15:0] phase_inc2;
   wire [31:0] cartesian;
   wire [31:0] pkt_size;
 
@@ -31,15 +31,15 @@ module noc_block_siggen_tb();
   real gain_correction = 0.699;
   real expected_sine, expected_cosine;
   real expected_sine2, expected_cosine2;
-  real phase_real, expected_sine_real, expected_cosine_real;
-  real phase_real2, expected_sine_real2, expected_cosine_real2;
+  real phase_inc_real, expected_sine_real, expected_cosine_real;
+  real phase_inc_real2, expected_sine_real2, expected_cosine_real2;
   integer freq = 1; // (In MHz)
   integer sample_rate = 100; // (In Msps)
 
-  assign phase = ($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5));
-  assign phase2 = ($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
-  assign phase_real = real'((phase/(2.0**13))* pi);
-  assign phase_real2 = real'((phase2/(2.0**13))* pi);
+  assign phase_inc = ($floor(((2.0**13) * ((2.0*freq)/sample_rate)) + 0.5));
+  assign phase_inc2 = ($floor(((2.0**13) * (freq/(2.0*sample_rate))) + 0.5));
+  assign phase_inc_real = real'((phase_inc/(2.0**13))* pi);
+  assign phase_inc_real2 = real'((phase_inc2/(2.0**13))* pi);
   assign cartesian = {16'(int'($floor((2.0**14) * (0.606)))),16'(int'($floor(0*(2.0**14) * (0.606))))};
   assign pkt_size = 364;
 
@@ -109,7 +109,7 @@ module noc_block_siggen_tb();
     //Setting Cartesian Value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_CARTESIAN,cartesian );
     //Setting Phase value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_LAST,phase );
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_PHASE_INC,phase_inc );
     //Setting Enable value
     tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_ENABLE ,1'b1 );
     //Setting Gain value
@@ -117,7 +117,7 @@ module noc_block_siggen_tb();
 
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
-       expected_sine_real = $sin((i)*phase_real);
+       expected_sine_real = $sin((i)*phase_inc_real);
        expected_sine = $floor((gain_correction * ((2.0**13)* expected_sine_real)) + 0.5);
        if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid)
          check_wave(real_val, expected_sine);
@@ -125,11 +125,11 @@ module noc_block_siggen_tb();
 
     //TEST PHASE 2 FOR SINE_WAVE
     //Setting Phase value
-    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_FREQ_LAST, phase2 );
+    tb_streamer.write_user_reg(sid_noc_block_siggen, noc_block_siggen.SR_PHASE_INC, phase_inc2 );
 
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
        tb_streamer.pull_word({real_val,cplx_val},last);
-       expected_sine_real2 = $sin((i)*phase_real2);
+       expected_sine_real2 = $sin((i)*phase_inc_real2);
        expected_sine2 = $floor((gain_correction * ((2.0**13)* expected_sine_real2)) + 0.5);
        if (noc_block_siggen.o_tready & noc_block_siggen.o_tvalid)
          check_wave(real_val, expected_sine2);

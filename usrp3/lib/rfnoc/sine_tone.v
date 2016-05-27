@@ -7,7 +7,7 @@
 
 module sine_tone #(
   parameter WIDTH = 32,
-  parameter SR_FREQ_ADDR = 128,
+  parameter SR_PHASE_INC_ADDR = 129,
   parameter SR_CARTESIAN_ADDR = 130)
 (
   input clk, input reset, input clear, input enable,
@@ -37,7 +37,7 @@ module sine_tone #(
 
 //AXI settings bus for phase values
   axi_setting_reg #(
-    .ADDR(SR_FREQ_ADDR), .ADDR_LAST(SR_FREQ_ADDR+1), .AWIDTH(8), .WIDTH(16), .USE_ADDR_LAST(1))
+    .ADDR(SR_PHASE_INC_ADDR), .AWIDTH(8), .WIDTH(16), .STROBE_LAST(1), .REPEATS(1))
   set_phase_acc (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),

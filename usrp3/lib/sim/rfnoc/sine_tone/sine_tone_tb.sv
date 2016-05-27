@@ -24,9 +24,9 @@ module sine_tone_tb();
   wire o_tlast;
   wire o_tvalid;
   wire o_tready;
-  wire [15:0] phase ;
+  wire [15:0] phase_inc;
   wire [31:0] cartesian;
-  wire [15:0] phase2 ;
+  wire [15:0] phase_inc2;
   wire [31:0] cartesian2;
 
   logic [15:0] real_val, cplx_val;
@@ -36,8 +36,8 @@ module sine_tone_tb();
   real gain_correction = 0.699;
   real expected_sine, expected_cosine;
   real expected_sine2, expected_cosine2;
-  real phase_real, expected_sine_real, expected_cosine_real;
-  real phase_real2, expected_sine_real2, expected_cosine_real2;
+  real phase_inc_real, expected_sine_real, expected_cosine_real;
+  real phase_inc_real2, expected_sine_real2, expected_cosine_real2;
   integer freq = 1; // (In MHz)
   integer sample_rate = 100; // (In Msps)
 
@@ -54,24 +54,23 @@ module sine_tone_tb();
     .set_stb(set_bus.settings_bus.set_stb), .set_data(set_bus.settings_bus.set_data), .set_addr(set_bus.settings_bus.set_addr), 
     .o_tdata(tb_axis.axis.tdata), .o_tlast(tb_axis.axis.tlast), .o_tvalid(tb_axis.axis.tvalid), .o_tready(tb_axis.axis.tready));
 
-  assign phase = 16'(int'($floor(((2**13) * ((2.0*freq)/sample_rate)) + 0.5)));
-  assign phase_real = real'((phase/(2.0**13))* pi);
+  assign phase_inc = 16'(int'($floor(((2**13) * ((2.0*freq)/sample_rate)) + 0.5)));
+  assign phase_inc_real = real'((phase_inc/(2.0**13))* pi);
   assign cartesian = {16'b0,16'(int'($floor((2**13) * (1/1.65))))};
 
-  assign phase2 = 16'(int'($floor(((2**13) * ((2.0*freq)/(0.5*sample_rate)) + 0.5))));
-  assign phase_real2 = real'((phase2/(2.0**13))* pi);
+  assign phase_inc2 = 16'(int'($floor(((2**13) * ((2.0*freq)/(0.5*sample_rate)) + 0.5))));
+  assign phase_inc_real2 = real'((phase_inc2/(2.0**13))* pi);
   assign cartesian2 = {16'b0,16'(int'($floor((2**13) * (1/1.65))))};
   assign enable = 1;
 
   task automatic check_wave;
-     input real actual;
-     input real expected;
-     begin
-        if (expected > 0) 
-           error = (actual > expected) ? (((actual - expected)/expected) > 0.03) : (((expected - actual)/expected) > 0.03);
-        //`ASSERT_FATAL(error != 1'b1, "Sine wave incorrectly generated");
-        `ASSERT_ERROR(error != 1'b1, "Sine wave incorrectly generated");
-     end
+    input real actual;
+    input real expected;
+    begin
+      if (expected > 0)
+        error = (actual > expected) ? (((actual - expected)/expected) > 0.03) : (((expected - actual)/expected) > 0.03);
+      `ASSERT_ERROR(error != 1'b1, "Sine wave incorrectly generated");
+    end
   endtask
 
   /********************************************************
@@ -79,7 +78,6 @@ module sine_tone_tb();
   ********************************************************/
   initial begin : tb_main
     `TEST_CASE_START("Wait for reset");
-    //FIXME: Reset set_bus here? 
     set_bus.reset;
     tb_axis.reset;
     while (rst) @(posedge clk);
@@ -87,7 +85,7 @@ module sine_tone_tb();
 
     `TEST_CASE_START("Check sine wave generation");
     //Set the phase value
-    set_bus.write(129,phase,0);
+    set_bus.write(129,phase_inc,0);
 
     //Set the cartesian value
     set_bus.write(130,cartesian,0);
@@ -95,7 +93,7 @@ module sine_tone_tb();
     //Receive data from AXI slave
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
       tb_axis.pull_word({real_val,cplx_val},last);
-      expected_sine_real = $sin((i-2)*phase_real);
+      expected_sine_real = $sin((i-2)*phase_inc_real);
       expected_sine = $floor((gain_correction * ((2.0**13)* expected_sine_real)) + 0.5);
       if (sine_tone_inst.o_tvalid)  check_wave(real_val, expected_sine );
     end
@@ -103,7 +101,7 @@ module sine_tone_tb();
     repeat (100) @(posedge clk);
 
     //Set the phase value
-    set_bus.write(129,phase2,0);
+    set_bus.write(129,phase_inc2,0);
 
     //Set the cartesian value
     set_bus.write(130,cartesian2,0);
@@ -111,7 +109,7 @@ module sine_tone_tb();
     //Receive data from AXI slave
     for (int i = 0; i < TEST_LENGTH - 1; ++i) begin
       tb_axis.pull_word({real_val,cplx_val},last);
-      expected_sine_real2 = $sin((i)*phase_real2);
+      expected_sine_real2 = $sin((i)*phase_inc_real2);
       expected_sine2 = $floor((gain_correction * ((2.0**13)* expected_sine_real2)) + 0.5);
       if (sine_tone_inst.o_tvalid) check_wave(real_val, expected_sine2);
     end

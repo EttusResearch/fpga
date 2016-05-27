@@ -140,14 +140,13 @@ module noc_block_siggen #(
   // Signal Generator Block
   //
   ////////////////////////////////////////////////////////////
-  localparam SR_FREQ       = 128;
-  localparam SR_FREQ_LAST  = 129;
-  localparam SR_CARTESIAN  = 130;
-  localparam SR_ENABLE     = 132;
-  localparam SR_CONSTANT   = 138;
-  localparam SR_GAIN       = 139;
-  localparam SR_PKT_SIZE   = 140;
-  localparam SR_WAVEFORM   = 142;
+  localparam SR_PHASE_INC      = 129;
+  localparam SR_CARTESIAN      = 130;
+  localparam SR_ENABLE         = 132;
+  localparam SR_CONSTANT       = 138;
+  localparam SR_GAIN           = 139;
+  localparam SR_PKT_SIZE       = 140;
+  localparam SR_WAVEFORM       = 142;
 
   localparam CONST  = 2'd0;
   localparam SINE   = 2'd1;
@@ -231,7 +230,7 @@ module noc_block_siggen #(
   // Sine_tone Block
   //
   ////////////////////////////////////////////////////////////
-  sine_tone #(.WIDTH(32), .SR_FREQ_ADDR(SR_FREQ), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst (
+  sine_tone #(.WIDTH(32), .SR_PHASE_INC_ADDR(SR_PHASE_INC), .SR_CARTESIAN_ADDR(SR_CARTESIAN)) sine_tone_inst (
     .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum), .enable(1'b1),
     .set_stb(set_stb), .set_data(set_data), .set_addr(set_addr),
     .o_tdata(s_axis_sine_tdata), .o_tlast(), .o_tvalid(s_axis_sine_tvalid), .o_tready(s_axis_sine_tready));

@@ -37,8 +37,6 @@ SIM_SRCS = \
 $(abspath noc_block_siggen_tb.sv) \
 $(abspath ../../../rfnoc/noc_block_siggen.v)
 
-MODELSIM_USER_DO = $(abspath wave.do)
-
 #-------------------------------------------------
 # Bottom-of-Makefile
 #-------------------------------------------------
