@@ -47,10 +47,8 @@ module axi_rate_change #(
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [127:0] i_tuser,
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready, output [127:0] o_tuser,
-  output [WIDTH-1:0] m_axis_data_tdata, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready, //output m_axis_data_eob,
-  input [WIDTH-1:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready //input s_axis_data_eob,
-  // Errors
-  //output error_pkt_size_changed
+  output [WIDTH-1:0] m_axis_data_tdata, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
+  input [WIDTH-1:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready
 );
 
   wire [WIDTH-1:0] i_reg_tdata;
@@ -452,7 +450,9 @@ module axi_rate_change #(
 
   axi_fifo_flop2 #(.WIDTH(WIDTH+1)) axi_fifo_flop2_from_user (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({s_axis_data_tlast,s_axis_data_tdata}), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
+    // FIXME: If user asserts tlast at the wrong time, it likely causes a deadlock. For now ignore tlast.
+    //.i_tdata({s_axis_data_tlast,s_axis_data_tdata}), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
+    .i_tdata({1'b0,s_axis_data_tdata}), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
     .o_tdata({o_reg_tlast_int,o_reg_tdata}), .o_tvalid(o_reg_tvalid_int), .o_tready(o_reg_tready),
     .space(), .occupied());
 
