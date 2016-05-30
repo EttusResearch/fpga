@@ -203,6 +203,8 @@ module x300_core (
    wire        r0_tx_tvalid_bi, r0_tx_tvalid_bo, r1_tx_tvalid_bi, r1_tx_tvalid_bo;
    wire        r0_tx_tready_bi, r0_tx_tready_bo, r1_tx_tready_bi, r1_tx_tready_bo;
 
+   // Number of Radio Cores Instantiated
+   localparam NUM_RADIO_CORES = 2;
 
    //------------------------------------------------------------------
    // Wishbone Slave Interface(s)
@@ -266,7 +268,7 @@ module x300_core (
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
    /////////////////////////////////////////////////////////////////////////////////
-   bus_int #(.NUM_CE(NUM_CE)) bus_int (
+   bus_int #(.NUM_CE(NUM_CE+NUM_RADIO_CORES)) bus_int (
       .clk(bus_clk), .reset(bus_rst),
       .sen(LMK_SEN), .sclk(LMK_SCLK), .mosi(LMK_MOSI), .miso(1'b0),
       .scl0(SFPP0_SCL), .sda0(SFPP0_SDA),
