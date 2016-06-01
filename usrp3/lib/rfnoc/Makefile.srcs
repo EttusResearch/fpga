@@ -69,6 +69,8 @@ fft_shift.v \
 axi_pipe_join.v \
 axi_pipe_mac.v \
 axi_round_and_clip_complex.v \
+axi_round_complex.v \
+axi_clip_complex.v \
 axi_join.v \
 split_complex.v \
 axi_round_and_clip.v \
