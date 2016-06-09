@@ -22,7 +22,7 @@ SIM_SRCS = \
 $(abspath noc_block_skeleton_tb.sv) \
 $(abspath ../noc_block_skeleton.v)
 
-MODELSIM_USER_DO = $(abspath wave.do)
+MODELSIM_USER_DO =
 
 #-------------------------------------------------
 # Bottom-of-Makefile

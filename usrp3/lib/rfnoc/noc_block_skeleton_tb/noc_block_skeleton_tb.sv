@@ -58,12 +58,12 @@ module noc_block_skeleton_tb();
     random_word = $random();
     tb_streamer.write_user_reg(sid_noc_block_skeleton, noc_block_skeleton.SR_TEST_REG_0, random_word);
     tb_streamer.read_user_reg(sid_noc_block_skeleton, 0, readback);
-    $sformat(s, "User register 0 incorrect readback! Expected: %0d, Actual %0d", readback[31:0] == random_word);
+    $sformat(s, "User register 0 incorrect readback! Expected: %0d, Actual %0d", readback[31:0], random_word);
     `ASSERT_ERROR(readback[31:0] == random_word, s);
     random_word = $random();
     tb_streamer.write_user_reg(sid_noc_block_skeleton, noc_block_skeleton.SR_TEST_REG_1, random_word);
     tb_streamer.read_user_reg(sid_noc_block_skeleton, 1, readback);
-    $sformat(s, "User register 1 incorrect readback! Expected: %0d, Actual %0d", readback[31:0] == random_word);
+    $sformat(s, "User register 1 incorrect readback! Expected: %0d, Actual %0d", readback[31:0], random_word);
     `ASSERT_ERROR(readback[31:0] == random_word, s);
     `TEST_CASE_DONE(1);
 
