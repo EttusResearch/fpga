@@ -45,53 +45,53 @@ post_build = @\
 ##Supported Targets
 ##-----------------
 
-all:      X300_HG X310_HG ##(Default target)
+all:      X300_HG X310_HG X300_XG X310_XG ##(Default target)
 
-X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO. (experimental!)
-	$(call vivado_build,bin,X310,$(GIGE_DEFS))
+X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. (experimental!)
+	$(call vivado_build,bin,X310,$(GIGE_DEFS) X310=1)
 	$(call post_build,X310,1G)
 
-X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO. (experimental!)
-	$(call vivado_build,bin,X300,$(GIGE_DEFS))
+X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. (experimental!)
+	$(call vivado_build,bin,X300,$(GIGE_DEFS) X300=1)
 	$(call post_build,X300,1G)
 
-X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(HYBRID_DEFS))
+X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+	$(call vivado_build,bin,X310,$(HYBRID_DEFS) X310=1)
 	$(call post_build,X310,HG)
 
-X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(HYBRID_DEFS))
+X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+	$(call vivado_build,bin,X300,$(HYBRID_DEFS) X300=1)
 	$(call post_build,X300,HG)
 
-X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(XGIGE_DEFS))
+X310_XG:  ##USRP X310. 10GigE on both SFP+ ports.
+	$(call vivado_build,bin,X310,$(XGIGE_DEFS) X310=1)
 	$(call post_build,X310,XG)
 
-X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(XGIGE_DEFS))
+X300_XG:  ##USRP X300. 10GigE on both SFP+ ports.
+	$(call vivado_build,bin,X300,$(XGIGE_DEFS) X300=1)
 	$(call post_build,X300,XG)
 
-X310_RFNOC_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC enabled.
+X310_RFNOC_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
 	$(call vivado_build,bin,X310,$(HYBRID_DEFS) RFNOC=1 X310=1)
 	$(call post_build,X310,RFNOC_HG)
 
-X300_RFNOC_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC enabled.
+X300_RFNOC_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
 	$(call vivado_build,bin,X300,$(HYBRID_DEFS) RFNOC=1 X300=1)
 	$(call post_build,X300,RFNOC_HG)
 
-X310_RFNOC_XG: ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO. RFNoC enabled.
+X310_RFNOC_XG: ##USRP X310. 10GigE on both SFP+ ports. RFNoC CEs enabled.
 	$(call vivado_build,bin,X310,$(XGIGE_DEFS) RFNOC=1 X310=1)
 	$(call post_build,X310,RFNOC_XG)
 
-X300_RFNOC_XG: ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO. RFNoC enabled.
+X300_RFNOC_XG: ##USRP X300. 10GigE on both SFP+ ports. RFNoC CEs enabled.
 	$(call vivado_build,bin,X300,$(XGIGE_DEFS) RFNOC=1 X300=1)
 	$(call post_build,X300,RFNOC_XG)
 
-X310_RFNOC_HLS_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC + Vivado HLS enabled.
+X310_RFNOC_HLS_HG: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs + Vivado HLS enabled.
 	$(call vivado_build,hls,X310,$(HYBRID_DEFS) RFNOC=1 X310=1 HLS=1)
 	$(call post_build,X310,RFNOC_HLS_HG)
 
-X300_RFNOC_HLS_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO. RFNoC + Vivado HLS enabled.
+X300_RFNOC_HLS_HG: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs + Vivado HLS enabled.
 	$(call vivado_build,hls,X300,$(HYBRID_DEFS) RFNOC=1 X310=1 HLS=1)
 	$(call post_build,X300,RFNOC_HLS_HG)
 
