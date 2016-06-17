@@ -17,6 +17,7 @@ include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/pcie_clk_gen/Makefile.inc
 include $(IP_DIR)/radio_clk_gen/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
+include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 
 IP_XCI_SRCS = \
 $(IP_AXI4_BRAM_SRCS) \
@@ -34,6 +35,9 @@ $(IP_ONE_GIG_ETH_PCS_PMA_SRCS) \
 
 IP_TEN_GIGE_PHY_XCI_SRCS = \
 $(IP_TEN_GIG_ETH_PCS_PMA_SRCS)
+
+IP_AURORA_XCI_SRCS = \
+$(IP_AURORA_64B66B_PCS_PMA_SRCS)
 
 IP_DRAM_XCI_SRCS = \
 $(IP_AXI_INTERCON_2X64_128_SRCS) \
@@ -59,7 +63,8 @@ $(IP_FIFO_SHORT_2CLK_OUTS) \
 $(IP_ONE_GIG_ETH_PCS_PMA_OUTS) \
 $(IP_PCIE_CLK_GEN_OUTS) \
 $(IP_RADIO_CLK_GEN_OUTS) \
-$(IP_TEN_GIG_ETH_PCS_PMA_OUTS)
+$(IP_TEN_GIG_ETH_PCS_PMA_OUTS) \
+$(IP_AURORA_64B66B_PCS_PMA_OUTS)
 
 # Currently unused
 # $(IP_INPUT_SAMPLE_FIFO_OUTS) \

@@ -9,19 +9,15 @@
                  N < 16 ? 3 : \
                  N < 32 ? 4 : \
                  N < 64 ? 5 : \
-		 N < 128 ? 6 : \
-		 N < 256 ? 7 : \
-		 N < 512 ? 8 : \
-		 N < 1024 ? 9 : \
+       N < 128 ? 6 : \
+       N < 256 ? 7 : \
+       N < 512 ? 8 : \
+       N < 1024 ? 9 : \
                  10)
 
 module bus_int
-  #(
-    parameter  dw  = 32,  // Data bus width
-    parameter  aw  = 16,  // Address bus width, for byte addressibility, 16 = 64K byte memory space
-    parameter  sw  = 4   // Select width -- 32-bit data bus with 8-bit granularity.
-    )
-   (input clk, input reset,
+(
+    input clk, input reset,
     output sen, output sclk, output mosi, input miso,
     inout scl0, inout sda0,
     inout scl1, inout sda1,
@@ -31,26 +27,17 @@ module bus_int
     output [7:0] leds,
     output [3:0] sw_rst,
     // SFP+ 0
-    input SFPP0_ModAbs,
-    input SFPP0_TxFault, // Current 10G PMA/PCS apparently ignores this signal.
-    input SFPP0_RxLOS,
-    inout SFPP0_RS0,
-    inout SFPP0_RS1,
+    input SFPP0_ModAbs, input SFPP0_TxFault, input SFPP0_RxLOS, inout SFPP0_RS0, inout SFPP0_RS1,
     // SFP+ 1
-    input SFPP1_ModAbs,
-    input SFPP1_TxFault, // Current 10G PMA/PCS apparently ignores this signal.
-    input SFPP1_RxLOS,
-    inout SFPP1_RS0,
-    inout SFPP1_RS1,
-    //
-    input [7:0] clock_status,
-    output [7:0] clock_control,
-    // ETH0
-    output [63:0] eth0_tx_tdata, output [3:0] eth0_tx_tuser, output eth0_tx_tlast, output eth0_tx_tvalid, input eth0_tx_tready,
-    input [63:0] eth0_rx_tdata, input [3:0] eth0_rx_tuser, input eth0_rx_tlast, input eth0_rx_tvalid, output eth0_rx_tready,
-    // ETH1
-    output [63:0] eth1_tx_tdata, output [3:0] eth1_tx_tuser, output eth1_tx_tlast, output eth1_tx_tvalid, input eth1_tx_tready,
-    input [63:0] eth1_rx_tdata, input [3:0] eth1_rx_tuser, input eth1_rx_tlast, input eth1_rx_tvalid, output eth1_rx_tready,
+    input SFPP1_ModAbs, input SFPP1_TxFault, input SFPP1_RxLOS, inout SFPP1_RS0, inout SFPP1_RS1,
+    // Clock control and status
+    input [7:0] clock_status, output [7:0] clock_control,
+    // SFP+ 0 data stream
+    output [63:0] sfp0_tx_tdata, output [3:0] sfp0_tx_tuser, output sfp0_tx_tlast, output sfp0_tx_tvalid, input sfp0_tx_tready,
+    input [63:0] sfp0_rx_tdata, input [3:0] sfp0_rx_tuser, input sfp0_rx_tlast, input sfp0_rx_tvalid, output sfp0_rx_tready,
+    // SFP+ 1 data stream
+    output [63:0] sfp1_tx_tdata, output [3:0] sfp1_tx_tuser, output sfp1_tx_tlast, output sfp1_tx_tvalid, input sfp1_tx_tready,
+    input [63:0] sfp1_rx_tdata, input [3:0] sfp1_rx_tuser, input sfp1_rx_tlast, input sfp1_rx_tvalid, output sfp1_rx_tready,
     // Radio0
     output [63:0] r0o_tdata, output r0o_tlast, output r0o_tvalid, input r0o_tready,
     input [63:0] r0i_tdata, input r0i_tlast, input r0i_tvalid, output r0i_tready,
@@ -75,32 +62,32 @@ module bus_int
     //------------------------------------------------------------------
     // Wishbone Slave Interface(s)
     //------------------------------------------------------------------
-    input [dw-1:0] s4_dat_i,
-    output [dw-1:0] s4_dat_o,
-    output [aw-1:0] s4_adr,
-    output [sw-1:0] s4_sel,
-    input s4_ack,
-    output s4_stb,
-    output s4_cyc,
-    output s4_we,
-    input s4_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
+    input [31:0] sfp0_wb_dat_i,
+    output [31:0] sfp0_wb_dat_o,
+    output [15:0] sfp0_wb_adr,
+    output [3:0] sfp0_wb_sel,
+    input sfp0_wb_ack,
+    output sfp0_wb_stb,
+    output sfp0_wb_cyc,
+    output sfp0_wb_we,
+    input sfp0_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
-    input [dw-1:0] s5_dat_i,
-    output [dw-1:0] s5_dat_o,
-    output [aw-1:0] s5_adr,
-    output [sw-1:0] s5_sel,
-    input s5_ack,
-    output s5_stb,
-    output s5_cyc,
-    output s5_we,
-    input s5_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
+    input [31:0] sfp1_wb_dat_i,
+    output [31:0] sfp1_wb_dat_o,
+    output [15:0] sfp1_wb_adr,
+    output [3:0] sfp1_wb_sel,
+    input sfp1_wb_ack,
+    output sfp1_wb_stb,
+    output sfp1_wb_cyc,
+    output sfp1_wb_we,
+    input sfp1_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
     output        set_stb_ext,
     output [7:0]  set_addr_ext,
     output [31:0] set_data_ext,
 
-    input [15:0] eth0_phy_status,
-    input [15:0] eth1_phy_status,
+    input [15:0] sfp0_phy_status,
+    input [15:0] sfp1_phy_status,
 
     input [31:0] dram_fifo0_rb_data,
     input [31:0] dram_fifo1_rb_data,
@@ -183,7 +170,7 @@ module bus_int
    reg   SFPP1_ModAbs_reg,  SFPP1_TxFault_reg,  SFPP1_RxLOS_reg;
    reg   SFPP1_ModAbs_chgd, SFPP1_TxFault_chgd, SFPP1_RxLOS_chgd;
 
-   wire [15:0]  eth0_phy_status_sync, eth1_phy_status_sync;
+   wire [15:0]  sfp0_phy_status_sync, sfp1_phy_status_sync;
 
    ////////////////////////////////////////////////////////////////////
    // Soft CPU - drives network setup, soft reset, ICMP, ...
@@ -239,15 +226,15 @@ module bus_int
       //------------------------------------------------------------------
       // Wishbone Slave Interface(s)
       //------------------------------------------------------------------
-      .s4_dat_i(s4_dat_i),
-      .s4_dat_o(s4_dat_o),
-      .s4_adr(s4_adr),
-      .s4_sel(s4_sel),
-      .s4_ack(s4_ack),
-      .s4_stb(s4_stb),
-      .s4_cyc(s4_cyc),
-      .s4_we(s4_we),
-      .s4_int(s4_int),
+      .s4_dat_i(sfp0_wb_dat_i),
+      .s4_dat_o(sfp0_wb_dat_o),
+      .s4_adr(sfp0_wb_adr),
+      .s4_sel(sfp0_wb_sel),
+      .s4_ack(sfp0_wb_ack),
+      .s4_stb(sfp0_wb_stb),
+      .s4_cyc(sfp0_wb_cyc),
+      .s4_we(sfp0_wb_we),
+      .s4_int(sfp0_wb_int),
       //------------------------------------------------------------------
       // IoPort2 Msg Interface
       //------------------------------------------------------------------
@@ -260,22 +247,22 @@ module bus_int
       .i_iop2_msg_tlast(i_iop2_msg_tlast),
       .i_iop2_msg_tready(i_iop2_msg_tready),
 
-      .s5_dat_i(s5_dat_i),
-      .s5_dat_o(s5_dat_o),
-      .s5_adr(s5_adr),
-      .s5_sel(s5_sel),
-      .s5_ack(s5_ack),
-      .s5_stb(s5_stb),
-      .s5_cyc(s5_cyc),
-      .s5_we(s5_we),
-      .s5_int(s5_int),
+      .s5_dat_i(sfp1_wb_dat_i),
+      .s5_dat_o(sfp1_wb_dat_o),
+      .s5_adr(sfp1_wb_adr),
+      .s5_sel(sfp1_wb_sel),
+      .s5_ack(sfp1_wb_ack),
+      .s5_stb(sfp1_wb_stb),
+      .s5_cyc(sfp1_wb_cyc),
+      .s5_we(sfp1_wb_we),
+      .s5_int(sfp1_wb_int),
 
       //------------------------------------------------------------------
       // Debug
       //------------------------------------------------------------------
       .debug0(debug2),
       .debug1()
-      );
+   );
 
    //The main settings bus also goes outside the hierarchy to connect to control
    //various components
@@ -327,23 +314,31 @@ module bus_int
        RB_CLK_STATUS: rb_data = {24'b0, clock_status};
        // SFPP Interface pins.
        RB_SFPP_STATUS0: rb_data = {
-            eth0_phy_status_sync, 10'b0,
+            sfp0_phy_status_sync, 10'b0,
             SFPP0_ModAbs_chgd, SFPP0_TxFault_chgd, SFPP0_RxLOS_chgd,
             SFPP0_ModAbs_sync, SFPP0_TxFault_sync, SFPP0_RxLOS_sync};
        RB_SFPP_STATUS1: rb_data = {
-            eth1_phy_status_sync, 10'b0,
+            sfp1_phy_status_sync, 10'b0,
             SFPP1_ModAbs_chgd, SFPP1_TxFault_chgd, SFPP1_RxLOS_chgd,
             SFPP1_ModAbs_sync, SFPP1_TxFault_sync, SFPP1_RxLOS_sync};
        // Allow readback of configured ethernet interfaces.
-`ifdef ETH10G_PORT0
+`ifdef SFP0_AURORA
+       RB_ETH_TYPE0: rb_data = {32'h2};
+`else
+   `ifdef SFP0_10GBE
        RB_ETH_TYPE0: rb_data = {32'h1};
-`else
+   `else
        RB_ETH_TYPE0: rb_data = {32'h0};
+   `endif
 `endif
-`ifdef ETH10G_PORT1
-       RB_ETH_TYPE1: rb_data = {32'h1};
+`ifdef SFP1_AURORA
+       RB_ETH_TYPE1: rb_data = {32'h2};
 `else
+   `ifdef SFP1_10GBE
+       RB_ETH_TYPE1: rb_data = {32'h1};
+   `else
        RB_ETH_TYPE1: rb_data = {32'h0};
+   `endif
 `endif
        RB_DRAM_FIFO0: rb_data = dram_fifo0_rb_data;
        RB_DRAM_FIFO1: rb_data = dram_fifo1_rb_data;
@@ -416,10 +411,10 @@ module bus_int
    genvar i;
    generate
    for (i=0; i<16; i=i+1) begin: eth_status_synchronizer_gen
-      synchronizer #(.INITIAL_VAL(1'b0)) eth0_status (
-         .clk(clk), .rst(1'b0 /* no reset */), .in(eth0_phy_status[i]), .out(eth0_phy_status_sync[i]));
-      synchronizer #(.INITIAL_VAL(1'b0)) eth1_status (
-         .clk(clk), .rst(1'b0 /* no reset */), .in(eth1_phy_status[i]), .out(eth1_phy_status_sync[i]));
+      synchronizer #(.INITIAL_VAL(1'b0)) sfp0_status (
+         .clk(clk), .rst(1'b0 /* no reset */), .in(sfp0_phy_status[i]), .out(sfp0_phy_status_sync[i]));
+      synchronizer #(.INITIAL_VAL(1'b0)) sfp1_status (
+         .clk(clk), .rst(1'b0 /* no reset */), .in(sfp1_phy_status[i]), .out(sfp1_phy_status_sync[i]));
    end
    endgenerate
 
@@ -449,18 +444,25 @@ module bus_int
    // ////////////////////////////////////////////////////////////////
    // ETH interfaces
 
-   wire [63:0] 	  e01_tdata, e10_tdata;
-   wire [3:0] 	  e01_tuser, e10_tuser;
-   wire 	  e01_tlast, e01_tvalid, e01_tready;
-   wire 	  e10_tlast, e10_tvalid, e10_tready;
+   wire [63:0] e01_tdata, e10_tdata;
+   wire [3:0]  e01_tuser, e10_tuser;
+   wire        e01_tlast, e01_tvalid, e01_tready;
+   wire        e10_tlast, e10_tvalid, e10_tready;
 
+`ifdef SFP0_AURORA
+   // The packet format over Aurora is CHDR so we don't need any special framing/deframing
+   assign {e2v0_tdata, e2v0_tlast, e2v0_tvalid, sfp0_rx_tready} = {sfp0_rx_tdata, sfp0_rx_tlast, sfp0_rx_tvalid, e2v0_tready};
+   assign {sfp0_tx_tdata, sfp0_tx_tlast, sfp0_tx_tvalid, v2e0_tready} = {v2e0_tdata, v2e0_tlast, v2e0_tvalid, sfp0_tx_tready};
+   assign {zpui0_tdata, zpui0_tlast, zpui0_tvalid, zpuo0_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
+   assign {e01_tdata, e01_tlast, e01_tvalid, e10_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
+`else
    eth_interface #(.BASE(SR_ETHINT0)) eth_interface0
-     (.clk(clk), .reset(reset), .clear(clear),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .eth_tx_tdata(eth0_tx_tdata), .eth_tx_tuser(eth0_tx_tuser), .eth_tx_tlast(eth0_tx_tlast),
-      .eth_tx_tvalid(eth0_tx_tvalid), .eth_tx_tready(eth0_tx_tready),
-      .eth_rx_tdata(eth0_rx_tdata), .eth_rx_tuser(eth0_rx_tuser), .eth_rx_tlast(eth0_rx_tlast),
-      .eth_rx_tvalid(eth0_rx_tvalid), .eth_rx_tready(eth0_rx_tready),
+      .eth_tx_tdata(sfp0_tx_tdata), .eth_tx_tuser(sfp0_tx_tuser), .eth_tx_tlast(sfp0_tx_tlast),
+      .eth_tx_tvalid(sfp0_tx_tvalid), .eth_tx_tready(sfp0_tx_tready),
+      .eth_rx_tdata(sfp0_rx_tdata), .eth_rx_tuser(sfp0_rx_tuser), .eth_rx_tlast(sfp0_rx_tlast),
+      .eth_rx_tvalid(sfp0_rx_tvalid), .eth_rx_tready(sfp0_rx_tready),
       .e2v_tdata(e2v0_tdata), .e2v_tlast(e2v0_tlast), .e2v_tvalid(e2v0_tvalid), .e2v_tready(e2v0_tready),
       .v2e_tdata(v2e0_tdata), .v2e_tlast(v2e0_tlast), .v2e_tvalid(v2e0_tvalid), .v2e_tready(v2e0_tready),
       .xo_tdata(e01_tdata), .xo_tuser(e01_tuser), .xo_tlast(e01_tlast), .xo_tvalid(e01_tvalid), .xo_tready(e01_tready),
@@ -468,14 +470,22 @@ module bus_int
       .e2z_tdata(zpui0_tdata), .e2z_tuser(zpui0_tuser), .e2z_tlast(zpui0_tlast), .e2z_tvalid(zpui0_tvalid), .e2z_tready(zpui0_tready),
       .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready),
       .debug());
+`endif
 
+`ifdef SFP1_AURORA
+   // The packet format over Aurora is CHDR so we don't need any special framing/deframing
+   assign {e2v1_tdata, e2v1_tlast, e2v1_tvalid, sfp1_rx_tready} = {sfp1_rx_tdata, sfp1_rx_tlast, sfp1_rx_tvalid, e2v1_tready};
+   assign {sfp1_tx_tdata, sfp1_tx_tlast, sfp1_tx_tvalid, v2e1_tready} = {v2e1_tdata, v2e1_tlast, v2e1_tvalid, sfp1_tx_tready};
+   assign {zpui1_tdata, zpui1_tlast, zpui1_tvalid, zpuo1_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
+   assign {e10_tdata, e10_tlast, e10_tvalid, e01_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
+`else
    eth_interface #(.BASE(SR_ETHINT1)) eth_interface1
-     (.clk(clk), .reset(reset), .clear(clear),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .eth_tx_tdata(eth1_tx_tdata), .eth_tx_tuser(eth1_tx_tuser), .eth_tx_tlast(eth1_tx_tlast),
-      .eth_tx_tvalid(eth1_tx_tvalid), .eth_tx_tready(eth1_tx_tready),
-      .eth_rx_tdata(eth1_rx_tdata), .eth_rx_tuser(eth1_rx_tuser), .eth_rx_tlast(eth1_rx_tlast),
-      .eth_rx_tvalid(eth1_rx_tvalid), .eth_rx_tready(eth1_rx_tready),
+      .eth_tx_tdata(sfp1_tx_tdata), .eth_tx_tuser(sfp1_tx_tuser), .eth_tx_tlast(sfp1_tx_tlast),
+      .eth_tx_tvalid(sfp1_tx_tvalid), .eth_tx_tready(sfp1_tx_tready),
+      .eth_rx_tdata(sfp1_rx_tdata), .eth_rx_tuser(sfp1_rx_tuser), .eth_rx_tlast(sfp1_rx_tlast),
+      .eth_rx_tvalid(sfp1_rx_tvalid), .eth_rx_tready(sfp1_rx_tready),
       .e2v_tdata(e2v1_tdata), .e2v_tlast(e2v1_tlast), .e2v_tvalid(e2v1_tvalid), .e2v_tready(e2v1_tready),
       .v2e_tdata(v2e1_tdata), .v2e_tlast(v2e1_tlast), .v2e_tvalid(v2e1_tvalid), .v2e_tready(v2e1_tready),
       .xo_tdata(e10_tdata), .xo_tuser(e10_tuser), .xo_tlast(e10_tlast), .xo_tvalid(e10_tvalid), .xo_tready(e10_tready),
@@ -483,9 +493,10 @@ module bus_int
       .e2z_tdata(zpui1_tdata), .e2z_tuser(zpui1_tuser), .e2z_tlast(zpui1_tlast), .e2z_tvalid(zpui1_tvalid), .e2z_tready(zpui1_tready),
       .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready),
       .debug());
+`endif
 
    axi_mux4 #(.PRIO(0), .WIDTH(68)) zpui_mux
-     (.clk(clk), .reset(reset), .clear(clear),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .i0_tdata({zpui0_tuser,zpui0_tdata}), .i0_tlast(zpui0_tlast), .i0_tvalid(zpui0_tvalid), .i0_tready(zpui0_tready),
       .i1_tdata({zpui1_tuser,zpui1_tdata}), .i1_tlast(zpui1_tlast), .i1_tvalid(zpui1_tvalid), .i1_tready(zpui1_tready),
       .i2_tdata(68'h0), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
@@ -497,7 +508,7 @@ module bus_int
    wire [1:0] 	  zpuo_eth_dest = (zpuo_eth_header[63:56] == 8'd0) ? 2'b00 : 2'b01;
 
    axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(68)) zpuo_demux
-     (.clk(clk), .reset(reset), .clear(clear),
+     (.clk(clk), .reset(reset), .clear(1'b0),
       .header(zpuo_eth_header), .dest(zpuo_eth_dest),
       .i_tdata({zpuo_tuser,zpuo_tdata}), .i_tlast(zpuo_tlast), .i_tvalid(zpuo_tvalid), .i_tready(zpuo_tready),
       .o0_tdata({zpuo0_tuser,zpuo0_tdata}), .o0_tlast(zpuo0_tlast), .o0_tvalid(zpuo0_tvalid), .o0_tready(zpuo0_tready),
@@ -516,15 +527,14 @@ module bus_int
    // 6 - CE2
    // 7 - PCIe
 
-    wire [7:0] 		 local_addr;
+    wire [7:0] local_addr;
 
    setting_reg #(.my_addr(SR_XB_LOCAL), .awidth(SR_AWIDTH), .width(8)) sr_local_addr
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(local_addr),.changed());
 
-
-   localparam 		 CROSSBAR_IN = 8;
-   localparam 		 CROSSBAR_OUT = 8;
+   localparam  CROSSBAR_IN = 8;
+   localparam  CROSSBAR_OUT = 8;
 
    axi_crossbar #(.FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(CROSSBAR_IN), .NUM_OUTPUTS(CROSSBAR_OUT)) axi_crossbar
      (.clk(clk), .reset(reset), .clear(0),

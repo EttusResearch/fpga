@@ -16,19 +16,16 @@
 ## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
 # Debug Options
-# Uncomment the following lines to build radio's with no DSP's (experimental!)
-#OPTIONS += DELETE_DSP0=1
-#OPTIONS += DELETE_DSP1=1
 # Uncomment the following line to add a debug UART on GPIO 10 & 11
 #OPTIONS += DEBUG_UART=1
 
 CREATE_LVBITX=python ../../lib/io_port2/create-lvbitx.py
 
-GIGE_DEFS=BUILD_1G=1 $(OPTIONS)
-HYBRID_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 $(OPTIONS)
-XGIGE_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 $(OPTIONS)
-HYBRID_SRAM_DEFS=ETH10G_PORT1=1 BUILD_1G=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
-XGIGE_SRAM_DEFS=ETH10G_PORT0=1 ETH10G_PORT1=1 BUILD_10G=1 NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16 $(OPTIONS)
+GIGE_DEFS=BUILD_1G=1 SFP0_1GBE=1 SFP1_1GBE=1 $(OPTIONS)
+HG_DEFS=BUILD_1G=1 BUILD_10G=1 SFP0_1GBE=1 SFP1_10GBE=1 $(OPTIONS)
+XG_DEFS=BUILD_10G=1 SFP0_10GBE=1 SFP1_10GBE=1 $(OPTIONS)
+HA_DEFS=BUILD_1G=1 BUILD_AURORA=1 SFP0_1GBE=1 SFP1_AURORA=1 $(OPTIONS)
+XA_DEFS=BUILD_10G=1 BUILD_AURORA=1 SFP0_10GBE=1 SFP1_AURORA=1 $(OPTIONS)
 
 # vivado_build($1=Device, $2=Definitions)
 vivado_build = make -f Makefile.x300.inc bin NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 VERILOG_DEFS="$2"
@@ -60,35 +57,51 @@ X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
 	$(call post_build,X300,1G)
 
 X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call vivado_build,X310,$(HYBRID_DEFS))
+	$(call vivado_build,X310,$(HG_DEFS))
 	$(call post_build,X310,HG)
 
 X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
-	$(call vivado_build,X300,$(HYBRID_DEFS))
+	$(call vivado_build,X300,$(HG_DEFS))
 	$(call post_build,X300,HG)
 
 X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,X310,$(XGIGE_DEFS))
+	$(call vivado_build,X310,$(XG_DEFS))
 	$(call post_build,X310,XG)
 
 X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-	$(call vivado_build,X300,$(XGIGE_DEFS))
+	$(call vivado_build,X300,$(XG_DEFS))
 	$(call post_build,X300,XG)
 
+X310_HA:  ##USRP X310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+	$(call vivado_build,X310,$(HA_DEFS))
+	$(call post_build,X310,HA)
+
+X300_HA:  ##USRP X300. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+	$(call vivado_build,X300,$(HA_DEFS))
+	$(call post_build,X300,HA)
+
+X310_XA:  ##USRP X310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+	$(call vivado_build,X310,$(XA_DEFS))
+	$(call post_build,X310,XA)
+
+X300_XA:  ##USRP X300. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+	$(call vivado_build,X300,$(XA_DEFS))
+	$(call post_build,X300,XA)
+
 X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,X310,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,X310,$(HG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X310,HGS)
 
 X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-	$(call vivado_build,X300,$(HYBRID_SRAM_DEFS))
+	$(call vivado_build,X300,$(HG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X300,HGS)
 
 X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,X310,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,X310,$(XG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X310,XGS)
 
 X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
-	$(call vivado_build,X300,$(XGIGE_SRAM_DEFS))
+	$(call vivado_build,X300,$(XG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X300,XGS)
 
 clean:    ##Clean up all target build outputs.
