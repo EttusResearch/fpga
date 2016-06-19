@@ -8,9 +8,7 @@ module axi_drop_partial_packet #(
   parameter WIDTH = 32,
   parameter MAX_PKT_SIZE = 1024,
   parameter HOLD_LAST_WORD = 0,       // Hold off sending last word until next full packet arrives
-  parameter SR_PKT_SIZE_ADDR = 1,
-  parameter SR_PKT_SIZE_FIXED = 1'b0,
-  parameter SR_PKT_SIZE_DEFAULT = 1
+  parameter SR_PKT_SIZE_ADDR = 1
 )(
   input clk, input reset, input clear,
   input flush,  // If using HOLD_LAST_WORD, will forcibly release all words in FIFO
@@ -29,14 +27,14 @@ module axi_drop_partial_packet #(
     // All other packet sizes
     end else begin
       // Settings register
-      wire [$clog2(MAX_PKT_SIZE+1)-1:0] pkt_size_sr;
-      setting_reg #(.my_addr(SR_PKT_SIZE_ADDR), .width($clog2(MAX_PKT_SIZE+1)), .at_reset(SR_PKT_SIZE_DEFAULT)) sr_n (
-        .clk(clk), .rst(reset | SR_PKT_SIZE_FIXED), .strobe(set_stb), .addr(set_addr), .in(set_data),
-        .out(pkt_size_sr), .changed());
+      wire [$clog2(MAX_PKT_SIZE+1)-1:0] sr_pkt_size;
+      setting_reg #(.my_addr(SR_PKT_SIZE_ADDR), .width($clog2(MAX_PKT_SIZE+1)), .at_reset(1)) set_pkt_size (
+        .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+        .out(sr_pkt_size), .changed());
 
       // Do not change n unless block is not active
       reg active;
-      reg [$clog2(MAX_PKT_SIZE+1)-1:0] pkt_size = SR_PKT_SIZE_FIXED;
+      reg [$clog2(MAX_PKT_SIZE+1)-1:0] pkt_size = 1;
       always @(posedge clk) begin
         if (reset | clear) begin
           active <= 1'b0;
@@ -46,7 +44,7 @@ module axi_drop_partial_packet #(
           end
         end
         if (clear | ~active) begin
-          pkt_size <= (pkt_size_sr == 1) ? 1 : pkt_size_sr;
+          pkt_size <= (sr_pkt_size == 0) ? 1 : sr_pkt_size;
         end
       end
 
