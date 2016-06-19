@@ -29,6 +29,8 @@ module axi_rate_change_tb();
   logic [31:0] m_axis_data_tdata, s_axis_data_tdata;
   logic m_axis_data_tlast, m_axis_data_tvalid, m_axis_data_tready;
   logic s_axis_data_tlast, s_axis_data_tvalid, s_axis_data_tready;
+  logic warning_header_fifo_full, warning_long_throttle;
+  logic error_extra_outputs, error_drop_pkt_lockup;
   axi_rate_change #(
     .WIDTH(32),
     .MAX_N(MAX_N),
@@ -45,7 +47,11 @@ module axi_rate_change_tb();
     .m_axis_data_tdata(m_axis_data_tdata), .m_axis_data_tlast(m_axis_data_tlast),
     .m_axis_data_tvalid(m_axis_data_tvalid), .m_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tdata(s_axis_data_tdata), .s_axis_data_tlast(s_axis_data_tlast),
-    .s_axis_data_tvalid(s_axis_data_tvalid), .s_axis_data_tready(s_axis_data_tready));
+    .s_axis_data_tvalid(s_axis_data_tvalid), .s_axis_data_tready(s_axis_data_tready),
+    .warning_header_fifo_full(warning_header_fifo_full),
+    .warning_long_throttle(warning_long_throttle),
+    .error_extra_outputs(error_extra_outputs),
+    .error_drop_pkt_lockup(error_drop_pkt_lockup));
 
   // Simulate user logic that can handle various decimation / interpolation rates
   // - Generates a word count sequence that is checked in the test_rate() task.
@@ -93,7 +99,7 @@ module axi_rate_change_tb();
   always @(posedge clk) begin
     if (clock_cnt_en == 1'b1) begin
       // Wait until output data starts
-      if (s_axis_data_tvalid & ss_axis_data_tready & ~clock_cnt_start) begin
+      if (s_axis_data_tvalid & s_axis_data_tready & ~clock_cnt_start) begin
         clock_cnt_start <= 1'b1;
         clock_cnt       <= clock_cnt + 1;
       end else if (clock_cnt_start) begin
@@ -238,7 +244,7 @@ module axi_rate_change_tb();
     cvita_hdr_t tmp_header;
     logic [63:0] word;
     logic last;
-    integer spp, num_words;
+    integer spp, number_words;
     spp = 16;
 
     /********************************************************
@@ -259,7 +265,7 @@ module axi_rate_change_tb();
     `TEST_CASE_START("Check various rates");
     for (int _n = 1; _n <= MAX_N; _n++) begin
       for (int _m = 1; _m <= MAX_M; _m++) begin
-        $display("Testing rate %0d:%0d (%0d/%0d)", _n, _m, _m, _n);
+        $display("Testing rate %0d:%0d", _n, _m);
         test_rate(_n, _m, _n*spp*3, spp, 1, 1);
       end
     end
@@ -276,7 +282,7 @@ module axi_rate_change_tb();
     `TEST_CASE_START("Test partial packets");
     for (int _n = 1; _n <= MAX_N; _n++) begin
       for (int _m = 1; _m <= MAX_M; _m++) begin
-        $display("Testing rate %0d:%0d (%0d/%0d)", _n, _m, _m, _n);
+        $display("Testing rate %0d:%0d", _n, _m);
         test_rate(_n, _m, _n*spp + spp-1, spp, 1, 1);
       end
     end
@@ -294,14 +300,27 @@ module axi_rate_change_tb();
     ********************************************************/
     `TEST_CASE_START("Test for bubble states");
     clock_cnt_en = 1'b1;
-    num_words = 100000;
-    test_rate(1, 1, num_words, spp, 0, 0);
-    $sformat(s, "Incorrect number of clock cycles -- Possible bubble states detected! Expected: %0d, Actual: %0d", num_words, clock_cnt);
-    `ASSERT_FATAL(clock_cnt == num_words, s);
+    number_words = 100000;
+    test_rate(1, 1, number_words, spp, 0, 0);
+    $sformat(s, "Incorrect number of clock cycles -- Possible bubble states detected! Expected: %0d, Actual: %0d", number_words, clock_cnt);
+    `ASSERT_FATAL(clock_cnt == number_words, s);
     clock_cnt_en = 1'b0;
     `TEST_CASE_DONE(1);
 
     `TEST_BENCH_DONE;
 
   end
+
+  // The warning, error signals should never assert.
+  initial begin
+    while (reset) @(posedge clk);
+    forever begin
+      @(posedge clk);
+      `ASSERT_FATAL(~warning_header_fifo_full, "Header FIFO full deadlock!");
+      `ASSERT_FATAL(~warning_long_throttle,    "Throttle state deadlock!");
+      `ASSERT_FATAL(~error_extra_outputs,      "Extra outputs detected!");
+      `ASSERT_FATAL(~error_drop_pkt_lockup,    "Drop packet deadlock!");
+    end
+  end
+
 endmodule

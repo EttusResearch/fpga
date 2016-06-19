@@ -23,32 +23,40 @@
 // - Can potentially use large amounts of block RAM when using large decimation rates
 //   (greater than 2K). This occurs due to the feature that the block always sends a multiple
 //   of N samples to the user. Implementing this feature requires N samples to be buffered.
-// - Blocks with long pipelines may need to increase HEADER_FIFOSIZE
+// - User code with long pipelines may need to increase HEADER_FIFOSIZE. The debug signal
+//   warning_header_fifo_full is useful in determining this case.
 //
+// Settings Registers:
+//   sr_n:       Number of input samples per M output samples
+//   sr_m:       Number of output samples per N input samples
+//   sr_config:  0: Enable clear_user signal.
 
 module axi_rate_change #(
   parameter WIDTH              = 32,     // Input bit width, must be a power of 2 and greater than or equal to 8.
   parameter MAX_N              = 2**16,
   parameter MAX_M              = 2**16,
-  parameter HEADER_FIFOSIZE    = 5,      // Log2 depth of header FIFO. Default might need to be increased if user logic has long pipelines.
+  parameter HEADER_FIFOSIZE    = 5,      // Log2 depth of header FIFO.
   // Settings registers
-  parameter SR_N_ADDR                  = 0,
-  parameter SR_N_FIXED                 = 1'b0,
-  parameter SR_N_DEFAULT               = 1,
-  parameter SR_M_ADDR                  = 1,
-  parameter SR_M_FIXED                 = 1'b0,
-  parameter SR_M_DEFAULT               = 1,
-  parameter SR_CONFIG_ADDR             = 2,
-  parameter SR_CONFIG_FIXED            = 1'b0,
-  parameter SR_CONFIG_DEFAULT          = 1
+  parameter SR_N_ADDR          = 0,
+  parameter SR_M_ADDR          = 1,
+  parameter SR_CONFIG_ADDR     = 2
 )(
-  input clk, input reset, input clear, output reg clear_user,
+  input clk, input reset, input clear,
+  output reg clear_user,  // Strobed after end of burst. Throttles input. Useful for resetting user code between bursts.
   input [15:0] src_sid, input [15:0] dst_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [127:0] i_tuser,
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready, output [127:0] o_tuser,
   output [WIDTH-1:0] m_axis_data_tdata, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
-  input [WIDTH-1:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready
+  input [WIDTH-1:0] s_axis_data_tdata, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready,
+  // Debugging signals:
+  // - Warnings indicate there may be an issue with user code.
+  // - Errors mean the user code has violated a rule.
+  // - Signals latch once set and block must be reset to clear.
+  output reg warning_header_fifo_full,  // Header FIFO full for a "long" time. May need to increase header FIFO size.
+  output reg warning_long_throttle,     // In the throttle state for a "long" time.
+  output reg error_extra_outputs,       // User code generated extra outputs, i.e. received more than the expected M outputs.
+  output reg error_drop_pkt_lockup      // Drop partial packet module is not accepting data even though user code is ready.
 );
 
   wire [WIDTH-1:0] i_reg_tdata;
@@ -65,20 +73,22 @@ module axi_rate_change #(
   /********************************************************
   ** Settings Registers
   ********************************************************/
-  wire [$clog2(MAX_N+1)-1:0] n_sr;
-  setting_reg #(.my_addr(SR_N_ADDR), .width($clog2(MAX_N+1)), .at_reset(SR_N_DEFAULT)) sr_n (
-    .clk(clk), .rst(reset | SR_N_FIXED), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(n_sr), .changed());
+  wire [$clog2(MAX_N+1)-1:0] sr_n;
+  setting_reg #(.my_addr(SR_N_ADDR), .width($clog2(MAX_N+1)), .at_reset(1)) set_n (
+    .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(sr_n), .changed());
 
-  wire [$clog2(MAX_M+1)-1:0] m_sr;
-  setting_reg #(.my_addr(SR_M_ADDR), .width($clog2(MAX_M+1)), .at_reset(SR_M_DEFAULT)) sr_m (
-    .clk(clk), .rst(reset | SR_M_FIXED), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(m_sr), .changed());
+  wire [$clog2(MAX_M+1)-1:0] sr_m;
+  setting_reg #(.my_addr(SR_M_ADDR), .width($clog2(MAX_M+1)), .at_reset(1)) set_m (
+    .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(sr_m), .changed());
 
-  wire enable_clear_user; // Enable strobing clear_user between bursts. Causes a single cycle bubble.
-  setting_reg #(.my_addr(SR_CONFIG_ADDR), .width(1), .at_reset(SR_CONFIG_DEFAULT)) sr_config (
-    .clk(clk), .rst(reset | SR_CONFIG_FIXED), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(enable_clear_user), .changed());
+  wire sr_config;
+  wire enable_clear_user; // Enable strobing clear_user between bursts.
+  setting_reg #(.my_addr(SR_CONFIG_ADDR), .width(1), .at_reset(1'b1)) set_config (
+    .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(sr_config), .changed());
+  assign enable_clear_user = sr_config;
 
   // Do not change rate unless block is not active
   reg active;
@@ -93,8 +103,8 @@ module axi_rate_change #(
       end
     end
     if (clear | clear_user | ~active) begin
-      n <= n_sr;
-      m <= m_sr;
+      n <= sr_n;
+      m <= sr_m;
     end
   end
 
@@ -190,11 +200,15 @@ module axi_rate_change #(
       //                      word_cnt_div_n.
       // in_pkt_cnt:          Similar to in_word_cnt, but for packets. Used
       //                      to determine when a group of N packets has been
-      //                      received.
+      //                      received to store the next header.
       // first_header:        We only use the header from the first packet in
       //                      a group of N packets (this greatly reduces
       //                      the header FIFO size).
       if (i_reg_tvalid & i_reg_tready) begin
+        // Track the number of words send to the user divided by N. 
+        // At the end of a burst, this value is forwarded to the output 
+        // state machine and used to determine when the final sample has 
+        // arrived from the user code.
         if (word_cnt_div_n_frac == n | (eob_in & i_reg_tlast)) begin
           if (i_reg_tlast & eob_in) begin
             word_cnt_div_n  <= 0;
@@ -205,6 +219,9 @@ module axi_rate_change #(
         end else begin
           word_cnt_div_n_frac  <= word_cnt_div_n_frac + 1;
         end
+        // Track when N packets have been received. We need the header for
+        // flags / vita time tracking, but we only need to keep
+        // the first header in a group of N packets.
         if (i_reg_tlast) begin
           if (in_pkt_cnt == n | eob_in) begin
             first_header          <= 1'b1;
@@ -220,10 +237,14 @@ module axi_rate_change #(
           if (first_header_in_burst) begin
             header_fifo_in_tdata <= {payload_length_in, has_time_in, vita_time_in};
           end else begin
+            // Have to use a latched payload length because the final packet in the burst
+            // could be shorter than the reset. It is expected the reset of the header values
+            // we be consistent and do not need to be latched.
             header_fifo_in_tdata <= {payload_length_in_hold, has_time_in, vita_time_in};
           end
         end
       end
+
       case (input_state)
         // Wait until we have enough samples to form one full
         // output sample. When we have enough, push the header to
@@ -243,7 +264,7 @@ module axi_rate_change #(
             // Have enough input samples for at least one output sample
             end else if (word_cnt_div_n_frac == n) begin
               header_fifo_in_tvalid <= 1'b1;
-              // Only one output sample
+              // Due to EOB, we will only have one output sample, so no need to transition to RECV.
               if (i_reg_tlast & eob_in) begin
                 word_cnt_div_n_tdata  <= word_cnt_div_n + (word_cnt_div_n_frac == n);
                 word_cnt_div_n_tvalid <= 1'b1;
@@ -265,8 +286,14 @@ module axi_rate_change #(
             // on to the next header.
             if (i_reg_tlast) begin
               if (eob_in) begin
+                // At the end of a burst, forward the number of words divided by N to 
+                // the output state machine via a FIFO. This allows the output state
+                // machine to know when it has received the final output word.
+                // We use a FIFO in case the bursts are very small and we
+                // need to store several of these values.
                 word_cnt_div_n_tdata  <= word_cnt_div_n + (word_cnt_div_n_frac == n);
                 word_cnt_div_n_tvalid <= 1'b1;
+                // Clear the user code after a burst.
                 if (enable_clear_user) begin
                   throttle    <= 1'b1;
                   input_state <= RECV_WAIT_FOR_USER_CLEAR;
@@ -339,35 +366,48 @@ module axi_rate_change #(
   reg [15:0] word_cnt_div_m;
   reg [$clog2(MAX_M+1)-1:0] word_cnt_div_m_frac = 1;
   reg [$clog2(MAX_M+1)-1:0] out_pkt_cnt = 1;
+
+  // End of burst tracking. Compare the number of words sent to the user divided by N
+  // to the number of words received from the user divided by M. When they equal each other
+  // then we have received the last word from the user in this burst.
+  wire last_word_in_burst = word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m);
+
   always @(posedge clk) begin
     if (reset | clear) begin
-      word_cnt_div_m      <= 1;
+      word_cnt_div_m      <= 1; // Start at 1 to avoid using "word_cnt_div_m-1" all over the place
       word_cnt_div_m_frac <= 1;
       out_pkt_cnt         <= 1;
       out_payload_cnt     <= (WIDTH/8);
       clear_user          <= 1'b0;
       output_state        <= SEND;
     end else begin
+      // Track
       case (output_state)
         SEND : begin
           if (o_reg_tvalid & o_reg_tready) begin
             if (o_reg_tlast) begin
+              // Track groups of M packets. Used to pop the header FIFO since the
+              // sample header is under for M packets.
               if (out_pkt_cnt == m) begin
                 out_pkt_cnt   <= 1;
               end else begin
                 out_pkt_cnt   <= out_pkt_cnt + 1;
               end
+              // Track number of samples from user to set tlast
               out_payload_cnt <= (WIDTH/8);
             end else begin
               out_payload_cnt <= out_payload_cnt + (WIDTH/8);
             end
+            // Track number of words from ther user divided by M. This is used
+            // in conjunction with word_cnt_div_n to determine when we have received
+            // the last word in a burst from the user.
             if (word_cnt_div_m_frac == m) begin
               word_cnt_div_m      <= word_cnt_div_m + 1;
               word_cnt_div_m_frac <= 1;
             end else begin
               word_cnt_div_m_frac <= word_cnt_div_m_frac + 1;
             end
-            if (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m)) begin
+            if (last_word_in_burst) begin
               word_cnt_div_m      <= 1;
               if (enable_clear_user & eob_out) begin
                 clear_user   <= 1'b1;
@@ -392,14 +432,14 @@ module axi_rate_change #(
   end
 
   assign {payload_length_out,has_time_out,vita_time_out} = header_fifo_out_tdata;
-  // Logic to pop header and word cnt FIFOs due to ...
+  // Pop header FIFO at ...
   assign header_fifo_out_tready     = o_reg_tvalid_int & o_reg_tready_int &
                                       // ... end of a group of M output packets
                                       ((o_reg_tlast & out_pkt_cnt == m) |
-                                      // ... EOB, could be a partial packet
-                                      (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m)));
-  assign word_cnt_div_n_fifo_tready = o_reg_tvalid_int & o_reg_tready_int &
-                                      (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m));
+                                      // ... EOB, could be a partial packet!
+                                      last_word_in_burst);
+  // Only pop this FIFO at EOB.
+  assign word_cnt_div_n_fifo_tready = o_reg_tvalid_int & o_reg_tready_int & last_word_in_burst;
 
   /********************************************************
   ** Adjust VITA time
@@ -429,7 +469,7 @@ module axi_rate_change #(
   end
 
   // Create output header
-  wire eob_out_int = (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m)) ? eob_out : 1'b0;
+  wire eob_out_int = last_word_in_burst ? eob_out : 1'b0;
   cvita_hdr_encoder cvita_hdr_encoder (
     .pkt_type(2'd0), .eob(eob_out_int), .has_time(has_time_out),
     .seqnum(12'd0), .payload_length(16'd0), // Not needed, handled by AXI Wrapper
@@ -446,7 +486,7 @@ module axi_rate_change #(
                             // End of packet
                             (out_payload_cnt == payload_length_out) |
                             // EOB, could be a partial packet
-                            (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m == word_cnt_div_n_fifo_tdata) & (word_cnt_div_m_frac == m));
+                            last_word_in_burst;
 
   axi_fifo_flop2 #(.WIDTH(WIDTH+1)) axi_fifo_flop2_from_user (
     .clk(clk), .reset(reset), .clear(clear),
@@ -462,5 +502,53 @@ module axi_rate_change #(
     .i_tdata({o_reg_tlast,o_reg_tdata,o_reg_tuser}), .i_tvalid(o_reg_tvalid), .i_tready(o_reg_tready_int),
     .o_tdata({o_tlast,o_tdata,o_tuser}), .o_tvalid(o_tvalid), .o_tready(o_tready),
     .space(), .occupied());
+
+  /********************************************************
+  ** Error / warning signals
+  ********************************************************/
+  reg [23:0] counter_header_fifo_full, counter_throttle, counter_drop_pkt_lockup;
+  always @(posedge clk) begin
+    if (reset) begin
+      warning_long_throttle       <= 1'b0;
+      warning_header_fifo_full    <= 1'b0;
+      error_extra_outputs         <= 1'b0;
+      error_drop_pkt_lockup       <= 1'b0;
+      counter_throttle            <= 0;
+      counter_header_fifo_full    <= 0;
+      counter_drop_pkt_lockup     <= 0;
+    end else begin
+      // In throttle state for a "long" time
+      if (throttle) begin
+        counter_throttle          <= counter_throttle + 1;
+        if (counter_throttle == 2**24-1) begin
+          warning_long_throttle   <= 1'b1;
+        end
+      end else begin
+        counter_throttle          <= 0;
+      end
+      // Header fifo full for a "long" time
+      if (~header_fifo_in_tready) begin
+        counter_header_fifo_full    <= counter_header_fifo_full + 1;
+        if (counter_header_fifo_full == 2**24-1) begin
+          warning_header_fifo_full  <= 1'b1;
+        end
+      end else begin
+        counter_header_fifo_full    <= 0;
+      end
+      // More than M outputs per N inputs
+      if (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m > word_cnt_div_n_fifo_tdata)) begin
+        error_extra_outputs         <= 1'b1;
+      end
+      // Bad internal state. AXI drop partial packet is in a lockup condition.
+      if (~i_reg_tready_int & m_axis_data_tready) begin
+        counter_drop_pkt_lockup     <= counter_drop_pkt_lockup + 1;
+        if (counter_drop_pkt_lockup == 2**24-1) begin
+          error_drop_pkt_lockup     <= 1'b1;
+        end
+      end else begin
+        counter_drop_pkt_lockup     <= 0;
+      end
+    end
+  end
 
 endmodule
