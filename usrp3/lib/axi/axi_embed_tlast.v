@@ -45,19 +45,21 @@ module axi_embed_tlast #(
 
    reg [1:0]  select;
 
-   reg [31:0] checksum;
+   wire [31:0] checksum;
    generate if (ADD_CHECKSUM == 1) begin
+      reg [31:0] checksum_reg;
       always @(posedge clk) begin
          if (reset | clear) begin
-            checksum <= 0;
+            checksum_reg <= 0;
          end else if (i_tready && i_tvalid && i_tlast) begin
-            checksum <= 0;
+            checksum_reg <= 0;
          end else if (i_tready && i_tvalid) begin
-            checksum <= checksum ^ i_tdata[31:0] ^ i_tdata[63:32];
+            checksum_reg <= checksum_reg ^ i_tdata[31:0] ^ i_tdata[63:32];
          end
       end
+      assign checksum = checksum_reg;
    end else begin
-      always @* checksum = 32'h0;
+      assign checksum = 32'h0;
    end endgenerate
 
    always @(posedge clk) 
