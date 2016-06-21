@@ -31,6 +31,7 @@ include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(BASE_DIR)/e300/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 
 ##################################################
@@ -83,6 +84,7 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(IP_XCI_SRCS) \
           $(PS7_SRCS) \
           $(RFNOC_SRCS) \
+          $(RFNOC_OOT_SRCS) \
           $(LIB_IP_XCI_SRCS) \
           $(HLS_IP_GEN_SRCS)
 
