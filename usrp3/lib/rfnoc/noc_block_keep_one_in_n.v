@@ -131,14 +131,15 @@ module noc_block_keep_one_in_n #(
   cvita_hdr_modify cvita_hdr_modify (
     .header_in(m_axis_data_tuser),
     .header_out(s_axis_data_tuser),
-    .use_pkt_type(1'b0),  .pkt_type(),
-    .use_has_time(1'b0),  .has_time(),
-    .use_eob(1'b0),       .eob(),
-    .use_seqnum(1'b0),    .seqnum(),
-    .use_length(1'b0),    .length(),
-    .use_src_sid(1'b1),   .src_sid(src_sid),
-    .use_dst_sid(1'b1),   .dst_sid(next_dst_sid),
-    .use_vita_time(1'b0), .vita_time());
+    .use_pkt_type(1'b0),       .pkt_type(),
+    .use_has_time(1'b0),       .has_time(),
+    .use_eob(1'b0),            .eob(),
+    .use_seqnum(1'b0),         .seqnum(),
+    .use_length(1'b0),         .length(),
+    .use_payload_length(1'b0), .payload_length(),
+    .use_src_sid(1'b1),        .src_sid(src_sid),
+    .use_dst_sid(1'b1),        .dst_sid(next_dst_sid),
+    .use_vita_time(1'b0),      .vita_time());
 
   // Note: When dropping samples (i.e. vector_mode = 0), unless this block receives a multiple
   //       of N packets (where N is the decimation rate), there will be a partial formed output
