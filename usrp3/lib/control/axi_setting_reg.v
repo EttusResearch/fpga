@@ -16,7 +16,7 @@
 module axi_setting_reg #(
   parameter ADDR = 0,
   parameter USE_ADDR_LAST = 0,
-  parameter ADDR_LAST = 1,
+  parameter ADDR_LAST = ADDR+1,
   parameter AWIDTH = 8,
   parameter WIDTH = 32,
   parameter USE_FIFO = 0,
