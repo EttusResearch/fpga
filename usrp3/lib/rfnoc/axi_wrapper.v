@@ -153,7 +153,7 @@ module axi_wrapper
            // Remove header
            s_axis_pkt_len <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
            if (s_axis_data_tvalid & s_axis_data_tready) begin
-             if (s_axis_pkt_cnt >= s_axis_pkt_len) begin
+             if ((s_axis_pkt_cnt >= s_axis_pkt_len) | s_axis_data_tlast) begin
                s_axis_pkt_cnt        <= 4;
              end else begin
                s_axis_pkt_cnt        <= s_axis_pkt_cnt + 4;
@@ -161,7 +161,7 @@ module axi_wrapper
            end
          end
        end
-       assign s_axis_data_tlast_int = (s_axis_pkt_cnt >= s_axis_pkt_len);
+       assign s_axis_data_tlast_int = (s_axis_pkt_cnt >= s_axis_pkt_len) | s_axis_data_tlast;
      end else begin
        // chdr_framer will automatically fill in the packet length based on user provided tlast
        assign s_axis_data_tlast_int = s_axis_data_tlast;
