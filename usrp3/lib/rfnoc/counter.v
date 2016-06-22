@@ -7,7 +7,7 @@
 module counter
   #(parameter WIDTH=16)
    (input clk, input reset, input clear,
-    input [WIDTH-1:0] max,
+    input [WIDTH:0] max,
     input i_tlast, input i_tvalid, output i_tready,
     output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
