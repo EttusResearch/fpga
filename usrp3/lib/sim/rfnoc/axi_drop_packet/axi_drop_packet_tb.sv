@@ -24,12 +24,12 @@ module axi_drop_packet_tb();
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(m_axis.axis.tdata[31:0]),
     .i_tvalid(m_axis.axis.tvalid),
-  	.i_tlast(m_axis.axis.tlast),
+    .i_tlast(m_axis.axis.tlast),
     .i_terror(m_axis.axis.tdata[32]), // Use MSB as terror
     .i_tready(m_axis.axis.tready),
     .o_tdata(s_axis.axis.tdata),
     .o_tvalid(s_axis.axis.tvalid),
-  	.o_tlast(s_axis.axis.tlast),
+    .o_tlast(s_axis.axis.tlast),
     .o_tready(s_axis.axis.tready));
 
   /********************************************************
@@ -90,7 +90,7 @@ module axi_drop_packet_tb();
       $display("Done filling remaining space");
       $display("Expected FIFO size: %0d, Actual: %0d",MAX_PKT_SIZE,cnt);
     end
-    // On the first packet, output is held off until
+    // On the first packet, output is held off until a full packet is received
     @(posedge clk);
     @(posedge clk);
     @(posedge clk);
