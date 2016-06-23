@@ -99,6 +99,7 @@ noc_block_logpwr.v \
 noc_block_fosphor.v \
 noc_block_moving_avg.v \
 noc_block_ddc.v \
+noc_block_duc.v \
 cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
@@ -109,6 +110,8 @@ axi_drop_packet.v \
 axi_drop_partial_packet.v \
 cordic.v \
 ddc.v \
+duc.v \
 cic_decimate.v \
+cic_interpolate.v \
 sine_tone.v \
 ))
