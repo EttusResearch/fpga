@@ -5,7 +5,7 @@
 module noc_block_ddc #(
   parameter NOC_ID = 64'hDDC0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
-  parameter NUM_CHAINS = 1
+  parameter NUM_CHAINS = 2
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
