@@ -1,5 +1,5 @@
 #
-# Copyright 2012-2014 Ettus Research LLC
+# Copyright 2012-2016 Ettus Research LLC
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
@@ -46,61 +46,61 @@ post_build = @\
 ##Supported Targets
 ##-----------------
 
-all:      X300_HGS X310_HGS ##(Default target)
+all:      X300_HG X310_HG X300_XG X310_XG ##(Default target)
 
-X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X310,$(GIGE_DEFS))
 	$(call post_build,X310,1G)
 
-X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X300,$(GIGE_DEFS))
 	$(call post_build,X300,1G)
 
-X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
+X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
 	$(call vivado_build,X310,$(HG_DEFS))
 	$(call post_build,X310,HG)
 
-X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
+X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
 	$(call vivado_build,X300,$(HG_DEFS))
 	$(call post_build,X300,HG)
 
-X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO.
 	$(call vivado_build,X310,$(XG_DEFS))
 	$(call post_build,X310,XG)
 
-X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
+X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO.
 	$(call vivado_build,X300,$(XG_DEFS))
 	$(call post_build,X300,XG)
 
-X310_HA:  ##USRP X310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+X310_HA:  ##USRP X310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X310,$(HA_DEFS))
 	$(call post_build,X310,HA)
 
-X300_HA:  ##USRP X300. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+X300_HA:  ##USRP X300. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X300,$(HA_DEFS))
 	$(call post_build,X300,HA)
 
-X310_XA:  ##USRP X310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+X310_XA:  ##USRP X310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X310,$(XA_DEFS))
 	$(call post_build,X310,XA)
 
-X300_XA:  ##USRP X300. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (experimental!).
+X300_XA:  ##USRP X300. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,X300,$(XA_DEFS))
 	$(call post_build,X300,XA)
 
-X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
+X310_HGS: ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO (Deprecated. Use X310_HG).
 	$(call vivado_build,X310,$(HG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X310,HGS)
 
-X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
+X300_HGS: ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO (Deprecated. Use X300_HG).
 	$(call vivado_build,X300,$(HG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X300,HGS)
 
-X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
+X310_XGS: ##USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO (Deprecated. Use X310_XG).
 	$(call vivado_build,X310,$(XG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X310,XGS)
 
-X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
+X300_XGS: ##USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO (Deprecated. Use X300_XG).
 	$(call vivado_build,X300,$(XG_DEFS) NO_DRAM_FIFOS=1 SRAM_FIFO_SIZE=16)
 	$(call post_build,X300,XGS)
 
