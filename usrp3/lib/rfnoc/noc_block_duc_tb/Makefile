@@ -20,13 +20,13 @@ IP_DIR = $(LIB_IP_DIR)
 
 # Include makefiles and sources for all IP components
 # *after* defining the LIB_IP_DIR
-include $(LIB_IP_DIR)/axi_hb31/Makefile.inc
-include $(LIB_IP_DIR)/cordic_rotator/Makefile.inc
+include $(LIB_IP_DIR)/axi_hb47/Makefile.inc
+include $(LIB_IP_DIR)/cordic_rotator24/Makefile.inc
 include $(LIB_IP_DIR)/complex_to_magphase/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
-$(LIB_IP_AXI_HB31_SRCS) \
-$(LIB_IP_CORDIC_ROTATOR_SRCS) \
+$(LIB_IP_AXI_HB47_SRCS) \
+$(LIB_IP_CORDIC_ROTATOR24_SRCS) \
 $(LIB_IP_COMPLEX_TO_MAGPHASE_SRCS) \
 )
 

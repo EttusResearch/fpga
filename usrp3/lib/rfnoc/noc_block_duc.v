@@ -69,6 +69,12 @@ module noc_block_duc #(
     .clear_tx_seqnum(clear_tx_seqnum),
     .debug(debug));
 
+  // Control Source Unused
+  assign cmdout_tdata = 64'd0;
+  assign cmdout_tlast = 1'b0;
+  assign cmdout_tvalid = 1'b0;
+  assign ackin_tready = 1'b1;
+
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
   localparam SR_USER_REG_BASE  = 128;

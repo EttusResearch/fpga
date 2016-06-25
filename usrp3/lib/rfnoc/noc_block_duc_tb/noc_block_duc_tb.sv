@@ -88,11 +88,6 @@ module noc_block_duc_tb();
           end
           md.eob = 1;
 
-          // Wait a random number of cycles between sending
-          delay = $urandom() % MAX_DELAY;
-          $display("Waiting %0d clock cycles", delay);
-          #(delay)
-
           tb_streamer.send(send_payload, md);
           $display("Send ones complete");
         end
