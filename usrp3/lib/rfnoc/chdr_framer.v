@@ -2,6 +2,10 @@
 // Copyright 2014 Ettus Research LLC
 //
 // FIXME handle odd length inputs
+//
+// Warning: Currently only 32 / 64-bit input widths are supported.
+//          If 64-bit is selected, there will be a bubble state.
+//
 
 module chdr_framer
   #(parameter SIZE=10,
