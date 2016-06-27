@@ -36,18 +36,18 @@ module db_control #(
     .out(), .changed(sync));
 
   // Readback
-  wire spi_ready_sync;
+  reg spi_readback_stb_hold;
   wire [31:0] spi_readback_sync;
   wire [31:0] fp_gpio_readback, db_gpio_readback, leds_readback;
   always @* begin
     case(rb_addr)
-      RB_MISC_IO  : {rb_stb, rb_data} <= {          1'b1, {misc_ins, misc_outs}};
-      // Use spi ready (instead of a strobe) so delayed readbacks after a SPI transaction will work
-      RB_SPI      : {rb_stb, rb_data} <= {spi_ready_sync, {32'd0, spi_readback_sync}};
-      RB_LEDS     : {rb_stb, rb_data} <= {          1'b1, {32'd0, leds}};
-      RB_DB_GPIO  : {rb_stb, rb_data} <= {          1'b1, {32'd0, db_gpio_readback}};
-      RB_FP_GPIO  : {rb_stb, rb_data} <= {          1'b1, {32'd0, fp_gpio_readback}};
-      default     : {rb_stb, rb_data} <= {          1'b1, {64'h0BADC0DE0BADC0DE}};
+      RB_MISC_IO  : {rb_stb, rb_data} <= {                 1'b1, {misc_ins, misc_outs}};
+      // Use a latched spi readback stobe so additional readbacks after a SPI transaction will work
+      RB_SPI      : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, spi_readback_sync}};
+      RB_LEDS     : {rb_stb, rb_data} <= {                 1'b1, {32'd0, leds}};
+      RB_DB_GPIO  : {rb_stb, rb_data} <= {                 1'b1, {32'd0, db_gpio_readback}};
+      RB_FP_GPIO  : {rb_stb, rb_data} <= {                 1'b1, {32'd0, fp_gpio_readback}};
+      default     : {rb_stb, rb_data} <= {                 1'b1, {64'h0BADC0DE0BADC0DE}};
     endcase
   end
 
@@ -78,11 +78,26 @@ module db_control #(
   wire spi_set_stb, spi_ready;
   wire [7:0] spi_set_addr;
   wire [31:0] spi_set_data;
+  wire spi_readback_stb, spi_readback_stb_sync;
   wire [31:0] spi_readback;
   wire spi_clk_int, spi_rst_int;
   genvar i;
   generate
     if (USE_SPI_CLK) begin
+      // Need a latched version of spi_readback_stb so additional readbacks
+      // after the initial spi transaction will work.
+      always @(posedge clk) begin
+        if (reset) begin
+          spi_readback_stb_hold       <= 1'b0;
+        end else begin
+          if (set_stb & (set_addr == SR_SPI+1 /* Trigger address */)) begin
+            spi_readback_stb_hold     <= 1'b0;
+          end else if (spi_readback_stb_sync) begin
+            spi_readback_stb_hold     <= 1'b1;
+          end
+        end
+      end
+
       settings_bus_crossclock #(
         .FLOW_CTRL(1),
         .SR_AWIDTH(8),
@@ -91,19 +106,12 @@ module db_control #(
       settings_bus_crossclock (
         .clk_a(clk), .rst_a(reset),
         .set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
-        .rb_stb_a(), .rb_addr_a(8'd0), .rb_data_a(),
+        .rb_stb_a(spi_readback_stb_sync), .rb_addr_a(), .rb_data_a(spi_readback_sync),
         .rb_ready(1'b1),
         .clk_b(spi_clk), .rst_b(spi_rst),
         .set_stb_b(spi_set_stb), .set_addr_b(spi_set_addr), .set_data_b(spi_set_data),
-        .rb_stb_b(), .rb_addr_b(), .rb_data_b(),
+        .rb_stb_b(spi_readback_stb), .rb_addr_b(), .rb_data_b(spi_readback),
         .set_ready(spi_ready));
-
-      synchronizer #(.STAGES(2), .INITIAL_VAL(1'b0)) synchronizer_spi_ready (
-        .clk(clk), .rst(reset), .in(spi_ready), .out(spi_ready_sync));
-      for (i = 0; i < 32; i = i + 1) begin
-        synchronizer #(.STAGES(2), .INITIAL_VAL(1'b0)) synchronizer_spi_readback (
-          .clk(clk), .rst(reset), .in(spi_readback[i]), .out(spi_readback_sync[i]));
-      end
 
       assign spi_clk_int       = spi_clk;
       assign spi_rst_int       = spi_rst;
@@ -121,7 +129,7 @@ module db_control #(
   simple_spi_core #(.BASE(SR_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) simple_spi_core (
     .clock(spi_clk_int), .reset(spi_rst_int),
     .set_stb(spi_set_stb), .set_addr(spi_set_addr), .set_data(spi_set_data),
-    .readback(spi_readback), .readback_stb(), .ready(spi_ready),
+    .readback(spi_readback), .readback_stb(spi_readback_stb), .ready(spi_ready),
     .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
     .debug());
 
