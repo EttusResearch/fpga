@@ -110,8 +110,8 @@ module simple_spi_core
     // IJB. One pipeline stage to break critical path from register in I/O pads.
     wire sen_is_idle = (state == WAIT_TRIG) || (state == IDLE_SEN);
     wire [23:0] sen24 = (sen_is_idle)? SEN_IDLE : (SEN_IDLE ^ slave_select);
-    reg [WIDTH-1:0] sen_reg;
-    always @(posedge clock or posedge reset) begin
+    reg [WIDTH-1:0] sen_reg = SEN_IDLE;
+    always @(posedge clock) begin
       if (reset) begin
         sen_reg <= SEN_IDLE;
       end else begin
