@@ -100,7 +100,7 @@ module simple_spi_core
     reg [2:0] state;
 
     reg ready_reg;
-    assign ready = ready_reg && ~trigger_spi && ~shutdown;
+    assign ready = ready_reg && ~trigger_spi;
 
     //serial clock either idles or is in one of two clock states
     reg sclk_reg;
@@ -161,7 +161,7 @@ module simple_spi_core
             case (state)
 
             WAIT_TRIG: begin
-                if (trigger_spi & ~shutdown) state <= PRE_IDLE;
+                if (trigger_spi) state <= PRE_IDLE;
                 readback_stb <= 1'b0;
                 ready_reg <= ~trigger_spi;
                 dataout_reg <= mosi_data;
