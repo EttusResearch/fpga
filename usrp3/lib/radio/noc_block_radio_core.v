@@ -45,13 +45,13 @@ module noc_block_radio_core #(
   wire [64*NUM_CHANNELS-1:0]      rb_data;
   wire [NUM_CHANNELS-1:0]         rb_stb;
 
-  wire [63:0]                   cmdout_tdata, ackin_tdata;
-  wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
+  wire [63:0]                     cmdout_tdata, ackin_tdata;
+  wire                            cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
 
   wire [64*NUM_CHANNELS-1:0]      str_sink_tdata, str_src_tdata;
   wire [NUM_CHANNELS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
-  wire [63:0]                   vita_time;
+  wire [63:0]                     vita_time;
   wire [NUM_CHANNELS-1:0]         clear_tx_seqnum;
   wire [16*NUM_CHANNELS-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
 
@@ -66,7 +66,7 @@ module noc_block_radio_core #(
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
-    // Computer Engine Clock Domain
+    // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time),
@@ -86,14 +86,14 @@ module noc_block_radio_core #(
   // Disable unused response port
   assign ackin_tready        = 1'b1;
 
-  wire [31:0]               m_axis_data_tdata[0:NUM_CHANNELS-1];
-  wire [127:0]              m_axis_data_tuser[0:NUM_CHANNELS-1];
+  wire [31:0]                 m_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [127:0]                m_axis_data_tuser[0:NUM_CHANNELS-1];
   wire [NUM_CHANNELS-1:0]     m_axis_data_tlast;
   wire [NUM_CHANNELS-1:0]     m_axis_data_tvalid;
   wire [NUM_CHANNELS-1:0]     m_axis_data_tready;
 
-  wire [31:0]               s_axis_data_tdata[0:NUM_CHANNELS-1];
-  wire [127:0]              s_axis_data_tuser[0:NUM_CHANNELS-1];
+  wire [31:0]                 s_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [127:0]                s_axis_data_tuser[0:NUM_CHANNELS-1];
   wire [NUM_CHANNELS-1:0]     s_axis_data_tlast;
   wire [NUM_CHANNELS-1:0]     s_axis_data_tvalid;
   wire [NUM_CHANNELS-1:0]     s_axis_data_tready;
@@ -141,7 +141,7 @@ module noc_block_radio_core #(
     .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
   // Expose settings bus externally
-  assign ext_set_stb  = set_stb;
+  assign ext_set_stb  = set_addr >= SR_EXTERNAL_BASE ? set_stb : 1'b0;
   assign ext_set_addr = set_addr;
   assign ext_set_data = set_data;
 
