@@ -50,7 +50,7 @@ module cvita_hdr_parser #(
         if (first_line) begin
           hdr_reg       <= o_tdata;
           first_line    <= 1'b0;
-          if (has_time) begin
+          if (has_time & ~o_tlast) begin
             read_time   <= 1'b1;
           end
         end
