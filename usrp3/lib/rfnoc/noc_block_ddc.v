@@ -50,7 +50,7 @@ module noc_block_ddc #(
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(/* Unused */),
-    .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
+    .rb_stb({NUM_CHAINS{1'b1}}), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -67,6 +67,12 @@ module noc_block_ddc #(
     .vita_time(64'd0),
     .clear_tx_seqnum(clear_tx_seqnum),
     .debug(debug));
+
+  // Control Source Unused
+  assign cmdout_tdata = 64'd0;
+  assign cmdout_tlast = 1'b0;
+  assign cmdout_tvalid = 1'b0;
+  assign ackin_tready = 1'b1;
 
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
