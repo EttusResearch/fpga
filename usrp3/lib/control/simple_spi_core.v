@@ -205,6 +205,7 @@ module simple_spi_core
 
             IDLE_SEN: begin
                 if (sclk_counter_done) begin
+                  ready_reg <= 1'b1;
                   readback_stb <= 1'b1;
                   state <= WAIT_TRIG;
                 end
