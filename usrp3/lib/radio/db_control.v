@@ -84,20 +84,6 @@ module db_control #(
   genvar i;
   generate
     if (USE_SPI_CLK) begin
-      // Need a latched version of spi_readback_stb so additional readbacks
-      // after the initial spi transaction will work.
-      always @(posedge clk) begin
-        if (reset) begin
-          spi_readback_stb_hold       <= 1'b0;
-        end else begin
-          if (set_stb & (set_addr == SR_SPI+1 /* Trigger address */)) begin
-            spi_readback_stb_hold     <= 1'b0;
-          end else if (spi_readback_stb_sync) begin
-            spi_readback_stb_hold     <= 1'b1;
-          end
-        end
-      end
-
       settings_bus_crossclock #(
         .FLOW_CTRL(1),
         .SR_AWIDTH(8),
@@ -113,18 +99,32 @@ module db_control #(
         .rb_stb_b(spi_readback_stb), .rb_addr_b(), .rb_data_b(spi_readback),
         .set_ready(spi_ready));
 
-      assign spi_clk_int       = spi_clk;
-      assign spi_rst_int       = spi_rst;
+      assign spi_clk_int = spi_clk;
+      assign spi_rst_int = spi_rst;
     end else begin
-      assign spi_set_stb       = set_stb;
-      assign spi_set_addr      = set_addr;
-      assign spi_set_data      = set_data;
-      assign spi_readback_sync = spi_readback;
-      assign spi_ready_sync    = spi_ready;
-      assign spi_clk_int       = clk;
-      assign spi_rst_int       = reset;
+      assign spi_set_stb           = set_stb;
+      assign spi_set_addr          = set_addr;
+      assign spi_set_data          = set_data;
+      assign spi_readback_stb_sync = spi_readback_stb;
+      assign spi_readback_sync     = spi_readback;
+      assign spi_clk_int           = clk;
+      assign spi_rst_int           = reset;
     end
   endgenerate
+
+  // Need to latch spi_readback_stb in case of additional readbacks
+  // after the initial spi transaction.
+  always @(posedge clk) begin
+    if (reset) begin
+      spi_readback_stb_hold       <= 1'b0;
+    end else begin
+      if (set_stb & (set_addr == SR_SPI+1 /* Trigger address */)) begin
+        spi_readback_stb_hold     <= 1'b0;
+      end else if (spi_readback_stb_sync) begin
+        spi_readback_stb_hold     <= 1'b1;
+      end
+    end
+  end
 
   simple_spi_core #(.BASE(SR_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) simple_spi_core (
     .clock(spi_clk_int), .reset(spi_rst_int),
