@@ -37,13 +37,14 @@ module db_control #(
 
   // Readback
   reg spi_readback_stb_hold;
+  reg [31:0] spi_readback_hold;
   wire [31:0] spi_readback_sync;
   wire [31:0] fp_gpio_readback, db_gpio_readback, leds_readback;
   always @* begin
     case(rb_addr)
       RB_MISC_IO  : {rb_stb, rb_data} <= {                 1'b1, {misc_ins, misc_outs}};
       // Use a latched spi readback stobe so additional readbacks after a SPI transaction will work
-      RB_SPI      : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, spi_readback_sync}};
+      RB_SPI      : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, spi_readback_hold}};
       RB_LEDS     : {rb_stb, rb_data} <= {                 1'b1, {32'd0, leds}};
       RB_DB_GPIO  : {rb_stb, rb_data} <= {                 1'b1, {32'd0, db_gpio_readback}};
       RB_FP_GPIO  : {rb_stb, rb_data} <= {                 1'b1, {32'd0, fp_gpio_readback}};
@@ -121,6 +122,7 @@ module db_control #(
       if (set_stb & (set_addr == SR_SPI+1 /* Trigger address */)) begin
         spi_readback_stb_hold     <= 1'b0;
       end else if (spi_readback_stb_sync) begin
+        spi_readback_hold         <= spi_readback_sync;
         spi_readback_stb_hold     <= 1'b1;
       end
     end
