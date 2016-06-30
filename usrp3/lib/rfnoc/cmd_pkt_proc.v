@@ -105,13 +105,12 @@ module cmd_pkt_proc #(
   localparam S_CMD_HEAD         = 4'd0;
   localparam S_CMD_TIME         = 4'd1;
   localparam S_CMD_DATA         = 4'd2;
-  localparam S_CMD_TIMED_DATA   = 4'd3;
-  localparam S_SET_WAIT         = 4'd4;
-  localparam S_READBACK         = 4'd5;
-  localparam S_RESP_HEAD        = 4'd6;
-  localparam S_RESP_TIME        = 4'd7;
-  localparam S_RESP_DATA        = 4'd8;
-  localparam S_DROP             = 4'd9;
+  localparam S_SET_WAIT         = 4'd3;
+  localparam S_READBACK         = 4'd4;
+  localparam S_RESP_HEAD        = 4'd5;
+  localparam S_RESP_TIME        = 4'd6;
+  localparam S_RESP_DATA        = 4'd7;
+  localparam S_DROP             = 4'd8;
 
   // Setting the readback address requires special handling in the state machine
   wire set_rb_addr      = int_tdata[SR_AWIDTH-1+32:32] == SR_RB_ADDR[SR_AWIDTH-1:0];
@@ -140,7 +139,7 @@ module cmd_pkt_proc #(
       resp_tlast          <= 1'b0;
       resp_tdata          <= 'd0;
       resp_time           <= 'd0;
-      set_stb             <= 'd0;
+      set_stb             <= 1'b0;
       set_data            <= 'd0;
       set_addr            <= 'd0;
       set_time            <= 'd0;
@@ -160,7 +159,7 @@ module cmd_pkt_proc #(
           int_tready      <= 1'b1;
           resp_tvalid     <= 1'b0;
           resp_tlast      <= 1'b0;
-          set_stb         <= 'd0;
+          set_stb         <= 1'b0;
           if (int_tvalid & int_tready) begin
             // Register packet header fields for later use
             has_time_hold <= USE_TIME[0] ? has_time : 1'b0;
@@ -169,7 +168,7 @@ module cmd_pkt_proc #(
             dst_sid_hold  <= dst_sid;
             // Packet must be of correct type and for an existing block port
             // and this must be the header.
-            if (is_cmd_pkt & hdr_stb) begin
+            if (is_cmd_pkt) begin
               if (has_time) begin
                 state    <= S_CMD_TIME;
               end else begin
@@ -187,14 +186,14 @@ module cmd_pkt_proc #(
 
         // Consume packet time
         S_CMD_TIME : begin
+          int_tready              <= 1'b1;
           if (int_tvalid & int_tready) begin
-            if (int_tlast | ~vita_time_stb) begin
-              // Command packet with time but missing command? Drop it.
-              int_tready          <= 1'b0;
-              state               <= S_DROP;
+            if (int_tlast) begin
+              // Invalid -- Short packet
+              state               <= S_CMD_HEAD;
             end else begin
-              pkt_vita_time_hold  <= pkt_vita_time;
               int_tready          <= 1'b0;
+              pkt_vita_time_hold  <= pkt_vita_time;
               state               <= S_CMD_DATA;
             end
           end
@@ -205,7 +204,8 @@ module cmd_pkt_proc #(
         // Note: Output of timed settings bus transactions will be delayed by
         //       one clock cycle due to registered outputs.
         S_CMD_DATA : begin
-          if (int_tvalid & (~has_time_hold | (USE_TIME[0] & go))) begin
+          int_tready        <= (USE_TIME[0] & has_time_hold) ? go : 1'b1;
+          if (int_tvalid & int_tready) begin
             is_long_cmd_pkt <= ~int_tlast;
             set_addr        <= int_tdata[SR_AWIDTH-1+32:32];
             set_data        <= int_tdata[SR_DWIDTH-1:0];
@@ -222,7 +222,6 @@ module cmd_pkt_proc #(
               state         <= S_SET_WAIT;
             // Long command packet support
             end else begin
-              int_tready    <= 1'b1;
               state         <= S_CMD_DATA;
             end
           end
@@ -281,9 +280,9 @@ module cmd_pkt_proc #(
 
         // Drop malformed / non-command packets
         S_DROP : begin
+          int_tready     <= 1'b1;
           if (int_tvalid & int_tready) begin
             if (int_tlast) begin
-              int_tready <= 1'b0;
               state      <= S_CMD_HEAD;
             end
           end
