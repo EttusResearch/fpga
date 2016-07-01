@@ -31,11 +31,11 @@ module noc_block_ddc_tb();
   wire [7:0] SR_N_ADDR           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_N_ADDR;
   wire [7:0] SR_M_ADDR           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_M_ADDR;
   wire [7:0] SR_CONFIG_ADDR      = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_CONFIG_ADDR;
-  wire [7:0] SR_RX_FREQ          = noc_block_ddc.gen_ddc_chains[0].ddc.BASE;
-  wire [7:0] SR_RX_SCALE_IQ      = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+1;
-  wire [7:0] SR_RX_DECIM         = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+2;
-  wire [7:0] SR_RX_MUX           = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+3;
-  wire [7:0] SR_RX_COEFFS        = noc_block_ddc.gen_ddc_chains[0].ddc.BASE+4;
+  wire [7:0] SR_FREQ_ADDR        = noc_block_ddc.gen_ddc_chains[0].ddc.SR_FREQ_ADDR;
+  wire [7:0] SR_SCALE_IQ_ADDR    = noc_block_ddc.gen_ddc_chains[0].ddc.SR_SCALE_IQ_ADDR;
+  wire [7:0] SR_DECIM_ADDR       = noc_block_ddc.gen_ddc_chains[0].ddc.SR_DECIM_ADDR;
+  wire [7:0] SR_MUX_ADDR         = noc_block_ddc.gen_ddc_chains[0].ddc.SR_MUX_ADDR;
+  wire [7:0] SR_COEFFS_ADDR      = noc_block_ddc.gen_ddc_chains[0].ddc.SR_COEFFS_ADDR;
 
   localparam SPP                 = FFT_SIZE;
   localparam PKT_SIZE_BYTES      = FFT_SIZE*4;
@@ -71,8 +71,8 @@ module noc_block_ddc_tb();
       $display("Set decimation to %0d", decim_rate);
       $display("- Number of enabled HBs: %0d", hb_enables);
       $display("- CIC Rate:              %0d", cic_rate);
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_N_ADDR, decim_rate);                     // Set decimation rate in AXI rate change
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_DECIM, {hb_enables,cic_rate});        // Enable HBs, set CIC rate
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_N_ADDR, decim_rate);                  // Set decimation rate in AXI rate change
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_DECIM_ADDR, {hb_enables,cic_rate});   // Enable HBs, set CIC rate
 
     end
   endtask
@@ -86,9 +86,9 @@ module noc_block_ddc_tb();
       set_decim_rate(decim_rate);
 
       // Setup DDC
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);            // Enable clear EOB
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_FREQ, 32'd0);                // CORDIC phase increment
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_SCALE_IQ, (1 << 14) + 3515); // Scaling, set to 1
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
 
       // Send a short ramp, should pass through unchanged
       fork
@@ -159,9 +159,9 @@ module noc_block_ddc_tb();
       `RFNOC_CONNECT(noc_block_fft, noc_block_tb, SC16, SPP);
 
       // Setup DDC
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);            // Enable clear EOB
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_FREQ, 32'd0);                // CORDIC phase increment
-      tb_streamer.write_reg(sid_noc_block_ddc, SR_RX_SCALE_IQ, (1 << 14) + 3515); // Scaling, set to 1
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
       // Setup FFT
       tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
       tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register

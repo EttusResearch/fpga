@@ -5,8 +5,12 @@
 //! RFNoC specific digital down-conversion chain
 
 module ddc #(
-  parameter BASE = 0,
-  parameter PRELOAD_HBS = 1 // Preload half band filter state with 0s
+  parameter SR_FREQ_ADDR     = 0,
+  parameter SR_SCALE_IQ_ADDR = 1,
+  parameter SR_DECIM_ADDR    = 2,
+  parameter SR_MUX_ADDR      = 3,
+  parameter SR_COEFFS_ADDR   = 4,
+  parameter PRELOAD_HBS      = 1 // Preload half band filter state with 0s
 )(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -60,23 +64,23 @@ module ddc #(
   wire reload_go, reload_we1, reload_we2, reload_we3, reload_ld1, reload_ld2, reload_ld3;
   wire [17:0] coef_din;
 
-  setting_reg #(.my_addr(BASE+0)) sr_0 (
+  setting_reg #(.my_addr(SR_FREQ_ADDR)) set_freq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(phase_inc),.changed());
 
-  setting_reg #(.my_addr(BASE+1), .width(18)) sr_1 (
+  setting_reg #(.my_addr(SR_SCALE_IQ_ADDR), .width(18)) set_scale_iq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(scale_factor),.changed());
 
-  setting_reg #(.my_addr(BASE+2), .width(10), .at_reset(1 /* No decimation */)) sr_2 (
+  setting_reg #(.my_addr(SR_DECIM_ADDR), .width(10), .at_reset(1 /* No decimation */)) set_decim (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out({hb_rate_int, cic_decim_rate_int}),.changed(rate_changed));
 
-  setting_reg #(.my_addr(BASE+3), .width(2)) sr_3 (
+  setting_reg #(.my_addr(SR_MUX_ADDR), .width(2)) set_mux (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out({realmode,swap_iq}),.changed());
 
-  setting_reg #(.my_addr(BASE+4), .width(24)) sr_4 (
+  setting_reg #(.my_addr(SR_COEFFS_ADDR), .width(24)) set_coeffs (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out({reload_ld3,reload_we3,reload_ld2,reload_we2,reload_ld1,reload_we1,coef_din}),.changed(reload_go));
 

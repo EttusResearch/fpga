@@ -76,7 +76,14 @@ module noc_block_ddc #(
 
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
-  localparam SR_USER_REG_BASE = 128;
+  localparam SR_N_ADDR        = 128;
+  localparam SR_M_ADDR        = 129;
+  localparam SR_CONFIG_ADDR   = 130;
+  localparam SR_FREQ_ADDR     = 131;
+  localparam SR_SCALE_IQ_ADDR = 132;
+  localparam SR_DECIM_ADDR    = 133;
+  localparam SR_MUX_ADDR      = 134;
+  localparam SR_COEFFS_ADDR   = 135;
 
   genvar i;
   generate
@@ -145,9 +152,9 @@ module noc_block_ddc #(
         .WIDTH(32),
         .MAX_N(2040),
         .MAX_M(1),
-        .SR_N_ADDR(SR_USER_REG_BASE),
-        .SR_M_ADDR(SR_USER_REG_BASE+1),
-        .SR_CONFIG_ADDR(SR_USER_REG_BASE+2))
+        .SR_N_ADDR(SR_N_ADDR),
+        .SR_M_ADDR(SR_M_ADDR),
+        .SR_CONFIG_ADDR(SR_CONFIG_ADDR))
       axi_rate_change (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
@@ -178,7 +185,13 @@ module noc_block_ddc #(
 
       wire [31:0] sample_out;
       wire sample_out_stb;
-      ddc #(.BASE(SR_USER_REG_BASE+4)) ddc (
+      ddc #(
+        .SR_FREQ_ADDR(SR_FREQ_ADDR),
+        .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR),
+        .SR_DECIM_ADDR(SR_DECIM_ADDR),
+        .SR_MUX_ADDR(SR_MUX_ADDR),
+        .SR_COEFFS_ADDR(SR_COEFFS_ADDR))
+      ddc (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_ddc),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .sample_in(sample_in), .sample_in_stb(sample_in_stb), .sample_in_last(1'b0), .sample_in_rdy(sample_in_rdy),
