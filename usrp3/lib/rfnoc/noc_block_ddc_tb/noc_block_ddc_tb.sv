@@ -265,7 +265,46 @@ module noc_block_ddc_tb();
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 4 -- Test passing through a partial packet
+    ** Test 4 -- Test timed cordic tune
+    ********************************************************/
+    `TEST_CASE_START("Test timed CORDIC tune");
+    // Configure DDC
+    set_decim_rate(1);
+    tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
+    tb_streamer.write_reg(sid_noc_block_ddc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
+    tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
+    fork
+      begin
+        // Setup timed tune
+        $display("Send timed tune command");
+        tb_streamer.write_reg_timed(sid_noc_block_ddc, SR_FREQ_ADDR, 10000, 30);
+      end
+      begin
+        cvita_payload_t send_payload;
+        cvita_metadata_t md;
+        $display("Send constant waveform");
+        for (int i = 0; i < SPP/2; i++) begin
+          if (i < 16) begin
+            send_payload.push_back({16'd1000, 16'd0, 16'd1000, 16'd0});
+          end else begin
+            send_payload.push_back({16'd3000, 16'd0, 16'd3000, 16'd0});
+          end
+        end
+        md.eob = 1;
+        md.has_time = 1;
+        md.timestamp = 0;
+        tb_streamer.send(send_payload,md);
+        $display("Send constant waveform complete");
+      end
+      begin
+        cvita_payload_t recv_payload;
+        cvita_metadata_t md;
+        tb_streamer.recv(recv_payload,md);
+      end
+    join
+
+    /********************************************************
+    ** Test 5 -- Test passing through a partial packet
     ********************************************************/
     `TEST_CASE_START("Pass through partial packet");
     send_ramp(2,0,4);

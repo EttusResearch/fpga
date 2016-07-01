@@ -14,20 +14,23 @@ module ddc #(
 )(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
-  input sample_in_stb,
-  input sample_in_last,
-  output sample_in_rdy,
-  input [31:0] sample_in,
-  output sample_out_stb,
-  output reg sample_out_last,
-  output [31:0] sample_out
+  input [31:0] sample_in_tdata,
+  input sample_in_tvalid,
+  input sample_in_tlast,
+  output sample_in_tready,
+  output [31:0] sample_out_tdata,
+  output sample_out_tvalid,
+  input sample_out_tready,
+  output sample_out_tlast
 );
 
   localparam  WIDTH = 24;
   localparam  cwidth = 25;
   localparam  zwidth = 24;
 
-  wire [31:0] phase_inc;
+  wire [31:0] sr_phase_inc;
+  wire sr_phase_inc_changed;
+  reg [31:0] phase_inc;
   reg [31:0]  phase;
 
   wire [17:0] scale_factor;
@@ -48,8 +51,8 @@ module ddc #(
   wire [7:0] cic_decim_rate_int;
   wire rate_changed;
 
-  wire [WIDTH-1:0] sample_in_i = {sample_in[31:16], 8'd0};
-  wire [WIDTH-1:0] sample_in_q = {sample_in[15:0], 8'd0};
+  wire [WIDTH-1:0] sample_in_i = {sample_in_tdata[31:16], 8'd0};
+  wire [WIDTH-1:0] sample_in_q = {sample_in_tdata[15:0], 8'd0};
 
   reg sample_mux_stb;
   reg sample_mux_last;
@@ -66,7 +69,20 @@ module ddc #(
 
   setting_reg #(.my_addr(SR_FREQ_ADDR)) set_freq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-    .in(set_data),.out(phase_inc),.changed());
+    .in(set_data),.out(sr_phase_inc),.changed());
+
+  always @(posedge clk) begin
+    if (reset) begin
+      phase_inc <= 'd0;
+    end else begin
+      // HACK: To enable timed tuning, tlast is used as the trigger.
+      //       Clear is also used to load the phase inc in case
+      //       of an overrun condition.
+      if ((sample_in_tvalid & sample_in_tready & sample_in_tlast) | clear) begin
+        phase_inc <= sr_phase_inc;
+      end
+    end
+  end
 
   setting_reg #(.my_addr(SR_SCALE_IQ_ADDR), .width(18)) set_scale_iq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -97,7 +113,7 @@ module ddc #(
     end else begin
       if (clear) begin
         active <= 1'b0;
-      end else if (sample_in_stb & sample_in_rdy) begin
+      end else if (sample_in_tvalid & sample_in_tready) begin
         active <= 1'b1;
       end
       if (rate_changed & active) begin
@@ -122,8 +138,8 @@ module ddc #(
       sample_mux_stb  <= 1'b0;
       sample_mux_last <= 1'b0;
     end else begin
-      sample_mux_stb  <= sample_in_stb;
-      sample_mux_last <= sample_in_last;
+      sample_mux_stb  <= sample_in_tvalid;
+      sample_mux_last <= sample_in_tlast;
       if (swap_iq) begin
         sample_mux_i <= sample_in_q;
         sample_mux_q <= realmode ? 'd0 : sample_in_i;
@@ -328,7 +344,7 @@ module ddc #(
     end
   endgenerate
 
-  assign sample_in_rdy = hb1_rdy & hb2_rdy & hb3_rdy;
+  assign sample_in_tready = sample_out_tready & hb1_rdy & hb2_rdy & hb3_rdy;
 
   assign strobe_hb1 = data_valid1 & hb1_rdy;
   assign strobe_hb2 = data_valid2 & hb2_rdy;
@@ -456,6 +472,9 @@ module ddc #(
     .CLK(clk),              // 1-bit positive edge clock input
     .RST(reset | clear));   // 1-bit input active high reset
 
+  wire [31:0] sample_out;
+  reg sample_out_last;
+
   always @(posedge clk) begin
     if (reset | clear) begin
       strobe_scaled   <= 1'b0;
@@ -479,5 +498,14 @@ module ddc #(
     .clk(clk), .reset(reset | clear), .in(i_clip), .strobe_in(strobe_clip), .out(sample_out[31:16]), .strobe_out(sample_out_stb));
   round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16), .DISABLE_SD(1)) round_q (
     .clk(clk), .reset(reset | clear), .in(q_clip), .strobe_in(strobe_clip), .out(sample_out[15:0]), .strobe_out());
+
+
+  strobed_to_axi #(
+    .WIDTH(32),
+    .FIFO_SIZE(8))
+  strobed_to_axi (
+    .clk(clk), .reset(reset), .clear(clear),
+    .in_stb(sample_out_stb), .in_data(sample_out), .in_last(sample_out_last),
+    .o_tdata(sample_out_tdata), .o_tlast(sample_out_tlast), .o_tvalid(sample_out_tvalid), .o_tready(sample_out_tready));
 
 endmodule // ddc_chain
