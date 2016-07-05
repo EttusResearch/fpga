@@ -93,7 +93,7 @@ module aurora_loopback_tb();
     .channel_up(m_channel_up), .hard_err(m_hard_err), .soft_err(m_soft_err)
   );
 
-  aurora_axis_mac #(.PACKET_MODE(PACKET_MODE)) aurora_mac_master_i (
+  aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_master_i (
     // Clocks and resets
     .phy_clk(m_user_clk), .phy_rst(m_user_rst),
     .sys_clk(m_user_clk), .sys_rst(m_user_rst),
@@ -139,7 +139,7 @@ module aurora_loopback_tb();
     .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err)
   );
 
-  aurora_axis_mac #(.PACKET_MODE(PACKET_MODE)) aurora_mac_slave_i (
+  aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_slave_i (
     // Clocks and resets
     .phy_clk(s_user_clk), .phy_rst(s_user_rst),
     .sys_clk(s_user_clk), .sys_rst(s_user_rst),

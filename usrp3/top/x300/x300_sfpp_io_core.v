@@ -237,7 +237,7 @@ generate
 
       assign sfpp_tx_disable = 1'b0; // Always on.
 
-      aurora_phy_x1 aurora_phy_master_i (
+      aurora_phy_x1 aurora_phy_i (
          // Resets
          .areset(areset | phy_areset),
          // Clocks
@@ -289,7 +289,7 @@ generate
       wire [47:0]    bist_checker_samps, bist_checker_errors;
       wire [31:0]    overruns, checksum_errors;
 
-      aurora_axis_mac aurora_mac_master_i (
+      aurora_axis_mac aurora_mac_i (
          // Clocks and resets
          .phy_clk(au_user_clk), .phy_rst(au_user_rst),
          .sys_clk(bus_clk), .sys_rst(bus_rst),

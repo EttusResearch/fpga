@@ -4,7 +4,8 @@
 
 module aurora_axis_mac #(
    parameter PACKET_MODE      = 0,
-   parameter PACKET_FIFO_SIZE = 10
+   parameter PACKET_FIFO_SIZE = 10,
+   parameter BIST_ENABLED     = 1
 ) (
    // Clocks and resets
    input             phy_clk,
@@ -80,7 +81,7 @@ module aurora_axis_mac #(
          overruns_reg <= overruns_reg + 32'd1;
 
    wire [7:0] dummy0;
-   fifo_short_2clk bist_counters_2clk_i (
+   fifo_short_2clk status_counters_2clk_i (
       .rst(phy_rst),
       .wr_clk(phy_clk), .din({8'h00, soft_errors_reg, overruns_reg}), .wr_en(1'b1), .full(), .wr_data_count(),
       .rd_clk(sys_clk), .dout({dummy0, soft_errors, overruns}), .rd_en(1'b1), .empty(), .rd_data_count()
@@ -96,24 +97,25 @@ module aurora_axis_mac #(
    wire        bist_i_tvalid, bist_i_tready;
    wire [63:0] loopback_tdata;
    wire        loopback_tvalid, loopback_tready;
-   reg         bist_gen_en_reg, bist_checker_en_reg, bist_loopback_en_reg;
-   reg  [4:0]  bist_gen_rate_reg;
+   reg         bist_gen_en_reg = 1'b0, bist_checker_en_reg = 1'b0, bist_loopback_en_reg = 1'b0;
+   reg  [4:0]  bist_gen_rate_reg = 5'b0;
 
-   // Pipeline control signals
-   always @(posedge sys_clk) begin
-      if (sys_rst | clear_sysclk) begin
-         bist_gen_en_reg      <= 1'b0;
-         bist_checker_en_reg  <= 1'b0;
-         bist_loopback_en_reg <= 1'b0;
-         bist_gen_rate_reg    <= 5'd0;
-      end else begin
-         bist_gen_en_reg      <= bist_gen_en;
-         bist_checker_en_reg  <= bist_checker_en;
-         bist_loopback_en_reg <= bist_loopback_en;
-         bist_gen_rate_reg    <= bist_gen_rate;
+   generate if (BIST_ENABLED == 1) begin
+      // Pipeline control signals
+      always @(posedge sys_clk) begin
+         if (sys_rst | clear_sysclk) begin
+            bist_gen_en_reg      <= 1'b0;
+            bist_checker_en_reg  <= 1'b0;
+            bist_loopback_en_reg <= 1'b0;
+            bist_gen_rate_reg    <= 5'd0;
+         end else begin
+            bist_gen_en_reg      <= bist_gen_en;
+            bist_checker_en_reg  <= bist_checker_en;
+            bist_loopback_en_reg <= bist_loopback_en;
+            bist_gen_rate_reg    <= bist_gen_rate;
+         end
       end
-   end
-
+   end endgenerate
    // ----------------------------------------------
    // RX Data Path
    // ----------------------------------------------
@@ -249,63 +251,65 @@ module aurora_axis_mac #(
    // BIST: Generator and checker for a PRBS15 pattern
    // ----------------------------------------------
 
-   localparam [15:0] SEED16 = 16'hFFFF;
-   localparam [63:0] SEED64 = {~SEED16, SEED16, ~SEED16, SEED16};
-
-   // Throttle outgoing PRBS to based on the specified rate
-   // BIST Throughput = sys_clk BW * (1 - (1/N))
-   // where: N = bist_gen_rate_reg + 1
-   //        N = 0 implies full rate
-   reg [4:0] throttle_cnt;
-   always @(posedge sys_clk) begin
-      if (sys_rst | clear_sysclk)
-         throttle_cnt <= bist_gen_rate_reg;
-      else if (bist_o_tready)
-         if (throttle_cnt == 5'd0)
+   generate if (BIST_ENABLED == 1) begin
+      localparam [15:0] SEED16 = 16'hFFFF;
+      localparam [63:0] SEED64 = {~SEED16, SEED16, ~SEED16, SEED16};
+   
+      // Throttle outgoing PRBS to based on the specified rate
+      // BIST Throughput = sys_clk BW * (1 - (1/N))
+      // where: N = bist_gen_rate_reg + 1
+      //        N = 0 implies full rate
+      reg [4:0] throttle_cnt;
+      always @(posedge sys_clk) begin
+         if (sys_rst | clear_sysclk)
             throttle_cnt <= bist_gen_rate_reg;
-         else
-            throttle_cnt <= throttle_cnt - 5'd1;
-   end
-   assign bist_o_tvalid = (bist_gen_rate_reg == 5'd0) || (throttle_cnt != 5'd0);
-
-   // Unsynchronized PRBS15 generator (for BIST output)
-   reg [15:0] prbs15_gen, prbs15_check;
-   always @(posedge sys_clk) begin
-      if (sys_rst | clear_sysclk)
-         prbs15_gen <= SEED16;
-      else if (bist_o_tready & bist_o_tvalid)
-         prbs15_gen <= {prbs15_gen[14:0], prbs15_gen[15] ^ prbs15_gen[14]};
-   end
-   assign bist_o_tdata = {~prbs15_gen, prbs15_gen, ~prbs15_gen, prbs15_gen};
-
-   // Unsynchronized PRBS15 generator (for BIST input)
-   wire [15:0] prbs15_next = {prbs15_check[14:0], prbs15_check[15] ^ prbs15_check[14]};
-   always @(posedge sys_clk) begin
-      if (sys_rst | clear_sysclk | ~bist_checker_en_reg) begin
-         bist_checker_locked  <= 1'b0;
-         prbs15_check <= SEED16;
-      end else if (bist_i_tvalid && bist_i_tready) begin
-         prbs15_check <= bist_i_tdata[15:0];
-         if (bist_i_tdata == SEED64)
-            bist_checker_locked <= 1'b1;
+         else if (bist_o_tready)
+            if (throttle_cnt == 5'd0)
+               throttle_cnt <= bist_gen_rate_reg;
+            else
+               throttle_cnt <= throttle_cnt - 5'd1;
       end
-   end
-
-   // PRBS15 checker
-   always @(posedge sys_clk) begin
-      if (bist_checker_locked) begin
-         if (bist_i_tvalid & bist_i_tready) begin
-            bist_checker_samps <= bist_checker_samps + 48'd1;
-            if (bist_i_tdata != {~prbs15_next, prbs15_next, ~prbs15_next, prbs15_next}) begin
-               bist_checker_errors <= bist_checker_errors + 48'd1;
-            end
+      assign bist_o_tvalid = (bist_gen_rate_reg == 5'd0) || (throttle_cnt != 5'd0);
+   
+      // Unsynchronized PRBS15 generator (for BIST output)
+      reg [15:0] prbs15_gen, prbs15_check;
+      always @(posedge sys_clk) begin
+         if (sys_rst | clear_sysclk)
+            prbs15_gen <= SEED16;
+         else if (bist_o_tready & bist_o_tvalid)
+            prbs15_gen <= {prbs15_gen[14:0], prbs15_gen[15] ^ prbs15_gen[14]};
+      end
+      assign bist_o_tdata = {~prbs15_gen, prbs15_gen, ~prbs15_gen, prbs15_gen};
+   
+      // Unsynchronized PRBS15 generator (for BIST input)
+      wire [15:0] prbs15_next = {prbs15_check[14:0], prbs15_check[15] ^ prbs15_check[14]};
+      always @(posedge sys_clk) begin
+         if (sys_rst | clear_sysclk | ~bist_checker_en_reg) begin
+            bist_checker_locked  <= 1'b0;
+            prbs15_check <= SEED16;
+         end else if (bist_i_tvalid && bist_i_tready) begin
+            prbs15_check <= bist_i_tdata[15:0];
+            if (bist_i_tdata == SEED64)
+               bist_checker_locked <= 1'b1;
          end
-      end else begin
-         bist_checker_samps  <= 48'd0;
-         bist_checker_errors <= 48'd0;
       end
-   end
-   assign bist_i_tready = 1'b1;
+   
+      // PRBS15 checker
+      always @(posedge sys_clk) begin
+         if (bist_checker_locked) begin
+            if (bist_i_tvalid & bist_i_tready) begin
+               bist_checker_samps <= bist_checker_samps + 48'd1;
+               if (bist_i_tdata != {~prbs15_next, prbs15_next, ~prbs15_next, prbs15_next}) begin
+                  bist_checker_errors <= bist_checker_errors + 48'd1;
+               end
+            end
+         end else begin
+            bist_checker_samps  <= 48'd0;
+            bist_checker_errors <= 48'd0;
+         end
+      end
+      assign bist_i_tready = 1'b1;
+   end endgenerate
 
 endmodule
 
