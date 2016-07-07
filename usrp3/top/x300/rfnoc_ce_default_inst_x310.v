@@ -1,4 +1,4 @@
-  localparam NUM_CE = 10;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
+  localparam NUM_CE = 4;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
 
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
@@ -31,14 +31,14 @@
     .o_tdata(ce_i_tdata[1]), .o_tlast(ce_i_tlast[1]), .o_tvalid(ce_i_tvalid[1]), .o_tready(ce_i_tready[1]),
     .debug(ce_debug[1]));
 
-  noc_block_duc inst_noc_block_duc (
+  noc_block_duc inst_noc_block_duc_0 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
     .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
     .debug(ce_debug[2]));
 
-  noc_block_null_source_sink inst_noc_block_null_source_sink (
+  noc_block_duc inst_noc_block_duc_1 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[3]), .i_tlast(ce_o_tlast[3]), .i_tvalid(ce_o_tvalid[3]), .i_tready(ce_o_tready[3]),
