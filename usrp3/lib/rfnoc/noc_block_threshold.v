@@ -2,7 +2,7 @@
 // Copyright 2016 Ettus Research
 //
 // Example thresholding block that also shows how to use
-// cvita_async_stream to handle asynchronous data
+// axi_async_stream to handle asynchronous data
 //
 
 module noc_block_threshold #(
@@ -161,9 +161,9 @@ module noc_block_threshold #(
   // Form header from asynchronous data
   //
   /////////////////////////////////////////////////////////////////////////////
-  cvita_async_stream #(
+  axi_async_stream #(
     .WIDTH(32))
-  cvita_async_stream (
+  axi_async_stream (
     .clk(ce_clk),
     .reset(ce_rst),
     .clear(clear_tx_seqnum),

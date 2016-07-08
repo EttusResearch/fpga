@@ -104,7 +104,7 @@ cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
 cvita_hdr_modify.v \
-cvita_async_stream.v \
+axi_async_stream.v \
 axi_rate_change.v \
 axi_packet_resizer.v \
 axi_drop_packet.v \

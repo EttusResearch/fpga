@@ -21,7 +21,7 @@
 //   will likely want the full burst and is then forced to aggregate packets?
 //
 
-module cvita_async_stream #(
+module axi_async_stream #(
   parameter WIDTH            = 32,
   parameter HEADER_WIDTH     = 128,
   parameter HEADER_FIFO_SIZE = 5,
