@@ -14,15 +14,13 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
-SIM_TOP = noc_block_skeleton_tb
+SIM_TOP = noc_block_threshold_tb
 
 # Add test bench, user design under test, and
 # additional user created files
 SIM_SRCS = \
-$(abspath noc_block_skeleton_tb.sv) \
-$(abspath ../noc_block_skeleton.v)
-
-MODELSIM_USER_DO = $(abspath wave.do)
+$(abspath noc_block_threshold_tb.sv) \
+$(abspath ../noc_block_threshold.v)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

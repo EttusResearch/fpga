@@ -56,16 +56,11 @@ module noc_block_threshold_tb();
     ** Test 4 -- Write / readback threshold & num_samples
     ********************************************************/
     `TEST_CASE_START("Write / readback user registers");
-    threshold = 10000;
-    tb_streamer.write_user_reg(sid_noc_block_threshold, noc_block_threshold.SR_THRESHOLD, random_word);
+    threshold = 10008;
+    tb_streamer.write_user_reg(sid_noc_block_threshold, noc_block_threshold.SR_THRESHOLD, threshold);
     tb_streamer.read_user_reg(sid_noc_block_threshold, noc_block_threshold.RB_THRESHOLD, readback);
     $sformat(s, "threshold incorrect readback! Expected: %0d, Actual %0d", readback[31:0] == threshold);
     `ASSERT_ERROR(readback[31:0] == threshold, s);
-    num_samples = 4;
-    tb_streamer.write_user_reg(sid_noc_block_threshold, noc_block_threshold.SR_TEST_REG_1, random_word);
-    tb_streamer.read_user_reg(sid_noc_block_threshold, 1, readback);
-    $sformat(s, "num_samples incorrect readback! Expected: %0d, Actual %0d", readback[15:0] == num_samples);
-    `ASSERT_ERROR(readback[15:0] == num_samples, s);
     `TEST_CASE_DONE(1);
 
     /********************************************************
@@ -86,13 +81,13 @@ module noc_block_threshold_tb();
         //     3: Entire pkt above threshold
         //     4: Cross below threshold midway in pkt
         //     5: Entire pkt below threshold
-        for (int i = 0; i < RAMP_NUM_SAMPS; i++) begin
+        for (int i = 0; i < 5*SPP; i=i+2) begin
           // Up
-          if (i < RAMP_NUM_SAMPS/2) begin
-            send_payload.push_back({32'(i + threshold - RAMP_NUM_SAMPS),32'(i+1 + threshold - RAMP_NUM_SAMPS)});
+          if (i < 5*SPP/2) begin
+            send_payload.push_back({32'(10000 - SPP + i),32'(10000 - SPP + i+1)});
           // Down
           end else begin
-            send_payload.push_back({32'(-i + threshold + 2*RAMP_NUM_SAMPS),32'(-i+1 + threshold + 2*RAMP_NUM_SAMPS)});
+            send_payload.push_back({32'(10000 + 4*SPP - i),32'(10000 + 4*SPP - i-1)});
           end
         end
         // Send packets
@@ -101,12 +96,13 @@ module noc_block_threshold_tb();
       begin
         cvita_payload_t recv_payload;
         cvita_metadata_t md;
-        logic [63:0] expected_value;
-        tb_streamer.recv(recv_payload,md);
-        for (int i = 0; i < SPP/2; i++) begin
-          expected_value = i;
-          $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
-          `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+        // We expect to receive 3 packets, see generating code above
+        for (int i = 0; i < 3; i++) begin
+          tb_streamer.recv(recv_payload,md);
+          for (int k = 0; k < recv_payload.size(); k++) begin
+            $sformat(s, "Value less than threshold! Threshold: %0d, Received: %0d", threshold, recv_payload[k]);
+            `ASSERT_ERROR(recv_payload[k] > threshold, s);
+          end
         end
       end
     join
