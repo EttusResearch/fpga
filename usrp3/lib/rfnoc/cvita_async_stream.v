@@ -33,6 +33,7 @@ module cvita_async_stream #(
   input [15:0] src_sid,
   input [15:0] dst_sid,
   input [$clog2(MAX_TICK_RATE)-1:0] tick_rate,
+  output header_fifo_full,
   input [WIDTH-1:0] s_axis_data_tdata,
   input [HEADER_WIDTH-1:0] s_axis_data_tuser,
   input s_axis_data_tlast,
@@ -53,7 +54,7 @@ module cvita_async_stream #(
   reg first_word;
   wire header_in_tready;
   wire [HEADER_WIDTH-1:0] header_out_tdata;
-  wire header_out_tlast, header_out_tvalid, header_out_tready;
+  wire header_out_tvalid, header_out_tready;
 
   reg [15:0] word_cnt;
   reg [16+$clog2(MAX_TICK_RATE)-1:0] time_cnt; // 16 bit payload length + max tick rate increment
@@ -66,36 +67,37 @@ module cvita_async_stream #(
     if (reset | clear) begin
       first_word <= 1'b1;
     end else begin
-      if (s_axis_data_tvalid & s_axis_data_tready) begin
-        if (s_axis_data_tlast) begin
-          first_word <= 1'b1;
-        end else begin
+      if (s_axis_data_tvalid) begin
+        if (first_word) begin
           first_word <= 1'b0;
+        end else if (s_axis_data_tlast & s_axis_data_tready) begin
+          first_word <= 1'b1;
         end
       end
     end
   end
 
   // Header FIFO
-  axi_fifo #(.WIDTH(HEADER_WIDTH-1), .SIZE(HEADER_FIFO_SIZE)) axi_fifo (
+  axi_fifo #(.WIDTH(HEADER_WIDTH), .SIZE(HEADER_FIFO_SIZE)) axi_fifo (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata(s_axis_data_tuser), .i_tvalid(s_axis_data_tvalid & first_word), .i_tready(s_axis_data_tready),
+    .i_tdata(s_axis_data_tuser), .i_tvalid(s_axis_data_tvalid & first_word), .i_tready(header_in_tready),
     .o_tdata(header_out_tdata), .o_tvalid(header_out_tvalid), .o_tready(header_out_tready),
     .space(), .occupied());
-  assign header_out_tready = (word_cnt >= payload_length);
+  assign header_out_tready = i_tvalid & i_tready & (word_cnt >= payload_length);
+  assign header_fifo_full = ~header_in_tready;
 
   // Track VITA time offset and word count for emptying header FIFO
   always @(posedge clk) begin
     if (reset | clear) begin
-      word_cnt       <= WIDTH/4;
+      word_cnt       <= WIDTH/8;
       time_cnt       <= 0;
     end else begin
       if (i_tvalid & i_tready) begin
         if (word_cnt >= payload_length) begin
-          word_cnt <= WIDTH/4;
+          word_cnt <= WIDTH/8;
           time_cnt <= 0;
         end else begin
-          word_cnt <= word_cnt + WIDTH/4;
+          word_cnt <= word_cnt + WIDTH/8;
           time_cnt <= time_cnt + tick_rate;
         end
       end
@@ -113,20 +115,49 @@ module cvita_async_stream #(
   cvita_hdr_modify cvita_hdr_modify (
     .header_in(header_out_tdata),
     .header_out(m_axis_data_tuser),
-    .use_pkt_type(1'b0),  .pkt_type(),
-    .use_has_time(1'b0),  .has_time(),
-    .use_eob(1'b0),       .eob(),
-    .use_seqnum(1'b0),    .seqnum(), // AXI Wrapper handles this
-    .use_length(1'b0),    .length(), // AXI Wrapper handles this
-    .use_src_sid(1'b1),   .src_sid(src_sid),
-    .use_dst_sid(1'b1),   .dst_sid(dst_sid),
-    .use_vita_time(1'b1), .vita_time(vita_time + time_cnt));
+    .use_pkt_type(1'b0),       .pkt_type(),
+    .use_has_time(1'b0),       .has_time(),
+    .use_eob(1'b0),            .eob(),
+    .use_seqnum(1'b0),         .seqnum(), // AXI Wrapper handles this
+    .use_length(1'b0),         .length(), // AXI Wrapper handles this
+    .use_payload_length(1'b0), .payload_length(),
+    .use_src_sid(1'b1),        .src_sid(src_sid),
+    .use_dst_sid(1'b1),        .dst_sid(dst_sid),
+    .use_vita_time(1'b1),      .vita_time(vita_time + time_cnt));
 
-  // Ready for data only after a header is loaded
-  assign i_tready = header_out_tvalid & m_axis_data_tready;
-  // User data passes through
-  assign m_axis_data_tdata  = i_tdata;
-  assign m_axis_data_tvalid = i_tvalid & i_tkeep;
-  assign m_axis_data_tlast  = i_tlast | (word_cnt >= payload_length);
+  wire ready;
+  reg [31:0] pipe0_tdata, pipe1_tdata;
+  reg pipe0_tvalid, pipe1_tvalid;
+  reg pipe0_tlast, pipe1_tlast;
+  reg pipe0_tkeep;
+  always @(posedge clk) begin
+    if (reset | clear) begin
+      pipe0_tdata        <= 'd0;
+      pipe0_tvalid       <= 1'b0;
+      pipe0_tlast        <= 1'b0;
+      pipe0_tkeep        <= 1'b0;
+      pipe1_tdata        <= 'd0;
+      pipe1_tvalid       <= 1'b0;
+      pipe1_tlast        <= 1'b0;
+    end else begin
+      if ((ready & i_tvalid) | ~pipe0_tvalid) begin
+        pipe0_tdata    <= i_tdata;
+        pipe0_tvalid   <= i_tvalid;
+        pipe0_tlast    <= i_tlast | (word_cnt >= payload_length);
+        pipe0_tkeep    <= i_tkeep;
+      end
+      if (ready & i_tvalid & pipe0_tvalid) begin
+        pipe1_tdata    <= pipe0_tdata;
+        pipe1_tvalid   <= pipe0_tvalid & pipe0_tkeep;
+        pipe1_tlast    <= pipe0_tlast | ~i_tkeep;
+      end
+    end
+  end
+
+  assign ready              = m_axis_data_tready & header_out_tvalid;
+  assign i_tready           = ready | ~pipe0_tvalid;
+  assign m_axis_data_tdata  = pipe1_tdata;
+  assign m_axis_data_tvalid = pipe1_tvalid;
+  assign m_axis_data_tlast  = pipe1_tlast;
 
 endmodule
