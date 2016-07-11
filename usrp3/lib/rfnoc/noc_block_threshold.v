@@ -86,8 +86,7 @@ module noc_block_threshold #(
   wire [127:0] s_axis_data_tuser;
 
   axi_wrapper #(
-    .SIMPLE_MODE(0),
-    .RESIZE_OUTPUT_PACKET(1))
+    .SIMPLE_MODE(0))
   axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
