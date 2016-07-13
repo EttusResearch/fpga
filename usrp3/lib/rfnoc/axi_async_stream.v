@@ -3,19 +3,13 @@
 //
 // - Tracks and fills out header information for an axi stream that is
 //   asynchronous or does not have a 1:1 input / output ratio.
-// - User must still pass through all received words and uses the tkeep
+// - User must pass through **ALL** received words and use the tkeep
 //   signal to flag which words to keep.
 // - This module is not intended to work with decimation / interpolation blocks.
 //
 // Open design questions:
-// - User specifies end of packet with i_tlast.
-//   What if two separate tkeep "bursts" occur in a single packet?
-//   The VITA time is only valid for the first "burst" due to the gap.
-//   Should this module generate an internal tlast causing it to output
-//   two packets in this case? Or should the responsibility be on the user
-//   to assert tlast twice?
-// - If tkeep bursts occurs between packet boundaries, an internal tlast is
-//   generated splitting the burst up into two (or more) packets. This is 
+// - If a tkeep burst occurs between packet boundaries, an internal tlast is
+//   generated splitting the burst up into two (or more) packets. This is
 //   an easy way to make sure the packet sizes are bounded and the VITA
 //   time is correct. Is this desirable, since the downstream block
 //   will likely want the full burst and is then forced to aggregate packets?
@@ -34,28 +28,42 @@ module axi_async_stream #(
   input [15:0] dst_sid,
   input [$clog2(MAX_TICK_RATE)-1:0] tick_rate,
   output header_fifo_full,
+  // From AXI Wrapper
   input [WIDTH-1:0] s_axis_data_tdata,
   input [HEADER_WIDTH-1:0] s_axis_data_tuser,
   input s_axis_data_tlast,
   input s_axis_data_tvalid,
-  input s_axis_data_tready,
-  input [WIDTH-1:0] i_tdata,
-  input i_tlast,
-  input i_tvalid,
-  input i_tkeep,
-  output i_tready,
+  output s_axis_data_tready,
+  // To AXI Wrapper
   output [WIDTH-1:0] m_axis_data_tdata,
   output [HEADER_WIDTH-1:0] m_axis_data_tuser,
   output m_axis_data_tlast,
   output m_axis_data_tvalid,
-  input m_axis_data_tready
+  input m_axis_data_tready,
+  // To User
+  output [WIDTH-1:0] o_tdata,
+  output o_tlast,
+  output o_tvalid,
+  input o_tready,
+  // From User
+  input [WIDTH-1:0] i_tdata,
+  input i_tlast,
+  input i_tvalid,
+  input i_tkeep,
+  output i_tready
 );
 
-  reg first_word;
-  wire header_in_tready;
-  wire [HEADER_WIDTH-1:0] header_out_tdata;
-  wire header_out_tvalid, header_out_tready;
+  reg [WIDTH-1:0] pipe_tdata;
+  reg pipe_tvalid, pipe_tlast, pipe_tkeep;
+  wire pipe_tready;
 
+  /********************************************************
+  ** Keep track of headers for user
+  ********************************************************/
+  wire header_in_tready, header_in_tvalid, header_out_tvalid, header_out_tready;
+  wire [HEADER_WIDTH-1:0] header_in_tdata, header_out_tdata;
+
+  reg first_word = 1'b1;
   reg [15:0] word_cnt;
   reg [16+$clog2(MAX_TICK_RATE)-1:0] time_cnt; // 16 bit payload length + max tick rate increment
 
@@ -67,11 +75,11 @@ module axi_async_stream #(
     if (reset | clear) begin
       first_word <= 1'b1;
     end else begin
-      if (s_axis_data_tvalid) begin
-        if (first_word) begin
-          first_word <= 1'b0;
-        end else if (s_axis_data_tlast & s_axis_data_tready) begin
+      if (s_axis_data_tvalid & s_axis_data_tready) begin
+        if (s_axis_data_tlast) begin
           first_word <= 1'b1;
+        end else if (first_word) begin
+          first_word <= 1'b0;
         end
       end
     end
@@ -80,11 +88,14 @@ module axi_async_stream #(
   // Header FIFO
   axi_fifo #(.WIDTH(HEADER_WIDTH), .SIZE(HEADER_FIFO_SIZE)) axi_fifo (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata(s_axis_data_tuser), .i_tvalid(s_axis_data_tvalid & first_word), .i_tready(header_in_tready),
+    .i_tdata(header_in_tdata), .i_tvalid(header_in_tvalid), .i_tready(header_in_tready),
     .o_tdata(header_out_tdata), .o_tvalid(header_out_tvalid), .o_tready(header_out_tready),
     .space(), .occupied());
+
+  assign header_in_tdata   = s_axis_data_tuser;
+  assign header_in_tvalid  = s_axis_data_tvalid & o_tready & first_word;
   assign header_out_tready = i_tvalid & i_tready & (word_cnt >= payload_length);
-  assign header_fifo_full = ~header_in_tready;
+  assign header_fifo_full  = ~header_in_tready;
 
   // Track VITA time offset and word count for emptying header FIFO
   always @(posedge clk) begin
@@ -92,7 +103,7 @@ module axi_async_stream #(
       word_cnt       <= WIDTH/8;
       time_cnt       <= 0;
     end else begin
-      if (i_tvalid & i_tready) begin
+      if (pipe_tvalid & pipe_tready) begin
         if (word_cnt >= payload_length) begin
           word_cnt <= WIDTH/8;
           time_cnt <= 0;
@@ -125,39 +136,44 @@ module axi_async_stream #(
     .use_dst_sid(1'b1),        .dst_sid(dst_sid),
     .use_vita_time(1'b1),      .vita_time(vita_time + time_cnt));
 
+  /********************************************************
+  ** Data to user from AXI Wrapper
+  ** - Throttles if header FIFO is full
+  ********************************************************/
+  assign o_tdata            = s_axis_data_tdata;
+  assign o_tvalid           = s_axis_data_tvalid & header_in_tready;
+  assign o_tlast            = s_axis_data_tlast;
+  assign s_axis_data_tready = o_tready & header_in_tready;
+
+  /********************************************************
+  ** Data from user to AXI Wrapper
+  ** - Handles asserting tlast
+  ** - Asserts tlast in three cases:
+  **   1) User asserts tlast
+  **   2) End of a burst of samples (i.e. when tkeep deasserts).
+  **   3) End of a packet, in case VITA is different between packets
+  ********************************************************/
   wire ready;
-  reg [31:0] pipe0_tdata, pipe1_tdata;
-  reg pipe0_tvalid, pipe1_tvalid;
-  reg pipe0_tlast, pipe1_tlast;
-  reg pipe0_tkeep;
   always @(posedge clk) begin
     if (reset | clear) begin
-      pipe0_tdata        <= 'd0;
-      pipe0_tvalid       <= 1'b0;
-      pipe0_tlast        <= 1'b0;
-      pipe0_tkeep        <= 1'b0;
-      pipe1_tdata        <= 'd0;
-      pipe1_tvalid       <= 1'b0;
-      pipe1_tlast        <= 1'b0;
+      pipe_tdata      <= 'd0;
+      pipe_tvalid     <= 1'b0;
+      pipe_tlast      <= 1'b0;
+      pipe_tkeep      <= 1'b0;
     end else begin
-      if ((ready & i_tvalid) | ~pipe0_tvalid) begin
-        pipe0_tdata    <= i_tdata;
-        pipe0_tvalid   <= i_tvalid;
-        pipe0_tlast    <= i_tlast | (word_cnt >= payload_length);
-        pipe0_tkeep    <= i_tkeep;
-      end
-      if (ready & i_tvalid & pipe0_tvalid) begin
-        pipe1_tdata    <= pipe0_tdata;
-        pipe1_tvalid   <= pipe0_tvalid & pipe0_tkeep;
-        pipe1_tlast    <= pipe0_tlast | ~i_tkeep;
+      if (pipe_tready) begin
+        pipe_tdata    <= i_tdata;
+        pipe_tvalid   <= i_tvalid;
+        pipe_tlast    <= i_tlast;
+        pipe_tkeep    <= i_tkeep;
       end
     end
   end
 
-  assign ready              = m_axis_data_tready & header_out_tvalid;
-  assign i_tready           = ready | ~pipe0_tvalid;
-  assign m_axis_data_tdata  = pipe1_tdata;
-  assign m_axis_data_tvalid = pipe1_tvalid;
-  assign m_axis_data_tlast  = pipe1_tlast;
+  assign pipe_tready        = ~pipe_tvalid | (m_axis_data_tready & header_out_tvalid & (i_tvalid | (m_axis_data_tvalid & m_axis_data_tlast)));
+  assign i_tready           = pipe_tready;
+  assign m_axis_data_tdata  = pipe_tdata;
+  assign m_axis_data_tvalid = pipe_tvalid & pipe_tkeep & i_tvalid & header_out_tvalid;
+  assign m_axis_data_tlast  = pipe_tlast | ~i_tkeep | (word_cnt >= payload_length);
 
 endmodule

@@ -120,6 +120,48 @@ module noc_block_threshold #(
 
   /////////////////////////////////////////////////////////////////////////////
   //
+  // Form header from asynchronous data
+  //
+  /////////////////////////////////////////////////////////////////////////////
+  wire [31:0] sample_tdata, threshold_tdata;
+  wire sample_tvalid, sample_tlast, sample_tready;
+  wire threshold_tvalid, threshold_tlast, threshold_tready, threshold_tkeep;
+
+  axi_async_stream #(
+    .WIDTH(32))
+  axi_async_stream (
+    .clk(ce_clk),
+    .reset(ce_rst),
+    .clear(clear_tx_seqnum),
+    .src_sid(src_sid),
+    .dst_sid(next_dst_sid),
+    .tick_rate(1), // TODO: Needs to be set by the host, add a noc shell register
+    // From AXI Wrapper
+    .s_axis_data_tdata(m_axis_data_tdata),
+    .s_axis_data_tlast(m_axis_data_tlast),
+    .s_axis_data_tvalid(m_axis_data_tvalid),
+    .s_axis_data_tready(m_axis_data_tready),
+    .s_axis_data_tuser(m_axis_data_tuser),
+    // To AXI Wrapper
+    .m_axis_data_tdata(s_axis_data_tdata),
+    .m_axis_data_tlast(s_axis_data_tlast),
+    .m_axis_data_tvalid(s_axis_data_tvalid),
+    .m_axis_data_tready(s_axis_data_tready),
+    .m_axis_data_tuser(s_axis_data_tuser),
+    // To User code
+    .o_tdata(sample_tdata),
+    .o_tlast(sample_tlast),
+    .o_tvalid(sample_tvalid),
+    .o_tready(sample_tready),
+    // From User code
+    .i_tdata(threshold_tdata),
+    .i_tlast(threshold_tlast),
+    .i_tvalid(threshold_tvalid),
+    .i_tready(threshold_tready),
+    .i_tkeep(threshold_tkeep));
+
+  /////////////////////////////////////////////////////////////////////////////
+  //
   // Settings and readback registers
   //
   /////////////////////////////////////////////////////////////////////////////
@@ -149,43 +191,10 @@ module noc_block_threshold #(
   // Thresholding
   //
   /////////////////////////////////////////////////////////////////////////////
-  wire [31:0] threshold_tdata        = m_axis_data_tdata;
-  wire        threshold_tvalid       = m_axis_data_tvalid;
-  wire        threshold_tkeep        = $signed(m_axis_data_tdata) > $signed(threshold);
-  wire        threshold_tlast        = m_axis_data_tlast;
-  assign      m_axis_data_tready     = threshold_tready;
-
-  /////////////////////////////////////////////////////////////////////////////
-  //
-  // Form header from asynchronous data
-  //
-  /////////////////////////////////////////////////////////////////////////////
-  axi_async_stream #(
-    .WIDTH(32))
-  axi_async_stream (
-    .clk(ce_clk),
-    .reset(ce_rst),
-    .clear(clear_tx_seqnum),
-    .src_sid(src_sid),
-    .dst_sid(next_dst_sid),
-    .tick_rate(1), // TODO: Needs to be set by the host, add a noc shell register
-    // From AXI Wrapper
-    .s_axis_data_tdata(m_axis_data_tdata),
-    .s_axis_data_tlast(m_axis_data_tlast),
-    .s_axis_data_tvalid(m_axis_data_tvalid),
-    .s_axis_data_tready(m_axis_data_tready),
-    .s_axis_data_tuser(m_axis_data_tuser),
-    // User code interface
-    .i_tdata(threshold_tdata),
-    .i_tlast(threshold_tlast),
-    .i_tvalid(threshold_tvalid),
-    .i_tready(threshold_tready),
-    .i_tkeep(threshold_tkeep),
-    // To AXI Wrapper
-    .m_axis_data_tdata(s_axis_data_tdata),
-    .m_axis_data_tlast(s_axis_data_tlast),
-    .m_axis_data_tvalid(s_axis_data_tvalid),
-    .m_axis_data_tready(s_axis_data_tready),
-    .m_axis_data_tuser(s_axis_data_tuser));
+  assign threshold_tdata   = sample_tdata;
+  assign threshold_tvalid  = sample_tvalid;
+  assign threshold_tkeep   = $signed(sample_tdata) > $signed(threshold);
+  assign threshold_tlast   = sample_tlast;
+  assign sample_tready     = threshold_tready;
 
 endmodule
