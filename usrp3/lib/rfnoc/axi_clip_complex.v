@@ -1,9 +1,9 @@
 // Copyright 2016 Ettus Research
 
-module axi_round_complex #(
+module axi_clip_complex #(
   parameter WIDTH_IN  = 24,
   parameter WIDTH_OUT = 16,
-  parameter FIFOSIZE  = 0)  // leave at 0 for a normal single flop
+  parameter FIFOSIZE  = 0)  // leave at 0 for a single flop
 (
   input clk, input reset,
   input [2*WIDTH_IN-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -21,12 +21,12 @@ module axi_round_complex #(
     .oi_tdata(ii_tdata), .oi_tlast(ii_tlast), .oi_tvalid(ii_tvalid), .oi_tready(ii_tready),
     .oq_tdata(iq_tdata), .oq_tlast(iq_tlast), .oq_tvalid(iq_tvalid), .oq_tready(iq_tready));
 
-  axi_round #(.WIDTH_IN(WIDTH_IN), .WIDTH_OUT(WIDTH_OUT), .FIFOSIZE(FIFOSIZE)) axi_round_i (
+  axi_clip #(.WIDTH_IN(WIDTH_IN), .WIDTH_OUT(WIDTH_OUT), .FIFOSIZE(FIFOSIZE)) axi_clip_i (
     .clk(clk), .reset(reset),
     .i_tdata(ii_tdata), .i_tlast(ii_tlast), .i_tvalid(ii_tvalid), .i_tready(ii_tready),
     .o_tdata(oi_tdata), .o_tlast(oi_tlast), .o_tvalid(oi_tvalid), .o_tready(oi_tready));
 
-  axi_round #(.WIDTH_IN(WIDTH_IN), .WIDTH_OUT(WIDTH_OUT), .FIFOSIZE(FIFOSIZE)) axi_round_q (
+  axi_clip #(.WIDTH_IN(WIDTH_IN), .WIDTH_OUT(WIDTH_OUT), .FIFOSIZE(FIFOSIZE)) axi_clip_q (
     .clk(clk), .reset(reset),
     .i_tdata(iq_tdata), .i_tlast(iq_tlast), .i_tvalid(iq_tvalid), .i_tready(iq_tready),
     .o_tdata(oq_tdata), .o_tlast(oq_tlast), .o_tvalid(oq_tvalid), .o_tready(oq_tready));
