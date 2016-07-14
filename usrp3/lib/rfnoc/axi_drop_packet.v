@@ -36,15 +36,14 @@ module axi_drop_packet #(
       assign i_tready = o_tready;
     // All other packet sizes
     end else begin
-      reg [WIDTH-1:0] int_tdata = {WIDTH{1'b0}};
-      reg  int_tlast = 1'b0, int_tvalid;
-      wire int_tready;
+      wire [WIDTH-1:0] int_tdata;
+      wire int_tlast, int_tvalid, int_tready;
 
       reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr;
-      reg [$clog2(MAX_PKT_SIZE)-1:0] in_pkt_cnt, out_pkt_cnt;
-      reg full, empty;
+      reg [$clog2(MAX_PKT_SIZE):0] in_pkt_cnt, out_pkt_cnt;
+      reg full = 1'b0, empty = 1'b1;
 
-      reg [WIDTH:0] mem[0:2**($clog2(MAX_PKT_SIZE))-1];
+      reg [WIDTH:0] mem[2**($clog2(MAX_PKT_SIZE))-1:0];
       // Initialize RAM to all zeros
       integer i;
       initial begin
@@ -53,26 +52,35 @@ module axi_drop_packet #(
         end
       end
 
+      assign i_tready   = ~full;
+      wire write        = i_tvalid & i_tready;
+      wire read         = int_tvalid & int_tready;
+      wire almost_full  = (wr_addr == rd_addr-1'b1);
+      wire almost_empty = (wr_addr == rd_addr+1'b1);
+
       // Write logic
       always @(posedge clk) begin
         if (reset | clear) begin
-          wr_addr       <= 'd0;
-          prev_wr_addr  <= 'd0;
-          in_pkt_cnt    <= 'd0;
+          wr_addr       <= 0;
+          prev_wr_addr  <= 0;
+          in_pkt_cnt    <= 0;
           full          <= 1'b0;
         end else begin
-          if (i_tvalid & i_tready) begin
-            mem[wr_addr] <= {i_tdata,i_tlast};
+          if (write) begin
+            mem[wr_addr] <= {i_tlast,i_tdata};
             wr_addr      <= wr_addr + 1'b1;
           end
-          if (~full & (wr_addr == rd_addr-1'b1) & i_tvalid & i_tready) begin
-            full         <= 1'b1;
-          end
-          if (full & int_tvalid & int_tready) begin
-            full         <= 1'b0;
+          if (almost_full) begin
+            if (write & ~read) begin
+              full       <= 1'b1;
+            end
+          end else begin
+            if (~write & read) begin
+              full       <= 1'b0;
+            end
           end
           // Rewind logic
-          if (i_tvalid & i_tready & i_tlast) begin
+          if (write & i_tlast) begin
             if (i_terror) begin
               wr_addr      <= prev_wr_addr;
             end else begin
@@ -83,43 +91,40 @@ module axi_drop_packet #(
         end
       end
 
-      assign i_tready = ~full;
-
       // Read logic
-      wire hold = (in_pkt_cnt == out_pkt_cnt);
+      wire hold         = (in_pkt_cnt == out_pkt_cnt);
+      assign int_tdata  = mem[rd_addr][WIDTH-1:0];
+      assign int_tlast  = mem[rd_addr][WIDTH];
+      assign int_tvalid = ~empty & ~hold;
 
       always @(posedge clk) begin
         if (reset | clear) begin
-          rd_addr     <= 'd0;
-          out_pkt_cnt <= 'd0;
+          rd_addr     <= 0;
+          out_pkt_cnt <= 0;
           empty       <= 1'b1;
-          int_tvalid  <= 1'b0;
         end else begin
-          if (~int_tvalid | int_tready) begin
-            {int_tdata,int_tlast} <= mem[rd_addr];
-            int_tvalid            <= ~empty & ~hold;
-          end
-          if ((~empty & ~hold) & (~int_tvalid | int_tready)) begin
+          if (read) begin
             rd_addr      <= rd_addr + 1;
           end
-          if (empty & i_tvalid & i_tready) begin
-            empty        <= 1'b0;
-          end
-          if ((~empty & ~hold) & (wr_addr-1'b1 == rd_addr) & (~int_tvalid | int_tready)) begin
-            if (~i_tvalid) begin
+          if (almost_empty) begin
+            if (read & ~write) begin
               empty      <= 1'b1;
+            end
+          end else begin
+            if (~read & write) begin
+              empty      <= 1'b0;
             end
           end
           // Prevent output until we have a full packet
-          if (int_tvalid & int_tready & int_tlast) begin
+          if (read & int_tlast) begin
             out_pkt_cnt  <= out_pkt_cnt + 1'b1;
           end
         end
       end
 
       // Output register stage
-      // Added specifically to prevent Vivado synth from putting block RAM
-      // output register in a slice instead of using the one block RAM primitive
+      // Added specifically to prevent Vivado synth from using a slice register instead 
+      // of the block RAM primative's output register.
       axi_fifo_flop2 #(.WIDTH(WIDTH+1)) axi_fifo_flop2 (
         .clk(clk), .reset(reset), .clear(clear),
         .i_tdata({int_tlast,int_tdata}), .i_tvalid(int_tvalid), .i_tready(int_tready),

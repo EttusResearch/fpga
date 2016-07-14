@@ -176,7 +176,7 @@ module axi_drop_packet_tb();
       m_axis.push_word({error,cnt}, i == MAX_PKT_SIZE/4-1);
       cnt++;
     end
-    $display("Wrie error packet with %0d words to FIFO", MAX_PKT_SIZE/4);
+    $display("Write error packet with %0d words to FIFO", MAX_PKT_SIZE/4);
     error = 1;
     for (int i = 0; i < MAX_PKT_SIZE/4; i++) begin
       $sformat(s, "FIFO prematurely full at %0d (tready not asserted!)", i);
@@ -229,18 +229,18 @@ module axi_drop_packet_tb();
     cnt = 0;
     fork
     begin
-      for (int k = 0; k < 1000*MAX_PKT_SIZE+16; k++) begin
-        m_axis.push_word({error,k}, k[4:0] == 5'b10000);
+      for (int k = 1; k <= 5000*MAX_PKT_SIZE; k++) begin
+        m_axis.push_word({error,k}, (k % 16) == 0);
         random_wait(0,16);
       end
     end
     begin
-      for (int k = 0; k < 1000*MAX_PKT_SIZE; k++) begin
+      for (int k = 1; k <= 5000*MAX_PKT_SIZE; k++) begin
         random_wait(0,16);
         s_axis.pull_word(check, last);
         $sformat(s, "FIFO output incorrect! Expected: %0d, Actual: %0d", k, check);
         `ASSERT_FATAL(check == k, s);
-        if (k[4:0] == 5'b10000) begin
+        if ((k % 16) == 0) begin
           `ASSERT_FATAL(last, "tlast not asserted!");
         end else begin
           `ASSERT_FATAL(~last, "tlast asserted prematurely!");
