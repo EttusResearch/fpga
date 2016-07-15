@@ -151,14 +151,15 @@ module source_flow_control #(
          else
             case(go)
             1'b0:
-               // NOTE: We must use a proper ">" comparison! Using (go_until_seqnum - current_seqnum != 0) causes all sorts of issues!
-               if(in_tvalid & (go_until_seqnum > current_seqnum))  // FIXME will need to handle wrap of 32-bit seqnum
+               // Note: "!=" works even with 32-bit wrap around. If a fc packet with an invalid seqnum
+               //       is received, this could get into a bad state.
+               if(in_tvalid & (go_until_seqnum != current_seqnum))
                   go <= 1'b1;
 
             1'b1:
                if(in_tvalid & in_tready & in_tlast)
                   go <= 1'b0;
-            endcase // case (go)      
+            endcase // case (go)
       end
 
    assign debug = { window_enable, go, go_until_seqnum[5:0], last_seqnum_consumed[11:0], current_seqnum[11:0] };
