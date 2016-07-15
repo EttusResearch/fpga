@@ -609,7 +609,7 @@ module x300_core (
       .NUM_CHANNELS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
-      .USE_SPI_CLK(1))
+      .USE_SPI_CLK(0))
    noc_block_radio_core_i0 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -642,7 +642,7 @@ module x300_core (
       .NUM_CHANNELS(2),
       .STR_SINK_FIFOSIZE(15),
       .MTU(13),
-      .USE_SPI_CLK(1))
+      .USE_SPI_CLK(0))
    noc_block_radio_core_i1 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
