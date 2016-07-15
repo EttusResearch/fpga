@@ -46,20 +46,16 @@ module radio_core #(
   wire [31:0] test_readback;
   wire db_rb_stb;
   wire [63:0] db_rb_data;
-  always @(posedge clk) begin
-    if (reset) begin
-      rb_data <= 64'd0;
-    end else begin
-      case (rb_addr)
-        RB_VITA_TIME    : {rb_stb, rb_data} <= {1'b1, vita_time};
-        RB_VITA_LASTPPS : {rb_stb, rb_data} <= {1'b1, vita_time_lastpps};
-        RB_TEST         : {rb_stb, rb_data} <= {1'b1, {rx, test_readback}};
-        RB_TXRX         : {rb_stb, rb_data} <= {1'b1, {tx, rx}};
-        RB_RADIO_NUM    : {rb_stb, rb_data} <= {1'b1, {32'd0, RADIO_NUM[31:0]}};
-        // All others default to daughter board control readback data
-        default         : {rb_stb, rb_data} <= {db_rb_stb, db_rb_data};
-      endcase
-    end
+  always @(*) begin
+    case (rb_addr)
+      RB_VITA_TIME    : {rb_stb, rb_data} <= {db_rb_stb, vita_time};
+      RB_VITA_LASTPPS : {rb_stb, rb_data} <= {db_rb_stb, vita_time_lastpps};
+      RB_TEST         : {rb_stb, rb_data} <= {db_rb_stb, {rx, test_readback}};
+      RB_TXRX         : {rb_stb, rb_data} <= {db_rb_stb, {tx, rx}};
+      RB_RADIO_NUM    : {rb_stb, rb_data} <= {db_rb_stb, {32'd0, RADIO_NUM[31:0]}};
+      // All others default to daughter board control readback data
+      default         : {rb_stb, rb_data} <= {db_rb_stb, db_rb_data};
+    endcase
   end
 
   // Set this register to loop TX data directly to RX data.
