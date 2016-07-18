@@ -21,7 +21,7 @@ module cic_interpolate #(
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] integrator [0:N-1];
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] differentiator [0:N-1];
   reg  [WIDTH+(N*$clog2(MAX_RATE+1))-1:0] pipeline [0:N-1];
-  
+
   reg  strobe_in_int;
 
   integer i;
@@ -87,7 +87,8 @@ module cic_interpolate #(
   generate
     for (l = 1; l <= MAX_RATE; l = l + 1) begin
       // N*log2(rate), $clog2(rate) = ceil(log2(rate)) which rounds to nearest shift without overflow
-      assign signal_out_shifted[l] = integrator[N-1][$clog2(l**N)+WIDTH-1:$clog2(l**N)];
+      round #(.bits_in($clog2(l**N)+WIDTH+1), .bits_out(WIDTH))
+      round_sum (.in({integrator[N-1][$clog2(l**N)+WIDTH-1:0], 1'b0}), .out(signal_out_shifted[l]), .err());
     end
   endgenerate
   assign signal_out_shifted[0] = integrator[N-1][WIDTH-1:0];
