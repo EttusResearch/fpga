@@ -40,7 +40,7 @@ architecture rtl of addsub_vhdl is
     generic (
       WIDTH       : natural := 16;
       ACTIVE_MASK : std_ulogic_vector(3 downto 0);
-      FIFOSIZE    : natural := 6);
+      FIFO_SIZE    : natural := 6);
     port (
       clk       : in std_ulogic;
       reset     : in std_ulogic;
@@ -110,7 +110,7 @@ begin
     generic map (
       WIDTH       => 4 * width_g,
       ACTIVE_MASK => "0011",
-      FIFOSIZE    => 6)
+      FIFO_SIZE    => 6)
     port map (
       clk       => clk_i,
       reset     => rst_i,
