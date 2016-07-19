@@ -56,7 +56,7 @@ module f15_packetizer #(
 			// Force Reload
 			decim_cnt <= { 1'b0, cfg_decim };
 		else if (in_valid & in_bin_last & in_last)
-			if (decim_cnt[8])
+			if (decim_cnt[DECIM_WIDTH])
 				// Reload
 				decim_cnt <= { 1'b0, cfg_decim };
 			else
