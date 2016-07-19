@@ -10,7 +10,9 @@
 `default_nettype none
 `endif
 
-module axi_logpwr (
+module axi_logpwr #(
+	parameter [1:0] RANDOM_MODE = 2'b11
+)(
 	input  clk, input reset,
 	input  [31:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
 	output [15:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready
@@ -64,6 +66,7 @@ module axi_logpwr (
 		.in_imag_0(in_imag_0),
 		.out_12(out_logpwr_12),
 		.rng(rng),
+		.random_mode(RANDOM_MODE),
 		.clk(clk),
 		.rst(reset)
 	);
