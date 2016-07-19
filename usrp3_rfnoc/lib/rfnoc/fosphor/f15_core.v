@@ -453,7 +453,7 @@ module f15_core (
 	);
 
 	// AXI mapping
-	assign o_tdata = { out_fifo_do[7:0], out_fifo_do[15:8], out_fifo_do[23:16], out_fifo_do[31:24] };
+	assign o_tdata = out_fifo_do[31:0];
 	assign o_tlast = out_fifo_do[32];
 	assign o_teob  = out_fifo_do[33];
 	assign o_tvalid = ~out_fifo_empty;

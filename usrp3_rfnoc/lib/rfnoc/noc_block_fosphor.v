@@ -67,6 +67,7 @@ module noc_block_fosphor #(
   wire [127:0] m_axis_data_tuser;
 
   wire [31:0]  s_axis_data_tdata;
+  wire [31:0]  s_axis_data_tdata_swap;
   wire         s_axis_data_tlast;
   wire         s_axis_data_tvalid;
   wire         s_axis_data_tready;
@@ -90,7 +91,7 @@ module noc_block_fosphor #(
     .m_axis_data_tvalid(m_axis_data_tvalid),
     .m_axis_data_tready(m_axis_data_tready),
     .m_axis_data_tuser(m_axis_data_tuser),
-    .s_axis_data_tdata(s_axis_data_tdata),
+    .s_axis_data_tdata(s_axis_data_tdata_swap),
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
@@ -200,6 +201,9 @@ module noc_block_fosphor #(
         .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
         .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready),
         .o_teob(s_axis_data_teob));
+
+  // Endian swap
+  s_axis_data_tdata_swap <= { s_axis_data_tdata[7:0], s_axis_data_tdata[15:8], s_axis_data_tdata[23:16], s_axis_data_tdata[31:24] };
 
   // CHDR header handling
   reg chdr_cap_next, chdr_pending, chdr_cur_valid;
