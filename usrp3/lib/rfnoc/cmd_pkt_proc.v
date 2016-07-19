@@ -162,7 +162,7 @@ module cmd_pkt_proc #(
           set_stb         <= 1'b0;
           if (int_tvalid & int_tready) begin
             // Register packet header fields for later use
-            has_time_hold <= USE_TIME[0] ? has_time : 1'b0;
+            has_time_hold <= has_time;
             seqnum_hold   <= seqnum;
             src_sid_hold  <= src_sid;
             dst_sid_hold  <= dst_sid;
