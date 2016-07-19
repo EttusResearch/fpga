@@ -291,29 +291,26 @@ interface rfnoc_block_streamer #(
       int unsigned bytes_per_word;
       int unsigned lines_per_pkt;
       int unsigned num_pkts;
-      logic [63:0] timestamp[$];
+      logic [63:0] timestamp;
 
       check_downstream(stream);
 
       bytes_per_word = data_type[stream].bytes_per_word;
       lines_per_pkt  = spp[stream]*bytes_per_word/bytes_per_cvita_line;
       num_pkts       = $ceil(real'(payload.size())/lines_per_pkt);
-      // Increment timestamps
-      for (int unsigned i = 0; i < num_pkts; i++) begin
-        timestamp.push_back(metadata.timestamp + i*ticks_per_word[stream]*(bytes_per_word/bytes_per_cvita_line));
-      end
+      timestamp      = metadata.timestamp;
       // Break up payload across multiple packets
       for (int unsigned i = 0; i < num_pkts; i++) begin
         if (i == num_pkts-1) begin
           pkt.payload = payload[i*lines_per_pkt:payload.size-1];
           pkt.hdr = '{pkt_type:DATA, has_time:metadata.has_time, eob:metadata.eob /* Set EOB on final packet */,
                       seqnum:data_seqnum[stream], length:8*(pkt.payload.size()+metadata.has_time+1),
-                      src_sid:src_sid[stream], dst_sid:dst_sid[stream], timestamp:timestamp[i]};
+                      src_sid:src_sid[stream], dst_sid:dst_sid[stream], timestamp:timestamp};
         end else begin
           pkt.payload = payload[i*lines_per_pkt:(i+1)*lines_per_pkt-1];
           pkt.hdr = '{pkt_type:DATA, has_time:metadata.has_time, eob:1'b0,
                       seqnum:data_seqnum[stream], length:8*(pkt.payload.size()+metadata.has_time+1),
-                      src_sid:src_sid[stream], dst_sid:dst_sid[stream], timestamp:timestamp[i]};
+                      src_sid:src_sid[stream], dst_sid:dst_sid[stream], timestamp:timestamp};
         end
         if (pkt.payload.size() != lines_per_pkt) begin
           $info("rfnoc_block_streamer::push(): Sending partial packet with %0d words (type: %s)",
@@ -321,6 +318,7 @@ interface rfnoc_block_streamer #(
         end
         push_pkt(pkt, stream);
         data_seqnum[stream] += 1'b1;
+        timestamp += ticks_per_word[stream]*spp[stream];
       end
     end
   endtask
@@ -974,6 +972,7 @@ endinterface
            `"to_noc_block_name`",sid_``to_noc_block_name >> 4,to_block_port); \
    // Clear block, write be any value \
   tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'hC1EA12, from_block_port); \
+  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'hC1EA12, to_block_port); \
   // Set block's src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid \
   // Default response dst in / out SIDs to test bench block \
   tb_config.write_reg(sid_``from_noc_block_name, SR_SRC_SID, sid_``from_noc_block_name + from_block_port, from_block_port); \
