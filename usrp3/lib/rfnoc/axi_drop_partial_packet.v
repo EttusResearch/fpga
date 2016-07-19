@@ -54,16 +54,17 @@ module axi_drop_partial_packet #(
 
       reg small_pkt, large_pkt;
       wire hold_last_sample;
-      reg release_due_to_error;
+      reg release_last;
       reg [$clog2(MAX_PKT_SIZE+1)-1:0] in_cnt;
-      reg [15:0] in_pkt_cnt, out_pkt_cnt;
+      reg [15:0] in_pkt_cnt, in_pkt_cnt_hold, out_pkt_cnt;
       always @(posedge clk) begin
         if (reset | clear) begin
           small_pkt             <= 1'b0;
           large_pkt             <= 1'b0;
-          release_due_to_error  <= 1'b0;
+          release_last          <= 1'b0;
           in_cnt                <= 1;
           in_pkt_cnt            <= 0;
+          in_pkt_cnt_hold       <= 0;
           out_pkt_cnt           <= 0;
         end else begin
           if (i_tvalid & i_tready) begin
@@ -91,22 +92,22 @@ module axi_drop_partial_packet #(
               end
             end
           end
-          if (i_tvalid & i_tready & i_tlast) begin
+          if (i_tvalid & i_tready & i_tlast & ~i_terror) begin
             in_pkt_cnt     <= in_pkt_cnt + 1'b1;
           end
           if (int_tvalid & int_tready & int_tlast & ~hold_last_sample) begin
             out_pkt_cnt    <= out_pkt_cnt + 1'b1;
           end
-          if (((i_tvalid & i_tready & i_terror) | flush) & (in_pkt_cnt != out_pkt_cnt)) begin
-            release_due_to_error <= 1'b1;
-          end
-          if (release_due_to_error & int_tvalid & int_tready & int_tlast & (in_pkt_cnt == out_pkt_cnt-1'b1)) begin
-            release_due_to_error <= 1'b0;
+          if ((i_tvalid & i_tready & i_terror) | flush) begin
+            release_last         <= 1'b1;
+            in_pkt_cnt_hold      <= in_pkt_cnt;
+          end else if (in_pkt_cnt_hold == out_pkt_cnt) begin
+            release_last         <= 1'b0;
           end
         end
       end
 
-      assign hold_last_sample = ((in_pkt_cnt == out_pkt_cnt) | (in_pkt_cnt == out_pkt_cnt+1)) & ~release_due_to_error & (pkt_size != 1);
+      assign hold_last_sample = ((in_pkt_cnt == out_pkt_cnt) | ((in_pkt_cnt == out_pkt_cnt+1) & ~release_last)) & (pkt_size != 1);
 
       assign i_tlast_int = i_tlast | large_pkt;
       assign i_terror    = i_tlast & i_tvalid & (small_pkt | large_pkt);

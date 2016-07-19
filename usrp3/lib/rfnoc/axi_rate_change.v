@@ -344,7 +344,7 @@ module axi_rate_change #(
     .MAX_PKT_SIZE(MAX_N),
     .SR_PKT_SIZE_ADDR(SR_N_ADDR))
   axi_drop_partial_packet (
-    .clk(clk), .reset(reset), .clear(clear),
+    .clk(clk), .reset(reset), .clear(clear | clear_user),
     .flush(word_cnt_div_n_tvalid & word_cnt_div_n_tready),  // Flush on EOB
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata({i_reg_tlast,i_reg_tdata}), .i_tvalid(i_reg_tvalid), .i_tlast(i_reg_tlast_int), .i_tready(i_reg_tready_int),
