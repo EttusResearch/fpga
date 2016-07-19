@@ -35,7 +35,7 @@ module axi_tag_time #(
   output s_axis_data_tready,
   // To user
   output [AXIS_WIDTH-1:0] m_axis_data_tdata,
-  input [HEADER_WIDTH-1:0] m_axis_data_tuser,
+  output [HEADER_WIDTH-1:0] m_axis_data_tuser,
   output [NUM_TAGS-1:0] m_axis_data_tag,
   output m_axis_data_tlast,
   output m_axis_data_tvalid,
