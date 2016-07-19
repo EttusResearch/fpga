@@ -49,7 +49,7 @@ module noc_block_ddc #(
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time),
-    .rb_stb({NUM_CHAINS{1'b1}}), .rb_data(rb_data), .rb_addr(rb_addr),
+    .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -78,11 +78,11 @@ module noc_block_ddc #(
   localparam SR_N_ADDR        = 128;
   localparam SR_M_ADDR        = 129;
   localparam SR_CONFIG_ADDR   = 130;
-  localparam SR_FREQ_ADDR     = 131;
-  localparam SR_SCALE_IQ_ADDR = 132;
-  localparam SR_DECIM_ADDR    = 133;
-  localparam SR_MUX_ADDR      = 134;
-  localparam SR_COEFFS_ADDR   = 135;
+  localparam SR_FREQ_ADDR     = 132;
+  localparam SR_SCALE_IQ_ADDR = 133;
+  localparam SR_DECIM_ADDR    = 134;
+  localparam SR_MUX_ADDR      = 136;
+  localparam SR_COEFFS_ADDR   = 137;
 
   genvar i;
   generate
@@ -140,48 +140,48 @@ module noc_block_ddc #(
         .m_axis_pkt_len_tvalid(),
         .m_axis_pkt_len_tready());
 
-      // Mark sample to trigger timed tune
-      wire [63:0] vita_time_pkt;
-      cvita_hdr_decoder cvita_hdr_decoder (
-        .header(m_axis_data_tuser),
-        .pkt_type(), .eob(), .has_time(),
-        .seqnum(), .length(), .payload_length(),
-        .src_sid(), .dst_sid(),
-        .vita_time(vita_time_pkt));
+      ////////////////////////////////////////////////////////////
+      //
+      // Timed Commands
+      //
+      ////////////////////////////////////////////////////////////
+      wire [31:0]  m_axis_tagged_tdata;
+      wire         m_axis_tagged_tlast;
+      wire         m_axis_tagged_tvalid;
+      wire         m_axis_tagged_tready;
+      wire [127:0] m_axis_tagged_tuser;
+      wire         m_axis_tagged_tag;
 
-      reg first_word = 1'b1;
-      reg wait_for_trigger;
-      wire trigger;
-      reg [63:0] vita_time_now, set_time_hold = 64'd0;
-      always @(posedge ce_clk) begin
-        if (ce_rst | clear_tx_seqnum[i]) begin
-          first_word       <= 1'b1;
-          wait_for_trigger <= 1'b0;
-        end else begin
-          if (m_axis_data_tvalid & m_axis_data_tready) begin
-            if (m_axis_data_tlast) begin
-              first_word <= 1'b1;
-            end else begin
-              first_word <= 1'b0;
-            end
-          end
-          if (first_word) begin
-            vita_time_now <= vita_time_pkt;
-          end else if (m_axis_data_tvalid & m_axis_data_tready) begin
-            vita_time_now <= vita_time_now + 1;
-          end
-          if (set_stb_int & (set_addr_int == SR_FREQ_ADDR)) begin
-            wait_for_trigger <= 1'b1;
-            set_time_hold    <= set_time_int;
-          end else if (trigger & m_axis_data_tvalid & m_axis_data_tready) begin
-            wait_for_trigger <= 1'b0;
-          end
-        end
-      end
+      wire         out_set_stb;
+      wire [7:0]   out_set_addr;
+      wire [31:0]  out_set_data;
+      wire         timed_set_stb;
+      wire [7:0]   timed_set_addr;
+      wire [31:0]  timed_set_data;
 
-      assign rb_stb[i] = ~wait_for_trigger;
-      assign trigger   = (vita_time_now >= set_time_hold) & wait_for_trigger;
+      wire         timed_cmd_fifo_full;
 
+      axi_tag_time #(
+        .NUM_TAGS(1),
+        .SR_TAG_ADDRS(SR_FREQ_ADDR))
+      axi_tag_time (
+        .clk(ce_clk),
+        .reset(ce_rst),
+        .clear(clear),
+        .tick_rate(16'd1),
+        .timed_cmd_fifo_full(timed_cmd_fifo_full),
+        .s_axis_data_tdata(m_axis_data_tdata), .s_axis_data_tlast(m_axis_data_tlast),
+        .s_axis_data_tvalid(m_axis_data_tvalid), .s_axis_data_tready(m_axis_data_tready),
+        .s_axis_data_tuser(m_axis_data_tuser),
+        .m_axis_data_tdata(m_axis_tagged_tdata), .m_axis_data_tlast(m_axis_tagged_tlast),
+        .m_axis_data_tvalid(m_axis_tagged_tvalid), .m_axis_data_tready(m_axis_tagged_tready),
+        .m_axis_data_tuser(m_axis_tagged_tuser), .m_axis_data_tag(m_axis_tagged_tag),
+        .in_set_stb(set_stb_int), .in_set_addr(set_addr_int), .in_set_data(set_data_int), .in_set_time(set_time_int),
+        .out_set_stb(out_set_stb), .out_set_addr(out_set_addr), .out_set_data(out_set_data),
+        .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data));
+
+      // Hold off reading additional commands if internal FIFO is full
+      assign rb_stb[i] = ~timed_cmd_fifo_full;
 
       ////////////////////////////////////////////////////////////
       //
@@ -189,9 +189,14 @@ module noc_block_ddc #(
       //
       ////////////////////////////////////////////////////////////
       wire [31:0] sample_in_tdata, sample_out_tdata;
-      wire sample_in_tvalid, sample_in_tlast, sample_in_tready;
-      wire sample_out_tvalid, sample_out_tlast, sample_out_tready;
+      wire sample_in_tuser;
+      wire sample_in_tvalid, sample_in_tready;
+      wire sample_out_tvalid, sample_out_tready;
       wire nc;
+      wire warning_header_fifo_full;
+      wire warning_long_throttle;
+      wire error_extra_outputs;
+      wire error_drop_pkt_lockup;
       axi_rate_change #(
         .WIDTH(33),
         .MAX_N(2040),
@@ -202,15 +207,20 @@ module noc_block_ddc #(
       axi_rate_change (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
-        .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
-        .i_tdata({trigger,m_axis_data_tdata}), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid),
-        .i_tready(m_axis_data_tready), .i_tuser(m_axis_data_tuser),
+        .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
+        .i_tdata({m_axis_tagged_tag,m_axis_tagged_tdata}), .i_tlast(m_axis_tagged_tlast),
+        .i_tvalid(m_axis_tagged_tvalid), .i_tready(m_axis_tagged_tready),
+        .i_tuser(m_axis_tagged_tuser),
         .o_tdata({nc,s_axis_data_tdata}), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid),
         .o_tready(s_axis_data_tready), .o_tuser(s_axis_data_tuser),
-        .m_axis_data_tdata({sample_in_tlast,sample_in_tdata}), .m_axis_data_tlast(), .m_axis_data_tvalid(sample_in_tvalid),
-        .m_axis_data_tready(sample_in_tready),
-        .s_axis_data_tdata({1'b0,sample_out_tdata}), .s_axis_data_tlast(1'b0), .s_axis_data_tvalid(sample_out_tvalid),
-        .s_axis_data_tready(sample_out_tready));
+        .m_axis_data_tdata({sample_in_tuser,sample_in_tdata}), .m_axis_data_tlast(),
+        .m_axis_data_tvalid(sample_in_tvalid), .m_axis_data_tready(sample_in_tready),
+        .s_axis_data_tdata({1'b0,sample_out_tdata}), .s_axis_data_tlast(1'b0),
+        .s_axis_data_tvalid(sample_out_tvalid), .s_axis_data_tready(sample_out_tready),
+        .warning_header_fifo_full(warning_header_fifo_full),
+        .warning_long_throttle(warning_long_throttle),
+        .error_extra_outputs(error_extra_outputs),
+        .error_drop_pkt_lockup(error_drop_pkt_lockup));
 
       ////////////////////////////////////////////////////////////
       //
@@ -225,11 +235,13 @@ module noc_block_ddc #(
         .SR_COEFFS_ADDR(SR_COEFFS_ADDR))
       ddc (
         .clk(ce_clk), .reset(ce_rst), .clear(clear),
-        .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
-        .sample_in_tdata(sample_in_tdata), .sample_in_tvalid(sample_in_tvalid),
-        .sample_in_tlast(sample_in_tlast), .sample_in_tready(sample_in_tready),
-        .sample_out_tdata(sample_out_tdata), .sample_out_tvalid(sample_out_tvalid),
-        .sample_out_tlast(), .sample_out_tready(sample_out_tready));
+        .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
+        .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),
+        .sample_in_tdata(sample_in_tdata), .sample_in_tlast(1'b0),
+        .sample_in_tvalid(sample_in_tvalid), .sample_in_tready(sample_in_tready),
+        .sample_in_tuser(sample_in_tuser),
+        .sample_out_tdata(sample_out_tdata), .sample_out_tlast(),
+        .sample_out_tvalid(sample_out_tvalid), .sample_out_tready(sample_out_tready));
     end
   endgenerate
 

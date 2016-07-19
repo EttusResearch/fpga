@@ -14,10 +14,12 @@ module ddc #(
 )(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
+  input timed_set_stb, input [7:0] timed_set_addr, input [31:0] timed_set_data,
   input [31:0] sample_in_tdata,
   input sample_in_tvalid,
   input sample_in_tlast,
   output sample_in_tready,
+  input sample_in_tuser,
   output [31:0] sample_out_tdata,
   output sample_out_tvalid,
   input sample_out_tready,
@@ -28,10 +30,10 @@ module ddc #(
   localparam  cwidth = 25;
   localparam  zwidth = 24;
 
-  wire [31:0] sr_phase_inc;
-  wire sr_phase_inc_changed;
+  wire [31:0] sr_phase_inc, sr_phase_inc_timed_tdata;
+  wire sr_phase_inc_valid, sr_phase_inc_timed_tvalid, sr_phase_inc_timed_tready;
   reg [31:0] phase_inc;
-  reg [31:0]  phase;
+  reg [31:0] phase;
 
   wire [17:0] scale_factor;
   wire last_cordic, last_cic;
@@ -56,6 +58,7 @@ module ddc #(
 
   reg sample_mux_stb;
   reg sample_mux_last;
+  reg sample_mux_set_freq;
   reg [WIDTH-1:0] sample_mux_i, sample_mux_q;
   wire realmode;
   wire swap_iq;
@@ -69,17 +72,29 @@ module ddc #(
 
   setting_reg #(.my_addr(SR_FREQ_ADDR)) set_freq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-    .in(set_data),.out(sr_phase_inc),.changed());
+    .in(set_data),.out(sr_phase_inc),.changed(sr_phase_inc_valid));
 
+  assign sr_phase_inc_timed_tready = sample_mux_stb & sample_mux_set_freq;
+  axi_setting_reg #(
+    .ADDR(SR_FREQ_ADDR),
+    .USE_FIFO(1),
+    .FIFO_SIZE(5))
+  set_freq_timed (
+    .clk(clk), .reset(reset | clear), .error_stb(),
+    .set_stb(timed_set_stb), .set_addr(timed_set_addr), .set_data(timed_set_data),
+    .o_tdata(sr_phase_inc_timed_tdata), .o_tlast(), .o_tvalid(sr_phase_inc_timed_tvalid),
+    .o_tready(sr_phase_inc_timed_tready));
+
+  // Load phase increment depending on whether or not the settings bus write is
+  // a timed command. Non-timed commands get priority.
   always @(posedge clk) begin
     if (reset) begin
       phase_inc <= 'd0;
     end else begin
-      // HACK: To enable timed tuning, tlast is used as the trigger.
-      //       Clear is also used to load the phase inc in case
-      //       of an overrun condition.
-      if ((sample_in_tvalid & sample_in_tready & sample_in_tlast) | clear) begin
+      if (sr_phase_inc_valid | clear) begin
         phase_inc <= sr_phase_inc;
+      end else if (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready) begin
+        phase_inc <= sr_phase_inc_timed_tdata;
       end
     end
   end
@@ -133,13 +148,15 @@ module ddc #(
   // MUX so we can do realmode signals on either input
   always @(posedge clk) begin
     if (reset | clear) begin
-      sample_mux_i    <= 'd0;
-      sample_mux_q    <= 'd0;
-      sample_mux_stb  <= 1'b0;
-      sample_mux_last <= 1'b0;
+      sample_mux_i        <= 'd0;
+      sample_mux_q        <= 'd0;
+      sample_mux_stb      <= 1'b0;
+      sample_mux_last     <= 1'b0;
+      sample_mux_set_freq <= 1'b0;
     end else begin
-      sample_mux_stb  <= sample_in_tvalid;
-      sample_mux_last <= sample_in_tlast;
+      sample_mux_stb      <= sample_in_tvalid & sample_in_tready;
+      sample_mux_last     <= sample_in_tlast;
+      sample_mux_set_freq <= sample_in_tuser;
       if (swap_iq) begin
         sample_mux_i <= sample_in_q;
         sample_mux_q <= realmode ? 'd0 : sample_in_i;
@@ -498,7 +515,6 @@ module ddc #(
     .clk(clk), .reset(reset | clear), .in(i_clip), .strobe_in(strobe_clip), .out(sample_out[31:16]), .strobe_out(sample_out_stb));
   round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16), .DISABLE_SD(1)) round_q (
     .clk(clk), .reset(reset | clear), .in(q_clip), .strobe_in(strobe_clip), .out(sample_out[15:0]), .strobe_out());
-
 
   strobed_to_axi #(
     .WIDTH(32),
