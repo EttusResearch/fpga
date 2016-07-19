@@ -81,8 +81,8 @@ module noc_block_ddc #(
   localparam SR_FREQ_ADDR     = 132;
   localparam SR_SCALE_IQ_ADDR = 133;
   localparam SR_DECIM_ADDR    = 134;
-  localparam SR_MUX_ADDR      = 136;
-  localparam SR_COEFFS_ADDR   = 137;
+  localparam SR_MUX_ADDR      = 135;
+  localparam SR_COEFFS_ADDR   = 136;
 
   genvar i;
   generate
