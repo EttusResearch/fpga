@@ -24,12 +24,14 @@ module ram_2port
 
    reg [DWIDTH-1:0] ram [(1<<AWIDTH)-1:0];
 
+   /*
    integer i;
    initial begin
      for (i=0;i<(1<<AWIDTH);i=i+1) begin
        ram[i] <= {DWIDTH{1'b0}};
      end
    end
+   */
 
    always @(posedge clka) begin
       if (ena)
