@@ -20,8 +20,11 @@ module f15_core (
 	input  [15:0] cfg_trise,  input [15:0] cfg_tdecay,
 	input  [15:0] cfg_alpha,  input [15:0] cfg_epsilon,
 	input  [11:0] cfg_decim, input cfg_decim_changed,
+	input  [ 1:0] cfg_wf_div, input cfg_wf_mode,
+	input  [ 7:0] cfg_wf_decim, input cfg_wf_decim_changed,
 	input  [31:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
-	output [31:0] o_hist_tdata, output o_hist_tlast, output o_hist_tvalid, input o_hist_tready, output o_hist_teob
+	output [31:0] o_hist_tdata, output o_hist_tlast, output o_hist_tvalid, input o_hist_tready, output o_hist_teob,
+	output [31:0] o_wf_tdata,   output o_wf_tlast,   output o_wf_tvalid,   input o_wf_tready
 );
 	// Signals
 	reg [31:0] in_data;
@@ -76,6 +79,20 @@ module f15_core (
 	wire out_hist_fifo_rden;
 	wire out_hist_fifo_empty;
 
+	wire [11:0] wf_data_2, wf_data_5, wf_data_6;
+	wire [15:0] wf_logpwr_0, wf_logpwr_2;
+	wire [ 7:0] wf_out_data_5;
+	wire wf_last_0, wf_last_2, wf_out_last_5;
+	wire wf_valid_0, wf_valid_2, wf_out_valid_5;
+
+	reg  [ 1:0] out_wf_cnt;
+	reg  [32:0] out_wf_fifo_di;
+	reg  out_wf_fifo_wren;
+	wire out_wf_fifo_afull;
+	wire [32:0] out_wf_fifo_do;
+	wire out_wf_fifo_rden;
+	wire out_wf_fifo_empty;
+
 	wire [31:0] rng;
 
 
@@ -94,9 +111,10 @@ module f15_core (
 			in_valid <= i_tvalid & i_tready;
 
 			// We know we can get a sample if :
-			//  - The output consumed a sample
-			//  - The FIFO has enough space
-			in_ready <= o_hist_tready | ~out_hist_fifo_afull;
+			//  - Both outputs consumed a sample
+			//  - Both FIFOs have enough space
+			in_ready <= (o_hist_tready & o_wf_tready) |
+			            (~out_hist_fifo_afull & ~out_wf_fifo_afull);
 		end
 
 		// Data pipeline
@@ -373,9 +391,11 @@ module f15_core (
 	// Data mapping
 	assign avgmh_avg_2 = sls_data_2[11: 0];
 	assign avgmh_max_2 = sls_data_2[23:12];
+	assign wf_data_2   = sls_data_2[35:24];
 
 	assign sls_data_6[11: 0] = avgmh_avg_6;
 	assign sls_data_6[23:12] = avgmh_max_6;
+	assign sls_data_6[35:24] = wf_data_6;
 
 
 	// -----------------------------------------------------------------------
@@ -483,6 +503,93 @@ module f15_core (
 	assign o_hist_teob  = out_hist_fifo_do[33];
 	assign o_hist_tvalid = ~out_hist_fifo_empty;
 	assign out_hist_fifo_rden = ~out_hist_fifo_empty && o_hist_tready;
+
+
+	// -----------------------------------------------------------------------
+	// Waterfall Output
+	// -----------------------------------------------------------------------
+
+	// Input to this stage (synced to SLS)
+	assign wf_logpwr_0 = proc_logpwr_end;
+	assign wf_last_0   = proc_last_end;
+	assign wf_valid_0  = proc_valid_end;
+
+	// Delay some input signals
+	delay_bus #(2, 16) dl_wf_logpwr (wf_logpwr_0, wf_logpwr_2, clk);
+	delay_bit #(2)     dl_wf_last   (wf_last_0,   wf_last_2,   clk);
+	delay_bit #(2)     dl_wf_valid  (wf_valid_0,  wf_valid_2,  clk);
+
+	// Decimation / Aggregation
+	f15_wf_agg #(
+		.Y_WIDTH(12),
+		.X_WIDTH(16),
+		.DECIM_WIDTH(8)
+	) dut_wf (
+		.yin_0(wf_data_2),
+		.x_0(wf_logpwr_2),
+		.valid_0(wf_valid_2),
+		.last_0(wf_last_2),
+		.rng_0(rng[15:0]),
+		.yout_3(wf_data_5),
+		.zout_3(wf_out_data_5),
+		.zvalid_3(wf_out_valid_5),
+		.cfg_div(cfg_wf_div),
+		.cfg_mode(cfg_wf_mode),
+		.cfg_decim(cfg_wf_decim),
+		.cfg_decim_changed(cfg_wf_decim_changed),
+		.clk(clk),
+		.rst(reset)
+	);
+
+	// Delay some output signals
+	delay_bus #(1, 12) dl_wf_data     (wf_data_5, wf_data_6, clk);
+	delay_bit #(3)     dl_wf_out_last (wf_last_2, wf_out_last_5, clk);
+
+	// Pack into 32 bits words
+	always @(posedge clk)
+	begin
+		if (reset) begin
+			out_wf_fifo_di   <= 0;
+			out_wf_fifo_wren <= 1'b0;
+			out_wf_cnt       <= 2'b00;
+		end else begin
+			if (wf_out_valid_5) begin
+				if (wf_out_last_5) begin
+					out_wf_fifo_di   <= { 1'b1, out_wf_fifo_di[23:0], wf_out_data_5 };
+					out_wf_fifo_wren <= 1'b1;
+					out_wf_cnt       <= 2'b00;
+				end else begin
+					out_wf_fifo_di   <= { 1'b0, out_wf_fifo_di[23:0], wf_out_data_5 };
+					out_wf_fifo_wren <= (out_wf_cnt == 2'b11);
+					out_wf_cnt       <= out_wf_cnt + 1;
+				end
+			end else begin
+				out_wf_fifo_wren <= 1'b0;
+			end
+		end
+	end
+
+	// FIFO
+	fifo_srl #(
+		.WIDTH(33),
+		.LOG2_DEPTH(6),
+		.AFULL_LEVEL(20)
+	) out_wf_fifo_I (
+		.di(out_wf_fifo_di),
+		.wren(out_wf_fifo_wren),
+		.afull(out_wf_fifo_afull),
+		.do(out_wf_fifo_do),
+		.rden(out_wf_fifo_rden),
+		.empty(out_wf_fifo_empty),
+		.clk(clk),
+		.rst(reset)
+	);
+
+	// AXI mapping
+	assign o_wf_tdata = out_wf_fifo_do[31:0];
+	assign o_wf_tlast = out_wf_fifo_do[32];
+	assign o_wf_tvalid = ~out_wf_fifo_empty;
+	assign out_wf_fifo_rden = ~out_wf_fifo_empty && o_wf_tready;
 
 
 	// -----------------------------------------------------------------------
