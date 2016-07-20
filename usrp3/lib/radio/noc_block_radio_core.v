@@ -61,7 +61,7 @@ module noc_block_radio_core #(
     .OUTPUT_PORTS(NUM_CHANNELS),
     .STR_SINK_FIFOSIZE({NUM_CHANNELS{STR_SINK_FIFOSIZE[7:0]}}),
     .USE_TIMED_CMDS(1), // Settings bus transactions will occur at the vita time specified in the command packet
-    .CMD_FIFO_SIZE({NUM_CHANNELS{8'd6}})) // Up to 64 commands in flight per radio
+    .CMD_FIFO_SIZE({NUM_CHANNELS{8'd7}})) // Up to 64 commands in flight per radio (128/2 lines per command packet = 64 commands)
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
