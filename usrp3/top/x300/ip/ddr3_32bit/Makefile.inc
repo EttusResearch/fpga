@@ -30,5 +30,7 @@ $(IP_DDR3_32BIT_SRCS) $(IP_DDR3_32BIT_OUTS) : $(IP_DIR)/ddr3_32bit/ddr3_32bit.xc
 	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit_mig.v $(IP_DIR)/ddr3_32bit/ddr3_32bit_mig.v.patch
 	cp $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit_mig_sim.v $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit_mig_sim.v.orig
 	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit_mig_sim.v $(IP_DIR)/ddr3_32bit/ddr3_32bit_mig_sim.v.patch
+	cp $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/constraints/ddr3_32bit.xdc $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/constraints/ddr3_32bit.xdc.orig
+	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/constraints/ddr3_32bit.xdc $(IP_DIR)/ddr3_32bit/ddr3_32bit.xdc.patch
 	cp $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit.v $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit.v.orig
 	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/ddr3_32bit.v $(IP_DIR)/ddr3_32bit/ddr3_32bit.v.patch

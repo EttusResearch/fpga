@@ -3,8 +3,8 @@
 // NOTE: A set of precompiler directives configure the features in an FPGA build
 // and are listed here. These should be set exclusively using the Makefile mechanism provided.
 //
-// ETH10G_PORT0 - Ethernet Port0 is configured for 10G (default is 1G)
-// ETH10G_PORT1 - Ethernet Port1 is configured for 10G (default is 1G)
+// SFP0_10GBE - Ethernet Port0 is configured for 10G (default is 1G)
+// SFP1_10GBE - Ethernet Port1 is configured for 10G (default is 1G)
 // DEBUG_UART - Adds 115kbaud UART to GPIO pins 10 & 11 for firmware debug
 //
 ///////////////////////////////////
@@ -34,6 +34,12 @@ module x300
 `endif
 
 `ifdef BUILD_10G
+   `define BUILD_10G_OR_AURORA
+`endif
+`ifdef BUILD_AURORA
+   `define BUILD_10G_OR_AURORA
+`endif
+`ifdef BUILD_10G_OR_AURORA
    input XG_CLK_p, input XG_CLK_n,
 `endif
 
@@ -789,7 +795,7 @@ module x300
 
    //////////////////////////////////////////////////////////////////////
    //
-   // Configure Ethernet PHY clocking
+   // Configure SFP+ clocking
    //
    //////////////////////////////////////////////////////////////////////
 `ifdef BUILD_1G
@@ -807,7 +813,7 @@ module x300
    wire  xgige_refclk;
    wire  xgige_clk156;
    wire  xgige_dclk;
-   
+
    ten_gige_phy_clk_gen xgige_clk_gen_i (
       .areset(global_rst | sw_rst[0]),
       .refclk_p(XG_CLK_p),
@@ -816,225 +822,204 @@ module x300
       .clk156(xgige_clk156),
       .dclk(xgige_dclk)
    );
+   `ifdef BUILD_AURORA
+      wire  aurora_refclk = xgige_refclk;
+      wire  aurora_refclk_bufg = xgige_clk156;
+      wire  aurora_init_clk = xgige_dclk;
+   `endif
+`else
+   `ifdef BUILD_AURORA
+      wire  aurora_refclk;
+      wire  aurora_refclk_bufg;
+      wire  aurora_init_clk;
+
+      aurora_phy_clk_gen aurora_clk_gen_i (
+         .areset(global_rst | sw_rst[0]),
+         .refclk_p(XG_CLK_p),
+         .refclk_n(XG_CLK_n),
+         .refclk(aurora_refclk),
+         .clk156(aurora_refclk_bufg),
+         .init_clk(aurora_init_clk)
+      );
+   `endif
+`endif
+
+   wire  sfp0_gt_refclk, sfp1_gt_refclk;
+   wire  sfp0_gb_refclk, sfp1_gb_refclk;
+   wire  sfp0_misc_clk, sfp1_misc_clk;
+
+`ifdef SFP0_10GBE
+   assign sfp0_gt_refclk = xgige_refclk;
+   assign sfp0_gb_refclk = xgige_clk156;
+   assign sfp0_misc_clk  = xgige_dclk;
+`endif
+`ifdef SFP0_1GBE
+   assign sfp0_gt_refclk = gige_refclk;
+   assign sfp0_gb_refclk = gige_refclk_bufg;
+   assign sfp0_misc_clk  = gige_refclk_bufg;
+`endif
+`ifdef SFP0_AURORA
+   assign sfp0_gt_refclk = aurora_refclk;
+   assign sfp0_gb_refclk = aurora_refclk_bufg;
+   assign sfp0_misc_clk  = aurora_init_clk;
+`endif
+
+`ifdef SFP1_10GBE
+   assign sfp1_gt_refclk = xgige_refclk;
+   assign sfp1_gb_refclk = xgige_clk156;
+   assign sfp1_misc_clk  = xgige_dclk;
+`endif
+`ifdef SFP1_1GBE
+   assign sfp1_gt_refclk = gige_refclk;
+   assign sfp1_gb_refclk = gige_refclk_bufg;
+   assign sfp1_misc_clk  = gige_refclk_bufg;
+`endif
+`ifdef SFP1_AURORA
+   assign sfp1_gt_refclk = aurora_refclk;
+   assign sfp1_gb_refclk = aurora_refclk_bufg;
+   assign sfp1_misc_clk  = aurora_init_clk;
 `endif
 
    //////////////////////////////////////////////////////////////////////
    //
-   // Configure Ethernet PHY implemented for PORT0
+   // SFP+ PORT0
    //
    //////////////////////////////////////////////////////////////////////
-   wire        mdc0, mdio_in0, mdio_out0, mdio_tri0;
-   wire [4:0]  prtad0 = 5'b00100;  // MDIO address is 4
-   wire [15:0] eth0_phy_status;
 
-`ifdef ETH10G_PORT0
-   //////////////////////////////////////////////////////////////////////
-   //
-   // 10GBaseR PHY with XGMII interface to MAC
-   //
-   //////////////////////////////////////////////////////////////////////
-   wire        xgmii_clk0;  // 156.25MHz
-   wire [63:0] xgmii_txd0;
-   wire [7:0]  xgmii_txc0;
-   wire [63:0] xgmii_rxd0;
-   wire [7:0]  xgmii_rxc0;
+   wire [63:0] sfp0_rx_tdata, sfp0_tx_tdata;
+   wire [3:0]  sfp0_rx_tuser, sfp0_tx_tuser;
+   wire        sfp0_rx_tlast, sfp0_tx_tlast, sfp0_rx_tvalid, sfp0_tx_tvalid, sfp0_rx_tready, sfp0_tx_tready;
+   wire [15:0] sfp0_phy_status;
 
-   wire [7:0]  xgmii_status0;
-   wire        xge_phy_resetdone0;
+   wire [31:0] sfp0_wb_dat_i;
+   wire [31:0] sfp0_wb_dat_o;
+   wire [15:0] sfp0_wb_adr;
+   wire        sfp0_wb_ack, sfp0_wb_stb, sfp0_wb_cyc, sfp0_wb_we, sfp0_wb_int;
 
-   ten_gige_phy ten_gige_phy_port0
-   (
-      // Clocks and Reset
-      .areset(global_rst | sw_rst[0]), // Asynchronous reset for entire core.
-      .refclk(xgige_refclk),           // Transciever reference clock: 156.25MHz
-      .clk156(xgige_clk156),           // Globally buffered core clock: 156.25MHz
-      .dclk(xgige_dclk),               // Management/DRP clock: 78.125MHz
-      .sim_speedup_control(1'b0),
-      // GMII Interface (client MAC <=> PCS)
-      .xgmii_txd(xgmii_txd0),          // Transmit data from client MAC.
-      .xgmii_txc(xgmii_txc0),          // Transmit control signal from client MAC.
-      .xgmii_rxd(xgmii_rxd0),          // Received Data to client MAC.
-      .xgmii_rxc(xgmii_rxc0),          // Received control signal to client MAC.
-      // Tranceiver Interface
-      .txp(SFP0_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
-      .txn(SFP0_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
-      .rxp(SFP0_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
-      .rxn(SFP0_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
-      // Management: MDIO Interface
-      .mdc(mdc0),                      // Management Data Clock
-      .mdio_in(mdio_in0),              // Management Data In
-      .mdio_out(mdio_out0),            // Management Data Out
-      .mdio_tri(mdio_tri0),            // Management Data Tristate
-      .prtad(prtad0),
-      // General IO's
-      .core_status(xgmii_status0),     // Core status
-      .resetdone(xge_phy_resetdone0),
-      .signal_detect(~SFPP0_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
-      .tx_fault(SFPP0_TxFault),
-      .tx_disable(SFPP0_TxDisable)
-   );
+
+   x300_sfpp_io_core #(
+`ifdef SFP0_10GBE
+      .PROTOCOL("10GbE"),
+`endif
+`ifdef SFP0_1GBE
+      .PROTOCOL("1GbE"),
+`endif
+`ifdef SFP0_AURORA
+      .PROTOCOL("Aurora"),
+`endif
+      .PORTNUM(8'd0)
+   ) sfpp_io_i0 (
+      .areset(global_rst | sw_rst[0]),
+      .gt_refclk(sfp0_gt_refclk),
+      .gb_refclk(sfp0_gb_refclk),
+      .misc_clk(sfp0_misc_clk),
+
+      .bus_rst(bus_rst),
+      .bus_clk(bus_clk),
+
+      .txp(SFP0_TX_p),
+      .txn(SFP0_TX_n),
+      .rxp(SFP0_RX_p),
+      .rxn(SFP0_RX_n),
+
+      .sfpp_rxlos(SFPP0_RxLOS),
+      .sfpp_tx_fault(SFPP0_TxFault),
+      .sfpp_tx_disable(SFPP0_TxDisable),
    
-   assign xgmii_clk0       = xgige_clk156;
-   assign eth0_phy_status  = {8'h00, xgmii_status0};
+      .s_axis_tdata(sfp0_tx_tdata),
+      .s_axis_tuser(sfp0_tx_tuser),
+      .s_axis_tlast(sfp0_tx_tlast),
+      .s_axis_tvalid(sfp0_tx_tvalid),
+      .s_axis_tready(sfp0_tx_tready),
+   
+      .m_axis_tdata(sfp0_rx_tdata),
+      .m_axis_tuser(sfp0_rx_tuser),
+      .m_axis_tlast(sfp0_rx_tlast),
+      .m_axis_tvalid(sfp0_rx_tvalid),
+      .m_axis_tready(sfp0_rx_tready),
 
-`else
+      .wb_adr_i(sfp0_wb_adr),
+      .wb_cyc_i(sfp0_wb_cyc),
+      .wb_dat_i(sfp0_wb_dat_o),
+      .wb_stb_i(sfp0_wb_stb),
+      .wb_we_i(sfp0_wb_we), 
+      .wb_ack_o(sfp0_wb_ack),
+      .wb_dat_o(sfp0_wb_dat_i),
+      .wb_int_o(sfp0_wb_int),
 
-   //////////////////////////////////////////////////////////////////////
-   //
-   // 1000Base-X PHY with GMII interface to MAC
-   //
-   //////////////////////////////////////////////////////////////////////
-   wire [7:0]  gmii_txd0, gmii_rxd0;
-   wire        gmii_tx_en0, gmii_tx_er0, gmii_rx_dv0, gmii_rx_er0;
-   wire        gmii_clk0;
-   wire [15:0] gmii_status0;
-
-   assign SFPP0_TxDisable = 1'b0; // Always on.
-
-   one_gige_phy one_gige_phy_port0 
-   (
-      .reset(global_rst | sw_rst[0]),  // Asynchronous reset for entire core.
-      .independent_clock(bus_clk),
-      // Tranceiver Interface
-      .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
-      .gtrefclk_bufg(gige_refclk_bufg),// Reference clock routed through a BUFG
-      .txp(SFP0_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
-      .txn(SFP0_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
-      .rxp(SFP0_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
-      .rxn(SFP0_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
-      // GMII Interface (client MAC <=> PCS)
-      .gmii_clk(gmii_clk0),            // Clock to client MAC.
-      .gmii_txd(gmii_txd0),            // Transmit data from client MAC.
-      .gmii_tx_en(gmii_tx_en0),        // Transmit control signal from client MAC.
-      .gmii_tx_er(gmii_tx_er0),        // Transmit control signal from client MAC.
-      .gmii_rxd(gmii_rxd0),            // Received Data to client MAC.
-      .gmii_rx_dv(gmii_rx_dv0),        // Received control signal to client MAC.
-      .gmii_rx_er(gmii_rx_er0),        // Received control signal to client MAC.
-      // Management: MDIO Interface
-      .mdc(mdc0),                      // Management Data Clock
-      .mdio_i(mdio_in0),               // Management Data In
-      .mdio_o(mdio_out0),              // Management Data Out
-      .mdio_t(mdio_tri0),              // Management Data Tristate
-      .configuration_vector(5'd0),     // Alternative to MDIO interface.
-      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
-      // General IO's
-      .status_vector(gmii_status0),    // Core status.
-      .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
+      .phy_status(sfp0_phy_status)
    );
 
-   assign eth0_phy_status  = gmii_status0;
-
-`endif // `ifdef ETH10G_PORT0
 
    //////////////////////////////////////////////////////////////////////
    //
-   // Configure Ethernet PHY implemented for PORT1
+   // SFP+ PORT1
    //
    //////////////////////////////////////////////////////////////////////
-   wire        mdc1, mdio_in1, mdio_out1, mdio_tri1;
-   wire [4:0]  prtad1 = 5'b00100;  // MDIO address is 4
-   wire [15:0] eth1_phy_status;
 
-`ifdef ETH10G_PORT1
-   //////////////////////////////////////////////////////////////////////
-   //
-   // 10GBaseR PHY with XGMII interface to MAC
-   //
-   //////////////////////////////////////////////////////////////////////
-   wire        xgmii_clk1;  // 156.25MHz
-   wire [63:0] xgmii_txd1;
-   wire [7:0]  xgmii_txc1;
-   wire [63:0] xgmii_rxd1;
-   wire [7:0]  xgmii_rxc1;
+   wire [63:0] sfp1_rx_tdata, sfp1_tx_tdata;
+   wire [3:0]  sfp1_rx_tuser, sfp1_tx_tuser;
+   wire        sfp1_rx_tlast, sfp1_tx_tlast, sfp1_rx_tvalid, sfp1_tx_tvalid, sfp1_rx_tready, sfp1_tx_tready;
+   wire [15:0] sfp1_phy_status;
 
-   wire [7:0]  xgmii_status1;
-   wire        xge_phy_resetdone1;
+   wire [31:0] sfp1_wb_dat_i;
+   wire [31:0] sfp1_wb_dat_o;
+   wire [15:0] sfp1_wb_adr;
+   wire        sfp1_wb_ack, sfp1_wb_stb, sfp1_wb_cyc, sfp1_wb_we, sfp1_wb_int;
 
-   ten_gige_phy ten_gige_phy_port1
-   (
-      // Clocks and Reset
-      .areset(global_rst | sw_rst[0]), // Asynchronous reset for entire core.
-      .refclk(xgige_refclk),           // Transciever reference clock: 156.25MHz
-      .clk156(xgige_clk156),           // Globally buffered core clock: 156.25MHz
-      .dclk(xgige_dclk),               // Management/DRP clock: 78.125MHz
-      .sim_speedup_control(1'b0),
-      // GMII Interface (client MAC <=> PCS)
-      .xgmii_txd(xgmii_txd1),          // Transmit data from client MAC.
-      .xgmii_txc(xgmii_txc1),          // Transmit control signal from client MAC.
-      .xgmii_rxd(xgmii_rxd1),          // Received Data to client MAC.
-      .xgmii_rxc(xgmii_rxc1),          // Received control signal to client MAC.
-      // Tranceiver Interface
-      .txp(SFP1_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
-      .txn(SFP1_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
-      .rxp(SFP1_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
-      .rxn(SFP1_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
-      // Management: MDIO Interface
-      .mdc(mdc1),                      // Management Data Clock
-      .mdio_in(mdio_in1),              // Management Data In
-      .mdio_out(mdio_out1),            // Management Data Out
-      .mdio_tri(mdio_tri1),            // Management Data Tristate
-      .prtad(prtad0),
-      // General IO's
-      .core_status(xgmii_status1),     // Core status
-      .resetdone(xge_phy_resetdone1),
-      .signal_detect(~SFPP1_RxLOS),    // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
-      .tx_fault(SFPP1_TxFault),
-      .tx_disable(SFPP1_TxDisable)
+
+   x300_sfpp_io_core #(
+`ifdef SFP1_10GBE
+      .PROTOCOL("10GbE"),
+`endif
+`ifdef SFP1_1GBE
+      .PROTOCOL("1GbE"),
+`endif
+`ifdef SFP1_AURORA
+      .PROTOCOL("Aurora"),
+`endif
+      .PORTNUM(8'd1)
+   ) sfpp_io_i1 (
+      .areset(global_rst | sw_rst[0]),
+      .gt_refclk(sfp1_gt_refclk),
+      .gb_refclk(sfp1_gb_refclk),
+      .misc_clk(sfp1_misc_clk),
+
+      .bus_rst(bus_rst),
+      .bus_clk(bus_clk),
+
+      .txp(SFP1_TX_p),
+      .txn(SFP1_TX_n),
+      .rxp(SFP1_RX_p),
+      .rxn(SFP1_RX_n),
+
+      .sfpp_rxlos(SFPP1_RxLOS),
+      .sfpp_tx_fault(SFPP1_TxFault),
+      .sfpp_tx_disable(SFPP1_TxDisable),
+   
+      .s_axis_tdata(sfp1_tx_tdata),
+      .s_axis_tuser(sfp1_tx_tuser),
+      .s_axis_tlast(sfp1_tx_tlast),
+      .s_axis_tvalid(sfp1_tx_tvalid),
+      .s_axis_tready(sfp1_tx_tready),
+   
+      .m_axis_tdata(sfp1_rx_tdata),
+      .m_axis_tuser(sfp1_rx_tuser),
+      .m_axis_tlast(sfp1_rx_tlast),
+      .m_axis_tvalid(sfp1_rx_tvalid),
+      .m_axis_tready(sfp1_rx_tready),
+
+      .wb_adr_i(sfp1_wb_adr),
+      .wb_cyc_i(sfp1_wb_cyc),
+      .wb_dat_i(sfp1_wb_dat_o),
+      .wb_stb_i(sfp1_wb_stb),
+      .wb_we_i(sfp1_wb_we), 
+      .wb_ack_o(sfp1_wb_ack),
+      .wb_dat_o(sfp1_wb_dat_i),
+      .wb_int_o(sfp1_wb_int),
+
+      .phy_status(sfp1_phy_status)
    );
-
-   assign xgmii_clk1       = xgige_clk156;
-   assign eth1_phy_status  = {8'h00, xgmii_status1};
-
-`else
-
-   //////////////////////////////////////////////////////////////////////
-   //
-   // 1000Base-X PHY with GMII interface to MAC
-   //
-   //////////////////////////////////////////////////////////////////////
-   wire [31:0] gige_phy_misc_dbg1;
-   wire [15:0] gige_phy_int_data1;
-   wire [7:0]  gmii_txd1, gmii_rxd1;
-   wire        gmii_tx_en1, gmii_tx_er1, gmii_rx_dv1, gmii_rx_er1;
-   wire        gmii_clk1;
-   wire [15:0] gmii_status1;
-
-   assign SFPP1_TxDisable = 1'b0; // Always on.
-
-   one_gige_phy one_gige_phy_port1 
-   (
-      .reset(global_rst | sw_rst[0]),  // Asynchronous reset for entire core.
-      .independent_clock(bus_clk),
-      // Tranceiver Interface
-      .gtrefclk(gige_refclk),          // Reference clock for MGT: 125MHz, very high quality.
-      .gtrefclk_bufg(gige_refclk_bufg),// Reference clock routed through a BUFG
-      .txp(SFP1_TX_p),                 // Differential +ve of serial transmission from PMA to PMD.
-      .txn(SFP1_TX_n),                 // Differential -ve of serial transmission from PMA to PMD.
-      .rxp(SFP1_RX_p),                 // Differential +ve for serial reception from PMD to PMA.
-      .rxn(SFP1_RX_n),                 // Differential -ve for serial reception from PMD to PMA.
-      // GMII Interface (client MAC <=> PCS)
-      .gmii_clk(gmii_clk1),            // Clock to client MAC.
-      .gmii_txd(gmii_txd1),            // Transmit data from client MAC.
-      .gmii_tx_en(gmii_tx_en1),        // Transmit control signal from client MAC.
-      .gmii_tx_er(gmii_tx_er1),        // Transmit control signal from client MAC.
-      .gmii_rxd(gmii_rxd1),            // Received Data to client MAC.
-      .gmii_rx_dv(gmii_rx_dv1),        // Received control signal to client MAC.
-      .gmii_rx_er(gmii_rx_er1),        // Received control signal to client MAC.
-      // Management: MDIO Interface
-      .mdc(mdc1),                      // Management Data Clock
-      .mdio_i(mdio_in1),               // Management Data In
-      .mdio_o(mdio_out1),              // Management Data Out
-      .mdio_t(mdio_tri1),              // Management Data Tristate
-      .configuration_vector(5'd0),     // Alternative to MDIO interface.
-      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
-      // General IO's
-      .status_vector(gmii_status1),    // Core status.
-      .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
-   );
-
-   assign eth1_phy_status  = gmii_status1;
-
-`endif // `ifdef ETH10G_PORT1
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
@@ -1280,57 +1265,30 @@ module x300
       .LMK_SEN(LMK_SEN), .LMK_SCLK(LMK_SCLK), .LMK_MOSI(LMK_MOSI),
       .misc_clock_status({1'b0, adc_idlyctrl_rdy_sync, radio_clk_locked_sync}),
       // SFP+ 0 flags
-      .SFPP0_SCL(SFPP0_SCL),
-      .SFPP0_SDA(SFPP0_SDA),
-      .SFPP0_ModAbs(SFPP0_ModAbs),
-      .SFPP0_TxFault(SFPP0_TxFault),
-      .SFPP0_RxLOS(SFPP0_RxLOS),
-      .SFPP0_RS1(SFPP0_RS1),
-      .SFPP0_RS0(SFPP0_RS0),
+      .SFPP0_SCL(SFPP0_SCL), .SFPP0_SDA(SFPP0_SDA), .SFPP0_ModAbs(SFPP0_ModAbs), .SFPP0_TxFault(SFPP0_TxFault),
+      .SFPP0_RxLOS(SFPP0_RxLOS), .SFPP0_RS1(SFPP0_RS1), .SFPP0_RS0(SFPP0_RS0),
       // SFP+ 1 flags
-      .SFPP1_SCL(SFPP1_SCL),
-      .SFPP1_SDA(SFPP1_SDA),
-      .SFPP1_ModAbs(SFPP1_ModAbs),
-      .SFPP1_TxFault(SFPP1_TxFault),
-      .SFPP1_RxLOS(SFPP1_RxLOS),
-      .SFPP1_RS1(SFPP1_RS1),
-      .SFPP1_RS0(SFPP1_RS0),
-      // MDIO bus to SFP0
-      .mdc0(mdc0),
-      .mdio_in0(mdio_in0),
-      .mdio_out0(mdio_out0),
-      .eth0_phy_status(eth0_phy_status),
-      // SFP+ 0 packet interface
-`ifdef ETH10G_PORT0
-      .xgmii_clk0(xgmii_clk0),
-      .xgmii_txd0(xgmii_txd0),
-      .xgmii_txc0(xgmii_txc0),
-      .xgmii_rxd0(xgmii_rxd0),
-      .xgmii_rxc0(xgmii_rxc0),
-      .xge_phy_resetdone0(xge_phy_resetdone0),
-`else
-      .gmii_clk0(gmii_clk0),
-      .gmii_txd0(gmii_txd0), .gmii_tx_en0(gmii_tx_en0), .gmii_tx_er0(gmii_tx_er0),
-      .gmii_rxd0(gmii_rxd0), .gmii_rx_dv0(gmii_rx_dv0), .gmii_rx_er0(gmii_rx_er0),
-`endif // !`ifdef
-      // MDIO bus to SFP1
-      .mdc1(mdc1),
-      .mdio_in1(mdio_in1),
-      .mdio_out1(mdio_out1),
-      .eth1_phy_status(eth1_phy_status),
-      // SFP+ 1 packet interface
-`ifdef ETH10G_PORT1
-      .xgmii_clk1(xgmii_clk1),
-      .xgmii_txd1(xgmii_txd1),
-      .xgmii_txc1(xgmii_txc1),
-      .xgmii_rxd1(xgmii_rxd1),
-      .xgmii_rxc1(xgmii_rxc1),
-      .xge_phy_resetdone1(xge_phy_resetdone1),
-`else
-      .gmii_clk1(gmii_clk1),
-      .gmii_txd1(gmii_txd1), .gmii_tx_en1(gmii_tx_en1), .gmii_tx_er1(gmii_tx_er1),
-      .gmii_rxd1(gmii_rxd1), .gmii_rx_dv1(gmii_rx_dv1), .gmii_rx_er1(gmii_rx_er1),
-`endif // !`ifdef
+      .SFPP1_SCL(SFPP1_SCL), .SFPP1_SDA(SFPP1_SDA), .SFPP1_ModAbs(SFPP1_ModAbs), .SFPP1_TxFault(SFPP1_TxFault),
+      .SFPP1_RxLOS(SFPP1_RxLOS), .SFPP1_RS1(SFPP1_RS1), .SFPP1_RS0(SFPP1_RS0),
+      // SFP+ 0 data stream
+      .sfp0_tx_tdata(sfp0_tx_tdata), .sfp0_tx_tuser(sfp0_tx_tuser), .sfp0_tx_tlast(sfp0_tx_tlast),
+      .sfp0_tx_tvalid(sfp0_tx_tvalid), .sfp0_tx_tready(sfp0_tx_tready),
+      .sfp0_rx_tdata(sfp0_rx_tdata), .sfp0_rx_tuser(sfp0_rx_tuser), .sfp0_rx_tlast(sfp0_rx_tlast),
+      .sfp0_rx_tvalid(sfp0_rx_tvalid), .sfp0_rx_tready(sfp0_rx_tready),
+      .sfp0_phy_status(sfp0_phy_status),
+      // SFP+ 1 data stream
+      .sfp1_tx_tdata(sfp1_tx_tdata), .sfp1_tx_tuser(sfp1_tx_tuser), .sfp1_tx_tlast(sfp1_tx_tlast),
+      .sfp1_tx_tvalid(sfp1_tx_tvalid), .sfp1_tx_tready(sfp1_tx_tready),
+      .sfp1_rx_tdata(sfp1_rx_tdata), .sfp1_rx_tuser(sfp1_rx_tuser), .sfp1_rx_tlast(sfp1_rx_tlast),
+      .sfp1_rx_tvalid(sfp1_rx_tvalid), .sfp1_rx_tready(sfp1_rx_tready),
+      .sfp1_phy_status(sfp1_phy_status),
+      // Wishbone Slave Interface(s)
+      .sfp0_wb_dat_i(sfp0_wb_dat_i), .sfp0_wb_dat_o(sfp0_wb_dat_o), .sfp0_wb_adr(sfp0_wb_adr),
+      .sfp0_wb_sel(), .sfp0_wb_ack(sfp0_wb_ack), .sfp0_wb_stb(sfp0_wb_stb),
+      .sfp0_wb_cyc(sfp0_wb_cyc), .sfp0_wb_we(sfp0_wb_we), .sfp0_wb_int(sfp0_wb_int),
+      .sfp1_wb_dat_i(sfp1_wb_dat_i), .sfp1_wb_dat_o(sfp1_wb_dat_o), .sfp1_wb_adr(sfp1_wb_adr),
+      .sfp1_wb_sel(), .sfp1_wb_ack(sfp1_wb_ack), .sfp1_wb_stb(sfp1_wb_stb),
+      .sfp1_wb_cyc(sfp1_wb_cyc), .sfp1_wb_we(sfp1_wb_we), .sfp1_wb_int(sfp1_wb_int),
       // Time
       .pps(pps),.pps_select(pps_select), .pps_out_enb(pps_out_enb),
       // GPS Signals

@@ -48,53 +48,56 @@ module x300_core (
    input SFPP1_TxFault,
    input SFPP1_RxLOS,
    output SFPP1_TxDisable,   // Assert low to enable transmitter.
-   // MDIO
-   output mdc0,
-   output mdio_in0,
-   input mdio_out0,
-   input [15:0] eth0_phy_status,
-   output mdc1,
-   output mdio_in1,
-   input mdio_out1,
-   input [15:0] eth1_phy_status,
 
-`ifdef ETH10G_PORT0
-   // XGMII
-   input xgmii_clk0,
-   output [63:0] xgmii_txd0,
-   output [7:0]  xgmii_txc0,
-   input [63:0] xgmii_rxd0,
-   input [7:0]  xgmii_rxc0,
-   input xge_phy_resetdone0,
-`else
-   // GMII
-   input gmii_clk0,
-   output [7:0] gmii_txd0,
-   output gmii_tx_en0,
-   output gmii_tx_er0,
-   input [7:0] gmii_rxd0,
-   input gmii_rx_dv0,
-   input gmii_rx_er0,
-`endif // !`ifdef
+   // SFP+ 0 data stream
+   output [63:0] sfp0_tx_tdata,
+   output [3:0] sfp0_tx_tuser,
+   output sfp0_tx_tlast,
+   output sfp0_tx_tvalid,
+   input sfp0_tx_tready,
 
-`ifdef ETH10G_PORT1
-   // XGMII
-   input xgmii_clk1,
-   output [63:0] xgmii_txd1,
-   output [7:0]  xgmii_txc1,
-   input [63:0] xgmii_rxd1,
-   input [7:0]  xgmii_rxc1,
-   input xge_phy_resetdone1,
-`else
-   // GMII
-   input gmii_clk1,
-   output [7:0] gmii_txd1,
-   output gmii_tx_en1,
-   output gmii_tx_er1,
-   input [7:0] gmii_rxd1,
-   input gmii_rx_dv1,
-   input gmii_rx_er1,
-`endif // !`ifdef
+   input [63:0] sfp0_rx_tdata,
+   input [3:0] sfp0_rx_tuser,
+   input sfp0_rx_tlast,
+   input sfp0_rx_tvalid,
+   output sfp0_rx_tready,
+   
+   input [15:0] sfp0_phy_status,
+
+   // SFP+ 1 data stream
+   output [63:0] sfp1_tx_tdata,
+   output [3:0] sfp1_tx_tuser,
+   output sfp1_tx_tlast,
+   output sfp1_tx_tvalid,
+   input sfp1_tx_tready,
+
+   input [63:0] sfp1_rx_tdata,
+   input [3:0] sfp1_rx_tuser,
+   input sfp1_rx_tlast,
+   input sfp1_rx_tvalid,
+   output sfp1_rx_tready,
+
+   input [15:0] sfp1_phy_status,
+
+   input [31:0] sfp0_wb_dat_i,
+   output [31:0] sfp0_wb_dat_o,
+   output [15:0] sfp0_wb_adr,
+   output [3:0] sfp0_wb_sel,
+   input sfp0_wb_ack,
+   output sfp0_wb_stb,
+   output sfp0_wb_cyc,
+   output sfp0_wb_we,
+   input sfp0_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
+
+   input [31:0] sfp1_wb_dat_i,
+   output [31:0] sfp1_wb_dat_o,
+   output [15:0] sfp1_wb_adr,
+   output [3:0] sfp1_wb_sel,
+   input sfp1_wb_ack,
+   output sfp1_wb_stb,
+   output sfp1_wb_cyc,
+   output sfp1_wb_we,
+   input sfp1_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
    // Time
    input pps,
@@ -183,9 +186,9 @@ module x300_core (
    output [127:0] debug2
 );
 
-   wire [63:0] eth0_rx_tdata, eth0_tx_tdata;
-   wire [3:0]  eth0_rx_tuser, eth0_tx_tuser;
-   wire        eth0_rx_tlast, eth0_tx_tlast, eth0_rx_tvalid, eth0_tx_tvalid, eth0_rx_tready, eth0_tx_tready;
+   wire [63:0] sfp0_rx_tdata, sfp0_tx_tdata;
+   wire [3:0]  sfp0_rx_tuser, sfp0_tx_tuser;
+   wire        sfp0_rx_tlast, sfp0_tx_tlast, sfp0_rx_tvalid, sfp0_tx_tvalid, sfp0_rx_tready, sfp0_tx_tready;
 
    wire [63:0] eth1_rx_tdata, eth1_tx_tdata;
    wire [3:0]  eth1_rx_tuser, eth1_tx_tuser;
@@ -206,33 +209,6 @@ module x300_core (
 
    // Number of Radio Cores Instantiated
    localparam NUM_RADIO_CORES = 2;
-
-   //------------------------------------------------------------------
-   // Wishbone Slave Interface(s)
-   //------------------------------------------------------------------
-   localparam  dw  = 32;  // Data bus width
-   localparam  aw  = 16;  // Address bus width, for byte addressibility, 16 = 64K byte memory space
-   localparam  sw  = 4;   // Select width -- 32-bit data bus with 8-bit granularity.
-
-   wire [dw-1:0] s4_dat_i;
-   wire [dw-1:0] s4_dat_o;
-   wire [aw-1:0] s4_adr;
-   wire [sw-1:0] s4_sel;
-   wire 	 s4_ack;
-   wire 	 s4_stb;
-   wire 	 s4_cyc;
-   wire 	 s4_we;
-   wire 	 s4_int;
-
-   wire [dw-1:0] s5_dat_i;
-   wire [dw-1:0] s5_dat_o;
-   wire [aw-1:0] s5_adr;
-   wire [sw-1:0] s5_sel;
-   wire 	 s5_ack;
-   wire 	 s5_stb;
-   wire 	 s5_cyc;
-   wire 	 s5_we;
-   wire 	 s5_int;
 
    //////////////////////////////////////////////////////////////////////////////////////////////
    // RFNoC
@@ -293,15 +269,15 @@ module x300_core (
       .clock_status({misc_clock_status, pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
       .clock_control({time_sync, clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
       // Eth0
-      .eth0_tx_tdata(eth0_tx_tdata), .eth0_tx_tuser(eth0_tx_tuser), .eth0_tx_tlast(eth0_tx_tlast),
-      .eth0_tx_tvalid(eth0_tx_tvalid), .eth0_tx_tready(eth0_tx_tready),
-      .eth0_rx_tdata(eth0_rx_tdata), .eth0_rx_tuser(eth0_rx_tuser), .eth0_rx_tlast(eth0_rx_tlast),
-      .eth0_rx_tvalid(eth0_rx_tvalid), .eth0_rx_tready(eth0_rx_tready),
+      .sfp0_tx_tdata(sfp0_tx_tdata), .sfp0_tx_tuser(sfp0_tx_tuser), .sfp0_tx_tlast(sfp0_tx_tlast),
+      .sfp0_tx_tvalid(sfp0_tx_tvalid), .sfp0_tx_tready(sfp0_tx_tready),
+      .sfp0_rx_tdata(sfp0_rx_tdata), .sfp0_rx_tuser(sfp0_rx_tuser), .sfp0_rx_tlast(sfp0_rx_tlast),
+      .sfp0_rx_tvalid(sfp0_rx_tvalid), .sfp0_rx_tready(sfp0_rx_tready),
       // Eth1
-      .eth1_tx_tdata(eth1_tx_tdata), .eth1_tx_tuser(eth1_tx_tuser), .eth1_tx_tlast(eth1_tx_tlast),
-      .eth1_tx_tvalid(eth1_tx_tvalid), .eth1_tx_tready(eth1_tx_tready),
-      .eth1_rx_tdata(eth1_rx_tdata), .eth1_rx_tuser(eth1_rx_tuser), .eth1_rx_tlast(eth1_rx_tlast),
-      .eth1_rx_tvalid(eth1_rx_tvalid), .eth1_rx_tready(eth1_rx_tready),
+      .sfp1_tx_tdata(sfp1_tx_tdata), .sfp1_tx_tuser(sfp1_tx_tuser), .sfp1_tx_tlast(sfp1_tx_tlast),
+      .sfp1_tx_tvalid(sfp1_tx_tvalid), .sfp1_tx_tready(sfp1_tx_tready),
+      .sfp1_rx_tdata(sfp1_rx_tdata), .sfp1_rx_tuser(sfp1_rx_tuser), .sfp1_rx_tlast(sfp1_rx_tlast),
+      .sfp1_rx_tvalid(sfp1_rx_tvalid), .sfp1_rx_tready(sfp1_rx_tready),
       // Computation Engines
       .ce_o_tdata({ce_flat_o_tdata, ioce_flat_o_tdata}), .ce_o_tlast({ce_o_tlast, ioce_o_tlast}),
       .ce_o_tvalid({ce_o_tvalid, ioce_o_tvalid}), .ce_o_tready({ce_o_tready, ioce_o_tready}),
@@ -314,28 +290,15 @@ module x300_core (
       .pcio_tdata(pcio_tdata), .pcio_tlast(pcio_tlast), .pcio_tvalid(pcio_tvalid), .pcio_tready(pcio_tready),
       .pcii_tdata(pcii_tdata), .pcii_tlast(pcii_tlast), .pcii_tvalid(pcii_tvalid), .pcii_tready(pcii_tready),
       // Wishbone Slave Interface(s)
-      .s4_dat_i(s4_dat_i),
-      .s4_dat_o(s4_dat_o),
-      .s4_adr(s4_adr),
-      .s4_sel(s4_sel),
-      .s4_ack(s4_ack),
-      .s4_stb(s4_stb),
-      .s4_cyc(s4_cyc),
-      .s4_we(s4_we),
-      .s4_int(s4_int),
-      .s5_dat_i(s5_dat_i),
-      .s5_dat_o(s5_dat_o),
-      .s5_adr(s5_adr),
-      .s5_sel(s5_sel),
-      .s5_ack(s5_ack),
-      .s5_stb(s5_stb),
-      .s5_cyc(s5_cyc),
-      .s5_we(s5_we),
-      .s5_int(s5_int),
-
+      .sfp0_wb_dat_i(sfp0_wb_dat_i), .sfp0_wb_dat_o(sfp0_wb_dat_o), .sfp0_wb_adr(sfp0_wb_adr),
+      .sfp0_wb_sel(sfp0_wb_sel), .sfp0_wb_ack(sfp0_wb_ack), .sfp0_wb_stb(sfp0_wb_stb),
+      .sfp0_wb_cyc(sfp0_wb_cyc), .sfp0_wb_we(sfp0_wb_we), .sfp0_wb_int(sfp0_wb_int),
+      .sfp1_wb_dat_i(sfp1_wb_dat_i), .sfp1_wb_dat_o(sfp1_wb_dat_o), .sfp1_wb_adr(sfp1_wb_adr),
+      .sfp1_wb_sel(sfp1_wb_sel), .sfp1_wb_ack(sfp1_wb_ack), .sfp1_wb_stb(sfp1_wb_stb),
+      .sfp1_wb_cyc(sfp1_wb_cyc), .sfp1_wb_we(sfp1_wb_we), .sfp1_wb_int(sfp1_wb_int),
       //Status signals
-      .eth0_phy_status(eth0_phy_status),
-      .eth1_phy_status(eth1_phy_status),
+      .sfp0_phy_status(sfp0_phy_status),
+      .sfp1_phy_status(sfp1_phy_status),
 
       // Debug
       .debug0(debug0), .debug1(debug1), .debug2(debug2)
@@ -747,157 +710,5 @@ module x300_core (
       misc_ins[2]       <= radio1_misc_in;
    end
 
-   /////////////////////////////////////////////////////////////////////////////////////////////
-   //
-   // Ethernet
-   //
-   /////////////////////////////////////////////////////////////////////////////////////////////
-`ifdef ETH10G_PORT0
-   xge_mac_wrapper
-     #(.PORTNUM(8'h0))
-   xge_mac_wrapper_port0
-     (
-      // XGMII
-      .xgmii_clk(xgmii_clk0),
-      .xgmii_txd(xgmii_txd0),
-      .xgmii_txc(xgmii_txc0),
-      .xgmii_rxd(xgmii_rxd0),
-      .xgmii_rxc(xgmii_rxc0),
-      // MDIO
-      .mdc(mdc0),
-      .mdio_in(mdio_in0),
-      .mdio_out(mdio_out0),
-      // Wishbone I/F
-      .wb_adr_i(s4_adr),               // To wishbone_if0 of wishbone_if.v
-      .wb_clk_i(bus_clk),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_cyc_i(s4_cyc),               // To wishbone_if0 of wishbone_if.v
-      .wb_dat_i(s4_dat_o),             // To wishbone_if0 of wishbone_if.v
-      .wb_rst_i(bus_rst),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_stb_i(s4_stb),               // To wishbone_if0 of wishbone_if.v
-      .wb_we_i(s4_we),                 // To wishbone_if0 of wishbone_if.v
-      .wb_ack_o(s4_ack),               // From wishbone_if0 of wishbone_if.v
-      .wb_dat_o(s4_dat_i),             // From wishbone_if0 of wishbone_if.v
-      .wb_int_o(s4_int),               // From wishbone_if0 of wishbone_if.v
-      // Client FIFO Interfaces
-      .sys_clk(bus_clk),
-      .reset(bus_rst),          // From sys_clk domain.
-      .rx_tdata(eth0_rx_tdata),
-      .rx_tuser(eth0_rx_tuser),
-      .rx_tlast(eth0_rx_tlast),
-      .rx_tvalid(eth0_rx_tvalid),
-      .rx_tready(eth0_rx_tready),
-      .tx_tdata(eth0_tx_tdata),
-      .tx_tuser(eth0_tx_tuser),                // Bit[3] (error) is ignored for now.
-      .tx_tlast(eth0_tx_tlast),
-      .tx_tvalid(eth0_tx_tvalid),
-      .tx_tready(eth0_tx_tready),
-      // Other
-      .phy_ready(xge_phy_resetdone0),
-      // Debug
-      .debug_rx(),
-      .debug_tx());
-
-`else
-   simple_gemac_wrapper #(.RX_FLOW_CTRL(0), .PORTNUM(8'd0)) simple_gemac_wrapper_port0
-     (.clk125(gmii_clk0), .reset(sw_rst[0]),
-      .GMII_GTX_CLK(), .GMII_TX_EN(gmii_tx_en0), .GMII_TX_ER(gmii_tx_er0), .GMII_TXD(gmii_txd0),
-      .GMII_RX_CLK(gmii_clk0), .GMII_RX_DV(gmii_rx_dv0), .GMII_RX_ER(gmii_rx_er0), .GMII_RXD(gmii_rxd0),
-
-      .sys_clk(bus_clk),
-      .rx_tdata(eth0_rx_tdata), .rx_tuser(eth0_rx_tuser), .rx_tlast(eth0_rx_tlast), .rx_tvalid(eth0_rx_tvalid), .rx_tready(eth0_rx_tready),
-      .tx_tdata(eth0_tx_tdata), .tx_tuser(eth0_tx_tuser), .tx_tlast(eth0_tx_tlast), .tx_tvalid(eth0_tx_tvalid), .tx_tready(eth0_tx_tready),
-      // MDIO
-      .mdc(mdc0),
-      .mdio_in(mdio_in0),
-      .mdio_out(mdio_out0),
-      // Wishbone I/F
-      .wb_adr_i(s4_adr),               // To wishbone_if0 of wishbone_if.v
-      .wb_clk_i(bus_clk),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_cyc_i(s4_cyc),               // To wishbone_if0 of wishbone_if.v
-      .wb_dat_i(s4_dat_o),             // To wishbone_if0 of wishbone_if.v
-      .wb_rst_i(bus_rst),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_stb_i(s4_stb),               // To wishbone_if0 of wishbone_if.v
-      .wb_we_i(s4_we),                 // To wishbone_if0 of wishbone_if.v
-      .wb_ack_o(s4_ack),               // From wishbone_if0 of wishbone_if.v
-      .wb_dat_o(s4_dat_i),             // From wishbone_if0 of wishbone_if.v
-      .wb_int_o(s4_int),               // From wishbone_if0 of wishbone_if.v
-      // Debug
-      .debug_tx(), .debug_rx()
-      );
-`endif // !`ifdef ETH10G_PORT0
-
-
- `ifdef ETH10G_PORT1
-   xge_mac_wrapper
-     #(.PORTNUM(8'h1))
-   xge_mac_wrapper_port1
-     (
-      // XGMII
-      .xgmii_clk(xgmii_clk1),
-      .xgmii_txd(xgmii_txd1),
-      .xgmii_txc(xgmii_txc1),
-      .xgmii_rxd(xgmii_rxd1),
-      .xgmii_rxc(xgmii_rxc1),
-      // MDIO
-      .mdc(mdc1),
-      .mdio_in(mdio_in1),
-      .mdio_out(mdio_out1),
-      // Wishbone I/F
-      .wb_adr_i(s5_adr),               // To wishbone_if0 of wishbone_if.v
-      .wb_clk_i(bus_clk),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_cyc_i(s5_cyc),               // To wishbone_if0 of wishbone_if.v
-      .wb_dat_i(s5_dat_o),             // To wishbone_if0 of wishbone_if.v
-      .wb_rst_i(bus_rst),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_stb_i(s5_stb),               // To wishbone_if0 of wishbone_if.v
-      .wb_we_i(s5_we),                 // To wishbone_if0 of wishbone_if.v
-      .wb_ack_o(s5_ack),               // From wishbone_if0 of wishbone_if.v
-      .wb_dat_o(s5_dat_i),             // From wishbone_if0 of wishbone_if.v
-      .wb_int_o(s5_int),               // From wishbone_if0 of wishbone_if.v
-      // Client FIFO Interfaces
-      .sys_clk(bus_clk),
-      .reset(bus_rst),          // From sys_clk domain.
-      .rx_tdata(eth1_rx_tdata),
-      .rx_tuser(eth1_rx_tuser),
-      .rx_tlast(eth1_rx_tlast),
-      .rx_tvalid(eth1_rx_tvalid),
-      .rx_tready(eth1_rx_tready),
-      .tx_tdata(eth1_tx_tdata),
-      .tx_tuser(eth1_tx_tuser),                // Bit[3] (error) is ignored for now.
-      .tx_tlast(eth1_tx_tlast),
-      .tx_tvalid(eth1_tx_tvalid),
-      .tx_tready(eth1_tx_tready),
-      // Other
-      .phy_ready(xge_phy_resetdone1),
-      // Debug
-      .debug_rx(),
-      .debug_tx());
-
-`else
-   simple_gemac_wrapper #(.RX_FLOW_CTRL(0), .PORTNUM(8'd1)) simple_gemac_wrapper_port1
-     (.clk125(gmii_clk1), .reset(sw_rst[0]),
-      .GMII_GTX_CLK(), .GMII_TX_EN(gmii_tx_en1), .GMII_TX_ER(gmii_tx_er1), .GMII_TXD(gmii_txd1),
-      .GMII_RX_CLK(gmii_clk1), .GMII_RX_DV(gmii_rx_dv1), .GMII_RX_ER(gmii_rx_er1), .GMII_RXD(gmii_rxd1),
-
-      .sys_clk(bus_clk),
-      .rx_tdata(eth1_rx_tdata), .rx_tuser(eth1_rx_tuser), .rx_tlast(eth1_rx_tlast), .rx_tvalid(eth1_rx_tvalid), .rx_tready(eth1_rx_tready),
-      .tx_tdata(eth1_tx_tdata), .tx_tuser(eth1_tx_tuser), .tx_tlast(eth1_tx_tlast), .tx_tvalid(eth1_tx_tvalid), .tx_tready(eth1_tx_tready),
-      // MDIO
-      .mdc(mdc1),
-      .mdio_in(mdio_in1),
-      .mdio_out(mdio_out1),
-      // Wishbone I/F
-      .wb_adr_i(s5_adr),               // To wishbone_if0 of wishbone_if.v
-      .wb_clk_i(bus_clk),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_cyc_i(s5_cyc),               // To wishbone_if0 of wishbone_if.v
-      .wb_dat_i(s5_dat_o),             // To wishbone_if0 of wishbone_if.v
-      .wb_rst_i(bus_rst),              // To sync_clk_wb0 of sync_clk_wb.v, ...
-      .wb_stb_i(s5_stb),               // To wishbone_if0 of wishbone_if.v
-      .wb_we_i(s5_we),                 // To wishbone_if0 of wishbone_if.v
-      .wb_ack_o(s5_ack),               // From wishbone_if0 of wishbone_if.v
-      .wb_dat_o(s5_dat_i),             // From wishbone_if0 of wishbone_if.v
-      .wb_int_o(s5_int),               // From wishbone_if0 of wishbone_if.v
-      // Debug
-      .debug_tx(), .debug_rx());
-`endif
 
 endmodule // x300_core

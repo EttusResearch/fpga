@@ -1,0 +1,7 @@
+538d537
+< set_false_path -through [get_pins -hier -filter {NAME =~ */u_iodelay_ctrl/sys_rst}]
+541c540
+<           
+\ No newline at end of file
+---
+>           
