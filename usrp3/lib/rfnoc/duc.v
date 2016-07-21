@@ -22,11 +22,12 @@ module duc #(
 
   localparam RESET_DELAY = 3;
 
-  localparam WIDTH  = 16;
-  localparam CWIDTH = 24;
-  localparam PWIDTH = 32;
+  localparam WIDTH  = 16; // Input/output bitwidth of the module
+  localparam CWIDTH = 24; // Internal bitwidth needed for CORDIC accuracy
+  localparam PWIDTH = 32; // Phase accumulator bitwidth
+  localparam MWIDTH = 43; // Product width of the multiplier
 
-  localparam CLIP_BITS = 14;
+  localparam CLIP_BITS = 12;
 
   reg  [1:0] hb_rate;
   reg  [7:0] cic_interp_rate;
@@ -45,9 +46,7 @@ module duc #(
   wire o_tlast_phase;
   wire i_tready_phase;
 
-  wire [WIDTH-1:0] o_tdata_scale;
-  wire o_tvalid_scale;
-  wire i_tready_scale;
+  wire [17:0] scale_factor;
 
  /**************************************************************************
   * Settings registers
@@ -60,12 +59,9 @@ module duc #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(o_tdata_phase), .o_tlast(o_tlast_phase), .o_tvalid(o_tvalid_phase), .o_tready(i_tready_phase));
 
-  axi_setting_reg #(
-    .ADDR(SR_SCALE_ADDR), .AWIDTH(8), .WIDTH(WIDTH), .REPEATS(1))
-  axi_sr_scale (
-    .clk(clk), .reset(reset),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .o_tdata(o_tdata_scale), .o_tlast(), .o_tvalid(o_tvalid_scale), .o_tready(i_tready_scale));
+  setting_reg #(.my_addr(SR_SCALE_ADDR), .width(18)) sr_scale (
+    .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
+    .in(set_data),.out(scale_factor),.changed());
 
   setting_reg #(.my_addr(SR_INTERP_ADDR), .width(10), .at_reset(1)) sr_interp
     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -151,7 +147,7 @@ module duc #(
   wire [2*CWIDTH-1:0] o_cic;
   wire o_tvalid_cic, i_tready_cic;
 
-  assign o_tdata_halfbands = (hb_rate == 2'b0) ? o_tdata_extd : 
+  assign o_tdata_halfbands = (hb_rate == 2'b0) ? o_tdata_extd :
                              (hb_rate == 2'b1) ? {o_tdata_hb1[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb1[CWIDTH-1:0] << 2} :
                                                  {o_tdata_hb2[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb2[CWIDTH-1:0] << 2};
 
@@ -243,52 +239,41 @@ module duc #(
  /**************************************************************************
   * Perform scaling on the IQ output
   *************************************************************************/
-  wire [CWIDTH-1:0] ii_tdata, iq_tdata;
-  wire ii_tvalid, ii_tready;
-  wire iq_tvalid, iq_tready;
+  wire [MWIDTH-1:0] i_prod, q_prod;
 
-  split_complex #(.WIDTH(CWIDTH)) split_complex (
-    .i_tdata(o_tdata_cordic), .i_tlast(1'b0), .i_tvalid(o_tvalid_cordic), .i_tready(o_tready_cordic),
-    .oi_tdata(ii_tdata), .oi_tlast(), .oi_tvalid(ii_tvalid), .oi_tready(ii_tready),
-    .oq_tdata(iq_tdata), .oq_tlast(), .oq_tvalid(iq_tvalid), .oq_tready(iq_tready),
-    .error()
-  );
+  MULT_MACRO #(
+    .DEVICE("7SERIES"),        // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6","7SERIES"
+    .LATENCY(1),               // Desired clock cycle latency, 0-4
+    .WIDTH_A(25),              // Multiplier A-input bus width, 1-25
+    .WIDTH_B(18))              // Multiplier B-input bus width, 1-18
+  SCALE_I (.P(i_prod), // Multiplier output bus, width determined by WIDTH_P parameter
+    // Multiplier input A bus, width determined by WIDTH_A parameter
+    .A({o_tdata_cordic[2*CWIDTH-1],o_tdata_cordic[2*CWIDTH-1:CWIDTH]}),
+    // Multiplier input B bus, width determined by WIDTH_B parameter
+    .B(scale_factor),
+    .CE(o_tvalid_cordic & o_tready_cordic), // 1-bit active high input clock enable
+    .CLK(clk),              // 1-bit positive edge clock input
+    .RST(reset | clear));   // 1-bit input active high reset
 
-  wire [CWIDTH+WIDTH-1:0] o_tdata_i_prod, o_tdata_q_prod;
-  wire o_tvalid_prod;
-  wire o_tready_prod;
-
-  mult #(
-   .WIDTH_A(CWIDTH),
-   .WIDTH_B(WIDTH),
-   .WIDTH_P(CWIDTH+WIDTH),
-   .DROP_TOP_P(0),
-   .LATENCY(4),
-   .CASCADE_OUT(0))
-  i_mult (
-    .clk(clk), .reset(reset),
-    .a_tdata(ii_tdata), .a_tlast(1'b0), .a_tvalid(ii_tvalid), .a_tready(ii_tready),
-    .b_tdata(o_tdata_scale), .b_tlast(1'b0), .b_tvalid(o_tvalid_scale), .b_tready(i_tready_scale),
-    .p_tdata(o_tdata_i_prod), .p_tlast(), .p_tvalid(o_tvalid_prod), .p_tready(o_tready_prod));
-
-  mult #(
-   .WIDTH_A(CWIDTH),
-   .WIDTH_B(WIDTH),
-   .WIDTH_P(CWIDTH+WIDTH),
-   .DROP_TOP_P(0),
-   .LATENCY(4),
-   .CASCADE_OUT(0))
-  q_mult (
-    .clk(clk), .reset(reset),
-    .a_tdata(iq_tdata), .a_tlast(1'b0), .a_tvalid(iq_tvalid), .a_tready(iq_tready),
-    .b_tdata(o_tdata_scale), .b_tlast(1'b0), .b_tvalid(o_tvalid_scale), .b_tready(),
-    .p_tdata(o_tdata_q_prod), .p_tlast(), .p_tvalid(), .p_tready(o_tready_prod));
+  MULT_MACRO #(
+    .DEVICE("7SERIES"),         // Target Device: "VIRTEX5", "VIRTEX6", "SPARTAN6","7SERIES"
+    .LATENCY(1),                // Desired clock cycle latency, 0-4
+    .WIDTH_A(25),               // Multiplier A-input bus width, 1-25
+    .WIDTH_B(18))               // Multiplier B-input bus width, 1-18
+   SCALE_Q (.P(q_prod), // Multiplier output bus, width determined by WIDTH_P parameter
+    .A({o_tdata_cordic[CWIDTH-1],o_tdata_cordic[CWIDTH-1:0]}),
+    // Multiplier input A bus, width determined by WIDTH_A parameter
+    .B(scale_factor),
+    // Multiplier input B bus, width determined by WIDTH_B parameter
+    .CE(o_tvalid_cordic & o_tready_cordic), // 1-bit active high input clock enable
+    .CLK(clk),              // 1-bit positive edge clock input
+    .RST(reset | clear));   // 1-bit input active high reset
 
   wire [2*WIDTH-1:0] o_tdata_final_rc;
   wire o_tvalid_final_rc, o_tready_final_rc;
-  axi_round_and_clip_complex #(.WIDTH_IN(CWIDTH+WIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(CLIP_BITS)) round_clip (
+  axi_round_and_clip_complex #(.WIDTH_IN(MWIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(CLIP_BITS)) round_clip (
       .clk(clk), .reset(reset | clear),
-      .i_tdata({o_tdata_q_prod, o_tdata_i_prod}), .i_tlast(1'b0), .i_tvalid(o_tvalid_prod), .i_tready(o_tready_prod),
+      .i_tdata({q_prod, i_prod}), .i_tlast(1'b0), .i_tvalid(o_tvalid_cordic), .i_tready(o_tready_cordic),
       .o_tdata(o_tdata_final_rc), .o_tlast(), .o_tvalid(o_tvalid_final_rc), .o_tready(o_tready_final_rc));
 
  /**************************************************************************
