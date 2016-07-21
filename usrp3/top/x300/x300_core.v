@@ -61,7 +61,7 @@ module x300_core (
    input sfp0_rx_tlast,
    input sfp0_rx_tvalid,
    output sfp0_rx_tready,
-   
+
    input [15:0] sfp0_phy_status,
 
    // SFP+ 1 data stream
@@ -570,7 +570,7 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE(15),
+      .STR_SINK_FIFOSIZE({8'd5,8'd13}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i0 (
@@ -596,14 +596,14 @@ module x300_core (
       //Debug
       .debug()
    );
-   
+
    //------------------------------------
    // Radio 2,3 (XB Radio Port 1)
    //------------------------------------
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE(15),
+      .STR_SINK_FIFOSIZE({8'd5,8'd13}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i1 (
@@ -677,7 +677,7 @@ module x300_core (
    assign tx_stb[1] = 1'b0;
    assign tx_stb[2] = 1'b1;
    assign tx_stb[3] = 1'b0;
-   
+
    //Daughter board GPIO
    assign {db_gpio_in[1], db_gpio_in[0]} = {32'b0, db0_gpio_in};
    assign {db_gpio_in[3], db_gpio_in[2]} = {32'b0, db1_gpio_in};
@@ -697,11 +697,11 @@ module x300_core (
    assign {miso[1], miso[0]}   = {1'b0, miso0};
    assign {sen1, sclk1, mosi1} = {sen[2], sclk[2], mosi[2]};   //*[3] unused
    assign {miso[3], miso[2]}   = {1'b0, miso1};
-   
+
    //LEDs
    assign radio_led0 = leds[0][2:0];    //Other other led bits unused in leds[0,1]
    assign radio_led1 = leds[2][2:0];    //Other other led bits unused in leds[2,3]
-   
+
    //Misc ins and outs
    always @(posedge radio_clk) begin
       radio0_misc_out   <= misc_outs[0];

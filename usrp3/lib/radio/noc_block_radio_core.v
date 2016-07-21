@@ -5,9 +5,9 @@
 
 module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 11,
   parameter MTU = 11,
   parameter NUM_CHANNELS = 1,
+  parameter STR_SINK_FIFOSIZE = {NUM_CHANNELS{8'd11}},
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
   parameter USE_SPI_CLK = 0
@@ -59,7 +59,7 @@ module noc_block_radio_core #(
     .NOC_ID(NOC_ID),
     .INPUT_PORTS(NUM_CHANNELS),
     .OUTPUT_PORTS(NUM_CHANNELS),
-    .STR_SINK_FIFOSIZE({NUM_CHANNELS{STR_SINK_FIFOSIZE[7:0]}}),
+    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
     .USE_TIMED_CMDS(1), // Settings bus transactions will occur at the vita time specified in the command packet
     .CMD_FIFO_SIZE({NUM_CHANNELS{8'd7}})) // Up to 64 commands in flight per radio (128/2 lines per command packet = 64 commands)
   noc_shell (
