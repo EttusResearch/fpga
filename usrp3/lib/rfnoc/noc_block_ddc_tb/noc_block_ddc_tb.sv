@@ -78,10 +78,10 @@ module noc_block_ddc_tb();
   endtask
 
   task automatic send_ramp (
-    input int decim_rate,
+    input int unsigned decim_rate,
     // (Optional) For testing passing through partial packets
     input logic drop_partial_packet = 1'b0,
-    input int extra_samples = 0);
+    input int unsigned extra_samples = 0);
     begin
       set_decim_rate(decim_rate);
 
@@ -214,6 +214,7 @@ module noc_block_ddc_tb();
   ********************************************************/
   initial begin : tb_main
     logic [63:0] resp;
+    string s;
     real freq_resp[0:FFT_SIZE/2-1];
     real phase_resp[0:FFT_SIZE/2-1];
 
@@ -247,7 +248,6 @@ module noc_block_ddc_tb();
     `RFNOC_CONNECT(noc_block_tb, noc_block_ddc, SC16, SPP);
     `RFNOC_CONNECT(noc_block_ddc, noc_block_tb, SC16, SPP);
     // List of rates to catch most issues
-    
     send_ramp(1);    // HBs enabled: 0, CIC rate: 1
     send_ramp(2);    // HBs enabled: 1, CIC rate: 1
     send_ramp(3);    // HBs enabled: 0, CIC rate: 3
@@ -268,27 +268,36 @@ module noc_block_ddc_tb();
     ** Test 4 -- Test timed cordic tune
     ********************************************************/
     `TEST_CASE_START("Test timed CORDIC tune");
+    `RFNOC_CONNECT(noc_block_tb, noc_block_ddc, SC16, SPP);
+    `RFNOC_CONNECT(noc_block_ddc, noc_block_fft, SC16, SPP);
+    `RFNOC_CONNECT(noc_block_fft, noc_block_tb, SC16, SPP);
     // Configure DDC
     set_decim_rate(1);
+    tb_streamer.read_user_reg(sid_noc_block_ddc, 0, resp);
     tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
-    tb_streamer.write_reg(sid_noc_block_ddc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
     tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
+    // Configure FFT
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable complex out
+    // Test description:
+    // - Send three packets to DDC, each set to a constant value
+    // - Setup a timed tune for the last two packets
+    //   - CORDIC tuning will cause the DDC to output a sine tone the last two packets
+    // - Route DDC output to FFT
+    // - Check FFT output for DC, Fs/8, and Fs/4 tones
     fork
       begin
-        // Setup timed tune
-        $display("Send timed tune command");
-        tb_streamer.write_reg_timed(sid_noc_block_ddc, SR_FREQ_ADDR, 10000, 30);
+        // Send timed tunes
+        tb_streamer.write_reg_timed(sid_noc_block_ddc, SR_FREQ_ADDR, 2**29, 254); // Shift by Fs/8
+        tb_streamer.write_reg_timed(sid_noc_block_ddc, SR_FREQ_ADDR, 2**30, 510); // Shift by Fs/4
       end
       begin
         cvita_payload_t send_payload;
         cvita_metadata_t md;
         $display("Send constant waveform");
-        for (int i = 0; i < SPP/2; i++) begin
-          if (i < 16) begin
-            send_payload.push_back({16'd1000, 16'd0, 16'd1000, 16'd0});
-          end else begin
-            send_payload.push_back({16'd3000, 16'd0, 16'd3000, 16'd0});
-          end
+        for (int i = 0; i < 3*(SPP/2); i++) begin
+          send_payload.push_back({16'd5000, 16'd0, 16'd5000, 16'd0});
         end
         md.eob = 1;
         md.has_time = 1;
@@ -297,16 +306,39 @@ module noc_block_ddc_tb();
         $display("Send constant waveform complete");
       end
       begin
-        cvita_payload_t recv_payload;
-        cvita_metadata_t md;
-        tb_streamer.recv(recv_payload,md);
+        logic [31:0] recv_word;
+        logic recv_eob;
+        $display("Receive & check FFT output");
+        // DC
+        for (int i = 0; i < 3*SPP; i++) begin
+          tb_streamer.pull_word(recv_word,recv_eob);
+          if (i == FFT_SIZE/2) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect DC component! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else if (i == SPP+FFT_SIZE/2+FFT_SIZE/8) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/8! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else if (i == 2*SPP+FFT_SIZE/2+FFT_SIZE/4) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/4! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else begin
+            $sformat(s, "Invalid CORDIC shift! Non-zero component detected at index %0d! Expected: {0,0}, Received: {%d,%d}", i, recv_word[31:16], recv_word[15:0]);
+            `ASSERT_WARN(recv_word == 32'd0, s);
+          end
+        end
+        $display("Receive & check FFT output complete");
       end
     join
+    // Reset CORDIC to 0
+    tb_streamer.write_reg_timed(sid_noc_block_ddc, SR_FREQ_ADDR, 0, 0);
+    `TEST_CASE_DONE(1);
 
     /********************************************************
     ** Test 5 -- Test passing through a partial packet
     ********************************************************/
     `TEST_CASE_START("Pass through partial packet");
+    `RFNOC_CONNECT(noc_block_tb, noc_block_ddc, SC16, SPP);
+    `RFNOC_CONNECT(noc_block_ddc, noc_block_tb, SC16, SPP);
     send_ramp(2,0,4);
     send_ramp(3,0,4);
     send_ramp(4,0,4);
