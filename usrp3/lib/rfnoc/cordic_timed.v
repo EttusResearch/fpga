@@ -163,7 +163,7 @@ module cordic_timed #(
   axi_sync #(
     .WIDTH(PHASE_WIDTH+2*CORDIC_WIDTH),
     .SIZE(2),
-    .FIFO_SIZE(5))
+    .FIFO_SIZE(2))
   axi_sync (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({{2*CORDIC_WIDTH{1'b0}},phase_tdata,{PHASE_WIDTH{1'b0}},cordic_in_tdata}),
@@ -236,7 +236,7 @@ module cordic_timed #(
   wire sample_tlast, sample_tvalid, sample_tready;
 
   axi_round_and_clip_complex #(
-    .WIDTH_IN(CORDIC_WIDTH+SCALING_WIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(12))
+    .WIDTH_IN(CORDIC_WIDTH+SCALING_WIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(11))
   axi_round_and_clip_complex (
     .clk(clk), .reset(reset | clear),
     .i_tdata({scaled_i_tdata, scaled_q_tdata}), .i_tlast(scaled_tlast), .i_tvalid(scaled_tvalid), .i_tready(scaled_tready),
