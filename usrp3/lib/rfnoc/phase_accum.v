@@ -4,6 +4,7 @@
 // Expects scaled radians fixed point input format of the form Q2.#,
 // Example: WIDTH_IN=8 then input format: Q2.5 (sign bit, 2 integer bits, 5 fraction bits)
 module phase_accum #(
+  parameter REVERSE_ROTATION = 0, // Negate phase increment value
   parameter WIDTH_ACCUM = 16,
   parameter WIDTH_IN = 16,
   parameter WIDTH_OUT = 16)
@@ -30,8 +31,8 @@ module phase_accum #(
     end else if (i_tready & i_tvalid) begin
       if (i_tlast) begin
         accum       <= {WIDTH_ACCUM{1'b0}};
-        accum_next  <= $signed(i_tdata);
-        phase_inc   <= $signed(i_tdata);
+        accum_next  <= REVERSE_ROTATION ? -$signed(i_tdata) : $signed(i_tdata);
+        phase_inc   <= REVERSE_ROTATION ? -$signed(i_tdata) : $signed(i_tdata);
       end else begin
         if (accum_next >= POS_ROLLOVER) begin
           accum_next <= accum_next + phase_inc - 2*POS_ROLLOVER;
