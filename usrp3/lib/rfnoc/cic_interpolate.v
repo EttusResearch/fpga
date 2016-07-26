@@ -21,8 +21,11 @@ module cic_interpolate #(
   reg  [WIDTH+$clog2(MAX_RATE**(N-1))-1:0] integrator [0:N-1];
   reg  [WIDTH+$clog2(MAX_RATE**(N-1))-1:0] differentiator [0:N-1];
   reg  [WIDTH+$clog2(MAX_RATE**(N-1))-1:0] pipeline [0:N-1];
+  reg  [WIDTH+$clog2(MAX_RATE**(N-1))-1:0] sampler;
 
-  reg  strobe_in_int;
+  reg  [N-1:0] strobe_diff;
+  reg  [N-1:0] strobe_integ;
+  reg          strobe_sampler;
 
   integer i;
 
@@ -31,16 +34,22 @@ module cic_interpolate #(
   // Differentiate
   always @(posedge clk) begin
     if (reset) begin
+      strobe_diff         <= 'd0;
       for (i = 0; i < N; i = i + 1) begin
         differentiator[i] <= 0;
         pipeline[i]       <= 0;
       end
-    end else if (strobe_in) begin
-      differentiator[0] <= signal_in_ext;
-      pipeline[0]       <= signal_in_ext - differentiator[0];
+    end else begin
+      strobe_diff         <= {strobe_diff[N-2:0], strobe_in};
+      if (strobe_in) begin
+        differentiator[0] <= signal_in_ext;
+        pipeline[0]       <= signal_in_ext - differentiator[0];
+      end
       for (i = 1; i < N; i = i + 1) begin
-        differentiator[i] <= pipeline[i-1];
-        pipeline[i]       <= pipeline[i-1] - differentiator[i];
+        if (strobe_diff[i-1]) begin
+          differentiator[i] <= pipeline[i-1];
+          pipeline[i]       <= pipeline[i-1] - differentiator[i];
+        end
       end
     end
   end
@@ -52,7 +61,7 @@ module cic_interpolate #(
   always @(posedge clk) begin
     if (reset | rate_stb) begin
       counter <= rate;
-    end else if (strobe_in) begin
+    end else if (strobe_diff[N-1]) begin
       counter <= rate - 1;
     end else begin
       if (counter == 0) begin
@@ -63,31 +72,44 @@ module cic_interpolate #(
     end
   end
 
-  assign strobe_out_int = counter < rate & ~rate_stb;
+  assign strobe_out_int = (counter < rate) & ~rate_stb;
 
   // Integrate
   always @(posedge clk) begin
-    strobe_in_int   <= strobe_in;
     if (reset) begin
+      strobe_sampler    <= 1'b0;
+      strobe_integ      <= 'd0;
       for (i = 0; i < N; i = i + 1) begin
-        integrator[i] <= 0;
+        integrator[i]   <= 0;
       end
-    end else if (strobe_out_int) begin
-      if (strobe_in_int) begin
-        integrator[0] <= integrator[0] + pipeline[N-1];
+    end else begin
+      strobe_sampler      <= strobe_diff[N-1];
+      if (strobe_diff[N-1]) begin
+        sampler           <= pipeline[N-1];
+      end
+      strobe_integ        <= {strobe_integ[N-2:0],strobe_out_int};
+      if (strobe_sampler) begin
+        integrator[0] <= integrator[0] + sampler;
       end
       for (i = 1; i < N; i = i + 1) begin
-        integrator[i] <= integrator[i] + integrator[i-1];
+        if (strobe_integ[i-1]) begin
+          integrator[i] <= integrator[i] + integrator[i-1];
+        end
       end
     end
   end
 
   genvar l;
   wire [WIDTH-1:0] signal_out_shifted[0:MAX_RATE];
+  wire signal_out_shifted_strobe;
   generate
     for (l = 2; l <= MAX_RATE; l = l + 1) begin
-      round #(.bits_in($clog2(l**(N-1))+WIDTH), .bits_out(WIDTH))
-      round_sum (.in(integrator[N-1][$clog2(l**(N-1))+WIDTH-1:0]), .out(signal_out_shifted[l]), .err());
+      axi_round #(
+        .WIDTH_IN($clog2(l**(N-1))+WIDTH), .WIDTH_OUT(WIDTH))
+      axi_round (
+        .clk(clk), .reset(reset),
+        .i_tdata(integrator[N-1][$clog2(l**(N-1))+WIDTH-1:0]), .i_tlast(1'b0), .i_tvalid(strobe_integ[N-1]), .i_tready(),
+        .o_tdata(signal_out_shifted[l]), .o_tlast(), .o_tvalid(signal_out_shifted_strobe), .o_tready(1'b1));
     end
   endgenerate
   assign signal_out_shifted[0] = integrator[N-1][WIDTH-1:0];
@@ -96,9 +118,10 @@ module cic_interpolate #(
   // Output register
   always @(posedge clk) begin
     if (reset) begin
+      strobe_out <= 1'b0;
       signal_out <= 'd0;
     end else begin
-      strobe_out <= strobe_out_int;
+      strobe_out <= signal_out_shifted_strobe;
       signal_out <= signal_out_shifted[rate];
     end
   end
