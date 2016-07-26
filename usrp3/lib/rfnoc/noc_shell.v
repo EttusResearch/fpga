@@ -35,7 +35,8 @@ module noc_shell
     input clk, input reset,
     
     // Control Sink
-    output [BLOCK_PORTS*32-1:0] set_data, output [BLOCK_PORTS*8-1:0] set_addr, output [BLOCK_PORTS-1:0] set_stb, output [BLOCK_PORTS*64-1:0] set_time,
+    output [BLOCK_PORTS*32-1:0] set_data, output [BLOCK_PORTS*8-1:0] set_addr, output [BLOCK_PORTS-1:0] set_stb,
+    output [BLOCK_PORTS*64-1:0] set_time, output [BLOCK_PORTS-1:0] set_has_time,
     input [BLOCK_PORTS-1:0] rb_stb, output [BLOCK_PORTS*8-1:0] rb_addr, input [BLOCK_PORTS*64-1:0] rb_data,
 
     // Control Source
@@ -159,7 +160,8 @@ module noc_shell
          .cmd_tdata(cmdin_ports_tdata[64*k+63:64*k]), .cmd_tlast(cmdin_ports_tlast[k]), .cmd_tvalid(cmdin_ports_tvalid[k]), .cmd_tready(cmdin_ports_tready[k]),
          .resp_tdata(ackout_ports_tdata[64*k+63:64*k]), .resp_tlast(ackout_ports_tlast[k]), .resp_tvalid(ackout_ports_tvalid[k]), .resp_tready(ackout_ports_tready[k]),
          .vita_time(vita_time),
-         .set_stb(set_stb[k]), .set_addr(set_addr[8*k+7:8*k]), .set_data(set_data[32*k+31:32*k]), .set_time(set_time[64*k+63:64*k]),
+         .set_stb(set_stb[k]), .set_addr(set_addr[8*k+7:8*k]), .set_data(set_data[32*k+31:32*k]),
+         .set_time(set_time[64*k+63:64*k]), .set_has_time(set_has_time[k]),
          .rb_stb(rb_stb_int), .rb_data(rb_data_int), .rb_addr(rb_addr_noc_shell), .rb_addr_user(rb_addr[8*k+7:8*k]));
 
        // Mux NoC Shell and user readback registers

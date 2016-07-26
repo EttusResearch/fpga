@@ -55,7 +55,8 @@ module cmd_pkt_proc #(
   input [63:0] cmd_tdata, input cmd_tlast, input cmd_tvalid, output cmd_tready,
   output reg [63:0] resp_tdata, output reg resp_tlast, output reg resp_tvalid, input resp_tready,
   input [63:0] vita_time,
-  output reg set_stb, output reg [SR_AWIDTH-1:0] set_addr, output reg [SR_DWIDTH-1:0] set_data, output reg [63:0] set_time,
+  output reg set_stb, output reg [SR_AWIDTH-1:0] set_addr, output reg [SR_DWIDTH-1:0] set_data,
+  output reg [63:0] set_time, output reg set_has_time,
   input rb_stb, input [RB_DWIDTH-1:0] rb_data, output reg [RB_AWIDTH-1:0] rb_addr, output reg [RB_USER_AWIDTH-1:0] rb_addr_user
 );
 
@@ -81,6 +82,7 @@ module cmd_pkt_proc #(
   wire [63:0] int_tdata;
   reg int_tready;
   wire int_tlast, int_tvalid;
+
   // Extracts header fields
   cvita_hdr_parser #(.REGISTER(0)) cvita_hdr_parser (
     .clk(clk), .reset(reset), .clear(clear),
@@ -143,6 +145,7 @@ module cmd_pkt_proc #(
       set_data            <= 'd0;
       set_addr            <= 'd0;
       set_time            <= 'd0;
+      set_has_time        <= 1'b0;
       rb_addr             <= 'd0;
       rb_addr_user        <= 'd0;
       rb_data_hold        <= 'd0;
@@ -210,6 +213,7 @@ module cmd_pkt_proc #(
             set_addr        <= int_tdata[SR_AWIDTH-1+32:32];
             set_data        <= int_tdata[SR_DWIDTH-1:0];
             set_time        <= has_time_hold ? pkt_vita_time_hold : 'd0;
+            set_has_time    <= has_time_hold;
             // Update rb_addr on same clock cycle as asserting set_stb
             if (set_rb_addr) begin
               rb_addr       <= int_tdata[RB_AWIDTH-1:0];
