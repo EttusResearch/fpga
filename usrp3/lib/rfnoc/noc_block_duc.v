@@ -24,6 +24,7 @@ module noc_block_duc #(
   wire [NUM_CHAINS*8-1:0]       set_addr;
   wire [NUM_CHAINS-1:0]         set_stb;
   wire [NUM_CHAINS*64-1:0]      set_time;
+  wire [NUM_CHAINS-1:0]         set_has_time;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
   wire [64*NUM_CHAINS-1:0]      rb_data;
 
@@ -41,8 +42,7 @@ module noc_block_duc #(
     .NOC_ID(NOC_ID),
     .INPUT_PORTS(NUM_CHAINS),
     .OUTPUT_PORTS(NUM_CHAINS),
-    .STR_SINK_FIFOSIZE({NUM_CHAINS{STR_SINK_FIFOSIZE[7:0]}}),
-    .USE_TIMED_CMDS(1)) // Settings bus transactions will occur at the vita time specified in the command packet
+    .STR_SINK_FIFOSIZE({NUM_CHAINS{STR_SINK_FIFOSIZE[7:0]}}))
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -50,8 +50,8 @@ module noc_block_duc #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(/* Unused */),
-    .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time), .set_has_time(set_has_time),
+    .rb_stb({NUM_CHAINS{1'b1}}), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -78,12 +78,12 @@ module noc_block_duc #(
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
   localparam SR_USER_REG_BASE  = 128;
-  localparam SR_N_ADDR         = SR_USER_REG_BASE;
-  localparam SR_M_ADDR         = SR_USER_REG_BASE + 1;
-  localparam SR_CONFIG_ADDR    = SR_USER_REG_BASE + 2;
-  localparam SR_INTERP_ADDR    = SR_USER_REG_BASE + 3;
-  localparam SR_PHASE_INC_ADDR = SR_USER_REG_BASE + 4;
-  localparam SR_SCALE_ADDR     = SR_USER_REG_BASE + 5;
+  localparam SR_N_ADDR         = 129;
+  localparam SR_M_ADDR         = 130;
+  localparam SR_CONFIG_ADDR    = 131;
+  localparam SR_INTERP_ADDR    = 132;
+  localparam SR_FREQ_ADDR      = 133;
+  localparam SR_SCALE_IQ_ADDR  = 134;
 
   genvar i;
   generate
@@ -109,9 +109,11 @@ module noc_block_duc #(
       wire clear_user;
       wire clear_duc = clear_tx_seqnum[i] | clear_user;
 
-      wire        set_stb_int  = set_stb[i];
-      wire [7:0]  set_addr_int = set_addr[8*i+7:8*i];
-      wire [31:0] set_data_int = set_data[32*i+31:32*i];
+      wire        set_stb_int      = set_stb[i];
+      wire [7:0]  set_addr_int     = set_addr[8*i+7:8*i];
+      wire [31:0] set_data_int     = set_data[32*i+31:32*i];
+      wire [63:0] set_time_int     = set_time[64*i+63:64*i];
+      wire        set_has_time_int = set_has_time[i];
 
       axi_wrapper #(
         .SIMPLE_MODE(0))
@@ -142,14 +144,42 @@ module noc_block_duc #(
 
       ////////////////////////////////////////////////////////////
       //
+      // Timed CORDIC
+      // - Implements timed cordic tunes. Placed between AXI Wrapper
+      //   and AXI Rate Change due to it needing access to the
+      //   vita time of the samples.
+      //
+      ////////////////////////////////////////////////////////////
+      wire [47:0]  m_axis_rc_tdata;
+      wire         m_axis_rc_tlast;
+      wire         m_axis_rc_tvalid;
+      wire         m_axis_rc_tready;
+      wire [127:0] m_axis_rc_tuser;
+
+      cordic_timed #(
+        .SR_FREQ_ADDR(SR_FREQ_ADDR),
+        .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR))
+      cordic_timed (
+        .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]),
+        .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
+        .set_time(set_time_int), .set_has_time(set_has_time_int),
+        .i_tdata(m_axis_rc_tdata), .i_tlast(m_axis_rc_tlast), .i_tvalid(m_axis_rc_tvalid),
+        .i_tready(m_axis_rc_tready), .i_tuser(m_axis_rc_tuser),
+        .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid),
+        .o_tready(s_axis_data_tready), .o_tuser(s_axis_data_tuser));
+
+      ////////////////////////////////////////////////////////////
+      //
       // Increase Rate
       //
       ////////////////////////////////////////////////////////////
-      wire [31:0] sample_tdata, sample_duc_tdata;
+      wire [15:0] nc;
+      wire [31:0] sample_tdata;
+      wire [47:0] sample_duc_tdata;
       wire sample_tvalid, sample_tready;
       wire sample_duc_tvalid, sample_duc_tready;
       axi_rate_change #(
-        .WIDTH(32),
+        .WIDTH(48),
         .MAX_N(1),
         .MAX_M(512),
         .SR_N_ADDR(SR_N_ADDR),
@@ -159,11 +189,11 @@ module noc_block_duc #(
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
-        .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid),
+        .i_tdata({16'd0,m_axis_data_tdata}), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid),
         .i_tready(m_axis_data_tready), .i_tuser(m_axis_data_tuser),
-        .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid),
-        .o_tready(s_axis_data_tready), .o_tuser(s_axis_data_tuser),
-        .m_axis_data_tdata(sample_tdata), .m_axis_data_tlast(), .m_axis_data_tvalid(sample_tvalid),
+        .o_tdata(m_axis_rc_tdata), .o_tlast(m_axis_rc_tlast), .o_tvalid(m_axis_rc_tvalid),
+        .o_tready(m_axis_rc_tready), .o_tuser(m_axis_rc_tuser),
+        .m_axis_data_tdata({nc,sample_tdata}), .m_axis_data_tlast(), .m_axis_data_tvalid(sample_tvalid),
         .m_axis_data_tready(sample_tready),
         .s_axis_data_tdata(sample_duc_tdata), .s_axis_data_tlast(1'b0), .s_axis_data_tvalid(sample_duc_tvalid),
         .s_axis_data_tready(sample_duc_tready));
@@ -174,15 +204,13 @@ module noc_block_duc #(
       //
       ////////////////////////////////////////////////////////////
       duc #(
-        .SR_PHASE_INC_ADDR(SR_PHASE_INC_ADDR),
-        .SR_SCALE_ADDR(SR_SCALE_ADDR),
-        .SR_INTERP_ADDR(SR_INTERP_ADDR)
-      ) duc (
+        .SR_INTERP_ADDR(SR_INTERP_ADDR))
+      duc (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_duc),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .i_tdata(sample_tdata), .i_tvalid(sample_tvalid), .i_tready(sample_tready),
-        .o_tdata(sample_duc_tdata), .o_tvalid(sample_duc_tvalid), .o_tready(sample_duc_tready)
-      );
+        .o_tdata(sample_duc_tdata), .o_tvalid(sample_duc_tvalid), .o_tready(sample_duc_tready));
+
     end
   endgenerate
 

@@ -17,7 +17,7 @@ module duc #(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [31:0] i_tdata, input [127:0] i_tuser, input i_tvalid, output i_tready,
-  output [31:0] o_tdata, output [127:0] o_tuser, output o_tvalid, input o_tready
+  output [47:0] o_tdata, output [127:0] o_tuser, output o_tvalid, input o_tready
 );
 
   localparam RESET_DELAY = 3;
@@ -180,14 +180,14 @@ module duc #(
     .clk(clk), .reset(reset | clear),
     .rate_stb(reset_on_change),
     .rate(cic_interp_rate), .strobe_in(to_cic_stb), .strobe_out(from_cic_stb),
-    .signal_in(to_cic_data[CWIDTH-1:0]), .signal_out(i_cic)
+    .signal_in(to_cic_data[2*CWIDTH-1:CWIDTH]), .signal_out(i_cic)
   );
 
   cic_interpolate #(.WIDTH(CWIDTH), .N(4), .MAX_RATE(128)) cic_interpolate_q (
     .clk(clk), .reset(reset | clear),
     .rate_stb(reset_on_change),
     .rate(cic_interp_rate), .strobe_in(to_cic_stb), .strobe_out(),
-    .signal_in(to_cic_data[2*CWIDTH-1:CWIDTH]), .signal_out(q_cic)
+    .signal_in(to_cic_data[CWIDTH-1:0]), .signal_out(q_cic)
   );
 
   assign o_cic = {i_cic, q_cic};
@@ -198,9 +198,17 @@ module duc #(
     .o_tdata(o_tdata_cic), .o_tvalid(o_tvalid_cic), .o_tlast(), .o_tready(i_tready_cartesian)
   );
 
- /**************************************************************************
-  * CORDIC
-  *************************************************************************/
+  assign o_tdata = o_tdata_cic;
+  assign o_tvalid = o_tvalid_cic;
+  assign i_tready_cartesian = o_tready;
+
+  /*
+  // Note: To facilitate timed CORDIC tunes, this code has been moved outside
+  //       the duc module to cordic_timed.v.
+   
+  //************************************************************************
+  // CORDIC
+  //************************************************************************
 
   // Phase accumulator for tracking the phase into the CORDIC
   wire [CWIDTH-1:0] o_tdata_acc;
@@ -220,25 +228,25 @@ module duc #(
     .aclk(clk),
     .aresetn(~(reset | clear)),
 
-    /* IQ input */
+    // IQ input
     .s_axis_cartesian_tvalid(o_tvalid_cic),
     .s_axis_cartesian_tready(i_tready_cartesian),
     .s_axis_cartesian_tdata(o_tdata_cic),
 
-    /* Phase input from NCO */
+    // Phase input from NCO
     .s_axis_phase_tvalid(o_tvalid_acc),
     .s_axis_phase_tready(i_tready_acc),
     .s_axis_phase_tdata(o_tdata_acc),
 
-    /* IQ output */
+    // IQ output
     .m_axis_dout_tvalid(o_tvalid_cordic),
     .m_axis_dout_tready(o_tready_cordic),
     .m_axis_dout_tdata(o_tdata_cordic)
   );
 
- /**************************************************************************
-  * Perform scaling on the IQ output
-  *************************************************************************/
+  //************************************************************************
+  // Perform scaling on the IQ output
+  //************************************************************************
   wire [MWIDTH-1:0] i_prod, q_prod;
 
   MULT_MACRO #(
@@ -276,11 +284,12 @@ module duc #(
       .i_tdata({q_prod, i_prod}), .i_tlast(1'b0), .i_tvalid(o_tvalid_cordic), .i_tready(o_tready_cordic),
       .o_tdata(o_tdata_final_rc), .o_tlast(), .o_tvalid(o_tvalid_final_rc), .o_tready(o_tready_final_rc));
 
- /**************************************************************************
-  * Assign the outputs (and ready input) of the module
-  *************************************************************************/
+  //*************************************************************************
+  // Assign the outputs (and ready input) of the module
+  //*************************************************************************
   assign o_tdata = o_tdata_final_rc;
   assign o_tvalid = o_tvalid_final_rc;
   assign o_tready_final_rc = o_tready;
+  */
 
 endmodule // duc

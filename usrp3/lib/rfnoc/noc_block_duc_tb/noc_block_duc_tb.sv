@@ -8,7 +8,7 @@
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US 100000000
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 3
+`define NUM_TEST_CASES 4
 
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.svh"
@@ -72,9 +72,9 @@ module noc_block_duc_tb();
       set_interp_rate(interp_rate);
 
       // Setup DUC
-      tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);           // Enable clear EOB
-      tb_streamer.write_reg(sid_noc_block_duc, SR_PHASE_INC_ADDR, 32'd0);        // CORDIC phase increment
-      tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_ADDR, (1 << 14) + 3515); // Scaling, set to 1
+      tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
+      tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
+      tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
 
       fork
         begin
@@ -121,6 +121,7 @@ module noc_block_duc_tb();
   ********************************************************/
   initial begin : tb_main
     logic [63:0] resp;
+    string s;
 
     /********************************************************
     ** Test 1 -- Reset
@@ -158,6 +159,85 @@ module noc_block_duc_tb();
     send_ones(13);   // HBs enabled: 0, CIC rate: 13
     send_ones(16);   // HBs enabled: 2, CIC rate: 3
     send_ones(40);   // HBs enabled: 2, CIC rate: 20
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 4 -- Test timed cordic tune
+    ********************************************************/
+    `TEST_CASE_START("Test timed CORDIC tune");
+    `RFNOC_CONNECT(noc_block_tb, noc_block_duc, SC16, SPP);
+    `RFNOC_CONNECT(noc_block_duc, noc_block_fft, SC16, SPP);
+    `RFNOC_CONNECT(noc_block_fft, noc_block_tb, SC16, SPP);
+    // Configure DUC
+    set_interp_rate(1);
+    tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);   // Enable clear EOB'
+    tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 32'd0);     // Reset phase increment
+    tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, 28140); // Scaling, set to 1, round((1/1.644375)*(2^15 - 1))
+    // Configure FFT
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable complex out
+    // Test description:
+    // - Send three packets to DUC, each set to a constant value
+    // - Setup a timed tune for the last two packets
+    //   - CORDIC tuning will cause the DUC to output a sine tone the last two packets
+    // - Route DUC output to FFT
+    // - Check FFT output for DC, Fs/8, and Fs/4 tones
+    fork
+      begin
+        // Send timed tunes
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, FFT_SIZE-2); // Shift by Fs/8
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*FFT_SIZE-2); // Shift by Fs/4
+      end
+      begin
+        cvita_payload_t send_payload;
+        cvita_metadata_t md;
+        $display("Send constant waveform");
+        for (int i = 0; i < 3*(SPP/2); i++) begin
+          if (i < SPP/2) begin
+            send_payload.push_back({16'd32000, 16'd0, 16'd32000, 16'd0});
+          end else if (i < SPP) begin
+            send_payload.push_back({16'd10000, 16'd0, 16'd10000, 16'd0});
+          end else begin
+            send_payload.push_back({16'd5000, 16'd0, 16'd5000, 16'd0});
+          end
+        end
+        md.eob = 1;
+        md.has_time = 1;
+        md.timestamp = 0;
+        tb_streamer.send(send_payload,md);
+        $display("Send constant waveform complete");
+      end
+      begin
+        logic [31:0] recv_word;
+        logic recv_eob;
+        $display("Receive & check FFT output");
+        // DC
+        for (int i = 0; i < 3*SPP; i++) begin
+          tb_streamer.pull_word(recv_word,recv_eob);
+          if (i == FFT_SIZE/2) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect DC component! Expected: {5000,0}, Received: {%d,%d}",
+              $signed(recv_word[31:16]), $signed(recv_word[15:0]));
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else if (i == SPP+FFT_SIZE/2+FFT_SIZE/8) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/8! Expected: {5000,0}, Received: {%d,%d}",
+              $signed(recv_word[31:16]), $signed(recv_word[15:0]));
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else if (i == 2*SPP+FFT_SIZE/2+FFT_SIZE/4) begin
+            $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/4! Expected: {5000,0}, Received: {%d,%d}",
+              $signed(recv_word[31:16]), $signed(recv_word[15:0]));
+            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+          end else begin
+            $sformat(s, "Invalid CORDIC shift! Non-zero component detected at index %0d! Expected: {0,0}, Received: {%d,%d}",
+              i, $signed(recv_word[31:16]), $signed(recv_word[15:0]));
+            `ASSERT_WARN(recv_word == 32'd0, s);
+          end
+        end
+        $display("Receive & check FFT output complete");
+      end
+    join
+    // Reset CORDIC to 0
+    tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 0);
     `TEST_CASE_DONE(1);
 
     `TEST_BENCH_DONE;
