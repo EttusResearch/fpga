@@ -111,6 +111,7 @@ axi_tag_time.v \
 axi_drop_packet.v \
 axi_drop_partial_packet.v \
 cordic.v \
+cordic_timed.v \
 ddc.v \
 duc.v \
 cic_decimate.v \
