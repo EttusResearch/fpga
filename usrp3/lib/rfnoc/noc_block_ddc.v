@@ -23,6 +23,7 @@ module noc_block_ddc #(
   wire [NUM_CHAINS*8-1:0]       set_addr;
   wire [NUM_CHAINS-1:0]         set_stb;
   wire [NUM_CHAINS*64-1:0]      set_time;
+  wire [NUM_CHAINS-1:0]         set_has_time;
   wire [NUM_CHAINS-1:0]         rb_stb;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
   wire [64*NUM_CHAINS-1:0]      rb_data;
@@ -48,7 +49,7 @@ module noc_block_ddc #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time), .set_has_time(set_has_time),
     .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -108,10 +109,11 @@ module noc_block_ddc #(
       wire clear_user;
       wire clear = clear_tx_seqnum[i] | clear_user;
 
-      wire        set_stb_int  = set_stb[i];
-      wire [7:0]  set_addr_int = set_addr[8*i+7:8*i];
-      wire [31:0] set_data_int = set_data[32*i+31:32*i];
-      wire [63:0] set_time_int = set_time[64*i+63:64*i];
+      wire        set_stb_int      = set_stb[i];
+      wire [7:0]  set_addr_int     = set_addr[8*i+7:8*i];
+      wire [31:0] set_data_int     = set_data[32*i+31:32*i];
+      wire [63:0] set_time_int     = set_time[64*i+63:64*i];
+      wire        set_has_time_int = set_has_time[i];
 
       axi_wrapper #(
         .SIMPLE_MODE(0))
@@ -176,7 +178,8 @@ module noc_block_ddc #(
         .m_axis_data_tdata(m_axis_tagged_tdata), .m_axis_data_tlast(m_axis_tagged_tlast),
         .m_axis_data_tvalid(m_axis_tagged_tvalid), .m_axis_data_tready(m_axis_tagged_tready),
         .m_axis_data_tuser(m_axis_tagged_tuser), .m_axis_data_tag(m_axis_tagged_tag),
-        .in_set_stb(set_stb_int), .in_set_addr(set_addr_int), .in_set_data(set_data_int), .in_set_time(set_time_int),
+        .in_set_stb(set_stb_int), .in_set_addr(set_addr_int), .in_set_data(set_data_int),
+        .in_set_time(set_time_int), .in_set_has_time(set_has_time_int),
         .out_set_stb(out_set_stb), .out_set_addr(out_set_addr), .out_set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data));
 

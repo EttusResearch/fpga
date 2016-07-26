@@ -12,7 +12,7 @@
 //   2) 
 
 module axi_tag_time #(
-  parameter AXIS_WIDTH       = 32,
+  parameter WIDTH            = 32,
   parameter HEADER_WIDTH     = 128,
   parameter SR_AWIDTH        = 8,
   parameter SR_DWIDTH        = 32,
@@ -28,13 +28,13 @@ module axi_tag_time #(
   input [$clog2(MAX_TICK_RATE)-1:0] tick_rate,
   output timed_cmd_fifo_full,
   // From AXI Wrapper
-  input [AXIS_WIDTH-1:0] s_axis_data_tdata,
+  input [WIDTH-1:0] s_axis_data_tdata,
   input [HEADER_WIDTH-1:0] s_axis_data_tuser,
   input s_axis_data_tlast,
   input s_axis_data_tvalid,
   output s_axis_data_tready,
   // To user
-  output [AXIS_WIDTH-1:0] m_axis_data_tdata,
+  output [WIDTH-1:0] m_axis_data_tdata,
   output [HEADER_WIDTH-1:0] m_axis_data_tuser,
   output [NUM_TAGS-1:0] m_axis_data_tag,
   output m_axis_data_tlast,
@@ -45,6 +45,7 @@ module axi_tag_time #(
   input [SR_AWIDTH-1:0] in_set_addr,
   input [SR_DWIDTH-1:0] in_set_data,
   input [SR_TWIDTH-1:0] in_set_time,
+  input in_set_has_time,
   // Non-timed settings bus to user
   output out_set_stb,
   output [SR_AWIDTH-1:0] out_set_addr,
@@ -55,14 +56,12 @@ module axi_tag_time #(
   output [SR_DWIDTH-1:0] timed_set_data
 );
 
-  wire set_has_time  = (in_set_time != 0);
-
   assign out_set_addr = in_set_addr;
   assign out_set_data = in_set_data;
-  assign out_set_stb  = in_set_stb & ~set_has_time;
+  assign out_set_stb  = in_set_stb & ~in_set_has_time;
   assign timed_set_addr = in_set_addr;
   assign timed_set_data = in_set_data;
-  assign timed_set_stb  = in_set_stb & set_has_time;
+  assign timed_set_stb  = in_set_stb & in_set_has_time;
 
   // Extract time from tuser
   wire [63:0] vita_time_in;
@@ -116,13 +115,13 @@ module axi_tag_time #(
     .space(), .occupied());
 
   assign timed_cmd_fifo_full = ~timed_cmd_fifo_full_n;
-  assign fifo_tready = m_axis_data_tvalid & m_axis_data_tready & fifo_tvalid & (vita_time_now >= fifo_set_time);
+  assign fifo_tready = m_axis_data_tvalid & m_axis_data_tready & fifo_tvalid & has_time & (vita_time_now >= fifo_set_time);
   assign in_rb_stb = fifo_tready;
 
   assign m_axis_data_tdata  = s_axis_data_tdata;
   assign m_axis_data_tlast  = s_axis_data_tlast;
   assign m_axis_data_tuser  = s_axis_data_tuser;
-  assign m_axis_data_tag    = ((vita_time_now >= fifo_set_time) & fifo_tvalid) ? fifo_tags : 'd0;
+  assign m_axis_data_tag    = ((vita_time_now >= fifo_set_time) & fifo_tvalid & has_time) ? fifo_tags : 'd0;
   assign m_axis_data_tvalid = s_axis_data_tvalid;
   assign s_axis_data_tready = m_axis_data_tready;
 
