@@ -73,6 +73,7 @@ axi_round_and_clip_complex.v \
 axi_round_complex.v \
 axi_clip_complex.v \
 axi_join.v \
+axi_sync.v \
 split_complex.v \
 axi_round_and_clip.v \
 join_complex.v \
