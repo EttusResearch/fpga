@@ -21,9 +21,6 @@ module phase_accum #(
   wire [WIDTH_OUT-1:0] output_round_tdata;
   wire output_round_tvalid, output_round_tready, output_round_tlast;
 
-  // Reset accumulator output on i_tlast
-  wire [WIDTH_ACCUM-1:0] output_tdata = (i_tvalid & i_tlast & i_tready) ? {WIDTH_ACCUM{1'b0}} : accum;
-
   // Phase accumulator, can rotate in either direction
   always @(posedge clk) begin
     if (reset | clear) begin
@@ -53,25 +50,19 @@ module phase_accum #(
   generate
     // Bypass rounding if accumulator width is same as output width
     if (WIDTH_ACCUM == WIDTH_OUT) begin
-      assign output_round_tdata = output_tdata;
-      assign output_round_tvalid = 1'b1;
-      assign output_round_tlast = i_tlast;
-      assign i_tready = output_round_tready;
+      assign o_tdata  = accum;
+      assign o_tvalid = i_tvalid;
+      assign o_tlast  = i_tlast;
+      assign i_tready = o_tready;
     end else begin
       axi_round #(
         .WIDTH_IN(WIDTH_ACCUM),
         .WIDTH_OUT(WIDTH_OUT))
       axi_round (
         .clk(clk), .reset(reset),
-        .i_tdata(output_tdata), .i_tlast(i_tlast), .i_tvalid(1'b1), .i_tready(i_tready),
-        .o_tdata(output_round_tdata), .o_tlast(output_round_tlast), .o_tvalid(output_round_tvalid), .o_tready(output_round_tready));
+        .i_tdata(accum), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+        .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
     end
   endgenerate
-
-  axi_fifo_flop #(.WIDTH(WIDTH_OUT+1)) axi_fifo_flop_output (
-    .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({output_round_tlast,output_round_tdata}), .i_tvalid(output_round_tvalid), .i_tready(output_round_tready),
-    .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
-    .occupied(), .space());
 
 endmodule
