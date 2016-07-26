@@ -53,9 +53,31 @@ module axi_async_stream #(
   output i_tready
 );
 
+  wire [WIDTH-1:0] i_reg_tdata;
+  wire i_reg_tvalid, i_reg_tlast, i_reg_tkeep, i_reg_tready;
+
   reg [WIDTH-1:0] pipe_tdata;
   reg pipe_tvalid, pipe_tlast, pipe_tkeep;
   wire pipe_tready;
+
+  /********************************************************
+  ** Register user input
+  ** - The output logic in some cases needs to wait for
+  **   i_tvalid to assert before asserting i_tready.
+  **   However, users may implement logic that waits for
+  **   i_tready to assert before asserting i_tvalid.
+  **   Without this register, that would result in a
+  **   deadlock.
+  ** - Note: Technically, the user waiting for i_tready
+  **   violates the AXI specification that a master cannot
+  **   wait for ready from the slave. However, it is common
+  **   for users to accidentally break this rule and this is
+  **   a cheap workaround.
+  ********************************************************/
+  axi_fifo_flop #(.WIDTH(WIDTH+2)) axi_fifo_flop (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({i_tkeep,i_tlast,i_tdata}), .i_tvalid(i_tvalid), .i_tready(i_tready),
+    .o_tdata({i_reg_tkeep,i_reg_tlast,i_reg_tdata}), .o_tvalid(i_reg_tvalid), .o_tready(i_reg_tready));
 
   /********************************************************
   ** Keep track of headers for user
@@ -94,7 +116,7 @@ module axi_async_stream #(
 
   assign header_in_tdata   = s_axis_data_tuser;
   assign header_in_tvalid  = s_axis_data_tvalid & o_tready & first_word;
-  assign header_out_tready = i_tvalid & i_tready & (word_cnt >= payload_length);
+  assign header_out_tready = i_reg_tvalid & i_reg_tready & (word_cnt >= payload_length);
   assign header_fifo_full  = ~header_in_tready;
 
   // Track VITA time offset and word count for emptying header FIFO
@@ -162,18 +184,18 @@ module axi_async_stream #(
       pipe_tkeep      <= 1'b0;
     end else begin
       if (pipe_tready) begin
-        pipe_tdata    <= i_tdata;
-        pipe_tvalid   <= i_tvalid;
-        pipe_tlast    <= i_tlast;
-        pipe_tkeep    <= i_tkeep;
+        pipe_tdata    <= i_reg_tdata;
+        pipe_tvalid   <= i_reg_tvalid;
+        pipe_tlast    <= i_reg_tlast;
+        pipe_tkeep    <= i_reg_tkeep;
       end
     end
   end
 
-  assign pipe_tready        = ~pipe_tvalid | (m_axis_data_tready & header_out_tvalid & (i_tvalid | (m_axis_data_tvalid & m_axis_data_tlast)));
-  assign i_tready           = pipe_tready;
+  assign pipe_tready        = ~pipe_tvalid | (m_axis_data_tready & header_out_tvalid & (i_reg_tvalid | (m_axis_data_tvalid & m_axis_data_tlast)));
+  assign i_reg_tready       = pipe_tready;
   assign m_axis_data_tdata  = pipe_tdata;
-  assign m_axis_data_tvalid = pipe_tvalid & pipe_tkeep & i_tvalid & header_out_tvalid;
-  assign m_axis_data_tlast  = pipe_tlast | ~i_tkeep | (word_cnt >= payload_length);
+  assign m_axis_data_tvalid = pipe_tvalid & pipe_tkeep & (i_reg_tvalid | m_axis_data_tlast) & header_out_tvalid;
+  assign m_axis_data_tlast  = pipe_tlast | (i_reg_tvalid & ~i_reg_tkeep) | (word_cnt >= payload_length);
 
 endmodule
