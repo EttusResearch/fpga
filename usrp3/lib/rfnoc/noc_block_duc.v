@@ -77,13 +77,12 @@ module noc_block_duc #(
 
   // NoC Shell registers 0 - 127,
   // User register address space starts at 128
-  localparam SR_USER_REG_BASE  = 128;
-  localparam SR_N_ADDR         = 129;
-  localparam SR_M_ADDR         = 130;
-  localparam SR_CONFIG_ADDR    = 131;
-  localparam SR_INTERP_ADDR    = 132;
-  localparam SR_FREQ_ADDR      = 133;
-  localparam SR_SCALE_IQ_ADDR  = 134;
+  localparam SR_N_ADDR         = 128;
+  localparam SR_M_ADDR         = 129;
+  localparam SR_CONFIG_ADDR    = 130;
+  localparam SR_INTERP_ADDR    = 131;
+  localparam SR_FREQ_ADDR      = 132;
+  localparam SR_SCALE_IQ_ADDR  = 133;
 
   genvar i;
   generate
