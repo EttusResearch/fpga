@@ -21,14 +21,14 @@ module cordic_timed #(
   input clk, input reset, input clear,
   input set_stb, input [SR_AWIDTH-1:0] set_addr, input [SR_DWIDTH-1:0] set_data,
   input [SR_TWIDTH-1:0] set_time, input set_has_time,
-  input [2*CORDIC_WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [HEADER_WIDTH-1:0] i_tuser,
+  input [2*WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [HEADER_WIDTH-1:0] i_tuser,
   output [2*WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready, output [HEADER_WIDTH-1:0] o_tuser
 );
 
   /**************************************************************************
   * Track VITA time
   *************************************************************************/
-  wire [2*CORDIC_WIDTH-1:0] int_tdata;
+  wire [2*WIDTH-1:0] int_tdata;
   wire [HEADER_WIDTH-1:0] int_tuser;
   wire int_tlast, int_tvalid, int_tready, int_tag;
   wire [SR_AWIDTH-1:0] out_set_addr, timed_set_addr;
@@ -36,7 +36,7 @@ module cordic_timed #(
   wire out_set_stb, timed_set_stb;
 
   axi_tag_time #(
-    .WIDTH(2*CORDIC_WIDTH),
+    .WIDTH(2*WIDTH),
     .NUM_TAGS(1),
     .SR_TAG_ADDRS(SR_FREQ_ADDR))
   axi_tag_time (
@@ -56,14 +56,14 @@ module cordic_timed #(
     .out_set_stb(out_set_stb), .out_set_addr(out_set_addr), .out_set_data(out_set_data),
     .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data));
 
-  wire [2*CORDIC_WIDTH-1:0] cordic_in_tdata, unused_tdata;
+  wire [2*WIDTH-1:0] cordic_in_tdata, unused_tdata;
   wire [HEADER_WIDTH-1:0] header_in_tdata, header_out_tdata, unused_tuser;
   wire cordic_in_tlast, cordic_in_tvalid, cordic_in_tready, cordic_in_tag;
   wire header_in_tvalid, header_in_tready, header_in_tlast, unused_tag;
   wire header_out_tvalid, header_out_tready;
 
   split_stream #(
-    .WIDTH(2*CORDIC_WIDTH+HEADER_WIDTH+1), .ACTIVE_MASK(4'b0011))
+    .WIDTH(2*WIDTH+HEADER_WIDTH+1), .ACTIVE_MASK(4'b0011))
   split_head (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({int_tdata,int_tuser,int_tag}), .i_tlast(int_tlast),
@@ -151,9 +151,9 @@ module cordic_timed #(
     .i_tdata(phase_inc_mux_tdata), .i_tlast(phase_inc_mux_tlast), .i_tvalid(phase_inc_mux_tvalid), .i_tready(),
     .o_tdata(phase_tdata), .o_tlast(), .o_tvalid(phase_tvalid), .o_tready(phase_tready));
 
-  wire [PHASE_WIDTH+2*CORDIC_WIDTH-1:0] phase_ext_tdata, cordic_in_ext_tdata;
+  wire [PHASE_WIDTH+2*WIDTH-1:0] phase_ext_tdata, cordic_in_ext_tdata;
   wire [PHASE_WIDTH-1:0] phase_sync_tdata;
-  wire [2*CORDIC_WIDTH-1:0] cordic_in_sync_tdata;
+  wire [2*WIDTH-1:0] cordic_in_sync_tdata;
   wire phase_sync_tvalid, phase_sync_tready, nc;
   wire cordic_in_sync_tvalid, cordic_in_sync_tready;
 
@@ -161,12 +161,12 @@ module cordic_timed #(
   // This is needed to ensure that applying the phase update happens on the
   // correct sample regardless of differing downstream path delays.
   axi_sync #(
-    .WIDTH(PHASE_WIDTH+2*CORDIC_WIDTH),
+    .WIDTH(PHASE_WIDTH+2*WIDTH),
     .SIZE(2),
     .FIFO_SIZE(2))
   axi_sync (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({{2*CORDIC_WIDTH{1'b0}},phase_tdata,{PHASE_WIDTH{1'b0}},cordic_in_tdata}),
+    .i_tdata({{2*WIDTH{1'b0}},phase_tdata,{PHASE_WIDTH{1'b0}},cordic_in_tdata}),
     .i_tlast({1'b0,cordic_in_tlast}),
     .i_tvalid({phase_tvalid,cordic_in_tvalid}),
     .i_tready({phase_tready,cordic_in_tready}),
@@ -176,11 +176,22 @@ module cordic_timed #(
     .o_tready({phase_sync_tready,cordic_in_sync_tready}));
 
   assign phase_sync_tdata     = phase_ext_tdata[PHASE_WIDTH-1:0];
-  assign cordic_in_sync_tdata = cordic_in_ext_tdata[2*CORDIC_WIDTH-1:0];
+  assign cordic_in_sync_tdata = cordic_in_ext_tdata[2*WIDTH-1:0];
 
   // Xilinx IP AXI CORDIC
+  wire [CORDIC_WIDTH-1:0] cordic_in_i_tdata, cordic_in_q_tdata;
   wire [CORDIC_WIDTH-1:0] cordic_out_i_tdata, cordic_out_q_tdata;
   wire cordic_out_tlast, cordic_out_tvalid, cordic_out_tready;
+
+  sign_extend #(
+    .bits_in(WIDTH), .bits_out(CORDIC_WIDTH))
+  sign_extend_cordic_i (
+    .in(cordic_in_sync_tdata[2*WIDTH-1:WIDTH]), .out(cordic_in_i_tdata));
+
+  sign_extend #(
+    .bits_in(WIDTH), .bits_out(CORDIC_WIDTH))
+  sign_extend_cordic_q (
+    .in(cordic_in_sync_tdata[WIDTH-1:0]), .out(cordic_in_q_tdata));
 
   cordic_rotator24 cordic_rotator24 (
     .aclk(clk),
@@ -189,7 +200,7 @@ module cordic_timed #(
     .s_axis_cartesian_tlast(cordic_in_sync_tlast),
     .s_axis_cartesian_tvalid(cordic_in_sync_tvalid),
     .s_axis_cartesian_tready(cordic_in_sync_tready),
-    .s_axis_cartesian_tdata(cordic_in_sync_tdata),
+    .s_axis_cartesian_tdata({cordic_in_i_tdata,cordic_in_q_tdata}),
     /* Phase input from NCO */
     .s_axis_phase_tvalid(phase_sync_tvalid),
     .s_axis_phase_tready(phase_sync_tready),

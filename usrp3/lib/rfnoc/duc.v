@@ -17,7 +17,7 @@ module duc #(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [31:0] i_tdata, input [127:0] i_tuser, input i_tvalid, output i_tready,
-  output [47:0] o_tdata, output [127:0] o_tuser, output o_tvalid, input o_tready
+  output [31:0] o_tdata, output [127:0] o_tuser, output o_tvalid, input o_tready
 );
 
   localparam RESET_DELAY = 3;
@@ -198,7 +198,7 @@ module duc #(
     .o_tdata(o_tdata_cic), .o_tvalid(o_tvalid_cic), .o_tlast(), .o_tready(i_tready_cartesian)
   );
 
-  assign o_tdata = o_tdata_cic;
+  assign o_tdata = {o_tdata_cic[39:24],o_tdata_cic[15:0]};
   assign o_tvalid = o_tvalid_cic;
   assign i_tready_cartesian = o_tready;
 

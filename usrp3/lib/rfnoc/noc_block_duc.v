@@ -150,7 +150,7 @@ module noc_block_duc #(
       //   vita time of the samples.
       //
       ////////////////////////////////////////////////////////////
-      wire [47:0]  m_axis_rc_tdata;
+      wire [31:0]  m_axis_rc_tdata;
       wire         m_axis_rc_tlast;
       wire         m_axis_rc_tvalid;
       wire         m_axis_rc_tready;
@@ -173,13 +173,11 @@ module noc_block_duc #(
       // Increase Rate
       //
       ////////////////////////////////////////////////////////////
-      wire [15:0] nc;
-      wire [31:0] sample_tdata;
-      wire [47:0] sample_duc_tdata;
+      wire [31:0] sample_tdata, sample_duc_tdata;
       wire sample_tvalid, sample_tready;
       wire sample_duc_tvalid, sample_duc_tready;
       axi_rate_change #(
-        .WIDTH(48),
+        .WIDTH(32),
         .MAX_N(1),
         .MAX_M(512),
         .SR_N_ADDR(SR_N_ADDR),
@@ -189,11 +187,11 @@ module noc_block_duc #(
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
-        .i_tdata({16'd0,m_axis_data_tdata}), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid),
+        .i_tdata({m_axis_data_tdata}), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid),
         .i_tready(m_axis_data_tready), .i_tuser(m_axis_data_tuser),
         .o_tdata(m_axis_rc_tdata), .o_tlast(m_axis_rc_tlast), .o_tvalid(m_axis_rc_tvalid),
         .o_tready(m_axis_rc_tready), .o_tuser(m_axis_rc_tuser),
-        .m_axis_data_tdata({nc,sample_tdata}), .m_axis_data_tlast(), .m_axis_data_tvalid(sample_tvalid),
+        .m_axis_data_tdata({sample_tdata}), .m_axis_data_tlast(), .m_axis_data_tvalid(sample_tvalid),
         .m_axis_data_tready(sample_tready),
         .s_axis_data_tdata(sample_duc_tdata), .s_axis_data_tlast(1'b0), .s_axis_data_tvalid(sample_duc_tvalid),
         .s_axis_data_tready(sample_duc_tready));
