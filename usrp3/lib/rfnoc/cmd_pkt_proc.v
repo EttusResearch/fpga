@@ -69,7 +69,6 @@ module cmd_pkt_proc #(
     .o_tdata({cmd_fifo_tlast,cmd_fifo_tdata}), .o_tvalid(cmd_fifo_tvalid), .o_tready(cmd_fifo_tready),
     .space(), .occupied());
 
-  wire hdr_stb, vita_time_stb;
   wire [63:0] pkt_vita_time;
   wire [1:0] pkt_type;
   wire has_time, eob;
@@ -86,11 +85,11 @@ module cmd_pkt_proc #(
   // Extracts header fields
   cvita_hdr_parser #(.REGISTER(0)) cvita_hdr_parser (
     .clk(clk), .reset(reset), .clear(clear),
-    .hdr_stb(hdr_stb),
+    .hdr_stb(),
     .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
     .seqnum(seqnum), .length(),
     .src_sid(src_sid), .dst_sid(dst_sid),
-    .vita_time_stb(vita_time_stb), .vita_time(pkt_vita_time),
+    .vita_time_stb(), .vita_time(pkt_vita_time),
     .i_tdata(cmd_fifo_tdata), .i_tlast(cmd_fifo_tlast), .i_tvalid(cmd_fifo_tvalid), .i_tready(cmd_fifo_tready),
     .o_tdata(int_tdata), .o_tlast(int_tlast), .o_tvalid(int_tvalid), .o_tready(int_tready));
 
@@ -98,7 +97,7 @@ module cmd_pkt_proc #(
   reg is_long_cmd_pkt;
 
   wire now, late;
-  wire go = now | late;
+  wire go = (USE_TIME[0] & has_time_hold) ? (now | late) : 1'b1;
   time_compare time_compare (
     .clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(pkt_vita_time_hold),
     .now(now), .early(), .late(late), .too_early());
@@ -130,40 +129,34 @@ module cmd_pkt_proc #(
   wire [63:0] resp_header = header[127:64];
 
   reg [63:0] rb_data_hold;
-  integer k;
+
+  always @(*) begin
+    case (state)
+      S_CMD_HEAD : int_tready <= 1'b1;
+      S_CMD_TIME : int_tready <= 1'b1;
+      S_CMD_DATA : int_tready <= go;
+      S_DROP     : int_tready <= 1'b1;
+      default    : int_tready <= 1'b0;
+    endcase
+  end
 
   // State machine
   always @(posedge clk) begin
     if (reset) begin
       state               <= S_CMD_HEAD;
-      int_tready          <= 1'b0;
       resp_tvalid         <= 1'b0;
-      resp_tlast          <= 1'b0;
-      resp_tdata          <= 'd0;
-      resp_time           <= 'd0;
       set_stb             <= 1'b0;
-      set_data            <= 'd0;
-      set_addr            <= 'd0;
-      set_time            <= 'd0;
       set_has_time        <= 1'b0;
       rb_addr             <= 'd0;
       rb_addr_user        <= 'd0;
-      rb_data_hold        <= 'd0;
-      is_long_cmd_pkt     <= 1'b0;
-      pkt_vita_time_hold  <= 'd0;
-      has_time_hold       <= 'd0;
-      seqnum_hold         <= 'd0;
-      src_sid_hold        <= 'd0;
-      dst_sid_hold        <= 'd0;
     end else begin
       case (state)
         // Wait for packet header to arrive
         S_CMD_HEAD : begin
-          int_tready      <= 1'b1;
           resp_tvalid     <= 1'b0;
           resp_tlast      <= 1'b0;
           set_stb         <= 1'b0;
-          if (int_tvalid & int_tready) begin
+          if (int_tvalid) begin
             // Register packet header fields for later use
             has_time_hold <= has_time;
             seqnum_hold   <= seqnum;
@@ -173,10 +166,10 @@ module cmd_pkt_proc #(
             // and this must be the header.
             if (is_cmd_pkt) begin
               if (has_time) begin
-                state    <= S_CMD_TIME;
+                state               <= S_CMD_TIME;
               end else begin
-                set_time <= 64'd0;
-                state    <= S_CMD_DATA;
+                pkt_vita_time_hold  <= 64'd0;
+                state               <= S_CMD_DATA;
               end
             end else begin
               // Drop all non-command packets.
@@ -189,13 +182,11 @@ module cmd_pkt_proc #(
 
         // Consume packet time
         S_CMD_TIME : begin
-          int_tready              <= 1'b1;
-          if (int_tvalid & int_tready) begin
+          if (int_tvalid) begin
             if (int_tlast) begin
               // Invalid -- Short packet
               state               <= S_CMD_HEAD;
             end else begin
-              int_tready          <= 1'b0;
               pkt_vita_time_hold  <= pkt_vita_time;
               state               <= S_CMD_DATA;
             end
@@ -207,12 +198,11 @@ module cmd_pkt_proc #(
         // Note: Output of timed settings bus transactions will be delayed by
         //       one clock cycle due to registered outputs.
         S_CMD_DATA : begin
-          int_tready        <= (USE_TIME[0] & has_time_hold) ? go : 1'b1;
-          if (int_tvalid & int_tready) begin
+          if (int_tvalid & go) begin
             is_long_cmd_pkt <= ~int_tlast;
             set_addr        <= int_tdata[SR_AWIDTH-1+32:32];
             set_data        <= int_tdata[SR_DWIDTH-1:0];
-            set_time        <= has_time_hold ? pkt_vita_time_hold : 'd0;
+            set_time        <= pkt_vita_time_hold;
             set_has_time    <= has_time_hold;
             // Update rb_addr on same clock cycle as asserting set_stb
             if (set_rb_addr) begin
@@ -222,7 +212,6 @@ module cmd_pkt_proc #(
             end
             set_stb         <= 1'b1;
             if (int_tlast) begin
-              int_tready    <= 1'b0;
               state         <= S_SET_WAIT;
             // Long command packet support
             end else begin
@@ -233,7 +222,6 @@ module cmd_pkt_proc #(
 
         // Wait a clock cycle to allow settings register to output
         S_SET_WAIT : begin
-          int_tready <= 1'b0;
           set_stb    <= 1'b0;
           state      <= S_READBACK;
         end
@@ -284,8 +272,7 @@ module cmd_pkt_proc #(
 
         // Drop malformed / non-command packets
         S_DROP : begin
-          int_tready     <= 1'b1;
-          if (int_tvalid & int_tready) begin
+          if (int_tvalid) begin
             if (int_tlast) begin
               state      <= S_CMD_HEAD;
             end

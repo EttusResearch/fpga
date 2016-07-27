@@ -881,8 +881,8 @@ module noc_block_radio_core_tb;
         #0; // VIVADO XSIM workaround. Need delay to make sure PPS asserts *after* rising edge
         pps = 1'b1;
         // Wait a few clocks for GPIO to output
-        // Note: This is an exact count of 7 clock cycles so if future code changes this latency the sim will throw an error.
-        repeat(7) @(posedge radio_clk);
+        // Note: This is an exact count of 6 clock cycles so if future code changes this latency the sim will throw an error.
+        repeat(6) @(posedge radio_clk);
         $sformat(s, "Radio %2d: FP GPIO output incorrect before timed command epoch! Expected: %d, Actual: %d", i, 32'd0, fp_gpio_out[32*i +: 32]);
         `ASSERT_ERROR(fp_gpio_out[32*i +: 32] == 32'd0, s);
         @(posedge radio_clk);
