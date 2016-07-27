@@ -198,14 +198,15 @@ module e310_core
   //////////////////////////////////////////////////////////////////////////////////////////////
   // RFNoC
   //////////////////////////////////////////////////////////////////////////////////////////////
-
-  // Included automatically instantiated CEs sources file created by RFNoC mod tool
+  // Specify RFNoC blocks
   `ifdef RFNOC
     `ifdef E310
       `include "rfnoc_ce_auto_inst_e310.v"
     `endif
   `else
-    localparam NUM_CE = 0;
+    `ifdef E310
+      `include "rfnoc_ce_default_inst_e310.v"
+    `endif
   `endif
 
   ////////////////////////////////////////////////////////////////////
@@ -240,10 +241,9 @@ module e310_core
   `endif
 
   // axi crossbar ports
-  // 0    - Host
-  // 1    - Radio0
-  // 2    - Radio1
-  // 3-15 - CEs
+  // 0    - Host (DMA FIFO)
+  // 1    - Radios
+  // 2-15 - CEs. If available, 2 == DDC and 3 == DUC.
 
   generate
   if (NUM_CE > 0) begin

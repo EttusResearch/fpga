@@ -20,6 +20,7 @@ include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
 include $(LIB_DIR)/ip/Makefile.inc
+include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/hls/Makefile.inc
 include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
@@ -83,6 +84,7 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(COREGEN_DSP_SRCS) \
           $(IP_XCI_SRCS) \
           $(PS7_SRCS) \
+          $(AXI_SRCS) \
           $(RFNOC_SRCS) \
           $(RFNOC_OOT_SRCS) \
           $(LIB_IP_XCI_SRCS) \
