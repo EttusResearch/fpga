@@ -19,6 +19,7 @@ module cordic_timed #(
   parameter SR_TWIDTH         = 64
 )(
   input clk, input reset, input clear,
+  output timed_cmd_fifo_full,
   input set_stb, input [SR_AWIDTH-1:0] set_addr, input [SR_DWIDTH-1:0] set_data,
   input [SR_TWIDTH-1:0] set_time, input set_has_time,
   input [2*WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [HEADER_WIDTH-1:0] i_tuser,
@@ -44,7 +45,7 @@ module cordic_timed #(
     .reset(reset),
     .clear(clear),
     .tick_rate(16'd1),
-    .timed_cmd_fifo_full(),
+    .timed_cmd_fifo_full(timed_cmd_fifo_full),
     .s_axis_data_tdata(i_tdata), .s_axis_data_tlast(i_tlast),
     .s_axis_data_tvalid(i_tvalid), .s_axis_data_tready(i_tready),
     .s_axis_data_tuser(i_tuser),
@@ -95,7 +96,8 @@ module cordic_timed #(
   axi_fifo_header (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata(header_in_tdata), .i_tvalid(header_in_tvalid & header_first_line), .i_tready(header_in_tready),
-    .o_tdata(header_out_tdata), .o_tvalid(header_out_tvalid), .o_tready(header_out_tready & header_out_tlast),
+    .o_tdata(header_out_tdata), .o_tvalid(header_out_tvalid),
+    .o_tready(header_out_tready & sample_tlast & sample_tvalid), // Consume header on last output sample
     .space(), .occupied());
 
   /**************************************************************************
