@@ -145,7 +145,7 @@ module cordic_timed #(
   wire phase_tvalid, phase_tready;
 
   phase_accum #(
-    .WIDTH_ACCUM(PHASE_ACCUM_WIDTH), .WIDTH_IN(PHASE_ACCUM_WIDTH), .WIDTH_OUT(PHASE_WIDTH))
+    .REVERSE_ROTATION(1), .WIDTH_ACCUM(PHASE_ACCUM_WIDTH), .WIDTH_IN(PHASE_ACCUM_WIDTH), .WIDTH_OUT(PHASE_WIDTH))
   phase_accum (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata(phase_inc_mux_tdata), .i_tlast(phase_inc_mux_tlast), .i_tvalid(phase_inc_mux_tvalid), .i_tready(),
