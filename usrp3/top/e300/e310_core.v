@@ -328,7 +328,7 @@ module e310_core
   wire sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
   noc_block_radio_core #(
     .NUM_CHANNELS(NUM_CHANNELS),
-    .STR_SINK_FIFOSIZE(13),  // Tuned value, verify throughput if changing
+    .STR_SINK_FIFOSIZE({8'd13,8'd13}),
     .MTU(10),                // Tuned value
     .USE_SPI_CLK(1))
   noc_block_radio_core (
