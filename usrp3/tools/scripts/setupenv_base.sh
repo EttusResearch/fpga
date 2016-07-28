@@ -13,7 +13,11 @@ if [[ $VIV_PLATFORM = "Cygwin" ]]; then
     VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado"
     MODELSIM_BASE_PATH="/cygdrive/c/mentor/modelsim"
 else
-    VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
+    if [[ -d "/opt/Xilinx/Vivado_Lab" ]]; then
+        VIVADO_BASE_PATH="/opt/Xilinx/Vivado_Lab"
+    else
+        VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
+    fi
     MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 fi
 
@@ -62,7 +66,7 @@ function help {
 Usage: source setupenv.sh [--help|-h] [--vivado-path=<PATH>] [--modelsim-path=<PATH>]
 
 --vivado-path   : Path to the base install directory for Xilinx Vivado
-                  (Default: /opt/Xilinx/Vivado)
+                  (Default: /opt/Xilinx/Vivado or /opt/Xilinx/Vivado_Lab)
 --modelsim-path : Path to the base install directory for Modelsim (optional simulation tool)
                   (Default: /opt/mentor/modelsim)
 --help -h       : Shows this message.
@@ -173,7 +177,11 @@ else
 fi
 
 $VIVADO_PATH/settings${BITNESS}.sh
-$VIVADO_PATH/.settings${BITNESS}-Vivado.sh
+if [[ -e $VIVADO_PATH/.settings${BITNESS}-Vivado_Lab.sh ]]; then
+    $VIVADO_PATH/.settings${BITNESS}-Vivado_Lab.sh
+else
+    $VIVADO_PATH/.settings${BITNESS}-Vivado.sh
+fi
 if [[ -e ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh ]]; then
     ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
 fi

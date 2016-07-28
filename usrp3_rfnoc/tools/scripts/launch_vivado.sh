@@ -62,7 +62,13 @@ trim() {
     echo -n "$var"
 }
 
-vivado $viv_args 2>&1 | while IFS= read -r line
+VIVADO_COMMAND="vivado"
+if command -v vivado_lab >/dev/null 2>&1; then
+    VIVADO_COMMAND=vivado_lab
+fi
+
+$VIVADO_COMMAND $viv_args 2>&1 | while IFS= read -r line
+
 do
     if [[ $line != \#* ]]; then # Ignore script output
         case $(trim $line) in
