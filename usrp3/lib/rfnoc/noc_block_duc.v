@@ -151,7 +151,7 @@ module noc_block_duc #(
       axi_rate_change #(
         .WIDTH(32),
         .MAX_N(1),
-        .MAX_M(128),
+        .MAX_M(512),
         .SR_N_ADDR(SR_N_ADDR),
         .SR_M_ADDR(SR_M_ADDR),
         .SR_CONFIG_ADDR(SR_CONFIG_ADDR))
