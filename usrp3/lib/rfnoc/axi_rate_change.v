@@ -507,6 +507,7 @@ module axi_rate_change #(
   ** Error / warning signals
   ********************************************************/
   reg [23:0] counter_header_fifo_full, counter_throttle, counter_drop_pkt_lockup;
+  reg [2:0] counter_header_fifo_empty;
   always @(posedge clk) begin
     if (reset) begin
       warning_long_throttle       <= 1'b0;
@@ -516,6 +517,7 @@ module axi_rate_change #(
       counter_throttle            <= 0;
       counter_header_fifo_full    <= 0;
       counter_drop_pkt_lockup     <= 0;
+      counter_header_fifo_empty   <= 0;
     end else begin
       // In throttle state for a "long" time
       if (throttle) begin
@@ -538,6 +540,16 @@ module axi_rate_change #(
       // More than M outputs per N inputs
       if (word_cnt_div_n_fifo_tvalid & (word_cnt_div_m > word_cnt_div_n_fifo_tdata)) begin
         error_extra_outputs         <= 1'b1;
+      end
+      if (~header_fifo_out_tvalid & o_reg_tvalid_int) begin
+        counter_header_fifo_empty   <= counter_header_fifo_empty + 1;
+        // Use a counter to prevent a false detection due to the header
+        // taking a few clock cycles to propagate through the header FIFO.
+        if (counter_header_fifo_empty == 4) begin
+          error_extra_outputs       <= 1'b1;
+        end
+      end else begin
+        counter_header_fifo_empty   <= 0;
       end
       // Bad internal state. AXI drop partial packet is in a lockup condition.
       if (~i_reg_tready_int & m_axis_data_tready) begin
