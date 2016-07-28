@@ -118,7 +118,7 @@ module axi_rate_change #(
   ********************************************************/
   // Decode input header
   wire [127:0] i_reg_tuser;
-  wire has_time_in, eob_in, has_time_out, eob_out;
+  wire has_time_in, eob_in, has_time_out;
   wire [15:0] payload_length_in, payload_length_out;
   wire [63:0] vita_time_in, vita_time_out;
   cvita_hdr_decoder cvita_hdr_decoder_in_header (
@@ -140,10 +140,10 @@ module axi_rate_change #(
   wire [15:0] word_cnt_div_n_fifo_tdata;
   reg word_cnt_div_n_tvalid;
   wire word_cnt_div_n_tready, word_cnt_div_n_fifo_tvalid, word_cnt_div_n_fifo_tready;
-  axi_fifo #(.WIDTH(17), .SIZE(HEADER_FIFOSIZE)) axi_fifo_eob_word_cnt (
+  axi_fifo #(.WIDTH(16), .SIZE(HEADER_FIFOSIZE)) axi_fifo_word_cnt (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({eob_in,word_cnt_div_n_tdata}), .i_tvalid(word_cnt_div_n_tvalid), .i_tready(word_cnt_div_n_tready),
-    .o_tdata({eob_out,word_cnt_div_n_fifo_tdata}), .o_tvalid(word_cnt_div_n_fifo_tvalid), .o_tready(word_cnt_div_n_fifo_tready),
+    .i_tdata(word_cnt_div_n_tdata), .i_tvalid(word_cnt_div_n_tvalid), .i_tready(word_cnt_div_n_tready),
+    .o_tdata(word_cnt_div_n_fifo_tdata), .o_tvalid(word_cnt_div_n_fifo_tvalid), .o_tready(word_cnt_div_n_fifo_tready),
     .space(), .occupied());
 
   /********************************************************
@@ -409,7 +409,7 @@ module axi_rate_change #(
             end
             if (last_word_in_burst) begin
               word_cnt_div_m      <= 1;
-              if (enable_clear_user & eob_out) begin
+              if (enable_clear_user) begin
                 clear_user   <= 1'b1;
                 output_state <= SEND_CLEAR_USER;
               end
@@ -469,9 +469,8 @@ module axi_rate_change #(
   end
 
   // Create output header
-  wire eob_out_int = last_word_in_burst ? eob_out : 1'b0;
   cvita_hdr_encoder cvita_hdr_encoder (
-    .pkt_type(2'd0), .eob(eob_out_int), .has_time(has_time_out),
+    .pkt_type(2'd0), .eob(last_word_in_burst), .has_time(has_time_out),
     .seqnum(12'd0), .payload_length(16'd0), // Not needed, handled by AXI Wrapper
     .src_sid(src_sid), .dst_sid(dst_sid),
     .vita_time(first_pkt_out ? vita_time_out : vita_time_reg),
