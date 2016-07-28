@@ -570,7 +570,7 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,8'd13}),
+      .STR_SINK_FIFOSIZE({8'd5,8'd14}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i0 (
@@ -603,7 +603,7 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,8'd13}),
+      .STR_SINK_FIFOSIZE({8'd5,8'd14}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i1 (
