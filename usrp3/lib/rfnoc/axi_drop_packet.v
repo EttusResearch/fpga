@@ -36,8 +36,9 @@ module axi_drop_packet #(
       assign i_tready = o_tready;
     // All other packet sizes
     end else begin
-      wire [WIDTH-1:0] int_tdata;
-      wire int_tlast, int_tvalid, int_tready;
+      reg [WIDTH-1:0] int_tdata;
+      reg int_tlast, int_tvalid;
+      wire int_tready;
 
       reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr;
       reg [$clog2(MAX_PKT_SIZE):0] in_pkt_cnt, out_pkt_cnt;
@@ -54,71 +55,72 @@ module axi_drop_packet #(
 
       assign i_tready   = ~full;
       wire write        = i_tvalid & i_tready;
-      wire read         = int_tvalid & int_tready;
+      wire read         = ~empty & ~hold & int_tready;
       wire almost_full  = (wr_addr == rd_addr-1'b1);
       wire almost_empty = (wr_addr == rd_addr+1'b1);
 
       // Write logic
       always @(posedge clk) begin
+        if (write) begin
+          mem[wr_addr] <= {i_tlast,i_tdata};
+          wr_addr      <= wr_addr + 1'b1;
+        end
+        if (almost_full) begin
+          if (write & ~read) begin
+            full       <= 1'b1;
+          end
+        end else begin
+          if (~write & read) begin
+            full       <= 1'b0;
+          end
+        end
+        // Rewind logic
+        if (write & i_tlast) begin
+          if (i_terror) begin
+            wr_addr      <= prev_wr_addr;
+          end else begin
+            in_pkt_cnt   <= in_pkt_cnt + 1'b1;
+            prev_wr_addr <= wr_addr + 1'b1;
+          end
+        end
         if (reset | clear) begin
           wr_addr       <= 0;
           prev_wr_addr  <= 0;
           in_pkt_cnt    <= 0;
           full          <= 1'b0;
-        end else begin
-          if (write) begin
-            mem[wr_addr] <= {i_tlast,i_tdata};
-            wr_addr      <= wr_addr + 1'b1;
-          end
-          if (almost_full) begin
-            if (write & ~read) begin
-              full       <= 1'b1;
-            end
-          end else begin
-            if (~write & read) begin
-              full       <= 1'b0;
-            end
-          end
-          // Rewind logic
-          if (write & i_tlast) begin
-            if (i_terror) begin
-              wr_addr      <= prev_wr_addr;
-            end else begin
-              in_pkt_cnt   <= in_pkt_cnt + 1'b1;
-              prev_wr_addr <= wr_addr + 1'b1;
-            end
-          end
         end
       end
 
       // Read logic
       wire hold         = (in_pkt_cnt == out_pkt_cnt);
-      assign int_tdata  = mem[rd_addr][WIDTH-1:0];
-      assign int_tlast  = mem[rd_addr][WIDTH];
-      assign int_tvalid = ~empty & ~hold;
 
       always @(posedge clk) begin
+        if (int_tready) begin
+          int_tdata      <= mem[rd_addr][WIDTH-1:0];
+          int_tlast      <= mem[rd_addr][WIDTH];
+          int_tvalid     <= ~empty & ~hold;
+        end
+        if (read) begin
+          rd_addr      <= rd_addr + 1;
+        end
+        if (almost_empty) begin
+          if (read & ~write) begin
+            empty      <= 1'b1;
+          end
+        end else begin
+          if (~read & write) begin
+            empty      <= 1'b0;
+          end
+        end
+        // Prevent output until we have a full packet
+        if (int_tvalid & int_tready & int_tlast) begin
+          out_pkt_cnt  <= out_pkt_cnt + 1'b1;
+        end
         if (reset | clear) begin
           rd_addr     <= 0;
           out_pkt_cnt <= 0;
           empty       <= 1'b1;
-        end else begin
-          if (read) begin
-            rd_addr      <= rd_addr + 1;
-          end
-          if (almost_empty) begin
-            if (read & ~write) begin
-              empty      <= 1'b1;
-            end
-          end else begin
-            if (~read & write) begin
-              empty      <= 1'b0;
-            end
-          end
-          // Prevent output until we have a full packet
-          if (read & int_tlast) begin
-            out_pkt_cnt  <= out_pkt_cnt + 1'b1;
-          end
+          int_tvalid  <= 1'b0;
         end
       end
 
