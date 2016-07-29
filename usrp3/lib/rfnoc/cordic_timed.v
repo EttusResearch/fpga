@@ -75,29 +75,13 @@ module cordic_timed #(
     .o1_tvalid(header_in_tvalid), .o1_tready(header_in_tready),
     .o2_tready(1'b0), .o3_tready(1'b0));
 
-  // Track first line
-  reg header_first_line = 1'b1;
-  always @(posedge clk) begin
-    if (reset | clear) begin
-      header_first_line     <= 1'b1;
-    end else begin
-      if (header_in_tvalid & header_in_tready) begin
-        if (header_in_tlast) begin
-          header_first_line <= 1'b1;
-        end else begin
-          header_first_line <= 1'b0;
-        end
-      end
-    end
-  end
-
   axi_fifo #(
     .WIDTH(HEADER_WIDTH), .SIZE(HEADER_FIFO_SIZE))
   axi_fifo_header (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata(header_in_tdata), .i_tvalid(header_in_tvalid & header_first_line), .i_tready(header_in_tready),
+    .i_tdata(header_in_tdata), .i_tvalid(header_in_tvalid & header_in_tlast), .i_tready(header_in_tready),
     .o_tdata(header_out_tdata), .o_tvalid(header_out_tvalid),
-    .o_tready(header_out_tready & sample_tlast & sample_tvalid), // Consume header on last output sample
+    .o_tready(header_out_tready), // Consume header on last output sample
     .space(), .occupied());
 
   /**************************************************************************
@@ -255,13 +239,12 @@ module cordic_timed #(
     .i_tdata({scaled_i_tdata, scaled_q_tdata}), .i_tlast(scaled_tlast), .i_tvalid(scaled_tvalid), .i_tready(scaled_tready),
     .o_tdata(sample_tdata), .o_tlast(sample_tlast), .o_tvalid(sample_tvalid), .o_tready(sample_tready));
 
-  axi_join #(
-    .INPUTS(2))
-  axi_join (
-    .i_tlast({sample_tlast,1'b0}), .i_tvalid({sample_tvalid,header_out_tvalid}), .i_tready({sample_tready,header_out_tready}),
-    .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
-
-  assign o_tdata = sample_tdata;
-  assign o_tuser = header_out_tdata;
+  // Throttle output on last sample if header is not valid
+  assign header_out_tready = sample_tlast & sample_tvalid & o_tready;
+  assign sample_tready     = (sample_tvalid & sample_tlast) ? (header_out_tvalid & o_tready) : o_tready;
+  assign o_tvalid          = (sample_tvalid & sample_tlast) ? header_out_tvalid : sample_tvalid;
+  assign o_tlast           = sample_tlast;
+  assign o_tdata           = sample_tdata;
+  assign o_tuser           = header_out_tdata;
 
 endmodule
