@@ -85,11 +85,6 @@ module simple_spi_core
         .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
         .out(mosi_data),.changed(trigger_spi));
 
-    wire shutdown;  // Disables SPI core
-    setting_reg #(.my_addr(BASE+3),.width(1),.at_reset(1'b0)) shutdown_sr (
-        .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
-        .out(shutdown),.changed());
-
     localparam WAIT_TRIG = 0;
     localparam PRE_IDLE = 1;
     localparam CLK_REG = 2;
