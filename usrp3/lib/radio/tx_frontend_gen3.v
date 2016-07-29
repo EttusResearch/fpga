@@ -49,7 +49,7 @@ module tx_frontend_gen3 #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(phase_corr),.changed());
 
-  setting_reg #(.my_addr(SR_MUX), .width(8)) sr_mux_ctrl (
+  setting_reg #(.my_addr(SR_MUX), .width(8), .at_reset(8'h10)) sr_mux_ctrl (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(mux_ctrl),.changed());
 
@@ -129,6 +129,14 @@ module tx_frontend_gen3 #(
     .clk(clk),.reset(reset), .in(tx_q_ofs),.strobe_in(tx_ofs_stb), .out(tx_q_round), .strobe_out());
 
   // Mux
+  // Muxing logic matches that in tx_frontend.v, and what tx_frontend_core_200.cpp expects.
+  //
+  // mux_ctrl ! 0+0  ! 0+16 ! 1+0  ! 1+16
+  // =========!======!======!======!========
+  // DAC_I    ! tx_i ! tx_i ! tx_q ! tx_q
+  // DAC_Q    ! tx_i ! tx_q ! tx_i ! tx_q
+  //
+  // Most daughterboards will thus use 0x01 or 0x10 as the mux_ctrl value.
   always @(posedge clk) begin
     if (reset) begin
       dac_stb <= 1'b0;
@@ -142,8 +150,8 @@ module tx_frontend_gen3 #(
         default : dac_i <= 0;
       endcase
       case(mux_ctrl[7:4])
-        0 : dac_q <= tx_q_round;
-        1 : dac_q <= tx_i_round;
+        0 : dac_q <= tx_i_round;
+        1 : dac_q <= tx_q_round;
         default : dac_q <= 0;
       endcase
     end
