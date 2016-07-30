@@ -1,0 +1,9 @@
+/build
+/build-*
+vivado*
+*.swp
+*.swo
+vprj
+.Xil
+*.log
+debug

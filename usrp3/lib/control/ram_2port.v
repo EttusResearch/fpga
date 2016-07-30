@@ -13,26 +13,23 @@ module ram_2port
      input wea,
      input [AWIDTH-1:0] addra,
      input [DWIDTH-1:0] dia,
-     output reg [DWIDTH-1:0] doa = 'd0,
-
+     output reg [DWIDTH-1:0] doa,
+     
      input clkb,
      input enb,
      input web,
      input [AWIDTH-1:0] addrb,
      input [DWIDTH-1:0] dib,
-     output reg [DWIDTH-1:0] dob = 'd0);
-
+     output reg [DWIDTH-1:0] dob);
+   
    reg [DWIDTH-1:0] ram [(1<<AWIDTH)-1:0];
-
    /*
-   integer i;
-   initial begin
-     for (i=0;i<(1<<AWIDTH);i=i+1) begin
+   integer 	    i;
+   initial
+     for(i=0;i<(1<<AWIDTH);i=i+1)
        ram[i] <= {DWIDTH{1'b0}};
-     end
-   end
-   */
-
+       */
+   
    always @(posedge clka) begin
       if (ena)
         begin

@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 
 module catcap_ddr_cmos
 #(

@@ -1,7 +1,3 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
-
 module axi_lite_slave
   (
    input aclk,                    // Global AXI clock

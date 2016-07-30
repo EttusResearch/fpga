@@ -1,0 +1,16 @@
+rm -rf fuse* *.exe isim
+vlogcomp -work work ${XILINX}/verilog/src/glbl.v
+vlogcomp -work work --sourcelibext .v \
+	 --sourcelibdir ../../../lib/dsp \
+         --sourcelibdir ../../../lib/control \
+	 --sourcelibdir ${XILINX}/verilog/src/unimacro \
+	 ../../../lib/dsp/hb47_int_tb.v
+
+
+
+fuse work.hb47_int_tb work.glbl -L unisims_ver -L xilinxcorelib_ver -o hb47_int_tb.exe 
+
+# run the simulation scrip
+./hb47_int_tb.exe  -tclbatch simcmds.tcl   -gui 
+
+

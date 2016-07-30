@@ -1,24 +1,22 @@
-//
-// Copyright 2014-2016 Ettus Research
+
+// source_flow_control.v
 //
 //  This block passes the in_* AXI port to the out_* AXI port only when it has
-//  enough flow control credits. Data is held when there are not enough credits.
+//   enough flow control credits.  Data is held when there are not enough credits.
 //  Credits are replenished with extension context packets which update the 
-//  last_consumed packet register. Max credits are controlled by settings regs.
+//   last_consumed packet register.  Max credits are controlled by settings regs.
 //  The 2nd line of the packet contains the sequence number in the low 12 bits.
 //  These packets should not have a time value, but if they do it will be ignored.
 
 module source_flow_control #(
-   parameter SR_FLOW_CTRL_WINDOW_SIZE = 0,
-   parameter SR_FLOW_CTRL_WINDOW_EN = 1
+   parameter BASE=0
 ) (
    input clk, input reset, input clear,
    input set_stb, input [7:0] set_addr, input [31:0] set_data,
    input [63:0] fc_tdata, input fc_tlast, input fc_tvalid, output fc_tready,
    input [63:0] in_tdata, input in_tlast, input in_tvalid, output in_tready,
    output [63:0] out_tdata, output out_tlast, output out_tvalid, input out_tready,
-   output busy,
-   output [31:0] debug
+   output busy
 );
    reg [31:0]     last_seqnum_consumed;
    wire [31:0]    window_size;
@@ -28,7 +26,7 @@ module source_flow_control #(
    wire           window_enable;
 
    //Sets the size of the flow control window
-   setting_reg #(.my_addr(SR_FLOW_CTRL_WINDOW_SIZE)) sr_window_size
+   setting_reg #(.my_addr(BASE)) sr_window_size
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
       .out(window_size),.changed());
 
@@ -38,7 +36,7 @@ module source_flow_control #(
    //dropped by this module and it will reset to the SFC_HEAD head state.
    //The reset sequence can take more than one cycle during which this
    //module will hold off all flow control data.
-   setting_reg #(.my_addr(SR_FLOW_CTRL_WINDOW_EN), .width(1)) sr_window_enable
+   setting_reg #(.my_addr(BASE+1), .width(1)) sr_window_enable
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
       .out(window_enable),.changed(window_reset));
 
@@ -73,7 +71,7 @@ module source_flow_control #(
          SFC_HEAD :
             if(fc_tlast)
                sfc_state <= SFC_HEAD; // Error. CHDR packet with only a header is an error.
-            else if(fc_tdata[63:62] != 2'b01)  // Is this NOT a flow control packet?
+            else if(~fc_tdata[63])   // Is this NOT an extension context packet?
                sfc_state <= SFC_DUMP; // Error. Only extension context packets should come in on this interface.
             else if(fc_tdata[61])    // Does this packet have time?
                sfc_state <= SFC_TIME;
@@ -100,7 +98,7 @@ module source_flow_control #(
              sfc_state <= SFC_HEAD;
 
          endcase // case (sfc_state)
-      
+
    assign busy       = window_reseting;
    assign fc_tready  = ~window_reseting;      // Consume FC if not in reset
    assign out_tdata  = in_tdata;              // CHDR data flows through combinatorially.
@@ -108,26 +106,8 @@ module source_flow_control #(
    assign in_tready  = (go ? out_tready : 1'b0) | window_reseting;
    assign out_tvalid = (go & ~window_reseting) ? in_tvalid : 1'b0;
 
-   // TODO: Fix to increment sequence number only on data packets.
-   reg first_line = 1'b1;
-   reg is_data_pkt;
-   always @(posedge clk) begin
-     if (reset) begin
-       first_line  <= 1'b1;
-       is_data_pkt <= 1'b0;
-     end else begin
-       if (in_tvalid & in_tready & first_line) begin
-         first_line  <= 1'b0;
-         is_data_pkt <= (in_tdata[63:62] == 2'b0);
-       end
-       if (in_tvalid & in_tready & in_tlast) begin
-         first_line  <= 1'b1;
-       end
-     end
-   end
-
    //
-   // Each time we receive the end of an IF data packet increment the current_seqnum.
+   // Each time we recieve the end of an IF data packet increment the current_seqnum.
    // We bravely assume that no packets go missing...or at least that they will be detected elsewhere
    // and then handled appropriately.
    // The SEQNUM needs to be initialized every time we start a new stream. In new_rx_framer this is done
@@ -139,7 +119,7 @@ module source_flow_control #(
    always @(posedge clk)
       if(reset | clear | window_reseting)
          current_seqnum <= 32'd0;
-      else if (in_tvalid && in_tready && in_tlast && is_data_pkt)
+      else if (in_tvalid && in_tready && in_tlast)
          current_seqnum <= current_seqnum + 32'd1;
 
    always @(posedge clk)
@@ -151,17 +131,17 @@ module source_flow_control #(
          else
             case(go)
             1'b0:
-               // Note: "!=" works even with 32-bit wrap around. If a fc packet with an invalid seqnum
-               //       is received, this could get into a bad state.
-               if(in_tvalid & (go_until_seqnum != current_seqnum))
+               // This test assumes the host is well behaved in sending good numbers for packets consumed
+               // and that current_seqnum increments always by 1 only.
+               // This way wraps are dealt with without a large logic penalty.
+               if (in_tvalid & (go_until_seqnum - current_seqnum != 0))
                   go <= 1'b1;
+                  //if(in_tvalid & (go_until_seqnum > current_seqnum))  // FIXME will need to handle wrap of 32-bit seqnum
 
             1'b1:
                if(in_tvalid & in_tready & in_tlast)
                   go <= 1'b0;
-            endcase // case (go)
+            endcase // case (go)      
       end
 
-   assign debug = { window_enable, go, go_until_seqnum[5:0], last_seqnum_consumed[11:0], current_seqnum[11:0] };
-      
 endmodule // source_flow_control

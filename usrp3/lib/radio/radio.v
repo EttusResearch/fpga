@@ -1,16 +1,14 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 // radio top level module
 //  Contains all clock-rate DSP components, all radio and hardware controls and settings
 //  Communication with outside world is exclusively via a single in/out axi cvita port
 //  Paths are separated by the lower 2 bits of stream ID, as follows:
 //
-//    CHDR[63:62] 
-//       0        Data
-//       1        Flow Control
-//       2        Command
-//       3        Response
+//     SID[1:0]   IN                                 OUT
+//       0        Transmit Data           (DATA)     Transmit Flow Control, ACK/Error  (CTXT)
+//       1        Control (SPI, settings) (CTXT)     Response (readback)               (CTXT)
+//       2        Receive Flow Control    (CTXT)     Receive Data                      (DATA)
+//       3        Receive Commands        (CTXT)     Receive Command ACK/ERROR         (CTXT)
 
 module radio #(
    parameter CHIPSCOPE = 0,
@@ -36,9 +34,9 @@ module radio #(
    input pps,
    input time_sync,
    output sync_dacs,
-   
-   output [63:0] debug
-   );
+
+   output [31:0] debug
+);
 
    // ///////////////////////////////////////////////////////////////////////////////
    // FIFO Interfacing to the bus clk domain
@@ -50,6 +48,10 @@ module radio #(
    wire [63:0] 	 ctrl_tdata_b, ctrl_tdata_r;
    wire 	 ctrl_tready_b, ctrl_tready_r, ctrl_tvalid_b, ctrl_tvalid_r;
    wire 	 ctrl_tlast_b, ctrl_tlast_r;
+
+   wire [63:0] 	  ctrl_tdata_s_r;
+   wire 	  ctrl_tready_s_r,  ctrl_tvalid_s_r;
+   wire 	  ctrl_tlast_s_r;
 
    wire [63:0] 	 resp_tdata_b, resp_tdata_r;
    wire 	 resp_tready_b, resp_tready_r, resp_tvalid_b, resp_tvalid_r;
@@ -70,13 +72,17 @@ module radio #(
    wire [63:0] 	 rxfc_tdata_b;
    wire 	 rxfc_tready_b, rxfc_tvalid_b, rxfc_tlast_b;
 
-   wire [63:0] 	 rx_mux_tdata_r;
+    wire [63:0] 	 rx_mux_tdata_r;
    wire 	 rx_mux_tready_r, rx_mux_tvalid_r;
    wire 	 rx_mux_tlast_r;
 
    wire [63:0] 	 rx_err_tdata_r;
    wire 	 rx_err_tready_r, rx_err_tvalid_r;
    wire 	 rx_err_tlast_r;
+   //IJB debug
+   wire [63:0] 	 tx_tdata_bo_debug;
+   wire 	 tx_tlast_bo_debug, tx_tvalid_bo_debug, tx_tready_bo_debug;
+
 
    axi_mux4 #(.PRIO(0), .WIDTH(64), .BUFFER(1)) radio_mux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -87,21 +93,30 @@ module radio #(
       .o_tdata(out_tdata), .o_tlast(out_tlast), .o_tvalid(out_tvalid), .o_tready(out_tready));
 
    wire [63:0] 	 vheader;
-   wire [1:0] 	 vdest = vheader[63:62];  // Switch by packet type
+   wire [1:0] 	 vdest = vheader[1:0];  // Switch by bottom 2 bits of SID
 
-   axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64)) radio_demux
+   axi_demux4 #(.ACTIVE_CHAN(4'b0111), .WIDTH(64)) radio_demux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(in_tdata), .i_tlast(in_tlast), .i_tvalid(in_tvalid), .i_tready(in_tready),
       .o0_tdata(tx_tdata_b), .o0_tlast(tx_tlast_b), .o0_tvalid(tx_tvalid_b), .o0_tready(tx_tready_b),  // TX Data
-      .o1_tdata(rxfc_tdata_b), .o1_tlast(rxfc_tlast_b), .o1_tvalid(rxfc_tvalid_b), .o1_tready(rxfc_tready_b), // RX Flow Control
-      .o2_tdata(ctrl_tdata_b), .o2_tlast(ctrl_tlast_b), .o2_tvalid(ctrl_tvalid_b), .o2_tready(ctrl_tready_b),  // Control
-      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // No CTRL Resp coming back
+      .o1_tdata(ctrl_tdata_b), .o1_tlast(ctrl_tlast_b), .o1_tvalid(ctrl_tvalid_b), .o1_tready(ctrl_tready_b),  // Control
+      .o2_tdata(rxfc_tdata_b), .o2_tlast(rxfc_tlast_b), .o2_tvalid(rxfc_tvalid_b), .o2_tready(rxfc_tready_b), // RX Flow Control
+      .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1)); // RX Command
 
-   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(MSG_FIFO_SIZE)) ctrl_fifo
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(ctrl_tvalid_b), .i_tready(ctrl_tready_b), .i_tdata({ctrl_tlast_b,ctrl_tdata_b}),
-      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r), .o_tdata({ctrl_tlast_r,ctrl_tdata_r}));
+      .o_aclk(radio_clk), .o_tvalid(ctrl_tvalid_s_r), .o_tready(ctrl_tready_s_r), .o_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}));
+
+   // For timing closure ..paths lead back from 64bit time comparison.
+   axi_fifo_short #(.WIDTH(65)) ctrl_fifo_s
+     (
+      .clk(radio_clk), .reset(radio_rst), .clear(1'b0),
+      .i_tdata({ctrl_tlast_s_r,ctrl_tdata_s_r}), .i_tvalid(ctrl_tvalid_s_r), .i_tready(ctrl_tready_s_r),
+      .o_tdata({ctrl_tlast_r,ctrl_tdata_r}), .o_tvalid(ctrl_tvalid_r), .o_tready(ctrl_tready_r),
+      .space(), .occupied()
+      );
 
    axi_fifo #(.WIDTH(65), .SIZE(TX_PRE_FIFO_SIZE)) tx_data_fifo
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -137,7 +152,7 @@ module radio #(
    localparam SR_SPI       = 8'd8;
    localparam SR_GPIO      = 8'd16;
    localparam SR_MISC_OUTS = 8'd24;
-   localparam SR_READBACK  = 8'd127;
+   localparam SR_READBACK  = 8'd32;
    localparam SR_TX_CTRL   = 8'd64;
    localparam SR_RX_CTRL   = 8'd96;
    localparam SR_TIME      = 8'd128;
@@ -167,9 +182,8 @@ module radio #(
    wire [63:0] 	vita_time, vita_time_lastpps;
    wire [31:0] test_readback;
    wire        loopback;
-   
-   wire [31:0] debug_sfc;
-   
+
+
 
    radio_ctrl_proc radio_ctrl_proc
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
@@ -196,11 +210,11 @@ module radio #(
    settings_bus_crossclock
      #(.FLOW_CTRL(0))
        settings_bus_crossclock
-       (.clk_a(radio_clk), .rst_a(radio_rst),
-	.set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
-	.clk_b(bus_clk), .rst_b(bus_rst),
-	.set_stb_b(set_stb_b), .set_addr_b(set_addr_b), .set_data_b(set_data_b),
-	.set_ready(1'b1));
+       (.clk_i(radio_clk), .rst_i(radio_rst),
+	.set_stb_i(set_stb), .set_addr_i(set_addr), .set_data_i(set_data),
+	.clk_o(bus_clk), .rst_o(bus_rst),
+	.set_stb_o(set_stb_b), .set_addr_o(set_addr_b), .set_data_o(set_data_b),
+	.blocked(1'b0));
 
    // Write this register with any value to create DAC sync operation
    setting_reg #(.my_addr(SR_DACSYNC), .awidth(8), .width(1)) sr_dacsync
@@ -250,12 +264,8 @@ module radio #(
       .rx(run_rx), .tx(run_tx),
       .gpio_in(3'b000), .gpio_out(leds), .gpio_ddr(/*assumed outs*/), .gpio_sw_rb());
 
-   timekeeper 
-    #(.SR_TIME_HI(SR_TIME),
-      .SR_TIME_LO(SR_TIME+1),
-      .SR_TIME_CTRL(SR_TIME+2))
-   timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync), .strobe(1'b1),
+   timekeeper #(.BASE(SR_TIME)) timekeeper
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
@@ -270,7 +280,7 @@ module radio #(
    wire [175:0] txsample_tdata;
    wire 	txsample_tvalid, txsample_tready;
    wire [31:0] 	sample_tx;
-   wire 	tx_ack, tx_error, packet_consumed;
+   wire 	ack_or_error, packet_consumed;
    wire [11:0] 	seqnum;
    wire [63:0] 	error_code;
    wire [31:0] 	sid;
@@ -285,19 +295,16 @@ module radio #(
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready),
       .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
       .debug());
 
-   tx_responder
-    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_TX_CTRL+2),
-      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_TX_CTRL+3))
-   tx_responder
+   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder_pre_radio
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .vita_time(vita_time),
       .o_tdata(txresp_tdata_r), .o_tlast(txresp_tlast_r), .o_tvalid(txresp_tvalid_r), .o_tready(txresp_tready_r));
@@ -316,13 +323,10 @@ module radio #(
          tx_theader_bo <= tx_tdata_bo;
    end
 
-   tx_responder
-    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_TX_CTRL+4),
-      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_TX_CTRL+5))
-   tx_responder_pre_fifo
+   tx_responder #(.BASE(SR_TX_CTRL+4)) tx_responder_pre_fifo
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
-      .ack(1'b0), .error(1'b0), .packet_consumed(tx_tvalid_bo & tx_tready_bo & tx_tlast_bo),
+      .ack_or_error(1'b0), .packet_consumed(tx_tvalid_bo & tx_tready_bo & tx_tlast_bo),
       .seqnum(tx_theader_bo[59:48]), .error_code(64'd0), .sid(tx_theader_bo[31:0]),
       .vita_time(64'd0),  //Assumption: FC handler in software does not care about time.
       .o_tdata(txresp_tdata_fifo), .o_tlast(txresp_tlast_fifo), .o_tvalid(txresp_tvalid_fifo), .o_tready(txresp_tready_fifo));
@@ -358,16 +362,12 @@ module radio #(
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
 
-   source_flow_control
-    #(.SR_FLOW_CTRL_WINDOW_SIZE(SR_RX_CTRL+6),
-      .SR_FLOW_CTRL_WINDOW_EN(SR_RX_CTRL+7))
-    rx_sfc
+   source_flow_control #(.BASE(SR_RX_CTRL+6)) rx_sfc
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
       .fc_tdata(rxfc_tdata_b), .fc_tlast(rxfc_tlast_b), .fc_tvalid(rxfc_tvalid_b), .fc_tready(rxfc_tready_b),
       .in_tdata(rx_tdata_b), .in_tlast(rx_tlast_b), .in_tvalid(rx_tvalid_b), .in_tready(rx_tready_b),
-      .out_tdata(rx_tdata_b_fc), .out_tlast(rx_tlast_b_fc), .out_tvalid(rx_tvalid_b_fc), .out_tready(rx_tready_b_fc),
-      .debug(debug_sfc));
+      .out_tdata(rx_tdata_b_fc), .out_tlast(rx_tlast_b_fc), .out_tvalid(rx_tvalid_b_fc), .out_tready(rx_tready_b_fc) );
 
    new_rx_framer #(.BASE(SR_RX_CTRL+4),.CHIPSCOPE(CHIPSCOPE)) new_rx_framer
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
@@ -426,7 +426,4 @@ module radio #(
    // /////////////////////////////////////////////////////////////////////////////////
    //  Debug
 
-   assign debug[63:32] = debug_sfc;
-   assign debug[31:0] = 32'd0;
-   
 endmodule // radio

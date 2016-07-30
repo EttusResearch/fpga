@@ -20,5 +20,4 @@ cvita_chunker.v \
 cvita_dechunker.v \
 axis_packet_debug.v \
 cvita_packet_debug.v \
-fix_short_packet.v \
 ))

@@ -145,12 +145,8 @@ module radio_legacy
    wire [2:0]     rb_addr;
 
    wire [63:0] vita_time, vita_time_lastpps;
-   timekeeper 
-    #(.SR_TIME_HI(SR_TIME),
-      .SR_TIME_LO(SR_TIME+1),
-      .SR_TIME_CTRL(SR_TIME+2))
-   timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync), .strobe(1'b1),
+   timekeeper #(.BASE(SR_TIME)) timekeeper
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
 
@@ -283,6 +279,9 @@ endgenerate
 generate
    if (SOURCE_FLOW_CONTROL == 1) begin
 
+      localparam SID_PREFIX_CTRL = 2'd0;
+      localparam SID_PREFIX_FC   = 2'd1;
+
       wire [63:0]    ctrl_tdata_fc;
       wire           ctrl_tready_fc, ctrl_tvalid_fc;
       wire           ctrl_tlast_fc;
@@ -290,21 +289,18 @@ generate
       wire [63:0]    ctrl_hdr;
       wire [1:0]     ctrl_dest;
 
-      assign ctrl_dest = ctrl_hdr[63:62];
+      assign ctrl_dest = (ctrl_hdr[1:0] == SID_PREFIX_FC) ? 2'd1 : 2'd0;
 
-      axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64), .BUFFER(1)) demux_proc_fc
+      axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(64), .BUFFER(1)) demux_proc_fc
         (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
          .header(ctrl_hdr), .dest(ctrl_dest),
          .i_tdata(ctrl_tdata_r), .i_tlast(ctrl_tlast_r), .i_tvalid(ctrl_tvalid_r), .i_tready(ctrl_tready_r),                  //Input
-         .o0_tdata(), .o0_tlast(), .o0_tvalid(), .o0_tready(1'b1),                                                            //Unused
+         .o0_tdata(ctrl_tdata_proc), .o0_tlast(ctrl_tlast_proc), .o0_tvalid(ctrl_tvalid_proc), .o0_tready(ctrl_tready_proc),  //Settings/Readback
          .o1_tdata(ctrl_tdata_fc), .o1_tlast(ctrl_tlast_fc), .o1_tvalid(ctrl_tvalid_fc), .o1_tready(ctrl_tready_fc),          //Flow control
-         .o2_tdata(ctrl_tdata_proc), .o2_tlast(ctrl_tlast_proc), .o2_tvalid(ctrl_tvalid_proc), .o2_tready(ctrl_tready_proc),  //Settings/Readback
-         .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1));                                                           //Unused
+         .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b0),                                                            //Unused
+         .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b0));                                                           //Unused
 
-      source_flow_control
-       #(.SR_FLOW_CTRL_WINDOW_SIZE(SR_RX_CTRL+6),
-         .SR_FLOW_CTRL_WINDOW_EN(SR_RX_CTRL+7))
-      rx_sfc
+      source_flow_control #(.BASE(SR_RX_CTRL+6)) rx_sfc
         (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
          .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
          .fc_tdata(ctrl_tdata_fc), .fc_tlast(ctrl_tlast_fc), .fc_tvalid(ctrl_tvalid_fc), .fc_tready(ctrl_tready_fc),                      //Flow control In
@@ -336,7 +332,7 @@ endgenerate
    wire [175:0] txsample_tdata;
    wire 	txsample_tvalid, txsample_tready;
    wire [31:0] 	sample_tx;
-   wire        tx_ack, tx_error, packet_consumed;
+   wire 	ack_or_error, packet_consumed;
    wire [11:0] 	seqnum;
    wire [63:0] 	error_code;
    wire [31:0] 	sid;
@@ -361,18 +357,16 @@ endgenerate
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .vita_time(vita_time),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .sample_tdata(txsample_tdata), .sample_tvalid(txsample_tvalid), .sample_tready(txsample_tready),
       .sample(sample_tx), .run(run_tx), .strobe(strobe_tx),
       .debug(debug_tx_control));
 
-   tx_responder
-    #(.SR_FLOW_CTRL_CYCS_PER_ACK(SR_TX_CTRL+2),
-      .SR_FLOW_CTRL_PKTS_PER_ACK(SR_TX_CTRL+3))
+   tx_responder #(.BASE(SR_TX_CTRL+2)) tx_responder
      (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .ack(tx_ack), .error(tx_error), .packet_consumed(packet_consumed),
+      .ack_or_error(ack_or_error), .packet_consumed(packet_consumed),
       .seqnum(seqnum), .error_code(error_code), .sid(sid),
       .vita_time(vita_time),
       .o_tdata(txresp_tdata_r), .o_tlast(txresp_tlast_r), .o_tvalid(txresp_tvalid_r), .o_tready(txresp_tready_r));

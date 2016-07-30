@@ -1,7 +1,4 @@
 //
-// Copyright 2014 Ettus Research LLC
-//
-//
 // AXI4 Burst enumeration
 //
 `define AXI4_BURST_FIXED 2'b00

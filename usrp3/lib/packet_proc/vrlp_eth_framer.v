@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 // vrlp_eth_framer
 //  Takes a vrlp stream in and adds udp, ip, and ethernet framing
 //  Uses 8 setting reg addresses.  First 4 are simple registers:

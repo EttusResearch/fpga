@@ -10,7 +10,7 @@
 //  This is useful after an ethernet interface to drop packets with bad CRCs.
 
 module axi_packet_gate
-  #(parameter WIDTH=64,
+  #(parameter WIDTH=68,
     parameter SIZE=10)
    (input clk, 
     input reset, 
@@ -69,12 +69,10 @@ module axi_packet_gate
 	     ;
    	 else if(last_out)
 	   num_packets <= num_packets - 8'd1;
-
-   // Cascade fifo gives a little extra space to fit headers and overhead
-   axi_fifo_cascade #(.SIZE(SIZE), .WIDTH(WIDTH+1)) axi_fifo 
+   
+   axi_fifo #(.SIZE(SIZE), .WIDTH(WIDTH+1)) axi_fifo
      (.clk(clk), .reset(reset), .clear(clear | (dump & (num_packets == 8'd0))),
       .i_tdata({i_tlast,i_tdata}), .i_tvalid(i_tvalid_int), .i_tready(i_tready_int),
-      .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid_int), .o_tready(o_tready_int),
-      .occupied(), .space());
+      .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid_int), .o_tready(o_tready_int));
       
 endmodule // axi_packet_gate

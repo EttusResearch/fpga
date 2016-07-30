@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 
 module new_tx_control
   #(parameter BASE=0)
@@ -8,8 +6,7 @@ module new_tx_control
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
 
     input [63:0] vita_time,
-    output reg ack,
-    output reg error,
+    output reg ack_or_error,
     output packet_consumed,
     output [11:0] seqnum,
     output reg [63:0] error_code,
@@ -49,17 +46,17 @@ module new_tx_control
      time_compare (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(send_time),
 		   .now(now), .early(early), .late(late), .too_early(too_early));
 
-   reg [2:0]     state;
+   assign run = (state == ST_SAMP0) | (state == ST_SAMP1);
+
+   assign sample = (state == ST_SAMP0) ? sample0 : sample1;
+
+   reg [2:0] 	 state;
 
    localparam ST_IDLE  = 0;
    localparam ST_SAMP0 = 1;
    localparam ST_SAMP1 = 2;
    localparam ST_ERROR = 3;
    localparam ST_WAIT  = 4;
-
-   assign run = (state == ST_SAMP0) | (state == ST_SAMP1);
-
-   assign sample = (state == ST_SAMP0) ? sample0 : sample1;
 
    reg [11:0]  expected_seqnum;
 
@@ -81,22 +78,20 @@ module new_tx_control
      if(reset | clear)
        begin
 	  state <= ST_IDLE;
-	  ack <= 1'b0;
-	  error <= 1'b0;
+	  ack_or_error <= 1'b0;
 	  error_code <= 64'd0;
        end
      else
        case(state)
 	 ST_IDLE :
 	   begin
-	      ack <= 1'b0;
-	      error <= 1'b0;
+	      ack_or_error <= 1'b0;
 	      if(sample_tvalid)
 		if(~send_at | now)
 		  if(expected_seqnum != seqnum)
 		    begin
 		       state <= ST_ERROR;
-		       error <= 1'b1;
+		       ack_or_error <= 1'b1;
 		       error_code <= CODE_SEQ_ERROR;
 		    end
 		  else
@@ -104,7 +99,7 @@ module new_tx_control
 		else if(late)
 		  begin
 		     state <= ST_ERROR;
-		     error <= 1'b1;
+		     ack_or_error <= 1'b1;
 		     error_code <= CODE_TIME_ERROR;
 		  end
 	   end // case: ST_IDLE
@@ -113,13 +108,13 @@ module new_tx_control
 	     if(~sample_tvalid)
 	       begin
 		  state <= ST_ERROR;
-		  error <= 1'b1;
+		  ack_or_error <= 1'b1;
 		  error_code <= CODE_UNDERRUN;
 	       end
 	     else if(eop & odd & eob)
 	       begin
 		  state <= ST_IDLE;
-		  ack <= 1'b1;
+		  ack_or_error <= 1'b1;
 		  error_code <= CODE_EOB_ACK;
 	       end
 	     else if(eop & odd)
@@ -127,7 +122,7 @@ module new_tx_control
 	     else if(expected_seqnum != seqnum)
 	       begin
 		  state <= ST_ERROR;
-		  error <= 1'b1;
+		  ack_or_error <= 1'b1;
 		  error_code <= CODE_SEQ_ERROR_MIDBURST;
 	       end
 	     else
@@ -137,15 +132,14 @@ module new_tx_control
 	     if(eop & eob)
 	       begin
 		  state <= ST_IDLE;
-		  ack <= 1'b1;
+		  ack_or_error <= 1'b1;
 		  error_code <= CODE_EOB_ACK;
 	       end
 	     else
 	       state <= ST_SAMP0;
 	 ST_ERROR :
 	   begin
-	      ack <= 1'b0;
-	      error <= 1'b0;
+	      ack_or_error <= 1'b0;
 	      if(sample_tvalid & eop)
 		if(policy_next_packet | (policy_next_burst & eob))
 		  state <= ST_IDLE;

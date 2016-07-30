@@ -80,7 +80,7 @@ module chdr_16sc_to_xxxx_chain
    
 
    //------------------------------------------------------------------
-   // Ingress and Egress muxing
+   // Ingress and Outgress muxing
    //------------------------------------------------------------------
    //assign {o_tdata, o_tlast, o_tvalid, i_tready} = {i_tdata, i_tlast, i_tvalid, o_tready};
    ///*

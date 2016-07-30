@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 
 module new_tx_deframer
   (input clk, input reset, input clear,
@@ -38,7 +36,7 @@ module new_tx_deframer
 	   if(i_tvalid)
 	     begin
 		if(~i_tlast)
-		  if(i_tdata[63:62] != 2'b00)
+		  if(i_tdata[63])
 		    td_state <= TD_DUMP;
 		  else if(i_tdata[61])
 		    td_state <= TD_TIME;

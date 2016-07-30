@@ -1,9 +1,5 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
-
 module iq_to_float
-
+  
   #(parameter BITS_IN =16,
     parameter BITS_OUT = 32
     )
@@ -33,7 +29,7 @@ module iq_to_float
 
    wire [15:0] binary_in;
    
-   binary_encoder #(.WIDTH(16))
+   binary_encoder #(.SIZE(16))
    encoding
      (.in(binary_in),.out(binary_out));
    

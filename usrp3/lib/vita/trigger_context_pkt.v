@@ -6,8 +6,7 @@
 
 
 module trigger_context_pkt
-  #(parameter SR_FLOW_CTRL_CYCS_PER_ACK = 0,
-    parameter SR_FLOW_CTRL_PKTS_PER_ACK = 1)
+  #(parameter BASE=0)
    (input clk, input reset, input clear,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     input packet_consumed, output trigger);
@@ -20,11 +19,11 @@ module trigger_context_pkt
    reg [30:0]  cycle_count, packet_count;
 
    
-   setting_reg #(.my_addr(SR_FLOW_CTRL_CYCS_PER_ACK), .at_reset(0)) sr_cycles
+   setting_reg #(.my_addr(BASE), .at_reset(0)) sr_cycles
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out({enable_cycle,dummy1,cycles}),.changed());
 
-   setting_reg #(.my_addr(SR_FLOW_CTRL_PKTS_PER_ACK), .at_reset(0)) sr_packets
+   setting_reg #(.my_addr(BASE+1), .at_reset(0)) sr_packets
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out({enable_consumed,dummy2,packets}),.changed());
 

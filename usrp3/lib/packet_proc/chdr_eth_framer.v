@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 // chdr_eth_framer
 //  Takes a CHDR stream in and adds udp, ip, and ethernet framing
 //  Uses 8 setting reg addresses.  First 4 are simple registers:

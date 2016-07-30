@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 // Insert tlast bit for fifos that don't support it.  This only works with VALID CVITA frames
 //  A single partial or invalid frame will make this wrong FOREVER
 

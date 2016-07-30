@@ -1,6 +1,3 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
 
 module vrlp_to_compressed_vita
   (input clk, input reset, input clear,

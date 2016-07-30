@@ -1,6 +1,3 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
 
 `include "axi_defs.v"
 

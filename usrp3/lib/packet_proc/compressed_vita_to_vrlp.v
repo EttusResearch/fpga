@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 module compressed_vita_to_vrlp
   (input clk, input reset, input clear,
    input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,

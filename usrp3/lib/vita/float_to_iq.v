@@ -1,7 +1,3 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
-
 module float_to_iq
 
   #(parameter BITS_IN = 32,

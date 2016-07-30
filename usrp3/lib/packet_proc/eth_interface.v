@@ -1,6 +1,4 @@
-//
-// Copyright 2014 Ettus Research LLC
-//
+
 // Adapts from internal VITA to ethernet packets.  Also handles ZPU and ethernet crossover interfaces.
 
 module eth_interface
