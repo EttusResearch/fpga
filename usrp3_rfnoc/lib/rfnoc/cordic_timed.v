@@ -230,7 +230,7 @@ module cordic_timed #(
   wire sample_tlast, sample_tvalid, sample_tready;
 
   axi_round_and_clip_complex #(
-    .WIDTH_IN(CORDIC_WIDTH+SCALING_WIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(11))
+    .WIDTH_IN(CORDIC_WIDTH+SCALING_WIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(12))
   axi_round_and_clip_complex (
     .clk(clk), .reset(reset | clear),
     .i_tdata({scaled_i_tdata, scaled_q_tdata}), .i_tlast(scaled_tlast), .i_tvalid(scaled_tvalid), .i_tready(scaled_tready),
