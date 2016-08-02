@@ -137,32 +137,29 @@ module cordic_timed #(
     .i_tdata(phase_inc_mux_tdata), .i_tlast(phase_inc_mux_tlast), .i_tvalid(phase_inc_mux_tvalid), .i_tready(),
     .o_tdata(phase_tdata), .o_tlast(), .o_tvalid(phase_tvalid), .o_tready(phase_tready));
 
-  wire [PHASE_WIDTH+2*WIDTH-1:0] phase_ext_tdata, cordic_in_ext_tdata;
   wire [PHASE_WIDTH-1:0] phase_sync_tdata;
+  wire phase_sync_tvalid, phase_sync_tready;
+  wire nc;
   wire [2*WIDTH-1:0] cordic_in_sync_tdata;
-  wire phase_sync_tvalid, phase_sync_tready, nc;
   wire cordic_in_sync_tvalid, cordic_in_sync_tready;
 
   // Sync the two path's pipeline delay.
   // This is needed to ensure that applying the phase update happens on the
   // correct sample regardless of differing downstream path delays.
   axi_sync #(
-    .WIDTH(PHASE_WIDTH+2*WIDTH),
     .SIZE(2),
+    .WIDTH_VEC({PHASE_WIDTH,2*WIDTH}), // Vector of widths, each width is defined by a 32-bit value
     .FIFO_SIZE(2))
   axi_sync (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({{2*WIDTH{1'b0}},phase_tdata,{PHASE_WIDTH{1'b0}},cordic_in_tdata}),
+    .i_tdata({phase_tdata,cordic_in_tdata}),
     .i_tlast({1'b0,cordic_in_tlast}),
     .i_tvalid({phase_tvalid,cordic_in_tvalid}),
     .i_tready({phase_tready,cordic_in_tready}),
-    .o_tdata({phase_ext_tdata, cordic_in_ext_tdata}),
+    .o_tdata({phase_sync_tdata,cordic_in_sync_tdata}),
     .o_tlast({nc,cordic_in_sync_tlast}),
     .o_tvalid({phase_sync_tvalid,cordic_in_sync_tvalid}),
     .o_tready({phase_sync_tready,cordic_in_sync_tready}));
-
-  assign phase_sync_tdata     = phase_ext_tdata[PHASE_WIDTH-1:0];
-  assign cordic_in_sync_tdata = cordic_in_ext_tdata[2*WIDTH-1:0];
 
   // Xilinx IP AXI CORDIC
   wire [CORDIC_WIDTH-1:0] cordic_in_i_tdata, cordic_in_q_tdata;
