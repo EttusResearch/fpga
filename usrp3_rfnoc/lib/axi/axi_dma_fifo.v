@@ -300,7 +300,7 @@ module axi_dma_fifo
    wire       o_tvalid_gate, o_tready_gate, o_tlast_gate;
 
    axi_mux4 #(.PRIO(1), .WIDTH(DWIDTH), .BUFFER(1)) axi_mux (
-      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready_int),
       .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist), .i1_tready(i_tready_bist),
       .i2_tdata({DWIDTH{1'b0}}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
@@ -327,7 +327,7 @@ module axi_dma_fifo
    assign rb_bist_status = {bist_error, bist_done, bist_running};
 
    axi_demux4 #(.ACTIVE_CHAN(4'b0011), .WIDTH(DWIDTH)) axi_demux(
-      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .header(), .dest({1'b0, bist_running}),
       .i_tdata(o_tdata_fifo), .i_tlast(o_tlast_fifo), .i_tvalid(o_tvalid_fifo), .i_tready(o_tready_fifo),
       .o0_tdata(o_tdata_gate), .o0_tlast(o_tlast_gate), .o0_tvalid(o_tvalid_gate), .o0_tready(o_tready_gate),
@@ -338,7 +338,7 @@ module axi_dma_fifo
 
    //Insert package gate before output to absorb any intra-packet bubble cycles
    axi_packet_gate #(.WIDTH(DWIDTH), .SIZE(11)) out_pkt_gate (
-      .clk(bus_clk), .reset(bus_reset), .clear(1'b0),
+      .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
       .i_terror(1'b0),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid_int), .o_tready(o_tready | clear_bclk)
