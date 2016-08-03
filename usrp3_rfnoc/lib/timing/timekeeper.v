@@ -70,7 +70,7 @@ module timekeeper
      else if(pps_edge)
        if(time_event)
          vita_time_lastpps <= time_at_next_event;
-       else if (strobe)
+       else
          vita_time_lastpps <= vita_time + 64'h1;
 
 endmodule // timekeeper
