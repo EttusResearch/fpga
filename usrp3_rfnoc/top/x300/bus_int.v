@@ -123,6 +123,7 @@ module bus_int
    localparam RB_NUM_CE       = 8'd07;
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
+   localparam RB_GIT_HASH     = 8'd10;
    localparam RB_CROSSBAR     = 8'd128;
 
    localparam COMPAT_MAJOR    = 16'h0020;
@@ -334,6 +335,7 @@ module bus_int
        RB_ETH_TYPE1: rb_data = {32'h0};
    `endif
 `endif
+       RB_GIT_HASH: rb_data = 32'h`GIT_HASH;
 
        RB_CROSSBAR: rb_data = rb_data_crossbar;
 
