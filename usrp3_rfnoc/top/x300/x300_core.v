@@ -699,8 +699,15 @@ module x300_core (
    assign {miso[3], miso[2]}   = {1'b0, miso1};
 
    //LEDs
-   assign radio_led0 = leds[0][2:0];    //Other other led bits unused in leds[0,1]
-   assign radio_led1 = leds[2][2:0];    //Other other led bits unused in leds[2,3]
+   // When we RX on both channels, we don't light up both LEDs. Rather, we
+   // treat both channels equally and print the overlay (OR) of both channels.
+   assign radio_led0 = leds[0][2:0] | leds[1][2:0];
+   assign radio_led1 = leds[2][2:0] | leds[3][2:0];
+   // If we wanted to treat channel 2 special, and map the RX chans
+   // to individual LEDs, we'd want to do something like this:
+   //assign radio_led0 = leds[0][2:0] | {2'b0,leds[1][0]};
+   //assign radio_led1 = leds[2][2:0] | {2'b0,leds[3][0]};
+   // Reminder: radio_ledX = {RX, TXRX_TX, TXRX_RX}
 
    //Misc ins and outs
    always @(posedge radio_clk) begin
@@ -709,6 +716,5 @@ module x300_core (
       misc_ins[0]       <= radio0_misc_in;
       misc_ins[2]       <= radio1_misc_in;
    end
-
 
 endmodule // x300_core
