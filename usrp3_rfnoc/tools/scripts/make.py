@@ -84,9 +84,9 @@ def setup_parser():
         default="")
     parser.add_argument(
         "-m", "--max-num-blocks", type=int,
-        help="Maximum number of blocks (Max. Allowed for x310|x300: 11,\
+        help="Maximum number of blocks (Max. Allowed for x310|x300: 10,\
                 for e300: 6)",
-        default=11)
+        default=10)
     parser.add_argument(
         "--fill-with-fifos",
         help="If the number of blocks provided was smaller than the max\
