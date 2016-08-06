@@ -485,6 +485,7 @@ module x300_core (
       .NUM_FIFOS(2),
       .DEFAULT_FIFO_BASE({30'h02000000, 30'h00000000}),
       .DEFAULT_FIFO_SIZE({30'h01FFFFFF, 30'h01FFFFFF}),
+      .STR_SINK_FIFOSIZE(14),
       .DEFAULT_BURST_TIMEOUT({12'd280, 12'd280}),
       .EXTENDED_DRAM_BIST(1)
    ) inst_noc_block_dram_fifo (
@@ -547,6 +548,7 @@ module x300_core (
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
+   localparam RADIO_STR_FIFO_SIZE = 8'd11;
 
    // Daughter board I/O
    wire [31:0] leds[0:3];
@@ -570,7 +572,7 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,8'd14}),
+      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i0 (
@@ -603,7 +605,7 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,8'd14}),
+      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
       .MTU(13),
       .USE_SPI_CLK(0))
    noc_block_radio_core_i1 (
