@@ -125,8 +125,8 @@ module bus_int
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_CROSSBAR     = 8'd128;
 
-   localparam COMPAT_MAJOR    = 16'd1000;
-   localparam COMPAT_MINOR    = 16'd0000;
+   localparam COMPAT_MAJOR    = 16'h0020;
+   localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
    wire [7:0] 	  set_addr;
