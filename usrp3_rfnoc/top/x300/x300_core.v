@@ -485,7 +485,7 @@ module x300_core (
       .NUM_FIFOS(2),
       .DEFAULT_FIFO_BASE({30'h02000000, 30'h00000000}),
       .DEFAULT_FIFO_SIZE({30'h01FFFFFF, 30'h01FFFFFF}),
-      .STR_SINK_FIFOSIZE(14),
+      .STR_SINK_FIFOSIZE(12),
       .DEFAULT_BURST_TIMEOUT({12'd280, 12'd280}),
       .EXTENDED_DRAM_BIST(1)
    ) inst_noc_block_dram_fifo (

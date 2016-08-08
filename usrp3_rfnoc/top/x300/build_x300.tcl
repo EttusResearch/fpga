@@ -21,9 +21,9 @@ vivado_utils::generate_post_route_reports
 # STEP#5: Generate a bitstream, netlist and debug probes
 
 # STC3 Requirement: Disable waiting for DCI Match
-set_property BITSTREAM.STARTUP.MATCH_CYCLE  NoWait  [get_designs *]
+set_property BITSTREAM.STARTUP.MATCH_CYCLE  NOWAIT  [get_designs *]
 # STC3 Requirement: No bitstream compression
-set_property BITSTREAM.GENERAL.COMPRESS     False   [get_designs *]
+set_property BITSTREAM.GENERAL.COMPRESS     FALSE   [get_designs *]
 # Use 6MHz clock to configure bitstream
 set_property BITSTREAM.CONFIG.CONFIGRATE    6       [get_designs *]
 
