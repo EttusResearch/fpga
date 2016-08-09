@@ -1,0 +1,72 @@
+##############################################################
+#
+# Xilinx Core Generator version 14.6
+# Date: Mon Jun 23 09:55:35 2014
+#
+##############################################################
+#
+#  This file contains the customisation parameters for a
+#  Xilinx CORE Generator IP GUI. It is strongly recommended
+#  that you do not manually alter this file as it may cause
+#  unexpected and unsupported behavior.
+#
+##############################################################
+#
+#  Generated from component: xilinx.com:ip:cordic:5.0
+#
+##############################################################
+#
+# BEGIN Project Options
+SET addpads = false
+SET asysymbol = true
+SET busformat = BusFormatAngleBracketNotRipped
+SET createndf = false
+SET designentry = Verilog
+SET device = xc7k410t
+SET devicefamily = kintex7
+SET flowvendor = Other
+SET formalverification = false
+SET foundationsym = false
+SET implementationfiletype = Ngc
+SET package = ffg900
+SET removerpms = false
+SET simulationfiles = Behavioral
+SET speedgrade = -2
+SET verilogsim = true
+SET vhdlsim = false
+# END Project Options
+# BEGIN Select
+SELECT CORDIC xilinx.com:ip:cordic:5.0
+# END Select
+# BEGIN Parameters
+CSET aclken=false
+CSET architectural_configuration=Parallel
+CSET aresetn=true
+CSET cartesian_has_tlast=true
+CSET cartesian_has_tuser=false
+CSET cartesian_tuser_width=1
+CSET coarse_rotation=true
+CSET compensation_scaling=No_Scale_Compensation
+CSET component_name=cordic_rotator
+CSET data_format=SignedFraction
+CSET flow_control=Blocking
+CSET functional_selection=Rotate
+CSET input_width=16
+CSET iterations=0
+CSET optimize_goal=Performance
+CSET out_tlast_behv=Pass_Cartesian_TLAST
+CSET out_tready=true
+CSET output_width=16
+CSET phase_format=Scaled_Radians
+CSET phase_has_tlast=true
+CSET phase_has_tuser=false
+CSET phase_tuser_width=1
+CSET pipelining_mode=Maximum
+CSET precision=0
+CSET round_mode=Truncate
+# END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2012-11-05T14:59:52Z
+# END Extra information
+GENERATE
+# CRC: b140b529

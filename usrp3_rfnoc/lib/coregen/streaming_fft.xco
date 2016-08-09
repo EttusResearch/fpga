@@ -1,0 +1,73 @@
+##############################################################
+#
+# Xilinx Core Generator version 14.7
+# Date: Tue Jan 13 17:49:08 2015
+#
+##############################################################
+#
+#  This file contains the customisation parameters for a
+#  Xilinx CORE Generator IP GUI. It is strongly recommended
+#  that you do not manually alter this file as it may cause
+#  unexpected and unsupported behavior.
+#
+##############################################################
+#
+#  Generated from component: xilinx.com:ip:xfft:8.0
+#
+##############################################################
+#
+# BEGIN Project Options
+SET addpads = false
+SET asysymbol = true
+SET busformat = BusFormatAngleBracketNotRipped
+SET createndf = false
+SET designentry = Verilog
+SET device = xc7k325t
+SET devicefamily = kintex7
+SET flowvendor = Other
+SET formalverification = false
+SET foundationsym = false
+SET implementationfiletype = Ngc
+SET package = ffg900
+SET removerpms = false
+SET simulationfiles = Behavioral
+SET speedgrade = -2
+SET verilogsim = true
+SET vhdlsim = false
+# END Project Options
+# BEGIN Select
+SELECT Fast_Fourier_Transform xilinx.com:ip:xfft:8.0
+# END Select
+# BEGIN Parameters
+CSET aclken=false
+CSET aresetn=true
+CSET butterfly_type=use_xtremedsp_slices
+CSET channels=1
+CSET complex_mult_type=use_mults_performance
+CSET component_name=streaming_fft
+CSET cyclic_prefix_insertion=false
+CSET data_format=fixed_point
+CSET implementation_options=pipelined_streaming_io
+CSET input_width=16
+CSET memory_options_data=block_ram
+CSET memory_options_hybrid=false
+CSET memory_options_phase_factors=block_ram
+CSET memory_options_reorder=block_ram
+CSET number_of_stages_using_block_ram_for_data_and_phase_factors=5
+CSET output_ordering=bit_reversed_order
+CSET ovflo=false
+CSET phase_factor_width=16
+CSET rounding_modes=convergent_rounding
+CSET run_time_configurable_transform_length=true
+CSET scaling_options=scaled
+CSET target_clock_frequency=200
+CSET target_data_throughput=50
+CSET throttle_scheme=nonrealtime
+CSET transform_length=4096
+CSET xk_index=true
+# END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2013-07-22T10:44:24Z
+# END Extra information
+GENERATE
+# CRC: ce511ed6

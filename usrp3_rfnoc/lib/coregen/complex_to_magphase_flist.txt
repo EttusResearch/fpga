@@ -1,0 +1,15 @@
+# Output products list for <complex_to_magphase>
+_xmsgs/pn_parser.xmsgs
+complex_to_magphase/doc/cordic_v5_0_readme.txt
+complex_to_magphase/doc/cordic_v5_0_vinfo.html
+complex_to_magphase/doc/ds858_cordic.pdf
+complex_to_magphase.asy
+complex_to_magphase.gise
+complex_to_magphase.ngc
+complex_to_magphase.v
+complex_to_magphase.veo
+complex_to_magphase.xco
+complex_to_magphase.xise
+complex_to_magphase_flist.txt
+complex_to_magphase_xmdf.tcl
+demo_tb/tb_complex_to_magphase.vhd

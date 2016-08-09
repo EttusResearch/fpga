@@ -1,0 +1,25 @@
+
+CHDR RFNoC packet header format
+
+BIT      Meaning
+63:62    Packet type
+61       has_time (0 for no, 1 for time field on next line)
+60       EOB
+59:48    12-bit sequence number (from VRLP frame count, bottom 4 bits should match VRT seq number)
+47:32    16-bit length in bytes (from VRT length in words32)
+31:0     stream ID
+
+
+Type	 EOB	Description
+00	 0	Data
+00	 1	Data with EOB
+
+01	 0	Flow Control
+01	 1	ACK the End of a Burst (should this also serve for flow control?)
+
+10	 0	Command
+10	 1	Reserved
+
+11	 0	Response / ACK to a Command
+11	 1	ERROR indicator (underflow, overflow, etc.)
+

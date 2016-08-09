@@ -1,0 +1,19 @@
+#
+# Copyright 2014 Ettus Research LLC
+#
+
+##################################################
+# IO Capture and Generation Sources
+##################################################
+CAT_CAP_GEN_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/io_cap_gen/, \
+./catcap_ddr_cmos.v \
+./catgen_ddr_cmos.v \
+./catcodec_ddr_cmos.v \
+./cat_input_lvds.v \
+./cat_output_lvds.v \
+./cat_io_lvds.v \
+))
+
+CAP_GEN_GENERIC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/io_cap_gen/, \
+./cap_pattern_verifier.v \
+))

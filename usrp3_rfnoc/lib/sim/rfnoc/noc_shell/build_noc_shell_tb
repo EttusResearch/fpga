@@ -1,0 +1,3 @@
+iverilog -o noc_shell_tb -Wall noc_shell_tb.v -y . -y ../control/ -y ../fifo/ -y /opt/Xilinx/14.4/ISE_DS/ISE/verilog/src/unisims/ -y ../packet_proc/ -y ../timing/ -y ../vita/ -y ../../top/x300/coregen -y /opt/Xilinx/14.4/ISE_DS/ISE/verilog/src/XilinxCoreLib
+
+# -y /opt/Xilinx/14.4/ISE_DS/ISE/coregen/ip/xilinx/primary/com/xilinx/ip/fifo_generator_v9_3/simulation/

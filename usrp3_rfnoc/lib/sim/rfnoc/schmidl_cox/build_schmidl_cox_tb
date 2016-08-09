@@ -1,0 +1,3 @@
+iverilog -o schmidl_cox_tb -Wall schmidl_cox_tb.v -y ../coregen -y ../../../usrp2/models -y . -y ../control/ -y ../fifo/ -y /opt/Xilinx/14.6/ISE_DS/ISE/verilog/src/unisims/ -y ../packet_proc/ -y ../timing/ -y ../vita/
+
+# -y /opt/Xilinx/14.4/ISE_DS/ISE/coregen/ip/xilinx/primary/com/xilinx/ip/fifo_generator_v9_3/simulation/

@@ -1,0 +1,69 @@
+##############################################################
+#
+# Xilinx Core Generator version 14.6
+# Date: Wed Jun 18 22:08:53 2014
+#
+##############################################################
+#
+#  This file contains the customisation parameters for a
+#  Xilinx CORE Generator IP GUI. It is strongly recommended
+#  that you do not manually alter this file as it may cause
+#  unexpected and unsupported behavior.
+#
+##############################################################
+#
+#  Generated from component: xilinx.com:ip:cmpy:5.0
+#
+##############################################################
+#
+# BEGIN Project Options
+SET addpads = false
+SET asysymbol = true
+SET busformat = BusFormatAngleBracketNotRipped
+SET createndf = false
+SET designentry = Verilog
+SET device = xc7k410t
+SET devicefamily = kintex7
+SET flowvendor = Other
+SET formalverification = false
+SET foundationsym = false
+SET implementationfiletype = Ngc
+SET package = ffg900
+SET removerpms = false
+SET simulationfiles = Behavioral
+SET speedgrade = -2
+SET verilogsim = true
+SET vhdlsim = false
+# END Project Options
+# BEGIN Select
+SELECT Complex_Multiplier xilinx.com:ip:cmpy:5.0
+# END Select
+# BEGIN Parameters
+CSET aclken=false
+CSET aportwidth=16
+CSET aresetn=true
+CSET atuserwidth=1
+CSET bportwidth=16
+CSET btuserwidth=1
+CSET component_name=complex_multiplier
+CSET ctrltuserwidth=1
+CSET flowcontrol=Blocking
+CSET hasatlast=true
+CSET hasatuser=false
+CSET hasbtlast=true
+CSET hasbtuser=false
+CSET hasctrltlast=false
+CSET hasctrltuser=false
+CSET latencyconfig=Automatic
+CSET minimumlatency=7
+CSET multtype=Use_Mults
+CSET optimizegoal=Performance
+CSET outputwidth=16
+CSET outtlastbehv=Pass_A_TLAST
+CSET roundmode=Random_Rounding
+# END Parameters
+# BEGIN Extra information
+MISC pkg_timestamp=2012-11-05T14:26:25Z
+# END Extra information
+GENERATE
+# CRC: df056b81

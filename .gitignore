@@ -7,3 +7,5 @@ a.out
 .project
 .settings
 *.swp
+*.jou
+*.log

@@ -1,0 +1,21 @@
+# Output products list for <simple_fir>
+_xmsgs/pn_parser.xmsgs
+demo_tb/tb_simple_fir.vhd
+simple_fir/cmodel/fir_compiler_v6_3_bitacc_cmodel_lin.zip
+simple_fir/cmodel/fir_compiler_v6_3_bitacc_cmodel_lin64.zip
+simple_fir/cmodel/fir_compiler_v6_3_bitacc_cmodel_nt.zip
+simple_fir/cmodel/fir_compiler_v6_3_bitacc_cmodel_nt64.zip
+simple_fir/doc/ds795_fir_compiler.pdf
+simple_fir/doc/fir_compiler_v6_3_readme.txt
+simple_fir/doc/fir_compiler_v6_3_vinfo.html
+simple_fir.asy
+simple_fir.gise
+simple_fir.mif
+simple_fir.ngc
+simple_fir.v
+simple_fir.veo
+simple_fir.xco
+simple_fir.xise
+simple_fir_flist.txt
+simple_fir_reload_order.txt
+simple_fir_xmdf.tcl

@@ -1,0 +1,25 @@
+#
+# Copyright 2014 Ettus Research LLC
+#
+
+##################################################
+# Coregen Sources
+##################################################
+LIBCOREGEN_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/coregen/, \
+simple_fir.v \
+simple_fir.xco \
+simple_fft.v \
+simple_fft.xco \
+streaming_fft.v \
+streaming_fft.xco \
+complex_multiplier.v \
+complex_multiplier.xco \
+complex_to_magphase.v \
+complex_to_magphase.xco \
+cordic_rotator.v \
+cordic_rotator.xco \
+))
+
+
+#decim_4_5.v \
+#decim_4_5.xco \
