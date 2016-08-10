@@ -107,7 +107,7 @@ proc ::vivado_strategies::implement_design {strategy} {
 
     # Route the current design
     set rt_dir [dict get $strategy "route_design.directive"]
-    set rt_more [dict gen $strategy "route_design.more_options"]
+    set rt_more [dict get $strategy "route_design.more_options"]
     route_design -directive $rt_dir $rt_more
 
     # Optimize the current routed netlist.
