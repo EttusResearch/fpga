@@ -3,6 +3,7 @@
 //
 
 module aurora_axis_mac #(
+   parameter PHY_ENDIANNESS   = "LITTLE", //{"LITTLE, "BIG"}
    parameter PACKET_MODE      = 0,
    parameter PACKET_FIFO_SIZE = 10,
    parameter BIST_ENABLED     = 1
@@ -134,10 +135,26 @@ module aurora_axis_mac #(
 
    wire           checksum_err;
 
+   wire [63:0]    phy_s_axis_tdata_endian, phy_m_axis_tdata_endian;
+   
+   generate if (PHY_ENDIANNESS == "BIG") begin
+      assign phy_s_axis_tdata_endian = {
+         phy_s_axis_tdata[7:0], phy_s_axis_tdata[15:8], phy_s_axis_tdata[23:16], phy_s_axis_tdata[31:24],
+         phy_s_axis_tdata[39:32], phy_s_axis_tdata[47:40], phy_s_axis_tdata[55:48], phy_s_axis_tdata[63:56]
+      };
+      assign phy_m_axis_tdata = {
+         phy_m_axis_tdata_endian[7:0], phy_m_axis_tdata_endian[15:8], phy_m_axis_tdata_endian[23:16], phy_m_axis_tdata_endian[31:24],
+         phy_m_axis_tdata_endian[39:32], phy_m_axis_tdata_endian[47:40], phy_m_axis_tdata_endian[55:48], phy_m_axis_tdata_endian[63:56]
+      };
+   end else begin
+      assign phy_s_axis_tdata_endian = phy_s_axis_tdata;
+      assign phy_m_axis_tdata = phy_m_axis_tdata_endian;
+   end endgenerate
+
    // Large FIFO must be able to run input side at 64b@156MHz to sustain 10Gb Rx.
    axi64_8k_2clk_fifo ingress_fifo_i (
       .s_aresetn(~phy_rst), .s_aclk(phy_clk),
-      .s_axis_tdata(phy_s_axis_tdata), .s_axis_tlast(phy_s_axis_tvalid), .s_axis_tuser(4'h0),
+      .s_axis_tdata(phy_s_axis_tdata_endian), .s_axis_tlast(phy_s_axis_tvalid), .s_axis_tuser(4'h0),
       .s_axis_tvalid(phy_s_axis_tvalid), .s_axis_tready(phy_s_axis_tready), .axis_wr_data_count(),
       .m_aclk(sys_clk),
       .m_axis_tdata(i_raw_tdata), .m_axis_tlast(), .m_axis_tuser(),
@@ -243,7 +260,7 @@ module aurora_axis_mac #(
       .s_axis_tdata(o_raw_tdata), .s_axis_tlast(o_raw_tvalid), .s_axis_tuser(4'h0),
       .s_axis_tvalid(o_raw_tvalid), .s_axis_tready(o_raw_tready), .axis_wr_data_count(),
       .m_aclk(phy_clk),
-      .m_axis_tdata(phy_m_axis_tdata), .m_axis_tlast(), .m_axis_tuser(),
+      .m_axis_tdata(phy_m_axis_tdata_endian), .m_axis_tlast(), .m_axis_tuser(),
       .m_axis_tvalid(phy_m_axis_tvalid), .m_axis_tready(phy_m_axis_tready), .axis_rd_data_count()
    );
 
