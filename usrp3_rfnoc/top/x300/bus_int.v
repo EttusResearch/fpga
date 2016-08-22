@@ -126,7 +126,7 @@ module bus_int
    localparam RB_GIT_HASH     = 8'd10;
    localparam RB_CROSSBAR     = 8'd128;
 
-   localparam COMPAT_MAJOR    = 16'h0020;
+   localparam COMPAT_MAJOR    = 16'h0021;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
