@@ -78,10 +78,11 @@ def setup_parser():
     parser = argparse.ArgumentParser(
         description="Generate the NoC block instantiation file",
     )
-    parser.add_argument( # TODO: Make sure you can stack -I
+    parser.add_argument(
         "-I", "--include-dir",
         help="Path directory of the RFNoC Out-of-Tree module",
-        default="")
+        nargs='+',
+        default=None)
     parser.add_argument(
         "-m", "--max-num-blocks", type=int,
         help="Maximum number of blocks (Max. Allowed for x310|x300: 10,\
@@ -94,7 +95,7 @@ def setup_parser():
         action="store_true")
     parser.add_argument(
         "-o", "--outfile",
-        help="Output /path/filename - By running this directive, \
+        help="Output /path/filename - By running this directive,\
                 you won't build your IP",
         default=None)
     parser.add_argument(
@@ -103,14 +104,14 @@ def setup_parser():
         default="x310")
     parser.add_argument(
         "-t", "--target",
-        help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG, \
+        help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG,\
                 E310_RFNOC_sg3...]",
         default=None)
     parser.add_argument(
         "blocks",
         help="List block names to instantiate.",
         default="",
-        nargs='*', #Means we collect them all, or none
+        nargs='*',
     )
     return parser
 
@@ -151,7 +152,7 @@ def file_generator(args, vfile):
     """
     fpga_utils_path = get_scriptpath()
     print("Adding CE instantiation file for '%s'" % args.target)
-    path_to_file = fpga_utils_path +'/../../top/' + device_dict(args.device) +\
+    path_to_file = fpga_utils_path +'/../../top/' + device_dict(args.device.lower()) +\
             '/rfnoc_ce_auto_inst_' + args.device + '.v'
     if args.outfile is None:
         open(path_to_file, 'w').write(vfile)
@@ -176,7 +177,7 @@ def append_re_line_sequence(filename, linepattern, newline):
         newfile = oldfile.replace(last_line, last_line + newline + '\n')
         open(filename, 'w').write(newfile)
 
-def append_item_into_file(filename, linepattern, input_string):
+def append_item_into_file(args):
     """
     Basically the same as append_re_line_sequence function, but it does not
     append anything when the input is not found
@@ -185,33 +186,32 @@ def append_item_into_file(filename, linepattern, input_string):
     pastes the input string. If pattern doesn't exist
     notifies and leaves the file unchanged
     """
-    oldfile = open(filename, 'r').read()
-    lines = re.findall(linepattern, oldfile, flags=re.MULTILINE)
-    if len(lines) == 0:
-        print("Pattern {} not found. Could not write {} file".\
-                format(linepattern, oldfile))
-        return
-    else:
-        last_line = lines[-1]
-        newfile = oldfile.replace(last_line, last_line + input_string)
-    open(filename, 'w').write(newfile)
 
-def copy_sources(args):
-    """
-    takes the contents of the sources file (which should be only a list) and
-    adds it to the RFNOC_OOT_SRCS variable of the Makefile.srcs, to be included
-    into the build process
-    """
-    target_dir = device_dict(args.device)
-    oot_dir = args.include_dir
-    checkdir_v(oot_dir)
-    oot_srcs_file = os.path.join(oot_dir, 'Makefile.srcs')
-    # FIXME
-    dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
-            target_dir, 'Makefile.srcs')
-    srcs = compare(oot_srcs_file, dest_srcs_file)
-    linepattern = re.escape('RFNOC_OOT_SRCS = \\\n')
-    append_item_into_file(dest_srcs_file, linepattern, ''.join(srcs))
+    target_dir = device_dict(args.device.lower())
+    if args.include_dir is not None:
+        for dirs in args.include_dir:
+            checkdir_v(dirs)
+            oot_srcs_file = os.path.join(dirs, 'Makefile.srcs')
+            dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
+                    target_dir, 'Makefile.srcs')
+            prefixpattern = re.escape('$(addprefix ' + dirs + ', \\\n')
+            linepattern = re.escape('RFNOC_OOT_SRCS = \\\n')
+            oldfile = open(dest_srcs_file, 'r').read()
+            prefixlines = re.findall(prefixpattern, oldfile, flags=re.MULTILINE)
+            if len(prefixlines) == 0:
+                lines = re.findall(linepattern, oldfile, flags=re.MULTILINE)
+                if len(lines) == 0:
+                    print("Pattern {} not found. Could not write {} file".\
+                            format(linepattern, oldfile))
+                    return
+                else:
+                    last_line = lines[-1]
+                    srcs = "".join(readfile(oot_srcs_file))
+            else:
+                last_line = prefixlines[-1]
+                srcs = "".join(compare(oot_srcs_file, dest_srcs_file))
+            newfile = oldfile.replace(last_line, last_line + srcs)
+            open(dest_srcs_file, 'w').write(newfile)
 
 def compare(file1, file2):
     """
@@ -230,10 +230,24 @@ def compare(file1, file2):
                     notinside.append(item)
     return notinside
 
+def readfile(files):
+    """
+    compares two files line by line, and returns the lines of first file that
+    were not found on the second. The returned is a tuple item that can be
+    accessed in the form of a list as tuple[0], where each line takes a
+    position on the list or in a string as tuple [1].
+    """
+    contents = []
+    with open(files, 'r') as arg:
+        text = arg.readlines()
+        for item in text:
+            contents.append(item)
+    return contents
+
 def build(args):
     " build "
     cwd = get_scriptpath()
-    target_dir = device_dict(args.device)
+    target_dir = device_dict(args.device.lower())
     build_dir = os.path.join(cwd, '..', '..', 'top', target_dir)
     if os.path.isdir(build_dir):
         print("changing temporarily working directory to {0}".\
@@ -269,7 +283,7 @@ def checkdir_v(include_dir):
     """
     nfiles = glob.glob(include_dir+'*.v')
     if len(nfiles) == 0:
-        print('No verilog files found in the given directory')
+        print('[ERROR] No verilog files found in the given directory')
         exit(0)
     else:
         print('Verilog sources found!')
@@ -281,18 +295,18 @@ def get_scriptpath():
     """
     return os.path.dirname(os.path.realpath(__file__))
 
-
 def main():
     " Go, go, go! "
     args = setup_parser().parse_args()
     vfile = create_vfiles(args)
     file_generator(args, vfile)
-    copy_sources(args)
+    append_item_into_file(args)
     if args.outfile is  None:
         return build(args)
     else:
         print("Instantiation file generated at {}".\
                 format(args.outfile))
+        return 0
 
 if __name__ == "__main__":
     exit(main())
