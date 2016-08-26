@@ -51,7 +51,7 @@ module cvita_uart
     //rx uart capture
     simple_uart_rx #(.SIZE(SIZE)) simple_uart_rx
     (
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst | ~rxd_enable),
         .fifo_out(rx_char), .fifo_read(fifo_read), .fifo_level(), .fifo_empty(fifo_empty),
         .clkdiv(clkdiv), .rx(rxd)
     );
