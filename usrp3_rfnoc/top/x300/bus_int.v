@@ -20,7 +20,7 @@ module bus_int
   #(
     parameter NUM_CE = 3          // Number of computation engines
    )
-   (input clk, input reset,
+   (input clk, input clk_div2, input reset, input reset_div2,
     output sen, output sclk, output mosi, input miso,
     inout scl0, inout sda0,
     inout scl1, inout sda1,
@@ -126,7 +126,7 @@ module bus_int
    localparam RB_GIT_HASH     = 8'd10;
    localparam RB_CROSSBAR     = 8'd128;
 
-   localparam COMPAT_MAJOR    = 16'h0020;
+   localparam COMPAT_MAJOR    = 16'h0021;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
@@ -177,6 +177,7 @@ module bus_int
    soft_ctrl #(.SB_ADDRW(SR_AWIDTH), .RB_ADDRW(RB_AWIDTH)) sc
      (
       .clk(clk), .rst(reset),
+      .clk_div2(clk_div2), .rst_div2(reset_div2),
       //------------------------------------------------------------------
       // I2C interfaces
       //------------------------------------------------------------------

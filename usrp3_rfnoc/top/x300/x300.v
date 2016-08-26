@@ -239,7 +239,7 @@ module x300
 );
 
    wire         radio_clk, radio_clk_2x, dac_dci_clk;
-   wire         global_rst, radio_rst, bus_rst, adc_idlyctrl_rst;
+   wire         global_rst, radio_rst, bus_rst, bus_rst_div2, adc_idlyctrl_rst;
    wire [3:0]   sw_rst;
    wire [2:0]   led0, led1;
 
@@ -251,7 +251,7 @@ module x300
    //
    ////////////////////////////////////////////////////////////////////
 
-   wire     fpga_clk125, bus_clk, ioport2_clk, rio40_clk, ioport2_idelay_ref_clk;
+   wire     fpga_clk125, bus_clk, bus_clk_div2, ioport2_clk, rio40_clk, ioport2_idelay_ref_clk;
    wire     bus_clk_locked, rio40_clk_locked, rio40_clk_reset;
 
    IBUFG fpga_125MHz_clk_buf (
@@ -264,6 +264,7 @@ module x300
    //----------------------------------------------------------------------------
    // CLK_OUT1___166.667______0.000______50.0______113.052_____96.948
    // CLK_OUT2___125.000______0.000______50.0______119.348_____96.948
+   // CLK_OUT3____83.333______0.000______50.0______129.296_____96.948
    //
    //----------------------------------------------------------------------------
    // Input Clock   Freq (MHz)    Input Jitter (UI)
@@ -277,6 +278,7 @@ module x300
       .CLKFB_IN(ioport2_clk),
       .CLK_OUT1(bus_clk),
       .CLK_OUT2_UNBUF(/* unused */),    //This exists to make the IP generate a 125MHz FB clock
+      .CLK_OUT3(bus_clk_div2), //bus_clk divided by 2. used by sc/zpu
       .CLKFB_OUT(ioport2_clk_unbuf),
       .LOCKED(bus_clk_locked));
 
@@ -394,6 +396,12 @@ module x300
       .clk(bus_clk),
       .reset_in(global_rst || !bus_clk_locked),
       .reset_out(bus_rst)
+   );
+   
+   reset_sync int_div2_reset_sync (
+      .clk(bus_clk_div2),
+      .reset_in(global_rst || !bus_clk_locked),
+      .reset_out(bus_rst_div2)
    );
 
    reset_sync adc_idlyctrl_reset_sync (
@@ -916,6 +924,8 @@ module x300
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
+      .bus_rst_div2(bus_rst_div2),
+      .bus_clk_div2(bus_clk_div2),
 
       .txp(SFP0_TX_p),
       .txn(SFP0_TX_n),
@@ -987,6 +997,8 @@ module x300
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
+      .bus_rst_div2(bus_rst_div2),
+      .bus_clk_div2(bus_clk_div2),
 
       .txp(SFP1_TX_p),
       .txn(SFP1_TX_n),
@@ -1244,6 +1256,7 @@ module x300
    x300_core x300_core (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
+      .bus_clk_div2(bus_clk_div2),
       // Radio0 signals
       .rx0(rx0), .tx0(tx0), 
       .db0_gpio_in(db0_gpio_in), .db0_gpio_out(db0_gpio_out), .db0_gpio_ddr(db0_gpio_ddr),

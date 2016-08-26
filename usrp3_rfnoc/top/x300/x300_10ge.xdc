@@ -11,6 +11,7 @@ set_property PACKAGE_PIN   R7       [get_ports XG_CLK_n]
 create_clock -name XG_CLK -period 6.400 -waveform {0.000 3.200} [get_ports XG_CLK_p]
 
 set_clock_groups -asynchronous -group [get_clocks bus_clk] -group [get_clocks XG_CLK]
+set_clock_groups -asynchronous -group [get_clocks bus_clk_div2] -group [get_clocks XG_CLK]
 set_clock_groups -asynchronous -group [get_clocks -filter {NAME =~ *sfpp_io_*/ten_gige_phy_i/ten_gig_eth_pcs_pma_i/*/gtxe2_i/RXOUTCLK}] -group [get_clocks XG_CLK]
 set_clock_groups -asynchronous -group [get_clocks -filter {NAME =~ *sfpp_io_*/ten_gige_phy_i/ten_gig_eth_pcs_pma_i/*/gtxe2_i/TXOUTCLK}] -group [get_clocks XG_CLK]
 

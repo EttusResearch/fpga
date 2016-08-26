@@ -8,11 +8,13 @@ module x300_sfpp_io_core #(
 )(
    input             areset,
    input             bus_rst,
+   input             bus_rst_div2,
 
    input             gt_refclk,
    input             gb_refclk,
    input             misc_clk,
    input             bus_clk,
+   input             bus_clk_div2,
 
    output            txp,
    output            txn,
@@ -106,8 +108,8 @@ generate
          .mdio_in(mdio_in),
          .mdio_out(mdio_out),
          // Wishbone I/F
-         .wb_clk_i(bus_clk),      
-         .wb_rst_i(bus_rst),      
+         .wb_clk_i(bus_clk_div2),      
+         .wb_rst_i(bus_rst_div2),      
          .wb_adr_i(wb_adr_i),  
          .wb_cyc_i(wb_cyc_i),  
          .wb_dat_i(wb_dat_i),
@@ -211,8 +213,8 @@ generate
          .mdio_out(mdio_out),
          .mdio_tri(),
          // Wishbone I/F
-         .wb_clk_i(bus_clk),
-         .wb_rst_i(bus_rst),
+         .wb_clk_i(bus_clk_div2),
+         .wb_rst_i(bus_rst_div2),
          .wb_adr_i(wb_adr_i),
          .wb_cyc_i(wb_cyc_i),
          .wb_dat_i(wb_dat_o),

@@ -6,6 +6,8 @@ module x300_core (
    input bus_clk,
    input bus_rst,
    output [3:0] sw_rst,
+   input bus_clk_div2,
+   input bus_rst_div2,
    // Radio 0
    input [31:0] rx0, output [31:0] tx0,
    input [31:0] db0_gpio_in, output [31:0] db0_gpio_out, output [31:0] db0_gpio_ddr,
@@ -251,7 +253,7 @@ module x300_core (
    // Bus Int containing soft CPU control, routing fabric
    /////////////////////////////////////////////////////////////////////////////////
    bus_int #(.NUM_CE(NUM_CE + NUM_IO_CE)) bus_int (
-      .clk(bus_clk), .reset(bus_rst),
+      .clk(bus_clk), .clk_div2(bus_clk_div2), .reset(bus_rst), .reset_div2(bus_rst_div2),
       .sen(LMK_SEN), .sclk(LMK_SCLK), .mosi(LMK_MOSI), .miso(1'b0),
       .scl0(SFPP0_SCL), .sda0(SFPP0_SDA),
       .scl1(db_scl), .sda1(db_sda),

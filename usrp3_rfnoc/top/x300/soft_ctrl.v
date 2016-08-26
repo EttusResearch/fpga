@@ -10,6 +10,7 @@ module soft_ctrl
 )
 (
     input clk, input rst,
+    input clk_div2, input rst_div2,
 
     //------------------------------------------------------------------
     // I2C interfaces
@@ -150,7 +151,7 @@ module soft_ctrl
         .sf_addr(8'b1111_1111),.sf_mask(8'b1111_1111),  // 0xff00 - I2C1
         .dw(dw),.aw(aw),.sw(sw))
      wb_1master
-       (.clk_i(clk),.rst_i(rst),
+       (.clk_i(clk_div2),.rst_i(rst_div2),
     .m0_dat_o(m0_dat_o),.m0_ack_o(m0_ack),.m0_err_o(),.m0_rty_o(),.m0_dat_i(m0_dat_i),
     .m0_adr_i(m0_adr),.m0_sel_i(m0_sel),.m0_we_i(m0_we),.m0_cyc_i(m0_cyc),.m0_stb_i(m0_stb),
     .s0_dat_o(s0_dat_o),.s0_adr_o(s0_adr),.s0_sel_o(s0_sel),.s0_we_o(s0_we),.s0_cyc_o(s0_cyc),.s0_stb_o(s0_stb),
@@ -210,7 +211,7 @@ module soft_ctrl
     wire zpu_rst;
 
     zpu_wb_top #(.dat_w(dw), .adr_w(aw), .sel_w(sw))
-     zpu_top0 (.clk(clk), .rst(zpu_rst), .enb(~zpu_rst),
+     zpu_top0 (.clk(clk_div2), .rst(zpu_rst), .enb(~zpu_rst),
        // Data Wishbone bus to system bus fabric
        .we_o(m0_we),.stb_o(m0_stb),.dat_o(m0_dat_i),.adr_o(m0_adr),
        .dat_i(m0_dat_o),.ack_i(m0_ack),.sel_o(m0_sel),.cyc_o(m0_cyc),
@@ -224,7 +225,7 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     zpu_bootram #(.ADDR_WIDTH(aw), .DATA_WIDTH(dw), .MAX_ADDR(16'h7FFC)) sys_ram 
     (
-        .clk(clk), .rst(rst),
+        .clk(clk_div2), .rst(rst_div2),
         .mem_stb(s0_stb), .mem_wea(&({4{s0_we}} & s0_sel)), .mem_acka(s0_ack),
         .mem_addra(s0_adr), .mem_dina(s0_dat_o), .mem_douta(s0_dat_i),
         .ldr_stb(sa_stb), .ldr_wea(&({4{sa_we}} & sa_sel)),
@@ -235,31 +236,66 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     // Packet RAM -- Slave #1
     ////////////////////////////////////////////////////////////////////
+
+    //------------------------------------------------------------------
+    // packet interface in div2
+    //------------------------------------------------------------------
+    wire [63:0] rx_tdata_div2;
+    wire [3:0] rx_tuser_div2;
+    wire rx_tlast_div2;
+    wire rx_tvalid_div2;
+    wire rx_tready_div2;
+
+    //------------------------------------------------------------------
+    // packet interface out div2
+    //------------------------------------------------------------------
+    wire [63:0] tx_tdata_div2;
+    wire [3:0] tx_tuser_div2;
+    wire tx_tlast_div2;
+    wire tx_tvalid_div2;
+    wire tx_tready_div2; 
+
+    //clock cross fifo between bus_clk and bus_clk_div2 for axi stream input
+    //WIDTH = tdata+tuser+tlast = 69  
+    axi_fifo_2clk #(.WIDTH(69), .SIZE(5)) axi_stream_rx_fifo_2clk
+    (.reset(reset),
+      .i_aclk(clk), .i_tdata({rx_tdata, rx_tuser, rx_tlast}), .i_tvalid(rx_tvalid), .i_tready(rx_tready),
+      .o_aclk(clk_div2), .o_tdata({rx_tdata_div2, rx_tuser_div2, rx_tlast_div2}), .o_tvalid(rx_tvalid_div2), .o_tready(rx_tready_div2));
+    
+    //clock cross fifo between bus_clk_div2 and bus_clk for axi stream output
+    //WIDTH = tdata+tuser+tlast = 69  
+    axi_fifo_2clk #(.WIDTH(69), .SIZE(5)) axi_stream_tx_fifo_2clk
+    (.reset(reset),
+      .i_aclk(clk_div2), .i_tdata({tx_tdata_div2, tx_tuser_div2, tx_tlast_div2}), .i_tvalid(tx_tvalid_div2), .i_tready(tx_tready_div2),
+      .o_aclk(clk), .o_tdata({tx_tdata, tx_tuser, tx_tlast}), .o_tvalid(tx_tvalid), .o_tready(tx_tready));
+    
     axi_stream_to_wb #(.AWIDTH(13), .CTRL_ADDR(13'h1ffc)) axi_stream_to_wb
     (
-        .clk_i(clk), .rst_i(rst),
+        .clk_i(clk_div2), .rst_i(rst_div2),
 
         //wb interface
         .we_i(s1_we), .stb_i(s1_stb), .cyc_i(s1_cyc), .ack_o(s1_ack),
         .adr_i(s1_adr[12:0]), .dat_i(s1_dat_o), .dat_o(s1_dat_i),
 
         //axi stream in
-        .rx_tdata(rx_tdata), .rx_tuser(rx_tuser), .rx_tlast(rx_tlast),
-        .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
+        .rx_tdata(rx_tdata_div2), .rx_tuser(rx_tuser_div2), .rx_tlast(rx_tlast_div2),
+        .rx_tvalid(rx_tvalid_div2), .rx_tready(rx_tready_div2),
 
         //axi stream out
-        .tx_tdata(tx_tdata), .tx_tuser(tx_tuser), .tx_tlast(tx_tlast),
-        .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
+        .tx_tdata(tx_tdata_div2), .tx_tuser(tx_tuser_div2), .tx_tlast(tx_tlast_div2),
+        .tx_tvalid(tx_tvalid_div2), .tx_tready(tx_tready_div2),
 
         .debug_rx(), .debug_tx()
     );
+
+
 
     ////////////////////////////////////////////////////////////////////
     // Settings and readback bus -- Slave #2
     ////////////////////////////////////////////////////////////////////
     settings_bus #(.AWIDTH(aw), .DWIDTH(dw), .SWIDTH(SB_ADDRW)) settings_bus
     (
-        .wb_clk(clk), .wb_rst(rst),
+        .wb_clk(clk_div2), .wb_rst(rst_div2),
         .wb_adr_i(s2_adr), .wb_dat_i(s2_dat_o),
         .wb_stb_i(s2_stb), .wb_we_i(s2_we), .wb_ack_o(s2_ack),
         .strobe(set_stb), .addr(set_addr), .data(set_data)
@@ -267,8 +303,8 @@ module soft_ctrl
 
     settings_readback #(.AWIDTH(aw),.DWIDTH(dw), .RB_ADDRW(RB_ADDRW)) settings_readback
     (
-        .wb_clk(clk), 
-        .wb_rst(rst), 
+        .wb_clk(clk_div2), 
+        .wb_rst(rst_div2), 
         .wb_adr_i(s2_adr),
         .wb_stb_i(s2_stb),
         .wb_we_i(s2_we),
@@ -310,7 +346,7 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     simple_uart zpu_debug_uart
     (
-        .clk_i(clk), .rst_i(rst),
+        .clk_i(clk_div2), .rst_i(rst_div2),
         .we_i(s9_we), .stb_i(s9_stb), .cyc_i(s9_cyc), .ack_o(s9_ack),
         .adr_i(s9_adr[4:2]), .dat_i(s9_dat_o), .dat_o(s9_dat_i),
         .rx_int_o(), .tx_int_o(), .tx_o(debug_txd), .rx_i(debug_rxd), .baud_o()
@@ -319,13 +355,41 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     // PCIe endpoint -- Slave #b
     ////////////////////////////////////////////////////////////////////
+    
+    //------------------------------------------------------------------
+    // PCIe endpoint interface in div2
+    //------------------------------------------------------------------
+    wire [63:0] o_iop2_msg_tdata_div2;
+    wire o_iop2_msg_tvalid_div2;
+    wire o_iop2_msg_tlast_div2;
+    wire o_iop2_msg_tready_div2;
+    wire [63:0] i_iop2_msg_tdata_div2;
+    wire i_iop2_msg_tvalid_div2;
+    wire i_iop2_msg_tlast_div2;
+    wire i_iop2_msg_tready_div2;
+
+
+    //clock cross fifo between bus_clk and bus_clk_div2 for i_iop2_msg 
+    //WIDTH = tdata+tuser+tlast = 69  
+    axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) i_iop2_msg_fifo_2clk
+    (.reset(reset),
+      .i_aclk(clk), .i_tdata({i_iop2_msg_tdata, i_iop2_msg_tlast}), .i_tvalid(i_iop2_msg_tvalid), .i_tready(i_iop2_msg_tready),
+      .o_aclk(clk_div2), .o_tdata({i_iop2_msg_tdata_div2, iop2_msg_tlast_div2}), .o_tvalid(i_iop2_msg_tvalid_div2), .o_tready(i_iop2_msg_tready_div2));
+    
+    //clock cross fifo between bus_clk_div2 and bus_clk for o_iop2_msg
+    //WIDTH = tdata+tuser+tlast = 69  
+    axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) o_iop2_msg_fifo_2clk
+    (.reset(reset),
+      .i_aclk(clk_div2), .i_tdata({o_iop2_msg_tdata_div2, o_iop2_msg_tlast_div2}), .i_tvalid(o_iop2_msg_tvalid_div2), .i_tready(o_iop2_msg_tready_div2),
+      .o_aclk(clk), .o_tdata({o_iop2_msg_tdata, o_iop2_msg_tlast}), .o_tvalid(o_iop2_msg_tvalid), .o_tready(o_iop2_msg_tready));
+    
     pcie_wb_reg_core #(.WB_ADDRW(aw), .WB_DATAW(dw)) pcie_reg_core 
     (
-        .clk(clk), .rst(rst),
+        .clk(clk_div2), .rst(rst_div2),
         .wb_stb_i(sb_stb), .wb_we_i(sb_we), .wb_adr_i(sb_adr),
         .wb_dat_i(sb_dat_o), .wb_ack_o(sb_ack), .wb_dat_o(sb_dat_i),
-        .msgi_tdata(i_iop2_msg_tdata), .msgi_tvalid(i_iop2_msg_tvalid), .msgi_tready(i_iop2_msg_tready),
-        .msgo_tdata(o_iop2_msg_tdata), .msgo_tvalid(o_iop2_msg_tvalid), .msgo_tready(o_iop2_msg_tready),
+        .msgi_tdata(i_iop2_msg_tdata_div2), .msgi_tvalid(i_iop2_msg_tvalid_div2), .msgi_tready(i_iop2_msg_tready_div2),
+        .msgo_tdata(o_iop2_msg_tdata_div2), .msgo_tvalid(o_iop2_msg_tvalid_div2), .msgo_tready(o_iop2_msg_tready_div2),
         .debug(debug0)
     );
     assign o_iop2_msg_tlast = o_iop2_msg_tvalid;
@@ -338,7 +402,7 @@ module soft_ctrl
 
     i2c_master_top #(.ARST_LVL(1)) i2c2
     (
-        .wb_clk_i(clk),.wb_rst_i(rst),.arst_i(1'b0),
+        .wb_clk_i(clk_div2),.wb_rst_i(rst_div2),.arst_i(1'b0),
         .wb_adr_i(sc_adr[4:2]),.wb_dat_i(sc_dat_o[7:0]),.wb_dat_o(sc_dat_i[7:0]),
         .wb_we_i(sc_we),.wb_stb_i(sc_stb),.wb_cyc_i(sc_cyc),
         .wb_ack_o(sc_ack),.wb_inta_o(),
@@ -358,7 +422,7 @@ module soft_ctrl
     ////////////////////////////////////////////////////////////////////
     simple_uart gps_uart
     (
-        .clk_i(clk), .rst_i(rst),
+        .clk_i(clk_div2), .rst_i(rst_div2),
         .we_i(sd_we), .stb_i(sd_stb), .cyc_i(sd_cyc), .ack_o(sd_ack),
         .adr_i(sd_adr[4:2]), .dat_i(sd_dat_o), .dat_o(sd_dat_i),
         .rx_int_o(), .tx_int_o(), .tx_o(gps_txd), .rx_i(gps_rxd), .baud_o()
@@ -372,7 +436,7 @@ module soft_ctrl
 
     i2c_master_top #(.ARST_LVL(1)) i2c0
     (
-        .wb_clk_i(clk),.wb_rst_i(rst),.arst_i(1'b0),
+        .wb_clk_i(clk_div2),.wb_rst_i(rst_div2),.arst_i(1'b0),
         .wb_adr_i(se_adr[4:2]),.wb_dat_i(se_dat_o[7:0]),.wb_dat_o(se_dat_i[7:0]),
         .wb_we_i(se_we),.wb_stb_i(se_stb),.wb_cyc_i(se_cyc),
         .wb_ack_o(se_ack),.wb_inta_o(),
@@ -394,7 +458,7 @@ module soft_ctrl
 
     i2c_master_top #(.ARST_LVL(1)) i2c1
     (
-        .wb_clk_i(clk),.wb_rst_i(rst),.arst_i(1'b0),
+        .wb_clk_i(clk_div2),.wb_rst_i(rst_div2),.arst_i(1'b0),
         .wb_adr_i(sf_adr[4:2]),.wb_dat_i(sf_dat_o[7:0]),.wb_dat_o(sf_dat_i[7:0]),
         .wb_we_i(sf_we),.wb_stb_i(sf_stb),.wb_cyc_i(sf_cyc),
         .wb_ack_o(sf_ack),.wb_inta_o(),
