@@ -25,7 +25,8 @@ module noc_shell
     parameter [OUTPUT_PORTS-1:0] USE_GATE_MASK = 'd0,
     // Expert settings
     parameter BLOCK_PORTS = (INPUT_PORTS > OUTPUT_PORTS) ? INPUT_PORTS : OUTPUT_PORTS, // DO NOT OVERRIDE!
-    parameter [BLOCK_PORTS*8-1:0] CMD_FIFO_SIZE = {BLOCK_PORTS{8'd5}})
+    parameter [BLOCK_PORTS*8-1:0] CMD_FIFO_SIZE = {BLOCK_PORTS{8'd5}},
+    parameter RESP_FIFO_SIZE = 0)
    (// RFNoC interfaces, to Crossbar, all on bus_clk
     input bus_clk, input bus_rst,
     input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -133,7 +134,7 @@ module noc_shell
        .i_tdata(cmdin_tdata), .i_tlast(cmdin_tlast), .i_tvalid(cmdin_tvalid), .i_tready(cmdin_tready),
        .o_tdata(cmdin_ports_tdata), .o_tlast(cmdin_ports_tlast), .o_tvalid(cmdin_ports_tvalid), .o_tready(cmdin_ports_tready));
      // Mux responses from each command packet processor
-     axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(BLOCK_PORTS)) axi_mux (
+     axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(RESP_FIFO_SIZE), .POST_FIFO_SIZE(0), .SIZE(BLOCK_PORTS)) axi_mux (
        .clk(clk), .reset(reset), .clear(1'b0),
        .i_tdata(ackout_ports_tdata), .i_tlast(ackout_ports_tlast), .i_tvalid(ackout_ports_tvalid), .i_tready(ackout_ports_tready),
        .o_tdata(ackout_tdata), .o_tlast(ackout_tlast), .o_tvalid(ackout_tvalid), .o_tready(ackout_tready));
