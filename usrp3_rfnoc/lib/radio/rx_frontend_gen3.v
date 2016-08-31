@@ -208,7 +208,7 @@ module rx_frontend_gen3 #(
         .rdy(), .data_valid(adc_hb_stb),
         .dout_1(adc_i_hb), .dout_2(adc_q_hb));
 
-      localparam  HB_SCALE = 18;
+      localparam  HB_SCALE = 17;
       assign adc_dsp_stb = realmode_decim ? adc_hb_stb : adc_cclip_stb;
       assign adc_i_dsp   = realmode_decim ? adc_i_hb[23+HB_SCALE:HB_SCALE] : adc_i_cclip;
       assign adc_q_dsp   = realmode_decim ? adc_q_hb[23+HB_SCALE:HB_SCALE] : adc_q_cclip;
