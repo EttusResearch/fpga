@@ -194,8 +194,8 @@ module noc_block_duc_tb();
     fork
       begin
         // Send timed tunes
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, FFT_SIZE-2); // Shift by Fs/8
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*FFT_SIZE-2); // Shift by Fs/4
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, SPP-1); // Shift by Fs/8
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*SPP-1); // Shift by Fs/4
       end
       begin
         cvita_payload_t send_payload;
