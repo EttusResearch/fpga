@@ -95,6 +95,7 @@ fosphor/f15_logpwr.v \
 fosphor/f15_maxhold.v \
 fosphor/f15_packetizer.v \
 fosphor/f15_rise_decay.v \
+fosphor/f15_wf_agg.v \
 fosphor/axi_logpwr.v \
 noc_block_logpwr.v \
 noc_block_fosphor.v \

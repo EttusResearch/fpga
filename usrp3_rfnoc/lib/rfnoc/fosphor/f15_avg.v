@@ -14,19 +14,21 @@
 `endif
 
 module f15_avg #(
-	parameter integer WIDTH = 9
+	parameter integer Y_WIDTH = 12,
+	parameter integer X_WIDTH = 16
 )(
-	input  wire [WIDTH-1:0] yin_0,
-	input  wire [WIDTH-1:0] x_0,
+	input  wire [Y_WIDTH-1:0] yin_0,
+	input  wire [X_WIDTH-1:0] x_0,
+	input  wire [15:0] rng_0,
 	input  wire [15:0] alpha_0,
 	input  wire clear_0,
-	output wire [WIDTH-1:0] yout_4,
+	output wire [Y_WIDTH-1:0] yout_4,
 	input  wire clk,
 	input  wire rst
 );
 
 	// Signals
-	wire [WIDTH-1:0] x_2;
+	wire [X_WIDTH-1:0] x_2;
 	wire clear_3;
 	wire [47:0] pout_4;
 
@@ -72,11 +74,11 @@ module f15_avg #(
 		.INMODE(5'b01100),		// B=B2, A=D-A2
 		.OPMODE(7'b0110101),	// X=M1, Y=M2, Z=C
 		.RSTINMODE(rst),
-		.A({{(30-WIDTH){1'b0}}, x_0}),
+		.A({{(30-X_WIDTH){1'b0}}, x_0}),
 		.B({2'h0, alpha_0}),
-		.C({{(32-WIDTH){1'b0}}, x_2, 16'h0}),
+		.C({{(32-X_WIDTH){1'b0}}, x_2, 16'h8000}),
 		.CARRYIN(1'b0),
-		.D({{(25-WIDTH){1'b0}}, yin_0}),
+		.D({{(25-X_WIDTH){1'b0}}, yin_0, rng_0[X_WIDTH-Y_WIDTH-1:0]}),
 		.CEA1(1'b0),
 		.CEA2(1'b1),
 		.CEAD(1'b1),
@@ -101,12 +103,12 @@ module f15_avg #(
 	);
 
 	// Delay x for the C input
-	delay_bus #(2, WIDTH) dl_x (x_0, x_2, clk);
+	delay_bus #(2, X_WIDTH) dl_x (x_0, x_2, clk);
 
 	// Delay clear to use as reset for P
 	delay_bit #(3) dl_clear (clear_0, clear_3, clk);
 
 	// Map the output
-	assign yout_4 = pout_4[WIDTH+15:16];
+	assign yout_4 = pout_4[X_WIDTH+15:X_WIDTH-Y_WIDTH+16];
 
 endmodule // f15_avg

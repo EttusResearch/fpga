@@ -45,11 +45,11 @@ module rng(
 	always @(posedge clk)
 		out <= {
 			out16[15:11] ^ out5rev,		// 5 bits
-			out16[10:2],			// 9 bits
+			out16[10:2],				// 9 bits
 			out16[1:0] ^ out12[11:10],	// 2 bits
-			out12[9:2],			// 8 bits
+			out12[9:2],					// 8 bits
 			out12[1:0] ^ out8[7:6],		// 2 bits
-			out8[5:0]			// 6 bits
+			out8[5:0]					// 6 bits
 		};
 
 endmodule // rng

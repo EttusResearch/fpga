@@ -39,7 +39,7 @@ module f15_line_mem #(
 	integer i;
 	initial
 		for (i=0; i<(1<<AWIDTH); i=i+1)
-			ram[i] = 0; 
+			ram[i] = 0;
 `endif
 
 	always @(posedge clk)
