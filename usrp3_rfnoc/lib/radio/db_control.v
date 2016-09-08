@@ -14,7 +14,7 @@ module db_control #(
   output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data,
   input run_rx, input run_tx,
   // Frontend / Daughterboard I/O
-  input [31:0] misc_ins, output [31:0] misc_outs, output sync,
+  input [31:0] misc_ins, output [31:0] misc_outs,
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr,
   output [31:0] leds,
@@ -29,11 +29,6 @@ module db_control #(
     .clk(clk), .rst(reset),
     .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(misc_outs), .changed());
-
-  setting_reg #(.my_addr(SR_SYNC), .width(1)) sr_sync (
-    .clk(clk), .rst(reset),
-    .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(), .changed(sync));
 
   // Readback
   reg spi_readback_stb_hold;

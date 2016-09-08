@@ -568,6 +568,8 @@ module x300_core (
    wire [7:0]  ext_set_addr[0:3];
    wire [31:0] ext_set_data[0:3];
 
+   wire [NUM_RADIO_CORES-1:0] sync_out;
+
    //------------------------------------
    // Radio 0,1 (XB Radio Port 0)
    //------------------------------------
@@ -590,7 +592,7 @@ module x300_core (
       // Ctrl ports connected to radio front end
       .ext_set_stb({ext_set_stb[1],ext_set_stb[0]}), .ext_set_addr({ext_set_addr[1],ext_set_addr[0]}), .ext_set_data({ext_set_data[1],ext_set_data[0]}),
       // Interfaces to front panel and daughter board
-      .pps(pps_rclk), .time_sync(time_sync_r), .sync(),
+      .pps(pps_rclk), .sync_in(time_sync_r), .sync_out(sync_out[0]),
       .misc_ins({misc_ins[1], misc_ins[0]}), .misc_outs({misc_outs[1], misc_outs[0]}),
       .fp_gpio_in({fp_gpio_r_in[1],fp_gpio_r_in[0]}), .fp_gpio_out({fp_gpio_r_out[1],fp_gpio_r_out[0]}), .fp_gpio_ddr({fp_gpio_r_ddr[1],fp_gpio_r_ddr[0]}),
       .db_gpio_in({db_gpio_in[1],db_gpio_in[0]}), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr({db_gpio_ddr[1],db_gpio_ddr[0]}),
@@ -623,7 +625,7 @@ module x300_core (
       // Ctrl ports connected to radio front end
       .ext_set_stb({ext_set_stb[3],ext_set_stb[2]}), .ext_set_addr({ext_set_addr[3],ext_set_addr[2]}), .ext_set_data({ext_set_data[3],ext_set_data[2]}),
       // Interfaces to front panel and daughter board
-      .pps(pps_rclk), .time_sync(time_sync_r), .sync(),
+      .pps(pps_rclk), .sync_in(time_sync_r), .sync_out(sync_out[1]),
       .misc_ins({misc_ins[3], misc_ins[2]}), .misc_outs({misc_outs[3], misc_outs[2]}),
       .fp_gpio_in({fp_gpio_r_in[3],fp_gpio_r_in[2]}), .fp_gpio_out({fp_gpio_r_out[3],fp_gpio_r_out[2]}), .fp_gpio_ddr({fp_gpio_r_ddr[3],fp_gpio_r_ddr[2]}),
       .db_gpio_in({db_gpio_in[3],db_gpio_in[2]}), .db_gpio_out({db_gpio_out[3],db_gpio_out[2]}), .db_gpio_ddr({db_gpio_ddr[3],db_gpio_ddr[2]}),
@@ -660,7 +662,7 @@ module x300_core (
          .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0), .BYPASS_REALMODE_DSP(0),
          .DEVICE("7SERIES")
       ) rx_fe_corr_i (
-         .clk(radio_clk), .reset(radio_rst),
+         .clk(radio_clk), .reset(radio_rst), .sync_in(sync_out[i < 2 ? 0 : 1]),
          .set_stb(ext_set_stb[i]), .set_addr(ext_set_addr[i]), .set_data(ext_set_data[i]),
          .adc_stb(1'b1), .adc_i(rx_data_in[i][31:16]), .adc_q(rx_data_in[i][15:0]),
          .rx_stb(rx_stb[i]), .rx_i(rx_data[i][31:16]), .rx_q(rx_data[i][15:0])
