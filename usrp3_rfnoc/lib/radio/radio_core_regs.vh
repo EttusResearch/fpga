@@ -20,7 +20,6 @@ localparam [7:0] SR_RX_CTRL_CLEAR_CMDS   = 157;
 localparam [7:0] SR_RX_CTRL_OUTPUT_FORMAT = 158;
 /* Daughter board control settings bus register */
 localparam [7:0] SR_MISC_OUTS            = 160;
-localparam [7:0] SR_SYNC                 = 161;
 localparam [7:0] SR_SPI                  = 168; // 168-173
 localparam [7:0] SR_LEDS                 = 176; // 176-181
 localparam [7:0] SR_FP_GPIO              = 184; // 184-189

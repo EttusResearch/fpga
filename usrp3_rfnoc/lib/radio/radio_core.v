@@ -24,7 +24,7 @@ module radio_core #(
   input [63:0] vita_time, input [63:0] vita_time_lastpps,
   // Interfaces to front panel and daughter board
   input pps,
-  input [31:0] misc_ins, output [31:0] misc_outs, output sync,
+  input [31:0] misc_ins, output [31:0] misc_outs,
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr,
   output [31:0] leds,
@@ -78,7 +78,7 @@ module radio_core #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .rb_stb(db_rb_stb), .rb_addr(rb_addr), .rb_data(db_rb_data),
     .run_rx(run_rx), .run_tx(run_tx),
-    .misc_ins(misc_ins), .misc_outs(misc_outs), .sync(sync),
+    .misc_ins(misc_ins), .misc_outs(misc_outs),
     .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
     .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
     .leds(leds),

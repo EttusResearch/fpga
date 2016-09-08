@@ -14,7 +14,7 @@ module rx_frontend_gen3 #(
   parameter BYPASS_REALMODE_DSP = 0,
   parameter DEVICE = "7SERIES"
 )(
-  input clk, input reset,
+  input clk, input reset, input sync_in,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input adc_stb, input [15:0] adc_i, input [15:0] adc_q,
   output rx_stb, output [15:0] rx_i, output [15:0] rx_q
@@ -163,9 +163,9 @@ module rx_frontend_gen3 #(
       // NCO for CORDIC
       reg [31:0] phase;
       always @(posedge clk) begin
-        if (reset || phase_reset)
+        if (reset || phase_reset || sync_in)
           phase <= 32'd0;
-        else if (adc_mux_stb)
+        else if (adc_dsp_cin_stb)
           phase <= phase + phase_incr;
       end
 
@@ -185,7 +185,7 @@ module rx_frontend_gen3 #(
 
      // CORDIC  24-bit I/O
       cordic #(.bitwidth(25)) het_cordic_i (
-        .clk(clk), .reset(reset), .enable(1'b1),
+        .clk(clk), .reset(reset || sync_in), .enable(1'b1),
         .strobe_in(adc_dsp_cin_stb), .strobe_out(adc_dsp_cout_stb),
         .last_in(1'b0), .last_out(),
         .xi(adc_i_dsp_cin),. yi(adc_q_dsp_cin), .zi(phase[31:8]),
@@ -201,7 +201,7 @@ module rx_frontend_gen3 #(
       // Half-band decimator for heterodyne signals
       // We assume that hbdec1 can accept a sample per cycle
       hbdec1 het_hbdec_i (
-        .clk(clk), .sclr(reset), .ce(1'b1),
+        .clk(clk), .sclr(reset || sync_in), .ce(1'b1),
         .coef_ld(1'b0), .coef_we(1'b0), .coef_din(18'd0),
         .rfd(), .nd(adc_cclip_stb),
         .din_1(adc_i_cclip), .din_2(adc_q_cclip),

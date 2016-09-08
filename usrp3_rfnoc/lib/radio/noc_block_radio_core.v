@@ -22,7 +22,7 @@ module noc_block_radio_core #(
   input  [NUM_CHANNELS*32-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb,
   output [NUM_CHANNELS*32-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb,
   // Interfaces to front panel and daughter board
-  input pps, input time_sync, output [NUM_CHANNELS-1:0] sync,
+  input pps, input sync_in, output sync_out,
   input [NUM_CHANNELS*32-1:0] misc_ins, output [NUM_CHANNELS*32-1:0] misc_outs,
   input [NUM_CHANNELS*32-1:0] fp_gpio_in, output [NUM_CHANNELS*32-1:0] fp_gpio_out, output [NUM_CHANNELS*32-1:0] fp_gpio_ddr,
   input [NUM_CHANNELS*32-1:0] db_gpio_in, output [NUM_CHANNELS*32-1:0] db_gpio_out, output [NUM_CHANNELS*32-1:0] db_gpio_ddr,
@@ -137,9 +137,10 @@ module noc_block_radio_core #(
     .SR_TIME_LO(SR_TIME_LO),
     .SR_TIME_CTRL(SR_TIME_CTRL))
   timekeeper (
-    .clk(ce_clk), .reset(ce_rst), .pps(pps), .sync(time_sync), .strobe(rx_stb[0]),
+    .clk(ce_clk), .reset(ce_rst), .pps(pps), .sync_in(sync_in), .strobe(rx_stb[0]),
     .set_stb(set_stb_mux), .set_addr(set_addr_mux), .set_data(set_data_mux),
-    .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
+    .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
+    .sync_out(sync_out));
 
   // Expose settings bus externally
   assign ext_set_stb  = set_addr >= SR_EXTERNAL_BASE ? set_stb : 1'b0;
@@ -199,7 +200,7 @@ module noc_block_radio_core #(
         .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb[i]),
         .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
         .pps(pps),
-        .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]), .sync(sync[i]),
+        .misc_ins(misc_ins[32*i+31:32*i]), .misc_outs(misc_outs[32*i+31:32*i]),
         .fp_gpio_in(fp_gpio_in[32*i+31:32*i]), .fp_gpio_out(fp_gpio_out[32*i+31:32*i]), .fp_gpio_ddr(fp_gpio_ddr[32*i+31:32*i]),
         .db_gpio_in(db_gpio_in[32*i+31:32*i]), .db_gpio_out(db_gpio_out[32*i+31:32*i]), .db_gpio_ddr(db_gpio_ddr[32*i+31:32*i]),
         .leds(leds[32*i+31:32*i]),

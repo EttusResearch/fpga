@@ -112,10 +112,6 @@ module e310_core
    /////////////////////////////////////////////////////////////////////////////////
    // Internal time synchronization
    /////////////////////////////////////////////////////////////////////////////////
-   wire time_sync, time_sync_r;
-    synchronizer time_sync_synchronizer
-     (.clk(radio_clk), .rst(radio_rst), .in(time_sync), .out(time_sync_r));
-
   wire [4:0]  rb_addr;
   wire [31:0] rb_test;
   wire [31:0] rb_data_xb;
@@ -166,7 +162,6 @@ module e310_core
   assign pps_select   = core_misc_out[1:0];
   assign mimo         = core_misc_out[2];
   assign codec_arst   = core_misc_out[3];
-  assign time_sync    = core_misc_out[21];
 
   setting_reg
   #(
@@ -342,7 +337,7 @@ module e310_core
     .rx({rx_data1,rx_data0}), .rx_stb({rx_stb1,rx_stb0}),
     .tx({tx_data1,tx_data0}), .tx_stb({tx_stb1,tx_stb0}),
     // Interfaces to front panel and daughter board
-    .pps(pps), .sync(),
+    .pps(pps), .sync_out(),
     .misc_ins('d0), .misc_outs(),
     .fp_gpio_in({fp_gpio_in[1],fp_gpio_in[0]}), .fp_gpio_out({fp_gpio_out[1],fp_gpio_out[0]}), .fp_gpio_ddr({fp_gpio_ddr[1],fp_gpio_ddr[0]}),
     .db_gpio_in('d0), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr(),
