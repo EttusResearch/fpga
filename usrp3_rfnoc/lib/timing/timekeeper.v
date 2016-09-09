@@ -54,7 +54,7 @@ module timekeeper
    //////////////////////////////////////////////////////////////////////////
    // vita time tracker - update every tick or when we get an "event"
    //////////////////////////////////////////////////////////////////////////
-   always @(posedge clk)
+   always @(posedge clk) begin
      sync_out <= 1'b0;
      if(reset) begin
        vita_time <= 64'h0;
@@ -66,6 +66,7 @@ module timekeeper
 	   vita_time <= vita_time + 64'h1;
          end
      end
+   end
 
    //////////////////////////////////////////////////////////////////////////
    // track the time at last pps so host can detect the pps
