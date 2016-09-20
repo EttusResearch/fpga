@@ -38,8 +38,9 @@ module duc #(
   wire [2*CWIDTH-1:0] o_tdata_halfbands;  // Halfband output
   wire o_tvalid_halfbands;
 
-  wire rate_changed;        // Rate changed by settings registers
-  wire reset_on_change;     // Reset the halfbands and cic everytime there is a rate change
+  wire rate_changed;    // Rate changed by the settings registers
+  wire reset_on_change; // Reset the halfbands and the cic everytime there is a rate change
+  wire reset_on_live_change; // Reset when rate changes while streaming
 
   wire [PWIDTH-1:0] o_tdata_phase;
   wire o_tvalid_phase;
@@ -69,7 +70,7 @@ module duc #(
     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
      .in(set_data),.out({hb_rate_int,cic_interp_rate_int}),.changed(rate_changed));
 
-  // Prevent changing interpolation rates while processing
+  // Changing interpolation rates while processing only when axi_rate_change sends a clear
   reg active, rate_changed_hold;
   reg [RESET_DELAY-1:0] shift_reset;
   always @(posedge clk) begin
@@ -88,7 +89,7 @@ module duc #(
       if (rate_changed & active) begin
         rate_changed_hold <= 1'b1;
       end
-      if (~active & (rate_changed | rate_changed_hold)) begin
+      if ((clear | ~active) & (rate_changed | rate_changed_hold)) begin
         rate_changed_hold <= 1'b0;
         cic_interp_rate   <= cic_interp_rate_int;
         hb_rate           <= hb_rate_int;
@@ -101,6 +102,7 @@ module duc #(
 
   // Long reset for the halfbands
   assign reset_on_change = |shift_reset;
+  assign reset_on_live_change =  (clear | reset_on_change | (~active & rate_changed));
 
  /**************************************************************************
   * Halfbands
@@ -157,14 +159,19 @@ module duc #(
   assign o_tdata_halfbands = (hb_rate == 2'b0) ? o_tdata_extd :
                              (hb_rate == 2'b1) ? {o_tdata_hb1[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb1[CWIDTH-1:0] << 2} :
                                                  {o_tdata_hb2[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb2[CWIDTH-1:0] << 2};
-
-  assign o_tvalid_halfbands = (hb_rate == 2'b0) ? i_tvalid :
-                              (hb_rate == 2'b1) ? o_tvalid_hb1 :
-                                                  o_tvalid_hb2;
-
-  assign i_tready     = (hb_rate == 2'b0) ? i_tready_cic : i_tready_hb1;
-  assign o_tready_hb1 = (hb_rate == 2'b1) ? i_tready_cic : i_tready_hb2;
-  assign o_tready_hb2 = i_tready_cic;
+  // Clearing valid on rate change as the halfbands take 2 cycles to clear
+  assign o_tvalid_halfbands = reset_on_live_change ? 1'b0 :
+                              (hb_rate == 2'b0)    ? i_tvalid :
+                              (hb_rate == 2'b1)    ? o_tvalid_hb1 :
+                                                     o_tvalid_hb2;
+  // Throttle input data while rate change is going on
+  assign i_tready     =  reset_on_live_change ? 1'b0 :
+                         (hb_rate == 2'b0)    ? i_tready_cic :
+                                                i_tready_hb1;
+  assign o_tready_hb1 =  reset_on_live_change ? 1'b0 :
+                         (hb_rate == 2'b1)    ? i_tready_cic :
+                                                i_tready_hb2;
+  assign o_tready_hb2 =  reset_on_live_change ? 1'b0 : i_tready_cic;
 
  /**************************************************************************
   * Ettus CIC; the Xilinx CIC has a minimum interpolation of 4,
@@ -206,8 +213,8 @@ module duc #(
   );
 
   assign o_tdata = {o_tdata_cic[39:24],o_tdata_cic[15:0]};
-  assign o_tvalid = o_tvalid_cic;
-  assign i_tready_cartesian = o_tready;
+  assign o_tvalid = reset_on_live_change ? 1'b0 : o_tvalid_cic;
+  assign i_tready_cartesian = reset_on_live_change ? 1'b0 : o_tready;
 
   // Note: To facilitate timed CORDIC tunes, the code has been moved outside
   //       the duc module to cordic_timed.v.
