@@ -36,11 +36,11 @@ module new_tx_control
 
    wire 	  now, early, late, too_early;
    wire 	  policy_next_burst, policy_next_packet, policy_wait;
-   wire 	  clear_seqnum;
+   wire clear_seqnum_int;
 
    setting_reg #(.my_addr(BASE), .width(3)) sr_error_policy
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out({policy_next_burst,policy_next_packet,policy_wait}),.changed(clear_seqnum));
+      .in(set_data),.out({policy_next_burst,policy_next_packet,policy_wait}),.changed(clear_seqnum_int));
 
    time_compare
      time_compare (.clk(clk), .reset(reset), .time_now(vita_time), .trigger_time(send_time),
@@ -67,21 +67,37 @@ module new_tx_control
    wire [63:0] CODE_UNDERRUN_MIDPKT    = {32'd16,20'd0,seqnum};
    wire [63:0] CODE_SEQ_ERROR_MIDBURST = {32'd32,4'd0,expected_seqnum,4'd0,seqnum};
 
-   always @(posedge clk)
-     if(reset | clear | clear_seqnum)
-       expected_seqnum <= 12'd0;
-     else
-       if(sample_tvalid & sample_tready & eop)
-	 expected_seqnum <= seqnum + 12'd1;
+   reg clear_seqnum_latch;
+
+   wire burst_start = ~send_at | now;
+   wire last_sample = sample_tvalid & sample_tready & eop;
+   wire time_to_clear = clear_seqnum_latch && (
+                        (last_sample && eob) ||
+                        (state == ST_ERROR) ||
+                        (state == ST_IDLE && ~burst_start));
 
    always @(posedge clk)
-     if(reset | clear)
-       begin
+     if(reset | clear) begin
+       expected_seqnum <= 12'd0;
+       clear_seqnum_latch <= 0;
+     end else begin
+       if(clear_seqnum_int) begin
+         clear_seqnum_latch <= 1;
+       end
+       if(time_to_clear) begin
+         expected_seqnum <= 12'd0;
+         clear_seqnum_latch <= 0;
+       end else if(last_sample) begin
+	 expected_seqnum <= seqnum + 12'd1;
+       end
+     end
+
+   always @(posedge clk)
+     if(reset | clear) begin
 	  state <= ST_IDLE;
 	  ack_or_error <= 1'b0;
 	  error_code <= 64'd0;
-       end
-     else
+     end else begin
        case(state)
 	 ST_IDLE :
 	   begin
@@ -141,12 +157,15 @@ module new_tx_control
 	   begin
 	      ack_or_error <= 1'b0;
 	      if(sample_tvalid & eop)
-		if(policy_next_packet | (policy_next_burst & eob))
+            if(policy_next_packet | (policy_next_burst & eob)) begin
 		  state <= ST_IDLE;
-		else if(policy_wait)
-		  state <= ST_WAIT;
+        end
+        // FIXME: Implement a wait state or remove wait policy
+        // else if(policy_wait)
+        //   state <= ST_WAIT;
 	   end
        endcase // case (state)
+      end
 
    assign sample_tready = (state == ST_ERROR) | (strobe & ( (state == ST_SAMP1) | ((state == ST_SAMP0) & eop & odd) ) );
 
