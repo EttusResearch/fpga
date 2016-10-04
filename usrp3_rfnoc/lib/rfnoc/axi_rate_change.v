@@ -241,9 +241,10 @@ module axi_rate_change #(
             in_pkt_cnt            <= in_pkt_cnt + 1;
           end
         end
+        else
+          first_header            <= 1'b0;
         // TODO: The present axi_rate_change works for only equal length packets in case of the DDC.
         if (first_header) begin
-          first_header           <= 1'b0;
           header_fifo_in_tdata   <= {payload_length_in, has_time_in, vita_time_in};
         end
       end
