@@ -63,34 +63,33 @@ module axi_tag_time #(
   assign timed_set_data = in_set_data;
   assign timed_set_stb  = in_set_stb & in_set_has_time;
 
-  // Extract time from tuser
+  // Extract vita time from tuser
   wire [63:0] vita_time_in;
-  wire has_time;
-  cvita_hdr_decoder cvita_hdr_decoder (
+  cvita_hdr_decoder cvita_hdr_decoder_in (
     .header(s_axis_data_tuser),
-    .pkt_type(), .eob(), .has_time(has_time),
+    .pkt_type(), .eob(), .has_time(),
     .seqnum(), .length(), .payload_length(),
     .src_sid(), .dst_sid(),
     .vita_time(vita_time_in));
 
   // Track time
   reg header_valid = 1'b1;
-  reg [63:0] vita_time_now, set_time_hold = 64'd0;
+  reg [63:0] vita_time_now = 64'd0, set_time_hold = 64'd0;
   always @(posedge clk) begin
     if (reset | clear) begin
       header_valid     <= 1'b1;
     end else begin
-      if (m_axis_data_tvalid & m_axis_data_tready) begin
-        if (m_axis_data_tlast) begin
+      if (s_axis_data_tvalid & s_axis_data_tready) begin
+        if (s_axis_data_tlast) begin
           header_valid <= 1'b1;
         end else begin
           header_valid <= 1'b0;
         end
-      end
-      if (header_valid) begin
-        vita_time_now <= vita_time_in;
-      end else if (m_axis_data_tvalid & m_axis_data_tready) begin
-        vita_time_now <= vita_time_now + tick_rate;
+        if (header_valid) begin
+          vita_time_now <= vita_time_in;
+        end else begin
+          vita_time_now <= vita_time_now + tick_rate;
+        end
       end
     end
   end
@@ -114,15 +113,25 @@ module axi_tag_time #(
     .o_tdata({fifo_set_time,fifo_tags}), .o_tvalid(fifo_tvalid), .o_tready(fifo_tready),
     .space(), .occupied());
 
+  // Extract has time from tuser
+  wire has_time;
+  cvita_hdr_decoder cvita_hdr_decoder_out (
+    .header(m_axis_data_tuser),
+    .pkt_type(), .eob(), .has_time(has_time),
+    .seqnum(), .length(), .payload_length(),
+    .src_sid(), .dst_sid(),
+    .vita_time());
+
   assign timed_cmd_fifo_full = ~timed_cmd_fifo_full_n;
   assign fifo_tready = m_axis_data_tvalid & m_axis_data_tready & fifo_tvalid & has_time & (vita_time_now >= fifo_set_time);
   assign in_rb_stb = fifo_tready;
 
-  assign m_axis_data_tdata  = s_axis_data_tdata;
-  assign m_axis_data_tlast  = s_axis_data_tlast;
-  assign m_axis_data_tuser  = s_axis_data_tuser;
-  assign m_axis_data_tag    = ((vita_time_now >= fifo_set_time) & fifo_tvalid & has_time) ? fifo_tags : 'd0;
-  assign m_axis_data_tvalid = s_axis_data_tvalid;
-  assign s_axis_data_tready = m_axis_data_tready;
+  // Need a single cycle delay to allow vita_time_now to update at the start of a new packet
+  axi_fifo_flop #(.WIDTH(WIDTH+HEADER_WIDTH+1)) axi_fifo_flop (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({s_axis_data_tdata,s_axis_data_tuser,s_axis_data_tlast}), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
+    .o_tdata({m_axis_data_tdata,m_axis_data_tuser,m_axis_data_tlast}), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
+
+  assign m_axis_data_tag = ((vita_time_now >= fifo_set_time) & fifo_tvalid & has_time) ? fifo_tags : 'd0;
 
 endmodule

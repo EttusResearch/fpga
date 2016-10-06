@@ -180,7 +180,7 @@ module noc_block_duc_tb();
     set_interp_rate(1);
     tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);   // Enable clear EOB'
     tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 32'd0);     // Reset phase increment
-    tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, 28141); // Scaling, set to 1
+    tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, 14070); // Scaling, set to 1
     // Configure FFT
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
@@ -194,8 +194,8 @@ module noc_block_duc_tb();
     fork
       begin
         // Send timed tunes
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, FFT_SIZE-2); // Shift by Fs/8
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*FFT_SIZE-2); // Shift by Fs/4
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, SPP-1); // Shift by Fs/8
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*SPP-1); // Shift by Fs/4
       end
       begin
         cvita_payload_t send_payload;
@@ -203,7 +203,7 @@ module noc_block_duc_tb();
         $display("Send constant waveform");
         for (int i = 0; i < 3*(SPP/2); i++) begin
           if (i < SPP/2) begin
-            send_payload.push_back({16'd32000, 16'd0, 16'd32000, 16'd0});
+            send_payload.push_back({16'd20000, 16'd0, 16'd20000, 16'd0});
           end else if (i < SPP) begin
             send_payload.push_back({16'd10000, 16'd0, 16'd10000, 16'd0});
           end else begin
@@ -224,21 +224,21 @@ module noc_block_duc_tb();
         for (int i = 0; i < 3*SPP; i++) begin
           tb_streamer.pull_word(recv_word,recv_eob);
           if (i == FFT_SIZE/2) begin
-            $sformat(s, "Invalid CORDIC shift! Did not detect DC component! Expected: {32000,0}, Received: {%d,%d}",
+            $sformat(s, "Invalid CORDIC shift! Did not detect DC component! Expected: {20000,0}, Received: {%d,%d}",
               $signed(recv_word[31:16]), $signed(recv_word[15:0]));
-            `ASSERT_WARN(recv_word == {16'd32000,16'd0}, s);
+            `ASSERT_ERROR(recv_word == {16'd20000,16'd0}, s);
           end else if (i == SPP+FFT_SIZE/2+FFT_SIZE/8) begin
             $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/8! Expected: {10000,0}, Received: {%d,%d}",
               $signed(recv_word[31:16]), $signed(recv_word[15:0]));
-            `ASSERT_WARN(recv_word == {16'd10000,16'd0}, s);
+            `ASSERT_ERROR(recv_word == {16'd10000,16'd0}, s);
           end else if (i == 2*SPP+FFT_SIZE/2+FFT_SIZE/4) begin
             $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/4! Expected: {5000,0}, Received: {%d,%d}",
               $signed(recv_word[31:16]), $signed(recv_word[15:0]));
-            `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
+            `ASSERT_ERROR(recv_word == {16'd5000,16'd0}, s);
           end else begin
             $sformat(s, "Invalid CORDIC shift! Non-zero component detected at index %0d! Expected: {0,0}, Received: {%d,%d}",
               i, $signed(recv_word[31:16]), $signed(recv_word[15:0]));
-            `ASSERT_WARN(recv_word == 32'd0, s);
+            `ASSERT_ERROR(recv_word == 32'd0, s);
           end
         end
         $display("Receive & check FFT output complete");

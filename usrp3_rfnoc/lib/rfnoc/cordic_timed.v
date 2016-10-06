@@ -89,7 +89,7 @@ module cordic_timed #(
   *************************************************************************/
   wire [PHASE_ACCUM_WIDTH-1:0] phase_inc_tdata, phase_inc_timed_tdata;
   wire phase_inc_tlast, phase_inc_tvalid, phase_inc_tready;
-  wire phase_inc_timed_tlast, phase_inc_timed_tready;
+  wire phase_inc_timed_tlast, phase_inc_timed_tready , phase_inc_timed_tvalid;
 
   axi_setting_reg #(
     .ADDR(SR_FREQ_ADDR), .AWIDTH(SR_AWIDTH), .WIDTH(PHASE_ACCUM_WIDTH), .STROBE_LAST(1))
@@ -119,10 +119,10 @@ module cordic_timed #(
   * CORDIC + Phase Accumulator
   *************************************************************************/
   wire [PHASE_ACCUM_WIDTH-1:0] phase_inc_mux_tdata;
-  wire phase_inc_mux_tlast, phase_inc_mux_tvalid;
+  wire phase_inc_mux_tlast, phase_inc_mux_tvalid, phase_inc_mux_tready;
 
-  assign phase_inc_mux_tdata    = phase_inc_tvalid ? phase_inc_tdata : phase_inc_timed_tdata;
-  assign phase_inc_mux_tlast    = phase_inc_tvalid ? (phase_inc_tlast & phase_inc_tready) : (phase_inc_timed_tlast & phase_inc_timed_tready);
+  assign phase_inc_mux_tdata    = phase_inc_timed_tready ? phase_inc_timed_tdata : phase_inc_tdata;
+  assign phase_inc_mux_tlast    = phase_inc_timed_tready ? phase_inc_timed_tlast : phase_inc_tlast;
   assign phase_inc_mux_tvalid   = cordic_in_tvalid & cordic_in_tready;
   assign phase_inc_tready       = cordic_in_tvalid & cordic_in_tready;
   assign phase_inc_timed_tready = cordic_in_tvalid & cordic_in_tready & cordic_in_tag;

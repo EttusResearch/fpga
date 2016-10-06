@@ -2,6 +2,8 @@
 // Copyright 2016 Ettus Research
 //
 // - Implements rate change of N:M (a.k.a. M/N), handles headers automatically
+// - Note: N should always be written before M in software to prevent false rate changes
+//         while the block is active
 // - User code is responsible for generating correct number of outputs per input
 //   > Example: When set 1/N, after N input samples block should output 1 sample. If
 //              user code's pipelining requires additional samples to "push" the 1
@@ -27,7 +29,7 @@
 //   warning_header_fifo_full is useful in determining this case.
 //
 // Settings Registers:
-//   sr_n:       Number of input samples per M output samples
+//   sr_n:       Number of input samples per M output samples (Always write N before M)
 //   sr_m:       Number of output samples per N input samples
 //   sr_config:  0: Enable clear_user signal.
 
@@ -64,11 +66,12 @@ module axi_rate_change #(
   wire i_reg_tvalid_int, i_reg_tready_int, i_reg_tlast_int;
 
   reg throttle;
-  reg first_header, first_header_in_burst;
-  reg [15:0] payload_length_in_hold;
+  reg first_header;
   reg [15:0] word_cnt_div_n;
   reg [$clog2(MAX_N+1)-1:0] word_cnt_div_n_frac = 1;
   reg [$clog2(MAX_N+1)-1:0] in_pkt_cnt = 1;
+  wire n_changed, m_changed, rate_changed;
+  reg rate_changed_hold;
 
   /********************************************************
   ** Settings Registers
@@ -76,12 +79,14 @@ module axi_rate_change #(
   wire [$clog2(MAX_N+1)-1:0] sr_n;
   setting_reg #(.my_addr(SR_N_ADDR), .width($clog2(MAX_N+1)), .at_reset(1)) set_n (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(sr_n), .changed());
+    .out(sr_n), .changed(n_changed));
 
   wire [$clog2(MAX_M+1)-1:0] sr_m;
   setting_reg #(.my_addr(SR_M_ADDR), .width($clog2(MAX_M+1)), .at_reset(1)) set_m (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(sr_m), .changed());
+    .out(sr_m), .changed(m_changed));
+
+  assign rate_changed = m_changed; // To reflect all live rate chanages and prevent intermittent false rates, M must always be written before N in software. 
 
   wire sr_config;
   wire enable_clear_user; // Enable strobing clear_user between bursts.
@@ -90,13 +95,14 @@ module axi_rate_change #(
     .out(sr_config), .changed());
   assign enable_clear_user = sr_config;
 
-  // Do not change rate unless block is not active
+  // Rate can change while streaming
   reg active;
   reg [$clog2(MAX_N+1)-1:0] n = 1;
   reg [$clog2(MAX_M+1)-1:0] m = 1;
   always @(posedge clk) begin
     if (reset | clear | clear_user) begin
       active <= 1'b0;
+      rate_changed_hold <= 1'b0;
     end else begin
       if (i_tready & i_tvalid) begin
         active <= 1'b1;
@@ -106,6 +112,10 @@ module axi_rate_change #(
       n <= sr_n;
       m <= sr_m;
     end
+    if (active & rate_changed)
+        rate_changed_hold <= 1'b1;
+    else if (rate_changed_hold & ( ~active | clear | clear_user ))
+        rate_changed_hold <= 1'b0;
   end
 
   /********************************************************
@@ -118,13 +128,15 @@ module axi_rate_change #(
   ********************************************************/
   // Decode input header
   wire [127:0] i_reg_tuser;
-  wire has_time_in, eob_in, has_time_out;
+  wire has_time_in, eob_in, has_time_out, eob_in_header;
   wire [15:0] payload_length_in, payload_length_out;
   wire [63:0] vita_time_in, vita_time_out;
   cvita_hdr_decoder cvita_hdr_decoder_in_header (
-    .header(i_reg_tuser), .pkt_type(), .eob(eob_in),
+    .header(i_reg_tuser), .pkt_type(), .eob(eob_in_header),
     .has_time(has_time_in), .seqnum(), .length(), .payload_length(payload_length_in),
     .src_sid(), .dst_sid(), .vita_time(vita_time_in));
+
+  assign eob_in = eob_in_header | rate_changed_hold;
 
   reg [80:0] header_fifo_in_tdata;
   wire [80:0] header_fifo_out_tdata;
@@ -174,7 +186,6 @@ module axi_rate_change #(
   always @(posedge clk) begin
     if (reset | clear) begin
       first_header          <= 1'b1;
-      first_header_in_burst <= 1'b1;
       word_cnt_div_n        <= 0;
       word_cnt_div_n_frac   <= 1;
       in_pkt_cnt            <= 1;
@@ -205,9 +216,9 @@ module axi_rate_change #(
       //                      a group of N packets (this greatly reduces
       //                      the header FIFO size).
       if (i_reg_tvalid & i_reg_tready) begin
-        // Track the number of words send to the user divided by N. 
-        // At the end of a burst, this value is forwarded to the output 
-        // state machine and used to determine when the final sample has 
+        // Track the number of words send to the user divided by N.
+        // At the end of a burst, this value is forwarded to the output
+        // state machine and used to determine when the final sample has
         // arrived from the user code.
         if (word_cnt_div_n_frac == n | (eob_in & i_reg_tlast)) begin
           if (i_reg_tlast & eob_in) begin
@@ -225,23 +236,16 @@ module axi_rate_change #(
         if (i_reg_tlast) begin
           if (in_pkt_cnt == n | eob_in) begin
             first_header          <= 1'b1;
-            first_header_in_burst <= eob_in;
             in_pkt_cnt            <= 1;
           end else begin
             in_pkt_cnt            <= in_pkt_cnt + 1;
           end
         end
+        else
+          first_header            <= 1'b0;
+        // TODO: The present axi_rate_change works for only equal length packets in case of the DDC.
         if (first_header) begin
-          first_header           <= 1'b0;
-          payload_length_in_hold <= payload_length_in;
-          if (first_header_in_burst) begin
-            header_fifo_in_tdata <= {payload_length_in, has_time_in, vita_time_in};
-          end else begin
-            // Have to use a latched payload length because the final packet in the burst
-            // could be shorter than the reset. It is expected the reset of the header values
-            // we be consistent and do not need to be latched.
-            header_fifo_in_tdata <= {payload_length_in_hold, has_time_in, vita_time_in};
-          end
+          header_fifo_in_tdata   <= {payload_length_in, has_time_in, vita_time_in};
         end
       end
 
@@ -286,7 +290,7 @@ module axi_rate_change #(
             // on to the next header.
             if (i_reg_tlast) begin
               if (eob_in) begin
-                // At the end of a burst, forward the number of words divided by N to 
+                // At the end of a burst, forward the number of words divided by N to
                 // the output state machine via a FIFO. This allows the output state
                 // machine to know when it has received the final output word.
                 // We use a FIFO in case the bursts are very small and we
@@ -311,7 +315,6 @@ module axi_rate_change #(
         //          EOBs, it should be very infrequent.
         RECV_WAIT_FOR_USER_CLEAR : begin
           first_header           <= 1'b1;
-          first_header_in_burst  <= 1'b1;
           word_cnt_div_n         <= 0;
           word_cnt_div_n_frac    <= 1;
           in_pkt_cnt             <= 1;
@@ -323,7 +326,6 @@ module axi_rate_change #(
         // Hit by a cosmic ray?
         default : begin
           first_header           <= 1'b1;
-          first_header_in_burst  <= 1'b1;
           word_cnt_div_n         <= 0;
           word_cnt_div_n_frac    <= 1;
           in_pkt_cnt             <= 1;
