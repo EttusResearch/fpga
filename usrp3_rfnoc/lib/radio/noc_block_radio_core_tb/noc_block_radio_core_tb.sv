@@ -36,7 +36,7 @@ module noc_block_radio_core_tb;
   logic rx_stb, tx_stb, rx_stb_int, tx_stb_dly;
   logic [32*NUM_CHANNELS-1:0] rx, tx, rx_int;
   logic pps = 1'b0;
-  logic time_sync = 1'b0;
+  logic sync_in = 1'b0;
   logic [NUM_CHANNELS-1:0] sync;
   logic [NUM_CHANNELS*32-1:0] misc_ins = 'd0;
   logic [NUM_CHANNELS*32-1:0] misc_outs, leds;
@@ -59,7 +59,7 @@ module noc_block_radio_core_tb;
     .ext_set_stb(), .ext_set_addr(), .ext_set_data(),
     .rx_stb({NUM_CHANNELS{rx_stb}}), .rx(rx),
     .tx_stb({NUM_CHANNELS{tx_stb}}), .tx(tx),
-    .pps(pps), .time_sync(time_sync), .sync(sync),
+    .pps(pps), .sync_in(sync_in), .sync_out(),
     .misc_ins(misc_ins), .misc_outs(misc_outs),
     .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
     .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
@@ -794,16 +794,6 @@ module noc_block_radio_core_tb;
       read_radio_core_reg(i, RB_MISC_IO, readback);
       `ASSERT_ERROR(readback[31:0] == test_word, "Incorrect misc outs readback!");
       `ASSERT_ERROR(misc_outs[32*i +: 32] == test_word, "Incorrect misc outs output!");
-      // Check sync
-      $display("Radio %2d: Check SYNC", i);
-      fork
-      begin
-        send_radio_cmd(i, SR_SYNC, 32'b0, readback);
-      end
-      begin
-        @(posedge sync[i]);
-      end
-      join
       // Check Front Panel GPIO ATR
       $display("Radio %2d: Check FP GPIO ATR input", i);
       // Enable tristate
