@@ -121,6 +121,7 @@ def get_options():
     parser.add_argument('--exclude_io', type=str, default='MIO,DDR,CONFIG', help='Exlcude the specified FPGA IO types from consideration')
     parser.add_argument('--suppress_warn', action='store_true', default=False, help='Suppress sanity check warnings')
     parser.add_argument('--traverse_depth', type=int, default=1, help='How many linear components to traverse before finding a named net')
+    parser.add_argument('--fix_names', action='store_true', default=False, help='Fix net names when writing the XDC and Verilog')
     args = parser.parse_args()
     if not args.xil_pkg_file:
         print 'ERROR: Please specify a Xilinx package file using the --xil_pkg_file option\n'
@@ -163,7 +164,7 @@ def parse_rinf(rinf_path, suppress_warnings):
                     elif state == '.ATT_COM':
                         component_db.add_attr(tokens[1], tokens[2].strip('"'), tokens[3].strip('"'))
                     elif state == '.ADD_TER':
-                        net_name = tokens[3]
+                        net_name = tokens[3].strip('"')
                         terminal_db.add(tokens[1], net_name, tokens[2])
                     elif state == '.TER':
                         terminal_db.add(tokens[1], net_name, tokens[2])
@@ -209,8 +210,13 @@ def filter_fpga_pins(ref_des, terminal_db, fpga_pin_db, max_level):
             pins[term.name] = fpga_pin_t(term.name, fpga_term.pin, iotype, bank)
     return pins
 
+# Fix net names.
+# This function lists all the valid substitutions to make to net names
+def fix_net_name(name):
+    return re.sub(r'[\W_]', '_', name)
+
 # Write an XDC file with sanity checks and readability enhancements
-def write_output_files(xdc_path, vstub_path, fpga_pins):
+def write_output_files(xdc_path, vstub_path, fpga_pins, fix_names):
     # Figure out the max pin name length for human readable text alignment
     max_pin_len = reduce(lambda x,y:max(x,y), map(len, fpga_pins.keys()))
     # Create a bus database. Collapse multi-bit buses into single entries
@@ -231,9 +237,10 @@ def write_output_files(xdc_path, vstub_path, fpga_pins):
         print 'INFO: Writing template XDC ' + xdc_path + '...'
         for bus in sorted(bus_db.keys()):
             if not re.match("[a-zA-Z].[a-zA-Z0-9_]*$", bus):
-                print 'CRITICAL WARNING: Invalid Verilog net name: ' + bus + '. Please review.'
+                print ('CRITICAL WARNING: Invalid net name (bad Verilog syntax): ' + bus +
+                    ('. Possibly fixed but please review.' if fix_names else '. Please review.'))
             if bus_db[bus] == []:
-                xdc_pin = bus.upper()
+                xdc_pin = fix_net_name(bus.upper()) if fix_names else bus.upper()
                 xdc_loc = fpga_pins[bus].loc.upper().ljust(16)
                 xdc_iotype = fpga_pins[bus].iotype
                 xdc_iostd = ('<IOSTD_BANK' + fpga_pins[bus].bank + '>').ljust(16)
@@ -261,7 +268,7 @@ def write_output_files(xdc_path, vstub_path, fpga_pins):
             vstub_f.write('module ' + os.path.splitext(os.path.basename(vstub_path))[0] + ' (\n')
             i = 1
             for bus in sorted(bus_db.keys()):
-                port_name = bus.upper()
+                port_name = fix_net_name(bus.upper()) if fix_names else bus.upper()
                 port_loc = fpga_pins[bus].loc.upper() if (bus_db[bus] == []) else '<Multiple>'
                 port_dir_short = raw_input('[' + str(i) + '/' + str(len(bus_db.keys())) +'] Direction for ' + port_name + ' (' + port_loc + ')? {[i]nput,[o]utput,[b]oth}: ').lower()
                 if port_dir_short.startswith('i'):
@@ -317,7 +324,7 @@ def main():
         print 'ERROR: Could not cross-reference pins for ' + args.ref_des + ' with FPGA device. Are you sure it is an FPGA?'
         sys.exit(1)
     # Write output XDC and Verilog
-    write_output_files(args.xdc_out, args.vstub_out, fpga_pins)
+    write_output_files(args.xdc_out, args.vstub_out, fpga_pins, args.fix_names)
     print 'INFO: Output file(s) generated successfully!'
     # Generate a report of all unconnected pins
     if not args.suppress_warn:
