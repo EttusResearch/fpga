@@ -1,10 +1,10 @@
-
-// source_flow_control.v
+//
+// Copyright 2014-2016 Ettus Research
 //
 //  This block passes the in_* AXI port to the out_* AXI port only when it has
-//   enough flow control credits.  Data is held when there are not enough credits.
+//  enough flow control credits. Data is held when there are not enough credits.
 //  Credits are replenished with extension context packets which update the 
-//   last_consumed packet register.  Max credits are controlled by settings regs.
+//  last_consumed packet register. Max credits are controlled by settings regs.
 //  The 2nd line of the packet contains the sequence number in the low 12 bits.
 //  These packets should not have a time value, but if they do it will be ignored.
 
@@ -107,7 +107,7 @@ module source_flow_control #(
    assign out_tvalid = (go & ~window_reseting) ? in_tvalid : 1'b0;
 
    //
-   // Each time we recieve the end of an IF data packet increment the current_seqnum.
+   // Each time we receive the end of an IF data packet increment the current_seqnum.
    // We bravely assume that no packets go missing...or at least that they will be detected elsewhere
    // and then handled appropriately.
    // The SEQNUM needs to be initialized every time we start a new stream. In new_rx_framer this is done

@@ -6,26 +6,26 @@
 
 module simple_uart_tx
     #(parameter SIZE=0)
-    (input clk, input rst, 
+    (input clk, input rst,
      input [7:0] fifo_in, input fifo_write, output [5:0] fifo_level, output fifo_full, 
      input [15:0] clkdiv, output baudclk, output reg tx);
-   
+
    reg [15:0] 	  baud_ctr;
    reg [3:0] 	  bit_ctr;
-   
+
    wire 	  read, empty;
    wire [7:0] 	  char_to_send;
    wire 	  i_tready, o_tvalid;
-   
+
    assign fifo_full = ~i_tready;
    assign empty = ~o_tvalid;
-   
+
    axi_fifo #(.WIDTH(8), .SIZE(SIZE)) fifo
      (.clk(clk),.reset(rst), .clear(1'b0),
       .i_tdata(fifo_in), .i_tvalid(fifo_write), .i_tready(i_tready),
       .o_tdata(char_to_send),.o_tvalid(o_tvalid),.o_tready(read),
       .space(fifo_level),.occupied() );
-   
+
    always @(posedge clk)
      if(rst)
        baud_ctr <= 0;
@@ -44,7 +44,7 @@ module simple_uart_tx
 	 bit_ctr <= bit_ctr + 1;
        else if(~empty)
 	 bit_ctr <= 1;
-   
+
    always @(posedge clk)
      if(rst)
        tx <= 1;
@@ -65,5 +65,5 @@ module simple_uart_tx
 
    assign 	  read = (bit_ctr == 9) && (baud_ctr == clkdiv);
    assign 	  baudclk = (baud_ctr == 1);  // Only for debug purposes
-   
+
 endmodule // simple_uart_tx

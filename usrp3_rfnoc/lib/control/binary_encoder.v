@@ -23,6 +23,7 @@ module binary_encoder
   input [WIDTH-1:0]         in,
   output [`log2(WIDTH)-1:0] out
 );
+
   genvar m,n;
 
   generate
@@ -33,9 +34,9 @@ module binary_encoder
      for (n = 0; n < WIDTH ; n = n + 1) begin: encode_this_bit
        assign encoding[n] = n[m];
      end
-     // OR tree for this output bit with appropraite bits enabled.
+     // OR tree for this output bit with appropriate bits enabled.
      assign out[m] = |(encoding & in);
    end
  endgenerate
 
-endmodule
+endmodule // binary_encoder

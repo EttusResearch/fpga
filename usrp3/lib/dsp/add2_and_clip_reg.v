@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module add2_and_clip_reg
   #(parameter WIDTH=16)
@@ -10,7 +13,7 @@ module add2_and_clip_reg
      output reg strobe_out);
 
    wire [WIDTH-1:0] sum_int;
-   
+
    add2_and_clip #(.WIDTH(WIDTH)) add2_and_clip (.in1(in1),.in2(in2),.sum(sum_int));
 
    always @(posedge clk)
@@ -19,7 +22,6 @@ module add2_and_clip_reg
      else if(strobe_in)
        sum <= sum_int;
 
-   always @(posedge clk)
-     strobe_out <= strobe_in;
-   
+   always @(posedge clk) strobe_out <= rst ? 1'b0 : strobe_in;
+
 endmodule // add2_and_clip_reg

@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 module add2_and_clip
   #(parameter WIDTH=16)

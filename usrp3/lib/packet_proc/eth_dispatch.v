@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Ethernet dispatcher
 //  Incoming ethernet packets are examined and sent to the correct destination
 //  There are 3 destinations, ZPU, other ethernet port (out), and vita router

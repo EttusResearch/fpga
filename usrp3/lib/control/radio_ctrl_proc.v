@@ -1,11 +1,13 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 
 // Radio Control Processor
 //  Accepts compressed vita extension context packets of the following form:
 //       { VITA Compressed Header, Stream ID }
 //       { Optional 64 bit time }
 //       { 16'h0, setting bus address [15:0], setting [31:0] }
-//  
+//
 //  If there is a timestamp, packet is held until that time comes.
 //  Goes immediately if there is no timestamp or if time has passed.
 //  Sends out setting to setting bus, and then generates a response packet

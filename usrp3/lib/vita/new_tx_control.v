@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Ettus Research
+// Copyright 2014-2016 Ettus Research
 //
 
 

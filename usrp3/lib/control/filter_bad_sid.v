@@ -1,3 +1,6 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Discard silently packets which don't match this SID
 
 module filter_bad_sid
@@ -69,4 +72,4 @@ module filter_bad_sid
       .space(), .occupied()
       );
    
-endmodule // axi_fast_fifo
+endmodule // filter_bad_sid

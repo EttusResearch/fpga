@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // radio top level module
 //  Contains all clock-rate DSP components, all radio and hardware controls and settings
 //  Communication with outside world is exclusively via a single in/out axi cvita port

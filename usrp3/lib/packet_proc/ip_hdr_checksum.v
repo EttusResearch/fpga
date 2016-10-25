@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Compute IP header checksum.  2 cycles of latency.
 module ip_hdr_checksum
   (input clk, input [159:0] in, output reg [15:0] out);
