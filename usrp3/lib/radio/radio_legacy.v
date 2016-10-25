@@ -145,10 +145,11 @@ module radio_legacy
    wire [2:0]     rb_addr;
 
    wire [63:0] vita_time, vita_time_lastpps;
-   timekeeper #(.BASE(SR_TIME)) timekeeper
-     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync(time_sync),
+   timekeeper #(.SR_TIME_HI(SR_TIME), .SR_TIME_LO(SR_TIME+1), .SR_TIME_CTRL(SR_TIME+2)) timekeeper
+     (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync_in(time_sync), .strobe(1'b1),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps));
+      .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
+      .sync_out());
 
    wire [31:0] debug_radio_ctrl_proc;
    radio_ctrl_proc radio_ctrl_proc

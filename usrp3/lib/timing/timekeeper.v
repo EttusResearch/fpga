@@ -4,10 +4,13 @@
 
 
 module timekeeper
-  #(parameter BASE = 0)
-   (input clk, input reset, input pps, input sync,
+  #(parameter SR_TIME_HI = 0,
+    parameter SR_TIME_LO = 1,
+    parameter SR_TIME_CTRL = 2)
+   (input clk, input reset, input pps, input sync_in, input strobe,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    output reg [63:0] vita_time, output reg [63:0] vita_time_lastpps);
+    output reg [63:0] vita_time, output reg [63:0] vita_time_lastpps,
+    output reg sync_out);
 
    //////////////////////////////////////////////////////////////////////////
    // timer settings for this module
@@ -16,15 +19,15 @@ module timekeeper
    wire set_time_pps, set_time_now, set_time_sync;
    wire cmd_trigger;
 
-   setting_reg #(.my_addr(BASE), .width()) sr_time_hi
+   setting_reg #(.my_addr(SR_TIME_HI), .width(32)) sr_time_hi
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[63:32]), .changed());
 
-   setting_reg #(.my_addr(BASE+1), .width()) sr_time_lo
+   setting_reg #(.my_addr(SR_TIME_LO), .width(32)) sr_time_lo
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(time_at_next_event[31:0]), .changed());
 
-   setting_reg #(.my_addr(BASE+2), .width(3)) sr_ctrl
+   setting_reg #(.my_addr(SR_TIME_CTRL), .width(3)) sr_ctrl
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out({set_time_sync, set_time_pps, set_time_now}), .changed(cmd_trigger));
 
@@ -41,7 +44,7 @@ module timekeeper
    // arm the trigger to latch a new time when the ctrl register is written
    //////////////////////////////////////////////////////////////////////////
    reg armed;
-   wire time_event = armed && ((set_time_now) || (set_time_pps && pps_edge) || (set_time_sync && sync));
+   wire time_event = armed && ((set_time_now) || (set_time_pps && pps_edge) || (set_time_sync && sync_in));
    always @(posedge clk) begin
      if (reset) armed <= 1'b0;
      else if (cmd_trigger) armed <= 1'b1;
@@ -51,13 +54,19 @@ module timekeeper
    //////////////////////////////////////////////////////////////////////////
    // vita time tracker - update every tick or when we get an "event"
    //////////////////////////////////////////////////////////////////////////
-   always @(posedge clk)
-     if(reset)
+   always @(posedge clk) begin
+     sync_out <= 1'b0;
+     if(reset) begin
        vita_time <= 64'h0;
-     else if (time_event)
-       vita_time <= time_at_next_event;
-     else
-       vita_time <= vita_time + 64'h1;
+     end else begin
+         if (time_event) begin
+           sync_out <= 1'b1;
+           vita_time <= time_at_next_event;
+         end else if (strobe) begin
+	   vita_time <= vita_time + 64'h1;
+         end
+     end
+   end
 
    //////////////////////////////////////////////////////////////////////////
    // track the time at last pps so host can detect the pps
