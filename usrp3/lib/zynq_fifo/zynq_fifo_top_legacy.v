@@ -12,7 +12,7 @@
 // Page0 - stream to host config
 // Page1 - host to stream config
 
-module zynq_fifo_top
+module zynq_fifo_top_legacy
 #(
     parameter CONFIG_BASE = 32'h40000000,
     parameter PAGE_WIDTH = 10, //in bytes, must fit widths below
@@ -217,7 +217,7 @@ module zynq_fifo_top
     wire s2h_tready_i0, s2h_tvalid_i0, s2h_tlast_i0;
     wire [S2H_STREAMS_WIDTH-1:0] which_stream_s2h;
 
-    cvita_dest_lookup #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
+    cvita_dest_lookup_legacy #(.DEST_WIDTH(S2H_STREAMS_WIDTH)) s2h_dest_gen
     (
         .clk(clk), .rst(rst),
         .set_stb(set_stb_dest_lookup), .set_addr(set_addr[9:2]), .set_data(set_data),
@@ -433,4 +433,4 @@ module zynq_fifo_top
         (set_stb && (set_page == 2'h2)), s2h_tlast_i1, s2h_tvalid_i1, s2h_tready_i1
     };
 */
-endmodule //zynq_fifo_top
+endmodule //zynq_fifo_top_legacy

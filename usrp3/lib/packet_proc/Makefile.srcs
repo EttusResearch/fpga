@@ -15,7 +15,7 @@ vrlp_to_compressed_vita.v \
 compressed_vita_to_vrlp.v \
 source_flow_control_legacy.v \
 cvita_insert_tlast.v \
-cvita_dest_lookup.v \
+cvita_dest_lookup_legacy.v \
 cvita_chunker.v \
 cvita_dechunker.v \
 axis_packet_debug.v \

@@ -5,7 +5,7 @@
 // This destination (o_tdest) signal will be valid with o_tdata
 // This only works with VALID CVITA frames
 
-module cvita_dest_lookup
+module cvita_dest_lookup_legacy
 #(
     parameter DEST_WIDTH = 4
 )
@@ -47,4 +47,4 @@ module cvita_dest_lookup
     assign o_tvalid = i_tvalid && forward;
     assign i_tready = o_tready && forward;
 
-endmodule // cvita_dest_lookup
+endmodule // cvita_dest_lookup_legacy

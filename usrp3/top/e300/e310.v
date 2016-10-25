@@ -544,7 +544,7 @@ module e300
   wire        core_set_stb, xbar_set_stb, xbar_rb_stb;
 
 
-  zynq_fifo_top
+  zynq_fifo_top_legacy
   #(
     .CONFIG_BASE(CONFIG_BASE),
     .PAGE_WIDTH(PAGE_WIDTH),
