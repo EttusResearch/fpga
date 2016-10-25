@@ -41,11 +41,13 @@ module rx_frontend
 
    rx_dcoffset #(.WIDTH(24),.ADDR(BASE+3)) rx_dcoffset_i
      (.clk(clk),.rst(rst),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .in({adc_i,8'b00}),.out(adc_i_ofs));
+      .in({adc_i,8'b00}), .in_stb(1'b1),
+      .out(adc_i_ofs), .out_stb());
    
    rx_dcoffset #(.WIDTH(24),.ADDR(BASE+4)) rx_dcoffset_q
      (.clk(clk),.rst(rst),.set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
-      .in({adc_q,8'b00}),.out(adc_q_ofs));
+      .in({adc_q,8'b00}), .in_stb(1'b1),
+      .out(adc_q_ofs), .out_stb());
    
    generate
       if(IQCOMP_EN == 1)
