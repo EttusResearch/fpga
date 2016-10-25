@@ -1,4 +1,7 @@
 //
+// Copyright 2014 Ettus Research LLC
+//
+//
 // Ultra fast critical path FIFO.
 // Only 2 entrys but no combinatorial feed through paths
 //

@@ -1,4 +1,7 @@
 //
+// Copyright 2014 Ettus Research LLC
+//
+//
 // Ultra fast critical path FIFO.
 // Only 2 entrys but no combinatorial feed through paths
 //
@@ -184,4 +187,4 @@ module axi_fast_extract_tlast
    assign {o_tlast,o_tdata} = (fifo_state == FULL) ? data_reg2 : data_reg1;
    
 
-endmodule // axi_fast_fifo
+endmodule // axi_fast_extract_tlast
