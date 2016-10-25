@@ -27,7 +27,6 @@ arb_qualify_master.v \
 axi_forwarding_cam.v \
 axi_test_vfifo.v \
 dram_2port.v \
-cvita_uart.v \
 serial_to_settings.v \
 filter_bad_sid.v \
 synchronizer_impl.v \

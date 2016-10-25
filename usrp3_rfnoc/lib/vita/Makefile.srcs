@@ -8,13 +8,7 @@
 VITA_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/vita/, \
 flow_control_responder.v \
 packet_error_responder.v \
-new_tx_control.v \
-new_tx_deframer.v \
-tx_responder.v \
-trigger_context_pkt.v \
-context_packet_gen.v \
 new_rx_control.v \
-new_rx_framer.v \
 chdr_16sc_to_xxxx_chain.v \
 chdr_xxxx_to_16sc_chain.v \
 chdr_16sc_to_12sc.v \
