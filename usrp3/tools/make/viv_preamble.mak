@@ -21,6 +21,8 @@ endif
 TOOLS_DIR = $(abspath $(BASE_DIR)/../tools)
 LIB_DIR = $(abspath $(BASE_DIR)/../lib)
 SIMLIB_DIR = $(abspath $(BASE_DIR)/../sim)
+LIB_IP_DIR = $(abspath $(LIB_DIR)/ip)
+HLS_IP_DIR = $(abspath $(LIB_DIR)/hls)
 
 ifdef NAME
 BUILD_DIR = $(abspath ./build-$(NAME))

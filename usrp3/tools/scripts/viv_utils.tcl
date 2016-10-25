@@ -108,6 +108,7 @@ proc ::vivado_utils::synthesize_design {args} {
     set synth_cmd [concat $synth_cmd $vdef_args]
     set synth_cmd [concat $synth_cmd $incdir_args]
     set synth_cmd [concat $synth_cmd $args]
+    set synth_cmd [concat $synth_cmd "-directive AreaOptimized_high -control_set_opt_threshold 1"]
     puts "BUILDER: Synthesizing design"
     eval $synth_cmd
 }
@@ -122,6 +123,7 @@ proc ::vivado_utils::generate_post_synth_reports {} {
     write_checkpoint -force $g_output_dir/post_synth
     puts "BUILDER: Writing post-synthesis reports"
     report_utilization -file $g_output_dir/post_synth_util.rpt
+    report_utilization -hierarchical -file $g_output_dir/post_synth_util_hier.rpt
     report_drc -ruledeck methodology_checks -file $g_output_dir/methodology.rpt
     report_high_fanout_nets -file $g_output_dir/high_fanout_nets.rpt
 }
@@ -137,6 +139,7 @@ proc ::vivado_utils::generate_post_place_reports {} {
     puts "BUILDER: Writing post-placement reports"
     report_clock_utilization -file $g_output_dir/clock_util.rpt
     report_utilization -file $g_output_dir/post_place_util.rpt
+    report_utilization -hierarchical -file $g_output_dir/post_place_util_hier.rpt
     report_timing -sort_by group -max_paths 5 -path_type summary -file $g_output_dir/post_place_timing.rpt
 }
 
@@ -154,6 +157,7 @@ proc ::vivado_utils::generate_post_route_reports {} {
     }
     report_timing_summary -file $g_output_dir/post_route_timing_summary.rpt
     report_utilization -file $g_output_dir/post_route_util.rpt
+    report_utilization -hierarchical -file $g_output_dir/post_route_util_hier.rpt
     report_power -file $g_output_dir/post_route_power.rpt
     report_drc -file $g_output_dir/post_imp_drc.rpt
     report_timing -sort_by group -max_paths 10 -path_type summary -file $g_output_dir/post_route_timing.rpt
