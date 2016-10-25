@@ -3,14 +3,15 @@
 //
 
 module synchronizer #(
+   parameter WIDTH            = 1,
    parameter STAGES           = 2,
-   parameter INITIAL_VAL      = 1'b0,
+   parameter INITIAL_VAL      = 0,
    parameter FALSE_PATH_TO_IN = 1
 )(
-   input    clk,
-   input    rst,
-   input    in,
-   output   out
+   input              clk,
+   input              rst,
+   input  [WIDTH-1:0] in,
+   output [WIDTH-1:0] out
 );
 
    //Q: Why do we have a separate impl and instantiate
@@ -31,13 +32,13 @@ module synchronizer #(
 
    generate if (FALSE_PATH_TO_IN == 1) begin
       synchronizer_impl #(
-        .STAGES(STAGES), .INITIAL_VAL(INITIAL_VAL)
+        .WIDTH(WIDTH), .STAGES(STAGES), .INITIAL_VAL(INITIAL_VAL)
       ) synchronizer_false_path (
          .clk(clk), .rst(rst), .in(in), .out(out)
       );
    end else begin
       synchronizer_impl #(
-        .STAGES(STAGES), .INITIAL_VAL(INITIAL_VAL)
+        .WIDTH(WIDTH), .STAGES(STAGES), .INITIAL_VAL(INITIAL_VAL)
       ) synchronizer_constrained (
          .clk(clk), .rst(rst), .in(in), .out(out)
       );

@@ -24,8 +24,8 @@ module simple_uart
    reg [15:0] clkdiv;
    wire [7:0] rx_char;
    wire       tx_fifo_full, rx_fifo_empty;
-   wire [5:0] tx_fifo_level, rx_fifo_level;
-   
+   wire [15:0] tx_fifo_level, rx_fifo_level;
+
    always @(posedge clk_i)
      if (rst_i)
        ack_o <= 1'b0;

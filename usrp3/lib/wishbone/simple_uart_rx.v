@@ -6,9 +6,9 @@
 
 
 module simple_uart_rx
-    #(parameter SIZE=0)
-    (input clk, input rst, 
-     output [7:0] fifo_out, input fifo_read, output [5:0] fifo_level, output fifo_empty, 
+    #(parameter SIZE=8)
+    (input clk, input rst,
+     output [7:0] fifo_out, input fifo_read, output [15:0] fifo_level, output fifo_empty,
      input [15:0] clkdiv, input rx);
 
    reg 		  rx_d1, rx_d2;

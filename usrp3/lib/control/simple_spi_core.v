@@ -52,12 +52,13 @@ module simple_spi_core
 
         //32-bit data readback
         output [31:0] readback,
+        output reg readback_stb,
 
         //read is high when spi core can begin another transaction
         output ready,
 
         //spi interface, slave selects, clock, data in, data out
-        output reg [WIDTH-1:0] sen,
+        output [WIDTH-1:0] sen,
         output sclk,
         output reg mosi,
         input miso,
@@ -74,7 +75,7 @@ module simple_spi_core
     wire [23:0] slave_select;
     wire [5:0] num_bits;
     wire datain_edge, dataout_edge;
-    setting_reg #(.my_addr(BASE+1),.width(32)) config_sr(
+    setting_reg #(.my_addr(BASE+1),.width(32)) ctrl_sr(
         .clk(clock),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
         .out({dataout_edge, datain_edge, num_bits, slave_select}),.changed());
 
@@ -104,11 +105,15 @@ module simple_spi_core
     // IJB. One pipeline stage to break critical path from register in I/O pads.
     wire sen_is_idle = (state == WAIT_TRIG) || (state == IDLE_SEN);
     wire [23:0] sen24 = (sen_is_idle)? SEN_IDLE : (SEN_IDLE ^ slave_select);
-    reg [WIDTH-1:0] sen_reg;
-    always @(posedge clock) 
-      sen_reg <= sen24[WIDTH-1:0];
-    always @(posedge clock) 
-      sen <= sen_reg;
+    reg [WIDTH-1:0] sen_reg = SEN_IDLE;
+    always @(posedge clock) begin
+      if (reset) begin
+        sen_reg <= SEN_IDLE;
+      end else begin
+        sen_reg <= sen24[WIDTH-1:0];
+      end
+    end
+    assign sen = sen_reg;
 
     //data output shift register
    // IJB. One pipeline stage to break critical path from register in I/O pads.
@@ -145,12 +150,14 @@ module simple_spi_core
             state <= WAIT_TRIG;
             sclk_reg <= CLK_IDLE;
             ready_reg <= 0;
+            readback_stb <= 1'b0;
         end
         else begin
             case (state)
 
             WAIT_TRIG: begin
                 if (trigger_spi) state <= PRE_IDLE;
+                readback_stb <= 1'b0;
                 ready_reg <= ~trigger_spi;
                 dataout_reg <= mosi_data;
                 sclk_counter <= 0;
@@ -192,7 +199,11 @@ module simple_spi_core
             end
 
             IDLE_SEN: begin
-                if (sclk_counter_done) state <= WAIT_TRIG;
+                if (sclk_counter_done) begin
+                  ready_reg <= 1'b1;
+                  readback_stb <= 1'b1;
+                  state <= WAIT_TRIG;
+                end
                 sclk_counter <= sclk_counter_next;
                 sclk_reg <= CLK_IDLE;
             end

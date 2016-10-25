@@ -6,12 +6,15 @@
 # FIFO Sources
 ##################################################
 AXI_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/axi/, \
-axi_dma_master.v \
+axi_chdr_header_trigger.v \
+axi_chdr_test_pattern.v \
+axi_defs.v \
 axi_dma_fifo.v \
+axi_dma_master.v \
 axi_embed_tlast.v \
 axi_extract_tlast.v \
-axi_chdr_test_pattern.v \
-axi_fast_fifo.v \
 axi_fast_extract_tlast.v \
-axi_chdr_header_trigger.v \
+axi_fast_fifo.v \
+axi_to_strobed.v \
+strobed_to_axi.v \
 ))

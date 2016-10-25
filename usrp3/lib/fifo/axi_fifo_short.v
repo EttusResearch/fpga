@@ -19,34 +19,39 @@ module axi_fifo_short
     input [WIDTH-1:0] i_tdata,
     input i_tvalid,
     output i_tready,
-    output [WIDTH-1:0] o_tdata,
-    output o_tvalid,
+    output reg [WIDTH-1:0] o_tdata = 'd0,
+    output reg o_tvalid = 1'b0,
     input o_tready,
     
     output reg [5:0] space,
     output reg [5:0] occupied
     );
 
+   wire [WIDTH-1:0] int_tdata;
+   wire int_tready;
+
    reg full = 1'b0, empty = 1'b1;
-   wire write 	     = i_tvalid & i_tready;
-   wire read 	     = o_tready & o_tvalid;
+   wire write        = i_tvalid & i_tready;
+   // read_int will assert when either a read occurs or the output register is empty (and there is data in the shift register fifo)
+   wire read_int     = ~empty & int_tready;
+   // read will only assert when an actual read request occurs at the interface
+   wire read         = o_tready & o_tvalid;
 
    assign i_tready  = ~full;
-   assign o_tvalid  = ~empty;
-   
+
    reg [4:0] 	  a;
    genvar 	  i; 
-   
+
    generate
-      for (i=0;i<WIDTH;i=i+1)
-	begin : gen_srlc32e
-	   SRLC32E
-	     srlc32e(.Q(o_tdata[i]), .Q31(),
-		     .A(a), //.A0(a[0]),.A1(a[1]),.A2(a[2]),.A3(a[3]),.A4(a[4]),
-		    .CE(write),.CLK(clk),.D(i_tdata[i]));
-	end
+      for (i=0;i<WIDTH;i=i+1) begin : gen_srlc32e
+         SRLC32E #(
+            .INIT(32'h00000000))
+         srlc32e(.Q(int_tdata[i]), .Q31(),
+            .A(a), //.A0(a[0]),.A1(a[1]),.A2(a[2]),.A3(a[3]),.A4(a[4]),
+            .CE(write),.CLK(clk),.D(i_tdata[i]));
+      end
    endgenerate
-   
+
    always @(posedge clk)
      if(reset)
        begin
@@ -60,7 +65,7 @@ module axi_fifo_short
 	  empty <= 1;
 	  full<= 0;
        end
-     else if(read & ~write)
+     else if(read_int & ~write)
        begin
 	  full <= 0;
 	  if(a==0)
@@ -68,7 +73,7 @@ module axi_fifo_short
 	  else
 	    a <= a - 1;
        end
-     else if(write & ~read)
+     else if(write & ~read_int)
        begin
 	  empty <= 0;
 	  if(~empty)
@@ -76,6 +81,22 @@ module axi_fifo_short
 	  if(a == 30)
 	    full <= 1;
        end
+
+   // Output registred stage
+   always @(posedge clk)
+   begin
+      // Valid flag
+      if (reset | clear) begin
+         o_tvalid <= 1'b0;
+      end else if (int_tready) begin
+         o_tvalid <= ~empty;
+      end
+      if (int_tready) begin
+         o_tdata <= int_tdata;
+      end
+   end
+
+   assign int_tready = o_tready | ~o_tvalid;
 
    // NOTE will fail if you write into a full fifo or read from an empty one
 
