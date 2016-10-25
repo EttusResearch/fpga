@@ -300,7 +300,7 @@ generate
          .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b0),                                                            //Unused
          .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b0));                                                           //Unused
 
-      source_flow_control #(.BASE(SR_RX_CTRL+6)) rx_sfc
+      source_flow_control_legacy #(.BASE(SR_RX_CTRL+6)) rx_sfc
         (.clk(radio_clk), .reset(radio_rst), .clear(1'b0),
          .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
          .fc_tdata(ctrl_tdata_fc), .fc_tlast(ctrl_tlast_fc), .fc_tvalid(ctrl_tvalid_fc), .fc_tready(ctrl_tready_fc),                      //Flow control In

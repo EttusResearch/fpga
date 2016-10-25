@@ -1,14 +1,14 @@
 `timescale 1ns/1ps
 
-module source_flow_control_tb();
+module source_flow_control_legacy_tb();
 
    reg clk    = 0;
    reg reset  = 1;
    
    always #10 clk = ~clk;
    
-   initial $dumpfile("source_flow_control_tb.vcd");
-   initial $dumpvars(0,source_flow_control_tb);
+   initial $dumpfile("source_flow_control_legacy_tb.vcd");
+   initial $dumpvars(0,source_flow_control_legacy_tb);
 
    initial
      begin
@@ -138,7 +138,7 @@ module source_flow_control_tb();
 	// Now force internal sequence count to close to wrap value to test corner case
 	//
 	#100;
-	source_flow_control.current_seqnum <= 32'hFFFF_FFFC;
+	source_flow_control_legacy.current_seqnum <= 32'hFFFF_FFFC;
 	#100;
 	send_fc_packet(32'hFFFF_FFFA,32'h3,1'b0);
 	#100;
@@ -169,7 +169,7 @@ module source_flow_control_tb();
 	// Again force internal sequence count to close to wrap value to test new corner case
 	//
 	#100;
-	source_flow_control.current_seqnum <= 32'hFFFF_FFFC;
+	source_flow_control_legacy.current_seqnum <= 32'hFFFF_FFFC;
 	#100;
 	send_fc_packet(32'hFFFF_FFFA,32'h3,1'b0);
 	#100;
@@ -220,7 +220,7 @@ module source_flow_control_tb();
       .o_tdata({tlast_int,tdata_int}), .o_tvalid(tvalid_int), .o_tready(tready_int),
       .occupied(occ_in));
 
-   source_flow_control source_flow_control
+   source_flow_control_legacy source_flow_control_legacy
      (.clk(clk), .reset(reset), .clear(1'b0),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .fc_tdata(fc_tdata), .fc_tlast(fc_tlast), .fc_tvalid(fc_tvalid), .fc_tready(fc_tready),
@@ -246,4 +246,4 @@ module source_flow_control_tb();
 	  if(out_tlast)
 	    $display("TLAST");
        end
-endmodule // source_flow_control_tb
+endmodule // source_flow_control_legacy_tb

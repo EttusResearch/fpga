@@ -8,7 +8,7 @@
 //  The 2nd line of the packet contains the sequence number in the low 12 bits.
 //  These packets should not have a time value, but if they do it will be ignored.
 
-module source_flow_control #(
+module source_flow_control_legacy #(
    parameter BASE=0
 ) (
    input clk, input reset, input clear,
@@ -144,4 +144,4 @@ module source_flow_control #(
             endcase // case (go)      
       end
 
-endmodule // source_flow_control
+endmodule // source_flow_control_legacy

@@ -13,7 +13,7 @@ chdr_eth_framer.v \
 eth_interface.v \
 vrlp_to_compressed_vita.v \
 compressed_vita_to_vrlp.v \
-source_flow_control.v \
+source_flow_control_legacy.v \
 cvita_insert_tlast.v \
 cvita_dest_lookup.v \
 cvita_chunker.v \

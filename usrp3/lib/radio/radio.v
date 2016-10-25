@@ -364,7 +364,7 @@ module radio #(
    wire [31:0] 	  rx_sid;
    wire [11:0] 	  rx_seqnum;
 
-   source_flow_control #(.BASE(SR_RX_CTRL+6)) rx_sfc
+   source_flow_control_legacy #(.BASE(SR_RX_CTRL+6)) rx_sfc
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .set_stb(set_stb_b), .set_addr(set_addr_b), .set_data(set_data_b),
       .fc_tdata(rxfc_tdata_b), .fc_tlast(rxfc_tlast_b), .fc_tvalid(rxfc_tvalid_b), .fc_tready(rxfc_tready_b),
