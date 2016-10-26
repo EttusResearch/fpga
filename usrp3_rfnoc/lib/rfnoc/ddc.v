@@ -170,7 +170,7 @@ module ddc #(
 
   // NCO
   always @(posedge clk) begin
-    if (reset | clear) begin
+    if (reset | clear | (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready)) begin
       phase <= 0;
     end else if (sample_mux_stb) begin
       phase <= phase + phase_inc;
