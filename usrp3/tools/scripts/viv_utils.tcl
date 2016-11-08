@@ -108,7 +108,6 @@ proc ::vivado_utils::synthesize_design {args} {
     set synth_cmd [concat $synth_cmd $vdef_args]
     set synth_cmd [concat $synth_cmd $incdir_args]
     set synth_cmd [concat $synth_cmd $args]
-    set synth_cmd [concat $synth_cmd "-directive AreaOptimized_high -control_set_opt_threshold 1"]
     puts "BUILDER: Synthesizing design"
     eval $synth_cmd
 }
