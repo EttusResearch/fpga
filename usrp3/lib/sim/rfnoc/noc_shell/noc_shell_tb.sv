@@ -93,8 +93,8 @@ module noc_shell_tb();
     tb_streamer.send(send_payload);
     while (~noc_block_skeleton.i_tlast) @(posedge ce_clk);
     while (noc_block_skeleton.i_tlast) @(posedge ce_clk);
-    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port.noc_input_port.noc_responder.flow_control_responder.byte_count_running !=
-                  noc_block_tb.noc_shell.gen_noc_output_port.noc_output_port.source_flow_control.current_byte,
+    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.flow_control_responder.byte_count !=
+                  noc_block_tb.noc_shell.gen_noc_output_port[0].noc_output_port.source_flow_control.current_byte,
                   "Producer's flow control byte count should not match consumer's byte count!");
     //
     // Allow next packet to be received, capture seqnum error packet,
@@ -114,21 +114,21 @@ module noc_shell_tb();
     $sformat(s, "Incorrect source SID! Received: %4x Expected: %4x", response.hdr.src_sid, sid_noc_block_skeleton);
     `ASSERT_ERROR(response.hdr.src_sid == sid_noc_block_skeleton, s);
     // No need to check dst_sid, otherwise how did we manage to receive the packet?
-    expected_resp_code = noc_block_skeleton.noc_shell.gen_noc_input_port.noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR_MIDBURST[63:32];
+    expected_resp_code = noc_block_skeleton.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR_MIDBURST[63:32];
     $sformat(s, "Incorrect response packet code! Received: %8x Expected: %8x", response.payload[0][63:32], expected_resp_code);
     `ASSERT_ERROR(response.payload[0][63:32] == expected_resp_code, s);
     // Packet should have been dropped, wait awhile for FC packet to propagate and check FC byte counters, they should match
     repeat(100) @(posedge ce_clk);
-    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port.noc_input_port.noc_responder.flow_control_responder.byte_count_running ==
-                  noc_block_tb.noc_shell.gen_noc_output_port.noc_output_port.source_flow_control.current_byte,
+    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.flow_control_responder.byte_count ==
+                  noc_block_tb.noc_shell.gen_noc_output_port[0].noc_output_port.source_flow_control.current_byte,
                   "Producer's flow control byte count should match consumer's byte count!");
     // Send and receive a few packets and make sure byte counters still match
     repeat(4) begin
       tb_streamer.send(send_payload);
       tb_streamer.recv(recv_payload,recv_md);
     end
-    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port.noc_input_port.noc_responder.flow_control_responder.byte_count_running ==
-                  noc_block_tb.noc_shell.gen_noc_output_port.noc_output_port.source_flow_control.current_byte,
+    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.flow_control_responder.byte_count ==
+                  noc_block_tb.noc_shell.gen_noc_output_port[0].noc_output_port.source_flow_control.current_byte,
                   "Producer's flow control byte count should match consumer's byte count!");
     `TEST_CASE_DONE(1);
 
@@ -166,8 +166,8 @@ module noc_shell_tb();
       $display("Received %0d packets",i);
     end
     join
-    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port.noc_input_port.noc_responder.flow_control_responder.byte_count_running ==
-                  noc_block_tb.noc_shell.gen_noc_output_port.noc_output_port.source_flow_control.current_byte,
+    `ASSERT_ERROR(noc_block_skeleton.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.flow_control_responder.byte_count ==
+                  noc_block_tb.noc_shell.gen_noc_output_port[0].noc_output_port.source_flow_control.current_byte,
                   "Producer's flow control byte count should match consumer's byte count!");
     `TEST_CASE_DONE(1);
     `TEST_BENCH_DONE;

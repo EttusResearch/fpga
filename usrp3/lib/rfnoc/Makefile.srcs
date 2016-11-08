@@ -14,6 +14,7 @@ chdr_deframer.v \
 chdr_deframer_2clk.v \
 noc_shell.v \
 noc_shell_regs.vh \
+chdr_pkt_types.vh \
 axi_packet_mux.v \
 axi_wrapper.v \
 axi_bit_reduce.v \

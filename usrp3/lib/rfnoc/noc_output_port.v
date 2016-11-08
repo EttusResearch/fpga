@@ -7,8 +7,9 @@
 // NoC Output port.  Implements source flow control on a single stream
 
 module noc_output_port #(
-  parameter SR_FLOW_CTRL_WINDOW_SIZE = 0,
-  parameter SR_FLOW_CTRL_WINDOW_EN = 1,
+  parameter SR_FLOW_CTRL_EN = 0,
+  parameter SR_FLOW_CTRL_WINDOW_SIZE = 1,
+  parameter SR_FLOW_CTRL_PKT_LIMIT = 2,
   parameter PORT_NUM=0,
   parameter MTU=10,      // includes some extra space due to cascade fifo
   parameter USE_GATE=0   // Gate only necessary if partial packets can get to us.  axi_wrapper and chdr_framer don't need gates.
@@ -41,8 +42,9 @@ module noc_output_port #(
   endgenerate
 
   source_flow_control #(
+    .SR_FLOW_CTRL_EN(SR_FLOW_CTRL_EN),
     .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
-    .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN))
+    .SR_FLOW_CTRL_PKT_LIMIT(SR_FLOW_CTRL_PKT_LIMIT))
   source_flow_control (
     .clk(clk), .reset(reset), .clear(clear),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),

@@ -8,11 +8,11 @@
 //  Implements destination flow control and sequence number error handling for a single port
 
 module noc_input_port #(
-  parameter SR_FLOW_CTRL_CYCS_PER_ACK = 0,
-  parameter SR_FLOW_CTRL_PKTS_PER_ACK = 1,
+  parameter SR_FLOW_CTRL_BYTES_PER_ACK = 1,
   parameter SR_ERROR_POLICY = 2,
-  parameter STR_SINK_FIFOSIZE = 10)
-(
+  parameter STR_SINK_FIFOSIZE = 11,
+  parameter USE_TIME = 0
+)(
   input clk, input reset, input clear,  // Note: Clear is used to clear the FIFO and flow control
   input [31:0] resp_sid,                // Stream ID used with response packets
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -35,10 +35,10 @@ module noc_input_port #(
   wire [63:0] fc_int_tdata, resp_int_tdata;
   wire fc_int_tlast, fc_int_tvalid, fc_int_tready, resp_int_tlast, resp_int_tvalid, resp_int_tready;
   noc_responder #(
-    .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
-    .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
+    .SR_FLOW_CTRL_BYTES_PER_ACK(SR_FLOW_CTRL_BYTES_PER_ACK),
     .SR_ERROR_POLICY(SR_ERROR_POLICY),
-    .USE_TIME(0))
+    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
+    .USE_TIME(USE_TIME))
   noc_responder (
     .clk(clk), .reset(reset), .clear(clear),
     .resp_sid(resp_sid),

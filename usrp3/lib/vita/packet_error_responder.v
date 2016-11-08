@@ -12,6 +12,7 @@ module packet_error_responder #(
 )(
   input clk, input reset, input clear,
   input [31:0] sid, // Destination SID
+  output seqnum_error,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
@@ -45,8 +46,8 @@ module packet_error_responder #(
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(int_tdata), .o_tlast(int_tlast), .o_tvalid(int_tvalid), .o_tready(int_tready));
 
-  reg [11:0] seqnum_expected, seqnum_error;
-  wire error_stb = (seqnum_expected != seqnum) & hdr_stb;
+  reg [11:0] seqnum_expected, seqnum_hold;
+  assign seqnum_error = (seqnum_expected != seqnum) & hdr_stb;
 
   wire [63:0] error_tdata;
   wire [127:0] error_tuser;
@@ -57,15 +58,15 @@ module packet_error_responder #(
   always @(posedge clk) begin
     if (reset | clear) begin
       seqnum_expected   <= 12'd0;
-      seqnum_error      <= 12'd0;
+      seqnum_hold       <= 12'd0;
       first_packet      <= 1'b1;
       error_tvalid      <= 1'b0;
       error_hold        <= 1'b0;
       clear_error_hold  <= 1'b0;
     end else begin
       // Trigger error packet
-      if (error_stb) begin
-        seqnum_error <= seqnum;
+      if (seqnum_error) begin
+        seqnum_hold  <= seqnum;
         error_tvalid <= send_error_pkt;
         // Policy continue essentially masks errors
         error_hold   <= ~policy_continue;
@@ -100,12 +101,12 @@ module packet_error_responder #(
   // Need to use separate error and error_hold signals to ensure we drop the first and subsequent lines of the packet.
   axi_fifo_flop2 #(.WIDTH(65)) axi_fifo_flop (
     .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({int_tlast, int_tdata}), .i_tvalid(int_tvalid & (~(error_stb | error_hold) | policy_continue)), .i_tready(int_tready),
+    .i_tdata({int_tlast, int_tdata}), .i_tvalid(int_tvalid & (~(seqnum_error | error_hold) | policy_continue)), .i_tready(int_tready),
     .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
     .space(), .occupied());
 
-  wire [63:0] CODE_SEQ_ERROR          = {32'd4,4'd0,seqnum_expected,4'd0,seqnum_error};
-  wire [63:0] CODE_SEQ_ERROR_MIDBURST = {32'd32,4'd0,seqnum_expected,4'd0,seqnum_error};
+  wire [63:0] CODE_SEQ_ERROR          = {32'd4,4'd0,seqnum_expected,4'd0,seqnum_hold};
+  wire [63:0] CODE_SEQ_ERROR_MIDBURST = {32'd32,4'd0,seqnum_expected,4'd0,seqnum_hold};
 
   assign error_tdata = first_packet ? CODE_SEQ_ERROR : CODE_SEQ_ERROR_MIDBURST;
   assign error_tuser = {2'b11, USE_TIME[0], 1'b1, 12'd0 /* handled by chdr framer */, 16'd0 /* here too */, sid, vita_time};

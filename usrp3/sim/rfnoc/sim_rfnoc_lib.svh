@@ -973,8 +973,8 @@ endinterface
    // Clear block, write be any value \
   tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'h1, from_block_port); \
   tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'h0, from_block_port); \
-  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'h1, to_block_port); \
-  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'h0, to_block_port); \
+  tb_config.write_reg(sid_``to_noc_block_name, SR_CLEAR_RX_FC, 32'h1, to_block_port); \
+  tb_config.write_reg(sid_``to_noc_block_name, SR_CLEAR_RX_FC, 32'h0, to_block_port); \
   // Set block's src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid \
   // Default response dst in / out SIDs to test bench block \
   tb_config.write_reg(sid_``from_noc_block_name, SR_SRC_SID, sid_``from_noc_block_name + from_block_port, from_block_port); \
@@ -994,14 +994,17 @@ endinterface
   if (sid_``to_noc_block_name == sid_noc_block_tb) begin \
     tb_streamer.connect_upstream(to_block_port); \
   end \
-  // Send a flow control response packet on every received packet \
-  tb_config.write_reg(sid_``to_noc_block_name,   SR_FLOW_CTRL_PKTS_PER_ACK, 32'h8000_0001, from_block_port); \
-  // Set up window size \
-  // Subtract 1 to account for +1 in source_flow_control.v \
-  tb_config.write_reg(sid_``to_noc_block_name,   SR_FLOW_CTRL_WINDOW_SIZE, \
-     32'((8*2**(``to_noc_block_name``.noc_shell.STR_SINK_FIFOSIZE[to_block_port*8 +: 8]))/(spp*data_type.bytes_per_word))-32'd1, \
+  // Send a flow control response packet every (receive window buffer size)/16 bytes \
+  tb_config.write_reg(sid_``to_noc_block_name,   SR_FLOW_CTRL_BYTES_PER_ACK, \
+     {1 /* enable consumed */, 31'(8*2**(``to_noc_block_name``.noc_shell.STR_SINK_FIFOSIZE[to_block_port*8 +: 8])/16)}, \
+     to_block_port); \
+  // Set up window size (in bytes) \
+  tb_config.write_reg(sid_``from_noc_block_name,   SR_FLOW_CTRL_WINDOW_SIZE, \
+     32'(8*2**(``to_noc_block_name``.noc_shell.STR_SINK_FIFOSIZE[to_block_port*8 +: 8])), \
      from_block_port); \
-  // Enable window \
-  tb_config.write_reg(sid_``to_noc_block_name,   SR_FLOW_CTRL_WINDOW_EN, 32'h0000_0001, from_block_port); \
+  // Set up packet limit (Unused and commented out for now) \
+  // tb_config.write_reg(sid_``from_noc_block_name,   SR_FLOW_CTRL_PKT_LIMIT, 32, from_block_port); \
+  // Enable source flow control output and byte based flow control, disable packet limit \
+  tb_config.write_reg(sid_``from_noc_block_name,   SR_FLOW_CTRL_EN, 3'b011, from_block_port); \
 
 `endif

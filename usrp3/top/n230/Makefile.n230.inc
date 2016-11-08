@@ -37,6 +37,7 @@ include $(LIB_DIR)/radio_200/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/extramfifo/Makefile.srcs
 include $(LIB_DIR)/wb_spi/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
 
 ##################################################
 # Sources
@@ -68,6 +69,7 @@ $(VITA_SRCS) \
 $(VITA_200_SRCS) \
 $(DSP_SRCS) \
 $(AXI_SRCS) \
+$(RFNOC_SRCS) \
 $(RADIO_200_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(ZPU_CORE_SRCS) \

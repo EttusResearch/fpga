@@ -67,9 +67,10 @@ module noc_shell
     );
 
    `include "noc_shell_regs.vh"
+   `include "chdr_pkt_types.vh"
 
    localparam RB_AWIDTH = 3;
-   localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'd3;
+   localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'd4;
    localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'd0;
 
    wire [63:0] fcin_tdata, fcout_tdata, cmdin_tdata, ackout_tdata;
@@ -130,8 +131,25 @@ module noc_shell
       .i3_tdata(ackout_tdata_bclk), .i3_tlast(ackout_tlast_bclk), .i3_tvalid(ackout_tvalid_bclk), .i3_tready(ackout_tready_bclk),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
 
-   wire [63:0]  vheader;
-   wire [1:0]   vdest = vheader[63:62];  // Switch by packet type
+   wire [63:0] vheader;
+   // Switch by packet type
+   // Note: EOB is masked (i.e. ignored) except in the case for FC ACK
+   wire [2:0] pkt_type_in = {vheader[63:62],vheader[60]};
+   reg  [1:0] vdest;
+
+   always @(*) begin
+     case (pkt_type_in)
+       DATA_PKT     : vdest = 2'd0;
+       DATA_EOB_PKT : vdest = 2'd0;
+       FC_RESP_PKT  : vdest = 2'd1;
+       FC_ACK_PKT   : vdest = 2'd0; // FC ACK **must** remain in-line with data packets since it is FC'd
+       CMD_PKT      : vdest = 2'd2;
+       CMD_EOB_PKT  : vdest = 2'd2;
+       RESP_PKT     : vdest = 2'd3;
+       RESP_ERR_PKT : vdest = 2'd3;
+       default      : vdest = 2'd0;
+     endcase
+   end
 
    axi_demux4 #(.ACTIVE_CHAN(4'b1111), .WIDTH(64)) input_demux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
@@ -330,8 +348,9 @@ module noc_shell
    generate
      for (i=0 ; i < OUTPUT_PORTS ; i = i + 1) begin : gen_noc_output_port
        noc_output_port #(
+         .SR_FLOW_CTRL_EN(SR_FLOW_CTRL_EN),
          .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
-         .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN),
+         .SR_FLOW_CTRL_PKT_LIMIT(SR_FLOW_CTRL_PKT_LIMIT),
          .PORT_NUM(i), .MTU(MTU[8*i+7:8*i]), .USE_GATE(USE_GATE_MASK[i]))
        noc_output_port (
          .clk(bus_clk), .reset(bus_rst), .clear(clear_tx_stb_bclk[i]),
@@ -390,8 +409,7 @@ module noc_shell
    generate
      for(j=0; j<INPUT_PORTS; j=j+1) begin : gen_noc_input_port
        noc_input_port #(
-         .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
-         .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
+         .SR_FLOW_CTRL_BYTES_PER_ACK(SR_FLOW_CTRL_BYTES_PER_ACK),
          .SR_ERROR_POLICY(SR_ERROR_POLICY),
          .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE[8*j+7:8*j]))
        noc_input_port (
