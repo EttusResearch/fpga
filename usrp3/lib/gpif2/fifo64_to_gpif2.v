@@ -54,7 +54,7 @@ module fifo64_to_gpif2
         .o_tdata(int0_tdata), .o_tlast(int0_tlast), .o_tvalid(int0_tvalid), .o_tready(int0_tready)
     );
 
-    axi_fifo #(.WIDTH(33), .SIZE(0)) outgress_timing_fifo
+    axi_fifo #(.WIDTH(33), .SIZE(5)) outgress_timing_fifo
     (
         .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
         .i_tdata({int0_tlast, int0_tdata}), .i_tvalid(int0_tvalid), .i_tready(int0_tready), .space(),
