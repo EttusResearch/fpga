@@ -59,7 +59,7 @@ module gpif2_to_fifo64
    //
    // This FIFO provides space to accept a single burst from FX3 and it's fullness drives flags to GPIF2 logic
    //
-   axi_fifo #(.WIDTH(33), .SIZE(BURST_SIZE)) min_read_buff
+   axi_fifo_legacy #(.WIDTH(33), .SIZE(BURST_SIZE)) min_read_buff
      (
       .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
       .i_tdata({int0_tlast, int0_tdata}), .i_tvalid(int0_tvalid), .i_tready(int0_tready), .space(space),
