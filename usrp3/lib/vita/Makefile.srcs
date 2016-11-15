@@ -6,7 +6,6 @@
 # VITA Sources
 ##################################################
 VITA_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/vita/, \
-binary_encoder.v \
 chdr_12sc_to_16sc.v \
 chdr_16sc_to_12sc.v \
 chdr_16sc_to_32f.v \
