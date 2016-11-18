@@ -19,16 +19,20 @@ include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
 include $(IP_DIR)/Makefile.inc
 include $(LIB_DIR)/control/Makefile.srcs
+include $(LIB_DIR)/control_200/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
+include $(LIB_DIR)/fifo_200/Makefile.srcs
 include $(LIB_DIR)/simple_gemac/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/zpu/Makefile.srcs
 include $(LIB_DIR)/wishbone/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
+include $(LIB_DIR)/packet_proc_200/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
+include $(LIB_DIR)/vita_200/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/radio_200/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/extramfifo/Makefile.srcs
 include $(LIB_DIR)/wb_spi/Makefile.srcs
@@ -50,16 +54,20 @@ timing.xdc \
 DESIGN_SRCS = \
 $(TOP_SRCS) \
 $(FIFO_SRCS) \
+$(FIFO_200_SRCS) \
 $(CONTROL_LIB_SRCS) \
+$(CONTROL_LIB_200_SRCS) \
 $(SIMPLE_GEMAC_SRCS) \
 $(TIMING_SRCS) \
 $(WISHBONE_SRCS) \
 $(ETH_SRCS)  \
 $(PACKET_PROC_SRCS) \
+$(PACKET_PROC_200_SRCS) \
 $(VITA_SRCS) \
+$(VITA_200_SRCS) \
 $(DSP_SRCS) \
 $(AXI_SRCS) \
-$(RADIO_LEGACY_SRCS) \
+$(RADIO_200_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(ZPU_CORE_SRCS) \
 $(EXTRAM_SRCS) \
