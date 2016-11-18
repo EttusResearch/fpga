@@ -7,7 +7,7 @@
 module simple_uart_tx
     #(parameter SIZE=0)
     (input clk, input rst,
-     input [7:0] fifo_in, input fifo_write, output [15:0] fifo_level, output fifo_full,
+     input [7:0] fifo_in, input fifo_write, output [5:0] fifo_level, output fifo_full, 
      input [15:0] clkdiv, output baudclk, output reg tx);
 
    reg [15:0] 	  baud_ctr;

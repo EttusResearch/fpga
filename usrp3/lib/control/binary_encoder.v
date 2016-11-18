@@ -17,25 +17,26 @@
 
 module binary_encoder
 #(
-  parameter WIDTH = 16
+      parameter SIZE = 16
 )
 (
-  input [WIDTH-1:0]         in,
-  output [`log2(WIDTH)-1:0] out
+       input [SIZE-1:0] in,
+       output [`log2(SIZE)-1:0] out
 );
+
   genvar m,n;
 
   generate
   // Loop enough times to represent the total number of input bits as an encoded value
-  for (m = 0; m <= `log2(WIDTH-1); m = m + 1)  begin: expand_or_tree
-    wire [WIDTH-1:0] encoding;
+  for (m = 0; m <= `log2(SIZE-1); m = m + 1)  begin: expand_or_tree
+    wire [SIZE-1:0] encoding;
      // Build enable mask by iterating through every input bit.
-     for (n = 0; n < WIDTH ; n = n + 1) begin: encode_this_bit
+     for (n = 0; n < SIZE ; n = n + 1) begin: encode_this_bit
        assign encoding[n] = n[m];
      end
-     // OR tree for this output bit with appropraite bits enabled.
+     // OR tree for this output bit with appropriate bits enabled.
      assign out[m] = |(encoding & in);
    end
  endgenerate
 
-endmodule
+endmodule // binary_encoder

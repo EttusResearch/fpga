@@ -72,4 +72,4 @@ module filter_bad_sid
       .space(), .occupied()
       );
    
-endmodule // axi_fast_fifo
+endmodule // filter_bad_sid
