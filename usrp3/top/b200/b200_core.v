@@ -158,7 +158,7 @@ module b200_core
      ******************************************************************/
     wire [63:0] u0i_ctrl_tdata; wire u0i_ctrl_tlast, u0i_ctrl_tvalid, u0i_ctrl_tready;
 
-    axi_fifo #(.WIDTH(65), .SIZE(0)) uart_timing_fifo
+    axi_fifo #(.WIDTH(65), .SIZE(5)) uart_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
         .i_tdata({u0_ctrl_tlast, u0_ctrl_tdata}), .i_tvalid(u0_ctrl_tvalid), .i_tready(u0_ctrl_tready), .space(),
@@ -192,7 +192,7 @@ module b200_core
 
     wire time_sync, time_sync_r;
 
-    axi_fifo #(.WIDTH(65), .SIZE(0)) radio_ctrl_proc_timing_fifo
+    axi_fifo #(.WIDTH(65), .SIZE(5)) radio_ctrl_proc_timing_fifo
     (
         .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
         .i_tdata({l0_ctrl_tlast, l0_ctrl_tdata}), .i_tvalid(l0_ctrl_tvalid), .i_tready(l0_ctrl_tready), .space(),

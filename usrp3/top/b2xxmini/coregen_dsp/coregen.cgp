@@ -1,6 +1,6 @@
 SET busformat = BusFormatAngleBracketNotRipped
 SET designentry = Verilog
-SET device = xc6slx75
+SET device = xc6slx150
 SET devicefamily = spartan6
 SET flowvendor = Other
 SET package = csg484
