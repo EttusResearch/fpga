@@ -1,4 +1,5 @@
-build*
+build
+build-*
 isim*
 fuse*
 tmp*
