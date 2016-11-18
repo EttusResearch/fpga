@@ -24,7 +24,7 @@ module moving_sum #(
   wire fifo_tvalid, fifo_tready;
   wire [WIDTH-1:0] fifo_tdata;
 
-  axi_fifo #(.WIDTH(WIDTH), .SIZE(WIDTH)) axi_fifo (
+  axi_fifo #(.WIDTH(WIDTH), .SIZE($clog2(MAX_LEN))) axi_fifo (
     .clk(clk), .reset(reset | len_changed), .clear(clear),
     .i_tdata(i_tdata), .i_tvalid(do_op), .i_tready(),
     .o_tdata(fifo_tdata), .o_tvalid(fifo_tvalid), .o_tready(fifo_tready),
