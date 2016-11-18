@@ -12,7 +12,8 @@ module ddc #(
   parameter SR_COEFFS_ADDR   = 4,
   parameter PRELOAD_HBS      = 1 // Preload half band filter state with 0s
 )(
-  input clk, input reset, input clear,
+  input clk, input reset,
+  input clear, // Resets everything except the CORDIC timed phase inc FIFO and phase inc
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input timed_set_stb, input [7:0] timed_set_addr, input [31:0] timed_set_data,
   input [31:0] sample_in_tdata,
@@ -80,7 +81,7 @@ module ddc #(
     .USE_FIFO(1),
     .FIFO_SIZE(5))
   set_freq_timed (
-    .clk(clk), .reset(reset | clear), .error_stb(),
+    .clk(clk), .reset(reset), .error_stb(),
     .set_stb(timed_set_stb), .set_addr(timed_set_addr), .set_data(timed_set_data),
     .o_tdata(sr_phase_inc_timed_tdata), .o_tlast(), .o_tvalid(sr_phase_inc_timed_tvalid),
     .o_tready(sr_phase_inc_timed_tready));
@@ -91,7 +92,7 @@ module ddc #(
     if (reset) begin
       phase_inc <= 'd0;
     end else begin
-      if (sr_phase_inc_valid | clear) begin
+      if (sr_phase_inc_valid) begin
         phase_inc <= sr_phase_inc;
       end else if (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready) begin
         phase_inc <= sr_phase_inc_timed_tdata;
@@ -169,7 +170,7 @@ module ddc #(
 
   // NCO
   always @(posedge clk) begin
-    if (reset | clear) begin
+    if (reset | clear | (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready)) begin
       phase <= 0;
     end else if (sample_mux_stb) begin
       phase <= phase + phase_inc;

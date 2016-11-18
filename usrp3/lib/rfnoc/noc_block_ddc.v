@@ -107,7 +107,6 @@ module noc_block_ddc #(
       wire [127:0] s_axis_data_tuser;
 
       wire clear_user;
-      wire clear = clear_tx_seqnum[i] | clear_user;
 
       wire        set_stb_int      = set_stb[i];
       wire [7:0]  set_addr_int     = set_addr[8*i+7:8*i];
@@ -169,7 +168,7 @@ module noc_block_ddc #(
       axi_tag_time (
         .clk(ce_clk),
         .reset(ce_rst),
-        .clear(clear),
+        .clear(clear_tx_seqnum[i]),
         .tick_rate(16'd1),
         .timed_cmd_fifo_full(timed_cmd_fifo_full),
         .s_axis_data_tdata(m_axis_data_tdata), .s_axis_data_tlast(m_axis_data_tlast),
@@ -237,7 +236,8 @@ module noc_block_ddc #(
         .SR_MUX_ADDR(SR_MUX_ADDR),
         .SR_COEFFS_ADDR(SR_COEFFS_ADDR))
       ddc (
-        .clk(ce_clk), .reset(ce_rst), .clear(clear),
+        .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum[i]),
+        .clear(clear_user), // Use AXI Rate Change's clear user to reset block to initial state after EOB
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),
         .sample_in_tdata(sample_in_tdata), .sample_in_tlast(1'b0),
