@@ -281,6 +281,17 @@ module e300
     pps_reg <= bus_rst ? 3'b000 : {pps_reg[1:0], GPS_PPS};
   assign ps_gpio_in[8] = pps_reg[2]; // 62
 
+  // Warning: PS SPI does not deassert slave select after transactions. (This appears to be 
+  // a kernel driver issue). Therefore, the radio SPI slave select is used as the mux
+  // select and software must take care not have overlapping SPI transactions on both SPI cores.
+  wire PS_SPI0_SS1, PS_SPI0_SCLK, PS_SPI0_MOSI;
+  wire PS_SPI0_MISO = CAT_MISO;
+  wire spi_miso     = CAT_MISO;
+  wire spi_sen;
+  assign CAT_CS = 1'b0;
+  MUXF7 CAT_SCLK_MUX (.I0(spi_sclk), .I1(PS_SPI0_SCLK), .S(spi_sen), .O(CAT_SCLK));
+  MUXF7 CAT_MOSI_MUX (.I0(spi_mosi), .I1(PS_SPI0_MOSI), .S(spi_sen), .O(CAT_MOSI));
+
    // First, make all connections to the PS (ARM+buses)
   axi_interconnect inst_axi_interconnect
   (
@@ -451,11 +462,11 @@ module e300
 
     //    SPI Core 0 - To AD9361
     .SPI0_SS(),
-    .SPI0_SS1(CAT_CS),
+    .SPI0_SS1(PS_SPI0_SS1),
     .SPI0_SS2(),
-    .SPI0_SCLK(CAT_SCLK),
-    .SPI0_MOSI(CAT_MOSI),
-    .SPI0_MISO(CAT_MISO),
+    .SPI0_SCLK(PS_SPI0_SCLK),
+    .SPI0_MOSI(PS_SPI0_MOSI),
+    .SPI0_MISO(PS_SPI0_MISO),
 
     //    SPI Core 1 - To AVR
     .SPI1_SS(),
@@ -469,14 +480,6 @@ module e300
   //------------------------------------------------------------------
   //-- generate clock and reset signals
   //------------------------------------------------------------------
-
-  reset_sync radio_rst_sync
-  (
-    .clk(radio_clk),
-    .reset_in(bus_rst),
-    .reset_out(radio_rst)
-  );
-
   assign bus_clk = fclk_clk0;
   assign bus_rst = fclk_reset0;
 
@@ -485,53 +488,76 @@ module e300
   //------------------------------------------------------------------
   wire mimo;
   wire codec_arst;
+  wire [11:0] rx_i0, rx_q0, rx_i1, rx_q1, tx_i0, tx_q0, tx_i1, tx_q1;
   wire [31:0] rx_data0, rx_data1, tx_data0, tx_data1;
+  assign rx_data0      = {rx_i0,4'd0,rx_q0,4'd0};
+  assign rx_data1      = {rx_i1,4'd0,rx_q1,4'd0};
+  assign {tx_i0,tx_q0} = {tx_data0[31:20],tx_data0[15:4]};
+  assign {tx_i1,tx_q1} = {tx_data1[31:20],tx_data1[15:4]};
 
-  catcodec_ddr_cmos #(
-    .DEVICE("7SERIES"))
-  inst_catcodec_ddr_cmos (
-    .radio_clk(radio_clk),
-    .arst(codec_arst),
-    .mimo(mimo),
-    .rx1(rx_data0),
-    .rx2(rx_data1),
-    .tx1(tx_data0),
-    .tx2(tx_data1),
-    .rx_clk(CAT_DATA_CLK),
-    .rx_frame(CAT_RX_FRAME),
-    .rx_d(CAT_P0_D),
-    .tx_clk(CAT_FB_CLK),
-    .tx_frame(CAT_TX_FRAME),
-    .tx_d(CAT_P1_D));
+  e310_io e310_io (
+  .areset(codec_arst),
+  .mimo(mimo),
+  // Baseband sample interface
+  .radio_clk(radio_clk),
+  .radio_rst(radio_rst),
+  .rx_i0(rx_i0),
+  .rx_q0(rx_q0),
+  .rx_i1(rx_i1),
+  .rx_q1(rx_q1),
+  .rx_stb(rx_stb),
+  .tx_i0(tx_i0),
+  .tx_q0(tx_q0),
+  .tx_i1(tx_i1),
+  .tx_q1(tx_q1),
+  .tx_stb(tx_stb),
+  // AD9361 interface
+  .rx_clk(CAT_DATA_CLK),
+  .rx_frame(CAT_RX_FRAME),
+  .rx_data(CAT_P0_D),
+  .tx_clk(CAT_FB_CLK),
+  .tx_frame(CAT_TX_FRAME),
+  .tx_data(CAT_P1_D));
 
   assign CAT_CTRL_IN = 4'b1;
   assign CAT_ENAGC = 1'b1;
   assign CAT_TXNRX = 1'b1;
   assign CAT_ENABLE = 1'b1;
 
-  assign CAT_RESET = ~(bus_rst || (CAT_CS & CAT_MOSI));   // Operates active-low, really CAT_RESET_B
+  assign CAT_RESET = ~bus_rst; // Operates active-low, really CAT_RESET_B
   assign CAT_SYNC = 1'b0;
 
   //------------------------------------------------------------------
   //-- radio core from x300 for super fast bring up
   //------------------------------------------------------------------
 
-  wire [31:0] gpio0, gpio1;
-  wire [5:0]  fp_gpio_in, fp_gpio_out, fp_gpio_ddr;
+  wire [31:0] db_gpio0, db_gpio1;
+  wire [2:0]  leds0, leds1;
+  wire [2:0] TX1_BANDSEL, TX2_BANDSEL;
+  wire [5:0]  fp_gpio_in0, fp_gpio_out0, fp_gpio_ddr0;
 
-  assign { LED_TXRX1_TX, LED_TXRX1_RX, LED_RX1_RX, //3
-           VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, //4
-           TX_ENABLE1B, TX_ENABLE1A //2
-         } = gpio0[18:10];
+  assign {LED_RX1_RX, LED_TXRX1_TX, LED_TXRX1_RX} = leds0;
+  assign { VCRX1_V2, VCRX1_V1, VCTXRX1_V2, VCTXRX1_V1, // 4
+           TX_ENABLE1B, TX_ENABLE1A, // 2
+           RX1C_BANDSEL, RX1B_BANDSEL, RX1_BANDSEL, // 7
+           TX1_BANDSEL // 3
+         } = db_gpio0[15:0];
 
-  assign { LED_TXRX2_TX, LED_TXRX2_RX, LED_RX2_RX, //3
-           VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
-           TX_ENABLE2B, TX_ENABLE2A //2
-         } = gpio1[18:10];
+  assign {LED_RX2_RX, LED_TXRX2_TX, LED_TXRX2_RX} = leds1;
+  assign { VCRX2_V2, VCRX2_V1, VCTXRX2_V2, VCTXRX2_V1, //4
+           TX_ENABLE2B, TX_ENABLE2A, // 2
+           RX2C_BANDSEL, RX2B_BANDSEL, RX2_BANDSEL, // 7
+           TX2_BANDSEL // 3
+         } = db_gpio1[15:0];
 
-  gpio_atr_io #(.WIDTH(6)) fp_gpio_atr_inst (
+  // It is okay to OR here as the both channels must be set to the same freq.
+  // This is needed so software does not have to set properties of radio core 0
+  // when only using radio core 1.
+  assign TX_BANDSEL = TX1_BANDSEL | TX2_BANDSEL;
+
+  gpio_atr_io #(.WIDTH(6)) fp_gpio_atr_inst0 (
     .clk(radio_clk), .gpio_pins(PL_GPIO),
-    .gpio_ddr(fp_gpio_ddr), .gpio_out(fp_gpio_out), .gpio_in(fp_gpio_in)
+    .gpio_ddr(fp_gpio_ddr0), .gpio_out(fp_gpio_out0), .gpio_in(fp_gpio_in0)
   );
 
   //------------------------------------------------------------------
@@ -684,19 +710,30 @@ module e300
     .radio_rst(radio_rst),
     // flip them to match case
     // this is a hack
+    .rx_stb0(rx_stb),
     .rx_data0(rx_data1),
+    .tx_stb0(tx_stb),
     .tx_data0(tx_data1),
+    .rx_stb1(rx_stb),
     .rx_data1(rx_data0),
+    .tx_stb1(tx_stb),
     .tx_data1(tx_data0),
 
     // flip them, to match
     // case ... this is a hack
-    .ctrl_out0(gpio1),
-    .ctrl_out1(gpio0),
+    .db_gpio0(db_gpio1),
+    .db_gpio1(db_gpio0),
+    .leds0(leds1),
+    .leds1(leds0),
 
-    .fp_gpio_in(fp_gpio_in),
-    .fp_gpio_out(fp_gpio_out),
-    .fp_gpio_ddr(fp_gpio_ddr),
+    .fp_gpio_in0(fp_gpio_in0),
+    .fp_gpio_out0(fp_gpio_out0),
+    .fp_gpio_ddr0(fp_gpio_ddr0),
+
+    .spi_sen(spi_sen),
+    .spi_sclk(spi_sclk),
+    .spi_mosi(spi_mosi),
+    .spi_miso(spi_miso),
 
     .set_data(core_set_data),
     .set_addr(core_set_addr),
@@ -717,10 +754,6 @@ module e300
     .lock_signals(CAT_CTRL_OUT[7:6]),
     .mimo(mimo),
     .codec_arst(codec_arst),
-    .tx_bandsel(TX_BANDSEL),
-    .rx_bandsel_a({RX2_BANDSEL, RX1_BANDSEL}),
-    .rx_bandsel_b({RX2B_BANDSEL, RX1B_BANDSEL}),
-    .rx_bandsel_c({RX2C_BANDSEL, RX1C_BANDSEL}),
 `ifdef DRAM_TEST
     .debug(),
     .debug_in(debug)

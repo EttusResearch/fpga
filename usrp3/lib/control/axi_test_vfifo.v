@@ -1,4 +1,7 @@
 //
+// Copyright 2014 Ettus Research LLC
+//
+//
 // Test Virtual FIFO's by streaming modulo 2^32 counter (replicated in upper
 // and lower 32bits). Test result by tracking count on receive and using 
 // sticky flag for error indication.

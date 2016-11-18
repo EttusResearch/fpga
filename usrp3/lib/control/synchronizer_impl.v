@@ -3,25 +3,38 @@
 //
 
 module synchronizer_impl #(
+   parameter WIDTH       = 1,
    parameter STAGES      = 2,
-   parameter INITIAL_VAL = 1'b0
+   parameter INITIAL_VAL = 0
 )(
-   input    clk,
-   input    rst,
-   input    in,
-   output   out
+   input              clk,
+   input              rst,
+   input  [WIDTH-1:0] in,
+   output [WIDTH-1:0] out
 );
 
-   (* ASYNC_REG = "TRUE" *) reg [STAGES-1:0] value = {STAGES{INITIAL_VAL}};
+   (* ASYNC_REG = "TRUE" *) reg [WIDTH-1:0] value[0:STAGES-1];
+
+   integer k;
+   initial begin
+     for (k = 0; k < STAGES; k = k + 1) begin
+       value[k] = INITIAL_VAL;
+     end
+   end
 
    genvar i;
    generate
       for (i=0; i<STAGES; i=i+1) begin: stages
          always @(posedge clk) begin
-            if (rst)
+            if (rst) begin
                value[i] <= INITIAL_VAL;
-            else
-               value[i] <= (i==0) ? in : value[i-1];
+            end else begin
+               if (i == 0) begin
+                 value[i] <= in;
+               end else begin
+                 value[i] <= value[i-1];
+               end
+            end
          end
       end
    endgenerate

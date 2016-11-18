@@ -1,4 +1,7 @@
 //
+// Copyright 2014 Ettus Research LLC
+//
+//
 // AXI stream neds N+1 bits to transmit packets of N bits so that the LAST bit can be represented.
 // LAST occurs relatively infrequently and can be synthesized by using an in-band ESC code to generate
 // a multi-word sequence to encode it (and the escape character when it appears as data input).

@@ -2,19 +2,19 @@
 // Copyright 2012 Ettus Research LLC
 //
 
-
+`ifndef LOG2
 `define LOG2(N) (\
-                 N < 2 ? 0 : \
-                 N < 4 ? 1 : \
-                 N < 8 ? 2 : \
-                 N < 16 ? 3 : \
-                 N < 32 ? 4 : \
-                 N < 64 ? 5 : \
-		 N < 128 ? 6 : \
-		 N < 256 ? 7 : \
-		 N < 512 ? 8 : \
-		 N < 1024 ? 9 : \
-                 10)
+                 N < 2    ? 0 : \
+                 N < 4    ? 1 : \
+                 N < 8    ? 2 : \
+                 N < 16   ? 3 : \
+                 N < 32   ? 4 : \
+                 N < 64   ? 5 : \
+                 N < 128  ? 6 : \
+                 N < 256  ? 7 : \
+                 N < 512  ? 8 : \
+                 N < 1024 ? 9 : 10)
+`endif
 
 module axi_crossbar
   #(
@@ -47,7 +47,7 @@ module axi_crossbar
      // readback bus
      input                        rb_rd_stb,
      input [`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):0] rb_addr,
-     output [31:0]                rb_data
+     output reg [31:0]            rb_data
      );
   
    genvar m,n;
@@ -162,7 +162,8 @@ module axi_crossbar
       end // block: instantiate_fifo_header
    endgenerate
 
-   assign rb_data = rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)]]; 
+   // Pipeline readback data to alleviate timing issues
+   always @(posedge clk) rb_data <= rb_data_mux[rb_addr[`LOG2(NUM_OUTPUTS)+`LOG2(NUM_INPUTS):`LOG2(NUM_OUTPUTS)]];
    
 
 endmodule // axi_crossbar

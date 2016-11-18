@@ -1,9 +1,10 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2016 Ettus Research
 //
 
 
 `timescale 1ns/1ps
+`define SIM_TIMEOUT_US 10000
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 3
 
@@ -111,6 +112,8 @@ module dram_test_tb();
     repeat (2_000_000) @(posedge sys_clk);
     `ASSERT_ERROR(tg_compare_error_reg == 1'b0, "Test generator reported error");
     `TEST_CASE_DONE(1'b1);
+    `TEST_BENCH_DONE;
+
   end
 
 endmodule

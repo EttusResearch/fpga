@@ -13,7 +13,11 @@ gpio_atr_io.v \
 simple_spi_core.v \
 simple_i2c_core.v \
 setting_reg.v \
+axi_setting_reg.v \
 settings_bus_crossclock.v \
+settings_bus_mux.v \
+settings_bus_mux_crossclock.v \
+settings_bus_timed_fifo.v \
 radio_ctrl_proc.v \
 ram_2port.v \
 axi_crossbar.v \
@@ -28,8 +32,12 @@ serial_to_settings.v \
 filter_bad_sid.v \
 synchronizer_impl.v \
 synchronizer.v \
+binary_encoder.v \
+priority_encoder.v \
+priority_encoder_one_hot.v \
 ad5662_auto_spi.v \
 s7_icap_wb.v \
 bin2gray.v \
+gray2bin.v \
 user_settings.v \
 ))

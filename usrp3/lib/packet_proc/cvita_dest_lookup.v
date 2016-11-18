@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Map the endpoint dest part of the SID in the CVITA header to a destination
 // This destination (o_tdest) signal will be valid with o_tdata
 // This only works with VALID CVITA frames
@@ -31,7 +33,7 @@ module cvita_dest_lookup
         end
         else if (forward == 1'b0 && i_tvalid) begin
             if (count == 2'b11) forward <= 1'b1;
-            endpoint <= i_tdata[23:16];
+              endpoint <= i_tdata[7:0];
             count <= count + 1'b1;
         end
         else if (forward == 1'b1 && i_tvalid && i_tready && i_tlast) begin

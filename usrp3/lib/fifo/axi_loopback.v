@@ -8,6 +8,9 @@
 //
 
 module axi_loopback
+ #(
+   parameter WIDTH = 64
+  )
   (
    input clk,
    input reset,
@@ -22,9 +25,6 @@ module axi_loopback
    output o_tvalid,
    input o_tready
    );
-   
-
-   localparam WIDTH=64;
 
    wire [WIDTH-1:0]     fifoin_tdata,fifoout_tdata,dmux_tdata;
    wire                 fifoin_tlast,dmux_tlast;

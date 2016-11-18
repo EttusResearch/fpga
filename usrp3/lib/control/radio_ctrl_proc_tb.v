@@ -1,12 +1,15 @@
+//
+// Copyright 2014 Ettus Research LLC
+//
 `timescale 1ns/1ps
 
 module radio_ctrl_proc_tb();
 
    reg clk    = 0;
    reg reset  = 1;
-   
+
    always #10 clk = ~clk;
-   
+
    initial $dumpfile("radio_ctrl_proc_tb.vcd");
    initial $dumpvars(0,radio_ctrl_proc_tb);
 

@@ -29,11 +29,21 @@ proc ::jtag_list {} {
     }
 }
 
-proc ::jtag_program { filepath {address "0:0"} } {
+proc ::jtag_program { filepath {serial "."} {address "0:0"} } {
     set idx_t [lindex [split $address :] 0]
     set idx_d [lindex [split $address :] 1]
 
-    set hw_target [lindex [get_hw_targets -of_objects [current_hw_server]] $idx_t]
+    set hw_targets [get_hw_targets -of_objects [current_hw_server]]
+    set hw_targets_regexp {}
+
+    foreach target $hw_targets {
+        if { [regexp $serial $target] } {
+            set hw_targets_regexp [concat $hw_targets_regexp $target]
+        }
+    }
+
+    set hw_target [lindex $hw_targets_regexp $idx_t]
+
     if { [string compare $hw_target ""] == 0 } {
         error "ERROR: Could not open hw_target $idx_t. Either the address $address is incorrect or the device is not connected."
     } else {
@@ -69,9 +79,13 @@ if [expr $argc > 0] {
         jtag_list        
     } elseif { [string compare $cmd "program"] == 0 } {
         set filepath [lindex $argv 1]
-        if [expr $argc > 2] {        
-            set devaddr [lindex $argv 2]
-            jtag_program $filepath $devaddr
+        if [expr $argc == 3] {
+            set serial [lindex $argv 2]
+            jtag_program $filepath $serial
+        } elseif [expr $argc > 3] {
+            set serial [lindex $argv 2]
+            set devaddr [lindex $argv 3]
+            jtag_program $filepath $serial $devaddr
         } else {
             jtag_program $filepath
         }

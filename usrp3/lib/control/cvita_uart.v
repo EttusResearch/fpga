@@ -51,7 +51,7 @@ module cvita_uart
     //rx uart capture
     simple_uart_rx #(.SIZE(SIZE)) simple_uart_rx
     (
-        .clk(clk), .rst(rst | ~rxd_enable),
+        .clk(clk), .rst(rst),
         .fifo_out(rx_char), .fifo_read(fifo_read), .fifo_level(), .fifo_empty(fifo_empty),
         .clkdiv(clkdiv), .rx(rxd)
     );
@@ -129,7 +129,7 @@ module cvita_uart
     localparam TXD_STATE_DROP_FIFO = 3;
 
     always @(posedge clk) begin
-        if (rst) begin;
+        if (rst) begin
             txd_state <= TXD_STATE_RECV_CHDR;
             rxd_enable <= 1'b0;
         end

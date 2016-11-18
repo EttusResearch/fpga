@@ -1,83 +1,40 @@
 //
-// Copyright 2015 Ettus Research LLC
+// Copyright 2014 Ettus Research LLC
 //
-// Single cycle latency, depth of 2 "Flip flop" with no end to end combinatorial paths on
-// AXI control signals (such as i_tready depends on o_tready). Breaking the combinatorial
-// paths requires an additional register stage.
+
+
 //
-// Note: Once i_tvalid is asserted, it cannot be deasserted without i_tready having asserted
-//       indicating i_tdata has been read. This is an AXI stream requirement.
+// Single FIFO (register) with AXI4-STREAM interface
+//
 
-module axi_fifo_flop #(
-  parameter WIDTH = 32)
-(
-  input clk,
-  input reset,
-  input clear,
-  input [WIDTH-1:0] i_tdata,
-  input i_tvalid,
-  output i_tready,
-  output [WIDTH-1:0] o_tdata,
-  output o_tvalid,
-  input o_tready,
-  output [1:0] space,
-  output [1:0] occupied);
+module axi_fifo_flop
+  #(parameter WIDTH=32)
+   (input clk,
+    input reset,
+    input clear,
+    input [WIDTH-1:0] i_tdata,
+    input i_tvalid,
+    output i_tready,
+    output reg [WIDTH-1:0] o_tdata = 'd0,
+    output reg o_tvalid = 1'b0,
+    input o_tready,
+    output space,
+    output occupied);
 
-  reg [WIDTH-1:0] i_tdata_pipe, i_tdata_reg;
-  reg             i_tvalid_pipe, i_tvalid_reg;
+   assign i_tready = ~reset & (~o_tvalid | o_tready);
 
-  // Steady state data flow is typically: i_tdata -> i_tdata_reg -> o_tdata
-  // but can change to: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-  // depending on i_tvalid / o_tready combinations
-  always @(posedge clk) begin
-    if (reset | clear) begin
-      i_tvalid_reg  <= 1'b0;
-      i_tvalid_pipe <= 1'b0;
-      i_tdata_reg   <= {WIDTH{1'b0}};
-      i_tdata_pipe  <= {WIDTH{1'b0}};
-    end else begin
-      // Always accept new data if there is space in the pipeline
-      if (i_tready) begin
-        i_tdata_reg  <= i_tdata;
-        i_tvalid_reg <= i_tvalid;
-      end
-      if (o_tready) begin
-        if (i_tready) begin
-          // Only useful when data flow is i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-          i_tdata_pipe <= i_tdata_reg;
-          if (i_tvalid_pipe) begin
-            // Switch from: i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-            // to:          i_tdata -> i_tdata_reg -> o_tdata
-            // will occur if i_tvalid_reg = 0
-            i_tvalid_pipe <= i_tvalid_reg;
-          end
-        // Input is throttled
-        end else begin
-          i_tdata_pipe  <= i_tdata_reg;
-          i_tvalid_pipe <= i_tvalid_reg;
-          i_tvalid_reg  <= 1'b0; // Since i_tready = 0, we know we will not get new data this cycle
-        end
-      // Output is throttled
-      end else begin
-        // Space available in i_tdata_pipe to store i_tdata_reg.
-        // This is the case where data flow will change
-        // from: i_tdata -> i_tdata_reg -> o_tdata
-        // to:   i_tdata -> i_tdata_reg -> i_tdata_pipe -> o_tdata
-        // if i_tvalid_reg = 1
-        if (~i_tvalid_pipe) begin
-          i_tvalid_pipe <= i_tvalid_reg;
-          i_tdata_pipe  <= i_tdata_reg;
-        end
-      end
-    end
-  end
+   always @(posedge clk)
+     if(reset | clear)
+       o_tvalid <= 1'b0;
+     else
+       o_tvalid <= (i_tready & i_tvalid) | (o_tvalid & ~o_tready);
 
-  assign i_tready = ~(i_tvalid_reg & i_tvalid_pipe);
+   always @(posedge clk)
+     if(i_tvalid & i_tready)
+       o_tdata <= i_tdata;
 
-  assign o_tvalid = i_tvalid_pipe ? 1'b1         : i_tvalid_reg;
-  assign o_tdata  = i_tvalid_pipe ? i_tdata_pipe : i_tdata_reg;
+   // These aren't terribly useful, but include them for consistency
+   assign space = i_tready;
+   assign occupied = o_tvalid;
 
-  assign occupied = i_tvalid_reg + i_tvalid_pipe;
-  assign space = 2'd2 - occupied;
-
-endmodule
+endmodule // axi_fifo_flop

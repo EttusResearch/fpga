@@ -41,25 +41,19 @@ include $(IP_DIR)/mig_7series_0/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(IP_MIG_7SERIES_0_SRCS) \
-$(IP_MIG_7SERIES_0_OUTS) \
+$(IP_MIG_7SERIES_TG_SRCS) \
+$(IP_MIG_7SERIES_0_SIM_OUTS) \
 )
 
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/general/Makefile.srcs
-include $(BASE_DIR)/../sim/axi/Makefile.srcs
-
 # Define only one toplevel module
 SIM_TOP = dram_test_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 10000
 
 SIM_SRCS = \
-$(abspath dram_test_tb.sv) \
-$(IP_MIG_7SERIES_0_SIM_OUTS) \
-$(SIM_GENERAL_SRCS) \
-$(SIM_AXI_SRCS)
+$(abspath dram_test_tb.sv \
+)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

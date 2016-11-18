@@ -389,17 +389,15 @@ function viv_jtag_program {
     if [[ -z $1 ]]; then
         echo "Downloads a bitfile to an FPGA device using Vivado"
         echo ""
-        echo "Usage: viv_jtag_program <Bitfile Path> [<Device Address> = 0:0]"
+        echo "Usage: viv_jtag_program <Bitfile Path> [<FTDI Serial> = .] [<Device Address> = 0:0]"
         echo "- <Bitfile Path>: Path to a .bit FPGA configuration file"
+        echo "- <FTDI Serial>: Regular expression for filtering out devices by"
+        echo "                 their FTDI serial"
         echo "- <Device Address>: Address to the device in the form <Target>:<Device>"
         echo "                    Run viv_jtag_list to get a list of connected devices"
         return 1
     fi
-    if [ "$2" == "" ]; then
-        $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 | grep -v -E '(^$|^#|\*\*)'
-    else
-        $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $1 $2 | grep -v -E '(^$|^#|\*\*)'
-    fi
+    $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $* | grep -v -E '(^$|^#|\*\*)'
 }
 
 function probe_bitfile {

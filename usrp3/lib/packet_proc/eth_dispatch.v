@@ -1,4 +1,6 @@
-
+//
+// Copyright 2014 Ettus Research LLC
+//
 // Ethernet dispatcher
 //  Incoming ethernet packets are examined and sent to the correct destination
 //  There are 3 destinations, ZPU, other ethernet port (out), and vita router
@@ -55,7 +57,6 @@ module eth_dispatch
     output in_tready,
     // Output AXI-STream interface to VITA Radio Core
     output [63:0] vita_tdata,
-    output [3:0] vita_tuser,
     output vita_tlast,
     output vita_tvalid,
     input vita_tready,
@@ -109,10 +110,15 @@ module eth_dispatch
 
     // Output AXI-Stream interface to VITA Radio Core
     wire [63:0]   vita_pre_tdata;
-    wire [3:0]    vita_pre_tuser;
+    wire [3:0]    vita_pre_tuser; // thrown away
     wire          vita_pre_tlast;
     wire          vita_pre_tvalid;
     wire          vita_pre_tready;
+    // pre2 to allow for fixing packets which were padded by ethernet
+    wire [63:0]   vita_pre2_tdata;
+    wire          vita_pre2_tlast;
+    wire          vita_pre2_tvalid;
+    wire          vita_pre2_tready;
     // Output AXI-Stream interface to ZPU
     wire [63:0]   zpu_pre_tdata;
     wire [3:0]    zpu_pre_tuser;
@@ -457,7 +463,7 @@ module eth_dispatch
 
     assign {zpu_pre_tlast, zpu_pre_tuser, zpu_pre_tdata}    = {out_tlast, out_tuser, out_tdata};
     assign {xo_pre_tlast, xo_pre_tuser, xo_pre_tdata}       = {out_tlast, out_tuser, out_tdata};
-    assign {vita_pre_tlast, vita_pre_tuser, vita_pre_tdata} = {out_tlast, out_tuser, out_tdata};
+    assign {vita_pre_tlast, vita_pre_tuser, vita_pre_tdata} = {out_tlast, out_tuser, out_tdata};  // vita_pre_tuser thrown away
 
     //---------------------------------------------------------
     // Egress FIFO's
@@ -498,19 +504,23 @@ module eth_dispatch
         .occupied()
     );
 
-    axi_fifo #(.WIDTH(69),.SIZE(10))
+    axi_fifo #(.WIDTH(65),.SIZE(10))
     axi_fifo_vita (
         .clk(clk),
         .reset(reset),
         .clear(clear),
-        .i_tdata({vita_pre_tlast,vita_pre_tuser,vita_pre_tdata}),
+        .i_tdata({vita_pre_tlast,vita_pre_tdata}),
         .i_tvalid(vita_pre_tvalid),
         .i_tready(vita_pre_tready),
-        .o_tdata({vita_tlast,vita_tuser,vita_tdata}),
-        .o_tvalid(vita_tvalid),
-        .o_tready(vita_tready),
+        .o_tdata({vita_pre2_tlast,vita_pre2_tdata}),
+        .o_tvalid(vita_pre2_tvalid),
+        .o_tready(vita_pre2_tready),
         .space(),
         .occupied()
     );
 
+   fix_short_packet(.clk(clk), .reset(reset), .clear(clear),
+		    .i_tdata(vita_pre2_tdata), .i_tlast(vita_pre2_tlast), .i_tvalid(vita_pre2_tvalid), .i_tready(vita_pre2_tready),
+		    .o_tdata(vita_tdata), .o_tlast(vita_tlast), .o_tvalid(vita_tvalid), .o_tready(vita_tready));
+   
 endmodule // eth_dispatch

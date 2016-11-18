@@ -2,7 +2,7 @@
 # Copyright 2015 Ettus Research LLC
 #
 
-# NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
+# NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target 
 ##-------------------
 ##USRP E3X0 FPGA Help
 ##-------------------
@@ -14,8 +14,8 @@
 ## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
-# vivado_build($1=Device, $2=SG, $3=Definitions)
-vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 EXTRA_DEFS="$3"
+# vivado_build($1=Target, $2=Device, $3=SG, $4=Definitions)
+vivado_build = make -f Makefile.e300.inc $1 NAME=$@ ARCH=zynq PART_ID=$2/clg484/-$3 $4 EXTRA_DEFS="$4"
 
 # post_build($1=Device, $2=TYPE, $3=SG)
 post_build = @\
@@ -30,30 +30,46 @@ post_build = @\
 ##
 ##Supported Targets
 ##-----------------
-all: E3XX_idle E3XX_idle_sg3 E310 E310_sg3 ##(Default target)
+all: E3XX_idle E3XX_idle_sg3 E310_RFNOC E310_RFNOC_sg3 ##(Default target)
 
 E3XX_idle: ##Build USRP E3XX idle design.
-	$(call vivado_build,xc7z020,1,E3XX_IDLE_IMAGE=1)
+	$(call vivado_build,bin,xc7z020,1,E3XX_IDLE_IMAGE=1)
 	$(call post_build,E3XX,_idle,)
 
 E3XX_idle_sg3: ##Build USRP E3XX idle design.
-	$(call vivado_build,xc7z020,3,E3XX_IDLE_IMAGE=1 E3XX_SG3)
+	$(call vivado_build,bin,xc7z020,3,E3XX_IDLE_IMAGE=1 E3XX_SG3)
 	$(call post_build,E3XX,_idle_,sg3)
 
 E310: ##Build USRP E310 design for SG1 device.
-	$(call vivado_build,xc7z020,1,E310)
+	$(call vivado_build,bin,xc7z020,1,E310)
 	$(call post_build,E310,,)
 
 E310_sg3: ##Build USRP E310 design for SG3 device.
-	$(call vivado_build,xc7z020,3,E310 E3XX_SG3)
+	$(call vivado_build,bin,xc7z020,3,E310 E3XX_SG3)
 	$(call post_build,E310,_,sg3)
 
+E310_RFNOC: ##Build USRP E310 with RFNoC enabled.
+	$(call vivado_build,bin,xc7z020,1,RFNOC=1 E310=1)
+	$(call post_build,E310,_RFNOC,)
+
+E310_RFNOC_sg3: ##Build USRP E310 with RFNoC enabled.
+	$(call vivado_build,bin,xc7z020,3,RFNOC=1 E310=1)
+	$(call post_build,E310,_RFNOC,_sg3)
+
+E310_RFNOC_HLS: ##Build USRP E310 with RFNoC + Vivado HLS enabled.
+	$(call vivado_build,hls,xc7z020,1,RFNOC=1 E310=1 HLS=1)
+	$(call post_build,E310,_RFNOC_HLS,)
+
+E310_RFNOC_HLS_sg3: ##Build USRP E310 with RFNoC + Vivado HLS enabled.
+	$(call vivado_build,hls,xc7z020,3,RFNOC=1 E310=1 HLS=1)
+	$(call post_build,E310,_RFNOC_HLS,_sg3)
+
 E310_dram_test: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,xc7z020,1,E310 DRAM_TEST)
+	$(call vivado_build,bin,xc7z020,1,E310 DRAM_TEST)
 	$(call post_build,E310,_dram_test,)
 
 E310_dram_test_sg3: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,xc7z020,3,E310 DRAM_TEST E3XX_SG3)
+	$(call vivado_build,bin,xc7z020,3,E310 DRAM_TEST E3XX_SG3)
 	$(call post_build,E310,_dram_test_,sg3)
 
 clean: ##Clean up all itarget build outputs.
@@ -75,4 +91,4 @@ help: ## Show this help message.
 ##-----------------
 ##GUI=1     Launch the build in the Vivado GUI.
 
-.PHONY: all clean cleanall E310 E310_sg3 E3XX_idle E3XX_idle_SG3 help
+.PHONY: all clean cleanall E310 E310_sg3 E310_RFNOC E310_RFNOC_sg3 E310_RFNOC_HLS E310_RFNOC_HLS_sg3 E3XX_idle E3XX_idle_sg3 help
