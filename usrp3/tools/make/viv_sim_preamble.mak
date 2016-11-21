@@ -40,6 +40,9 @@ all:
 ipclean:
 	@rm -rf $(abspath ./build-ip)
 
+bdclean:
+	@rm -rf $(abspath ./build-bd)
+
 cleanall: ipclean clean
 
 help::

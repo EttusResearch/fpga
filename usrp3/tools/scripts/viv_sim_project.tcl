@@ -60,6 +60,12 @@ foreach src_file $design_srcs {
     } elseif [expr [lsearch {.ngc .edif} $src_ext] >= 0] {
         puts "BUILDER: Adding Netlist : $src_file"
         read_edif $src_file
+    } elseif [expr [lsearch {.bd} $src_ext] >= 0] {
+            puts "BUILDER: Adding Block Diagram: $src_file"
+            add_files -norecurse $src_file
+    } elseif [expr [lsearch {.bxml} $src_ext] >= 0] {
+            puts "BUILDER: Adding Block Diagram XML: $src_file"
+            add_files -norecurse $src_file
     } else {
         puts "BUILDER: \[WARNING\] File ignored!!!: $src_file"
     }

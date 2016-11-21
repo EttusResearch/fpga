@@ -30,6 +30,7 @@ else
 BUILD_DIR = $(abspath ./build)
 endif
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
+BD_BUILD_DIR = $(abspath ./build-bd/$(subst /,,$(PART_ID)))
 
 # -------------------------------------------------------------------
 # GUI Mode switch. Calling with GUI:=1 will launch Vivado GUI for build
@@ -55,6 +56,7 @@ endif
 .build_dirs:
 	@mkdir -p $(BUILD_DIR)
 	@mkdir -p $(IP_BUILD_DIR)
+	@mkdir -p $(BD_BUILD_DIR)
 
 .prereqs: .check_tool .build_dirs
 
