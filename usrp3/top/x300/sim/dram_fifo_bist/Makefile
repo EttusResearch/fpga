@@ -39,6 +39,7 @@ IP_DIR = ../../ip
 # *after* defining the IP_DIR
 include $(IP_DIR)/ddr3_32bit/Makefile.inc
 include $(IP_DIR)/axi_intercon_2x64_128/Makefile.inc
+include $(IP_DIR)/axi_intercon_2x64_128_bd/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 include $(IP_DIR)/axi4_dualport_sram/Makefile.inc
@@ -46,6 +47,7 @@ include $(IP_DIR)/axi4_dualport_sram/Makefile.inc
 DESIGN_SRCS += $(abspath \
 $(IP_DDR3_32BIT_SRCS) \
 $(IP_AXI_INTERCON_2X64_128_SRCS) \
+$(IP_AXI_INTERCON_2X64_128_BD_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(IP_AXI4_BRAM_SRCS) \

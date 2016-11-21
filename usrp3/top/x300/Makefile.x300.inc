@@ -15,10 +15,8 @@ TOP_MODULE = x300
 
 BASE_DIR = $(abspath ..)
 IP_DIR = $(abspath ./ip)
-BD_DIR = $(abspath ./bd)
 include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
-include $(BD_DIR)/Makefile.inc
 include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
 include $(LIB_DIR)/ip/Makefile.inc
@@ -109,7 +107,7 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
-bin: .prereqs $$(DESIGN_SRCS) bd ip 
+bin: .prereqs $$(DESIGN_SRCS) ip 
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
 hls: .prereqs hls_ip bin

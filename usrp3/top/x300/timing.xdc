@@ -597,14 +597,3 @@ set_false_path -to   [get_ports LED_*]
 set_false_path -to   [get_ports {SFPP*_RS0 SFPP*_RS1 SFPP*_SCL SFPP*_SDA SFPP*_TxDisable}]
 set_false_path -from [get_ports {SFPP*_ModAbs SFPP*_RxLOS SFPP*_SCL SFPP*_SDA SFPP*_TxFault}]
 set_false_path -to   [get_ports GPSDO_PWR_ENA]
-
-
-#*******************************************************************************
-## Area constrain AXI Interconnect
-
-create_pblock pblock_ax_intrcn
-add_cells_to_pblock [get_pblocks pblock_ax_intrcn] [get_cells -quiet [list x300_core/axi_intercon_*]]
-resize_pblock [get_pblocks pblock_ax_intrcn] -add {SLICE_X90Y100:SLICE_X153Y149}
-resize_pblock [get_pblocks pblock_ax_intrcn] -add {DSP48_X3Y40:DSP48_X5Y59}
-resize_pblock [get_pblocks pblock_ax_intrcn] -add {RAMB18_X3Y40:RAMB18_X6Y59}
-resize_pblock [get_pblocks pblock_ax_intrcn] -add {RAMB36_X3Y20:RAMB36_X6Y29}

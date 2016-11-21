@@ -7,6 +7,7 @@
 module axis_dram_fifo_single 
 #(
   parameter USE_SRAM_MEMORY = 0,
+  parameter USE_BD_INTERCON = 0,
   parameter SR_BASE = 0
 ) (
   input         bus_clk,
@@ -197,6 +198,137 @@ module axis_dram_fifo_single
     //---------------------------------------------------
     // We use an interconnect to connect to FIFOs.
     //---------------------------------------------------
+    if (USE_BD_INTERCON) begin
+    // Vivado Block Diagram interconnect.
+    axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_i (
+      .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
+      .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
+      //
+      //.S00_AXI_ARESET_OUT_N                 (), // output S00_AXI_ARESET_OUT_N
+      .S00_AXI_ACLK                         (ddr3_axi_clk_x2), // input S00_AXI_ACLK
+      .S00_AXI_ARESETN                      (~ddr3_axi_rst), // input S00_AXI_ARESETN
+      .S00_AXI_AWID                         (dma_axi_wr.addr.id), // input [0 : 0] S00_AXI_AWID
+      .S00_AXI_AWADDR                       (dma_axi_wr.addr.addr), // input [31 : 0] S00_AXI_AWADDR
+      .S00_AXI_AWLEN                        (dma_axi_wr.addr.len), // input [7 : 0] S00_AXI_AWLEN
+      .S00_AXI_AWSIZE                       (dma_axi_wr.addr.size), // input [2 : 0] S00_AXI_AWSIZE
+      .S00_AXI_AWBURST                      (dma_axi_wr.addr.burst), // input [1 : 0] S00_AXI_AWBURST
+      .S00_AXI_AWLOCK                       (dma_axi_wr.addr.lock), // input S00_AXI_AWLOCK
+      .S00_AXI_AWCACHE                      (dma_axi_wr.addr.cache), // input [3 : 0] S00_AXI_AWCACHE
+      .S00_AXI_AWPROT                       (dma_axi_wr.addr.prot), // input [2 : 0] S00_AXI_AWPROT
+      .S00_AXI_AWQOS                        (dma_axi_wr.addr.qos), // input [3 : 0] S00_AXI_AWQOS
+      .S00_AXI_AWVALID                      (dma_axi_wr.addr.valid), // input S00_AXI_AWVALID
+      .S00_AXI_AWREADY                      (dma_axi_wr.addr.ready), // output S00_AXI_AWREADY
+      .S00_AXI_WDATA                        (dma_axi_wr.data.data ^ forced_bit_err), // input [63 : 0] S00_AXI_WDATA
+      .S00_AXI_WSTRB                        (dma_axi_wr.data.strb), // input [7 : 0] S00_AXI_WSTRB
+      .S00_AXI_WLAST                        (dma_axi_wr.data.last), // input S00_AXI_WLAST
+      .S00_AXI_WVALID                       (dma_axi_wr.data.valid), // input S00_AXI_WVALID
+      .S00_AXI_WREADY                       (dma_axi_wr.data.ready), // output S00_AXI_WREADY
+      .S00_AXI_BID                          (dma_axi_wr.resp.id), // output [0 : 0] S00_AXI_BID
+      .S00_AXI_BRESP                        (dma_axi_wr.resp.resp), // output [1 : 0] S00_AXI_BRESP
+      .S00_AXI_BVALID                       (dma_axi_wr.resp.valid), // output S00_AXI_BVALID
+      .S00_AXI_BREADY                       (dma_axi_wr.resp.ready), // input S00_AXI_BREADY
+      .S00_AXI_ARID                         (dma_axi_rd.addr.id), // input [0 : 0] S00_AXI_ARID
+      .S00_AXI_ARADDR                       (dma_axi_rd.addr.addr), // input [31 : 0] S00_AXI_ARADDR
+      .S00_AXI_ARLEN                        (dma_axi_rd.addr.len), // input [7 : 0] S00_AXI_ARLEN
+      .S00_AXI_ARSIZE                       (dma_axi_rd.addr.size), // input [2 : 0] S00_AXI_ARSIZE
+      .S00_AXI_ARBURST                      (dma_axi_rd.addr.burst), // input [1 : 0] S00_AXI_ARBURST
+      .S00_AXI_ARLOCK                       (dma_axi_rd.addr.lock), // input S00_AXI_ARLOCK
+      .S00_AXI_ARCACHE                      (dma_axi_rd.addr.cache), // input [3 : 0] S00_AXI_ARCACHE
+      .S00_AXI_ARPROT                       (dma_axi_rd.addr.prot), // input [2 : 0] S00_AXI_ARPROT
+      .S00_AXI_ARQOS                        (dma_axi_rd.addr.qos), // input [3 : 0] S00_AXI_ARQOS
+      .S00_AXI_ARVALID                      (dma_axi_rd.addr.valid), // input S00_AXI_ARVALID
+      .S00_AXI_ARREADY                      (dma_axi_rd.addr.ready), // output S00_AXI_ARREADY
+      .S00_AXI_RID                          (dma_axi_rd.data.id), // output [0 : 0] S00_AXI_RID
+      .S00_AXI_RDATA                        (dma_axi_rd.data.data), // output [63 : 0] S00_AXI_RDATA
+      .S00_AXI_RRESP                        (dma_axi_rd.data.resp), // output [1 : 0] S00_AXI_RRESP
+      .S00_AXI_RLAST                        (dma_axi_rd.data.last), // output S00_AXI_RLAST
+      .S00_AXI_RVALID                       (dma_axi_rd.data.valid), // output S00_AXI_RVALID
+      .S00_AXI_RREADY                       (dma_axi_rd.data.ready), // input S00_AXI_RREADY
+      //
+      //.S01_AXI_ARESET_OUT_N                 (), // output S01_AXI_ARESET_OUT_N
+      .S01_AXI_ACLK                         (ddr3_axi_clk_x2), // input S01_AXI_ACLK
+      .S01_AXI_ARESETN                      (~ddr3_axi_rst), // input S01_AXI_ARESETN
+      .S01_AXI_AWID                         (0), // input [0 : 0] S01_AXI_AWID
+      .S01_AXI_AWADDR                       (0), // input [31 : 0] S01_AXI_AWADDR
+      .S01_AXI_AWLEN                        (0), // input [7 : 0] S01_AXI_AWLEN
+      .S01_AXI_AWSIZE                       (0), // input [2 : 0] S01_AXI_AWSIZE
+      .S01_AXI_AWBURST                      (0), // input [1 : 0] S01_AXI_AWBURST
+      .S01_AXI_AWLOCK                       (0), // input S01_AXI_AWLOCK
+      .S01_AXI_AWCACHE                      (0), // input [3 : 0] S01_AXI_AWCACHE
+      .S01_AXI_AWPROT                       (0), // input [2 : 0] S01_AXI_AWPROT
+      .S01_AXI_AWQOS                        (0), // input [3 : 0] S01_AXI_AWQOS
+      .S01_AXI_AWVALID                      (0), // input S01_AXI_AWVALID
+      .S01_AXI_AWREADY                      (), // output S01_AXI_AWREADY
+      .S01_AXI_WDATA                        (0), // input [63 : 0] S01_AXI_WDATA
+      .S01_AXI_WSTRB                        (0), // input [7 : 0] S01_AXI_WSTRB
+      .S01_AXI_WLAST                        (0), // input S01_AXI_WLAST
+      .S01_AXI_WVALID                       (0), // input S01_AXI_WVALID
+      .S01_AXI_WREADY                       (), // output S01_AXI_WREADY
+      .S01_AXI_BID                          (), // output [0 : 0] S01_AXI_BID
+      .S01_AXI_BRESP                        (), // output [1 : 0] S01_AXI_BRESP
+      .S01_AXI_BVALID                       (), // output S01_AXI_BVALID
+      .S01_AXI_BREADY                       (0), // input S01_AXI_BREADY
+      .S01_AXI_ARID                         (0), // input [0 : 0] S01_AXI_ARID
+      .S01_AXI_ARADDR                       (0), // input [31 : 0] S01_AXI_ARADDR
+      .S01_AXI_ARLEN                        (0), // input [7 : 0] S01_AXI_ARLEN
+      .S01_AXI_ARSIZE                       (0), // input [2 : 0] S01_AXI_ARSIZE
+      .S01_AXI_ARBURST                      (0), // input [1 : 0] S01_AXI_ARBURST
+      .S01_AXI_ARLOCK                       (0), // input S01_AXI_ARLOCK
+      .S01_AXI_ARCACHE                      (0), // input [3 : 0] S01_AXI_ARCACHE
+      .S01_AXI_ARPROT                       (0), // input [2 : 0] S01_AXI_ARPROT
+      .S01_AXI_ARQOS                        (0), // input [3 : 0] S01_AXI_ARQOS
+      .S01_AXI_ARVALID                      (0), // input S01_AXI_ARVALID
+      .S01_AXI_ARREADY                      (), // output S01_AXI_ARREADY
+      .S01_AXI_RID                          (), // output [0 : 0] S01_AXI_RID
+      .S01_AXI_RDATA                        (), // output [63 : 0] S01_AXI_RDATA
+      .S01_AXI_RRESP                        (), // output [1 : 0] S01_AXI_RRESP
+      .S01_AXI_RLAST                        (), // output S01_AXI_RLAST
+      .S01_AXI_RVALID                       (), // output S01_AXI_RVALID
+      .S01_AXI_RREADY                       (0), // input S01_AXI_RREADY
+      //
+      //.M00_AXI_ARESET_OUT_N                 (), // output M00_AXI_ARESET_OUT_N
+      .M00_AXI_ACLK                         (ddr3_axi_clk), // input M00_AXI_ACLK
+      .M00_AXI_ARESETN                      (~ddr3_axi_rst), // input M00_AXI_ARESETN
+      .M00_AXI_AWID                         (mig_axi_wr.addr.id), // output [3 : 0] M00_AXI_AWID
+      .M00_AXI_AWADDR                       (mig_axi_wr.addr.addr), // output [31 : 0] M00_AXI_AWADDR
+      .M00_AXI_AWLEN                        (mig_axi_wr.addr.len), // output [7 : 0] M00_AXI_AWLEN
+      .M00_AXI_AWSIZE                       (mig_axi_wr.addr.size), // output [2 : 0] M00_AXI_AWSIZE
+      .M00_AXI_AWBURST                      (mig_axi_wr.addr.burst), // output [1 : 0] M00_AXI_AWBURST
+      .M00_AXI_AWLOCK                       (mig_axi_wr.addr.lock), // output M00_AXI_AWLOCK
+      .M00_AXI_AWCACHE                      (mig_axi_wr.addr.cache), // output [3 : 0] M00_AXI_AWCACHE
+      .M00_AXI_AWPROT                       (mig_axi_wr.addr.prot), // output [2 : 0] M00_AXI_AWPROT
+      .M00_AXI_AWQOS                        (mig_axi_wr.addr.qos), // output [3 : 0] M00_AXI_AWQOS
+      .M00_AXI_AWVALID                      (mig_axi_wr.addr.valid), // output M00_AXI_AWVALID
+      .M00_AXI_AWREADY                      (mig_axi_wr.addr.ready), // input M00_AXI_AWREADY
+      .M00_AXI_WDATA                        (mig_axi_wr.data.data), // output [127 : 0] M00_AXI_WDATA
+      .M00_AXI_WSTRB                        (mig_axi_wr.data.strb), // output [15 : 0] M00_AXI_WSTRB
+      .M00_AXI_WLAST                        (mig_axi_wr.data.last), // output M00_AXI_WLAST
+      .M00_AXI_WVALID                       (mig_axi_wr.data.valid), // output M00_AXI_WVALID
+      .M00_AXI_WREADY                       (mig_axi_wr.data.ready), // input M00_AXI_WREADY
+      .M00_AXI_BID                          (mig_axi_wr.resp.id), // input [3 : 0] M00_AXI_BID
+      .M00_AXI_BRESP                        (mig_axi_wr.resp.resp), // input [1 : 0] M00_AXI_BRESP
+      .M00_AXI_BVALID                       (mig_axi_wr.resp.valid), // input M00_AXI_BVALID
+      .M00_AXI_BREADY                       (mig_axi_wr.resp.ready), // output M00_AXI_BREADY
+      .M00_AXI_ARID                         (mig_axi_rd.addr.id), // output [3 : 0] M00_AXI_ARID
+      .M00_AXI_ARADDR                       (mig_axi_rd.addr.addr), // output [31 : 0] M00_AXI_ARADDR
+      .M00_AXI_ARLEN                        (mig_axi_rd.addr.len), // output [7 : 0] M00_AXI_ARLEN
+      .M00_AXI_ARSIZE                       (mig_axi_rd.addr.size), // output [2 : 0] M00_AXI_ARSIZE
+      .M00_AXI_ARBURST                      (mig_axi_rd.addr.burst), // output [1 : 0] M00_AXI_ARBURST
+      .M00_AXI_ARLOCK                       (mig_axi_rd.addr.lock), // output M00_AXI_ARLOCK
+      .M00_AXI_ARCACHE                      (mig_axi_rd.addr.cache), // output [3 : 0] M00_AXI_ARCACHE
+      .M00_AXI_ARPROT                       (mig_axi_rd.addr.prot), // output [2 : 0] M00_AXI_ARPROT
+      .M00_AXI_ARQOS                        (mig_axi_rd.addr.qos), // output [3 : 0] M00_AXI_ARQOS
+      .M00_AXI_ARVALID                      (mig_axi_rd.addr.valid), // output M00_AXI_ARVALID
+      .M00_AXI_ARREADY                      (mig_axi_rd.addr.ready), // input M00_AXI_ARREADY
+      .M00_AXI_RID                          (mig_axi_rd.data.id), // input [3 : 0] M00_AXI_RID
+      .M00_AXI_RDATA                        (mig_axi_rd.data.data), // input [127 : 0] M00_AXI_RDATA
+      .M00_AXI_RRESP                        (mig_axi_rd.data.resp), // input [1 : 0] M00_AXI_RRESP
+      .M00_AXI_RLAST                        (mig_axi_rd.data.last), // input M00_AXI_RLAST
+      .M00_AXI_RVALID                       (mig_axi_rd.data.valid), // input M00_AXI_RVALID
+      .M00_AXI_RREADY                       (mig_axi_rd.data.ready) // output M00_AXI_RREADY
+    );
+    end else begin
+    //Original IP interconnect
     axi_intercon_2x64_128 axi_intercon_2x64_128_i (
       .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
       .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
@@ -321,6 +453,7 @@ module axis_dram_fifo_single
       .M00_AXI_RVALID                       (mig_axi_rd.data.valid), // input M00_AXI_RVALID
       .M00_AXI_RREADY                       (mig_axi_rd.data.ready) // output M00_AXI_RREADY
     );
+    end 
   
     //---------------------------------------------------
     // MIG
