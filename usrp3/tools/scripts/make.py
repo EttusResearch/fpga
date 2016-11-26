@@ -112,6 +112,10 @@ def setup_parser():
         help="Open Vivado GUI during the FPGA building process",
         action="store_true")
     parser.add_argument(
+        "-c", "--clean-all",
+        help="Cleans the IP before a new build",
+        action="store_true")
+    parser.add_argument(
         "blocks",
         help="List block names to instantiate.",
         default="",
@@ -257,7 +261,10 @@ def build(args):
         print("changing temporarily working directory to {0}".\
                 format(build_dir))
         os.chdir(build_dir)
-        make_cmd = "source ./setupenv.sh && make " + dtarget(args)
+        make_cmd = "source ./setupenv.sh "
+        if(args.clean_all):
+            make_cmd = make_cmd + "&& make cleanall "
+        make_cmd = make_cmd + "&& make " + dtarget(args)
         if(args.GUI):
             make_cmd = make_cmd + " GUI=1"
         ret_val = os.system(make_cmd)
