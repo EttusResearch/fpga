@@ -12,7 +12,7 @@ module fft_shift #(
   parameter WIDTH = 32)
 (
   input clk, input reset,
-  input [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata, input fft_size_log2_tvalid, output fft_size_log2_tready,
+  input [$clog2(MAX_FFT_SIZE_LOG2+1)-1:0] fft_size_log2_tdata, input fft_size_log2_tvalid, output fft_size_log2_tready,
   input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [MAX_FFT_SIZE_LOG2-1:0] i_tuser,
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
@@ -20,8 +20,9 @@ module fft_shift #(
   reg ping_pong;
   reg loading_pkt;
   reg [2:0] reconfig_stall;
-  reg [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_latch;
-  reg [MAX_FFT_SIZE_LOG2-1:0] fft_size, fft_size_minus_1, fft_shift_mask;
+  reg [$clog2(MAX_FFT_SIZE_LOG2+1)-1:0] fft_size_log2_latch;
+  reg [MAX_FFT_SIZE_LOG2:0] fft_size;
+  reg [MAX_FFT_SIZE_LOG2-1:0] fft_size_minus_1, fft_shift_mask;
   wire [WIDTH-1:0] ping_rd_data, pong_rd_data;
   reg [MAX_FFT_SIZE_LOG2-1:0] ping_rd_addr, pong_rd_addr;
   // t_user is the FFT index, this XOR is how the natural order FFT output is flipped to
