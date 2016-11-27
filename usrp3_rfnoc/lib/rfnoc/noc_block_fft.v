@@ -166,9 +166,9 @@ module noc_block_fft #(
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(fft_reset), .changed());
 
-  wire [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata;
+  wire [$clog2(MAX_FFT_SIZE_LOG2+1)-1:0] fft_size_log2_tdata;
   axi_setting_reg #(
-    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH($clog2(MAX_FFT_SIZE_LOG2)))
+    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH($clog2(MAX_FFT_SIZE_LOG2+1)))
   sr_fft_size_log2 (
     .clk(ce_clk), .reset(ce_rst), .error_stb(),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
