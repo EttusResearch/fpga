@@ -141,8 +141,8 @@ module ppsloop(
 
 
   reg [5:0] pcnt;
-  wire [5:0]  nxt_pcnt = rising_r ? 6'b0 : pcnt+1'b1;
   reg pcnt_ovfl;
+  wire [5:0]  nxt_pcnt = (rising_r | pcnt_ovfl) ? 6'b0 : pcnt+1'b1;
   always @(posedge clk) begin
     pcnt <= nxt_pcnt;
     if (rcnt_ovfl)
