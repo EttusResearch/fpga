@@ -38,7 +38,6 @@ IP_DIR = ../../ip
 # Include makefiles and sources for all IP components
 # *after* defining the IP_DIR
 include $(IP_DIR)/ddr3_32bit/Makefile.inc
-include $(IP_DIR)/axi_intercon_2x64_128/Makefile.inc
 include $(IP_DIR)/axi_intercon_2x64_128_bd/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
