@@ -119,7 +119,7 @@ module x300_core (
    input           ddr3_axi_rst,
    input           ddr3_running,
    // Write Address Ports
-   output  [3:0]   ddr3_axi_awid,
+   output          ddr3_axi_awid,
    output  [31:0]  ddr3_axi_awaddr,
    output  [7:0]   ddr3_axi_awlen,
    output  [2:0]   ddr3_axi_awsize,
@@ -138,11 +138,11 @@ module x300_core (
    input           ddr3_axi_wready,
    // Write Response Ports
    output          ddr3_axi_bready,
-   input [3:0]     ddr3_axi_bid,
+   input           ddr3_axi_bid,
    input [1:0]     ddr3_axi_bresp,
    input           ddr3_axi_bvalid,
    // Read Address Ports
-   output  [3:0]   ddr3_axi_arid,
+   output          ddr3_axi_arid,
    output  [31:0]  ddr3_axi_araddr,
    output  [7:0]   ddr3_axi_arlen,
    output  [2:0]   ddr3_axi_arsize,
@@ -155,7 +155,7 @@ module x300_core (
    input           ddr3_axi_arready,
    // Read Data Ports
    output          ddr3_axi_rready,
-   input [3:0]     ddr3_axi_rid,
+   input           ddr3_axi_rid,
    input [255:0]   ddr3_axi_rdata,
    input [1:0]     ddr3_axi_rresp,
    input           ddr3_axi_rlast,
@@ -358,12 +358,12 @@ module x300_core (
    wire [1:0]  s00_axi_rresp, s01_axi_rresp;
    wire [0:0]  s00_axi_ruser, s01_axi_ruser;
 
-   axi_intercon_2x64_128 axi_intercon_2x64_128_i (
+   axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_bd_i (
       .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
       .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
       //
-      .S00_AXI_ARESET_OUT_N(), // output S00_AXI_ARESET_OUT_N
       .S00_AXI_ACLK(ddr3_axi_clk_x2), // input S00_AXI_ACLK
+      .S00_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
       .S00_AXI_AWID(s00_axi_awid), // input [0 : 0] S00_AXI_AWID
       .S00_AXI_AWADDR(s00_axi_awaddr), // input [31 : 0] S00_AXI_AWADDR
       .S00_AXI_AWLEN(s00_axi_awlen), // input [7 : 0] S00_AXI_AWLEN
@@ -402,8 +402,8 @@ module x300_core (
       .S00_AXI_RVALID(s00_axi_rvalid), // output S00_AXI_RVALID
       .S00_AXI_RREADY(s00_axi_rready), // input S00_AXI_RREADY
       //
-      .S01_AXI_ARESET_OUT_N(), // output S01_AXI_ARESET_OUT_N
       .S01_AXI_ACLK(ddr3_axi_clk_x2), // input S01_AXI_ACLK
+      .S01_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
       .S01_AXI_AWID(s01_axi_awid), // input [0 : 0] S01_AXI_AWID
       .S01_AXI_AWADDR(s01_axi_awaddr), // input [31 : 0] S01_AXI_AWADDR
       .S01_AXI_AWLEN(s01_axi_awlen), // input [7 : 0] S01_AXI_AWLEN
@@ -442,8 +442,8 @@ module x300_core (
       .S01_AXI_RVALID(s01_axi_rvalid), // output S01_AXI_RVALID
       .S01_AXI_RREADY(s01_axi_rready), // input S01_AXI_RREADY
       //
-      .M00_AXI_ARESET_OUT_N(), // output M00_AXI_ARESET_OUT_N
       .M00_AXI_ACLK(ddr3_axi_clk), // input M00_AXI_ACLK
+      .M00_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
       .M00_AXI_AWID(ddr3_axi_awid), // output [3 : 0] M00_AXI_AWID
       .M00_AXI_AWADDR(ddr3_axi_awaddr), // output [31 : 0] M00_AXI_AWADDR
       .M00_AXI_AWLEN(ddr3_axi_awlen), // output [7 : 0] M00_AXI_AWLEN

@@ -46,6 +46,8 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
     variable g_output_dir
     variable g_source_files
 
+    variable bd_files ""
+
     file delete -force $g_output_dir/build.rpt
 
     if {$save_to_disk == 1} {
@@ -73,6 +75,12 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         } elseif [expr [lsearch {.ngc .edif} $src_ext] >= 0] {
             puts "BUILDER: Adding Netlist : $src_file"
             read_edif $src_file
+        } elseif [expr [lsearch {.bd} $src_ext] >= 0] {
+            puts "BUILDER: Adding Block Design to list (added after IP regeneration): $src_file"
+            append bd_files "$src_file "
+        } elseif [expr [lsearch {.bxml} $src_ext] >= 0] {
+            puts "BUILDER: Adding Block Design XML to list (added after IP regeneration): $src_file"
+            append bd_files "$src_file "
         } else {
             puts "BUILDER: \[WARNING\] File ignored!!!: $src_file"
         }
@@ -81,6 +89,12 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
     puts "BUILDER: Refreshing IP"
     generate_target all [get_ips *]
     synth_ip [get_ips *]
+
+    #might seem silly, but we need to add the bd files after the ip regeneration.
+    foreach file $bd_files {
+        puts "BUILDER: Adding file from Block Design list: $file"
+        add_files -norecurse $file
+    } 
 
     puts "BUILDER: Setting $g_top_module as the top module"
     set_property top $g_top_module [current_fileset]

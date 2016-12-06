@@ -14,6 +14,11 @@
 `include "sim_axi4_lib.svh"
 `include "sim_set_rb_lib.svh"
 
+//`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
+`define USE_SRAM_MIG 0      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
+`define USE_BD_INTERCON 1     //Use the Block Design Axi Interconnect
+
+
 module dram_fifo_bist_tb();
   `TEST_BENCH_INIT("dram_fifo_bist_tb",`NUM_TEST_CASES,`NS_PER_TICK)
 
@@ -48,8 +53,9 @@ module dram_fifo_bist_tb();
   localparam SR_BIST_BASE = SR_FIFO_BASE + 4;
 
   axis_dram_fifo_single #(
-    .USE_SRAM_MEMORY(1),    //Use SRAM for speed. The DRAM MIG is too slow!
-    .SR_BASE(SR_FIFO_BASE)
+  .USE_SRAM_MEMORY(`USE_SRAM_MIG),
+  .USE_BD_INTERCON(`USE_BD_INTERCON), 
+  .SR_BASE(SR_FIFO_BASE)
   ) dut_single (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),

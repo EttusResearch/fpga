@@ -1074,7 +1074,7 @@ module x300
    wire        ddr3_running;           // DRAM calibration complete.
 
    // Slave Interface Write Address Ports
-   wire [3:0]  s_axi_awid;
+   wire        s_axi_awid;
    wire [31:0] s_axi_awaddr;
    wire [7:0]  s_axi_awlen;
    wire [2:0]  s_axi_awsize;
@@ -1093,11 +1093,11 @@ module x300
    wire     s_axi_wready;
    // Slave Interface Write Response Ports
    wire     s_axi_bready;
-   wire [3:0]   s_axi_bid;
+   wire     s_axi_bid;
    wire [1:0]   s_axi_bresp;
    wire     s_axi_bvalid;
    // Slave Interface Read Address Ports
-   wire [3:0]   s_axi_arid;
+   wire     s_axi_arid;
    wire [31:0]  s_axi_araddr;
    wire [7:0]   s_axi_arlen;
    wire [2:0]   s_axi_arsize;
@@ -1110,7 +1110,7 @@ module x300
    wire     s_axi_arready;
    // Slave Interface Read Data Ports
    wire     s_axi_rready;
-   wire [3:0]   s_axi_rid;
+   wire     s_axi_rid;
    wire [255:0] s_axi_rdata;
    wire [1:0]   s_axi_rresp;
    wire     s_axi_rlast;

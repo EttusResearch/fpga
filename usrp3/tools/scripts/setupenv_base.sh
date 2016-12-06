@@ -344,6 +344,7 @@ function viv_ls_ip {
         return 1
     fi
     $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs list $part_name | grep -v -E '(^$|^#|\*\*)'
+    test ${PIPESTATUS[0]} -eq 0
 }
 
 function viv_upgrade_ip {
@@ -365,6 +366,7 @@ function viv_upgrade_ip {
             echo "Upgrading $xci_path..."
             part_name=$(python $REPO_BASE_PATH/tools/scripts/viv_ip_xci_editor.py read_part $xci_path)
             $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs upgrade $part_name $(resolve_viv_path $xci_path) | grep -v -E '(^$|^#|\*\*)'
+            test ${PIPESTATUS[0]} -eq 0
         else
             echo "ERROR: IP $xci_path not found."
             return 1
@@ -383,6 +385,7 @@ function viv_hw_console {
 
 function viv_jtag_list {
     $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs list | grep -v -E '(^$|^#|\*\*)'
+    test ${PIPESTATUS[0]} -eq 0
 }
 
 function viv_jtag_program {
@@ -398,6 +401,7 @@ function viv_jtag_program {
         return 1
     fi
     $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_HW_UTILS) -nolog -nojournal -tclargs program $* | grep -v -E '(^$|^#|\*\*)'
+    test ${PIPESTATUS[0]} -eq 0
 }
 
 function probe_bitfile {

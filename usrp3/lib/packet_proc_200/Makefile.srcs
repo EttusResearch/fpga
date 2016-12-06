@@ -1,0 +1,11 @@
+#
+# Copyright 2013 Ettus Research LLC
+#
+
+##################################################
+# Packet Processing Sources
+##################################################
+PACKET_PROC_200_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/packet_proc_200/, \
+cvita_dest_lookup_legacy.v \
+source_flow_control_legacy.v \
+))

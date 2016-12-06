@@ -19,7 +19,6 @@ axi_fifo_flop2.v \
 axi_fifo_flop.v \
 axi_fifo_short.v \
 axi_fifo.v \
-axi_fifo_legacy.v \
 axi_filter_mux4.v \
 axi_loopback.v \
 axi_mux4.v \

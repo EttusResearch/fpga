@@ -16,14 +16,18 @@ CUSTOM_DEFS =
 include ../Makefile.common
 include ../../lib/gpif2/Makefile.srcs
 include ../../lib/fifo/Makefile.srcs
+include ../../lib/fifo_200/Makefile.srcs
 include ../../lib/dsp/Makefile.srcs
 include ../../lib/control/Makefile.srcs
+include ../../lib/control_200/Makefile.srcs
 include ../../lib/packet_proc/Makefile.srcs
+include ../../lib/packet_proc_200/Makefile.srcs
 include ../../lib/timing/Makefile.srcs
 include ../../lib/vita/Makefile.srcs
+include ../../lib/vita_200/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
-include ../../lib/radio/Makefile.srcs
+include ../../lib/radio_200/Makefile.srcs
 include ../../lib/io_cap_gen/Makefile.srcs
 include coregen_dsp/Makefile.srcs
 
@@ -76,17 +80,17 @@ ifeq ($(NAME),B210)
 TOP_SRCS+=gpio.ucf
 endif
 
-SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
-$(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) \
+SOURCES = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) $(FIFO_200_SRCS) \
+$(CONTROL_LIB_SRCS) $(CONTROL_LIB_200_SRCS) $(SDR_LIB_SRCS) \
 $(TIMING_SRCS) $(OPENCORES_SRCS) \
 $(VRT_SRCS) $(COREGEN_SRCS) \
-$(GPIF2_SRCS) $(PACKET_PROC_SRCS) \
+$(GPIF2_SRCS) $(PACKET_PROC_SRCS) $(PACKET_PROC_200_SRCS) \
 $(WISHBONE_SRCS) \
 $(TIMING_SRCS) \
 $(DSP_SRCS) \
-$(VITA_SRCS) \
+$(VITA_SRCS) $(VITA_200_SRCS) \
 $(AXI_SRCS) \
-$(RADIO_LEGACY_SRCS) \
+$(RADIO_200_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(COREGEN_DSP_SRCS)
 

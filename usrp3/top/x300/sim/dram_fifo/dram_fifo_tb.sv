@@ -15,7 +15,8 @@
 `include "sim_set_rb_lib.svh"
 
 //`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
-//`define USE_SRAM_MIG      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
+`define USE_SRAM_MIG 0      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
+`define USE_BD_INTERCON 1     //Use the Block Design Axi Interconnect
 
 module dram_fifo_tb();
   `TEST_BENCH_INIT("dram_fifo_tb",`NUM_TEST_CASES,`NS_PER_TICK)
@@ -54,11 +55,10 @@ module dram_fifo_tb();
 
 `else
 
-  axis_dram_fifo_single 
-`ifdef USE_SRAM_MIG
-  #(.USE_SRAM_MEMORY(1)) 
-`endif
-  dut_single
+  axis_dram_fifo_single #(
+  .USE_SRAM_MEMORY(`USE_SRAM_MIG),
+  .USE_BD_INTERCON(`USE_BD_INTERCON) 
+  ) dut_single
   (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
