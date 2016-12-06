@@ -406,7 +406,7 @@ module radio #(
 	      .i_out(rx_corr_i), .q_out(rx_corr_q),
 	      .run(run_rx), .debug());
 
-	   ddc_chain_x300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
+	   ddc_chain_e300 #(.BASE(SR_RX_DSP), .DSPNO(0), .WIDTH(24)) ddc_chain
 	     (.clk(radio_clk), .rst(radio_rst), .clr(1'b0),
 	      .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
 	      .rx_fe_i(rx_corr_i),.rx_fe_q(rx_corr_q),

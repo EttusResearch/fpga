@@ -23,11 +23,13 @@ include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/zynq_fifo/Makefile.srcs
 include $(LIB_DIR)/control/Makefile.srcs
+include $(LIB_DIR)/control_200/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
+include $(LIB_DIR)/packet_proc_200/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
+include $(LIB_DIR)/vita_200/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 
 ##################################################
@@ -37,7 +39,9 @@ TOP_SRCS = e3xx_ps.v \
            ppsloop.v \
            spi_slave.v \
            axi_pmu.v \
-           axi_dummy.v
+           axi_dummy.v \
+	   radio.v \
+           ddc_chain_e300.v
 
 ifeq (E310,$(findstring E310, $(EXTRA_DEFS)))
 TOP_SRCS += e310.v
@@ -63,11 +67,13 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(ZYNQ_FIFO_SRCS) \
           $(FIFO_SRCS) \
           $(VITA_SRCS) \
+          $(VITA_200_SRCS) \
           $(TIMING_SRCS) \
           $(DSP_SRCS) \
           $(PACKET_PROC_SRCS) \
+          $(PACKET_PROC_200_SRCS) \
           $(CONTROL_LIB_SRCS) \
-          $(RADIO_SRCS) \
+          $(CONTROL_LIB_200_SRCS) \
           $(CAT_CAP_GEN_SRCS) \
           $(COREGEN_DSP_SRCS) \
           $(IP_XCI_SRCS) \
