@@ -239,7 +239,7 @@ module x300
 );
 
    wire         radio_clk, radio_clk_2x, dac_dci_clk;
-   wire         global_rst, radio_rst, bus_rst, bus_rst_div2, adc_idlyctrl_rst;
+   wire         global_rst, radio_rst, bus_rst, bus_rst_div2, ce_rst, adc_idlyctrl_rst;
    wire [3:0]   sw_rst;
    wire [2:0]   led0, led1;
 
@@ -251,7 +251,7 @@ module x300
    //
    ////////////////////////////////////////////////////////////////////
 
-   wire     fpga_clk125, bus_clk, bus_clk_div2, ioport2_clk, rio40_clk, ioport2_idelay_ref_clk;
+   wire     fpga_clk125, bus_clk, bus_clk_div2, ce_clk, ioport2_clk, rio40_clk, ioport2_idelay_ref_clk;
    wire     bus_clk_locked, rio40_clk_locked, rio40_clk_reset;
 
    IBUFG fpga_125MHz_clk_buf (
@@ -262,9 +262,10 @@ module x300
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
    //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
    //----------------------------------------------------------------------------
-   // CLK_OUT1___166.667______0.000______50.0______113.052_____96.948
-   // CLK_OUT2___125.000______0.000______50.0______119.348_____96.948
-   // CLK_OUT3____83.333______0.000______50.0______129.296_____96.948
+   // CLK_OUT1___166.667______0.000______50.0_______87.118_____73.940
+   // CLK_OUT2___125.000______0.000______50.0_______91.831_____73.940
+   // CLK_OUT3____83.333______0.000______50.0_______98.933_____73.940
+   // CLK_OUT4___214.286______0.000______50.0_______83.210_____73.940
    //
    //----------------------------------------------------------------------------
    // Input Clock   Freq (MHz)    Input Jitter (UI)
@@ -279,6 +280,7 @@ module x300
       .CLK_OUT1(bus_clk),
       .CLK_OUT2_UNBUF(/* unused */),    //This exists to make the IP generate a 125MHz FB clock
       .CLK_OUT3(bus_clk_div2), //bus_clk divided by 2. used by sc/zpu
+      .CLK_OUT4(ce_clk),
       .CLKFB_OUT(ioport2_clk_unbuf),
       .LOCKED(bus_clk_locked));
 
@@ -408,6 +410,12 @@ module x300
       .clk(bus_clk),
       .reset_in(global_rst || !bus_clk_locked || sw_rst[3]),
       .reset_out(adc_idlyctrl_rst)
+   );
+
+   reset_sync ce_reset_sync (
+      .clk(ce_clk),
+      .reset_in(global_rst || !bus_clk_locked),
+      .reset_out(ce_rst)
    );
 
    ////////////////////////////////////////////////////////////////////
@@ -1257,6 +1265,8 @@ module x300
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
       .bus_clk_div2(bus_clk_div2),
+      .ce_clk(ce_clk),
+      .ce_rst(ce_rst),
       // Radio0 signals
       .rx0(rx0), .tx0(tx0), 
       .db0_gpio_in(db0_gpio_in), .db0_gpio_out(db0_gpio_out), .db0_gpio_ddr(db0_gpio_ddr),
