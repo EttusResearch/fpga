@@ -10,7 +10,12 @@ export VIV_PLATFORM=$(uname -o)
 
 # Vivado specific
 if [[ $VIV_PLATFORM = "Cygwin" ]]; then
-    VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado"
+    if [[ -d "/cygdrive/c/Xilinx/Vivado_Lab" ]]; then
+        VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado_Lab"
+    else
+        VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado"
+    fi
+    VIVADO_HLS_BASE_PATH="/cygdrive/c/Xilinx/Vivado_HLS"
     MODELSIM_BASE_PATH="/cygdrive/c/mentor/modelsim"
 else
     if [[ -d "/opt/Xilinx/Vivado_Lab" ]]; then
@@ -18,6 +23,7 @@ else
     else
         VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
     fi
+    VIVADO_HLS_BASE_PATH="/opt/Xilinx/Vivado_HLS"
     MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 fi
 
@@ -65,18 +71,21 @@ function help {
 
 Usage: source setupenv.sh [--help|-h] [--vivado-path=<PATH>] [--modelsim-path=<PATH>]
 
---vivado-path   : Path to the base install directory for Xilinx Vivado
-                  (Default: /opt/Xilinx/Vivado or /opt/Xilinx/Vivado_Lab)
---modelsim-path : Path to the base install directory for Modelsim (optional simulation tool)
-                  (Default: /opt/mentor/modelsim)
---help -h       : Shows this message.
+--vivado-path     : Path to the base install directory for Xilinx Vivado
+                    (Default: /opt/Xilinx/Vivado or /opt/Xilinx/Vivado_Lab)
+--vivado-hls-path : Path to the base install directory for Xilinx Vivado
+                    (Default: /opt/Xilinx/Vivado_HLS)
+--modelsim-path   : Path to the base install directory for Modelsim (optional simulation tool)
+                    (Default: /opt/mentor/modelsim)
+--help -h         : Shows this message.
 
 This script sets up the environment required to build FPGA images for the Ettus Research
 ${DISPLAY_NAME}. It will also optionally set up the the environment to run the
 Modelsim simulator (although this tool is not required).
 
 Required tools: Xilinx Vivado $VIVADO_VER (Synthesis and Simulation)
-Optional tools: Mentor Graphics Modelsim (Simulation)
+Optional tools: Xilinx Vivado HLS $VIVADO_VER (High-Level Synthesis)
+                Mentor Graphics Modelsim (Simulation)
 
 EOHELP
 }
@@ -108,6 +117,13 @@ for i in "$@"; do
         --vivado-path)
             PARSE_STATE="vivado-path"
         ;;
+        --vivado-hls-path=*)
+            VIVADO_HLS_BASE_PATH="${i#*=}"
+            PARSE_STATE=""
+        ;;
+        --vivado-hls-path)
+            PARSE_STATE="vivado-hls-path"
+        ;;
         --vivado-version=*)
             VIVADO_USER_VER="${i#*=}"
             PARSE_STATE=""
@@ -127,6 +143,10 @@ for i in "$@"; do
             case $PARSE_STATE in
                 vivado-path)
                     VIVADO_BASE_PATH="$i"
+                    PARSE_STATE=""
+                ;;
+                vivado-hls-path)
+                    VIVADO_HLS_BASE_PATH="$i"
                     PARSE_STATE=""
                 ;;
                 vivado-version)
@@ -158,6 +178,7 @@ if [[ ${VIVADO_VER^^} = "CMDLINE_ARG" ]]; then
     fi
 fi
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
+export VIVADO_HLS_PATH=$VIVADO_HLS_BASE_PATH/$VIVADO_VER
 
 echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}..."
 #----------------------------------------------------------------------------
@@ -165,6 +186,11 @@ echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}
 #----------------------------------------------------------------------------
 if [ -d "$VIVADO_PATH/bin" ]; then
     echo "- Vivado: Found ($VIVADO_PATH/bin)"
+    if [ -d "$VIVADO_HLS_PATH/bin" ]; then
+        echo "- Vivado HLS: Found ($VIVADO_HLS_PATH/bin)"
+    else
+        echo "- Vivado HLS: Not found in $VIVADO_HLS_BASE_PATH (WARNING.. HLS build targets will not work)"
+    fi
 else
     echo "- Vivado: Version $VIVADO_VER not found in $VIVADO_BASE_PATH (ERROR.. Builds and simulations will not work)"
     if [[ -z $VIVADO_USER_VER ]]; then
@@ -182,8 +208,8 @@ if [[ -e $VIVADO_PATH/.settings${BITNESS}-Vivado_Lab.sh ]]; then
 else
     $VIVADO_PATH/.settings${BITNESS}-Vivado.sh
 fi
-if [[ -e ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh ]]; then
-    ${VIVADO_PATH/Vivado/Vivado_HLS}/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
+if [[ -e $VIVADO_HLS_PATH/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh ]]; then
+    $VIVADO_HLS_PATH/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
 fi
 if [[ -e $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh ]]; then
     $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh
@@ -254,7 +280,7 @@ fi
 # Misc export variables
 #----------------------------------------------------------------------------
 export PATH=$(echo ${PATH} | tr ':' '\n' | awk '$0 !~ "/Vivado/"' | paste -sd:)
-export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$MODELSIM_PATH
+export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$VIVADO_HLS_PATH:$VIVADO_HLS_PATH/bin:$MODELSIM_PATH
 
 for prod in "${!PRODUCT_ID_MAP[@]}"; do
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$prod]}"
