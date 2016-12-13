@@ -81,16 +81,16 @@ module noc_shell
    ///////////////////////////////////////////////////////////////////////////////////////
    wire [63:0] 	  i_tdata_b, o_tdata_b;
    wire 	  i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
-   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(5)) in_fifo   // Very little buffering needed here, only a clock domain crossing
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) in_fifo   // Very little buffering needed here, only a clock domain crossing
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(i_tvalid), .i_tready(i_tready), .i_tdata({i_tlast,i_tdata}),
       .o_aclk(clk), .o_tvalid(i_tvalid_b), .o_tready(i_tready_b), .o_tdata({i_tlast_b,i_tdata_b}));
-   
-   axi_fifo_2clk_cascade #(.WIDTH(65), .SIZE(5)) out_fifo
+
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) out_fifo
      (.reset(bus_rst),
       .i_aclk(clk), .i_tvalid(o_tvalid_b), .i_tready(o_tready_b), .i_tdata({o_tlast_b,o_tdata_b}),
       .o_aclk(bus_clk), .o_tvalid(o_tvalid), .o_tready(o_tready), .o_tdata({o_tlast,o_tdata}));
-   
+
    ///////////////////////////////////////////////////////////////////////////////////////
    // Mux and Demux to join/split streams going to/coming from RFNoC
    ///////////////////////////////////////////////////////////////////////////////////////
