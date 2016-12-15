@@ -30,6 +30,7 @@ import sys
 import re
 import json
 from datetime import datetime
+import time
 import argparse
 import subprocess
 import threading
@@ -125,6 +126,10 @@ def parse_args():
         '--parse-config', default=None,
         help="Additional parser configurations",
     )
+    parser.add_argument(
+        '-v', '--verbose', default=False,
+        action='store_true',
+        help="Print Vivado output")
     our_args, viv_args = parser.parse_known_args()
     return our_args, " ".join(viv_args)
 
@@ -159,7 +164,8 @@ class VivadoRunner(object):
         self.line_types = {
             'task': {
                 'regexes': [
-                    '^Starting .* Task'
+                    '^Starting .* Task',
+                    '^\[TEST CASE .*',
                 ],
                 'action': self.update_task,
                 'id': "Task",
@@ -168,6 +174,7 @@ class VivadoRunner(object):
                 'regexes': [
                     '^Phase (?P<id>[a-zA-Z0-9/. ]*)$',
                     '^Start (?P<id>[a-zA-Z0-9/. ]*)$',
+                    '^(?P<id>TESTBENCH STARTED: [\w_]*)$',
                 ],
                 'action': self.update_phase,
                 'id': "Phase",
@@ -199,6 +206,7 @@ class VivadoRunner(object):
                 'regexes': [
                     '^ERROR',
                     'no such file or directory',
+                    '^Result: FAILED'
                 ],
                 'action': lambda x: self.act_on_build_msg('error', x),
                 'id': "Error",
@@ -206,6 +214,14 @@ class VivadoRunner(object):
                     '.', # All errors are fatal by default
                 ]
             },
+            'test': {
+                'regexes': [
+                    '^ - T'
+                    '^Result: '
+                ],
+                'action': self.update_testbench,
+                'id': "Test"
+            }
         }
         self.parse_config = None
         if args.parse_config is not None:
@@ -227,6 +243,7 @@ class VivadoRunner(object):
                     "Could not read parser configuration from: {pc}".format(pc=args.parse_config),
                     color=self.colors.get('error')
                 )
+        self.tty = sys.stdout.isatty()
         self.timer = datetime.now() # Make sure this is the last line in ctor
 
     def run(self):
@@ -262,6 +279,9 @@ class VivadoRunner(object):
         # End the thread when the program terminates
         t.daemon = True
         t.start()
+        status_line_t = threading.Thread(target=VivadoRunner.run_loop, args=(self.print_status_line, 0.5 if self.tty else 60*10))
+        status_line_t.daemon = True
+        status_line_t.start()
         # Run loop
         while proc.poll() is None or not q_stdout.empty(): # Run while process is alive
             line_stdout = poll_queue(q_stdout)
@@ -273,14 +293,24 @@ class VivadoRunner(object):
     def update_output(self, lines):
         " Receives a line from Vivado output and acts upon it. "
         self.process_line(lines)
+
+    @staticmethod
+    def run_loop(func, delay, *args, **kwargs):
+        while True:
+            func(*args, **kwargs)
+            time.sleep(delay)
+
+    def print_status_line(self):
+        " Prints status on stdout"
         old_status_line_len = len(self.status)
         self.update_status_line()
-        sys.stdout.write("\r") # Scroll cursor back to beginning
-        msgs_printed = self.flush_notification_queue(old_status_line_len)
+        sys.stdout.write("\x1b[2K\r") # Scroll cursor back to beginning and clear last line
+        self.flush_notification_queue(old_status_line_len)
         sys.stdout.write(self.status)
+        sys.stdout.flush()
         # Make sure we print enough spaces to clear out all of the previous message
-        if not msgs_printed:
-            sys.stdout.write(" " * max(0, old_status_line_len - len(self.status)))
+        # if not msgs_printed:
+        #     sys.stdout.write(" " * max(0, old_status_line_len - len(self.status)))
 
     def cleanup_output(self, success):
         " Run final printery after all is said and done. "
@@ -290,7 +320,7 @@ class VivadoRunner(object):
             add_time=True,
             color=self.colors.get("task" if success else "error")
         )
-        sys.stdout.write("\r") # Scroll cursor back to beginning
+        sys.stdout.write("\n")
         self.flush_notification_queue(len(self.status))
         print("")
         print("========================================================")
@@ -298,6 +328,7 @@ class VivadoRunner(object):
         print("Critical Warnings: ", self.msg_counters.get('critical warning', 0))
         print("Errors:            ", self.msg_counters.get('error', 0))
         print("")
+        sys.stdout.flush()
 
     def process_line(self, lines):
         " process line "
@@ -305,6 +336,8 @@ class VivadoRunner(object):
             line_info, line_data = self.classify_line(line)
             if line_info is not None:
                 self.line_types[line_info]['action'](line_data)
+            elif self.args.verbose:
+                print(line)
 
     def classify_line(self, line):
         """
@@ -319,7 +352,7 @@ class VivadoRunner(object):
 
     def update_status_line(self):
         " Update self.status. Does not print anything! "
-        status_line = "{timer} Current task: {task} +++ Current Phase: {phase}                              "
+        status_line = "{timer} Current task: {task} +++ Current Phase: {phase}"
         self.status = status_line.format(
             timer=print_timer(datetime.now() - self.timer),
             task=self.current_task.strip(),
@@ -341,8 +374,7 @@ class VivadoRunner(object):
         msg_printed = False
         while not self.notif_queue.empty():
             msg = self.notif_queue.get().strip()
-            padding = " " * max(0, min_len - len(msg))
-            print(msg + padding)
+            print(msg)
             msg_printed = True
         return msg_printed
 
@@ -362,11 +394,19 @@ class VivadoRunner(object):
         self.current_task = task
         self.current_task.replace("Starting", "").replace("Task", "")
         self.add_notification(task, add_time=True, color=self.colors.get("task"))
+        sys.stdout.write("\n")
+        self.print_status_line()
 
     def update_phase(self, phase):
         " Update current phase "
         self.current_phase = phase.strip()
         self.current_task.replace("Phase", "")
+        sys.stdout.write("\n")
+        self.print_status_line()
+
+    def update_testbench(self, testbench):
+        pass  # Do nothing
+
 
 def main():
     " Go, go, go! "

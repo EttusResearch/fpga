@@ -218,7 +218,7 @@ fi
 if [[ -x `which tput 2>/dev/null` ]] ; then
     export VIV_COLOR_SCHEME=default
 fi
-VIVADO_EXEC=$REPO_BASE_PATH/tools/scripts/launch_vivado.sh
+VIVADO_EXEC="$REPO_BASE_PATH/tools/scripts/launch_vivado.py --verbose"
 
 #----------------------------------------------------------------------------
 # Prepare Modelsim environment
