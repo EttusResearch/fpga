@@ -5,6 +5,8 @@ module x300_core (
    input radio_rst,
    input bus_clk,
    input bus_rst,
+   input ce_clk,
+   input ce_rst,
    output [3:0] sw_rst,
    input bus_clk_div2,
    input bus_rst_div2,

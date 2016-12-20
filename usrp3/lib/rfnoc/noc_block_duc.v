@@ -4,7 +4,7 @@
 
 module noc_block_duc #(
   parameter NOC_ID = 64'hD0C0_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 11,
+  parameter STR_SINK_FIFOSIZE = 12,
   parameter NUM_CHAINS = 1
 
 )(
@@ -115,7 +115,8 @@ module noc_block_duc #(
       wire        set_has_time_int = set_has_time[i];
 
       axi_wrapper #(
-        .SIMPLE_MODE(0))
+        .SIMPLE_MODE(0),
+        .MTU(12)) // Increased MTU until cordic_timed bubble is fixed
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
