@@ -161,7 +161,7 @@ def file_generator(args, vfile):
     fpga_utils_path = get_scriptpath()
     print("Adding CE instantiation file for '%s'" % args.target)
     path_to_file = fpga_utils_path +'/../../top/' + device_dict(args.device.lower()) +\
-            '/rfnoc_ce_auto_inst_' + args.device + '.v'
+            '/rfnoc_ce_auto_inst_' + args.device.lower() + '.v'
     if args.outfile is None:
         open(path_to_file, 'w').write(vfile)
     else:
@@ -286,7 +286,7 @@ def dtarget(args):
     if args.target is None:
         default_trgt = {'x300':'X300_RFNOC_HG', 'x310':'X310_RFNOC_HG',\
                 'e310':'E310_RFNOC_HLS'}
-        return default_trgt[args.device]
+        return default_trgt[args.device.lower()]
     else:
         return args.target
 
