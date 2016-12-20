@@ -236,6 +236,7 @@ generate
       wire [63:0] i_tdata, o_tdata;
       wire        i_tvalid, i_tready, o_tvalid;
       wire        channel_up, hard_err, soft_err;
+      wire        mac_clear;
 
       assign sfpp_tx_disable = 1'b0; // Always on.
 
@@ -287,14 +288,20 @@ generate
 
       wire           bist_gen_en, bist_checker_en, bist_loopback_en;
       wire           bist_checker_locked;
-      wire [4:0]     bist_gen_rate;
+      wire [5:0]     bist_gen_rate;
       wire [47:0]    bist_checker_samps, bist_checker_errors;
       wire [31:0]    overruns, checksum_errors;
 
-      aurora_axis_mac aurora_mac_i (
+      aurora_axis_mac #(
+         .PHY_ENDIANNESS ("LITTLE"),
+         .PACKET_MODE    (1),
+         .MAX_PACKET_SIZE(1024),
+         .BIST_ENABLED   (1)
+      ) aurora_mac_i (
          // Clocks and resets
          .phy_clk(au_user_clk), .phy_rst(au_user_rst),
          .sys_clk(bus_clk), .sys_rst(bus_rst),
+         .clear(mac_clear),
          // PHY Interface (Synchronous to phy_clk)
          .phy_s_axis_tdata(o_tdata),
          .phy_s_axis_tvalid(o_tvalid),
@@ -348,10 +355,10 @@ generate
          .rb_data(rb_data), .rb_addr(rb_addr), .rb_rd_stb()
       );
 
-      setting_reg #(.my_addr(4'd0), .awidth(4), .width(9), .at_reset(9'h000)) set_core_control_i (
+      setting_reg #(.my_addr(4'd0), .awidth(4), .width(11), .at_reset(11'h000)) set_core_control_i (
          .clk(bus_clk), .rst(bus_rst),
          .strobe(set_stb), .addr(set_addr), .in(set_data),
-         .out({phy_areset, bist_gen_rate, bist_loopback_en, bist_gen_en, bist_checker_en}), .changed()
+         .out({mac_clear, phy_areset, bist_gen_rate, bist_loopback_en, bist_gen_en, bist_checker_en}), .changed()
       );
 
       wire channel_up_bclk, hard_err_bclk, soft_err_bclk;
@@ -371,7 +378,7 @@ generate
       end
 
       wire [31:0] core_status = {
-         checksum_errors[11:0],     //[31:20]
+         12'h0,                     //[31:20]
          bist_lock_latency[19:4],   //[19:4]
          bist_checker_locked,       //[3]
          soft_err_bclk,             //[2]
@@ -383,8 +390,9 @@ generate
          case (rb_addr)
             4'd0:    rb_data = core_status;
             4'd1:    rb_data = overruns;
-            4'd2:    rb_data = bist_checker_samps[47:16];   //Scale num sample by 2^16
-            4'd3:    rb_data = bist_checker_errors[31:0];   //Dont scale errors
+            4'd2:    rb_data = checksum_errors;
+            4'd3:    rb_data = bist_checker_samps[47:16];   //Scale num sample by 2^16
+            4'd4:    rb_data = bist_checker_errors[31:0];   //Dont scale errors
             default: rb_data = 32'h0;
          endcase // case (rb_addr)
 
