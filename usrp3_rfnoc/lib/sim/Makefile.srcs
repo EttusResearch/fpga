@@ -27,4 +27,5 @@ $(PACKET_PROC_SRCS) \
 $(DSP_SRCS) \
 $(RADIO_SRCS) \
 $(RFNOC_SRCS) \
+$(OOT_SRCS) \
 )
