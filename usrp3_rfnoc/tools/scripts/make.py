@@ -70,6 +70,16 @@ generate
 endgenerate
 """
 
+OOT_SRCS_FILE_TMPL = """\nOOT_DIR = {oot_dir}\n"""
+OOT_FPGA_SRCS_TMPL = """include $(OOT_DIR)/fpga-src/Makefile.srcs
+RFNOC_OOT_SRCS := $(RFNOC_OOT_SRCS) $(OOT_SRCS)\n"""
+OOT_FPGA_IP_TMPL = """include $(OOT_DIR)/ip/Makefile.inc
+RFNOC_OOT_SRCS := $(RFNOC_OOT_SRCS) $(LIB_OOT_IP_XCI_SRCS)\n"""
+
+OOT_SRCS_FILE_HDR = """##################################################
+# Include OOT makefiles
+##################################################\n"""
+
 
 def setup_parser():
     """
@@ -176,6 +186,26 @@ def append_re_line_sequence(filename, linepattern, newline):
         last_line = pattern_lines[-1]
         newfile = oldfile.replace(last_line, last_line + newline + '\n')
         open(filename, 'w').write(newfile)
+
+def create_oot_include(args):
+    """
+    Create the include file for OOT RFNoC sources
+    """
+    target_dir = device_dict(args.device.lower())
+    dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
+            target_dir, 'Makefile.OOT.inc')
+    incfile = open(dest_srcs_file, 'w')
+    incfile.write(OOT_SRCS_FILE_HDR)
+    if args.include_dir is not None:
+        for dirs in args.include_dir:
+            rfnoc_path = os.path.join('$(BASE_DIR)', get_relative_path(get_basedir(), os.path.abspath(dirs)))
+            print('Including RFNoC module at: ' + rfnoc_path)
+            incfile.write(OOT_SRCS_FILE_TMPL.format(oot_dir=rfnoc_path))
+            if os.path.isdir(os.path.join(dirs, 'fpga-src')):
+                incfile.write(OOT_FPGA_SRCS_TMPL.format(oot_dir=dirs))
+            if os.path.isdir(os.path.join(dirs, 'ip')):
+                incfile.write(OOT_FPGA_IP_TMPL.format(oot_dir=dirs))
+    incfile.close()
 
 def append_item_into_file(args):
     """
@@ -295,12 +325,35 @@ def get_scriptpath():
     """
     return os.path.dirname(os.path.realpath(__file__))
 
+def get_basedir():
+    """
+    returns the base directory (BASE_DIR) used in rfnoc build process
+    """
+    return os.path.abspath(os.path.join(get_scriptpath(), '..', '..', 'top'))
+
+def get_relative_path(base, target):
+    """
+    Find the relative path (including going "up" directories) from base to target
+    """
+    basedir = os.path.abspath(base)
+    prefix = os.path.commonprefix([basedir, os.path.abspath(target)])
+    path_tail = os.path.relpath(os.path.abspath(target), prefix)
+    total_path = path_tail
+    if prefix != "":
+        while basedir != os.path.abspath(prefix):
+            basedir = os.path.dirname(basedir)
+            total_path = os.path.join('..', total_path)
+        return total_path
+    else:
+        print ("Could not determine relative path")
+        return path_tail
+
 def main():
     " Go, go, go! "
     args = setup_parser().parse_args()
     vfile = create_vfiles(args)
     file_generator(args, vfile)
-    append_item_into_file(args)
+    create_oot_include(args)
     if args.outfile is  None:
         return build(args)
     else:
