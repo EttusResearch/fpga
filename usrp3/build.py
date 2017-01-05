@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # Copyright 2016 Ettus Research LLC
 #
@@ -25,9 +25,10 @@ _STDOUT.setFormatter(_FORMATTER)
 
 
 def match_file(expr, path):
+    """ Match regex expr on all lines of path and return list of matches """
     matches = []
-    with open(path) as f:
-        for line in f:
+    with open(path, 'rb') as my_file:
+        for line in my_file:
             match = expr.match(line)
             if match:
                 matches.append(match)
@@ -35,87 +36,96 @@ def match_file(expr, path):
 
 
 def create_index(paths):
-    verilog_file = re.compile(".*\.v$")
-    verilog_module = re.compile("module (?P<mod_name>[\w]+) *$", re.IGNORECASE)
-    vhdl_file = re.compile(".*\.vhd$")
-    vhdl_module = re.compile("entity (?P<mod_name>[\w]+) is *$", re.IGNORECASE)
+    """ Create an index of modules in .v/.vhd and dump it to modules.json """
+    hdl_expressions = {
+        re.compile(r".*\.v$"):
+        re.compile(b"module (?P<mod_name>[\\w]+) *$", re.IGNORECASE),
+        re.compile(r".*\.vhd$"):
+        re.compile(b"entity (?P<mod_name>[\\w]+) is *$", re.IGNORECASE)
+    }
+    ignore_dirs = ["build-ip", "sim"]
 
     modules = {}
     for path in paths:
         for root, dirs, files in os.walk(os.path.join(_BASE_DIR, path)):
-            if "build-ip" in dirs:
-                dirs.pop(dirs.index("build-ip"))
-            if "sim" in dirs:
-                dirs.pop(dirs.index("sim"))
-            for f in files:
-                if verilog_file.match(f):
-                    matches = match_file(verilog_module, os.path.join(root, f))
-                elif vhdl_file.match(f):
-                    matches = match_file(vhdl_module, os.path.join(root, f))
-                else:
-                    continue
+            ignore = [my_dir in dirs for my_dir in ignore_dirs]
+            if any(ignore):
+                for index, ignore_me in enumerate(ignore):
+                    if not ignore_me:
+                        continue
+                    dirs.pop(dirs.index(ignore_dirs[index]))
+            for my_file in files:
+                matches = []
+                for key, value in hdl_expressions.items():
+                    if key.match(my_file):
+                        matches = match_file(value,
+                                             os.path.join(root, my_file))
+                        break
+
                 for match in matches:
                     if match.group("mod_name") in modules:
-                        _LOG.error("{} is already in modules".format(
-                            match.group("mod_name")))
-                        _LOG.error("Old Path: {}".format(modules[match.group(
-                            "mod_name")]))
-                        _LOG.error("New Path: {}".format(
-                            os.path.join(root, f)))
+                        _LOG.error("%s is already in modules",
+                                   match.group("mod_name"))
+                        _LOG.error("Old Path: %s",
+                                   modules[match.group("mod_name")])
+                        _LOG.error("New Path: %s", os.path.join(root, my_file))
                     else:
                         modules.update({
-                            match.group("mod_name"): os.path.join(root, f)
+                            match.group("mod_name").decode('utf-8'):
+                            os.path.join(root, my_file)
                         })
-    with open("modules.json", "w") as f:
-        json.dump(modules, f, sort_keys=True, indent=4, separators=(',', ': '))
+    with open("modules.json", "w") as my_file:
+        json.dump(
+            modules, my_file, sort_keys=True, indent=4, separators=(',', ': '))
 
 
 def call_xsim(path):
+    """ Call make xsim with default environment at path """
     os.chdir(os.path.join(_BASE_DIR, path))
-    d = os.environ
-    d["REPO_BASE_PATH"] = _BASE_DIR
-    d["DISPLAY_NAME"] = "USRP-XSIM"
-    d["VIVADO_VER"] = "2015.4"
-    d["PRODUCT_ID_MAP"] = "kintex7/xc7k325t/ffg900/-2"
+    env = os.environ
+    env["REPO_BASE_PATH"] = _BASE_DIR
+    env["DISPLAY_NAME"] = "USRP-XSIM"
+    env["VIVADO_VER"] = "2015.4"
+    env["PRODUCT_ID_MAP"] = "foo/foo/bar/bar"
     setup_env = os.path.join(_BASE_DIR, "tools", "scripts", "setupenv_base.sh")
     result = subprocess.Popen(
-        ". {setup}; make xsim".format(setup=setup_env), env=d,
+        ". {setup}; make xsim".format(setup=setup_env), env=env,
         shell=True).wait()
     return result
 
 
 def find_xsims():
-    # Find testbenches in lib/sim (dirs with Makefile)
+    """ Find testbenches in lib/sim (dirs with Makefile) """
     sims = {}
     for basedir in _SEARCH_BASE:
-        for root, dirs, files in os.walk(os.path.join(_BASE_DIR, basedir)):
+        for root, _, files in os.walk(os.path.join(_BASE_DIR, basedir)):
             if "Makefile" in files:
                 sims.update({os.path.basename(root): root})
     return sims
 
 
 def run_xsim(args):
+    """ Run xsim for all specified modules """
     sims = find_xsims()
     result_all = 0
     if not isinstance(args.target, list):
         args.target = [args.target]
     if "cleanall" in args.target:
-        d = os.environ
-        d["REPO_BASE_PATH"] = _BASE_DIR
+        env = os.environ
+        env["REPO_BASE_PATH"] = _BASE_DIR
         for name, path in sims.iteritems():
-            _LOG.info("Cleaning {}".format(name))
+            _LOG.info("Cleaning %s", name)
             os.chdir(os.path.join(_BASE_DIR, path))
-            cleanup = subprocess.Popen(
-                "make cleanall", env=d, shell=True).wait()
+            subprocess.Popen("make cleanall", env=env, shell=True).wait()
     elif "all" in args.target:
         for name, path in sims.iteritems():
-            _LOG.info("Running {} xsim".format(name))
+            _LOG.info("Running %s xsim", name)
             result = call_xsim(path)
             if result:
                 result_all = result
     else:
         for target in args.target:
-            _LOG.info("Running {} xsim".format(target))
+            _LOG.info("Running %s xsim", target)
             result = call_xsim(sims[target])
             if result:
                 result_all = result
@@ -123,6 +133,7 @@ def run_xsim(args):
 
 
 def parse_args():
+    """ Parse cmdline arguments"""
     test_benches = find_xsims()
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(dest="command", metavar="")
@@ -131,9 +142,9 @@ def parse_args():
     xsim_parser.add_argument(
         "target",
         nargs="+",
-        choices=test_benches.keys() + ["all", "cleanall"],
+        choices=list(test_benches.keys()) + ["all", "cleanall"],
         help="Space separated simulation target(s) or all. Available targets: "
-        + ", ".join(test_benches.keys() + ["all", "cleanall"]),
+        + ", ".join(list(test_benches.keys()) + ["all", "cleanall"]),
         metavar="")
     index_parser = subparser.add_parser(
         "index", help="Index available HDL modules")
@@ -144,6 +155,7 @@ def parse_args():
 
 
 def main():
+    """Main logic"""
     args = parse_args()
     result = 0
     if args.command == "xsim":
