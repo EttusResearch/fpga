@@ -137,10 +137,16 @@ a list and usage information
 - X300_HG:  USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO (experimental!).
 - X310_XG:  USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
 - X300_XG:  USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO (experimental!).
-- X310_HGS: USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-- X300_HGS: USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. SRAM TX FIFO.
-- X310_XGS: USRP X310. 10GigE on both SFP+ ports. SRAM TX FIFO.
-- X300_XGS: USRP X300. 10GigE on both SFP+ ports. SRAM TX FIFO.
+- X310_HA:  USRP X310. 1GigE on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO.
+- X300_HA:  USRP X300. 1GigE on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO.
+- X310_XA:  USRP X310. 10GigE on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO.
+- X300_XA:  USRP X300. 10GigE on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO.
+- X310_RFNOC_HG:  USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled
+- X300_RFNOC_HG:  USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled
+- X310_RFNOC_XG:  USRP X310. 10GigE on both SFP+ ports. RFNoC CEs enabled.
+- X300_RFNOC_XG:  USRP X300. 10GigE on both SFP+ ports. RFNoC CEs enabled.
+- X310_RFNOC_HLS_HG:  USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled + Vivado HLS
+- X300_RFNOC_HLS_HG:  USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled + Vivado HLS
 
 #### Outputs
 - `build/usrp_<product>_fpga_<image_type>.bit` :    Configuration bitstream with header
