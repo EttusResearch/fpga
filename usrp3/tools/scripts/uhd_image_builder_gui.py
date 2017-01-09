@@ -17,13 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 """
-Make.py GUI
+uhd_image_builder GUI
 """
 import sip
 sip.setapi('QVariant', 2)
 import os
 import subprocess
-import make # make.py base
+import uhd_image_builder
 import sys
 import re
 from PyQt4.QtCore import *
@@ -32,14 +32,14 @@ import xml.etree.ElementTree as ET
 
 class MainWindow(QWidget):
     """
-    Make.py GUI - RFNoC Biterator - CHDR collider
+    UHD_IMAGE_BUILDER
     """
     def __init__(self):
         super(MainWindow, self).__init__()
         self.initGUI()
 
     def initGUI(self):
-        ettusSources = os.path.join(make.get_scriptpath(), '..', '..', 'lib',\
+        ettusSources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'lib',\
             'rfnoc', 'Makefile.srcs')
 
         ##################################################
@@ -113,7 +113,7 @@ class MainWindow(QWidget):
         EttusBlocks = QStandardItem("Ettus-provided Blocks")
         self.populateList(EttusBlocks,ettusSources)
 
-        ootSources = os.path.join(make.get_scriptpath(), '..', '..', 'top',\
+        ootSources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
             'x300', 'Makefile.srcs')
         self.OOT = QStandardItem("OOT Blocks for X300 devices")
         self.populateList(self.OOT,ootSources)
@@ -139,7 +139,7 @@ class MainWindow(QWidget):
         self.blocksInDesign.setFixedSize(250,400)
 
         self.setFixedSize(980, 460)
-        self.setWindowTitle("Make.py GUI")
+        self.setWindowTitle("uhd_image_builder.py GUI")
         self.show()
 
     ##################################################
@@ -159,7 +159,7 @@ class MainWindow(QWidget):
 
     @pyqtSlot()
     def showFile(self):
-        self.instFile = os.path.join(make.get_scriptpath(), '..', '..', 'top',\
+        self.instFile = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
                 self.target, 'rfnoc_ce_auto_inst_' + self.device.lower() + '.v')
         if (self.genCommand(False)):
             os.system("xdg-open " + self.instFile)
@@ -179,7 +179,7 @@ class MainWindow(QWidget):
         elif self.device =='E310':
             self.target = 'e300'
             self.max_allowed_blocks = 6
-        ootSources = os.path.join(make.get_scriptpath(), '..', '..', 'top',\
+        ootSources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
             self.target, 'Makefile.srcs')
         self.showList(self.OOT, self.target, ootSources)
 
@@ -190,8 +190,8 @@ class MainWindow(QWidget):
         if len(filename) > 0:
             appendDir.append(os.path.join(os.path.dirname(
                 os.path.join("", str(filename))), ''))
-            make.append_item_into_file(self.device, appendDir)
-            ootSources = os.path.join(make.get_scriptpath(), '..', '..', 'top',\
+            uhd_image_builder.append_item_into_file(self.device, appendDir)
+            ootSources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
                 self.target, 'Makefile.srcs')
             self.populateList(self.OOT, ootSources)
 
@@ -274,7 +274,7 @@ class MainWindow(QWidget):
 
     def populateTargets(self, selectedTarget):
         s =  '0_RFNOC_'
-        buildTargets = os.path.join(make.get_scriptpath(), '..', '..', 'top',
+        buildTargets = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',
                 selectedTarget, 'Makefile')
         with open(buildTargets, 'r') as f:
             text = f.readlines()
@@ -317,7 +317,7 @@ class MainWindow(QWidget):
             return
         if not (notInFlag or maxFlag):
             com = ' '.join(toDesign)
-            command = "./make.py " + com + ' -d ' + self.device + ' -t ' + self.buildTarget
+            command = "./uhd_image_builder.py " + com + ' -d ' + self.device + ' -t ' + self.buildTarget
             if flag == False:
                 command = command + ' -o ' + self.instFile
             if self.vivGui.isChecked():
