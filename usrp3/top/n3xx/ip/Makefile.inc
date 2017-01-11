@@ -18,6 +18,8 @@ include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 #include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 
+BD_SRCS = \
+
 IP_XCI_SRCS = \
 $(IP_AXI4_BRAM_SRCS) \
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) \
@@ -63,11 +65,13 @@ $(IP_RADIO_CLK_GEN_OUTS) \
 $(IP_TEN_GIG_ETH_PCS_PMA_OUTS) \
 $(IP_AURORA_64B66B_PCS_PMA_OUTS)
 
+BD_OUTPUTS= \
+
 # Currently unused
 # $(IP_INPUT_SAMPLE_FIFO_OUTS) \
 # $(IP_AXI_INTERCON_4X64_128_OUTS) \
 
-ip: $(IP_SYNTH_OUTPUTS) $(IP_CODEGEN_SRCS)
+ip: $(IP_SYNTH_OUTPUTS) $(IP_CODEGEN_SRCS) $(BD_OUTPUTS)
 
 .PHONY: ip
 
