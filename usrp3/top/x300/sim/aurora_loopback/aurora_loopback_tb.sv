@@ -65,8 +65,9 @@ module aurora_loopback_tb();
   wire        m_bist_locked;
   wire [47:0] m_bist_samps, m_bist_errors;
 
-  cvita_stream_t m_tx_chdr (.clk(m_user_clk));
-  cvita_stream_t m_rx_chdr (.clk(s_user_clk));
+
+  cvita_master m_tx_chdr (.clk(m_user_clk));
+  cvita_slave m_rx_chdr (.clk(s_user_clk));
 
   aurora_phy_x1 #(.SIMULATION(1)) aurora_phy_master_i (
     // Resets
@@ -168,6 +169,7 @@ module aurora_loopback_tb();
   //Main thread for testbench execution
   //------------------------------------------
   initial begin : tb_main
+    string s;
     `TEST_CASE_START("Wait for reset");
     while (GSR) @(posedge XG_CLK_P);
     `TEST_CASE_DONE((~GSR));
@@ -204,8 +206,8 @@ module aurora_loopback_tb();
     `TEST_CASE_DONE(1'b1);
 
     header = '{
-      pkt_type:DATA, has_time:0, eob:0, seqno:12'h666,
-      length:0, sid:$random, timestamp:64'h0};
+      pkt_type:DATA, has_time:0, eob:0, seqnum:12'h666,
+      length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Fill up empty FIFO then drain (short packet)");
       m_rx_chdr.axis.tready = 0;
@@ -213,7 +215,9 @@ module aurora_loopback_tb();
       m_rx_chdr.axis.tready = 1;
       m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
       `ASSERT_ERROR(stats.count==16,            "Bad packet: Length mismatch");
-      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      $sformat(s, "Bad packet: Wrong SID. Expected: %08x, Actual: %08x",
+        {header.src_sid,header.dst_sid},{header_out.src_sid,header_out.dst_sid});
+      `ASSERT_ERROR({header.src_sid,header.dst_sid}=={header_out.src_sid,header_out.dst_sid}, s);
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Fill up empty FIFO then drain (long packet)");
@@ -222,12 +226,14 @@ module aurora_loopback_tb();
       m_rx_chdr.axis.tready = 1;
       m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
       `ASSERT_ERROR(stats.count==256,           "Bad packet: Length mismatch");
-      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      $sformat(s, "Bad packet: Wrong SID. Expected: %08x, Actual: %08x",
+        {header.src_sid,header.dst_sid},{header_out.src_sid,header_out.dst_sid});
+      `ASSERT_ERROR({header.src_sid,header.dst_sid}=={header_out.src_sid,header_out.dst_sid}, s);
     `TEST_CASE_DONE(1);
 
     header = '{
-      pkt_type:DATA, has_time:1, eob:0, seqno:12'h666, 
-      length:0, sid:$random, timestamp:64'h0};
+      pkt_type:DATA, has_time:1, eob:0, seqnum:12'h666, 
+      length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Concurrent read and write (single packet)");
       m_rx_chdr.axis.tready = 1;
