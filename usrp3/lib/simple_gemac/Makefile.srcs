@@ -20,5 +20,6 @@ ll8_to_txmac.v \
 rxmac_to_ll8.v \
 ll8_to_axi64.v \
 axi64_to_ll8.v \
+gmii_to_axis.v \
 mdio.v \
 ))
