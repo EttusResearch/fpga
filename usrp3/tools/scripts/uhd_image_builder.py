@@ -185,7 +185,7 @@ def append_re_line_sequence(filename, linepattern, newline):
         newfile = oldfile.replace(last_line, last_line + newline + '\n')
         open(filename, 'w').write(newfile)
 
-def append_item_into_file(args):
+def append_item_into_file(device, include_dir):
     """
     Basically the same as append_re_line_sequence function, but it does not
     append anything when the input is not found
@@ -195,9 +195,9 @@ def append_item_into_file(args):
     notifies and leaves the file unchanged
     """
 
-    target_dir = device_dict(args.device.lower())
-    if args.include_dir is not None:
-        for dirs in args.include_dir:
+    target_dir = device_dict(device.lower())
+    if include_dir is not None:
+        for dirs in include_dir:
             checkdir_v(dirs)
             oot_srcs_file = os.path.join(dirs, 'Makefile.srcs')
             dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
@@ -313,7 +313,7 @@ def main():
     args = setup_parser().parse_args()
     vfile = create_vfiles(args)
     file_generator(args, vfile)
-    append_item_into_file(args)
+    append_item_into_file(args.device,args.include_dir)
     if args.outfile is  None:
         return build(args)
     else:
