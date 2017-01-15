@@ -273,7 +273,7 @@ class MainWindow(QWidget):
                         parent.appendRow(block)
 
     def populateTargets(self, selectedTarget):
-        s =  '0_RFNOC_'
+        s =  '0_RFNOC'
         buildTargets = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',
                 selectedTarget, 'Makefile')
         with open(buildTargets, 'r') as f:

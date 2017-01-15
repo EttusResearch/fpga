@@ -9,3 +9,4 @@ a.out
 *.swp
 *.jou
 *.log
+*.pyc
