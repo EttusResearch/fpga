@@ -100,7 +100,9 @@ module noc_block_threshold_tb();
         for (int i = 0; i < 3; i++) begin
           tb_streamer.recv(recv_payload,md);
           for (int k = 0; k < recv_payload.size(); k++) begin
-            $sformat(s, "Value less than threshold! Threshold: %0d, Received: %0d", threshold, recv_payload[k]);
+            $sformat(s, "Value less than threshold! Threshold: %0d, Received: %0d", threshold, recv_payload[k][63:32]);
+            `ASSERT_ERROR(recv_payload[k] > threshold, s);
+            $sformat(s, "Value less than threshold! Threshold: %0d, Received: %0d", threshold, recv_payload[k][31:0]);
             `ASSERT_ERROR(recv_payload[k] > threshold, s);
           end
         end
