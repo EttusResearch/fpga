@@ -11,21 +11,6 @@ BASE_DIR = $(abspath ../../../top)
 include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 
 #-------------------------------------------------
-# IP Specific
-#-------------------------------------------------
-# If simulation contains IP, define the IP_DIR and point
-# it to the base level IP directory
-LIB_IP_DIR = $(BASE_DIR)/../lib/ip
-
-# Include makefiles and sources for all IP components
-# *after* defining the LIB_IP_DIR
-include $(LIB_IP_DIR)/axi_fir/Makefile.inc
-
-DESIGN_SRCS += $(abspath \
-$(LIB_IP_AXI_FIR_SRCS) \
-)
-
-#-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
@@ -35,9 +20,9 @@ SIM_TOP = noc_block_fir_filter_tb
 # additional user created files
 SIM_SRCS = \
 $(abspath noc_block_fir_filter_tb.sv) \
-$(abspath ../noc_block_fir_filter.v)
-
-MODELSIM_USER_DO = $(abspath wave.do)
+$(abspath ../noc_block_fir_filter.v) \
+$(abspath ../axi_fir_filter.v) \
+$(abspath ../fir_filter_slice.v) \
 
 #-------------------------------------------------
 # Bottom-of-Makefile
