@@ -2,9 +2,9 @@
 <Root MajorVersion="0" MinorVersion="33">
   <CompositeFile CompositeFileTopName="axi_intercon_2x64_128_bd" CanBeSetAsTop="true" CanDisplayChildGraph="true">
     <Description>Composite Fileset</Description>
-    <Generation Name="SYNTHESIS" State="STALE" Timestamp="1479326932"/>
-    <Generation Name="IMPLEMENTATION" State="STALE" Timestamp="1479326932"/>
-    <Generation Name="SIMULATION" State="STALE" Timestamp="1479326932"/>
+    <Generation Name="SYNTHESIS" State="GENERATED" Timestamp="1485403114"/>
+    <Generation Name="IMPLEMENTATION" State="GENERATED" Timestamp="1485403114"/>
+    <Generation Name="SIMULATION" State="GENERATED" Timestamp="1485403114"/>
     <FileCollection Name="SOURCES" Type="SOURCES">
       <File Name="hdl/axi_intercon_2x64_128_bd.v" Type="Verilog">
         <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
@@ -12,28 +12,6 @@
         <UsedIn Val="SYNTHESIS"/>
         <UsedIn Val="IMPLEMENTATION"/>
         <UsedIn Val="SIMULATION"/>
-      </File>
-      <File Name="axi_intercon_2x64_128_bd_ooc.xdc" Type="XDC">
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="SYNTHESIS"/>
-        <UsedIn Val="IMPLEMENTATION"/>
-        <UsedIn Val="OUT_OF_CONTEXT"/>
-      </File>
-      <File Name="hw_handoff/axi_intercon_2x64_128_bd.hwh" Type="HwHandoff">
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="HW_HANDOFF"/>
-      </File>
-      <File Name="hw_handoff/axi_intercon_2x64_128_bd_bd.tcl">
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="HW_HANDOFF"/>
-      </File>
-      <File Name="hdl/axi_intercon_2x64_128_bd.hwdef">
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="HW_HANDOFF"/>
       </File>
       <File Name="ip/axi_intercon_2x64_128_bd_s00_width_conv_0/axi_intercon_2x64_128_bd_s00_width_conv_0.xci" Type="IP">
         <Instance HierarchyPath="s00_width_conv"/>
@@ -60,7 +38,23 @@
         <UsedIn Val="SIMULATION"/>
       </File>
       <File Name="ip/axi_intercon_2x64_128_bd_m00_rs_0/axi_intercon_2x64_128_bd_m00_rs_0.xci" Type="IP">
+        <Instance HierarchyPath="m00_rs"/>
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
+        <Library Name="xil_defaultlib"/>
+        <UsedIn Val="SYNTHESIS"/>
+        <UsedIn Val="IMPLEMENTATION"/>
+        <UsedIn Val="SIMULATION"/>
+      </File>
+      <File Name="ip/axi_intercon_2x64_128_bd_s01_rs_0/axi_intercon_2x64_128_bd_s01_rs_0.xci" Type="IP">
         <Instance HierarchyPath="s01_rs"/>
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
+        <Library Name="xil_defaultlib"/>
+        <UsedIn Val="SYNTHESIS"/>
+        <UsedIn Val="IMPLEMENTATION"/>
+        <UsedIn Val="SIMULATION"/>
+      </File>
+      <File Name="ip/axi_intercon_2x64_128_bd_s00_rs_0/axi_intercon_2x64_128_bd_s00_rs_0.xci" Type="IP">
+        <Instance HierarchyPath="s00_rs"/>
         <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
         <Library Name="xil_defaultlib"/>
         <UsedIn Val="SYNTHESIS"/>
@@ -76,20 +70,34 @@
         <UsedIn Val="SIMULATION"/>
       </File>
       <File Name="ip/axi_intercon_2x64_128_bd_m00_rs_1/axi_intercon_2x64_128_bd_m00_rs_1.xci" Type="IP">
-        <Instance HierarchyPath="m00_rs"/>
+        <Instance HierarchyPath="m00_rs1"/>
         <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
         <Library Name="xil_defaultlib"/>
         <UsedIn Val="SYNTHESIS"/>
         <UsedIn Val="IMPLEMENTATION"/>
         <UsedIn Val="SIMULATION"/>
       </File>
-      <File Name="ip/axi_intercon_2x64_128_bd_s00_rs_0/axi_intercon_2x64_128_bd_s00_rs_0.xci" Type="IP">
-        <Instance HierarchyPath="s00_rs"/>
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
+      <File Name="axi_intercon_2x64_128_bd_ooc.xdc" Type="XDC">
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
         <Library Name="xil_defaultlib"/>
         <UsedIn Val="SYNTHESIS"/>
         <UsedIn Val="IMPLEMENTATION"/>
-        <UsedIn Val="SIMULATION"/>
+        <UsedIn Val="OUT_OF_CONTEXT"/>
+      </File>
+      <File Name="hw_handoff/axi_intercon_2x64_128_bd.hwh" Type="HwHandoff">
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
+        <Library Name="xil_defaultlib"/>
+        <UsedIn Val="HW_HANDOFF"/>
+      </File>
+      <File Name="hw_handoff/axi_intercon_2x64_128_bd_bd.tcl">
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
+        <Library Name="xil_defaultlib"/>
+        <UsedIn Val="HW_HANDOFF"/>
+      </File>
+      <File Name="hdl/axi_intercon_2x64_128_bd.hwdef">
+        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="false" IsStatusTracked="false"/>
+        <Library Name="xil_defaultlib"/>
+        <UsedIn Val="HW_HANDOFF"/>
       </File>
     </FileCollection>
   </CompositeFile>
