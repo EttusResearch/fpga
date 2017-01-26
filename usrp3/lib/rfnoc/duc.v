@@ -25,9 +25,6 @@ module duc #(
   localparam WIDTH  = 16; // Input/output bitwidth of the module
   localparam CWIDTH = 24; // Internal bitwidth needed for CORDIC accuracy
   localparam PWIDTH = 32; // Phase accumulator bitwidth
-  localparam MWIDTH = 43; // Product width of the multiplier
-
-  localparam CLIP_BITS = 12;
 
   reg  [1:0] hb_rate;             // Current Halfband rate
   reg  [7:0] cic_interp_rate;     // Current CIC rate
@@ -155,6 +152,7 @@ module duc #(
   wire [2*CWIDTH-1:0] o_tdata_cic;
   wire [2*CWIDTH-1:0] o_cic;
   wire o_tvalid_cic, i_tready_cic;
+  wire o_tready_cic;
 
   assign o_tdata_halfbands = (hb_rate == 2'b0) ? o_tdata_extd :
                              (hb_rate == 2'b1) ? {o_tdata_hb1[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb1[CWIDTH-1:0] << 2} :
@@ -209,11 +207,23 @@ module duc #(
   strobed_to_axi #(.WIDTH(2*CWIDTH), .FIFO_SIZE(8)) strobed_to_axi (
     .clk(clk), .reset(reset | reset_on_change), .clear(clear),
     .in_stb(from_cic_stb), .in_data(o_cic), .in_last(1'b0),
-    .o_tdata(o_tdata_cic), .o_tvalid(o_tvalid_cic), .o_tlast(), .o_tready(i_tready_cartesian)
+    .o_tdata(o_tdata_cic), .o_tvalid(o_tvalid_cic), .o_tlast(), .o_tready(o_tready_cic)
   );
 
-  assign o_tdata = {o_tdata_cic[39:24],o_tdata_cic[15:0]};
-  assign o_tvalid = reset_on_live_change ? 1'b0 : o_tvalid_cic;
+
+ /**************************************************************************
+  * Clip back to 16 bits
+  *************************************************************************/
+  wire o_tvalid_clip;
+
+  axi_round_and_clip_complex #(
+    .WIDTH_IN(CWIDTH), .WIDTH_OUT(WIDTH), .CLIP_BITS(CWIDTH-WIDTH)) // No rounding, all clip
+  axi_round_and_clip_complex (
+    .clk(clk), .reset(reset | clear | reset_on_change),
+    .i_tdata(o_tdata_cic), .i_tlast(1'b0), .i_tvalid(o_tvalid_cic), .i_tready(o_tready_cic),
+    .o_tdata(o_tdata), .o_tlast(), .o_tvalid(o_tvalid_clip), .o_tready(i_tready_cartesian));
+
+  assign o_tvalid = reset_on_live_change ? 1'b0 : o_tvalid_clip;
   assign i_tready_cartesian = reset_on_live_change ? 1'b0 : o_tready;
 
   // Note: To facilitate timed CORDIC tunes, the code has been moved outside

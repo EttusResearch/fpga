@@ -60,6 +60,7 @@ create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -f
 #create_generated_clock -name dac_dci_clk              [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT2"}]
 create_generated_clock -name bus_clk                  [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT0"}]
 create_generated_clock -name bus_clk_div2             [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT2"}]
+create_generated_clock -name ce_clk                   [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKOUT3"}]
 create_generated_clock -name ioport2_clk              [get_pins -hierarchical -filter {NAME =~ "*bus_clk_gen/*/CLKFBOUT"}]
 create_generated_clock -name rio40_clk                [get_pins -hierarchical -filter {NAME =~ "*pcie_clk_gen/*/CLKOUT0"}]
 create_generated_clock -name ioport2_idelay_ref_clk   [get_pins -hierarchical -filter {NAME =~ "*pcie_clk_gen/*/CLKOUT1"}]
@@ -74,6 +75,8 @@ set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_cloc
 set_clock_groups -asynchronous -group [get_clocks bus_clk_div2] -group [get_clocks radio_clk]
 set_clock_groups -asynchronous -group [get_clocks ioport2_clk]  -group [get_clocks IoPort2Wrapperx/RxLowSpeedClk]
 set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks FPGA_REFCLK_10MHz]
+set_clock_groups -asynchronous -group [get_clocks ce_clk]       -group [get_clocks bus_clk]
+set_clock_groups -asynchronous -group [get_clocks ce_clk]       -group [get_clocks radio_clk]
 
 
 #*******************************************************************************
@@ -585,9 +588,10 @@ set_max_delay -from   [get_ports {GPS_LOCK_OK}] 25.000
 # Reset paths
 # All asynchronous resets must be held for at least 20ns
 # which is 2+2 radio_clk cycles @200MHz or 2+2 bus_clk cycles @166MHz
-set_max_delay -to [get_pins {int_reset_sync/reset_int*/PRE}]   12.000
+set_max_delay -to [get_pins {int_reset_sync/reset_int*/PRE}]        12.000
 set_max_delay -to [get_pins {int_div2_reset_sync/reset_int*/PRE}]   12.000
-set_max_delay -to [get_pins {radio_reset_sync/reset_int*/PRE}] 10.000
+set_max_delay -to [get_pins {ce_reset_sync/reset_int*/PRE}]         12.000
+set_max_delay -to [get_pins {radio_reset_sync/reset_int*/PRE}]      10.000
 
 #*******************************************************************************
 ## Asynchronous paths
