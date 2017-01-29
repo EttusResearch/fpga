@@ -5,14 +5,15 @@
 module aurora_axis_mac #(
    parameter PHY_ENDIANNESS   = "LITTLE", //{"LITTLE, "BIG"}
    parameter PACKET_MODE      = 0,
-   parameter PACKET_FIFO_SIZE = 10,
+   parameter MAX_PACKET_SIZE  = 512,
    parameter BIST_ENABLED     = 1
 ) (
    // Clocks and resets
    input             phy_clk,
-   input             phy_rst, 
+   input             phy_rst,
    input             sys_clk,
-   input             sys_rst, 
+   input             sys_rst,
+   input             clear,
    // PHY TX Interface (Synchronous to phy_clk)
    output [63:0]     phy_m_axis_tdata,
    output            phy_m_axis_tvalid,
@@ -40,7 +41,7 @@ module aurora_axis_mac #(
    output reg [31:0] checksum_errors,
    // BIST Interface (Synchronous to sys_clk)
    input             bist_gen_en,
-   input  [4:0]      bist_gen_rate,
+   input  [5:0]      bist_gen_rate,
    input             bist_checker_en,
    input             bist_loopback_en,
    output reg        bist_checker_locked,
@@ -55,10 +56,11 @@ module aurora_axis_mac #(
    wire phy_s_axis_tready;    // Internal only. The PHY has no backpressure signal.
 
    // Stay idle if the PHY is not up or if it experiences a fatal error 
-   wire clear = (~channel_up) | hard_err;
-   wire clear_sysclk;
-   synchronizer #(.INITIAL_VAL(1'b1)) clear_sync (
-      .clk(sys_clk), .rst(1'b0 /* no reset */), .in(clear), .out(clear_sysclk));
+   wire clear_sysclk, clear_phyclk;
+   synchronizer #(.INITIAL_VAL(1'b1)) clear_sync_phyclk_i (
+      .clk(phy_clk), .rst(1'b0 /* no reset */), .in((~channel_up) | hard_err | clear), .out(clear_phyclk));
+   synchronizer #(.INITIAL_VAL(1'b1)) clear_sync_sysclk_i (
+      .clk(sys_clk), .rst(1'b0 /* no reset */), .in(clear_phyclk), .out(clear_sysclk));
 
    // ----------------------------------------------
    // Counters
@@ -69,14 +71,14 @@ module aurora_axis_mac #(
 
    // Counter for recoverable errors. For reporting only.
    always @(posedge phy_clk)
-      if (phy_rst | clear)
+      if (phy_rst | clear_phyclk)
          soft_errors_reg <= 32'd0;
       else if (soft_err)
          soft_errors_reg <= soft_errors_reg + 32'd1;
 
    // Tag an overrun if the FIFO is full. Samples will get dropped
    always @(posedge phy_clk)
-      if (phy_rst | clear)
+      if (phy_rst | clear_phyclk)
          overruns_reg <= 32'd0;
       else if (phy_s_axis_tvalid & ~phy_s_axis_tready)
          overruns_reg <= overruns_reg + 32'd1;
@@ -99,7 +101,7 @@ module aurora_axis_mac #(
    wire [63:0] loopback_tdata;
    wire        loopback_tvalid, loopback_tready;
    reg         bist_gen_en_reg = 1'b0, bist_checker_en_reg = 1'b0, bist_loopback_en_reg = 1'b0;
-   reg  [4:0]  bist_gen_rate_reg = 5'b0;
+   reg  [5:0]  bist_gen_rate_reg = 'd0;
 
    generate if (BIST_ENABLED == 1) begin
       // Pipeline control signals
@@ -108,7 +110,7 @@ module aurora_axis_mac #(
             bist_gen_en_reg      <= 1'b0;
             bist_checker_en_reg  <= 1'b0;
             bist_loopback_en_reg <= 1'b0;
-            bist_gen_rate_reg    <= 5'd0;
+            bist_gen_rate_reg    <= 'd0;
          end else begin
             bist_gen_en_reg      <= bist_gen_en;
             bist_checker_en_reg  <= bist_checker_en;
@@ -152,7 +154,7 @@ module aurora_axis_mac #(
    end endgenerate
 
    // Large FIFO must be able to run input side at 64b@156MHz to sustain 10Gb Rx.
-   axi64_8k_2clk_fifo ingress_fifo_i (
+   axi64_4k_2clk_fifo ingress_fifo_i (
       .s_aresetn(~phy_rst), .s_aclk(phy_clk),
       .s_axis_tdata(phy_s_axis_tdata_endian), .s_axis_tlast(phy_s_axis_tvalid), .s_axis_tuser(4'h0),
       .s_axis_tvalid(phy_s_axis_tvalid), .s_axis_tready(phy_s_axis_tready), .axis_wr_data_count(),
@@ -185,7 +187,7 @@ module aurora_axis_mac #(
    );
 
    generate if (PACKET_MODE == 1) begin
-      axi_packet_gate #(.WIDTH(64), .SIZE(PACKET_FIFO_SIZE)) ingress_pkt_gate_i (
+      axi_drop_packet #(.WIDTH(64), .MAX_PKT_SIZE(MAX_PACKET_SIZE)) ingress_pkt_gate_i (
          .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
          .i_tdata(i_pkt_tdata), .i_tlast(i_pkt_tlast), .i_tvalid(i_pkt_tvalid), .i_tready(i_pkt_tready),
          .i_terror(checksum_err),
@@ -255,7 +257,7 @@ module aurora_axis_mac #(
    assign loopback_tready  = o_pip_tready;
 
    // Egress FIFO
-   axi64_8k_2clk_fifo egress_fifo_i (
+   axi64_4k_2clk_fifo egress_fifo_i (
       .s_aresetn(~phy_rst), .s_aclk(sys_clk),
       .s_axis_tdata(o_raw_tdata), .s_axis_tlast(o_raw_tvalid), .s_axis_tuser(4'h0),
       .s_axis_tvalid(o_raw_tvalid), .s_axis_tready(o_raw_tready), .axis_wr_data_count(),
@@ -264,59 +266,70 @@ module aurora_axis_mac #(
       .m_axis_tvalid(phy_m_axis_tvalid), .m_axis_tready(phy_m_axis_tready), .axis_rd_data_count()
    );
 
-   // ----------------------------------------------
-   // BIST: Generator and checker for a PRBS15 pattern
-   // ----------------------------------------------
+   // -------------------------------------------------
+   // BIST: Generator and checker for a LFSR polynomial
+   // -------------------------------------------------
+   localparam LFSR_LEN  = 32;
+   localparam LFSR_SEED = {LFSR_LEN{1'b1}};
+   
+   function [LFSR_LEN-1:0] compute_lfsr_next;
+      input [LFSR_LEN-1:0] current;
+      // Maximal length polynomial: x^32 + x^22 + x^2 + x^1 + 1
+      compute_lfsr_next = {current[30:0], current[31]^current[21]^current[1]^current[0]};
+   endfunction
+
+   function [63:0] lfsr_to_axis;
+      input [LFSR_LEN-1:0] lfsr;
+      lfsr_to_axis = {~lfsr, lfsr};
+   endfunction
+
+   function [LFSR_LEN-1:0] axis_to_lfsr;
+      input [63:0] axis;
+      axis_to_lfsr = axis[LFSR_LEN-1:0];
+   endfunction
 
    generate if (BIST_ENABLED == 1) begin
-      localparam [15:0] SEED16 = 16'hFFFF;
-      localparam [63:0] SEED64 = {~SEED16, SEED16, ~SEED16, SEED16};
-   
-      // Throttle outgoing PRBS to based on the specified rate
-      // BIST Throughput = sys_clk BW * (1 - (1/N))
-      // where: N = bist_gen_rate_reg + 1
-      //        N = 0 implies full rate
-      reg [4:0] throttle_cnt;
+      // Throttle outgoing LFSR to based on the specified rate
+      // BIST Throughput = sys_clk BW * (bist_gen_rate+1)/64
+      reg [5:0] throttle_cnt;
       always @(posedge sys_clk) begin
          if (sys_rst | clear_sysclk)
-            throttle_cnt <= bist_gen_rate_reg;
-         else if (bist_o_tready)
-            if (throttle_cnt == 5'd0)
-               throttle_cnt <= bist_gen_rate_reg;
-            else
-               throttle_cnt <= throttle_cnt - 5'd1;
+            throttle_cnt <= 6'd0;
+         else if (bist_gen_en_reg)
+            throttle_cnt <= throttle_cnt + 6'd1;
       end
-      assign bist_o_tvalid = (bist_gen_rate_reg == 5'd0) || (throttle_cnt != 5'd0);
-   
-      // Unsynchronized PRBS15 generator (for BIST output)
-      reg [15:0] prbs15_gen, prbs15_check;
+      // NOTE: This techinically violates AXIS spec (valid revocation)
+      assign bist_o_tvalid = bist_gen_en_reg && (throttle_cnt <= bist_gen_rate_reg);
+
+      // Unsynchronized LFSR generator (for BIST output)
+      reg [LFSR_LEN-1:0] lfsr_gen = LFSR_SEED, lfsr_check = LFSR_SEED;
       always @(posedge sys_clk) begin
-         if (sys_rst | clear_sysclk)
-            prbs15_gen <= SEED16;
+         if (sys_rst | clear_sysclk | ~bist_gen_en_reg)
+            lfsr_gen <= LFSR_SEED;
          else if (bist_o_tready & bist_o_tvalid)
-            prbs15_gen <= {prbs15_gen[14:0], prbs15_gen[15] ^ prbs15_gen[14]};
+            lfsr_gen <= compute_lfsr_next(lfsr_gen);
       end
-      assign bist_o_tdata = {~prbs15_gen, prbs15_gen, ~prbs15_gen, prbs15_gen};
-   
-      // Unsynchronized PRBS15 generator (for BIST input)
-      wire [15:0] prbs15_next = {prbs15_check[14:0], prbs15_check[15] ^ prbs15_check[14]};
+      assign bist_o_tdata = lfsr_to_axis(lfsr_gen);
+
+      // Synchronized LFSR checker (for BIST input)
+      wire [LFSR_LEN-1:0] lfsr_next = compute_lfsr_next(lfsr_check);;
       always @(posedge sys_clk) begin
          if (sys_rst | clear_sysclk | ~bist_checker_en_reg) begin
-            bist_checker_locked  <= 1'b0;
-            prbs15_check <= SEED16;
+            bist_checker_locked <= 1'b0;
+            lfsr_check <= LFSR_SEED;
          end else if (bist_i_tvalid && bist_i_tready) begin
-            prbs15_check <= bist_i_tdata[15:0];
-            if (bist_i_tdata == SEED64)
+            lfsr_check <= axis_to_lfsr(bist_i_tdata);
+            if (bist_i_tdata == lfsr_to_axis(LFSR_SEED))
                bist_checker_locked <= 1'b1;
          end
       end
-   
-      // PRBS15 checker
+
+      // LFSR checker
       always @(posedge sys_clk) begin
          if (bist_checker_locked) begin
             if (bist_i_tvalid & bist_i_tready) begin
                bist_checker_samps <= bist_checker_samps + 48'd1;
-               if (bist_i_tdata != {~prbs15_next, prbs15_next, ~prbs15_next, prbs15_next}) begin
+               if (bist_i_tdata != lfsr_to_axis(lfsr_next)) begin
                   bist_checker_errors <= bist_checker_errors + 48'd1;
                end
             end
