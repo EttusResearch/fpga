@@ -552,7 +552,7 @@ module x300_core (
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
-   localparam RADIO_STR_FIFO_SIZE = 8'd11;
+   localparam RADIO_STR_FIFO_SIZE = 8'd12;
 
    // Daughter board I/O
    wire [31:0] leds[0:3];
