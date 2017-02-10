@@ -17,6 +17,7 @@ include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
 #include $(IP_DIR)/radio_clk_gen/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 #include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
+include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
 
 BD_SRCS = \
 
@@ -24,6 +25,7 @@ IP_XCI_SRCS = \
 $(IP_AXI4_BRAM_SRCS) \
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) \
 $(IP_AXI64_8K_2CLK_FIFO_SRCS) \
+$(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_SRCS) \
 $(IP_BUS_CLK_GEN_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
@@ -55,6 +57,7 @@ IP_SYNTH_OUTPUTS = \
 $(IP_AXI4_BRAM_OUTS) \
 $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
+$(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_OUTS) \
 $(IP_AXI_INTERCON_2X64_128_OUTS) \
 $(IP_BUS_CLK_GEN_OUTS) \
 $(IP_FIFO_4K_2CLK_OUTS) \
