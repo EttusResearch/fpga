@@ -24,6 +24,7 @@ include $(IP_DIR)/Makefile.inc
 include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/simple_gemac/Makefile.srcs
+include $(LIB_DIR)/axi/Makefile.srcs
 #include $(LIB_DIR)/timing/Makefile.srcs
 #include $(LIB_DIR)/zpu/Makefile.srcs
 #include $(LIB_DIR)/wishbone/Makefile.srcs
@@ -75,7 +76,7 @@ else
 HLS_IP_GEN_SRCS =
 endif
 
-DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
+DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \

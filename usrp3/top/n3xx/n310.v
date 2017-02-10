@@ -621,89 +621,97 @@ module n310
     );
 `endif
 
-   // Processing System
-   n310_ps inst_n310_ps (
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
 
-     .USB0_PORT_INDCTL(USB0_PORT_INDCTL),
-     .USB0_VBUS_PWRSELECT(USB0_VBUS_PWRSELECT),
-     .USB0_VBUS_PWRFAULT(USB0_VBUS_PWRFAULT),
+    .s_axi_awaddr(M_AXI_GP0_AWADDR),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID),
+    .s_axi_awready(M_AXI_GP0_AWREADY),
 
-      // TODO: Connections tied off to 1
-      // GP0  --  General Purpose Slave 0
-     .M_AXI_GP0_ACLK(M_AXI_GP0_ACLK),
-      // Read Address Channel
-     .M_AXI_GP0_ARID(M_AXI_GP0_ARID),
-     .M_AXI_GP0_ARVALID(M_AXI_GP0_ARVALID),
-     .M_AXI_GP0_ARREADY(/*M_AXI_GP0_ARREADY*/ 1'b1),
-     .M_AXI_GP0_ARBURST(M_AXI_GP0_ARBURST),
-     .M_AXI_GP0_ARLOCK(M_AXI_GP0_ARLOCK),
-     .M_AXI_GP0_ARSIZE(M_AXI_GP0_ARSIZE),
-     .M_AXI_GP0_ARPROT(M_AXI_GP0_ARPROT),
-     .M_AXI_GP0_ARADDR(M_AXI_GP0_ARADDR),
-     .M_AXI_GP0_ARCACHE(M_AXI_GP0_ARCACHE),
-     .M_AXI_GP0_ARLEN(M_AXI_GP0_ARLEN),
-     .M_AXI_GP0_ARQOS(M_AXI_GP0_ARQOS),
-      // Write Address Channel
-     .M_AXI_GP0_AWID(M_AXI_GP0_AWID),
-     .M_AXI_GP0_AWVALID(M_AXI_GP0_AWVALID),
-     .M_AXI_GP0_AWREADY(/*M_AXI_GP0_AWREADY*/ 1'b1),
-     .M_AXI_GP0_AWBURST(M_AXI_GP0_AWBURST),
-     .M_AXI_GP0_AWLOCK(M_AXI_GP0_AWLOCK),
-     .M_AXI_GP0_AWSIZE(M_AXI_GP0_AWSIZE),
-     .M_AXI_GP0_AWPROT(M_AXI_GP0_AWPROT),
-     .M_AXI_GP0_AWADDR(M_AXI_GP0_AWADDR),
-     .M_AXI_GP0_AWCACHE(M_AXI_GP0_AWCACHE),
-     .M_AXI_GP0_AWLEN(M_AXI_GP0_AWLEN),
-     .M_AXI_GP0_AWQOS(M_AXI_GP0_AWQOS),
-      // Write Data Channel
-     .M_AXI_GP0_WLAST(M_AXI_GP0_WLAST),
-     .M_AXI_GP0_WVALID(M_AXI_GP0_WVALID),
-     .M_AXI_GP0_WID(M_AXI_GP0_WID),
-     .M_AXI_GP0_WDATA(M_AXI_GP0_WDATA),
-     .M_AXI_GP0_WSTRB(M_AXI_GP0_WSTRB),
-     .M_AXI_GP0_WREADY(/*M_AXI_GP0_WREADY*/ 1'b1),
-     // Read Data Channel
-     .M_AXI_GP0_RLAST(M_AXI_GP0_RLAST),
-     .M_AXI_GP0_RVALID(/*M_AXI_GP0_RVALID*/ 1'b1),
-     .M_AXI_GP0_RID(M_AXI_GP0_RID),
-     .M_AXI_GP0_RDATA(M_AXI_GP0_RDATA),
-     .M_AXI_GP0_RRESP(/*M_AXI_GP0_RRESP*/ 2'b00),
-     .M_AXI_GP0_RREADY(M_AXI_GP0_RREADY),
-     // Write Response Channel
-     .M_AXI_GP0_BREADY(M_AXI_GP0_BREADY),
-     .M_AXI_GP0_BID(M_AXI_GP0_BID),
-     .M_AXI_GP0_BRESP(/*M_AXI_GP0_BRESP*/ 2'b00),
-     .M_AXI_GP0_BVALID(/*M_AXI_GP0_BVALID*/ 1'b1),
+    .s_axi_wdata(M_AXI_GP0_WDATA),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB),
+    .s_axi_wvalid(M_AXI_GP0_WVALID),
+    .s_axi_wready(M_AXI_GP0_WREADY),
 
-      // Misc Interrupts, GPIO, clk
-     .IRQ_F2P(IRQ_F2P),
-     .FCLK_CLK0(FCLK_CLK0),
-     .FCLK_RESET0(FCLK_RESET0),
+    .s_axi_bresp(M_AXI_GP0_BRESP),
+    .s_axi_bvalid(M_AXI_GP0_BVALID),
+    .s_axi_bready(M_AXI_GP0_BREADY),
 
-      // Outward connections to the pins
-     .MIO(MIO),
-     .DDR_CAS_n(DDR_CAS_n),
-     .DDR_CKE(DDR_CKE),
-     .DDR_Clk_n(DDR_Clk_n),
-     .DDR_Clk(DDR_Clk),
-     .DDR_CS_n(DDR_CS_n),
-     .DDR_DRSTB(DDR_DRSTB),
-     .DDR_ODT(DDR_ODT),
-     .DDR_RAS_n(DDR_RAS_n),
-     .DDR_WEB(DDR_WEB),
-     .DDR_BankAddr(DDR_BankAddr),
-     .DDR_Addr(DDR_Addr),
-     .DDR_VRN(DDR_VRN),
-     .DDR_VRP(DDR_VRP),
-     .DDR_DM(DDR_DM),
-     .DDR_DQ(DDR_DQ),
-     .DDR_DQS_n(DDR_DQS_n),
-     .DDR_DQS(DDR_DQS),
-     .PS_SRSTB(PS_SRSTB),
-     .PS_CLK(PS_CLK),
-     .PS_PORB(PS_PORB)
+    .s_axi_araddr(M_AXI_GP0_ARADDR),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID),
+    .s_axi_arready(M_AXI_GP0_ARREADY),
 
-   );
+    .s_axi_rdata(M_AXI_GP0_RDATA),
+    .s_axi_rresp(M_AXI_GP0_RRESP),
+    .s_axi_rvalid(M_AXI_GP0_RVALID),
+    .s_axi_rready(M_AXI_GP0_RREADY)
+  );
+
+  // Processing System
+  n310_ps inst_n310_ps
+  (
+    .M_AXI_GP0_ARVALID(M_AXI_GP0_ARVALID),
+    .M_AXI_GP0_ARREADY(M_AXI_GP0_ARREADY),
+    .M_AXI_GP0_ARADDR(M_AXI_GP0_ARADDR),
+     // Write Address Channel
+    .M_AXI_GP0_AWVALID(M_AXI_GP0_AWVALID),
+    .M_AXI_GP0_AWREADY(M_AXI_GP0_AWREADY),
+    .M_AXI_GP0_AWADDR(M_AXI_GP0_AWADDR),
+    // Write Data Channel
+    .M_AXI_GP0_WVALID(M_AXI_GP0_WVALID),
+    .M_AXI_GP0_WDATA(M_AXI_GP0_WDATA),
+    .M_AXI_GP0_WSTRB(M_AXI_GP0_WSTRB),
+    .M_AXI_GP0_WREADY(M_AXI_GP0_WREADY),
+    // Read Data Channel
+    .M_AXI_GP0_RVALID(M_AXI_GP0_RVALID),
+    .M_AXI_GP0_RDATA(M_AXI_GP0_RDATA),
+    .M_AXI_GP0_RRESP(M_AXI_GP0_RRESP),
+    .M_AXI_GP0_RREADY(M_AXI_GP0_RREADY),
+    // Write Response Channel
+    .M_AXI_GP0_BREADY(M_AXI_GP0_BREADY),
+    .M_AXI_GP0_BRESP(M_AXI_GP0_BRESP),
+    .M_AXI_GP0_BVALID(M_AXI_GP0_BVALID),
+
+    // Misc Interrupts, GPIO, clk
+    .IRQ_F2P(IRQ_F2P),
+
+    .GPIO_I(ps_gpio_in),
+    .GPIO_O(ps_gpio_out),
+
+    .FCLK_CLK0(FCLK_CLK0),
+    .FCLK_RESET0(FCLK_RESET0),
+    .FCLK_CLK1(FCLK_CLK1),
+    .FCLK_RESET1(FCLK_RESET1),
+    .FCLK_CLK2(FCLK_CLK2),
+    .FCLK_RESET2(FCLK_RESET2),
+    .FCLK_CLK3(FCLK_CLK3),
+    .FCLK_RESET3(FCLK_RESET3),
+
+    // Outward connections to the pins
+    .MIO(MIO),
+    .DDR_CAS_n(DDR_CAS_n),
+    .DDR_CKE(DDR_CKE),
+    .DDR_Clk_n(DDR_Clk_n),
+    .DDR_Clk(DDR_Clk),
+    .DDR_CS_n(DDR_CS_n),
+    .DDR_DRSTB(DDR_DRSTB),
+    .DDR_ODT(DDR_ODT),
+    .DDR_RAS_n(DDR_RAS_n),
+    .DDR_WEB(DDR_WEB),
+    .DDR_BankAddr(DDR_BankAddr),
+    .DDR_Addr(DDR_Addr),
+    .DDR_VRN(DDR_VRN),
+    .DDR_VRP(DDR_VRP),
+    .DDR_DM(DDR_DM),
+    .DDR_DQ(DDR_DQ),
+    .DDR_DQS_n(DDR_DQS_n),
+    .DDR_DQS(DDR_DQS),
+    .PS_SRSTB(PS_SRSTB),
+    .PS_CLK(PS_CLK),
+    .PS_PORB(PS_PORB)
+);
 
    // Radio Clock Generation
 
