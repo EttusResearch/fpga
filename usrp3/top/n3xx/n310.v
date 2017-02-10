@@ -1,12 +1,8 @@
-//////////////////////////////////////
 //
-//  2016 Ettus Research
+// Copyright 2016-2017 Ettus Research
 //
-//////////////////////////////////////
-
-
 module n310
-  (
+(
 
    //inout [11:0] FpgaGpio,
    //output FpgaGpioEn,
