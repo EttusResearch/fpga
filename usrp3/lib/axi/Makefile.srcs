@@ -18,4 +18,5 @@ axi_fast_fifo.v \
 axi_to_strobed.v \
 axi_dummy.v \
 strobed_to_axi.v \
+axis_2clk_fifo.v \
 ))

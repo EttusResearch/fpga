@@ -40,4 +40,5 @@ simple_spi_core.v \
 synchronizer_impl.v \
 synchronizer.v \
 user_settings.v \
+axil_regport_master.v \
 ))

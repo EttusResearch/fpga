@@ -33,7 +33,7 @@ include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
 #include $(LIB_DIR)/dsp/Makefile.srcs
-#include $(LIB_DIR)/axi/Makefile.srcs
+include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 #include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs

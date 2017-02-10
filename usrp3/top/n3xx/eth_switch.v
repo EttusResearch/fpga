@@ -16,12 +16,26 @@
 //////////////////////////////////////
 
 
-module eth_switch
-  #(parameter NUM_CE = 3          // Number of computation engines
-   )
-   (
+module eth_switch #(
+    parameter NUM_CE = 3,          // Number of computation engines
+    parameter REG_DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+    parameter REG_AWIDTH  = 32     // Width of the address bus
+   )(
     input           clk,
     input           reset,
+
+    input           reg_clk,
+    // Register port: Write port (domain: reg_clk)
+    output                         reg_wr_req,
+    output   [REG_AWIDTH-1:0]      reg_wr_addr,
+    output   [REG_DWIDTH-1:0]      reg_wr_data,
+    output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
+
+    // Register port: Read port (domain: reg_clk)
+    output                         reg_rd_req,
+    output   [REG_AWIDTH-1:0]      reg_rd_addr,
+    input                          reg_rd_resp,
+    input    [REG_DWIDTH-1:0]      reg_rd_data,
 
     // SFP+ 0 data stream
     output  [63:0]  sfp0_tx_tdata,
@@ -117,15 +131,24 @@ module eth_switch
     wire            e01_tlast, e01_tvalid, e01_tready;
     wire            e10_tlast, e10_tvalid, e10_tready;
 
-    n310_eth_interface #(.BASE(SR_ETHINT0)) eth_interface0
-    (
+    n310_eth_interface #(
+        .BASE       (SR_ETHINT0),
+        .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+        .REG_AWIDTH (REG_AWIDTH)         // Width of the address bus
+    ) eth_interface0 (
         .clk			(clk),
         .reset			(reset),
         .clear			(1'b0),
-        // TODO: Change to regport
-        .set_stb		(set_stb),
-        .set_addr		(set_addr),
-        .set_data		(set_data),
+        //RegPort
+        .reg_clk	    (bus_clk),
+        .reg_wr_req	    (reg_wr_req),
+        .reg_wr_addr	(reg_wr_addr),
+        .reg_wr_data	(reg_wr_data),
+        .reg_wr_keep	(/*unused*/),
+        .reg_rd_req	    (reg_rd_req),
+        .reg_rd_addr	(reg_rd_addr),
+        .reg_rd_resp	(reg_rd_resp),
+        .reg_rd_data	(reg_rd_data),
         // SFP
         .eth_tx_tdata	(sfp0_tx_tdata),
         .eth_tx_tuser	(sfp0_tx_tuser),
@@ -173,15 +196,24 @@ module eth_switch
         .debug			()
     );
 
-   n310_eth_interface #(.BASE(SR_ETHINT1)) eth_interface1
-    (
+   n310_eth_interface #(
+        .BASE       (SR_ETHINT1),
+        .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+        .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
+   ) eth_interface1 (
         .clk			(clk),
         .reset			(reset),
         .clear			(1'b0),
-        // TODO: Change to regport
-        .set_stb		(set_stb),
-        .set_addr		(set_addr),
-        .set_data		(set_data),
+        //RegPort
+        .reg_clk	    (bus_clk),
+        .reg_wr_req	    (reg_wr_req),
+        .reg_wr_addr	(reg_wr_addr),
+        .reg_wr_data	(reg_wr_data),
+        .reg_wr_keep	(/*unused*/),
+        .reg_rd_req	    (reg_rd_req),
+        .reg_rd_addr	(reg_rd_addr),
+        .reg_rd_resp	(reg_rd_resp),
+        .reg_rd_data	(reg_rd_data),
         // SFP
         .eth_tx_tdata	(sfp1_tx_tdata),
         .eth_tx_tuser	(sfp1_tx_tuser),

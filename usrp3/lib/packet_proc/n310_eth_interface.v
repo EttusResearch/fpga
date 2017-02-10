@@ -3,20 +3,31 @@
 //
 // Adapts from internal VITA to ethernet packets.  Also handles CPU and ethernet crossover interfaces.
 
-module n310_eth_interface
-  #(parameter BASE=0,
+module n310_eth_interface #(
+    parameter BASE=0,
     parameter XO_FIFOSIZE=10,
     parameter CPU_FIFOSIZE=10,
     parameter VITA_FIFOSIZE=10,
-    parameter ETHOUT_FIFOSIZE=10)
-   (
+    parameter ETHOUT_FIFOSIZE=10,
+    parameter REG_DWIDTH = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+    parameter REG_AWIDTH = 32     // Width of the address bus
+    )(
     input           clk,
     input           reset,
     input           clear,
 
-    input           set_stb,
-    input   [7:0]   set_addr,
-    input   [31:0]  set_data,
+    input           reg_clk,
+    // Register port: Write port (domain: reg_clk)
+    output                         reg_wr_req,
+    output   [REG_AWIDTH-1:0]      reg_wr_addr,
+    output   [REG_DWIDTH-1:0]      reg_wr_data,
+    output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
+
+    // Register port: Read port (domain: reg_clk)
+    output                         reg_rd_req,
+    output   [REG_AWIDTH-1:0]      reg_rd_addr,
+    input                          reg_rd_resp,
+    input    [REG_DWIDTH-1:0]      reg_rd_data,
 
     // Eth ports
     output	[63:0]  eth_tx_tdata,
@@ -113,16 +124,59 @@ module n310_eth_interface
   wire [3:0]     e2c_tuser_int;
   wire           e2c_tlast_int, e2c_tvalid_int, e2c_tready_int;
 
-   n310_eth_dispatch #(.BASE(BASE+8)) eth_dispatch
-     (.clk(clk), .reset(reset), .clear(clear),
-      .set_stb(set_stb), .set_addr(set_addr) , .set_data(set_data),
-      .in_tdata(epg_tdata_int), .in_tuser(epg_tuser_int), .in_tlast(epg_tlast_int), .in_tvalid(epg_tvalid_int), .in_tready(epg_tready_int),
-      .vita_tdata(e2v_tdata_int), .vita_tlast(e2v_tlast_int), .vita_tvalid(e2v_tvalid_int), .vita_tready(e2v_tready_int),
-      .cpu_tdata(e2c_tdata_int), .cpu_tuser(e2c_tuser_int), .cpu_tlast(e2c_tlast_int), .cpu_tvalid(e2c_tvalid_int), .cpu_tready(e2c_tready_int),
-      .xo_tdata(xo_tdata), .xo_tuser(xo_tuser), .xo_tlast(xo_tlast), .xo_tvalid(xo_tvalid), .xo_tready(xo_tready), // to other eth port
-      .mac_src_addr(mac_src_addr), .ip_src_addr(ip_src_addr), .udp_src_prt(udp_src_prt),
-      .my_mac_addr(my_mac_addr), .my_ip_addr(my_ip_addr), .my_udp_port(my_udp_port),
-      .debug_flags(),.debug());
+   n310_eth_dispatch #(
+    .BASE	(BASE+8),
+    .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
+    ) eth_dispatch (
+    .clk    	    (clk),
+    .reset	        (reset),
+    .clear	        (clear),
+    //RegPort
+    .reg_clk	    (bus_clk),
+    .reg_wr_req	    (reg_wr_req),
+    .reg_wr_addr	(reg_wr_addr),
+    .reg_wr_data	(reg_wr_data),
+    .reg_wr_keep	(/*unused*/),
+    .reg_rd_req	    (reg_rd_req),
+    .reg_rd_addr	(reg_rd_addr),
+    .reg_rd_resp	(reg_rd_resp),
+    .reg_rd_data	(reg_rd_data),
+
+    .in_tdata	    (epg_tdata_int),
+    .in_tuser	    (epg_tuser_int),
+    .in_tlast	    (epg_tlast_int),
+    .in_tvalid	    (epg_tvalid_int),
+    .in_tready	    (epg_tready_int),
+
+    .vita_tdata	    (e2v_tdata_int),
+    .vita_tlast	    (e2v_tlast_int),
+    .vita_tvalid    (e2v_tvalid_int),
+    .vita_tready    (e2v_tready_int),
+
+    .cpu_tdata	    (e2c_tdata_int),
+    .cpu_tuser	    (e2c_tuser_int),
+    .cpu_tlast	    (e2c_tlast_int),
+    .cpu_tvalid	    (e2c_tvalid_int),
+    .cpu_tready	    (e2c_tready_int),
+
+    .xo_tdata	    (xo_tdata),
+    .xo_tuser	    (xo_tuser),
+    .xo_tlast	    (xo_tlast),
+    .xo_tvalid	    (xo_tvalid),
+    .xo_tready	    (xo_tready),
+    // to other eth port
+    .mac_src_addr	(mac_src_addr),
+    .ip_src_addr	(ip_src_addr),
+    .udp_src_prt	(udp_src_prt),
+
+    .my_mac_addr	(my_mac_addr),
+    .my_ip_addr	    (my_ip_addr),
+    .my_udp_port	(my_udp_port),
+
+    .debug_flags	(),
+    .debug	        ()
+    );
 
    axi_fifo_short #(.WIDTH(65)) e2v_pipeline_srl
      (.clk(clk), .reset(reset), .clear(clear),

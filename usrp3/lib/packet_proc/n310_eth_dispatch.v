@@ -38,17 +38,26 @@
 //
 //
 
-module n310_eth_dispatch
-  #(parameter BASE=0)
-   (
+module n310_eth_dispatch #(
+    parameter BASE=0,
+    parameter REG_DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+    parameter REG_AWIDTH  = 32     // Width of the address bus
+    )(
     // Clocking and reset interface
-    input clk,
-    input reset,
-    input clear,
-    // Setting register interface
-    input           set_stb,
-    input   [7:0]   set_addr,
-    input   [31:0]  set_data,
+    input           clk,
+    input           reset,
+    input           clear,
+    input           reg_clk,
+    // Register port: Write port (domain: reg_clk)
+    output                         reg_wr_req,
+    output   [REG_AWIDTH-1:0]      reg_wr_addr,
+    output   [REG_DWIDTH-1:0]      reg_wr_data,
+    output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
+    // Register port: Read port (domain: reg_clk)
+    output                         reg_rd_req,
+    output   [REG_AWIDTH-1:0]      reg_rd_addr,
+    input                          reg_rd_resp,
+    input    [REG_DWIDTH-1:0]      reg_rd_data,
     // Input 68bit AXI-Stream interface (from MAC)
     input   [63:0]  in_tdata,
     input   [3:0]   in_tuser,
@@ -159,6 +168,7 @@ module n310_eth_dispatch
     reg [15:0]    udp_src_port;
     assign udp_src_prt = udp_src_port;
 
+    //TODO: Change these to Reg Ports
     //---------------------------------------------------------
     // Settings regs
     //---------------------------------------------------------
