@@ -27,15 +27,15 @@ include $(LIB_DIR)/simple_gemac/Makefile.srcs
 #include $(LIB_DIR)/timing/Makefile.srcs
 #include $(LIB_DIR)/zpu/Makefile.srcs
 #include $(LIB_DIR)/wishbone/Makefile.srcs
-#include $(LIB_DIR)/packet_proc/Makefile.srcs
-#include $(LIB_DIR)/vita/Makefile.srcs
+include $(LIB_DIR)/packet_proc/Makefile.srcs
+include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
 #include $(LIB_DIR)/dsp/Makefile.srcs
 #include $(LIB_DIR)/axi/Makefile.srcs
-#include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/radio/Makefile.srcs
 #include $(LIB_DIR)/io_cap_gen/Makefile.srcs
-#include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(BASE_DIR)/n3xx/Makefile.srcs
 
 ##################################################
@@ -43,9 +43,11 @@ include $(BASE_DIR)/n3xx/Makefile.srcs
 ##################################################
 TOP_SRCS = \
 n310.v \
+n310_core.v \
 n310_sfpp_io_core.v \
 n310.xdc \
 n310_ps.v \
+eth_switch.v
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)

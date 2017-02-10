@@ -345,6 +345,11 @@ module n310
       .S(1'b0)    // 1-bit set
    );
 
+  wire ref_clk_10mhz; //TODO: Check if this is 10 MHz
+  IBUF FPGA_REFCLK_ibuf (
+      .I(FPGA_REFCLK),
+      .O(ref_clk_10mhz));
+
 
 `ifdef BUILD_1G
    wire  gige_refclk, gige_refclk_bufg;
@@ -408,18 +413,6 @@ module n310
   assign SFP_0_RS1 = 1'b0;
   assign SFP_1_RS0 = 1'b0;
   assign SFP_1_RS1 = 1'b0;
-
-   wire [7:0]  gmii_txd_loop;
-   wire [7:0]  gmii_rxd_loop;
-   wire        gmii_tx_en_loop;
-   wire        gmii_tx_er_loop;
-   wire        gmii_rx_dv_loop;
-   wire        gmii_rx_er_loop;
-
-   wire [63:0] xgmii_txd_loop;
-   wire [7:0]  xgmii_txc_loop;
-   wire [63:0] xgmii_rxd_loop;
-   wire [7:0]  xgmii_rxc_loop;
 
    //////////////////////////////////////////////////////////////////////
    //
@@ -501,20 +494,8 @@ module n310
       .wb_dat_o(/*sfp0_wb_dat_i*/),
       .wb_int_o(/*sfp0_wb_int*/),
 
-      .phy_status(sfp0_phy_status),
+      .phy_status(sfp0_phy_status)
 
-      //Phy Loopback
-      .xgmii_txd_loop(xgmii_txd_loop),
-      .xgmii_txc_loop(xgmii_txc_loop),
-      .xgmii_rxd_loop(xgmii_rxd_loop),
-      .xgmii_rxc_loop(xgmii_rxc_loop),
-
-      .gmii_txd_loop(gmii_txd_loop),            // Transmit data from client MAC.
-      .gmii_tx_en_loop(gmii_tx_en_loop),        // Transmit control signal from client MAC.
-      .gmii_tx_er_loop(gmii_tx_er_loop),        // Transmit control signal from client MAC.
-      .gmii_rxd_loop(gmii_rxd_loop),            // Received Data to client MAC.
-      .gmii_rx_dv_loop(gmii_rx_dv_loop),        // Received control signal to client MAC.
-      .gmii_rx_er_loop(gmii_rx_er_loop)        // Received control signal to client MAC.
    );
 
    //////////////////////////////////////////////////////////////////////
@@ -592,35 +573,22 @@ module n310
       .wb_dat_o(/*sfp1_wb_dat_i*/),
       .wb_int_o(/*sfp1_wb_int*/),
 
-      .phy_status(sfp1_phy_status),
-
-      //Phy Loopback
-      .xgmii_txd_loop(xgmii_rxd_loop),
-      .xgmii_txc_loop(xgmii_rxc_loop),
-      .xgmii_rxd_loop(xgmii_txd_loop),
-      .xgmii_rxc_loop(xgmii_txc_loop),
-
-      .gmii_txd_loop(gmii_rxd_loop),            // Transmit data from client MAC.
-      .gmii_tx_en_loop(gmii_rx_dv_loop),        // Transmit control signal from client MAC.
-      .gmii_tx_er_loop(gmii_rx_er_loop),        // Transmit control signal from client MAC.
-      .gmii_rxd_loop(gmii_txd_loop),            // Received Data to client MAC.
-      .gmii_rx_dv_loop(gmii_tx_en_loop),        // Received control signal to client MAC.
-      .gmii_rx_er_loop(gmii_tx_er_loop)        // Received control signal to client MAC.
+      .phy_status(sfp1_phy_status)
 
    );
 
    // Ethernet Loopback for testing
-   assign sfp0_tx_tdata = sfp1_rx_tdata;
-   assign sfp0_tx_tuser = sfp1_rx_tuser;
-   assign sfp0_tx_tlast = sfp1_rx_tlast;
-   assign sfp0_tx_tvalid = sfp1_rx_tvalid;
-   assign sfp1_rx_tready = sfp0_tx_tready;
+   //assign sfp0_tx_tdata = sfp1_rx_tdata;
+   //assign sfp0_tx_tuser = sfp1_rx_tuser;
+   //assign sfp0_tx_tlast = sfp1_rx_tlast;
+   //assign sfp0_tx_tvalid = sfp1_rx_tvalid;
+   //assign sfp1_rx_tready = sfp0_tx_tready;
 
-   assign sfp1_tx_tdata = sfp0_rx_tdata;
-   assign sfp1_tx_tuser = sfp0_rx_tuser;
-   assign sfp1_tx_tlast = sfp0_rx_tlast;
-   assign sfp1_tx_tvalid = sfp0_rx_tvalid;
-   assign sfp0_rx_tready = sfp1_tx_tready;
+   //assign sfp1_tx_tdata = sfp0_rx_tdata;
+   //assign sfp1_tx_tuser = sfp0_rx_tuser;
+   //assign sfp1_tx_tlast = sfp0_rx_tlast;
+   //assign sfp1_tx_tvalid = sfp0_rx_tvalid;
+   //assign sfp0_rx_tready = sfp1_tx_tready;
 
 
 `ifdef SFP0_1GBE
@@ -734,6 +702,110 @@ module n310
      .PS_SRSTB(PS_SRSTB),
      .PS_CLK(PS_CLK),
      .PS_PORB(PS_PORB)
+
+   );
+
+   // Radio Clock Generation
+
+   wire             radio_clk;
+   wire             radio_clk_locked;
+
+   wire [31:0]      rx0, rx1;
+   wire [31:0]      tx0, tx1;
+//   wire             sclk0, mosi0, miso0, sclk1, mosi1, miso1;
+//   wire [7:0]       sen0, sen1;
+
+   wire             set_stb;
+   wire [7:0]       set_addr;
+   wire [31:0]      set_data;
+
+   wire [63:0]      cpui_tdata;
+   wire [3:0]       cpui_tuser;
+   wire             cpui_tlast;
+   wire             cpui_tvalid;
+   wire             cpui_tready;
+
+   wire [63:0]      cpuo_tdata;
+   wire [3:0]       cpuo_tuser;
+   wire             cpuo_tlast;
+   wire             cpuo_tvalid;
+   wire             cpuo_tready;
+
+   n310_core n310_core (
+
+         //Clocks and resets
+        .radio_clk		        (radio_clk),
+        .radio_rst		        (/*radio_rst*/GSR),
+        .bus_clk		        (bus_clk),
+        .bus_rst		        (bus_rst),
+        // Radio 0 signals
+        .rx0		            (rx0),
+        .tx0		            (tx0),
+        //.db0_gpio_in		    (db0_gpio_in),
+        //.db0_gpio_out		    (db0_gpio_out),
+        //.db0_gpio_ddr		    (db0_gpio_ddr),
+        //.fp_gpio_in		        (fp_gpio_in),
+        //.fp_gpio_out		    (fp_gpio_out),
+        //.fp_gpio_ddr		    (fp_gpio_ddr),
+        //.sen0		            (sen0),
+        //.sclk0		            (sclk0),
+        //.mosi0		            (mosi0),
+        //.miso0		            (miso0),
+        //.radio_led0		        (led0),
+        //.radio0_misc_out		(radio0_misc_out),
+        //.radio0_misc_in		    (radio0_misc_in),
+        // Radio 1 signals
+        .rx1		            (rx1),
+        .tx1		            (tx1),
+        //.db1_gpio_in		    (db1_gpio_in),
+        //.db1_gpio_out		    (db1_gpio_out),
+        //.db1_gpio_ddr		    (db1_gpio_ddr),
+        //.sen1		            (sen1),
+        //.sclk1		            (sclk1),
+        //.mosi1		            (mosi1),
+        //.miso1		            (miso1),
+        //.radio_led1		        (led1),
+        //.radio1_misc_out		(radio1_misc_out),
+        //.radio1_misc_in		    (radio1_misc_in),
+        // External clock gen
+        .ext_ref_clk		    (ref_clk_10mhz),
+
+        // SFP+ 0 data stream
+        .sfp0_tx_tdata		    (sfp0_tx_tdata),
+        .sfp0_tx_tuser		    (sfp0_tx_tuser),
+        .sfp0_tx_tlast		    (sfp0_tx_tlast),
+        .sfp0_tx_tvalid		    (sfp0_tx_tvalid),
+        .sfp0_tx_tready		    (sfp0_tx_tready),
+        .sfp0_rx_tdata		    (sfp0_rx_tdata),
+        .sfp0_rx_tuser		    (sfp0_rx_tuser),
+        .sfp0_rx_tlast		    (sfp0_rx_tlast),
+        .sfp0_rx_tvalid		    (sfp0_rx_tvalid),
+        .sfp0_rx_tready		    (sfp0_rx_tready),
+        .sfp0_phy_status		(sfp0_phy_status),
+        // SFP+ 1 data stream
+        .sfp1_tx_tdata		    (sfp1_tx_tdata),
+        .sfp1_tx_tuser		    (sfp1_tx_tuser),
+        .sfp1_tx_tlast		    (sfp1_tx_tlast),
+        .sfp1_tx_tvalid		    (sfp1_tx_tvalid),
+        .sfp1_tx_tready		    (sfp1_tx_tready),
+        .sfp1_rx_tdata		    (sfp1_rx_tdata),
+        .sfp1_rx_tuser		    (sfp1_rx_tuser),
+        .sfp1_rx_tlast		    (sfp1_rx_tlast),
+        .sfp1_rx_tvalid		    (sfp1_rx_tvalid),
+        .sfp1_rx_tready		    (sfp1_rx_tready),
+        .sfp1_phy_status		(sfp1_phy_status),
+        // CPU
+        .cpui_tdata				(cpui_tdata),
+        .cpui_tuser				(cpui_tuser),
+        .cpui_tlast				(cpui_tlast),
+        .cpui_tvalid			(cpui_tvalid),
+        .cpui_tready			(cpui_tready),
+
+        .cpuo_tdata				(cpuo_tdata),
+        .cpuo_tuser				(cpuo_tuser),
+        .cpuo_tlast				(cpuo_tlast),
+        .cpuo_tvalid			(cpuo_tvalid),
+        .cpuo_tready			(cpuo_tready)
 
    );
 

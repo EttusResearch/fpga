@@ -87,18 +87,18 @@ module ten_gige_phy
    wire        drp_drdy_i;
    wire [15:0] drp_drpdo_i;
 
-   (* mark_debug = "true" *) wire        tx_resetdone_int;
-   (* mark_debug = "true" *) wire        rx_resetdone_int;
+   wire        tx_resetdone_int;
+   wire        rx_resetdone_int;
 
-  (* mark_debug = "true" *)  wire        areset_clk156;
-  (* mark_debug = "true" *)  wire        gttxreset;
-  (* mark_debug = "true" *)  wire        gtrxreset;
+   wire        areset_clk156;
+   wire        gttxreset;
+   wire        gtrxreset;
    wire        qplllock_txusrclk2;
    wire        gttxreset_txusrclk2;
-   (* mark_debug = "true" *) wire        reset_counter_done;
+   wire        reset_counter_done;
    wire        txusrclk;
    wire        txusrclk2;
-   (* mark_debug = "true" *) reg         txuserrdy;
+   reg         txuserrdy;
 
    assign resetdone = tx_resetdone_int && rx_resetdone_int;
 

@@ -53,19 +53,8 @@ module n310_sfpp_io_core #(
    output            qpllreset,
    input             qplllock,
    input             qplloutclk,
-   input             qplloutrefclk,
+   input             qplloutrefclk
 
-   output            gmii_clk,
-   input [63:0]      xgmii_txd_loop,
-   input [7:0]       xgmii_txc_loop,
-   output [63:0]     xgmii_rxd_loop,
-   output [7:0]      xgmii_rxc_loop,
-   input [7:0]       gmii_txd_loop,
-   output [7:0]      gmii_rxd_loop,
-   input             gmii_tx_en_loop,
-   input             gmii_tx_er_loop,
-   output            gmii_rx_dv_loop,
-   output            gmii_rx_er_loop
 );
 
    wire mdc, mdio_in, mdio_out;
@@ -74,10 +63,10 @@ generate
       //-----------------------------------------------------------------
       // 10 Gigabit Ethernet
       //-----------------------------------------------------------------
-      //wire [63:0] xgmii_txd;
-      //wire [7:0]  xgmii_txc;
-      //wire [63:0] xgmii_rxd;
-      //wire [7:0]  xgmii_rxc;
+      wire [63:0] xgmii_txd;
+      wire [7:0]  xgmii_txc;
+      wire [63:0] xgmii_rxd;
+      wire [7:0]  xgmii_rxc;
       wire [7:0]  xgmii_status;
       wire        xge_phy_resetdone;
 
@@ -90,10 +79,10 @@ generate
          .dclk(misc_clk),                 // Management/DRP clock: 78.125MHz
          .sim_speedup_control(1'b0),
          // GMII Interface (client MAC <=> PCS)
-         .xgmii_txd(xgmii_txd_loop),          // Transmit data from client MAC.
-         .xgmii_txc(xgmii_txc_loop),          // Transmit control signal from client MAC.
-         .xgmii_rxd(xgmii_rxd_loop),          // Received Data to client MAC.
-         .xgmii_rxc(xgmii_rxc_loop),          // Received control signal to client MAC.
+         .xgmii_txd(xgmii_txd),          // Transmit data from client MAC.
+         .xgmii_txc(xgmii_txc),          // Transmit control signal from client MAC.
+         .xgmii_rxd(xgmii_rxd),          // Received Data to client MAC.
+         .xgmii_rxc(xgmii_rxc),          // Received control signal to client MAC.
          // Tranceiver Interface
          .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
          .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
@@ -167,8 +156,8 @@ generate
       //-----------------------------------------------------------------
       // 1 Gigabit Ethernet
       //-----------------------------------------------------------------
-//      wire [7:0]  gmii_txd, gmii_rxd;
-//      wire        gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er;
+      wire [7:0]  gmii_txd, gmii_rxd;
+      wire        gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er;
       wire        gmii_clk;
 
       assign sfpp_tx_disable = 1'b0; // Always on.
@@ -189,12 +178,12 @@ generate
          .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
          // GMII Interface (client MAC <=> PCS)
          .gmii_clk(gmii_clk),            // Clock to client MAC.
-         .gmii_txd(gmii_txd_loop),            // Transmit data from client MAC.
-         .gmii_tx_en(gmii_tx_en_loop),        // Transmit control signal from client MAC.
-         .gmii_tx_er(gmii_tx_er_loop),        // Transmit control signal from client MAC.
-         .gmii_rxd(gmii_rxd_loop),            // Received Data to client MAC.
-         .gmii_rx_dv(gmii_rx_dv_loop),        // Received control signal to client MAC.
-         .gmii_rx_er(gmii_rx_er_loop),        // Received control signal to client MAC.
+         .gmii_txd(gmii_txd),            // Transmit data from client MAC.
+         .gmii_tx_en(gmii_tx_en),        // Transmit control signal from client MAC.
+         .gmii_tx_er(gmii_tx_er),        // Transmit control signal from client MAC.
+         .gmii_rxd(gmii_rxd),            // Received Data to client MAC.
+         .gmii_rx_dv(gmii_rx_dv),        // Received control signal to client MAC.
+         .gmii_rx_er(gmii_rx_er),        // Received control signal to client MAC.
          // Management: MDIO Interface
          .mdc(mdc),                      // Management Data Clock
          .mdio_i(mdio_in),               // Management Data In
