@@ -19,6 +19,7 @@ include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
 include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
+include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/zynq_fifo/Makefile.srcs
@@ -39,7 +40,6 @@ TOP_SRCS = e3xx_ps.v \
            ppsloop.v \
            spi_slave.v \
            axi_pmu.v \
-           axi_dummy.v \
 	   radio.v \
            ddc_chain_e300.v
 
@@ -64,6 +64,7 @@ PS7_SRCS = $(IP_PS7_3_SRCS)
 endif
 
 DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
+          $(AXI_SRCS) \
           $(ZYNQ_FIFO_SRCS) \
           $(FIFO_SRCS) \
           $(VITA_SRCS) \

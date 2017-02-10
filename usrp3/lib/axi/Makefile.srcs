@@ -16,5 +16,6 @@ axi_extract_tlast.v \
 axi_fast_extract_tlast.v \
 axi_fast_fifo.v \
 axi_to_strobed.v \
+axi_dummy.v \
 strobed_to_axi.v \
 ))
