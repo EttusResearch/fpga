@@ -228,11 +228,12 @@ module n310
    //output USRPIO_B_TX_0_P, USRPIO_B_TX_1_P, USRPIO_B_TX_2_P, USRPIO_B_TX_3_P,
    //output USRPIO_B_TX_0_N, USRPIO_B_TX_1_N, USRPIO_B_TX_2_N, USRPIO_B_TX_3_N
 
-   );
+);
+  localparam N_AXILITE_SLAVES = 4;
 
-   localparam REG_BASE = 0;
-   localparam REG_AWIDTH = 32;
-   localparam REG_DWIDTH = 32;
+  localparam REG_BASE_MISC = 32'h4001_0000;
+  localparam REG_AWIDTH = 32;
+  localparam REG_DWIDTH = 32;
 
    //TODO: Add bus_clk_gen, bus_rst, sw_rst
    wire bus_clk;
@@ -254,52 +255,168 @@ module n310
 
   // Internal connections to PS
   //   GP0 -- General Purpose port 0, FPGA is the slave
-   wire M_AXI_GP0_ARVALID;
-   wire M_AXI_GP0_AWVALID;
-   wire M_AXI_GP0_BREADY;
-   wire M_AXI_GP0_RREADY;
-   wire M_AXI_GP0_WLAST;
-   wire M_AXI_GP0_WVALID;
-   wire [11:0] M_AXI_GP0_ARID;
-   wire [11:0] M_AXI_GP0_AWID;
-   wire [11:0] M_AXI_GP0_WID;
-   wire [1:0] M_AXI_GP0_ARBURST;
-   wire [1:0] M_AXI_GP0_ARLOCK;
-   wire [2:0] M_AXI_GP0_ARSIZE;
-   wire [1:0] M_AXI_GP0_AWBURST;
-   wire [1:0] M_AXI_GP0_AWLOCK;
-   wire [2:0] M_AXI_GP0_AWSIZE;
-   wire [2:0] M_AXI_GP0_ARPROT;
-   wire [2:0] M_AXI_GP0_AWPROT;
-   wire [31:0] M_AXI_GP0_ARADDR;
-   wire [31:0] M_AXI_GP0_AWADDR;
-   wire [31:0] M_AXI_GP0_WDATA;
-   wire [3:0] M_AXI_GP0_ARCACHE;
-   wire [3:0] M_AXI_GP0_ARLEN;
-   wire [3:0] M_AXI_GP0_ARQOS;
-   wire [3:0] M_AXI_GP0_AWCACHE;
-   wire [3:0] M_AXI_GP0_AWLEN;
-   wire [3:0] M_AXI_GP0_AWQOS;
-   wire [3:0] M_AXI_GP0_WSTRB;
-   wire M_AXI_GP0_ACLK;
-   wire M_AXI_GP0_ARREADY;
-   wire M_AXI_GP0_AWREADY;
-   wire M_AXI_GP0_BVALID;
-   wire M_AXI_GP0_RLAST;
-   wire M_AXI_GP0_RVALID;
-   wire M_AXI_GP0_WREADY;
-   wire [11:0] M_AXI_GP0_BID;
-   wire [11:0] M_AXI_GP0_RID;
-   wire [1:0] M_AXI_GP0_BRESP;
-   wire [1:0] M_AXI_GP0_RRESP;
-   wire [31:0] M_AXI_GP0_RDATA;
-   wire [15:0] IRQ_F2P;
-   wire FCLK_CLK0;
-   wire FCLK_RESET0;
+  wire M_AXI_GP0_ARVALID;
+  wire M_AXI_GP0_AWVALID;
+  wire M_AXI_GP0_BREADY;
+  wire M_AXI_GP0_RREADY;
+  wire M_AXI_GP0_WVALID;
+  wire [11:0] M_AXI_GP0_ARID;
+  wire [11:0] M_AXI_GP0_AWID;
+  wire [11:0] M_AXI_GP0_WID;
+  wire [31:0] M_AXI_GP0_ARADDR;
+  wire [31:0] M_AXI_GP0_AWADDR;
+  wire [31:0] M_AXI_GP0_WDATA;
+  wire [3:0] M_AXI_GP0_WSTRB;
+  wire M_AXI_GP0_ARREADY;
+  wire M_AXI_GP0_AWREADY;
+  wire M_AXI_GP0_BVALID;
+  wire M_AXI_GP0_RLAST;
+  wire M_AXI_GP0_RVALID;
+  wire M_AXI_GP0_WREADY;
+  wire [1:0] M_AXI_GP0_BRESP;
+  wire [1:0] M_AXI_GP0_RRESP;
+  wire [31:0] M_AXI_GP0_RDATA;
 
-   wire [1:0] USB0_PORT_INDCTL;
-   wire USB0_VBUS_PWRSELECT;
-   wire USB0_VBUS_PWRFAULT;
+  wire M_AXI_GP0_ARVALID_S0;
+  wire M_AXI_GP0_AWVALID_S0;
+  wire M_AXI_GP0_BREADY_S0;
+  wire M_AXI_GP0_RREADY_S0;
+  wire M_AXI_GP0_WVALID_S0;
+  wire [11:0] M_AXI_GP0_ARID_S0;
+  wire [11:0] M_AXI_GP0_AWID_S0;
+  wire [11:0] M_AXI_GP0_WID_S0;
+  wire [31:0] M_AXI_GP0_ARADDR_S0;
+  wire [31:0] M_AXI_GP0_AWADDR_S0;
+  wire [31:0] M_AXI_GP0_WDATA_S0;
+  wire [3:0] M_AXI_GP0_WSTRB_S0;
+  wire M_AXI_GP0_ARREADY_S0;
+  wire M_AXI_GP0_AWREADY_S0;
+  wire M_AXI_GP0_BVALID_S0;
+  wire M_AXI_GP0_RLAST_S0;
+  wire M_AXI_GP0_RVALID_S0;
+  wire M_AXI_GP0_WREADY_S0;
+  wire [1:0] M_AXI_GP0_BRESP_S0;
+  wire [1:0] M_AXI_GP0_RRESP_S0;
+  wire [31:0] M_AXI_GP0_RDATA_S0;
+
+  wire M_AXI_GP0_ARVALID_S1;
+  wire M_AXI_GP0_AWVALID_S1;
+  wire M_AXI_GP0_BREADY_S1;
+  wire M_AXI_GP0_RREADY_S1;
+  wire M_AXI_GP0_WVALID_S1;
+  wire [11:0] M_AXI_GP0_ARID_S1;
+  wire [11:0] M_AXI_GP0_AWID_S1;
+  wire [11:0] M_AXI_GP0_WID_S1;
+  wire [31:0] M_AXI_GP0_ARADDR_S1;
+  wire [31:0] M_AXI_GP0_AWADDR_S1;
+  wire [31:0] M_AXI_GP0_WDATA_S1;
+  wire [3:0] M_AXI_GP0_WSTRB_S1;
+  wire M_AXI_GP0_ARREADY_S1;
+  wire M_AXI_GP0_AWREADY_S1;
+  wire M_AXI_GP0_BVALID_S1;
+  wire M_AXI_GP0_RLAST_S1;
+  wire M_AXI_GP0_RVALID_S1;
+  wire M_AXI_GP0_WREADY_S1;
+  wire [1:0] M_AXI_GP0_BRESP_S1;
+  wire [1:0] M_AXI_GP0_RRESP_S1;
+  wire [31:0] M_AXI_GP0_RDATA_S1;
+
+  wire M_AXI_GP0_ARVALID_S2;
+  wire M_AXI_GP0_AWVALID_S2;
+  wire M_AXI_GP0_BREADY_S2;
+  wire M_AXI_GP0_RREADY_S2;
+  wire M_AXI_GP0_WVALID_S2;
+  wire [11:0] M_AXI_GP0_ARID_S2;
+  wire [11:0] M_AXI_GP0_AWID_S2;
+  wire [11:0] M_AXI_GP0_WID_S2;
+  wire [31:0] M_AXI_GP0_ARADDR_S2;
+  wire [31:0] M_AXI_GP0_AWADDR_S2;
+  wire [31:0] M_AXI_GP0_WDATA_S2;
+  wire [3:0] M_AXI_GP0_WSTRB_S2;
+  wire M_AXI_GP0_ARREADY_S2;
+  wire M_AXI_GP0_AWREADY_S2;
+  wire M_AXI_GP0_BVALID_S2;
+  wire M_AXI_GP0_RLAST_S2;
+  wire M_AXI_GP0_RVALID_S2;
+  wire M_AXI_GP0_WREADY_S2;
+  wire [1:0] M_AXI_GP0_BRESP_S2;
+  wire [1:0] M_AXI_GP0_RRESP_S2;
+  wire [31:0] M_AXI_GP0_RDATA_S2;
+
+  wire M_AXI_GP0_ARVALID_S3;
+  wire M_AXI_GP0_AWVALID_S3;
+  wire M_AXI_GP0_BREADY_S3;
+  wire M_AXI_GP0_RREADY_S3;
+  wire M_AXI_GP0_WVALID_S3;
+  wire [11:0] M_AXI_GP0_ARID_S3;
+  wire [11:0] M_AXI_GP0_AWID_S3;
+  wire [11:0] M_AXI_GP0_WID_S3;
+  wire [31:0] M_AXI_GP0_ARADDR_S3;
+  wire [31:0] M_AXI_GP0_AWADDR_S3;
+  wire [31:0] M_AXI_GP0_WDATA_S3;
+  wire [3:0] M_AXI_GP0_WSTRB_S3;
+  wire M_AXI_GP0_ARREADY_S3;
+  wire M_AXI_GP0_AWREADY_S3;
+  wire M_AXI_GP0_BVALID_S3;
+  wire M_AXI_GP0_RLAST_S3;
+  wire M_AXI_GP0_RVALID_S3;
+  wire M_AXI_GP0_WREADY_S3;
+  wire [1:0] M_AXI_GP0_BRESP_S3;
+  wire [1:0] M_AXI_GP0_RRESP_S3;
+  wire [31:0] M_AXI_GP0_RDATA_S3;
+
+  wire M_AXI_GP0_ARVALID_S4;
+  wire M_AXI_GP0_AWVALID_S4;
+  wire M_AXI_GP0_BREADY_S4;
+  wire M_AXI_GP0_RREADY_S4;
+  wire M_AXI_GP0_WVALID_S4;
+  wire [11:0] M_AXI_GP0_ARID_S4;
+  wire [11:0] M_AXI_GP0_AWID_S4;
+  wire [11:0] M_AXI_GP0_WID_S4;
+  wire [31:0] M_AXI_GP0_ARADDR_S4;
+  wire [31:0] M_AXI_GP0_AWADDR_S4;
+  wire [31:0] M_AXI_GP0_WDATA_S4;
+  wire [3:0] M_AXI_GP0_WSTRB_S4;
+  wire M_AXI_GP0_ARREADY_S4;
+  wire M_AXI_GP0_AWREADY_S4;
+  wire M_AXI_GP0_BVALID_S4;
+  wire M_AXI_GP0_RLAST_S4;
+  wire M_AXI_GP0_RVALID_S4;
+  wire M_AXI_GP0_WREADY_S4;
+  wire [1:0] M_AXI_GP0_BRESP_S4;
+  wire [1:0] M_AXI_GP0_RRESP_S4;
+  wire [31:0] M_AXI_GP0_RDATA_S4;
+
+  wire        M_AXI_GP0_ARVALID_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_AWVALID_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_BREADY_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_RREADY_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_WVALID_S[N_AXILITE_SLAVES-1:0];
+  wire [11:0] M_AXI_GP0_ARID_S[N_AXILITE_SLAVES-1:0];
+  wire [11:0] M_AXI_GP0_AWID_S[N_AXILITE_SLAVES-1:0];
+  wire [11:0] M_AXI_GP0_WID_S[N_AXILITE_SLAVES-1:0];
+  wire [31:0] M_AXI_GP0_ARADDR_S[N_AXILITE_SLAVES-1:0];
+  wire [31:0] M_AXI_GP0_AWADDR_S[N_AXILITE_SLAVES-1:0];
+  wire [31:0] M_AXI_GP0_WDATA_S[N_AXILITE_SLAVES-1:0];
+  wire [3:0]  M_AXI_GP0_WSTRB_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_ARREADY_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_AWREADY_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_BVALID_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_RLAST_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_RVALID_S[N_AXILITE_SLAVES-1:0];
+  wire        M_AXI_GP0_WREADY_S[N_AXILITE_SLAVES-1:0];
+  wire [1:0]  M_AXI_GP0_BRESP_S[N_AXILITE_SLAVES-1:0];
+  wire [1:0]  M_AXI_GP0_RRESP_S[N_AXILITE_SLAVES-1:0];
+  wire [31:0] M_AXI_GP0_RDATA_S[N_AXILITE_SLAVES-1:0];
+
+  wire [15:0] IRQ_F2P;
+  wire FCLK_CLK0;
+  wire FCLK_RESET0;
+  wire FCLK_RESET0N = ~FCLK_RESET0;
+
+  wire [1:0] USB0_PORT_INDCTL;
+  wire USB0_VBUS_PWRSELECT;
+  wire USB0_VBUS_PWRFAULT;
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -632,6 +749,159 @@ module n310
     );
 `endif
 
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy0
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_GP0_AWADDR_S0),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID_S0),
+    .s_axi_awready(M_AXI_GP0_AWREADY_S0),
+
+    .s_axi_wdata(M_AXI_GP0_WDATA_S0),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB_S0),
+    .s_axi_wvalid(M_AXI_GP0_WVALID_S0),
+    .s_axi_wready(M_AXI_GP0_WREADY_S0),
+
+    .s_axi_bresp(M_AXI_GP0_BRESP_S0),
+    .s_axi_bvalid(M_AXI_GP0_BVALID_S0),
+    .s_axi_bready(M_AXI_GP0_BREADY_S0),
+
+    .s_axi_araddr(M_AXI_GP0_ARADDR_S0),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID_S0),
+    .s_axi_arready(M_AXI_GP0_ARREADY_S0),
+
+    .s_axi_rdata(M_AXI_GP0_RDATA_S0),
+    .s_axi_rresp(M_AXI_GP0_RRESP_S0),
+    .s_axi_rvalid(M_AXI_GP0_RVALID_S0),
+    .s_axi_rready(M_AXI_GP0_RREADY_S0)
+  );
+
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy1
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_GP0_AWADDR_S1),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID_S1),
+    .s_axi_awready(M_AXI_GP0_AWREADY_S1),
+
+    .s_axi_wdata(M_AXI_GP0_WDATA_S1),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB_S1),
+    .s_axi_wvalid(M_AXI_GP0_WVALID_S1),
+    .s_axi_wready(M_AXI_GP0_WREADY_S1),
+
+    .s_axi_bresp(M_AXI_GP0_BRESP_S1),
+    .s_axi_bvalid(M_AXI_GP0_BVALID_S1),
+    .s_axi_bready(M_AXI_GP0_BREADY_S1),
+
+    .s_axi_araddr(M_AXI_GP0_ARADDR_S1),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID_S1),
+    .s_axi_arready(M_AXI_GP0_ARREADY_S1),
+
+    .s_axi_rdata(M_AXI_GP0_RDATA_S1),
+    .s_axi_rresp(M_AXI_GP0_RRESP_S1),
+    .s_axi_rvalid(M_AXI_GP0_RVALID_S1),
+    .s_axi_rready(M_AXI_GP0_RREADY_S1)
+  );
+
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy2
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_GP0_AWADDR_S2),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID_S2),
+    .s_axi_awready(M_AXI_GP0_AWREADY_S2),
+
+    .s_axi_wdata(M_AXI_GP0_WDATA_S2),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB_S2),
+    .s_axi_wvalid(M_AXI_GP0_WVALID_S2),
+    .s_axi_wready(M_AXI_GP0_WREADY_S2),
+
+    .s_axi_bresp(M_AXI_GP0_BRESP_S2),
+    .s_axi_bvalid(M_AXI_GP0_BVALID_S2),
+    .s_axi_bready(M_AXI_GP0_BREADY_S2),
+
+    .s_axi_araddr(M_AXI_GP0_ARADDR_S2),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID_S2),
+    .s_axi_arready(M_AXI_GP0_ARREADY_S2),
+
+    .s_axi_rdata(M_AXI_GP0_RDATA_S2),
+    .s_axi_rresp(M_AXI_GP0_RRESP_S2),
+    .s_axi_rvalid(M_AXI_GP0_RVALID_S2),
+    .s_axi_rready(M_AXI_GP0_RREADY_S2)
+  );
+
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy3
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_GP0_AWADDR_S3),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID_S3),
+    .s_axi_awready(M_AXI_GP0_AWREADY_S3),
+
+    .s_axi_wdata(M_AXI_GP0_WDATA_S3),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB_S3),
+    .s_axi_wvalid(M_AXI_GP0_WVALID_S3),
+    .s_axi_wready(M_AXI_GP0_WREADY_S3),
+
+    .s_axi_bresp(M_AXI_GP0_BRESP_S3),
+    .s_axi_bvalid(M_AXI_GP0_BVALID_S3),
+    .s_axi_bready(M_AXI_GP0_BREADY_S3),
+
+    .s_axi_araddr(M_AXI_GP0_ARADDR_S3),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID_S3),
+    .s_axi_arready(M_AXI_GP0_ARREADY_S3),
+
+    .s_axi_rdata(M_AXI_GP0_RDATA_S3),
+    .s_axi_rresp(M_AXI_GP0_RRESP_S3),
+    .s_axi_rvalid(M_AXI_GP0_RVALID_S3),
+    .s_axi_rready(M_AXI_GP0_RREADY_S3)
+  );
+
+  axi_interconnect inst_axi_interconnect
+  (
+    .aclk(bus_clk),
+    .aresetn(~bus_rst),
+    .s_axi_awaddr(M_AXI_GP0_AWADDR),
+    .s_axi_awready(M_AXI_GP0_AWREADY),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID),
+    .s_axi_wdata(M_AXI_GP0_WDATA),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB),
+    .s_axi_wvalid(M_AXI_GP0_WVALID),
+    .s_axi_wready(M_AXI_GP0_WREADY),
+    .s_axi_bresp(M_AXI_GP0_BRESP),
+    .s_axi_bvalid(M_AXI_GP0_BVALID),
+    .s_axi_bready(M_AXI_GP0_BREADY),
+    .s_axi_araddr(M_AXI_GP0_ARADDR),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID),
+    .s_axi_arready(M_AXI_GP0_ARREADY),
+    .s_axi_rdata(M_AXI_GP0_RDATA),
+    .s_axi_rresp(M_AXI_GP0_RRESP),
+    .s_axi_rvalid(M_AXI_GP0_RVALID),
+    .s_axi_rready(M_AXI_GP0_RREADY),
+    .m_axi_awaddr({M_AXI_GP0_AWADDR_S4, M_AXI_GP0_AWADDR_S3, M_AXI_GP0_AWADDR_S2, M_AXI_GP0_AWADDR_S1, M_AXI_GP0_AWADDR_S0}),
+    .m_axi_awvalid({M_AXI_GP0_AWVALID_S4, M_AXI_GP0_AWVALID_S3, M_AXI_GP0_AWVALID_S2, M_AXI_GP0_AWVALID_S1, M_AXI_GP0_AWVALID_S0}),
+    .m_axi_awready({M_AXI_GP0_AWREADY_S4, M_AXI_GP0_AWREADY_S3, M_AXI_GP0_AWREADY_S2, M_AXI_GP0_AWREADY_S1, M_AXI_GP0_AWREADY_S0}),
+    .m_axi_wdata({M_AXI_GP0_WDATA_S4, M_AXI_GP0_WDATA_S3, M_AXI_GP0_WDATA_S2, M_AXI_GP0_WDATA_S1, M_AXI_GP0_WDATA_S0}),
+    .m_axi_wstrb({M_AXI_GP0_WSTRB_S4, M_AXI_GP0_WSTRB_S3, M_AXI_GP0_WSTRB_S2, M_AXI_GP0_WSTRB_S1, M_AXI_GP0_WSTRB_S0}),
+    .m_axi_wvalid({M_AXI_GP0_WVALID_S4, M_AXI_GP0_WVALID_S3, M_AXI_GP0_WVALID_S2, M_AXI_GP0_WVALID_S1, M_AXI_GP0_WVALID_S0}),
+    .m_axi_wready({M_AXI_GP0_WREADY_S4, M_AXI_GP0_WREADY_S3, M_AXI_GP0_WREADY_S2, M_AXI_GP0_WREADY_S1, M_AXI_GP0_WREADY_S0}),
+    .m_axi_bresp({M_AXI_GP0_BRESP_S4, M_AXI_GP0_BRESP_S3, M_AXI_GP0_BRESP_S2, M_AXI_GP0_BRESP_S1, M_AXI_GP0_BRESP_S0}),
+    .m_axi_bvalid({M_AXI_GP0_BVALID_S4, M_AXI_GP0_BVALID_S3, M_AXI_GP0_BVALID_S2, M_AXI_GP0_BVALID_S1, M_AXI_GP0_BVALID_S0}),
+    .m_axi_bready({M_AXI_GP0_BREADY_S4, M_AXI_GP0_BREADY_S3, M_AXI_GP0_BREADY_S2, M_AXI_GP0_BREADY_S1, M_AXI_GP0_BREADY_S0}),
+    .m_axi_araddr({M_AXI_GP0_ARADDR_S4, M_AXI_GP0_ARADDR_S3, M_AXI_GP0_ARADDR_S2, M_AXI_GP0_ARADDR_S1, M_AXI_GP0_ARADDR_S0}),
+    .m_axi_arvalid({M_AXI_GP0_ARVALID_S4, M_AXI_GP0_ARVALID_S3, M_AXI_GP0_ARVALID_S2, M_AXI_GP0_ARVALID_S1, M_AXI_GP0_ARVALID_S0}),
+    .m_axi_arready({M_AXI_GP0_ARREADY_S4, M_AXI_GP0_ARREADY_S3, M_AXI_GP0_ARREADY_S2, M_AXI_GP0_ARREADY_S1, M_AXI_GP0_ARREADY_S0}),
+    .m_axi_rdata({M_AXI_GP0_RDATA_S4, M_AXI_GP0_RDATA_S3, M_AXI_GP0_RDATA_S2, M_AXI_GP0_RDATA_S1, M_AXI_GP0_RDATA_S0}),
+    .m_axi_rresp({M_AXI_GP0_RRESP_S4, M_AXI_GP0_RRESP_S3, M_AXI_GP0_RRESP_S2, M_AXI_GP0_RRESP_S1, M_AXI_GP0_RRESP_S0}),
+    .m_axi_rvalid({M_AXI_GP0_RVALID_S4, M_AXI_GP0_RVALID_S3, M_AXI_GP0_RVALID_S2, M_AXI_GP0_RVALID_S1, M_AXI_GP0_RVALID_S0}),
+    .m_axi_rready({M_AXI_GP0_RREADY_S4, M_AXI_GP0_RREADY_S3, M_AXI_GP0_RREADY_S2, M_AXI_GP0_RREADY_S1, M_AXI_GP0_RREADY_S0})
+  );
+
+
   // Processing System
   n310_ps inst_n310_ps
   (
@@ -789,37 +1059,37 @@ module n310
 
    // AXI4-Lite to RegPort (PS to PL Register Access)
    axil_regport_master #(
-      .DWIDTH   (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .AWIDTH   (REG_AWIDTH),         // Width of the address bus
-      .WRBASE   (REG_BASE),   // Write address base
-      .RDBASE   (REG_BASE),   // Read address base
-      .TIMEOUT  (10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
-   ) ublaze_regport_master_i (
+      .DWIDTH   (REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .AWIDTH   (REG_AWIDTH),     // Width of the address bus
+      .WRBASE   (REG_BASE_MISC),  // Write address base
+      .RDBASE   (REG_BASE_MISC),  // Read address base
+      .TIMEOUT  (10)              // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
+   ) regport_master_i (
       // Clock and reset
       .s_axi_aclk    (FCLK_CLK0),
-      .s_axi_aresetn (FCLK_RESET0),
+      .s_axi_aresetn (FCLK_RESET0N),
       // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr  (M_AXI_GP0_AWADDR),
-      .s_axi_awvalid (M_AXI_GP0_AWVALID),
-      .s_axi_awready (M_AXI_GP0_AWREADY),
+      .s_axi_awaddr  (M_AXI_GP0_AWADDR_S4),
+      .s_axi_awvalid (M_AXI_GP0_AWVALID_S4),
+      .s_axi_awready (M_AXI_GP0_AWREADY_S4),
       // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata   (M_AXI_GP0_WDATA),
-      .s_axi_wstrb   (M_AXI_GP0_WSTRB),
-      .s_axi_wvalid  (M_AXI_GP0_WVALID),
-      .s_axi_wready  (M_AXI_GP0_WREADY),
+      .s_axi_wdata   (M_AXI_GP0_WDATA_S4),
+      .s_axi_wstrb   (M_AXI_GP0_WSTRB_S4),
+      .s_axi_wvalid  (M_AXI_GP0_WVALID_S4),
+      .s_axi_wready  (M_AXI_GP0_WREADY_S4),
       // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp   (M_AXI_GP0_BRESP),
-      .s_axi_bvalid  (M_AXI_GP0_BVALID),
-      .s_axi_bready  (M_AXI_GP0_BREADY),
+      .s_axi_bresp   (M_AXI_GP0_BRESP_S4),
+      .s_axi_bvalid  (M_AXI_GP0_BVALID_S4),
+      .s_axi_bready  (M_AXI_GP0_BREADY_S4),
       // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr  (M_AXI_GP0_ARADDR),
-      .s_axi_arvalid (M_AXI_GP0_ARVALID),
-      .s_axi_arready (M_AXI_GP0_ARREADY),
+      .s_axi_araddr  (M_AXI_GP0_ARADDR_S4),
+      .s_axi_arvalid (M_AXI_GP0_ARVALID_S4),
+      .s_axi_arready (M_AXI_GP0_ARREADY_S4),
       // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata   (M_AXI_GP0_RDATA),
-      .s_axi_rresp   (M_AXI_GP0_RRESP),
-      .s_axi_rvalid  (M_AXI_GP0_RVALID),
-      .s_axi_rready  (M_AXI_GP0_RREADY),
+      .s_axi_rdata   (M_AXI_GP0_RDATA_S4),
+      .s_axi_rresp   (M_AXI_GP0_RRESP_S4),
+      .s_axi_rvalid  (M_AXI_GP0_RVALID_S4),
+      .s_axi_rready  (M_AXI_GP0_RREADY_S4),
       // Register port: Write port (domain: reg_clk)
       .reg_clk       (bus_clk),
       .reg_wr_req    (reg_wr_req),
