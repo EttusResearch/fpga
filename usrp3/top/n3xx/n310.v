@@ -632,34 +632,6 @@ module n310
     );
 `endif
 
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy
-  (
-    .s_axi_aclk(bus_clk),
-    .s_axi_areset(bus_rst),
-
-    .s_axi_awaddr(M_AXI_GP0_AWADDR),
-    .s_axi_awvalid(M_AXI_GP0_AWVALID),
-    .s_axi_awready(M_AXI_GP0_AWREADY),
-
-    .s_axi_wdata(M_AXI_GP0_WDATA),
-    .s_axi_wstrb(M_AXI_GP0_WSTRB),
-    .s_axi_wvalid(M_AXI_GP0_WVALID),
-    .s_axi_wready(M_AXI_GP0_WREADY),
-
-    .s_axi_bresp(M_AXI_GP0_BRESP),
-    .s_axi_bvalid(M_AXI_GP0_BVALID),
-    .s_axi_bready(M_AXI_GP0_BREADY),
-
-    .s_axi_araddr(M_AXI_GP0_ARADDR),
-    .s_axi_arvalid(M_AXI_GP0_ARVALID),
-    .s_axi_arready(M_AXI_GP0_ARREADY),
-
-    .s_axi_rdata(M_AXI_GP0_RDATA),
-    .s_axi_rresp(M_AXI_GP0_RRESP),
-    .s_axi_rvalid(M_AXI_GP0_RVALID),
-    .s_axi_rready(M_AXI_GP0_RREADY)
-  );
-
   // Processing System
   n310_ps inst_n310_ps
   (
