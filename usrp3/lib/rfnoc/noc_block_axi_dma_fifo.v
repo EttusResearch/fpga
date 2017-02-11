@@ -144,23 +144,46 @@ module noc_block_axi_dma_fifo #(
       wire         m_axis_data_tlast, s_axis_data_tlast;
       wire         m_axis_data_tvalid, s_axis_data_tvalid;
       wire         m_axis_data_tready, s_axis_data_tready;
-      
+
       assign m_axis_data_tdata  = str_sink_tdata[(64*(i+1))-1:64*i];
       assign m_axis_data_tlast  = str_sink_tlast[i];
       assign m_axis_data_tvalid = str_sink_tvalid[i];
       assign str_sink_tready[i] = m_axis_data_tready;
 
-      reg         update_sid;
-      wire [31:0] new_sid = {src_sid[(16*(i+1))-1:16*i], next_dst_sid[(16*(i+1))-1:16*i]};
-      always @(posedge bus_clk)
-        if (bus_rst | clear_tx_seqnum[i])
-          update_sid <= 1'b1;
-        else
-          if (s_axis_data_tvalid & s_axis_data_tready)
-            update_sid <= s_axis_data_tlast;
+      reg         first_line;
+      reg  [11:0] seqnum;
+      wire [63:0] modified_header;
+      always @(posedge bus_clk) begin
+        if (bus_rst | clear_tx_seqnum[i]) begin
+          first_line <= 1'b1;
+          seqnum     <= 12'd0;
+        end else begin
+          if (s_axis_data_tvalid & s_axis_data_tready) begin
+            if (s_axis_data_tlast) begin
+              first_line <= 1'b1;
+              seqnum     <= seqnum + 1;
+            end else begin
+              first_line <= 1'b0;
+            end
+          end
+        end
+      end
 
-      assign str_src_tdata[(64*(i+1))-1:64*i] =
-        {s_axis_data_tdata[63:32], (update_sid ? new_sid : s_axis_data_tdata[31:0])};
+      wire [63:0] unused;
+      cvita_hdr_modify cvita_hdr_modify (
+        .header_in({s_axis_data_tdata,64'd0}),
+        .header_out({modified_header,unused}),
+        .use_pkt_type(1'b0),       .pkt_type(),
+        .use_has_time(1'b0),       .has_time(),
+        .use_eob(1'b0),            .eob(),
+        .use_seqnum(1'b1),         .seqnum(seqnum),
+        .use_length(1'b0),         .length(),
+        .use_payload_length(1'b0), .payload_length(),
+        .use_src_sid(1'b1),        .src_sid(src_sid[(16*(i+1))-1:16*i]),
+        .use_dst_sid(1'b1),        .dst_sid(next_dst_sid[(16*(i+1))-1:16*i]),
+        .use_vita_time(1'b0),      .vita_time());
+
+      assign str_src_tdata[(64*(i+1))-1:64*i] = first_line ? modified_header : s_axis_data_tdata;
       assign str_src_tlast[i] = s_axis_data_tlast;
       assign str_src_tvalid[i] = s_axis_data_tvalid;
       assign s_axis_data_tready = str_src_tready[i];

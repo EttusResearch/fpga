@@ -1,11 +1,53 @@
 //
-// Copyright 2014-2015 Ettus Research
+// Copyright 2014-2017 Ettus Research
 //
-
+// Parameterized FIR filter RFNoC block with optional reloadable
+// coefficients.
+// Has several optimizations to resource utilization such as
+// using half the number of DSP slices for symmetric coefficients,
+// skipping coefficients that are always set to zero, and using
+// internal DSP slice registers to hold coefficients.
+//
+// For the most efficient DSP slice inference use these settings:
+// - COEFF_WIDTH < 18
+//
+// Settings Registers:
+//   SR_RELOAD                - Reload register. Write NUM_COEFFS coefficients to this register
+//                              to load new taps.
+//   RB_NUM_COEFFS            - Number of coefficients
+//
+// Parameters:
+//   IN_WIDTH                 - Input width
+//   COEFF_WIDTH              - Coefficient width
+//   OUT_WIDTH                - Output width
+//   NUM_COEFFS               - Number of coefficients / taps
+//   CLIP_BITS                - If IN_WIDTH != OUT_WIDTH, number of MSBs to drop
+//   ACCUM_WIDTH              - Accumulator width
+//   COEFFS_VEC               - Vector of NUM_COEFFS values each of width COEFF_WIDTH to
+//                              initialize coeffs. Defaults to an impulse.
+//   RELOADABLE_COEFFS        - Enable (1) or disable (0) reloading coefficients at runtime (via reload bus)
+//   BLANK_OUTPUT             - Enable (0) or disable (1) output tvalid when filling internal pipeline
+//   BLANK_OUTPUT_SET_TLAST   - Set output tlast at end of resetting internal pipeline
+//   SYMMETRIC_COEFFS         - Reduce multiplier usage by approx half if coefficients are symmetric
+//   SKIP_ZERO_COEFFS         - Reduce multiplier usage by assuming zero valued coefficients in
+//                              DEFAULT_COEFFS are always zero. Useful for halfband filters.
+//   USE_EMBEDDED_REGS_COEFFS - Reduce register usage by only using embedded registers in DSP slices.
+//                              Updating taps while streaming will cause temporary output corruption!
+//
+// Note: If using USE_EMBEDDED_REGS_COEFFS, coefficients must be written at least once as COEFFS_VEC is ignored!
+//
 module noc_block_fir_filter #(
-  parameter NOC_ID = 64'hF112_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 11)
-(
+  parameter NOC_ID                   = 64'hF112_0000_0000_0000,
+  parameter STR_SINK_FIFOSIZE        = 11,
+  parameter COEFF_WIDTH              = 16,
+  parameter NUM_COEFFS               = 41,
+  parameter [NUM_COEFFS*COEFF_WIDTH-1:0] COEFFS_VEC = 
+    {{1'b0,{(COEFF_WIDTH-1){1'b1}}},{(COEFF_WIDTH*(NUM_COEFFS-1)){1'b0}}}, // Impulse
+  parameter RELOADABLE_COEFFS        = 1,
+  parameter SYMMETRIC_COEFFS         = 0,
+  parameter SKIP_ZERO_COEFFS         = 0,
+  parameter USE_EMBEDDED_REGS_COEFFS = 1
+)(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
@@ -107,38 +149,26 @@ module noc_block_fir_filter #(
   // FIR Filter Implementation
   //
   ////////////////////////////////////////////////////////////
-  wire [79:0] s_axis_fir_tdata;
-  wire        s_axis_fir_tlast;
-  wire        s_axis_fir_tvalid;
-  wire        s_axis_fir_tready;
-  wire [15:0] m_axis_fir_reload_tdata;
-  wire        m_axis_fir_reload_tvalid, m_axis_fir_reload_tready, m_axis_fir_reload_tlast;
-  wire [7:0]  m_axis_fir_config_tdata;
-  wire        m_axis_fir_config_tvalid, m_axis_fir_config_tready;
+  wire [COEFF_WIDTH-1:0] m_axis_fir_reload_tdata;
+  wire m_axis_fir_reload_tvalid, m_axis_fir_reload_tready, m_axis_fir_reload_tlast;
 
   localparam SR_RELOAD       = 128;
-  localparam SR_RELOAD_LAST  = 129;
-  localparam SR_CONFIG       = 130;
-  localparam RB_NUM_TAPS     = 0;
-
-  localparam NUM_TAPS = 41;
+  localparam SR_RELOAD_TLAST = 129;
+  localparam RB_NUM_COEFFS   = 0;
 
   // Readback register for number of FIR filter taps
   always @*
     case(rb_addr)
-      RB_NUM_TAPS : rb_data <= {NUM_TAPS};
-      default     : rb_data <= 64'h0BADC0DE0BADC0DE;
+      RB_NUM_COEFFS : rb_data <= {NUM_COEFFS};
+      default       : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
 
   // FIR filter coefficient reload bus
-  // (see Xilinx FIR Filter Compiler documentation)
   axi_setting_reg #(
     .ADDR(SR_RELOAD),
     .USE_ADDR_LAST(1),
-    .ADDR_LAST(SR_RELOAD_LAST),
-    .WIDTH(16),
-    .USE_FIFO(1),
-    .FIFO_SIZE(7))
+    .ADDR_LAST(SR_RELOAD_TLAST),
+    .WIDTH(COEFF_WIDTH))
   set_coeff (
     .clk(ce_clk),
     .reset(ce_rst),
@@ -150,55 +180,70 @@ module noc_block_fir_filter #(
     .o_tvalid(m_axis_fir_reload_tvalid),
     .o_tready(m_axis_fir_reload_tready));
 
-  // FIR filter config bus
-  // (see Xilinx FIR Filter Compiler documentation)
-  axi_setting_reg #(
-    .ADDR(SR_CONFIG),
-    .WIDTH(8))
-  set_config (
+  // SC16 format
+  localparam IN_WIDTH    = 16;
+  localparam OUT_WIDTH   = 16;
+
+  // I
+  axi_fir_filter #(
+    .IN_WIDTH(IN_WIDTH),
+    .COEFF_WIDTH(COEFF_WIDTH),
+    .OUT_WIDTH(OUT_WIDTH),
+    .NUM_COEFFS(NUM_COEFFS),
+    .COEFFS_VEC(COEFFS_VEC),
+    .RELOADABLE_COEFFS(RELOADABLE_COEFFS),
+    .BLANK_OUTPUT(1),
+    .BLANK_OUTPUT_SET_TLAST(0),
+    // Optional optimizations
+    .SYMMETRIC_COEFFS(SYMMETRIC_COEFFS),
+    .SKIP_ZERO_COEFFS(SKIP_ZERO_COEFFS),
+    .USE_EMBEDDED_REGS_COEFFS(USE_EMBEDDED_REGS_COEFFS))
+  inst_axi_fir_filter_i (
     .clk(ce_clk),
     .reset(ce_rst),
-    .set_stb(set_stb),
-    .set_addr(set_addr),
-    .set_data(set_data),
-    .o_tdata(m_axis_fir_config_tdata),
-    .o_tlast(),
-    .o_tvalid(m_axis_fir_config_tvalid),
-    .o_tready(m_axis_fir_config_tready));
-
-  // Xilinx FIR Filter IP Core
-  axi_fir inst_axi_fir (
-    .aresetn(~(ce_rst | clear_tx_seqnum)), .aclk(ce_clk),
-    .s_axis_data_tdata(m_axis_data_tdata),
+    .clear(clear_tx_seqnum),
+    .s_axis_data_tdata(m_axis_data_tdata[2*IN_WIDTH-1:IN_WIDTH]),
     .s_axis_data_tlast(m_axis_data_tlast),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
-    .m_axis_data_tdata(s_axis_fir_tdata),
-    .m_axis_data_tlast(s_axis_fir_tlast),
-    .m_axis_data_tvalid(s_axis_fir_tvalid),
-    .m_axis_data_tready(s_axis_fir_tready),
-    .s_axis_config_tdata(m_axis_fir_config_tdata),
-    .s_axis_config_tvalid(m_axis_fir_config_tvalid),
-    .s_axis_config_tready(m_axis_fir_config_tready),
+    .m_axis_data_tdata(s_axis_data_tdata[2*OUT_WIDTH-1:OUT_WIDTH]),
+    .m_axis_data_tlast(s_axis_data_tlast),
+    .m_axis_data_tvalid(s_axis_data_tvalid),
+    .m_axis_data_tready(s_axis_data_tready),
     .s_axis_reload_tdata(m_axis_fir_reload_tdata),
+    .s_axis_reload_tlast(m_axis_fir_reload_tlast),
     .s_axis_reload_tvalid(m_axis_fir_reload_tvalid),
-    .s_axis_reload_tready(m_axis_fir_reload_tready),
-    .s_axis_reload_tlast(m_axis_fir_reload_tlast));
+    .s_axis_reload_tready(m_axis_fir_reload_tready));
 
-  // Clip extra bits for bit growth and round
-  axi_round_and_clip_complex #(
-    .WIDTH_IN(38),
-    .WIDTH_OUT(16),
-    .CLIP_BITS(6))
-  inst_axi_round_and_clip (
-    .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum),
-    .i_tdata({s_axis_fir_tdata[77:40],s_axis_fir_tdata[37:0]}),
-    .i_tlast(s_axis_fir_tlast),
-    .i_tvalid(s_axis_fir_tvalid),
-    .i_tready(s_axis_fir_tready),
-    .o_tdata(s_axis_data_tdata),
-    .o_tlast(s_axis_data_tlast),
-    .o_tvalid(s_axis_data_tvalid),
-    .o_tready(s_axis_data_tready));
+  // Q
+  axi_fir_filter #(
+    .IN_WIDTH(IN_WIDTH),
+    .COEFF_WIDTH(COEFF_WIDTH),
+    .OUT_WIDTH(OUT_WIDTH),
+    .NUM_COEFFS(NUM_COEFFS),
+    .COEFFS_VEC(COEFFS_VEC),
+    .RELOADABLE_COEFFS(RELOADABLE_COEFFS),
+    .BLANK_OUTPUT(1),
+    .BLANK_OUTPUT_SET_TLAST(0),
+    // Optional optimizations
+    .SYMMETRIC_COEFFS(SYMMETRIC_COEFFS),
+    .SKIP_ZERO_COEFFS(SKIP_ZERO_COEFFS),
+    .USE_EMBEDDED_REGS_COEFFS(USE_EMBEDDED_REGS_COEFFS))
+  inst_axi_fir_filter_q (
+    .clk(ce_clk),
+    .reset(ce_rst),
+    .clear(clear_tx_seqnum),
+    .s_axis_data_tdata(m_axis_data_tdata[IN_WIDTH-1:0]),
+    .s_axis_data_tlast(m_axis_data_tlast),
+    .s_axis_data_tvalid(m_axis_data_tvalid),
+    .s_axis_data_tready(),
+    .m_axis_data_tdata(s_axis_data_tdata[OUT_WIDTH-1:0]),
+    .m_axis_data_tlast(),
+    .m_axis_data_tvalid(),
+    .m_axis_data_tready(s_axis_data_tready),
+    .s_axis_reload_tdata(m_axis_fir_reload_tdata),
+    .s_axis_reload_tlast(m_axis_fir_reload_tlast),
+    .s_axis_reload_tvalid(m_axis_fir_reload_tvalid),
+    .s_axis_reload_tready());
 
 endmodule
