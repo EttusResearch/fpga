@@ -40,6 +40,7 @@ sign_extend.v \
 small_hb_dec.v \
 small_hb_int.v \
 tx_frontend.v \
+variable_part_select_and_clip.v \
 dsp_tx_glue.v \
 dsp_rx_glue.v \
 ))

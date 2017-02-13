@@ -39,8 +39,8 @@ module round
    assign 			 round_corr_nearest = in[bits_in-bits_out-1];
 
    generate
-      if(bits_in-bits_out > 1)
-	assign 			 round_corr_nearest_safe = (~in[bits_in-1] & (&in[bits_in-2:bits_out])) ? 0 :
+      if(bits_out > 1)
+	assign 			 round_corr_nearest_safe = (~in[bits_in-1] & (&in[bits_in-2:bits_in-bits_out])) ? 0 :
 				 round_corr_nearest;
       else
 	assign round_corr_nearest_safe = round_corr_nearest;
