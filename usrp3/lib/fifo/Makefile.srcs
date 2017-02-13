@@ -26,6 +26,7 @@ axi_mux8.v \
 axi_mux_select.v \
 axi_mux.v \
 axi_packet_gate.v \
+fifo64_to_axi4lite.v \
 monitor_axi_fifo.v \
 shortfifo.v \
 ))

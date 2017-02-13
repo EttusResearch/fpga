@@ -749,7 +749,7 @@ module n310
     );
 `endif
 
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy0
+  fifo64_to_axi4lite inst_fifo64_to_axi4lite0
   (
     .s_axi_aclk(bus_clk),
     .s_axi_areset(bus_rst),
@@ -774,7 +774,8 @@ module n310
     .s_axi_rdata(M_AXI_GP0_RDATA_S0),
     .s_axi_rresp(M_AXI_GP0_RRESP_S0),
     .s_axi_rvalid(M_AXI_GP0_RVALID_S0),
-    .s_axi_rready(M_AXI_GP0_RREADY_S0)
+    .s_axi_rready(M_AXI_GP0_RREADY_S0),
+    .irq()
   );
 
   axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy1
@@ -805,7 +806,7 @@ module n310
     .s_axi_rready(M_AXI_GP0_RREADY_S1)
   );
 
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy2
+  fifo64_to_axi4lite inst_fifo64_to_axi4lite1
   (
     .s_axi_aclk(bus_clk),
     .s_axi_areset(bus_rst),
@@ -830,7 +831,8 @@ module n310
     .s_axi_rdata(M_AXI_GP0_RDATA_S2),
     .s_axi_rresp(M_AXI_GP0_RRESP_S2),
     .s_axi_rvalid(M_AXI_GP0_RVALID_S2),
-    .s_axi_rready(M_AXI_GP0_RREADY_S2)
+    .s_axi_rready(M_AXI_GP0_RREADY_S2),
+    .irq()
   );
 
   axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy3
