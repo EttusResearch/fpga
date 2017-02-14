@@ -18,16 +18,16 @@ module eth_switch #(
 
     input           reg_clk,
     // Register port: Write port (domain: reg_clk)
-    output                         reg_wr_req,
-    output   [REG_AWIDTH-1:0]      reg_wr_addr,
-    output   [REG_DWIDTH-1:0]      reg_wr_data,
-    output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
+    input                         reg_wr_req,
+    input   [REG_AWIDTH-1:0]      reg_wr_addr,
+    input   [REG_DWIDTH-1:0]      reg_wr_data,
+    input   [REG_DWIDTH/8-1:0]    reg_wr_keep,
 
     // Register port: Read port (domain: reg_clk)
-    output                         reg_rd_req,
-    output   [REG_AWIDTH-1:0]      reg_rd_addr,
-    input                          reg_rd_resp,
-    input    [REG_DWIDTH-1:0]      reg_rd_data,
+    input                         reg_rd_req,
+    input   [REG_AWIDTH-1:0]      reg_rd_addr,
+    output                        reg_rd_resp,
+    output  [REG_DWIDTH-1:0]      reg_rd_data,
 
     // Eth ports
     output	[63:0]  eth_tx_tdata,

@@ -49,15 +49,15 @@ module n310_eth_dispatch #(
     input           clear,
     input           reg_clk,
     // Register port: Write port (domain: reg_clk)
-    output                         reg_wr_req,
-    output   [REG_AWIDTH-1:0]      reg_wr_addr,
-    output   [REG_DWIDTH-1:0]      reg_wr_data,
-    output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
+    input                         reg_wr_req,
+    input   [REG_AWIDTH-1:0]      reg_wr_addr,
+    input   [REG_DWIDTH-1:0]      reg_wr_data,
+    input   [REG_DWIDTH/8-1:0]    reg_wr_keep,
     // Register port: Read port (domain: reg_clk)
-    output                         reg_rd_req,
-    output   [REG_AWIDTH-1:0]      reg_rd_addr,
-    input                          reg_rd_resp,
-    input    [REG_DWIDTH-1:0]      reg_rd_data,
+    input                          reg_rd_req,
+    input   [REG_AWIDTH-1:0]       reg_rd_addr,
+    output reg                     reg_rd_resp,
+    output reg [REG_DWIDTH-1:0]    reg_rd_data,
     // Input 68bit AXI-Stream interface (from MAC)
     input   [63:0]  in_tdata,
     input   [3:0]   in_tuser,
@@ -168,6 +168,74 @@ module n310_eth_dispatch #(
     reg [15:0]    udp_src_port;
     assign udp_src_prt = udp_src_port;
 
+
+  reg [47:0]      mac_reg;
+  reg [31:0]      ip_reg;
+  reg [15:0]      udp_port0, udp_port1;
+
+  localparam REG_MAC_LSB   = BASE + 'h00;
+  localparam REG_MAC_MSB   = BASE + 'h04;
+  localparam REG_IP        = BASE + 'h08;
+  localparam REG_PORT0     = BASE + 'h0c;
+  localparam REG_PORT1     = BASE + 'h10;
+
+  assign my_mac_addr = mac_reg;
+  assign my_ip_addr  = ip_reg;
+
+  always @(posedge reg_clk)
+    if (reset) begin
+      mac_reg   <= 48'd0;
+      ip_reg    <= 32'd0;
+      udp_port0 <= 16'd0;
+      udp_port1 <= 16'd0;
+    end
+    else begin
+      if (reg_wr_req)
+        case (reg_wr_addr)
+
+        REG_MAC_LSB:
+          mac_reg[31:0]  <= reg_wr_data;
+
+        REG_MAC_MSB:
+          mac_reg[47:32] <= reg_wr_data;
+
+        REG_IP:
+          ip_reg        <= reg_wr_data;
+
+        REG_PORT0:
+          udp_port0     <= reg_wr_data;
+
+        REG_PORT1:
+          udp_port1     <= reg_wr_data;
+
+        endcase
+    end
+
+  always @ (posedge reg_clk)
+    if (reg_rd_req) begin
+      reg_rd_resp <= 1'b1;
+
+      case (reg_rd_addr)
+      REG_MAC_LSB:
+        reg_rd_data <= mac_reg;
+
+      REG_MAC_MSB:
+        reg_rd_data <= mac_reg;
+
+      REG_IP:
+        reg_rd_data <= ip_reg;
+
+      REG_PORT0:
+        reg_rd_data <= ip_reg;
+
+      REG_PORT1:
+        reg_rd_data <= ip_reg;
+
+      default:
+        reg_rd_resp <= 1'b0;
+      endcase
+    end
+
     //TODO: Change these to Reg Ports
     //---------------------------------------------------------
     // Settings regs
@@ -177,33 +245,15 @@ module n310_eth_dispatch #(
     // This value is used to determine if the packet is meant
     // for this device should be consumed
     // Sample generated MAC = 00:80:2F:16:C5:2F
-    wire [47:0]      my_mac;
-    setting_reg #(.my_addr(BASE), .awidth(16), .width(32), .at_reset(32'h2F16C52F)) sr_my_mac_lsb
-        (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-        .in(set_data),.out(my_mac[31:0]),.changed());
-    setting_reg #(.my_addr(BASE+1), .awidth(16), .width(16), .at_reset(16'h0080)) sr_my_mac_msb
-        (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-        .in(set_data),.out(my_mac[47:32]),.changed());
-    assign my_mac_addr = my_mac;
 
     // IP address for the dispatcher module.
     // This value is used to determine if the packet is addressed
     // to this device
     // No idea what IP to give it. :/ Dummy value for now!
     //vhook_warn Give me a valid IP! 192.168.10.2 = C0.A8.0A.02
-    wire [31:0]      my_ip;
-    setting_reg #(.my_addr(BASE+2), .awidth(16), .width(32), .at_reset(32'hC0A80A02)) sr_my_ip
-        (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-        .in(set_data),.out(my_ip[31:0]),.changed());
-    assign my_ip_addr = my_ip;
 
     // This module supports two destination ports
     //vhook_warn Set both port addresses to zero?
-    wire [15:0]      my_port0, my_port1;
-    setting_reg #(.my_addr(BASE+3), .awidth(16), .width(32), .at_reset(32'h00000000)) sr_udp_port
-        (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-        .in(set_data),.out({my_port1[15:0],my_port0[15:0]}),.changed());
-    assign my_udp_port = my_port0;
 
     // forward_ndest: Forward to crossover path if MAC Addr in packet
     //                does not match "my_mac"
@@ -402,7 +452,7 @@ module n310_eth_dispatch #(
                     // Look at upper 16bits of MAC Dst Addr.
                     if (in_tdata_reg[15:0] == 16'hFFFF)
                         is_eth_broadcast <= 1'b1;
-                    if (in_tdata_reg[15:0] == my_mac[47:32])
+                    if (in_tdata_reg[15:0] == mac_reg[47:32])
                         is_eth_dst_addr <= 1'b1;
                 end
                 2: begin
@@ -413,7 +463,7 @@ module n310_eth_dispatch #(
                         is_eth_broadcast <= 1'b1;
                     else
                         is_eth_broadcast <= 1'b0;
-                    if (is_eth_dst_addr && (in_tdata_reg[63:32] == my_mac[31:0]))
+                    if (is_eth_dst_addr && (in_tdata_reg[63:32] == mac_reg[31:0]))
                         is_eth_dst_addr <= 1'b1;
                     else
                         is_eth_dst_addr <= 1'b0;
@@ -438,16 +488,16 @@ module n310_eth_dispatch #(
                     // Export the source IP address.
                     ip_src <= in_tdata_reg[63:32];
                     // Look at IP DST Address.
-                    if ((in_tdata_reg[31:0] == my_ip[31:0]) && is_eth_type_ipv4)
+                    if ((in_tdata_reg[31:0] == ip_reg[31:0]) && is_eth_type_ipv4)
                         is_ipv4_dst_addr <= 1'b1;
                 end
                 6: begin
                     // Export the source UDP port.
                     udp_src_port <= in_tdata_reg[63:48];
                     // Look at UDP dest port
-                    if ((in_tdata_reg[47:32] == my_port0[15:0]) && is_ipv4_proto_udp)
+                    if ((in_tdata_reg[47:32] == udp_port0[15:0]) && is_ipv4_proto_udp)
                         is_udp_dst_ports[0] <= 1'b1;
-                    if ((in_tdata_reg[47:32] == my_port1[15:0]) && is_ipv4_proto_udp)
+                    if ((in_tdata_reg[47:32] == udp_port1[15:0]) && is_ipv4_proto_udp)
                         is_udp_dst_ports[1] <= 1'b1;
                     // Look at ICMP type and code
                     if (in_tdata_reg[63:48] == {my_icmp_type, my_icmp_code} && is_ipv4_proto_icmp)
