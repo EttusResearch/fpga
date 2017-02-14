@@ -553,10 +553,6 @@ module n310
    wire        sfp0_rx_tlast, sfp0_tx_tlast, sfp0_rx_tvalid, sfp0_tx_tvalid, sfp0_rx_tready, sfp0_tx_tready;
    wire [15:0] sfp0_phy_status;
 
-   wire [31:0] sfp0_wb_dat_i;
-   wire [31:0] sfp0_wb_dat_o;
-   wire [15:0] sfp0_wb_adr;
-   wire        sfp0_wb_ack, sfp0_wb_stb, sfp0_wb_cyc, sfp0_wb_we, sfp0_wb_int;
    wire        gt0_qplloutclk,gt0_qplloutrefclk;
    wire        pma_reset;
    wire        qpllreset;
@@ -704,20 +700,6 @@ module n310
       .phy_status(sfp1_phy_status)
 
    );
-
-   // Ethernet Loopback for testing
-   //assign sfp0_tx_tdata = sfp1_rx_tdata;
-   //assign sfp0_tx_tuser = sfp1_rx_tuser;
-   //assign sfp0_tx_tlast = sfp1_rx_tlast;
-   //assign sfp0_tx_tvalid = sfp1_rx_tvalid;
-   //assign sfp1_rx_tready = sfp0_tx_tready;
-
-   //assign sfp1_tx_tdata = sfp0_rx_tdata;
-   //assign sfp1_tx_tuser = sfp0_rx_tuser;
-   //assign sfp1_tx_tlast = sfp0_rx_tlast;
-   //assign sfp1_tx_tvalid = sfp0_rx_tvalid;
-   //assign sfp0_rx_tready = sfp1_tx_tready;
-
 
 `ifdef SFP0_1GBE
    //GT COMMON
@@ -982,17 +964,29 @@ module n310
    wire [7:0]       set_addr;
    wire [31:0]      set_data;
 
-   wire [63:0]      cpui_tdata;
-   wire [3:0]       cpui_tuser;
-   wire             cpui_tlast;
-   wire             cpui_tvalid;
-   wire             cpui_tready;
+   wire [63:0]      cpui0_tdata;
+   wire [3:0]       cpui0_tuser;
+   wire             cpui0_tlast;
+   wire             cpui0_tvalid;
+   wire             cpui0_tready;
 
-   wire [63:0]      cpuo_tdata;
-   wire [3:0]       cpuo_tuser;
-   wire             cpuo_tlast;
-   wire             cpuo_tvalid;
-   wire             cpuo_tready;
+   wire [63:0]      cpuo0_tdata;
+   wire [3:0]       cpuo0_tuser;
+   wire             cpuo0_tlast;
+   wire             cpuo0_tvalid;
+   wire             cpuo0_tready;
+
+   wire [63:0]      cpui1_tdata;
+   wire [3:0]       cpui1_tuser;
+   wire             cpui1_tlast;
+   wire             cpui1_tvalid;
+   wire             cpui1_tready;
+
+   wire [63:0]      cpuo1_tdata;
+   wire [3:0]       cpuo1_tuser;
+   wire             cpuo1_tlast;
+   wire             cpuo1_tvalid;
+   wire             cpuo1_tready;
 
    n310_core #(
       .REG_DWIDTH   (32),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1003,60 +997,41 @@ module n310
         .radio_rst		        (/*radio_rst*/GSR),
         .bus_clk		        (bus_clk),
         .bus_rst		        (bus_rst),
-        //RegPort
-        .reg_clk                (bus_clk),
-        .reg_wr_req             (reg_wr_req),
-        .reg_wr_addr            (reg_wr_addr),
-        .reg_wr_data            (reg_wr_data),
-        .reg_wr_keep            (/*unused*/),
-        .reg_rd_req             (reg_rd_req),
-        .reg_rd_addr            (reg_rd_addr),
-        .reg_rd_resp            (reg_rd_resp),
-        .reg_rd_data            (reg_rd_data),
         // Radio 0 signals
         .rx0		            (rx0),
         .tx0		            (tx0),
         .rx1		            (rx1),
         .tx1		            (tx1),
-        // External clock gen
-        .ext_ref_clk		    (ref_clk_10mhz),
-        // SFP+ 0 data stream
-        .sfp0_tx_tdata		    (sfp0_tx_tdata),
-        .sfp0_tx_tuser		    (sfp0_tx_tuser),
-        .sfp0_tx_tlast		    (sfp0_tx_tlast),
-        .sfp0_tx_tvalid		    (sfp0_tx_tvalid),
-        .sfp0_tx_tready		    (sfp0_tx_tready),
-        .sfp0_rx_tdata		    (sfp0_rx_tdata),
-        .sfp0_rx_tuser		    (sfp0_rx_tuser),
-        .sfp0_rx_tlast		    (sfp0_rx_tlast),
-        .sfp0_rx_tvalid		    (sfp0_rx_tvalid),
-        .sfp0_rx_tready		    (sfp0_rx_tready),
-        .sfp0_phy_status		(sfp0_phy_status),
-        // SFP+ 1 data stream
-        .sfp1_tx_tdata		    (sfp1_tx_tdata),
-        .sfp1_tx_tuser		    (sfp1_tx_tuser),
-        .sfp1_tx_tlast		    (sfp1_tx_tlast),
-        .sfp1_tx_tvalid		    (sfp1_tx_tvalid),
-        .sfp1_tx_tready		    (sfp1_tx_tready),
-        .sfp1_rx_tdata		    (sfp1_rx_tdata),
-        .sfp1_rx_tuser		    (sfp1_rx_tuser),
-        .sfp1_rx_tlast		    (sfp1_rx_tlast),
-        .sfp1_rx_tvalid		    (sfp1_rx_tvalid),
-        .sfp1_rx_tready		    (sfp1_rx_tready),
-        .sfp1_phy_status		(sfp1_phy_status),
-        // CPU
-        .cpui_tdata				(cpui_tdata),
-        .cpui_tuser				(cpui_tuser),
-        .cpui_tlast				(cpui_tlast),
-        .cpui_tvalid			(cpui_tvalid),
-        .cpui_tready			(cpui_tready),
+        //DMA
+        .dmao_tdata				(dmao_tdata),
+        .dmao_tlast				(dmao_tlast),
+        .dmao_tvalid			(dmao_tvalid),
+        .dmao_tready			(dmao_tready),
 
-        .cpuo_tdata				(cpuo_tdata),
-        .cpuo_tuser				(cpuo_tuser),
-        .cpuo_tlast				(cpuo_tlast),
-        .cpuo_tvalid			(cpuo_tvalid),
-        .cpuo_tready			(cpuo_tready)
+        .dmai_tdata				(dmai_tdata),
+        .dmai_tlast				(dmai_tlast),
+        .dmai_tvalid			(dmai_tvalid),
+        .dmai_tready			(dmai_tready),
+        // VITA to Ethernet
+        .v2e0_tdata				(v2e0_tdata),
+        .v2e0_tvalid		    (v2e0_tvalid),
+        .v2e0_tlast			    (v2e0_tlast),
+        .v2e0_tready			(v2e0_tready),
 
+        .v2e1_tdata				(v2e1_tdata),
+        .v2e1_tlast				(v2e1_tlast),
+        .v2e1_tvalid			(v2e1_tvalid),
+        .v2e1_tready			(v2e1_tready),
+        // Ethernet to VITA
+        .e2v0_tdata				(e2v0_tdata),
+        .e2v0_tlast				(e2v0_tlast),
+        .e2v0_tvalid			(e2v0_tvalid),
+        .e2v0_tready			(e2v0_tready),
+
+        .e2v1_tdata				(e2v1_tdata),
+        .e2v1_tlast				(e2v1_tlast),
+        .e2v1_tvalid			(e2v1_tvalid),
+        .e2v1_tready			(e2v1_tready)
    );
 
    // AXI4-Lite to RegPort (PS to PL Register Access)
@@ -1104,6 +1079,145 @@ module n310
       .reg_rd_resp   (reg_rd_resp),
       .reg_rd_data   (reg_rd_data)
    );
+
+    // ////////////////////////////////////////////////////////////////
+    // Ethernet Soft Switch
+    // ////////////////////////////////////////////////////////////////
+
+    wire    [63:0]  e01_tdata, e10_tdata;
+    wire    [3:0]   e01_tuser, e10_tuser;
+    wire            e01_tlast, e01_tvalid, e01_tready;
+    wire            e10_tlast, e10_tvalid, e10_tready;
+
+    eth_switch #(
+        .BASE       (),
+        .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+        .REG_AWIDTH (REG_AWIDTH)         // Width of the address bus
+    ) eth_switch0 (
+        .clk			(clk),
+        .reset			(reset),
+        .clear			(1'b0),
+        //RegPort
+        .reg_clk	    (bus_clk),
+        .reg_wr_req	    (reg_wr_req),
+        .reg_wr_addr	(reg_wr_addr),
+        .reg_wr_data	(reg_wr_data),
+        .reg_wr_keep	(/*unused*/),
+        .reg_rd_req	    (reg_rd_req),
+        .reg_rd_addr	(reg_rd_addr),
+        .reg_rd_resp	(reg_rd_resp),
+        .reg_rd_data	(reg_rd_data),
+        // SFP
+        .eth_tx_tdata	(sfp0_tx_tdata),
+        .eth_tx_tuser	(sfp0_tx_tuser),
+        .eth_tx_tlast	(sfp0_tx_tlast),
+        .eth_tx_tvalid	(sfp0_tx_tvalid),
+        .eth_tx_tready	(sfp0_tx_tready),
+        .eth_rx_tdata	(sfp0_rx_tdata),
+        .eth_rx_tuser	(sfp0_rx_tuser),
+        .eth_rx_tlast	(sfp0_rx_tlast),
+        .eth_rx_tvalid	(sfp0_rx_tvalid),
+        .eth_rx_tready	(sfp0_rx_tready),
+        // Ethernet to Vita
+        .e2v_tdata		(e2v0_tdata),
+        .e2v_tlast		(e2v0_tlast),
+        .e2v_tvalid		(e2v0_tvalid),
+        .e2v_tready		(e2v0_tready),
+        // Vita to Ethernet
+        .v2e_tdata		(v2e0_tdata),
+        .v2e_tlast		(v2e0_tlast),
+        .v2e_tvalid		(v2e0_tvalid),
+        .v2e_tready		(v2e0_tready),
+        // Crossover
+        .xo_tdata		(e01_tdata),
+        .xo_tuser		(e01_tuser),
+        .xo_tlast		(e01_tlast),
+        .xo_tvalid		(e01_tvalid),
+        .xo_tready		(e01_tready),
+        .xi_tdata		(e10_tdata),
+        .xi_tuser		(e10_tuser),
+        .xi_tlast		(e10_tlast),
+        .xi_tvalid		(e10_tvalid),
+        .xi_tready		(e10_tready),
+        // Ethernet to CPU
+        .e2c_tdata		(cpui0_tdata),
+        .e2c_tuser		(cpui0_tuser),
+        .e2c_tlast		(cpui0_tlast),
+        .e2c_tvalid		(cpui0_tvalid),
+        .e2c_tready		(cpui0_tready),
+        // CPU to Ethernet
+        .c2e_tdata		(cpuo0_tdata),
+        .c2e_tuser		(cpuo0_tuser),
+        .c2e_tlast		(cpuo0_tlast),
+        .c2e_tvalid		(cpuo0_tvalid),
+        .c2e_tready		(cpuo0_tready),
+        .debug			()
+    );
+
+   eth_switch #(
+        .BASE       (),
+        .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+        .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
+   ) eth_switch1 (
+        .clk			(clk),
+        .reset			(reset),
+        .clear			(1'b0),
+        //RegPort
+        //.reg_clk	    (bus_clk),
+        //.reg_wr_req	    (reg_wr_req),
+        //.reg_wr_addr	(reg_wr_addr),
+        //.reg_wr_data	(reg_wr_data),
+        //.reg_wr_keep	(/*unused*/),
+        //.reg_rd_req	    (reg_rd_req),
+        //.reg_rd_addr	(reg_rd_addr),
+        //.reg_rd_resp	(reg_rd_resp),
+        //.reg_rd_data	(reg_rd_data),
+        // SFP
+        .eth_tx_tdata	(sfp1_tx_tdata),
+        .eth_tx_tuser	(sfp1_tx_tuser),
+        .eth_tx_tlast	(sfp1_tx_tlast),
+        .eth_tx_tvalid	(sfp1_tx_tvalid),
+        .eth_tx_tready	(sfp1_tx_tready),
+        .eth_rx_tdata	(sfp1_rx_tdata),
+        .eth_rx_tuser	(sfp1_rx_tuser),
+        .eth_rx_tlast	(sfp1_rx_tlast),
+        .eth_rx_tvalid	(sfp1_rx_tvalid),
+        .eth_rx_tready	(sfp1_rx_tready),
+        // Ethernet to Vita
+        .e2v_tdata		(e2v1_tdata),
+        .e2v_tlast		(e2v1_tlast),
+        .e2v_tvalid		(e2v1_tvalid),
+        .e2v_tready		(e2v1_tready),
+        // Vita to Ethernet
+        .v2e_tdata		(v2e1_tdata),
+        .v2e_tlast		(v2e1_tlast),
+        .v2e_tvalid		(v2e1_tvalid),
+        .v2e_tready		(v2e1_tready),
+        // Crossover
+        .xo_tdata		(e10_tdata),
+        .xo_tuser		(e10_tuser),
+        .xo_tlast		(e10_tlast),
+        .xo_tvalid		(e10_tvalid),
+        .xo_tready		(e10_tready),
+        .xi_tdata		(e01_tdata),
+        .xi_tuser		(e01_tuser),
+        .xi_tlast		(e01_tlast),
+        .xi_tvalid		(e01_tvalid),
+        .xi_tready		(e01_tready),
+        // Ethernet to CPU
+        .e2c_tdata		(cpui1_tdata),
+        .e2c_tuser		(cpui1_tuser),
+        .e2c_tlast		(cpui1_tlast),
+        .e2c_tvalid		(cpui1_tvalid),
+        .e2c_tready		(cpui1_tready),
+        // CPU to Ethernet
+        .c2e_tdata		(cpuo1_tdata),
+        .c2e_tuser		(cpuo1_tuser),
+        .c2e_tlast		(cpuo1_tlast),
+        .c2e_tvalid		(cpuo1_tvalid),
+        .c2e_tready		(cpuo1_tready),
+        .debug			()
+    );
 
    reg [31:0] counter1;
    always @(posedge bus_clk) begin

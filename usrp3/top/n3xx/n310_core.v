@@ -14,19 +14,6 @@ module n310_core #(
    input             bus_clk,
    input             bus_rst,
 
-   input             reg_clk,
-   // Register port: Write port (domain: reg_clk)
-   output                         reg_wr_req,
-   output   [REG_AWIDTH-1:0]      reg_wr_addr,
-   output   [REG_DWIDTH-1:0]      reg_wr_data,
-   output   [REG_DWIDTH/8-1:0]    reg_wr_keep,
-
-   // Register port: Read port (domain: reg_clk)
-   output                         reg_rd_req,
-   output   [REG_AWIDTH-1:0]      reg_rd_addr,
-   input                          reg_rd_resp,
-   input    [REG_DWIDTH-1:0]      reg_rd_data,
-
    // Radio 0
    input     [31:0]  rx0,
    output    [31:0]  tx0,
@@ -35,51 +22,37 @@ module n310_core #(
    input     [31:0]  rx1,
    output    [31:0]  tx1,
 
-   // Clock control
-   input             ext_ref_clk,
+   // DMA
+   output  [63:0]  dmao_tdata,
+   output          dmao_tlast,
+   output          dmao_tvalid,
+   input           dmao_tready,
 
-   // SFP+ 0 data stream
-   output    [63:0]  sfp0_tx_tdata,
-   output    [3:0]   sfp0_tx_tuser,
-   output            sfp0_tx_tlast,
-   output            sfp0_tx_tvalid,
-   input             sfp0_tx_tready,
+   input   [63:0]  dmai_tdata,
+   input           dmai_tlast,
+   input           dmai_tvalid,
+   output          dmai_tready,
 
-   input     [63:0]  sfp0_rx_tdata,
-   input     [3:0]   sfp0_rx_tuser,
-   input             sfp0_rx_tlast,
-   input             sfp0_rx_tvalid,
-   output            sfp0_rx_tready,
+   // v2e (vita to ethernet) and e2v (eth to vita)
+   output    [63:0]    v2e0_tdata,
+   output              v2e0_tvalid,
+   output              v2e0_tlast,
+   input               v2e0_tready,
 
-   input     [15:0]  sfp0_phy_status,
+   output    [63:0]    v2e1_tdata,
+   output              v2e1_tlast,
+   output              v2e1_tvalid,
+   input               v2e1_tready,
 
-   // SFP+ 1 data stream
-   output    [63:0]  sfp1_tx_tdata,
-   output    [3:0]   sfp1_tx_tuser,
-   output            sfp1_tx_tlast,
-   output            sfp1_tx_tvalid,
-   input             sfp1_tx_tready,
+   input     [63:0]    e2v0_tdata,
+   input               e2v0_tlast,
+   input               e2v0_tvalid,
+   output              e2v0_tready,
 
-   input     [63:0]  sfp1_rx_tdata,
-   input     [3:0]   sfp1_rx_tuser,
-   input             sfp1_rx_tlast,
-   input             sfp1_rx_tvalid,
-   output            sfp1_rx_tready,
-
-   // CPU
-   output    [63:0]  cpui_tdata,
-   output    [3:0]   cpui_tuser,
-   output            cpui_tlast,
-   output            cpui_tvalid,
-   input             cpui_tready,
-
-   input     [63:0]  cpuo_tdata,
-   input     [3:0]   cpuo_tuser,
-   input             cpuo_tlast,
-   input             cpuo_tvalid,
-   output            cpuo_tready,
-
-   input     [15:0]  sfp1_phy_status
+   input     [63:0]    e2v1_tdata,
+   input               e2v1_tlast,
+   input               e2v1_tvalid,
+   output              e2v1_tready
 );
 
    // Computation engines that need access to IO
@@ -104,7 +77,7 @@ module n310_core #(
 
    // Number of Radio Cores Instantiated
    localparam NUM_RADIO_CORES = 2;
-
+/*
    //////////////////////////////////////////////////////////////////////////////////////////////
    // RFNoC
    //////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,95 +99,50 @@ module n310_core #(
  `endif
 `endif
 
-   /////////////////////////////////////////////////////////////////////////////////
-   // Ethernet Soft Switch
-   /////////////////////////////////////////////////////////////////////////////////
+   wire  [(NUM_CE)*64-1:0] ce_o_tdata;
+   wire  [(NUM_CE)-1:0]    ce_o_tlast;
+   wire  [(NUM_CE)-1:0]    ce_o_tvalid;
+   wire  [(NUM_CE)-1:0]    ce_o_tready;
 
-   eth_switch #(
-    .NUM_CE     (NUM_CE + NUM_IO_CE),
-    .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-    .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
-   ) eth_switch (
-    .clk	        (bus_clk),
-    .reset	        (bus_rst),
+   wire  [(NUM_CE)*64-1:0] ce_i_tdata;
+   wire  [(NUM_CE)-1:0]    ce_i_tlast;
+   wire  [(NUM_CE)-1:0]    ce_i_tvalid;
+   wire  [(NUM_CE)-1:0]    ce_i_tready;
+   // //////////////////////////////////////////////////////////////////////
+   // axi_crossbar ports
+   // 0  - ETH0
+   // 1  - ETH1
+   // 2  - DMA
+   // 3  - CE0
+   // ...
+   // 15 - CE13
+   // //////////////////////////////////////////////////////////////////////
 
-    //RegPort
-    .reg_clk	    (bus_clk),
-    .reg_wr_req	    (reg_wr_req),
-    .reg_wr_addr	(reg_wr_addr),
-    .reg_wr_data	(reg_wr_data),
-    .reg_wr_keep	(/*unused*/),
-    .reg_rd_req	    (reg_rd_req),
-    .reg_rd_addr	(reg_rd_addr),
-    .reg_rd_resp	(reg_rd_resp),
-    .reg_rd_data	(reg_rd_data),
+  // Base width of crossbar based on fixed components (ethernet, DMA)
+   localparam XBAR_FIXED_PORTS = 3;
+   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
 
-    // Eth0
-    .sfp0_tx_tdata	(sfp0_tx_tdata),
-    .sfp0_tx_tuser	(sfp0_tx_tuser),
-    .sfp0_tx_tlast	(sfp0_tx_tlast),
-    .sfp0_tx_tvalid	(sfp0_tx_tvalid),
-    .sfp0_tx_tready	(sfp0_tx_tready),
+   // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
+   axi_crossbar #(
+      .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
+   inst_axi_crossbar (
+      .clk(clk), .reset(reset), .clear(0),
+      .local_addr(),
+      .set_stb(), .set_addr(), .set_data(),
+      .i_tdata({ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
+      .i_tlast({ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
+      .i_tvalid({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .i_tready({ce_i_tready,dmai_tready,e2v1_tready,e2v0_tready}),
+      .o_tdata({ce_o_tdata,dmao_tdata,v2e1_tdata,v2e0_tdata}),
+      .o_tlast({ce_o_tlast,dmao_tlast,v2e1_tlast,v2e0_tlast}),
+      .o_tvalid({ce_o_tvalid,dmao_tvalid,v2e1_tvalid,v2e0_tvalid}),
+      .o_tready({ce_o_tready,dmao_tready,v2e1_tready,v2e0_tready}),
+      .pkt_present({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid})
+      //.rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
+      //.rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar)
+      );
 
-    .sfp0_rx_tdata	(sfp0_rx_tdata),
-    .sfp0_rx_tuser	(sfp0_rx_tuser),
-    .sfp0_rx_tlast	(sfp0_rx_tlast),
-    .sfp0_rx_tvalid	(sfp0_rx_tvalid),
-    .sfp0_rx_tready	(sfp0_rx_tready),
-
-    // Eth1
-    .sfp1_tx_tdata	(sfp1_tx_tdata),
-    .sfp1_tx_tuser	(sfp1_tx_tuser),
-    .sfp1_tx_tlast	(sfp1_tx_tlast),
-    .sfp1_tx_tvalid	(sfp1_tx_tvalid),
-    .sfp1_tx_tready	(sfp1_tx_tready),
-
-    .sfp1_rx_tdata	(sfp1_rx_tdata),
-    .sfp1_rx_tuser	(sfp1_rx_tuser),
-    .sfp1_rx_tlast	(sfp1_rx_tlast),
-    .sfp1_rx_tvalid	(sfp1_rx_tvalid),
-    .sfp1_rx_tready	(sfp1_rx_tready),
-
-    // Computation Engines
-    .ce_o_tdata	    ({ce_flat_o_tdata,ioce_flat_o_tdata}),
-    .ce_o_tlast 	({ce_o_tlast,ioce_o_tlast}),
-    .ce_o_tvalid	({ce_o_tvalid,ioce_o_tvalid}),
-    .ce_o_tready	({ce_o_tready,ioce_o_tready}),
-
-    .ce_i_tdata	    ({ce_flat_i_tdata,ioce_flat_i_tdata}),
-    .ce_i_tlast 	({ce_i_tlast,ioce_i_tlast}),
-    .ce_i_tvalid	({ce_i_tvalid,ioce_i_tvalid}),
-    .ce_i_tready	({ce_i_tready,ioce_i_tready}),
-
-    // DMA
-    .dmao_tdata	    (/*dmao_tdata*/),
-    .dmao_tlast 	(/*dmao_tlast*/),
-    .dmao_tvalid	(/*dmao_tvalid*/),
-    .dmao_tready	(/*dmao_tready*/),
-
-    .dmai_tdata 	(/*dmai_tdata*/),
-    .dmai_tlast 	(/*dmai_tlast*/),
-    .dmai_tvalid	(/*dmai_tvalid*/),
-    .dmai_tready	(/*dmai_tready*/),
-
-    // CPU
-    .cpui_tdata	    (cpui_tdata),
-    .cpui_tuser	    (cpui_tuser),
-    .cpui_tlast	    (cpui_tlast),
-    .cpui_tvalid	(cpui_tvalid),
-    .cpui_tready	(cpui_tready),
-
-    .cpuo_tdata 	(cpuo_tdata),
-    .cpuo_tuser 	(cpuo_tuser),
-    .cpuo_tlast 	(cpuo_tlast),
-    .cpuo_tvalid	(cpuo_tvalid),
-    .cpuo_tready	(cpuo_tready),
-
-    //Status signals
-    .sfp0_phy_status(sfp0_phy_status),
-    .sfp1_phy_status(sfp1_phy_status)
-
-   );
+*/
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
