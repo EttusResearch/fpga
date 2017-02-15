@@ -710,6 +710,76 @@ module n310
     );
 `endif
 
+  // ARM ethernet 0 bridge signals
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] arm_eth0_tx_tdata;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_tx_tvalid;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_tx_tlast;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_tx_tready;
+  (* mark_debug = "true", keep = "true" *)
+  wire [3:0]  arm_eth0_tx_tuser;
+
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] arm_eth0_rx_tdata;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_rx_tvalid;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_rx_tlast;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_rx_tready;
+  (* mark_debug = "true", keep = "true" *)
+  wire [3:0]  arm_eth0_rx_tuser;
+
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth0_irq;
+
+  // ARM ethernet 1 bridge signals
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] arm_eth1_tx_tdata;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_tx_tvalid;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_tx_tlast;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_tx_tready;
+  (* mark_debug = "true", keep = "true" *)
+  wire [3:0]  arm_eth1_tx_tuser;
+
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] arm_eth1_rx_tdata;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_rx_tvalid;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_rx_tlast;
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_rx_tready;
+  (* mark_debug = "true", keep = "true" *)
+  wire [3:0]  arm_eth1_rx_tuser;
+
+  (* mark_debug = "true", keep = "true" *)
+  wire        arm_eth1_irq;
+
+  // loopback test
+  /*
+  assign      arm_eth0_rx_tdata = arm_eth1_tx_tdata;
+  assign      arm_eth0_rx_tvalid = arm_eth1_tx_tvalid;
+  assign      arm_eth0_rx_tlast = arm_eth1_tx_tlast;
+  assign      arm_eth0_rx_tuser = arm_eth1_tx_tuser;
+  assign      arm_eth1_tx_tready = arm_eth0_rx_tready;
+
+  assign      arm_eth1_rx_tdata = arm_eth0_tx_tdata;
+  assign      arm_eth1_rx_tvalid = arm_eth0_tx_tvalid;
+  assign      arm_eth1_rx_tlast = arm_eth0_tx_tlast;
+  assign      arm_eth1_rx_tuser = arm_eth0_tx_tuser;
+  assign      arm_eth0_tx_tready = arm_eth1_rx_tready;
+*/
+
+  assign      IRQ_F2P[0] = arm_eth0_irq;
+  assign      IRQ_F2P[1] = arm_eth1_irq;
+
   fifo64_to_axi4lite inst_fifo64_to_axi4lite0
   (
     .s_axi_aclk(bus_clk),
@@ -736,7 +806,20 @@ module n310
     .s_axi_rresp(M_AXI_GP0_RRESP_S0),
     .s_axi_rvalid(M_AXI_GP0_RVALID_S0),
     .s_axi_rready(M_AXI_GP0_RREADY_S0),
-    .irq()
+
+    .m_axis_tvalid(arm_eth0_tx_tvalid),
+    .m_axis_tlast(arm_eth0_tx_tlast),
+    .m_axis_tdata(arm_eth0_tx_tdata),
+    .m_axis_tready(arm_eth0_tx_tready),
+    .m_axis_tuser(arm_eth0_tx_tuser),
+
+    .s_axis_tvalid(arm_eth0_rx_tvalid),
+    .s_axis_tlast(arm_eth0_rx_tlast),
+    .s_axis_tdata(arm_eth0_rx_tdata),
+    .s_axis_tready(arm_eth0_rx_tready),
+    .s_axis_tuser(arm_eth0_rx_tuser),
+
+    .irq(arm_eth0_irq)
   );
 
   axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy1
@@ -793,7 +876,20 @@ module n310
     .s_axi_rresp(M_AXI_GP0_RRESP_S2),
     .s_axi_rvalid(M_AXI_GP0_RVALID_S2),
     .s_axi_rready(M_AXI_GP0_RREADY_S2),
-    .irq()
+
+    .m_axis_tvalid(arm_eth1_tx_tvalid),
+    .m_axis_tlast(arm_eth1_tx_tlast),
+    .m_axis_tdata(arm_eth1_tx_tdata),
+    .m_axis_tready(arm_eth1_tx_tready),
+    .m_axis_tuser(arm_eth1_tx_tuser),
+
+    .s_axis_tvalid(arm_eth1_rx_tvalid),
+    .s_axis_tlast(arm_eth1_rx_tlast),
+    .s_axis_tdata(arm_eth1_rx_tdata),
+    .s_axis_tready(arm_eth1_rx_tready),
+    .s_axis_tuser(arm_eth1_rx_tuser),
+
+    .irq(arm_eth1_irq)
   );
 
   axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy3
@@ -1097,17 +1193,17 @@ module n310
         .xi_tvalid		(e10_tvalid),
         .xi_tready		(e10_tready),
         // Ethernet to CPU
-        .e2c_tdata		(cpui0_tdata),
-        .e2c_tuser		(cpui0_tuser),
-        .e2c_tlast		(cpui0_tlast),
-        .e2c_tvalid		(cpui0_tvalid),
-        .e2c_tready		(cpui0_tready),
+        .e2c_tdata		(arm_eth0_rx_tdata),
+        .e2c_tuser		(arm_eth0_rx_tuser),
+        .e2c_tlast		(arm_eth0_rx_tlast),
+        .e2c_tvalid		(arm_eth0_rx_tvalid),
+        .e2c_tready		(arm_eth0_rx_tready),
         // CPU to Ethernet
-        .c2e_tdata		(cpuo0_tdata),
-        .c2e_tuser		(cpuo0_tuser),
-        .c2e_tlast		(cpuo0_tlast),
-        .c2e_tvalid		(cpuo0_tvalid),
-        .c2e_tready		(cpuo0_tready),
+        .c2e_tdata		(arm_eth0_tx_tdata),
+        .c2e_tuser		(arm_eth0_tx_tuser),
+        .c2e_tlast		(arm_eth0_tx_tlast),
+        .c2e_tvalid		(arm_eth0_tx_tvalid),
+        .c2e_tready		(arm_eth0_tx_tready),
         .debug			()
     );
 
@@ -1162,17 +1258,17 @@ module n310
         .xi_tvalid		(e01_tvalid),
         .xi_tready		(e01_tready),
         // Ethernet to CPU
-        .e2c_tdata		(cpui1_tdata),
-        .e2c_tuser		(cpui1_tuser),
-        .e2c_tlast		(cpui1_tlast),
-        .e2c_tvalid		(cpui1_tvalid),
-        .e2c_tready		(cpui1_tready),
+        .e2c_tdata		(arm_eth1_rx_tdata),
+        .e2c_tuser		(arm_eth1_rx_tuser),
+        .e2c_tlast		(arm_eth1_rx_tlast),
+        .e2c_tvalid		(arm_eth1_rx_tvalid),
+        .e2c_tready		(arm_eth1_rx_tready),
         // CPU to Ethernet
-        .c2e_tdata		(cpuo1_tdata),
-        .c2e_tuser		(cpuo1_tuser),
-        .c2e_tlast		(cpuo1_tlast),
-        .c2e_tvalid		(cpuo1_tvalid),
-        .c2e_tready		(cpuo1_tready),
+        .c2e_tdata		(arm_eth1_tx_tdata),
+        .c2e_tuser		(arm_eth1_tx_tuser),
+        .c2e_tlast		(arm_eth1_tx_tlast),
+        .c2e_tvalid		(arm_eth1_tx_tvalid),
+        .c2e_tready		(arm_eth1_tx_tready),
         .debug			()
     );
 
