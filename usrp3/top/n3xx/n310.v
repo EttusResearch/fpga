@@ -234,7 +234,7 @@ module n310
   localparam REG_BASE_MISC = 32'h4001_0000;
   localparam REG_BASE_MDIO_0 = 32'h4004_0000;
   localparam REG_BASE_MDIO_1 = 32'h400C_0000;
-  localparam REG_AWIDTH = 32;
+  localparam REG_AWIDTH = 14; // log2(0x4000)
   localparam REG_DWIDTH = 32;
 
    //TODO: Add bus_clk_gen, bus_rst, sw_rst
@@ -968,14 +968,38 @@ module n310
    wire             cpuo1_tready;
 
    n310_core #(
-      .REG_DWIDTH   (32),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .REG_AWIDTH   (32)          // Width of the address bus
+      .REG_DWIDTH   (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .REG_AWIDTH   (REG_AWIDTH)          // Width of the address bus
    ) n310_core (
          //Clocks and resets
         .radio_clk		        (radio_clk),
         .radio_rst		        (/*radio_rst*/GSR),
         .bus_clk		        (bus_clk),
         .bus_rst		        (bus_rst),
+
+      // AXI4-Lite: Write address port (domain: s_axi_aclk)
+      .s_axi_awaddr  (M_AXI_GP0_AWADDR_S4),
+      .s_axi_awvalid (M_AXI_GP0_AWVALID_S4),
+      .s_axi_awready (M_AXI_GP0_AWREADY_S4),
+      // AXI4-Lite: Write data port (domain: s_axi_aclk)
+      .s_axi_wdata   (M_AXI_GP0_WDATA_S4),
+      .s_axi_wstrb   (M_AXI_GP0_WSTRB_S4),
+      .s_axi_wvalid  (M_AXI_GP0_WVALID_S4),
+      .s_axi_wready  (M_AXI_GP0_WREADY_S4),
+      // AXI4-Lite: Write response port (domain: s_axi_aclk)
+      .s_axi_bresp   (M_AXI_GP0_BRESP_S4),
+      .s_axi_bvalid  (M_AXI_GP0_BVALID_S4),
+      .s_axi_bready  (M_AXI_GP0_BREADY_S4),
+      // AXI4-Lite: Read address port (domain: s_axi_aclk)
+      .s_axi_araddr  (M_AXI_GP0_ARADDR_S4),
+      .s_axi_arvalid (M_AXI_GP0_ARVALID_S4),
+      .s_axi_arready (M_AXI_GP0_ARREADY_S4),
+      // AXI4-Lite: Read data port (domain: s_axi_aclk)
+      .s_axi_rdata   (M_AXI_GP0_RDATA_S4),
+      .s_axi_rresp   (M_AXI_GP0_RRESP_S4),
+      .s_axi_rvalid  (M_AXI_GP0_RVALID_S4),
+      .s_axi_rready  (M_AXI_GP0_RREADY_S4),
+
         // Radio 0 signals
         .rx0		            (rx0),
         .tx0		            (tx0),
@@ -1013,52 +1037,6 @@ module n310
         .e2v1_tready			(e2v1_tready)
    );
 
-   // AXI4-Lite to RegPort (PS to PL Register Access)
-   axil_regport_master #(
-      .DWIDTH   (REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .AWIDTH   (REG_AWIDTH),     // Width of the address bus
-      .WRBASE   (REG_BASE_MISC),  // Write address base
-      .RDBASE   (REG_BASE_MISC),  // Read address base
-      .TIMEOUT  (10)              // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
-   ) regport_master_i (
-      // Clock and reset
-      .s_axi_aclk    (FCLK_CLK0),
-      .s_axi_aresetn (FCLK_RESET0N),
-      // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr  (M_AXI_GP0_AWADDR_S4),
-      .s_axi_awvalid (M_AXI_GP0_AWVALID_S4),
-      .s_axi_awready (M_AXI_GP0_AWREADY_S4),
-      // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata   (M_AXI_GP0_WDATA_S4),
-      .s_axi_wstrb   (M_AXI_GP0_WSTRB_S4),
-      .s_axi_wvalid  (M_AXI_GP0_WVALID_S4),
-      .s_axi_wready  (M_AXI_GP0_WREADY_S4),
-      // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp   (M_AXI_GP0_BRESP_S4),
-      .s_axi_bvalid  (M_AXI_GP0_BVALID_S4),
-      .s_axi_bready  (M_AXI_GP0_BREADY_S4),
-      // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr  (M_AXI_GP0_ARADDR_S4),
-      .s_axi_arvalid (M_AXI_GP0_ARVALID_S4),
-      .s_axi_arready (M_AXI_GP0_ARREADY_S4),
-      // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata   (M_AXI_GP0_RDATA_S4),
-      .s_axi_rresp   (M_AXI_GP0_RRESP_S4),
-      .s_axi_rvalid  (M_AXI_GP0_RVALID_S4),
-      .s_axi_rready  (M_AXI_GP0_RREADY_S4),
-      // Register port: Write port (domain: reg_clk)
-      .reg_clk       (bus_clk),
-      .reg_wr_req    (reg_wr_req),
-      .reg_wr_addr   (reg_wr_addr),
-      .reg_wr_data   (reg_wr_data),
-      .reg_wr_keep   (/*unused*/),
-      // Register port: Read port (domain: reg_clk)
-      .reg_rd_req    (reg_rd_req),
-      .reg_rd_addr   (reg_rd_addr),
-      .reg_rd_resp   (reg_rd_resp),
-      .reg_rd_data   (reg_rd_data)
-   );
-
     // ////////////////////////////////////////////////////////////////
     // Ethernet Soft Switch
     // ////////////////////////////////////////////////////////////////
@@ -1077,15 +1055,15 @@ module n310
         .reset			(reset),
         .clear			(1'b0),
         //RegPort
-        .reg_clk	    (bus_clk),
-        .reg_wr_req	    (reg_wr_req),
-        .reg_wr_addr	(reg_wr_addr),
-        .reg_wr_data	(reg_wr_data),
-        .reg_wr_keep	(/*unused*/),
-        .reg_rd_req	    (reg_rd_req),
-        .reg_rd_addr	(reg_rd_addr),
-        .reg_rd_resp	(reg_rd_resp),
-        .reg_rd_data	(reg_rd_data),
+        //.reg_clk	    (bus_clk),
+        //.reg_wr_req	    (reg_wr_req),
+        //.reg_wr_addr	(reg_wr_addr),
+        //.reg_wr_data	(reg_wr_data),
+        //.reg_wr_keep	(/*unused*/),
+        //.reg_rd_req	    (reg_rd_req),
+        //.reg_rd_addr	(reg_rd_addr),
+        //.reg_rd_resp	(reg_rd_resp),
+        //.reg_rd_data	(reg_rd_data),
         // SFP
         .eth_tx_tdata	(sfp0_tx_tdata),
         .eth_tx_tuser	(sfp0_tx_tuser),
@@ -1142,15 +1120,15 @@ module n310
         .reset			(reset),
         .clear			(1'b0),
         //RegPort
-        .reg_clk	    (bus_clk),
-        .reg_wr_req	    (reg_wr_req),
-        .reg_wr_addr	(reg_wr_addr),
-        .reg_wr_data	(reg_wr_data),
-        .reg_wr_keep	(/*unused*/),
-        .reg_rd_req	    (reg_rd_req),
-        .reg_rd_addr	(reg_rd_addr),
-        .reg_rd_resp	(reg_rd_resp),
-        .reg_rd_data	(reg_rd_data),
+        //.reg_clk	    (bus_clk),
+        //.reg_wr_req	    (reg_wr_req),
+        //.reg_wr_addr	(reg_wr_addr),
+        //.reg_wr_data	(reg_wr_data),
+        //.reg_wr_keep	(/*unused*/),
+        //.reg_rd_req	    (reg_rd_req),
+        //.reg_rd_addr	(reg_rd_addr),
+        //.reg_rd_resp	(reg_rd_resp),
+        //.reg_rd_data	(reg_rd_data),
         // SFP
         .eth_tx_tdata	(sfp1_tx_tdata),
         .eth_tx_tuser	(sfp1_tx_tuser),

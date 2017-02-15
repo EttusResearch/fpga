@@ -4,59 +4,188 @@
 //
 //////////////////////////////////////
 
-module n310_core #(
-   parameter REG_DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
-   parameter REG_AWIDTH  = 32     // Width of the address bus
-)(
-   //Clocks and resets
-   input             radio_clk,
-   input             radio_rst,
-   input             bus_clk,
-   input             bus_rst,
+module n310_core
+#(
+  parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
+  parameter REG_AWIDTH  = 32  // Width of the address bus
+)
+(
+ //Clocks and resets
+  input         radio_clk,
+  input         radio_rst,
+  input         bus_clk,
+  input         bus_rst,
 
-   // Radio 0
-   input     [31:0]  rx0,
-   output    [31:0]  tx0,
+  input [31:0]  s_axi_awaddr,
+  input         s_axi_awvalid,
+  output        s_axi_awready,
 
-   // Radio 1
-   input     [31:0]  rx1,
-   output    [31:0]  tx1,
+  input [31:0]  s_axi_wdata,
+  input [3:0]   s_axi_wstrb,
+  input         s_axi_wvalid,
+  output        s_axi_wready,
 
-   // DMA
-   output  [63:0]  dmao_tdata,
-   output          dmao_tlast,
-   output          dmao_tvalid,
-   input           dmao_tready,
+  output [1:0]  s_axi_bresp,
+  output        s_axi_bvalid,
+  input         s_axi_bready,
 
-   input   [63:0]  dmai_tdata,
-   input           dmai_tlast,
-   input           dmai_tvalid,
-   output          dmai_tready,
+  input [31:0]  s_axi_araddr,
+  input         s_axi_arvalid,
+  output        s_axi_arready,
 
-   // v2e (vita to ethernet) and e2v (eth to vita)
-   output    [63:0]    v2e0_tdata,
-   output              v2e0_tvalid,
-   output              v2e0_tlast,
-   input               v2e0_tready,
+  output [31:0] s_axi_rdata,
+  output [1:0]  s_axi_rresp,
+  output        s_axi_rvalid,
+  input         s_axi_rready,
 
-   output    [63:0]    v2e1_tdata,
-   output              v2e1_tlast,
-   output              v2e1_tvalid,
-   input               v2e1_tready,
+  // Radio 0
+  input  [31:0] rx0,
+  output [31:0] tx0,
 
-   input     [63:0]    e2v0_tdata,
-   input               e2v0_tlast,
-   input               e2v0_tvalid,
-   output              e2v0_tready,
+  // Radio 1
+  input  [31:0]  rx1,
+  output [31:0]  tx1,
 
-   input     [63:0]    e2v1_tdata,
-   input               e2v1_tlast,
-   input               e2v1_tvalid,
-   output              e2v1_tready
+  // DMA
+  output [63:0] dmao_tdata,
+  output        dmao_tlast,
+  output        dmao_tvalid,
+  input         dmao_tready,
+
+  input [63:0]  dmai_tdata,
+  input         dmai_tlast,
+  input         dmai_tvalid,
+  output        dmai_tready,
+
+  // v2e (vita to ethernet) and e2v (eth to vita)
+  output [63:0] v2e0_tdata,
+  output        v2e0_tvalid,
+  output        v2e0_tlast,
+  input         v2e0_tready,
+
+  output [63:0] v2e1_tdata,
+  output        v2e1_tlast,
+  output        v2e1_tvalid,
+  input         v2e1_tready,
+
+  input  [63:0] e2v0_tdata,
+  input         e2v0_tlast,
+  input         e2v0_tvalid,
+  output        e2v0_tready,
+
+  input  [63:0] e2v1_tdata,
+  input         e2v1_tlast,
+  input         e2v1_tvalid,
+  output        e2v1_tready
 );
 
-   // Computation engines that need access to IO
-   localparam NUM_IO_CE = 3;
+  // Computation engines that need access to IO
+  localparam NUM_IO_CE = 3;
+
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  // Global Registers
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  localparam REG_BASE_MISC = 0; // axi interconnect takes care of that
+
+  wire                     reg_wr_req;
+  wire [REG_AWIDTH-1:0]    reg_wr_addr;
+  wire [REG_DWIDTH-1:0]    reg_wr_data;
+  wire [REG_DWIDTH/8-1:0]  reg_wr_keep;
+  wire                     reg_rd_req;
+  wire  [REG_AWIDTH-1:0]   reg_rd_addr;
+  reg                      reg_rd_resp;
+  reg   [REG_DWIDTH-1:0]   reg_rd_data;
+
+  axil_regport_master #(
+    .DWIDTH   (REG_DWIDTH), // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .AWIDTH   (REG_AWIDTH), // Width of the address bus
+    .WRBASE   (0),          // Write address base
+    .RDBASE   (0),          // Read address base
+    .TIMEOUT  (10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
+  ) regport_master_i (
+    // Clock and reset
+    .s_axi_aclk    (bus_clk),
+    .s_axi_aresetn (~bus_rst),
+    // AXI4-Lite: Write address port (domain: s_axi_aclk)
+    .s_axi_awaddr  (s_axi_awaddr),
+    .s_axi_awvalid (s_axi_awvalid),
+    .s_axi_awready (s_axi_awready),
+    // AXI4-Lite: Write data port (domain: s_axi_aclk)
+    .s_axi_wdata   (s_axi_wdata),
+    .s_axi_wstrb   (s_axi_wstrb),
+    .s_axi_wvalid  (s_axi_wvalid),
+    .s_axi_wready  (s_axi_wready),
+    // AXI4-Lite: Write response port (domain: s_axi_aclk)
+    .s_axi_bresp   (s_axi_bresp),
+    .s_axi_bvalid  (s_axi_bvalid),
+    .s_axi_bready  (s_axi_bready),
+    // AXI4-Lite: Read address port (domain: s_axi_aclk)
+    .s_axi_araddr  (s_axi_araddr),
+    .s_axi_arvalid (s_axi_arvalid),
+    .s_axi_arready (s_axi_arready),
+    // AXI4-Lite: Read data port (domain: s_axi_aclk)
+    .s_axi_rdata   (s_axi_rdata),
+    .s_axi_rresp   (s_axi_rresp),
+    .s_axi_rvalid  (s_axi_rvalid),
+    .s_axi_rready  (s_axi_rready),
+    // Register port: Write port (domain: reg_clk)
+    .reg_clk       (bus_clk),
+    .reg_wr_req    (reg_wr_req),
+    .reg_wr_addr   (reg_wr_addr),
+    .reg_wr_data   (reg_wr_data),
+    .reg_wr_keep   (/*unused*/),
+    // Register port: Read port (domain: reg_clk)
+    .reg_rd_req    (reg_rd_req),
+    .reg_rd_addr   (reg_rd_addr),
+    .reg_rd_resp   (reg_rd_resp),
+    .reg_rd_data   (reg_rd_data)
+  );
+
+  localparam REG_GIT_HASH    = 14'd0;
+  localparam REG_NUM_CE      = 14'd4;
+  localparam REG_SCRATCH     = 14'd8;
+
+  reg [31:0] scratch_reg;
+
+  always @ (posedge bus_clk)
+    if (bus_rst) begin
+      scratch_reg <= 32'hdead_babe;
+    end
+    else begin
+    if (reg_wr_req)
+      case (reg_wr_addr)
+        REG_SCRATCH:
+          scratch_reg <= reg_wr_data;
+      endcase
+    end
+
+  always @ (posedge bus_clk)
+    if (bus_rst)
+      reg_rd_resp <= 1'b0;
+
+    else begin
+      if (reg_rd_req) begin
+        reg_rd_resp <= 1'b1;
+
+        case (reg_rd_addr)
+        REG_GIT_HASH:
+          reg_rd_data <= 32'h`GIT_HASH;
+
+        REG_NUM_CE:
+          reg_rd_data <= NUM_IO_CE;
+
+        REG_SCRATCH:
+          reg_rd_data <= scratch_reg;
+        default:
+          reg_rd_resp <= 1'b0;
+        endcase
+      end
+      else if (reg_rd_resp) begin
+          reg_rd_resp <= 1'b0;
+      end
+    end
+
+
 
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_o_tdata;
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_i_tdata;
