@@ -74,7 +74,7 @@ module axis_2clk_fifo #(
    generate
       for (i = 0; i < NUM_FIFOS; i = i + 1) begin: fifo_section
          if (MODE == "BRAM512") begin
-            axis64_bram_4k_2clk_fifo bram_fifo_i (
+            axi64_4k_2clk_fifo srlfifo_i ( // FIXME: BRAM fifo?
                .s_aresetn     (~s_axis_areset),
                .s_aclk        (s_axis_aclk),
                .s_axis_tdata  (i_flat_tdata[((i+1)*BASE_WIDTH)-9:i*BASE_WIDTH]),

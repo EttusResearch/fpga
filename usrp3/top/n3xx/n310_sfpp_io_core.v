@@ -3,52 +3,52 @@
 //
 
 module n310_sfpp_io_core #(
-   parameter PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-   parameter PORTNUM  = 8'd0
+   parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
+   parameter [31:0] REG_BASE = 32'h0,
+   parameter        PORTNUM  = 8'd0,
+   parameter        MDIO_EN  = 0
 )(
+   // Resets
    input             areset,
    input             bus_rst,
-   input             bus_rst_div2,
-
+   // Clocks
    input             gt_refclk,
    input             gb_refclk,
    input             misc_clk,
    input             bus_clk,
-   input             bus_clk_div2,
-   input             gt0_qplloutclk,
-   input             gt0_qplloutrefclk,
-   output            pma_reset_out,
-
+   // SFP high-speed IO
    output            txp,
    output            txn,
    input             rxp,
    input             rxn,
-
+   // SFP low-speed IO
    input             sfpp_rxlos,
    input             sfpp_tx_fault,
    output            sfpp_tx_disable,
-
+   // Data port: Ethernet TX
    input  [63:0]     s_axis_tdata,
    input  [3:0]      s_axis_tuser,
    input             s_axis_tlast,
    input             s_axis_tvalid,
    output            s_axis_tready,
-
+   // Data port: Ethernet RX
    output [63:0]     m_axis_tdata,
    output [3:0]      m_axis_tuser,
    output            m_axis_tlast,
    output            m_axis_tvalid,
    input             m_axis_tready,
-
-   input  [7:0]      wb_adr_i,
-   input             wb_cyc_i,
-   input  [31:0]     wb_dat_i,
-   input             wb_stb_i,
-   input             wb_we_i,
-   output            wb_ack_o,
-   output [31:0]     wb_dat_o,
-   output            wb_int_o,
-
+   // Register port
+   input             reg_wr_req,
+   input  [31:0]     reg_wr_addr,
+   input  [31:0]     reg_wr_data,
+   input             reg_rd_req,
+   input  [31:0]     reg_rd_addr,
+   output            reg_rd_resp,
+   output [31:0]     reg_rd_data,
+   // GT Common
+   input             gt0_qplloutclk,
+   input             gt0_qplloutrefclk,
+   output            pma_reset_out,
    output [15:0]     phy_status,
    output            qpllreset,
    input             qplllock,
@@ -56,8 +56,91 @@ module n310_sfpp_io_core #(
    input             qplloutrefclk
 
 );
+   //-----------------------------------------------------------------
+   // Registers
+   //-----------------------------------------------------------------
+   localparam REG_MAC_CTRL_STATUS = REG_BASE + 32'h0;
+   localparam REG_PHY_CTRL_STATUS = REG_BASE + 32'h4;
 
-   wire mdc, mdio_in, mdio_out;
+   wire        reg_rd_resp_mdio;
+   reg         reg_rd_resp_glob = 1'b0;
+   wire [31:0] reg_rd_data_mdio;
+   reg  [31:0] mac_ctrl_reg, phy_ctrl_reg, readback_reg;
+   wire [31:0] mac_status, phy_status;
+   wire [31:0] mac_status_bclk, phy_status_bclk;
+
+   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) mac_status_sync_i (
+      .clk(bus_clk), .rst(1'b0), .in(mac_status), .out(mac_status_bclk)
+   );
+
+   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
+      .clk(bus_clk), .rst(1'b0), .in(phy_status), .out(phy_status_bclk)
+   );
+
+   always @(posedge bus_clk) begin
+      if (bus_rst) begin
+         mac_ctrl_reg <= 32'h0;
+      end else if (reg_wr_req) begin
+         case(reg_wr_addr)
+            REG_MAC_CTRL_STATUS:
+               mac_ctrl_reg <= reg_wr_data;
+            REG_PHY_CTRL_STATUS:
+               phy_ctrl_reg <= reg_wr_data;
+         endcase
+      end
+   end
+
+   always @(posedge bus_clk) begin
+      // No reset handling needed for readback
+      if (reg_rd_req) begin
+         reg_rd_resp_glob <= 1'b1;
+         case(reg_rd_addr)
+            REG_MAC_CTRL_STATUS:
+               readback_reg <= mac_status_bclk;
+            REG_PHY_CTRL_STATUS:
+               readback_reg <= phy_status_bclk;
+            default:
+               reg_rd_resp_glob <= 1'b0;
+         endcase
+      end if (reg_rd_resp_glob) begin
+         reg_rd_resp_glob <= 1'b0;
+      end
+   end
+
+   assign reg_rd_resp = reg_rd_resp_glob | reg_rd_resp_mdio;
+   assign reg_rd_data = reg_rd_resp_mdio ? reg_rd_data_mdio : readback_reg;
+
+   //-----------------------------------------------------------------
+   // MDIO Master
+   //-----------------------------------------------------------------
+   wire mdc, mdio_m2s, mdio_s2m;
+
+   generate if (MDIO_EN == 1) begin
+      mdio_master #(
+         .REG_BASE      (REG_BASE + 32'h10),
+         .MDC_DIVIDER   (8'd200)
+      ) mdio_master_i (
+         .clk        (bus_clk),
+         .rst        (bus_rst),
+         .mdc        (mdc),
+         .mdio_in    (mdio_s2m),
+         .mdio_out   (mdio_m2s),
+         .mdio_tri   (),
+         .reg_wr_req (reg_wr_req),
+         .reg_wr_addr(reg_wr_addr),
+         .reg_wr_data(reg_wr_data),
+         .reg_rd_req (reg_rd_req),
+         .reg_rd_addr(reg_rd_addr),
+         .reg_rd_data(reg_rd_data_mdio),
+         .reg_rd_resp(reg_rd_resp_mdio)
+      );
+   end else begin
+      assign mdc              = 1'b0;
+      assign mdio_m2s         = 1'b0;
+      assign reg_rd_resp_mdio = 1'b0;
+      assign reg_rd_data_mdio = 32'h0;
+   end endgenerate
+
 generate
    if (PROTOCOL == "10GbE") begin
       //-----------------------------------------------------------------
@@ -72,81 +155,73 @@ generate
 
       ten_gige_phy ten_gige_phy_i
       (
-         // Clocks and Reset
-         .areset(areset),                 // Asynchronous reset for entire core.
-         .refclk(gt_refclk),              // Transciever reference clock: 156.25MHz
-         .clk156(gb_refclk),              // Globally buffered core clock: 156.25MHz
-         .dclk(misc_clk),                 // Management/DRP clock: 78.125MHz
-         .sim_speedup_control(1'b0),
-         // GMII Interface (client MAC <=> PCS)
-         .xgmii_txd(xgmii_txd),          // Transmit data from client MAC.
-         .xgmii_txc(xgmii_txc),          // Transmit control signal from client MAC.
-         .xgmii_rxd(xgmii_rxd),          // Received Data to client MAC.
-         .xgmii_rxc(xgmii_rxc),          // Received control signal to client MAC.
-         // Tranceiver Interface
-         .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
-         .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
-         .rxp(rxp),                       // Differential +ve for serial reception from PMD to PMA.
-         .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
-         // Management: MDIO Interface
-         .mdc(mdc),                      // Management Data Clock
-         .mdio_in(mdio_in),              // Management Data In
-         .mdio_out(mdio_out),            // Management Data Out
-         .mdio_tri(),                     // Management Data Tristate
-         .prtad(5'd4),                    // MDIO address is 4
-         // General IO's
-         .core_status(xgmii_status),     // Core status
-         .resetdone(xge_phy_resetdone),
-         .signal_detect(~sfpp_rxlos),     // Input from PMD to indicate presence of optical input. (Undocumented, but it seems Xilinx expect this to be inverted.)
-         .tx_fault(sfpp_tx_fault),
-         .tx_disable(sfpp_tx_disable),
-         .qpllreset(qpllreset),
-         .qplllock(qplllock),
-         .qplloutclk(qplloutclk),
-         .qplloutrefclk(qplloutrefclk)
+        // Clocks and Reset
+        .areset	        	(areset | phy_ctrl_reg[0]), // Asynchronous reset for entire core.
+        .refclk	        	(gt_refclk),              // Transciever reference clock: 156.25MHz
+        .clk156		    	(gb_refclk),              // Globally buffered core clock: 156.25MHz
+        .dclk		    	(misc_clk),                 // Management/DRP clock: 78.125MHz
+        .sim_speedup_control(1'b0),
+        // GMII Interface	(client MAC <=> PCS)
+        .xgmii_txd			(xgmii_txd),          // Transmit data from client MAC.
+        .xgmii_txc			(xgmii_txc),          // Transmit control signal from client MAC.
+        .xgmii_rxd			(xgmii_rxd),          // Received Data to client MAC.
+        .xgmii_rxc			(xgmii_rxc),          // Received control signal to client MAC.
+        // Tranceiver Interface
+        .txp		    	(txp),                       // Differential +ve of serial transmission from PMA to PMD.
+        .txn		    	(txn),                       // Differential -ve of serial transmission from PMA to PMD.
+        .rxp		    	(rxp),                       // Differential +ve for serial reception from PMD to PMA.
+        .rxn		    	(rxn),                       // Differential -ve for serial reception from PMD to PMA.
+        // Management: MDIO Interface
+        .mdc		    	(mdc),                       // Management Data Clock
+        .mdio_in			(mdio_m2s),              // Management Data In
+        .mdio_out			(mdio_s2m),             // Management Data Out
+        .mdio_tri			(),                     // Management Data Tristate
+        .prtad		    	(5'd4),                    // MDIO address is 4
+        // General IO's
+        .core_status		(xgmii_status),     // Core status
+        .resetdone			(xge_phy_resetdone),
+        .signal_detect		(~sfpp_rxlos),     // Input from PMD to indicate presence of optical input.		(Undocumented, but it seems Xilinx expect this to be inverted.)
+        .tx_fault			(sfpp_tx_fault),
+        .tx_disable			(sfpp_tx_disable),
+        .qpllreset			(qpllreset),
+        .qplllock			(qplllock),
+        .qplloutclk			(qplloutclk),
+        .qplloutrefclk	    (qplloutrefclk)
       );
 
-      xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
+      n310_xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
       (
-         // XGMII
-         .xgmii_clk(gb_refclk),
-         .xgmii_txd(xgmii_txd),
-         .xgmii_txc(xgmii_txc),
-         .xgmii_rxd(xgmii_rxd),
-         .xgmii_rxc(xgmii_rxc),
-         // MDIO
-         .mdc(mdc),
-         .mdio_in(mdio_in),
-         .mdio_out(mdio_out),
-         // Wishbone I/F
-         .wb_clk_i(bus_clk_div2),
-         .wb_rst_i(bus_rst_div2),
-         .wb_adr_i(wb_adr_i),
-         .wb_cyc_i(wb_cyc_i),
-         .wb_dat_i(wb_dat_i),
-         .wb_stb_i(wb_stb_i),
-         .wb_we_i(wb_we_i),
-         .wb_ack_o(wb_ack_o),
-         .wb_dat_o(wb_dat_o),
-         .wb_int_o(wb_int_o),
-         // Client FIFO Interfaces
-         .sys_clk(bus_clk),
-         .reset(bus_rst),
-         .rx_tdata(m_axis_tdata),
-         .rx_tuser(m_axis_tuser),
-         .rx_tlast(m_axis_tlast),
-         .rx_tvalid(m_axis_tvalid),
-         .rx_tready(m_axis_tready),
-         .tx_tdata(s_axis_tdata),
-         .tx_tuser(s_axis_tuser),                // Bit[3] (error) is ignored for now.
-         .tx_tlast(s_axis_tlast),
-         .tx_tvalid(s_axis_tvalid),
-         .tx_tready(s_axis_tready),
-         // Other
-         .phy_ready(xge_phy_resetdone),
-         // Debug
-         .debug_rx(),
-         .debug_tx()
+        // XGMII
+        .xgmii_clk              (gb_refclk),
+        .xgmii_txd              (xgmii_txd),
+        .xgmii_txc              (xgmii_txc),
+        .xgmii_rxd              (xgmii_rxd),
+        .xgmii_rxc              (xgmii_rxc),
+        // Client FIFO Interfaces
+        .sys_clk                (bus_clk),
+        .sys_rst                (bus_rst),
+        .rx_tdata               (m_axis_tdata),
+        .rx_tuser               (m_axis_tuser),
+        .rx_tlast               (m_axis_tlast),
+        .rx_tvalid              (m_axis_tvalid),
+        .rx_tready              (m_axis_tready),
+        .tx_tdata               (s_axis_tdata),
+        .tx_tuser               (s_axis_tuser),   // Bit[3] (error) is ignored for now.
+        .tx_tlast               (s_axis_tlast),
+        .tx_tvalid              (s_axis_tvalid),
+        .tx_tready              (s_axis_tready),
+        // Other
+        .phy_ready              (xge_phy_resetdone),
+        .ctrl_tx_enable         (/*mac_ctrl_reg[0]*/1'b1), //FIXME: Remove hardcoded value
+        .status_crc_error       (mac_status[0]),
+        .status_fragment_error  (mac_status[1]),
+        .status_txdfifo_ovflow  (mac_status[2]),
+        .status_txdfifo_udflow  (mac_status[3]),
+        .status_rxdfifo_ovflow  (mac_status[4]),
+        .status_rxdfifo_udflow  (mac_status[5]),
+        .status_pause_frame_rx  (mac_status[6]),
+        .status_local_fault     (mac_status[7]),
+        .status_remote_fault    (mac_status[8])
       );
 
       assign phy_status  = {8'h00, xgmii_status};

@@ -45,6 +45,7 @@ include $(BASE_DIR)/n3xx/Makefile.srcs
 TOP_SRCS = \
 n310.v \
 n310_core.v \
+mdio_master.v \
 n310_sfpp_io_core.v \
 n310.xdc \
 n310_ps.v \

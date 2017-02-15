@@ -232,6 +232,8 @@ module n310
   localparam N_AXILITE_SLAVES = 4;
 
   localparam REG_BASE_MISC = 32'h4001_0000;
+  localparam REG_BASE_MDIO_0 = 32'h4004_0000;
+  localparam REG_BASE_MDIO_1 = 32'h400C_0000;
   localparam REG_AWIDTH = 32;
   localparam REG_DWIDTH = 32;
 
@@ -567,6 +569,8 @@ module n310
 `ifdef SFP0_1GBE
       .PROTOCOL("1GbE"),
 `endif
+      .REG_BASE(REG_BASE_MDIO_0),
+      .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) sfpp_io_i0 (
       .areset(global_rst),
@@ -576,8 +580,6 @@ module n310
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
-      .bus_rst_div2(bus_rst),
-      .bus_clk_div2(bus_clk),
    `ifdef SFP0_1GBE
       .gt0_qplloutclk(gt0_qplloutclk),
       .gt0_qplloutrefclk(gt0_qplloutrefclk),
@@ -609,15 +611,6 @@ module n310
       .m_axis_tvalid(sfp0_rx_tvalid),
       .m_axis_tready(sfp0_rx_tready),
 
-      .wb_adr_i(8'b0 /*sfp0_wb_adr*/),
-      .wb_cyc_i(1'b0 /*sfp0_wb_cyc*/),
-      .wb_dat_i(31'b0 /*sfp0_wb_dat_o*/),
-      .wb_stb_i(1'b0 /*sfp0_wb_stb*/),
-      .wb_we_i(1'b0 /*sfp0_wb_we*/),
-      .wb_ack_o(/*sfp0_wb_ack*/),
-      .wb_dat_o(/*sfp0_wb_dat_i*/),
-      .wb_int_o(/*sfp0_wb_int*/),
-
       .phy_status(sfp0_phy_status)
 
    );
@@ -633,11 +626,6 @@ module n310
    wire        sfp1_rx_tlast, sfp1_tx_tlast, sfp1_rx_tvalid, sfp1_tx_tvalid, sfp1_rx_tready, sfp1_tx_tready;
    wire [15:0] sfp1_phy_status;
 
-   wire [31:0] sfp1_wb_dat_i;
-   wire [31:0] sfp1_wb_dat_o;
-   wire [15:0] sfp1_wb_adr;
-   wire        sfp1_wb_ack, sfp1_wb_stb, sfp1_wb_cyc, sfp1_wb_we, sfp1_wb_int;
-
    n310_sfpp_io_core #(
 `ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
@@ -645,6 +633,8 @@ module n310
 `ifdef SFP1_1GBE
       .PROTOCOL("1GbE"),
 `endif
+      .REG_BASE(REG_BASE_MDIO_1),
+      .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) sfpp_io_i1 (
       .areset(global_rst),
@@ -654,8 +644,6 @@ module n310
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
-      .bus_rst_div2(bus_rst),
-      .bus_clk_div2(bus_clk),
    `ifdef SFP1_1GBE
       .gt0_qplloutclk(gt0_qplloutclk),
       .gt0_qplloutrefclk(gt0_qplloutrefclk),
@@ -687,15 +675,6 @@ module n310
       .m_axis_tlast(sfp1_rx_tlast),
       .m_axis_tvalid(sfp1_rx_tvalid),
       .m_axis_tready(sfp1_rx_tready),
-
-      .wb_adr_i(8'b0 /*sfp1_wb_adr*/),
-      .wb_cyc_i(1'b0 /*sfp1_wb_cyc*/),
-      .wb_dat_i(31'b0 /*sfp1_wb_dat_o*/),
-      .wb_stb_i(1'b0 /*sfp1_wb_stb*/),
-      .wb_we_i(1'b0 /*sfp1_wb_we*/),
-      .wb_ack_o(/*sfp1_wb_ack*/),
-      .wb_dat_o(/*sfp1_wb_dat_i*/),
-      .wb_int_o(/*sfp1_wb_int*/),
 
       .phy_status(sfp1_phy_status)
 
@@ -1163,15 +1142,15 @@ module n310
         .reset			(reset),
         .clear			(1'b0),
         //RegPort
-        //.reg_clk	    (bus_clk),
-        //.reg_wr_req	    (reg_wr_req),
-        //.reg_wr_addr	(reg_wr_addr),
-        //.reg_wr_data	(reg_wr_data),
-        //.reg_wr_keep	(/*unused*/),
-        //.reg_rd_req	    (reg_rd_req),
-        //.reg_rd_addr	(reg_rd_addr),
-        //.reg_rd_resp	(reg_rd_resp),
-        //.reg_rd_data	(reg_rd_data),
+        .reg_clk	    (bus_clk),
+        .reg_wr_req	    (reg_wr_req),
+        .reg_wr_addr	(reg_wr_addr),
+        .reg_wr_data	(reg_wr_data),
+        .reg_wr_keep	(/*unused*/),
+        .reg_rd_req	    (reg_rd_req),
+        .reg_rd_addr	(reg_rd_addr),
+        .reg_rd_resp	(reg_rd_resp),
+        .reg_rd_data	(reg_rd_data),
         // SFP
         .eth_tx_tdata	(sfp1_tx_tdata),
         .eth_tx_tuser	(sfp1_tx_tuser),

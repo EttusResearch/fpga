@@ -184,8 +184,8 @@ module n310_eth_dispatch #(
 
   always @(posedge reg_clk)
     if (reset) begin
-      mac_reg   <= 48'd0;
-      ip_reg    <= 32'd0;
+      mac_reg   <= 48'h00802F16C52F;
+      ip_reg    <= 32'hC0A80A02;
       udp_port0 <= 16'd0;
       udp_port1 <= 16'd0;
     end
