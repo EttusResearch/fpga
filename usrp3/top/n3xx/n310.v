@@ -1063,75 +1063,77 @@ module n310
    wire             cpuo1_tvalid;
    wire             cpuo1_tready;
 
-   n310_core #(
-      .REG_DWIDTH   (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .REG_AWIDTH   (REG_AWIDTH)          // Width of the address bus
-   ) n310_core (
-         //Clocks and resets
-        .radio_clk		        (radio_clk),
-        .radio_rst		        (/*radio_rst*/GSR),
-        .bus_clk		        (bus_clk),
-        .bus_rst		        (bus_rst),
+  n310_core
+  #(
+    .REG_DWIDTH   (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH   (REG_AWIDTH)          // Width of the address bus
+  ) n310_core
+  (
+    //Clocks and resets
+    .radio_clk(radio_clk),
+    .radio_rst(/*radio_rst*/GSR),
+    .bus_clk(bus_clk),
+    .bus_rst(bus_rst),
 
-      // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr  (M_AXI_GP0_AWADDR_S4),
-      .s_axi_awvalid (M_AXI_GP0_AWVALID_S4),
-      .s_axi_awready (M_AXI_GP0_AWREADY_S4),
-      // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata   (M_AXI_GP0_WDATA_S4),
-      .s_axi_wstrb   (M_AXI_GP0_WSTRB_S4),
-      .s_axi_wvalid  (M_AXI_GP0_WVALID_S4),
-      .s_axi_wready  (M_AXI_GP0_WREADY_S4),
-      // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp   (M_AXI_GP0_BRESP_S4),
-      .s_axi_bvalid  (M_AXI_GP0_BVALID_S4),
-      .s_axi_bready  (M_AXI_GP0_BREADY_S4),
-      // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr  (M_AXI_GP0_ARADDR_S4),
-      .s_axi_arvalid (M_AXI_GP0_ARVALID_S4),
-      .s_axi_arready (M_AXI_GP0_ARREADY_S4),
-      // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata   (M_AXI_GP0_RDATA_S4),
-      .s_axi_rresp   (M_AXI_GP0_RRESP_S4),
-      .s_axi_rvalid  (M_AXI_GP0_RVALID_S4),
-      .s_axi_rready  (M_AXI_GP0_RREADY_S4),
+    // AXI4-Lite: Write address port (domain: s_axi_aclk)
+    .s_axi_awaddr(M_AXI_GP0_AWADDR_S4),
+    .s_axi_awvalid(M_AXI_GP0_AWVALID_S4),
+    .s_axi_awready(M_AXI_GP0_AWREADY_S4),
+    // AXI4-Lite: Write data port (domain: s_axi_aclk)
+    .s_axi_wdata(M_AXI_GP0_WDATA_S4),
+    .s_axi_wstrb(M_AXI_GP0_WSTRB_S4),
+    .s_axi_wvalid(M_AXI_GP0_WVALID_S4),
+    .s_axi_wready(M_AXI_GP0_WREADY_S4),
+    // AXI4-Lite: Write response port (domain: s_axi_aclk)
+    .s_axi_bresp(M_AXI_GP0_BRESP_S4),
+    .s_axi_bvalid(M_AXI_GP0_BVALID_S4),
+    .s_axi_bready(M_AXI_GP0_BREADY_S4),
+    // AXI4-Lite: Read address port (domain: s_axi_aclk)
+    .s_axi_araddr(M_AXI_GP0_ARADDR_S4),
+    .s_axi_arvalid(M_AXI_GP0_ARVALID_S4),
+    .s_axi_arready(M_AXI_GP0_ARREADY_S4),
+    // AXI4-Lite: Read data port (domain: s_axi_aclk)
+    .s_axi_rdata(M_AXI_GP0_RDATA_S4),
+    .s_axi_rresp(M_AXI_GP0_RRESP_S4),
+    .s_axi_rvalid(M_AXI_GP0_RVALID_S4),
+    .s_axi_rready(M_AXI_GP0_RREADY_S4),
 
-        // Radio 0 signals
-        .rx0		            (rx0),
-        .tx0		            (tx0),
-        .rx1		            (rx1),
-        .tx1		            (tx1),
-        //DMA
-        .dmao_tdata				(dmao_tdata),
-        .dmao_tlast				(dmao_tlast),
-        .dmao_tvalid			(dmao_tvalid),
-        .dmao_tready			(dmao_tready),
+    // Radio 0 signals
+    .rx0(rx0),
+    .tx0(tx0),
+    .rx1(rx1),
+    .tx1(tx1),
+    //DMA
+    .dmao_tdata(dmao_tdata),
+    .dmao_tlast(dmao_tlast),
+    .dmao_tvalid(dmao_tvalid),
+    .dmao_tready(dmao_tready),
 
-        .dmai_tdata				(dmai_tdata),
-        .dmai_tlast				(dmai_tlast),
-        .dmai_tvalid			(dmai_tvalid),
-        .dmai_tready			(dmai_tready),
-        // VITA to Ethernet
-        .v2e0_tdata				(v2e0_tdata),
-        .v2e0_tvalid		    (v2e0_tvalid),
-        .v2e0_tlast			    (v2e0_tlast),
-        .v2e0_tready			(v2e0_tready),
+    .dmai_tdata(dmai_tdata),
+    .dmai_tlast(dmai_tlast),
+    .dmai_tvalid(dmai_tvalid),
+    .dmai_tready(dmai_tready),
+    // VITA to Ethernet
+    .v2e0_tdata(v2e0_tdata),
+    .v2e0_tvalid(v2e0_tvalid),
+    .v2e0_tlast(v2e0_tlast),
+    .v2e0_tready(v2e0_tready),
 
-        .v2e1_tdata				(v2e1_tdata),
-        .v2e1_tlast				(v2e1_tlast),
-        .v2e1_tvalid			(v2e1_tvalid),
-        .v2e1_tready			(v2e1_tready),
-        // Ethernet to VITA
-        .e2v0_tdata				(e2v0_tdata),
-        .e2v0_tlast				(e2v0_tlast),
-        .e2v0_tvalid			(e2v0_tvalid),
-        .e2v0_tready			(e2v0_tready),
+    .v2e1_tdata(v2e1_tdata),
+    .v2e1_tlast(v2e1_tlast),
+    .v2e1_tvalid(v2e1_tvalid),
+    .v2e1_tready(v2e1_tready),
+    // Ethernet to VITA
+    .e2v0_tdata(e2v0_tdata),
+    .e2v0_tlast(e2v0_tlast),
+    .e2v0_tvalid(e2v0_tvalid),
+    .e2v0_tready(e2v0_tready),
 
-        .e2v1_tdata				(e2v1_tdata),
-        .e2v1_tlast				(e2v1_tlast),
-        .e2v1_tvalid			(e2v1_tvalid),
-        .e2v1_tready			(e2v1_tready)
-   );
+    .e2v1_tdata(e2v1_tdata),
+    .e2v1_tlast(e2v1_tlast),
+    .e2v1_tvalid(e2v1_tvalid),
+    .e2v1_tready(e2v1_tready)
+  );
 
     // ////////////////////////////////////////////////////////////////
     // Ethernet Soft Switch
