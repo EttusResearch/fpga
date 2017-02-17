@@ -48,7 +48,7 @@
   // Fill remaining crossbar ports with loopback FIFOs
   genvar n;
   generate
-    for (n = 4; n < NUM_CE; n = n + 1) begin
+    for (n = 0; n < NUM_CE; n = n + 1) begin
       noc_block_axi_fifo_loopback inst_noc_block_axi_fifo_loopback (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .ce_clk(ce_clk), .ce_rst(ce_rst),
