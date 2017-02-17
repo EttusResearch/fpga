@@ -178,17 +178,24 @@ module n310_xge_mac_wrapper #(
    //
    // Large FIFO must be able to run input side at 64b@156MHz to sustain 10Gb Rx.
    //
-   axis_2clk_fifo #( .WIDTH(69), .MODE("BRAM512"), .PIPELINE("NONE") ) rxfifo_2clk (
-      .s_axis_areset(xgmii_reset),
-      .s_axis_aclk(xgmii_clk),
-      .s_axis_tdata({rx_tlast_int, rx_tuser_int, rx_tdata_int}),
+   axi64_4k_2clk_fifo rxfifo_2clk
+     (
+      .s_aresetn(~xgmii_reset),
+      .s_aclk(xgmii_clk),
       .s_axis_tvalid(rx_tvalid_int),
       .s_axis_tready(rx_tready_int),
-      .m_axis_aclk(sys_clk),
-      .m_axis_tdata({rx_tlast, rx_tuser, rx_tdata}),
+      .s_axis_tdata(rx_tdata_int),
+      .s_axis_tlast(rx_tlast_int),
+      .s_axis_tuser(rx_tuser_int),
+      .axis_wr_data_count(),
+
+      .m_aclk(sys_clk),
       .m_axis_tvalid(rx_tvalid),
-      .m_axis_tready(rx_tready)
-   );
+      .m_axis_tready(rx_tready),
+      .m_axis_tdata(rx_tdata),
+      .m_axis_tlast(rx_tlast),
+      .m_axis_tuser(rx_tuser),
+      .axis_rd_data_count() );
 
 
    ///////////////////////////////////////////////////////////////////////////////////////
@@ -212,17 +219,24 @@ module n310_xge_mac_wrapper #(
    wire        tx_sof_int3;
    wire        enable_tx;
 
-   axis_2clk_fifo #( .WIDTH(69), .MODE("BRAM512"), .PIPELINE("NONE") ) txfifo_2clk_1x (
-      .s_axis_areset(sys_rst),
-      .s_axis_aclk(sys_clk),
-      .s_axis_tdata({tx_tlast, tx_tuser, tx_tdata}),
+   axi64_4k_2clk_fifo txfifo_2clk_1x
+     (
+      .s_aresetn(~xgmii_reset),
+      .s_aclk(sys_clk),
       .s_axis_tvalid(tx_tvalid),
       .s_axis_tready(tx_tready),
-      .m_axis_aclk(xgmii_clk),
-      .m_axis_tdata({tx_tlast_int, tx_tuser_int, tx_tdata_int}),
+      .s_axis_tdata(tx_tdata),
+      .s_axis_tlast(tx_tlast),
+      .s_axis_tuser(tx_tuser),
+      .axis_wr_data_count(),
+
+      .m_aclk(xgmii_clk),
       .m_axis_tvalid(tx_tvalid_int),
-      .m_axis_tready(tx_tready_int)
-   );
+      .m_axis_tready(tx_tready_int),
+      .m_axis_tdata(tx_tdata_int),
+      .m_axis_tlast(tx_tlast_int),
+      .m_axis_tuser(tx_tuser_int),
+      .axis_rd_data_count() );
 
    //
    // Strip the 6 octet ethernet padding we used internally.
