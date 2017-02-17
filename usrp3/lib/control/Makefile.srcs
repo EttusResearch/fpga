@@ -41,4 +41,5 @@ synchronizer_impl.v \
 synchronizer.v \
 user_settings.v \
 axil_regport_master.v \
+regport_resp_mux.v \
 ))
