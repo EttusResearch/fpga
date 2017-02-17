@@ -1149,8 +1149,8 @@ module n310
         .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH (REG_AWIDTH)         // Width of the address bus
     ) eth_switch0 (
-        .clk			(clk),
-        .reset			(reset),
+        .clk			(bus_clk),
+        .reset			(bus_rst),
         .clear			(1'b0),
         //RegPort
         //.reg_clk	    (bus_clk),
@@ -1214,8 +1214,8 @@ module n310
         .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
    ) eth_switch1 (
-        .clk			(clk),
-        .reset			(reset),
+        .clk			(bus_clk),
+        .reset			(bus_rst),
         .clear			(1'b0),
         //RegPort
         //.reg_clk	    (bus_clk),
