@@ -978,10 +978,34 @@ module n310
     .m_axi_rready({M_AXI_GP0_RREADY_S4, M_AXI_GP0_RREADY_S3, M_AXI_GP0_RREADY_S2, M_AXI_GP0_RREADY_S1, M_AXI_GP0_RREADY_S0})
   );
 
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_sclk;
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_mosi;
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_miso;
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_ss0;
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_ss1;
+  (* mark_debug = "true", keep = "true" *)
+  wire spi0_ss2;
+
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] ps_gpio_out;
+  (* mark_debug = "true", keep = "true" *)
+  wire [63:0] ps_gpio_in;
 
   // Processing System
   n310_ps inst_n310_ps
   (
+    .SPI0_SCLK(spi0_sclk),
+    .SPI0_MOSI(spi0_miso),
+    .SPI0_MISO(spi0_miso),
+    .SPI0_SS0(spi0_ss0),
+    .SPI0_SS1(spi0_ss1),
+    .SPI0_SS2(spi0_ss2),
+
     .M_AXI_GP0_ARVALID(M_AXI_GP0_ARVALID),
     .M_AXI_GP0_ARREADY(M_AXI_GP0_ARREADY),
     .M_AXI_GP0_ARADDR(M_AXI_GP0_ARADDR),
