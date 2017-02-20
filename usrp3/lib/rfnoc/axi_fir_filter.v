@@ -20,8 +20,7 @@
 //   COEFFS_VEC               - Vector of NUM_COEFFS values each of width COEFF_WIDTH to
 //                              initialize coeffs. Defaults to an impulse.
 //   RELOADABLE_COEFFS        - Enable (1) or disable (0) reloading coefficients at runtime (via reload bus)
-//   BLANK_OUTPUT             - Enable (0) or disable (1) output tvalid when filling internal pipeline
-//   BLANK_OUTPUT_SET_TLAST   - Set output tlast at end of resetting internal pipeline
+//   BLANK_OUTPUT             - Disable (1) or enable (0) output when filling internal pipeline
 //   SYMMETRIC_COEFFS         - Reduce multiplier usage by approx half if coefficients are symmetric
 //   SKIP_ZERO_COEFFS         - Reduce multiplier usage by assuming zero valued coefficients in
 //                              DEFAULT_COEFFS are always zero. Useful for halfband filters.
@@ -43,7 +42,6 @@ module axi_fir_filter #(
       {{1'b0,{(COEFF_WIDTH-1){1'b1}}},{(COEFF_WIDTH*(NUM_COEFFS-1)){1'b0}}},
   parameter RELOADABLE_COEFFS         = 1,
   parameter BLANK_OUTPUT              = 1,
-  parameter BLANK_OUTPUT_SET_TLAST    = 0,
   // Optimizations
   parameter SYMMETRIC_COEFFS          = 1,
   parameter SKIP_ZERO_COEFFS          = 0,
@@ -66,7 +64,7 @@ module axi_fir_filter #(
   output s_axis_reload_tready
 );
 
-  localparam NUM_SLICES       = SYMMETRIC_COEFFS ? 
+  localparam NUM_SLICES       = SYMMETRIC_COEFFS ?
                                     NUM_COEFFS/2 + NUM_COEFFS[0] :  // Manual round up, Vivado complains when using $ceil()
                                     NUM_COEFFS;
   localparam ODD_LEN          = NUM_COEFFS[0];
@@ -208,7 +206,7 @@ module axi_fir_filter #(
         for (n = 1; n < NUM_COEFFS; n = n + 1) begin
           sample_shift_reg[n] <= sample_shift_reg[n-1];
         end
-          sample_shift_reg[0]     <= s_axis_data_tdata;
+          sample_shift_reg[0] <= s_axis_data_tdata;
       end
     end
 
@@ -220,7 +218,7 @@ module axi_fir_filter #(
         for (m = 1; m < PIPELINE_DELAY; m = m + 1) begin
           tlast_shift_reg[m] <= tlast_shift_reg[m-1];
         end
-        tlast_shift_reg[0]     <= s_axis_data_tlast;
+        tlast_shift_reg[0]   <= s_axis_data_tlast;
       end
     end
 
@@ -281,9 +279,9 @@ module axi_fir_filter #(
           .sample_out(sample_accum[i+1]));
       end
     end
-    assign m_axis_data_tdata_int  = (cnt < PIPELINE_DELAY) ? ((BLANK_OUTPUT == 1) ? 0    : sample_accum[NUM_SLICES]) : sample_accum[NUM_SLICES];
-    assign m_axis_data_tvalid_int = (cnt < PIPELINE_DELAY) ? ((BLANK_OUTPUT == 1) ? 1'b0 : s_axis_data_tvalid)       : s_axis_data_tvalid;
-    assign m_axis_data_tlast_int  = (cnt < PIPELINE_DELAY) ? (BLANK_OUTPUT_SET_TLAST && (cnt == PIPELINE_DELAY-1))   : tlast_shift_reg[PIPELINE_DELAY-1];
+    assign m_axis_data_tdata_int  = (BLANK_OUTPUT == 1) & (cnt < PIPELINE_DELAY) ? 0    : sample_accum[NUM_SLICES];
+    assign m_axis_data_tvalid_int = (BLANK_OUTPUT == 1) & (cnt < PIPELINE_DELAY) ? 1'b0 : s_axis_data_tvalid;
+    assign m_axis_data_tlast_int  = (BLANK_OUTPUT == 1) ? ((cnt < PIPELINE_DELAY) ? 1'b0 : tlast_shift_reg[PIPELINE_DELAY-1]) : s_axis_data_tlast;
     assign s_axis_data_tready     = m_axis_data_tready_int;
   endgenerate
 

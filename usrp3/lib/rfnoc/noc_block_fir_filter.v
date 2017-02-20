@@ -17,17 +17,11 @@
 //   RB_NUM_COEFFS            - Number of coefficients
 //
 // Parameters:
-//   IN_WIDTH                 - Input width
 //   COEFF_WIDTH              - Coefficient width
-//   OUT_WIDTH                - Output width
 //   NUM_COEFFS               - Number of coefficients / taps
-//   CLIP_BITS                - If IN_WIDTH != OUT_WIDTH, number of MSBs to drop
-//   ACCUM_WIDTH              - Accumulator width
 //   COEFFS_VEC               - Vector of NUM_COEFFS values each of width COEFF_WIDTH to
 //                              initialize coeffs. Defaults to an impulse.
 //   RELOADABLE_COEFFS        - Enable (1) or disable (0) reloading coefficients at runtime (via reload bus)
-//   BLANK_OUTPUT             - Enable (0) or disable (1) output tvalid when filling internal pipeline
-//   BLANK_OUTPUT_SET_TLAST   - Set output tlast at end of resetting internal pipeline
 //   SYMMETRIC_COEFFS         - Reduce multiplier usage by approx half if coefficients are symmetric
 //   SKIP_ZERO_COEFFS         - Reduce multiplier usage by assuming zero valued coefficients in
 //                              DEFAULT_COEFFS are always zero. Useful for halfband filters.
@@ -192,8 +186,7 @@ module noc_block_fir_filter #(
     .NUM_COEFFS(NUM_COEFFS),
     .COEFFS_VEC(COEFFS_VEC),
     .RELOADABLE_COEFFS(RELOADABLE_COEFFS),
-    .BLANK_OUTPUT(1),
-    .BLANK_OUTPUT_SET_TLAST(0),
+    .BLANK_OUTPUT(0),
     // Optional optimizations
     .SYMMETRIC_COEFFS(SYMMETRIC_COEFFS),
     .SKIP_ZERO_COEFFS(SKIP_ZERO_COEFFS),
@@ -223,8 +216,7 @@ module noc_block_fir_filter #(
     .NUM_COEFFS(NUM_COEFFS),
     .COEFFS_VEC(COEFFS_VEC),
     .RELOADABLE_COEFFS(RELOADABLE_COEFFS),
-    .BLANK_OUTPUT(1),
-    .BLANK_OUTPUT_SET_TLAST(0),
+    .BLANK_OUTPUT(0),
     // Optional optimizations
     .SYMMETRIC_COEFFS(SYMMETRIC_COEFFS),
     .SKIP_ZERO_COEFFS(SKIP_ZERO_COEFFS),
