@@ -80,7 +80,7 @@ module n310_core
 );
 
   // Computation engines that need access to IO
-  localparam NUM_IO_CE = 3;
+  localparam NUM_IO_CE = 2;
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   // Global Registers
@@ -185,8 +185,6 @@ module n310_core
       end
     end
 
-
-
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_o_tdata;
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_i_tdata;
    wire     [63:0]              ioce_o_tdata[0:NUM_IO_CE-1];
@@ -204,9 +202,76 @@ module n310_core
       assign ioce_flat_i_tdata[ioce_i*64+63:ioce_i*64] = ioce_i_tdata[ioce_i];
    end endgenerate
 
+   /////////////////////////////////////////////////////////////////////////////////////////////
+   //
+   // Radios
+   //
+   /////////////////////////////////////////////////////////////////////////////////////////////
+
    // Number of Radio Cores Instantiated
    localparam NUM_RADIO_CORES = 2;
-/*
+   localparam RADIO_STR_FIFO_SIZE = 8'd11;
+
+   //------------------------------------
+   // Radios
+   //------------------------------------
+
+   genvar i;
+   generate for (i = 0; i < NUM_RADIO_CORES; i = i + 1) begin
+
+   noc_block_radio_core #(
+      .NOC_ID(64'h12AD_1000_0000_0001),
+      .NUM_CHANNELS(2),
+      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
+      .MTU(13)
+   ) noc_block_radio_core_i (
+      //Clocks
+      .bus_clk(bus_clk),
+      .bus_rst(bus_rst),
+      .ce_clk(radio_clk),
+      .ce_rst(radio_rst),
+      //AXIS data to/from crossbar
+      .i_tdata(ioce_o_tdata[i+1]),
+      .i_tlast(ioce_o_tlast[i+1]),
+      .i_tvalid(ioce_o_tvalid[i+1]),
+      .i_tready(ioce_o_tready[i+1]),
+      .o_tdata(ioce_i_tdata[i+1]),
+      .o_tlast(ioce_i_tlast[i+1]),
+      .o_tvalid(ioce_i_tvalid[i+1]),
+      .o_tready(ioce_i_tready[i+1]),
+      // Data ports connected to radio front end
+      //.rx({rx_data[i+1],rx_data[i]}),
+      //.rx_stb({rx_stb[i+1],rx_stb[i]}),
+      //.tx({tx_data[i+1],tx_data[i]}),
+      //.tx_stb({tx_stb[i+1],tx_stb[i]}),
+      // Ctrl ports connected to radio front end
+      //.ext_set_stb({ext_set_stb[i+1],ext_set_stb[i]}),
+      //.ext_set_addr({ext_set_addr[i+1],ext_set_addr[i]}),
+      //.ext_set_data({ext_set_data[i+1],ext_set_data[i]}),
+      //// Interfaces to front panel and daughter board
+      //.pps(pps_rclk),
+      //.sync_in(time_sync_r),
+      //.sync_out(sync_out[i]),
+      //.misc_ins({misc_ins[i+1],misc_ins[i]}),
+      //.misc_outs({misc_outs[i+1], misc_outs[i]}),
+      //.fp_gpio_in({fp_gpio_r_in[i+1],fp_gpio_r_in[i]}),
+      //.fp_gpio_out({fp_gpio_r_out[i+1],fp_gpio_r_out[i]}),
+      //.fp_gpio_ddr({fp_gpio_r_ddr[i+1],fp_gpio_r_ddr[i]}),
+      //.db_gpio_in({db_gpio_in[i+1],db_gpio_in[i]}),
+      //.db_gpio_out({db_gpio_out[i+1],db_gpio_out[i]}),
+      //.db_gpio_ddr({db_gpio_ddr[i+1],db_gpio_ddr[i]}),
+      //.leds({leds[i+1],leds[i]}),
+      //.spi_clk(radio_clk),
+      //.spi_rst(radio_rst),
+      //.sen({sen[i+1],sen[i]}),
+      //.sclk({sclk[i+1],sclk[i]}),
+      //.mosi({mosi[i+1],mosi[i]}),
+      //.miso({miso[i+1],miso[i]}),
+      //Debug
+      .debug()
+   );
+   end endgenerate
+
    //////////////////////////////////////////////////////////////////////////////////////////////
    // RFNoC
    //////////////////////////////////////////////////////////////////////////////////////////////
@@ -228,15 +293,26 @@ module n310_core
  `endif
 `endif
 
-   wire  [(NUM_CE)*64-1:0] ce_o_tdata;
-   wire  [(NUM_CE)-1:0]    ce_o_tlast;
-   wire  [(NUM_CE)-1:0]    ce_o_tvalid;
-   wire  [(NUM_CE)-1:0]    ce_o_tready;
+   wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_o_tdata;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tlast;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tvalid;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tready;
 
-   wire  [(NUM_CE)*64-1:0] ce_i_tdata;
-   wire  [(NUM_CE)-1:0]    ce_i_tlast;
-   wire  [(NUM_CE)-1:0]    ce_i_tvalid;
-   wire  [(NUM_CE)-1:0]    ce_i_tready;
+   wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_i_tdata;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tlast;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tvalid;
+   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tready;
+
+   assign xbar_ce_i_tdata  = {ce_flat_i_tdata, ioce_flat_i_tdata};
+   assign xbar_ce_i_tvalid = {ce_i_tvalid, ioce_i_tvalid};
+   assign {ce_i_tready, ioce_i_tready} = xbar_ce_i_tready;
+   assign xbar_ce_i_tlast  = {ce_i_tlast, ioce_i_tlast};
+
+   assign xbar_ce_o_tdata  = {ce_flat_o_tdata, ioce_flat_o_tdata};
+   assign xbar_ce_o_tvalid = {ce_o_tvalid, ioce_o_tvalid};
+   assign {ce_o_tready, ioce_o_tready} = xbar_ce_o_tready;
+   assign xbar_ce_o_tlast  = {ce_o_tlast, ioce_o_tlast};
+
    // //////////////////////////////////////////////////////////////////////
    // axi_crossbar ports
    // 0  - ETH0
@@ -258,20 +334,20 @@ module n310_core
       .clk(clk), .reset(reset), .clear(0),
       .local_addr(),
       .set_stb(), .set_addr(), .set_data(),
-      .i_tdata({ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
-      .i_tlast({ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
-      .i_tvalid({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .i_tready({ce_i_tready,dmai_tready,e2v1_tready,e2v0_tready}),
-      .o_tdata({ce_o_tdata,dmao_tdata,v2e1_tdata,v2e0_tdata}),
-      .o_tlast({ce_o_tlast,dmao_tlast,v2e1_tlast,v2e0_tlast}),
-      .o_tvalid({ce_o_tvalid,dmao_tvalid,v2e1_tvalid,v2e0_tvalid}),
-      .o_tready({ce_o_tready,dmao_tready,v2e1_tready,v2e0_tready}),
+      .i_tdata({xbar_ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
+      .i_tlast({xbar_ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
+      .i_tvalid({xbar_ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .i_tready({xbar_ce_i_tready,dmai_tready,e2v1_tready,e2v0_tready}),
+      .o_tdata({xbar_ce_o_tdata,dmao_tdata,v2e1_tdata,v2e0_tdata}),
+      .o_tlast({xbar_ce_o_tlast,dmao_tlast,v2e1_tlast,v2e0_tlast}),
+      .o_tvalid({xbar_ce_o_tvalid,dmao_tvalid,v2e1_tvalid,v2e0_tvalid}),
+      .o_tready({xbar_ce_o_tready,dmao_tready,v2e1_tready,v2e0_tready}),
       .pkt_present({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid})
       //.rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
       //.rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar)
       );
 
-*/
+
 
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
