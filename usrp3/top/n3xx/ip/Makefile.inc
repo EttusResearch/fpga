@@ -11,7 +11,7 @@ include $(IP_DIR)/processing_system7_0/Makefile.inc
 #include $(IP_DIR)/bus_clk_gen/Makefile.inc
 #include $(IP_DIR)/ddr3_32bit/Makefile.inc
 #include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
-#include $(IP_DIR)/fifo_short_2clk/Makefile.inc
+include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 #include $(IP_DIR)/input_sample_fifo/Makefile.inc
 include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
 #include $(IP_DIR)/radio_clk_gen/Makefile.inc

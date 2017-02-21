@@ -25,7 +25,7 @@ include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/simple_gemac/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
-#include $(LIB_DIR)/timing/Makefile.srcs
+include $(LIB_DIR)/timing/Makefile.srcs
 #include $(LIB_DIR)/zpu/Makefile.srcs
 #include $(LIB_DIR)/wishbone/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
