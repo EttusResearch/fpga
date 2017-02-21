@@ -93,8 +93,24 @@ module n310_core
   wire [REG_DWIDTH/8-1:0]  reg_wr_keep;
   wire                     reg_rd_req;
   wire  [REG_AWIDTH-1:0]   reg_rd_addr;
-  reg                      reg_rd_resp;
-  reg   [REG_DWIDTH-1:0]   reg_rd_data;
+  wire                     reg_rd_resp;
+  wire  [REG_DWIDTH-1:0]   reg_rd_data;
+
+  reg                      reg_rd_resp_glob;
+  reg   [REG_DWIDTH-1:0]   reg_rd_data_glob;
+
+  wire  [REG_DWIDTH-1:0]   reg_rd_data_xbar;
+  wire                     reg_rd_resp_xbar;
+
+  regport_resp_mux #(.WIDTH(REG_DWIDTH)) inst_regport_resp_mux
+  (
+    .clk(bus_clk),
+    .reset(bus_rst),
+    .sla_rd_resp({reg_rd_resp_glob, reg_rd_resp_xbar}),
+    .sla_rd_data({reg_rd_data_glob, reg_rd_data_xbar}),
+    .mst_rd_resp(reg_rd_resp),
+    .mst_rd_data(reg_rd_data)
+  );
 
   axil_regport_master #(
     .DWIDTH   (REG_DWIDTH), // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -141,11 +157,13 @@ module n310_core
     .reg_rd_data   (reg_rd_data)
   );
 
-  localparam REG_GIT_HASH    = 14'd0;
-  localparam REG_NUM_CE      = 14'd4;
-  localparam REG_SCRATCH     = 14'd8;
+  localparam REG_GIT_HASH    = 14'h0;
+  localparam REG_NUM_CE      = 14'h4;
+  localparam REG_LOCAL_ADDR  = 14'h8;
+  localparam REG_SCRATCH     = 14'hc;
 
   reg [31:0] scratch_reg;
+  reg [7:0]  local_addr_reg;
 
   always @ (posedge bus_clk)
     if (bus_rst) begin
@@ -156,32 +174,38 @@ module n310_core
       case (reg_wr_addr)
         REG_SCRATCH:
           scratch_reg <= reg_wr_data;
+
+        REG_LOCAL_ADDR:
+          local_addr_reg  <= reg_wr_data;
       endcase
     end
 
   always @ (posedge bus_clk)
     if (bus_rst)
-      reg_rd_resp <= 1'b0;
+      reg_rd_resp_glob <= 1'b0;
 
     else begin
       if (reg_rd_req) begin
-        reg_rd_resp <= 1'b1;
+        reg_rd_resp_glob <= 1'b1;
 
         case (reg_rd_addr)
         REG_GIT_HASH:
-          reg_rd_data <= 32'h`GIT_HASH;
+          reg_rd_data_glob <= 32'h`GIT_HASH;
 
         REG_NUM_CE:
-          reg_rd_data <= NUM_IO_CE;
+          reg_rd_data_glob <= NUM_CE;
+
+        REG_LOCAL_ADDR:
+          reg_rd_data_glob <= local_addr_reg;
 
         REG_SCRATCH:
-          reg_rd_data <= scratch_reg;
+          reg_rd_data_glob <= scratch_reg;
         default:
-          reg_rd_resp <= 1'b0;
+          reg_rd_resp_glob <= 1'b0;
         endcase
       end
-      else if (reg_rd_resp) begin
-          reg_rd_resp <= 1'b0;
+      else if (reg_rd_resp_glob) begin
+          reg_rd_resp_glob <= 1'b0;
       end
     end
 
@@ -328,12 +352,12 @@ module n310_core
    localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
 
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-   axi_crossbar #(
+   axi_crossbar_wrapper #(
+      .BASE(32'h10),
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
-   inst_axi_crossbar (
-      .clk(clk), .reset(reset), .clear(0),
-      .local_addr(),
-      .set_stb(), .set_addr(), .set_data(),
+   inst_axi_crossbar_wrapper (
+      .clk(bus_clk), .reset(bus_rst), .clear(0),
+      .local_addr(local_addr_reg),
       .i_tdata({xbar_ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
       .i_tlast({xbar_ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
       .i_tvalid({xbar_ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
@@ -342,17 +366,15 @@ module n310_core
       .o_tlast({xbar_ce_o_tlast,dmao_tlast,v2e1_tlast,v2e0_tlast}),
       .o_tvalid({xbar_ce_o_tvalid,dmao_tvalid,v2e1_tvalid,v2e0_tvalid}),
       .o_tready({xbar_ce_o_tready,dmao_tready,v2e1_tready,v2e0_tready}),
-      .pkt_present({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid})
-      //.rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
-      //.rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar)
+      .pkt_present({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .reg_wr_req(reg_wr_req),
+      .reg_wr_addr(reg_wr_addr),
+      .reg_wr_data(reg_wr_data),
+      .reg_rd_req(reg_rd_req),
+      .reg_rd_addr(reg_rd_addr),
+      .reg_rd_data(reg_rd_data_xbar),
+      .reg_rd_resp(reg_rd_resp_xbar)
       );
 
-
-
-   /////////////////////////////////////////////////////////////////////////////////////////////
-   //
-   // Radios
-   //
-   /////////////////////////////////////////////////////////////////////////////////////////////
 
 endmodule //n310_core
