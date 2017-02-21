@@ -10,6 +10,7 @@ ad5662_auto_spi.v \
 arb_qualify_master.v \
 axi_crossbar_intf.sv \
 axi_crossbar.v \
+axi_crossbar_wrapper.v \
 axi_fifo_header.v \
 axi_forwarding_cam.v \
 axi_setting_reg.v \
@@ -42,4 +43,5 @@ synchronizer.v \
 user_settings.v \
 axil_regport_master.v \
 regport_resp_mux.v \
+regport_to_settingsbus.v \
 ))
