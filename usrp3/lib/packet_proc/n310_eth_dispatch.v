@@ -173,11 +173,11 @@ module n310_eth_dispatch #(
   reg [31:0]      ip_reg;
   reg [15:0]      udp_port0, udp_port1;
 
-  localparam REG_MAC_LSB   = BASE + 'h00;
-  localparam REG_MAC_MSB   = BASE + 'h04;
-  localparam REG_IP        = BASE + 'h08;
-  localparam REG_PORT0     = BASE + 'h0c;
-  localparam REG_PORT1     = BASE + 'h10;
+  localparam REG_MAC_LSB   = BASE + 'h0000;
+  localparam REG_MAC_MSB   = BASE + 'h0004;
+  localparam REG_IP        = BASE + 'h2000;
+  localparam REG_PORT0     = BASE + 'h2004;
+  localparam REG_PORT1     = BASE + 'h2008;
 
   assign my_mac_addr = mac_reg;
   assign my_ip_addr  = ip_reg;

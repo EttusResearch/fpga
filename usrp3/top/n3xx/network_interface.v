@@ -13,7 +13,6 @@ module network_interface
    parameter DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
    parameter AWIDTH  = 14,    // Width of the address bus
    parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-   parameter [31:0] REG_BASE = 32'h0,
    parameter        PORTNUM  = 8'd0,
    parameter        MDIO_EN  = 0
 )(
@@ -133,8 +132,8 @@ module network_interface
    axil_regport_master #(
       .DWIDTH   (DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH   (AWIDTH),     // Width of the address bus
-      .WRBASE   (REG_BASE),  // Write address base
-      .RDBASE   (REG_BASE),  // Read address base
+      .WRBASE   (0),  // Write address base
+      .RDBASE   (0),  // Read address base
       .TIMEOUT  (10)              // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
    ) network_regport_master_i (
       // Clock and reset
@@ -204,6 +203,7 @@ module network_interface
 `ifdef SFP0_1GBE
       .PROTOCOL("1GbE"),
 `endif
+      .REG_BASE(14'h0),
       .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) sfpp_io_i (
@@ -265,6 +265,7 @@ module network_interface
    //////////////////////////////////////////////////////////////////////
 
     eth_switch #(
+        .BASE(14'h1000),
         .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH (AWIDTH)         // Width of the address bus
     ) eth_switch0 (

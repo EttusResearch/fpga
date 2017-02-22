@@ -129,7 +129,7 @@ module eth_switch #(
    wire            e2c_tlast_int2, e2c_tvalid_int2, e2c_tready_int2;
 
    n310_eth_dispatch #(
-    .BASE   (BASE+8),
+    .BASE   (BASE),
     .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
     .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
     ) eth_dispatch (

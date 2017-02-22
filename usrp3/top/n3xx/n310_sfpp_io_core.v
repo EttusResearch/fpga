@@ -4,7 +4,7 @@
 
 module n310_sfpp_io_core #(
    parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-   parameter [31:0] REG_BASE = 32'h0,
+   parameter [13:0] REG_BASE = 14'h0,
    parameter        PORTNUM  = 8'd0,
    parameter        MDIO_EN  = 0
 )(

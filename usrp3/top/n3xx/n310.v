@@ -234,10 +234,6 @@ module n310
   localparam REG_AWIDTH = 14; // log2(0x4000)
   localparam REG_DWIDTH = 32;
 
-  localparam REG_BASE_MISC = 32'h4001_0000;
-  localparam REG_BASE_ETH_0 = 32'h4000_0000;
-  localparam REG_BASE_ETH_1 = 32'h4008_0000;
-
    //TODO: Add bus_clk_gen, bus_rst, sw_rst
    wire bus_clk;
    wire bus_rst;
@@ -629,7 +625,6 @@ module n310
 `ifdef SFP0_1GBE
       .PROTOCOL("1GbE"),
 `endif
-      .REG_BASE(REG_BASE_ETH_0),
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
@@ -737,7 +732,6 @@ module n310
 `endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
-      .REG_BASE(REG_BASE_ETH_1),
       .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) network_interface_1 (
