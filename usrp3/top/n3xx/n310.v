@@ -667,27 +667,27 @@ module n310
       .s_axi_aclk(FCLK_CLK0),
       .s_axi_aresetn(FCLK_RESET0N),
       // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr(M_AXI_GP0_AWADDR_S3),
-      .s_axi_awvalid(M_AXI_GP0_AWVALID_S3),
-      .s_axi_awready(M_AXI_GP0_AWREADY_S3),
+      .s_axi_awaddr(M_AXI_GP0_AWADDR_S1),
+      .s_axi_awvalid(M_AXI_GP0_AWVALID_S1),
+      .s_axi_awready(M_AXI_GP0_AWREADY_S1),
       // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata(M_AXI_GP0_WDATA_S3),
-      .s_axi_wstrb(M_AXI_GP0_WSTRB_S3),
-      .s_axi_wvalid(M_AXI_GP0_WVALID_S3),
-      .s_axi_wready(M_AXI_GP0_WREADY_S3),
+      .s_axi_wdata(M_AXI_GP0_WDATA_S1),
+      .s_axi_wstrb(M_AXI_GP0_WSTRB_S1),
+      .s_axi_wvalid(M_AXI_GP0_WVALID_S1),
+      .s_axi_wready(M_AXI_GP0_WREADY_S1),
       // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp(M_AXI_GP0_BRESP_S3),
-      .s_axi_bvalid(M_AXI_GP0_BVALID_S3),
-      .s_axi_bready(M_AXI_GP0_BREADY_S3),
+      .s_axi_bresp(M_AXI_GP0_BRESP_S1),
+      .s_axi_bvalid(M_AXI_GP0_BVALID_S1),
+      .s_axi_bready(M_AXI_GP0_BREADY_S1),
       // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr(M_AXI_GP0_ARADDR_S3),
-      .s_axi_arvalid(M_AXI_GP0_ARVALID_S3),
-      .s_axi_arready(M_AXI_GP0_ARREADY_S3),
+      .s_axi_araddr(M_AXI_GP0_ARADDR_S1),
+      .s_axi_arvalid(M_AXI_GP0_ARVALID_S1),
+      .s_axi_arready(M_AXI_GP0_ARREADY_S1),
       // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata(M_AXI_GP0_RDATA_S3),
-      .s_axi_rresp(M_AXI_GP0_RRESP_S3),
-      .s_axi_rvalid(M_AXI_GP0_RVALID_S3),
-      .s_axi_rready(M_AXI_GP0_RREADY_S3),
+      .s_axi_rdata(M_AXI_GP0_RDATA_S1),
+      .s_axi_rresp(M_AXI_GP0_RRESP_S1),
+      .s_axi_rvalid(M_AXI_GP0_RVALID_S1),
+      .s_axi_rready(M_AXI_GP0_RREADY_S1),
 
       // Ethernet to Vita
       .e2v_tdata(e2v0_tdata),
@@ -769,6 +769,32 @@ module n310
       .sfpp_tx_disable(/*SFP_1_TXDISABLE*/),
 
       .sfp_phy_status(sfp1_phy_status),
+
+      // Clock and reset
+      .s_axi_aclk(FCLK_CLK0),
+      .s_axi_aresetn(FCLK_RESET0N),
+      // AXI4-Lite: Write address port (domain: s_axi_aclk)
+      .s_axi_awaddr(M_AXI_GP0_AWADDR_S3),
+      .s_axi_awvalid(M_AXI_GP0_AWVALID_S3),
+      .s_axi_awready(M_AXI_GP0_AWREADY_S3),
+      // AXI4-Lite: Write data port (domain: s_axi_aclk)
+      .s_axi_wdata(M_AXI_GP0_WDATA_S3),
+      .s_axi_wstrb(M_AXI_GP0_WSTRB_S3),
+      .s_axi_wvalid(M_AXI_GP0_WVALID_S3),
+      .s_axi_wready(M_AXI_GP0_WREADY_S3),
+      // AXI4-Lite: Write response port (domain: s_axi_aclk)
+      .s_axi_bresp(M_AXI_GP0_BRESP_S3),
+      .s_axi_bvalid(M_AXI_GP0_BVALID_S3),
+      .s_axi_bready(M_AXI_GP0_BREADY_S3),
+      // AXI4-Lite: Read address port (domain: s_axi_aclk)
+      .s_axi_araddr(M_AXI_GP0_ARADDR_S3),
+      .s_axi_arvalid(M_AXI_GP0_ARVALID_S3),
+      .s_axi_arready(M_AXI_GP0_ARREADY_S3),
+      // AXI4-Lite: Read data port (domain: s_axi_aclk)
+      .s_axi_rdata(M_AXI_GP0_RDATA_S3),
+      .s_axi_rresp(M_AXI_GP0_RRESP_S3),
+      .s_axi_rvalid(M_AXI_GP0_RVALID_S3),
+      .s_axi_rready(M_AXI_GP0_RREADY_S3),
 
       // Ethernet to Vita
       .e2v_tdata(e2v1_tdata),
@@ -868,34 +894,6 @@ module n310
     .s_axis_tuser(arm_eth0_rx_tuser),
 
     .irq(arm_eth0_irq)
-  );
-
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy1
-  (
-    .s_axi_aclk(bus_clk),
-    .s_axi_areset(bus_rst),
-
-    .s_axi_awaddr(M_AXI_GP0_AWADDR_S1),
-    .s_axi_awvalid(M_AXI_GP0_AWVALID_S1),
-    .s_axi_awready(M_AXI_GP0_AWREADY_S1),
-
-    .s_axi_wdata(M_AXI_GP0_WDATA_S1),
-    .s_axi_wstrb(M_AXI_GP0_WSTRB_S1),
-    .s_axi_wvalid(M_AXI_GP0_WVALID_S1),
-    .s_axi_wready(M_AXI_GP0_WREADY_S1),
-
-    .s_axi_bresp(M_AXI_GP0_BRESP_S1),
-    .s_axi_bvalid(M_AXI_GP0_BVALID_S1),
-    .s_axi_bready(M_AXI_GP0_BREADY_S1),
-
-    .s_axi_araddr(M_AXI_GP0_ARADDR_S1),
-    .s_axi_arvalid(M_AXI_GP0_ARVALID_S1),
-    .s_axi_arready(M_AXI_GP0_ARREADY_S1),
-
-    .s_axi_rdata(M_AXI_GP0_RDATA_S1),
-    .s_axi_rresp(M_AXI_GP0_RRESP_S1),
-    .s_axi_rvalid(M_AXI_GP0_RVALID_S1),
-    .s_axi_rready(M_AXI_GP0_RREADY_S1)
   );
 
   fifo64_to_axi4lite inst_fifo64_to_axi4lite1
