@@ -1069,7 +1069,7 @@ module n310
    wire [31:0]      rx0, rx1;
    wire [31:0]      tx0, tx1;
 
-  n310_core n310_core
+  n310_core #(.REG_AWIDTH(14)) n310_core
   (
     //Clocks and resets
     .radio_clk(radio_clk),
