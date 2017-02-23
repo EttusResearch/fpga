@@ -175,14 +175,14 @@ module n310
    //input SFP_1_TXFAULT
 
    //USRP IO
-   output         DbaCpldReset_n,
-   output  [2:0]  DbaCpldAddr,
-   output         DbaCpldSpiSdo,
-   output         DbaCpldSelAtrSpi_n,
-   output         DbaCpldSyncAtrRx1,
-   inout          DbaCpldSpiSdiAtrTx2,
-   output         DbaCpldSpiCsbAtrTx1,
-   output         DbaCpldSpiSclkAtrRx2,
+   output         DBA_CPLD_RESET_N,
+   output  [2:0]  DBA_CPLD_ADDR,
+   input          DBA_CPLD_SPI_SDO,
+   output         DBA_CPLD_SEL_ATR_SPI_N,
+   output         DBA_CPLD_SYNC_ATR_RX1,
+   output         DBA_CPLD_SPI_SDI_ATR_TX2,
+   output         DBA_CPLD_SPI_CSB_ATR_TX1,
+   output         DBA_CPLD_SPI_SCLK_ATR_RX2,
 
 //   output         DbaCh1TxDsaLe,
 //   output  [5:0]  DbaCh1TxDsaData,
@@ -206,16 +206,16 @@ module n310
 //   output         DbaMykGpio13,
 //   output         DbaMykGpio14,
 //   output         DbaMykGpio15,
-   output         DbaMykSpiSdo,
-   input          DbaMykSpiSdio,
-   output         DbaMykSpiCs_n,
-   output         DbaMykSpiSclk,
-//   input          DbaMykIntrq,
+   input          DBA_MYK_SPI_SDO,
+   output         DBA_MYK_SPI_SDIO,
+   output         DBA_MYK_SPI_CS_N,
+   output         DBA_MYK_SPI_SCLK,
+//   input          DBA_MykIntrq,
 
-   input          DbaCpldJtagTdi,
-   output         DbaCpldJtagTdo,
-   output         DbaCpldJtagTms,
-   output         DbaCpldJtagTck
+   input          DBA_CPLD_JTAG_TDI,
+   output         DBA_CPLD_JTAG_TDO,
+   output         DBA_CPLD_JTAG_TMS,
+   output         DBA_CPLD_JTAG_TCK
 
 //   output         DbaMykSyncIn_p,
 //   output         DbaMykSyncIn_n,
@@ -1101,16 +1101,22 @@ module n310
    ///////////////////////////////////////////////////////
 
    // Drive CPLD Address line with PS GPIO
-   assign DbaCpldAddr          = ps_gpio_out[3:1];
+   assign DBA_CPLD_ADDR             = ps_gpio_out[3:1];
 
    // SPI to CPLD
-   assign DbaCpldSpiSclkAtrRx2 = spi0_sclk;
-   assign DbaCpldSpiSdo        = spi0_miso;  // Slave Out
-   assign DbaCpldSpiSdiAtrTx2  = spi0_mosi;  // Slave In
-   assign DbaCpldSelAtrSpi_n   = 1'b0;       // Select SPI
-   assign DbaCpldSyncAtrRx1    = 1'b0;
-   assign DbaCpldSpiCsbAtrTx1  = spi0_ss0;
-   assign DbaCpldReset_n       = ps_gpio_out[0];
+   assign DBA_CPLD_SPI_SCLK_ATR_RX2 = spi0_sclk;
+   assign DBA_CPLD_SPI_SDI_ATR_TX2  = spi0_mosi;  // Slave In
+   assign DBA_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
+   assign DBA_CPLD_SYNC_ATR_RX1     = 1'b0;
+   assign DBA_CPLD_SPI_CSB_ATR_TX1  = spi0_ss0;
+
+   assign DBA_CPLD_RESET_N          = ps_gpio_out[0];
+
+   assign DBA_MYK_SPI_CS_N          = spi0_ss1;
+   assign DBA_MYK_SPI_SCLK          = spi0_sclk;
+   assign DBA_MYK_SPI_SDIO          = spi0_mosi;
+
+   assign spi0_miso = DBA_MYK_SPI_SDO | DBA_CPLD_SPI_SDO;
    //assign DbaCpldReset_n       = ~global_rst;
 
 
