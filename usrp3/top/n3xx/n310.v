@@ -171,30 +171,63 @@ module n310
    //input SFP_1_LOS,
    output SFP_1_RS0,
    output SFP_1_RS1,
-   output SFP_1_TXDISABLE
+   output SFP_1_TXDISABLE,
    //input SFP_1_TXFAULT
 
-   //TODO: Uncomment when connected here
    //USRP IO
-   //inout  USRPIO_A_GP_0_P, USRPIO_A_GP_1_P, USRPIO_A_GP_2_P, USRPIO_A_GP_3_P,
-   //inout  USRPIO_A_GP_0_N, USRPIO_A_GP_1_N, USRPIO_A_GP_2_N, USRPIO_A_GP_3_N,
-   //inout  USRPIO_A_GP_4_P, USRPIO_A_GP_5_P, USRPIO_A_GP_6_P, USRPIO_A_GP_7_P,
-   //inout  USRPIO_A_GP_4_N, USRPIO_A_GP_5_N, USRPIO_A_GP_6_N, USRPIO_A_GP_7_N,
-   //inout  USRPIO_A_GP_8_P, USRPIO_A_GP_9_P, USRPIO_A_GP_10_P, USRPIO_A_GP_11_P,
-   //inout  USRPIO_A_GP_8_N, USRPIO_A_GP_9_N, USRPIO_A_GP_10_N, USRPIO_A_GP_11_N,
-   //inout  USRPIO_A_GP_12_P, USRPIO_A_GP_13_P, USRPIO_A_GP_14_P, USRPIO_A_GP_15_P,
-   //inout  USRPIO_A_GP_12_N, USRPIO_A_GP_13_N, USRPIO_A_GP_14_N, USRPIO_A_GP_15_N,
-   //inout  USRPIO_A_GP_16_P, USRPIO_A_GP_17_P, USRPIO_A_GP_18_P, USRPIO_A_GP_19_P,
-   //inout  USRPIO_A_GP_16_N, USRPIO_A_GP_17_N, USRPIO_A_GP_18_N, USRPIO_A_GP_19_N,
-   //inout  USRPIO_A_GP_20_P, USRPIO_A_GP_21_P, USRPIO_A_GP_22_P, USRPIO_A_GP_23_P,
-   //inout  USRPIO_A_GP_20_N, USRPIO_A_GP_21_N, USRPIO_A_GP_22_N, USRPIO_A_GP_23_N,
-   //inout  USRPIO_A_GP_24_P, USRPIO_A_GP_25_P, USRPIO_A_GP_26_P, USRPIO_A_GP_27_P,
-   //inout  USRPIO_A_GP_24_N, USRPIO_A_GP_25_N, USRPIO_A_GP_26_N, USRPIO_A_GP_27_N,
-   //inout  USRPIO_A_GP_28_P, USRPIO_A_GP_29_P, USRPIO_A_GP_30_P, USRPIO_A_GP_31_P,
-   //inout  USRPIO_A_GP_28_N, USRPIO_A_GP_29_N, USRPIO_A_GP_30_N, USRPIO_A_GP_31_N,
-   //inout  USRPIO_A_GP_32_P,
-   //inout  USRPIO_A_GP_32_N,
-   //input USRPIO_A_I2C_NINTRQ,
+   output         DbaCpldReset_n,
+   output  [2:0]  DbaCpldAddr,
+   output         DbaCpldSpiSdo,
+   output         DbaCpldSelAtrSpi_n,
+   output         DbaCpldSyncAtrRx1,
+   inout          DbaCpldSpiSdiAtrTx2,
+   output         DbaCpldSpiCsbAtrTx1,
+   output         DbaCpldSpiSclkAtrRx2,
+
+//   output         DbaCh1TxDsaLe,
+//   output  [5:0]  DbaCh1TxDsaData,
+//   output         DbaCh1RxDsaLe,
+//   output  [5:0]  DbaCh1RxDsaData,
+
+//   output         DbaCh2TxDsaLe,
+//   output  [5:0]  DbaCh2TxDsaData,
+//   output         DbaCh2RxDsaLe,
+//   output  [5:0]  DbaCh2RxDsaData,
+
+//   output         DbaPDacSync_n,
+//   output         DbaPDacDin,
+//   output         DbaPDacSclk,
+
+//   output         DbaMykGpio0,
+//   output         DbaMykGpio1,
+//   output         DbaMykGpio3,
+//   output         DbaMykGpio4,
+//   output         DbaMykGpio12,
+//   output         DbaMykGpio13,
+//   output         DbaMykGpio14,
+//   output         DbaMykGpio15,
+   output         DbaMykSpiSdo,
+   input          DbaMykSpiSdio,
+   output         DbaMykSpiCs_n,
+   output         DbaMykSpiSclk,
+//   input          DbaMykIntrq,
+
+   input          DbaCpldJtagTdi,
+   output         DbaCpldJtagTdo,
+   output         DbaCpldJtagTms,
+   output         DbaCpldJtagTck
+
+//   output         DbaMykSyncIn_p,
+//   output         DbaMykSyncIn_n,
+//   input          DbaMykSyncOut_p,
+//   input          DbaMykSyncOut_n,
+//   input          DbaFpgaClk_p,
+//   input          DbaFpgaClk_n,
+//   input          DbaFpgaSysref_p,
+//   input          DbaFpgaSysref_n
+
+   //input          DbaSwitcherClock
+   //
    //input USRPIO_A_MGTCLK_P,
    //input USRPIO_A_MGTCLK_N,
    //input USRPIO_A_RX_0_P, USRPIO_A_RX_1_P, USRPIO_A_RX_2_P, USRPIO_A_RX_3_P,
@@ -994,7 +1027,7 @@ module n310
   n310_ps inst_n310_ps
   (
     .SPI0_SCLK(spi0_sclk),
-    .SPI0_MOSI(spi0_miso),
+    .SPI0_MOSI(spi0_mosi),
     .SPI0_MISO(spi0_miso),
     .SPI0_SS0(spi0_ss0),
     .SPI0_SS1(spi0_ss1),
@@ -1061,6 +1094,32 @@ module n310
     .PS_PORB(PS_PORB)
 );
 
+   ///////////////////////////////////////////////////////
+   //
+   // DB Connections
+   //
+   ///////////////////////////////////////////////////////
+
+   // Drive CPLD Address line with PS GPIO
+   assign DbaCpldAddr          = ps_gpio_out[3:1];
+
+   // SPI to CPLD
+   assign DbaCpldSpiSclkAtrRx2 = spi0_sclk;
+   assign DbaCpldSpiSdo        = spi0_miso;  // Slave Out
+   assign DbaCpldSpiSdiAtrTx2  = spi0_mosi;  // Slave In
+   assign DbaCpldSelAtrSpi_n   = 1'b0;       // Select SPI
+   assign DbaCpldSyncAtrRx1    = 1'b0;
+   assign DbaCpldSpiCsbAtrTx1  = spi0_ss0;
+   assign DbaCpldReset_n       = ps_gpio_out[0];
+   //assign DbaCpldReset_n       = ~global_rst;
+
+
+   ///////////////////////////////////////////////////////
+   //
+   // N310 CORE
+   //
+   ///////////////////////////////////////////////////////
+
    // Radio Clock Generation
 
    wire             radio_clk;
@@ -1073,7 +1132,7 @@ module n310
   (
     //Clocks and resets
     .radio_clk(radio_clk),
-    .radio_rst(/*radio_rst*/GSR),
+    .radio_rst(/*radio_rst*/global_rst),
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
