@@ -268,7 +268,7 @@ module network_interface
         .BASE(14'h1000),
         .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH (AWIDTH)         // Width of the address bus
-    ) eth_switch0 (
+    ) eth_switch (
         .clk(bus_clk),
         .reset(bus_rst),
         .clear(1'b0),

@@ -133,53 +133,53 @@ module eth_switch #(
     .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
     .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
     ) eth_dispatch (
-    .clk           (clk),
-    .reset           (reset),
-    .clear           (clear),
+    .clk        (clk),
+    .reset      (reset),
+    .clear      (clear),
     //RegPort
-    .reg_clk       (bus_clk),
-    .reg_wr_req       (reg_wr_req),
-    .reg_wr_addr   (reg_wr_addr),
-    .reg_wr_data   (reg_wr_data),
-    .reg_wr_keep   (/*unused*/),
-    .reg_rd_req       (reg_rd_req),
-    .reg_rd_addr   (reg_rd_addr),
-    .reg_rd_resp   (reg_rd_resp),
-    .reg_rd_data   (reg_rd_data),
+    .reg_clk    (bus_clk),
+    .reg_wr_req (reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
+    .reg_wr_keep(/*unused*/),
+    .reg_rd_req (reg_rd_req),
+    .reg_rd_addr(reg_rd_addr),
+    .reg_rd_resp(reg_rd_resp),
+    .reg_rd_data(reg_rd_data),
 
-    .in_tdata       (epg_tdata_int),
-    .in_tuser       (epg_tuser_int),
-    .in_tlast       (epg_tlast_int),
-    .in_tvalid       (epg_tvalid_int),
-    .in_tready       (epg_tready_int),
+    .in_tdata   (epg_tdata_int),
+    .in_tuser   (epg_tuser_int),
+    .in_tlast   (epg_tlast_int),
+    .in_tvalid  (epg_tvalid_int),
+    .in_tready  (epg_tready_int),
 
-    .vita_tdata       (e2v_tdata_int),
-    .vita_tlast       (e2v_tlast_int),
-    .vita_tvalid    (e2v_tvalid_int),
-    .vita_tready    (e2v_tready_int),
+    .vita_tdata (e2v_tdata_int),
+    .vita_tlast (e2v_tlast_int),
+    .vita_tvalid(e2v_tvalid_int),
+    .vita_tready(e2v_tready_int),
 
-    .cpu_tdata       (e2c_tdata_int),
-    .cpu_tuser       (e2c_tuser_int),
-    .cpu_tlast       (e2c_tlast_int),
-    .cpu_tvalid       (e2c_tvalid_int),
-    .cpu_tready       (e2c_tready_int),
+    .cpu_tdata  (e2c_tdata_int),
+    .cpu_tuser  (e2c_tuser_int),
+    .cpu_tlast  (e2c_tlast_int),
+    .cpu_tvalid (e2c_tvalid_int),
+    .cpu_tready (e2c_tready_int),
 
-    .xo_tdata       (xo_tdata),
-    .xo_tuser       (xo_tuser),
-    .xo_tlast       (xo_tlast),
-    .xo_tvalid       (xo_tvalid),
-    .xo_tready       (xo_tready),
+    .xo_tdata   (xo_tdata),
+    .xo_tuser   (xo_tuser),
+    .xo_tlast   (xo_tlast),
+    .xo_tvalid  (xo_tvalid),
+    .xo_tready  (xo_tready),
     // to other eth port
-    .mac_src_addr   (mac_src_addr),
-    .ip_src_addr   (ip_src_addr),
-    .udp_src_prt   (udp_src_prt),
+    .mac_src_addr(mac_src_addr),
+    .ip_src_addr(ip_src_addr),
+    .udp_src_prt(udp_src_prt),
 
-    .my_mac_addr   (my_mac_addr),
-    .my_ip_addr       (my_ip_addr),
-    .my_udp_port   (my_udp_port),
+    .my_mac_addr(my_mac_addr),
+    .my_ip_addr (my_ip_addr),
+    .my_udp_port(my_udp_port),
 
-    .debug_flags   (),
-    .debug           ()
+    .debug_flags(),
+    .debug      ()
     );
 
    axi_fifo_short #(.WIDTH(65)) e2v_pipeline_srl
@@ -267,8 +267,7 @@ module eth_switch #(
 
    // ARM FRAMER
    // Add pad of 6 empty bytes before MAC addresses of new Rxed packet so that IP
-   // headers are alligned. Also put metadata in first octet of pad that shows
-   // ingress port.
+   // headers are alligned.
    //
    reg c2e_tvalid_reg;
    wire sof;
@@ -280,7 +279,6 @@ module eth_switch #(
        c2e_tvalid_reg <= c2e_tvalid;
      end
    end
-   // FIXME: The block violates axi, replace with simple axi block to add
    // 6 octet padding
    assign c2e_tready = 1'b1;
    xge64_to_axi64  #(.LABEL(1'b0)) arm_framer
@@ -289,7 +287,7 @@ module eth_switch #(
       .reset(reset),
       .clear(clear),
       .datain(c2e_tdata),
-      .occ(3'd0),
+      .occ(c2e_tuser[2:0]),
       .sof(sof),
       .eof(c2e_tlast),
       .err(c2e_tuser[3]),
@@ -298,9 +296,10 @@ module eth_switch #(
       .axis_tuser(c2e_tuser_int2),
       .axis_tlast(c2e_tlast_int2),
       .axis_tvalid(c2e_tvalid_int2),
-      .axis_tready(c2e_tready_int2) //FIXME: Add a fifo so that tready is asserted correctly
+      .axis_tready(c2e_tready_int2)
       );
 
+   // xge64_to_axi64 block violates axi, added fifo to take care of tready
    axi_fifo_short #(.WIDTH(69)) cpuout_fifo (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({c2e_tlast_int2,c2e_tdata_int2,c2e_tuser_int2}), .i_tvalid(c2e_tvalid_int2), .i_tready(c2e_tready_int2),
@@ -321,4 +320,4 @@ module eth_switch #(
       .o_tdata({eth_tx_tlast,eth_tx_tuser,eth_tx_tdata}), .o_tvalid(eth_tx_tvalid), .o_tready(eth_tx_tready));
 
 
-endmodule // eth_interface
+endmodule // eth_switch
