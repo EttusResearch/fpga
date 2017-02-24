@@ -3,25 +3,26 @@
 //
 
 module mdio_master #(
-   parameter [31:0] REG_BASE    = 32'h0,
+   parameter        REG_AWIDTH  = 32,
+   parameter        REG_BASE    = 'h0,
    parameter [7:0]  MDC_DIVIDER = 8'd200
 ) (
    // Clock and reset
-   input             clk,
-   input             rst,
+   input                  clk,
+   input                  rst,
    // MDIO ports
-   output reg        mdc,
-   output reg        mdio_out,
-   output reg        mdio_tri,   // Assert to tristate driver.
-   input             mdio_in,
+   output reg             mdc,
+   output reg             mdio_out,
+   output reg             mdio_tri,   // Assert to tristate driver.
+   input                  mdio_in,
    // Register ports
-   input             reg_wr_req,
-   input [31:0]      reg_wr_addr,
-   input [31:0]      reg_wr_data,
-   input             reg_rd_req,
-   input [31:0]      reg_rd_addr,
-   output reg        reg_rd_resp,
-   output reg [31:0] reg_rd_data
+   input                  reg_wr_req,
+   input [31:0]           reg_wr_addr,
+   input [31:0]           reg_wr_data,
+   input                  reg_rd_req,
+   input [REG_AWIDTH-1:0] reg_rd_addr,
+   output reg             reg_rd_resp,
+   output reg [31:0]      reg_rd_data
 );
 
    localparam [7:0]
@@ -127,10 +128,10 @@ module mdio_master #(
       PREIDLE = 99
    ;
 
-   localparam REG_MDIO_DATA         = REG_BASE + 16'h0;
-   localparam REG_MDIO_ADDR         = REG_BASE + 16'h4;
-   localparam REG_MDIO_OP           = REG_BASE + 16'h8;
-   localparam REG_MDIO_CTRL_STATUS  = REG_BASE + 16'hC;
+   localparam REG_MDIO_DATA         = REG_BASE + 'h0;
+   localparam REG_MDIO_ADDR         = REG_BASE + 'h4;
+   localparam REG_MDIO_OP           = REG_BASE + 'h8;
+   localparam REG_MDIO_CTRL_STATUS  = REG_BASE + 'hC;
 
    reg [15:0]  mdio_read_data, mdio_write_data;
    reg [15:0]  mdio_address;
@@ -160,6 +161,10 @@ module mdio_master #(
             case (reg_rd_addr)
                REG_MDIO_DATA:
                   reg_rd_data <= {16'h0, mdio_read_data};
+               REG_MDIO_ADDR:
+                  reg_rd_data <= {16'h0, mdio_address};
+               REG_MDIO_OP:
+                  reg_rd_data <= {16'h0, mdio_operation};
                REG_MDIO_CTRL_STATUS:
                   reg_rd_data <= {31'b0, mdio_running};
                default:
