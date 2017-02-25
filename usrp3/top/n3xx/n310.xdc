@@ -283,8 +283,8 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_LED_A}]
 set_property PACKAGE_PIN   W25              [get_ports {SFP_0_LED_B}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_LED_B}]
 #
-#set_property PACKAGE_PIN   P28              [get_ports {SFP_0_LOS}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_LOS}]
+set_property PACKAGE_PIN   P28              [get_ports {SFP_0_LOS}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_LOS}]
 #
 set_property PACKAGE_PIN   N28              [get_ports {SFP_0_RS0}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_RS0}]
@@ -292,11 +292,11 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_RS0}]
 set_property PACKAGE_PIN   W30              [get_ports {SFP_0_RS1}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_RS1}]
 
-set_property PACKAGE_PIN   T27              [get_ports {SFP_0_TXDISABLE}]
-set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_TXDISABLE}]
+set_property PACKAGE_PIN T27 [get_ports SFP_0_TXDISABLE]
+set_property IOSTANDARD LVCMOS33 [get_ports SFP_0_TXDISABLE]
 
-#set_property PACKAGE_PIN   U24              [get_ports {SFP_0_TXFAULT}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_TXFAULT}]
+set_property PACKAGE_PIN   U24              [get_ports {SFP_0_TXFAULT}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_TXFAULT}]
 #
 ### SFP+ 1, Slow Speed, Bank 13 3.3V
 #
@@ -309,11 +309,11 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_LED_A}]
 set_property PACKAGE_PIN   P21              [get_ports {SFP_1_LED_B}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_LED_B}]
 
-#set_property PACKAGE_PIN   R23              [get_ports {SFP_1_LOS}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_LOS}]
 #
 set_property PACKAGE_PIN   T24              [get_ports {SFP_1_RS0}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_RS0}]
+set_property PACKAGE_PIN   R23              [get_ports {SFP_1_LOS}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_LOS}]
 
 set_property PACKAGE_PIN   P24              [get_ports {SFP_1_RS1}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_RS1}]
@@ -323,6 +323,8 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_TXDISABLE}]
 
 #set_property PACKAGE_PIN   V21              [get_ports {SFP_1_TXFAULT}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_TXFAULT}]
+set_property PACKAGE_PIN   V21              [get_ports {SFP_1_TXFAULT}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_TXFAULT}]
 #
 
 ## USRP IO A : ##########################################################################

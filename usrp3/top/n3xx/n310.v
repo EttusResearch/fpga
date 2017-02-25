@@ -158,21 +158,21 @@ module n310
    //input SFP_0_I2C_NPRESENT,
    output SFP_0_LED_A,
    output SFP_0_LED_B,
-   //input SFP_0_LOS,
+   input SFP_0_LOS,
    output SFP_0_RS0,
    output SFP_0_RS1,
    output SFP_0_TXDISABLE,
-   //input SFP_0_TXFAULT,
+   input SFP_0_TXFAULT,
 
    //SFP+ 1, Slow Speed, Bank 13 3.3V
    //input SFP_1_I2C_NPRESENT,
    output SFP_1_LED_A,
    output SFP_1_LED_B,
-   //input SFP_1_LOS,
+   input SFP_1_LOS,
    output SFP_1_RS0,
    output SFP_1_RS1,
    output SFP_1_TXDISABLE,
-   //input SFP_1_TXFAULT
+   input SFP_1_TXFAULT,
 
    //USRP IO
    output         DBA_CPLD_RESET_N,
@@ -779,9 +779,9 @@ module n310
       .rxp(SFP_0_RX_P),
       .rxn(SFP_0_RX_N),
 
-      .sfpp_rxlos(1'b0/*SFP_0_LOS*/),
-      .sfpp_tx_fault(1'b0/*SFP_0_TXFAULT*/),
-      .sfpp_tx_disable(/*SFP_0_TXDISABLE*/),
+      .sfpp_rxlos(SFP_0_LOS),
+      .sfpp_tx_fault(SFP_0_TXFAULT),
+      .sfpp_tx_disable(SFP_0_TXDISABLE),
 
       .sfp_phy_status(sfp0_phy_status),
 
@@ -885,9 +885,9 @@ module n310
       .rxp(SFP_1_RX_P),
       .rxn(SFP_1_RX_N),
 
-      .sfpp_rxlos(1'b0/*SFP_1_LOS*/),
-      .sfpp_tx_fault(1'b0/*SFP_1_TXFAULT*/),
-      .sfpp_tx_disable(/*SFP_1_TXDISABLE*/),
+      .sfpp_rxlos(SFP_1_LOS),
+      .sfpp_tx_fault(SFP_1_TXFAULT),
+      .sfpp_tx_disable(SFP_1_TXDISABLE),
 
       .sfp_phy_status(sfp1_phy_status),
 
