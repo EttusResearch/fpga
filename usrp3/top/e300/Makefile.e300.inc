@@ -106,6 +106,6 @@ VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
-hls: prereqs hls_ip bin
+hls: .prereqs hls_ip bin
 
 .PHONY: bin hls
