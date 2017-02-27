@@ -1,5 +1,5 @@
 #
-# Copyright 2015 Ettus Research
+# Copyright 2015-2017 Ettus Research
 #
 
 # -------------------------------------------------------------------
@@ -29,3 +29,36 @@ BUILD_VIVADO_HLS_IP = \
 	vivado_hls -f $(TOOLS_DIR)/scripts/viv_generate_hls_ip.tcl -l $(1).log || export VIV_ERR=$$?; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) release; \
 	exit $$(($$VIV_ERR))
+
+# -------------------------------------------------------------------
+# Generates targets to build HLS IP and to add HLS output files to
+# global variable HLS_IP_OUTPUT_SRCS
+#
+# Usage: $(eval $(HLS_IP_GEN_TARGETS))
+# Args: $1 = HLS_IP_NAME (High level synthsis IP name)
+#       $2 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = HLS_IP_SRCS (HLS IP source files relative to $4, HLS_IP_SRC_DIR)
+#       $4 = HLS_IP_SRC_DIR (Absolute path to the top level HLS IP src dir)
+#       $5 = HLS_IP_BUILD_DIR (Absolute path to the top level HLS IP build dir)
+# Prereqs:
+# - HLS_IP_OUTPUT_SRCS and HLS_IP_BUILD_TARGETS must be defined globally
+# -------------------------------------------------------------------
+define HLS_IP_GEN_TARGETS
+# Sources in lib directory
+HLS_IP_$(1)_LIB_SRCS = $(addprefix $(4)/$(1)/, $(3))
+# Output file for dependency tracking
+HLS_IP_$(1)_OUTS = $(5)/$(1)/solution/impl/verilog/$(1).v
+# Add this IP to global list of HLS IP to build
+HLS_IP_BUILD_TARGETS += build_$(1)
+
+# Since HLS output files can change between software versions, this target finds them and
+# adds them to the list of output source files
+build_$(1) : $$(HLS_IP_$(1)_OUTS)
+	$$(eval HLS_IP_OUTPUT_SRCS += $$(shell find $(5)/$(1)/solution/impl/verilog/ -name '*.v' -o -name '*.vhd' -o -name '*.xci'))
+
+# Build with HLS
+$$(HLS_IP_$(1)_OUTS) : $$(HLS_IP_$(1)_LIB_SRCS)
+	$$(call BUILD_VIVADO_HLS_IP,$(1),$(2),$$(HLS_IP_$(1)_LIB_SRCS),$(4),$(5))
+
+.PHONEY : build_$(1)
+endef
