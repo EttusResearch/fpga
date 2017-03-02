@@ -60,90 +60,100 @@ module aurora_phy_x1 #(
    //--------------------------------------------------------------
    // Reset and PMA Init Sequence
    //--------------------------------------------------------------
+   // Requirements from PG074:
+   // -  It is expected that user_clock is stable when the reset_pb signal is applied.
+   // -  During the board power-on sequence, both the pma_init and reset_pb signals are
+   //    expected to be High. INIT_CLK and GT_REFCLK are expected to be stable during
+   //    power-on for the proper functioning of the Aurora 64B/66B core. When both clocks are
+   //    stable, pma_init is deasserted followed by the deassertion of reset_pb.
+   // - Normal Operation Reset Sequence:
+   //   1. Assert reset. Wait for a minimum time equal to 128*user_clk's time-period.
+   //   2. Assert pma_init. Keep pma_init and reset asserted for at least one second to prevent
+   //      the transmission of CC characters and ensure that the remote agent detects a hot plug event.
+   //   3. Deassert pma_init.
+   //   4. Deassert reset_pb.
 
-   localparam GTRST_ASSERT_DEL       = 32'd128;
-   localparam GTRST_PULSE_WIDTH_LOG2 = (SIMULATION == 1) ? 4 : 26;
-   localparam SYSRST_DEASSERT_DEL    = 32'd20;
+   localparam PWRON_PMA_INIT_CYC       = 32'd1024;
+   localparam SYSRST_ASSERT_CYC        = 32'd128;
+   localparam PMA_INIT_ASSERT_CYC_LOG2 = (SIMULATION == 1) ? 4 : 26;
+   localparam SYSRST_DEASSERT_CYC      = 32'd20;
 
-   localparam RST_ST_IDLE     = 2'd0;
-   localparam RST_ST_SYS_PRE  = 2'd1;
-   localparam RST_ST_GT       = 2'd2;
-   localparam RST_ST_SYS_POST = 2'd3;
-
-   wire reset_iclk, gt_reset, sys_reset_iclk, sys_reset;
+   wire reset_iclk, pma_init, reset_pb;
    wire gt_pll_lock, gt_pll_lock_iclk, mmcm_locked, mmcm_locked_iclk;
 
-   aurora_64b66b_pcs_pma_rst_sync_exdes #(
-      .c_init_val(1), .c_mtbf_stages(3)
-   ) input_rst_sync_i (
-      .prmry_in     (areset),
-      .scndry_aclk  (init_clk),
-      .scndry_out   (reset_iclk)
+   synchronizer #( .STAGES(3), .INITIAL_VAL(1'b1) ) input_rst_sync_i (
+      .clk(init_clk), .rst(1'b0), .in(areset), .out(reset_iclk)
    );
 
-   aurora_64b66b_pcs_pma_rst_sync_exdes #(
-      .c_init_val(0), .c_mtbf_stages(3)
-   ) gt_pll_lock_sync_i (
-      .prmry_in     (gt_pll_lock),
-      .scndry_aclk  (init_clk),
-      .scndry_out   (gt_pll_lock_iclk)
+   synchronizer #( .STAGES(3), .INITIAL_VAL(1'b0) ) gt_pll_lock_sync_i (
+      .clk(init_clk), .rst(1'b0), .in(gt_pll_lock), .out(gt_pll_lock_iclk)
    );
 
-   aurora_64b66b_pcs_pma_rst_sync_exdes #(
-      .c_init_val(0), .c_mtbf_stages(3)
-   ) mmcm_locked_sync_i (
-      .prmry_in     (mmcm_locked),
-      .scndry_aclk  (init_clk),
-      .scndry_out   (mmcm_locked_iclk)
+   synchronizer #( .STAGES(3), .INITIAL_VAL(1'b0) ) mmcm_locked_sync_i (
+      .clk(init_clk), .rst(1'b0), .in(mmcm_locked), .out(mmcm_locked_iclk)
    );
 
-   reg [1:0]      rst_state = RST_ST_IDLE;
-   reg [31:0]     rst_counter = 32'd0;
+   localparam [2:0] RST_ST_PWRON_PMA_INIT    = 3'd0;
+   localparam [2:0] RST_ST_PWRON_PMA_SYSRST  = 3'd1;
+   localparam [2:0] RST_ST_IDLE              = 3'd2;
+   localparam [2:0] RST_ST_SYSRST_PRE        = 3'd3;
+   localparam [2:0] RST_ST_PMA_INIT          = 3'd4;
+   localparam [2:0] RST_ST_SYSRST_POST       = 3'd5;
+
+   reg [2:0]  rst_state = RST_ST_PWRON_PMA_INIT;
+   reg [31:0] rst_counter = PWRON_PMA_INIT_CYC;
 
    always @(posedge init_clk) begin
       case (rst_state)
-         RST_ST_IDLE: begin
-            if (reset_iclk) begin
-               rst_state   <= RST_ST_SYS_PRE;
-               rst_counter <= GTRST_ASSERT_DEL;
-            end
-         end
-         RST_ST_SYS_PRE: begin
+         RST_ST_PWRON_PMA_INIT: begin
             if (rst_counter == 32'd0) begin
-               rst_state   <= RST_ST_GT;
-               rst_counter <= {{(32-GTRST_PULSE_WIDTH_LOG2){1'b0}}, {GTRST_PULSE_WIDTH_LOG2{1'b1}}};
-            end else if (gt_pll_lock_iclk) begin
-               rst_counter <= rst_counter - 32'd1;
-            end
-         end
-         RST_ST_GT: begin
-            if (rst_counter == 32'd0) begin
-               rst_state   <= RST_ST_SYS_POST;
-               rst_counter <= SYSRST_DEASSERT_DEL;
+               rst_state   <= RST_ST_PWRON_PMA_SYSRST;
+               rst_counter <= SYSRST_DEASSERT_CYC;
             end else begin
                rst_counter <= rst_counter - 32'd1;
             end
          end
-         RST_ST_SYS_POST: begin
+         RST_ST_PWRON_PMA_SYSRST: begin
             if (rst_counter == 32'd0) begin
                rst_state   <= RST_ST_IDLE;
+            end else begin
+               rst_counter <= rst_counter - 32'd1;
+            end
+         end
+         RST_ST_IDLE: begin
+            if (reset_iclk) begin
+               rst_state   <= RST_ST_SYSRST_PRE;
+               rst_counter <= SYSRST_ASSERT_CYC;
+            end
+         end
+         RST_ST_SYSRST_PRE: begin
+            if (rst_counter == 32'd0) begin
+               rst_state   <= RST_ST_PMA_INIT;
+               rst_counter <= {{(32-PMA_INIT_ASSERT_CYC_LOG2){1'b0}}, {PMA_INIT_ASSERT_CYC_LOG2{1'b1}}};
             end else if (mmcm_locked_iclk) begin
+               rst_counter <= rst_counter - 32'd1;
+            end
+         end
+         RST_ST_PMA_INIT: begin
+            if (rst_counter == 32'd0) begin
+               rst_state   <= RST_ST_SYSRST_POST;
+               rst_counter <= SYSRST_DEASSERT_CYC;
+            end else begin
+               rst_counter <= rst_counter - 32'd1;
+            end
+         end
+         RST_ST_SYSRST_POST: begin
+            if (rst_counter == 32'd0) begin
+               rst_state   <= RST_ST_IDLE;
+            end else begin
                rst_counter <= rst_counter - 32'd1;
             end
          end
       endcase
    end
 
-   assign sys_reset_iclk = (rst_state != RST_ST_IDLE);
-   assign gt_reset = (rst_state == RST_ST_GT);
-
-   aurora_64b66b_pcs_pma_rst_sync_exdes #(
-      .c_init_val(1), .c_mtbf_stages(3)
-   ) rst_sync_sys_rst_i (
-      .prmry_in     (sys_reset_iclk),
-      .scndry_aclk  (user_clk),
-      .scndry_out   (sys_reset)
-   );
+   assign reset_pb = (rst_state != RST_ST_IDLE);
+   assign pma_init = (rst_state == RST_ST_PMA_INIT || rst_state == RST_ST_PWRON_PMA_INIT);
 
    //--------------------------------------------------------------
    // Clocking
@@ -314,11 +324,11 @@ module aurora_phy_x1 #(
       .mmcm_not_locked           (!mmcm_locked),
       .user_clk                  (user_clk),
       .sync_clk                  (sync_clk),
-      .reset_pb                  (sys_reset),
+      .reset_pb                  (reset_pb),
       .gt_rxcdrovrden_in         (gt_rxcdrovrden_i),
       .power_down                (power_down_i),
       .loopback                  (loopback_i),
-      .pma_init                  (gt_reset),
+      .pma_init                  (pma_init),
       .gt_pll_lock               (gt_pll_lock),
       .drp_clk_in                (init_clk),
       .gt_qpllclk_quad1_in       (gt_qpllclk_quad1_i),
