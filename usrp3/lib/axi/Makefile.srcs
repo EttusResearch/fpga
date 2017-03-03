@@ -18,4 +18,6 @@ axi_fast_fifo.v \
 axi_to_strobed.v \
 axi_dummy.v \
 strobed_to_axi.v \
+axi_add_preamble.v \
+axi_strip_preamble.v \
 ))

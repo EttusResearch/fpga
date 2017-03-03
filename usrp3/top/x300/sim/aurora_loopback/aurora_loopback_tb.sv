@@ -23,7 +23,7 @@ module aurora_loopback_tb();
   wire XG_CLK_N = ~XG_CLK_P;
   wire SFP_LN0_P, SFP_LN0_N, SFP_LN1_P, SFP_LN1_N;
 
-  localparam PACKET_MODE = 0;
+  localparam PACKET_MODE = 1;
 
   // Aurora Loopback Topology:
   //
@@ -98,6 +98,7 @@ module aurora_loopback_tb();
     // Clocks and resets
     .phy_clk(m_user_clk), .phy_rst(m_user_rst),
     .sys_clk(m_user_clk), .sys_rst(m_user_rst),
+    .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(m_o_tdata), .phy_s_axis_tvalid(m_o_tvalid),
     .phy_m_axis_tdata(m_i_tdata), .phy_m_axis_tvalid(m_i_tvalid), .phy_m_axis_tready(m_i_tready),
@@ -144,6 +145,7 @@ module aurora_loopback_tb();
     // Clocks and resets
     .phy_clk(s_user_clk), .phy_rst(s_user_rst),
     .sys_clk(s_user_clk), .sys_rst(s_user_rst),
+    .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(s_o_tdata), .phy_s_axis_tvalid(s_o_tvalid),
     .phy_m_axis_tdata(s_i_tdata), .phy_m_axis_tvalid(s_i_tvalid), .phy_m_axis_tready(s_i_tready),
@@ -237,17 +239,18 @@ module aurora_loopback_tb();
       length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Concurrent read and write (single packet)");
+      repeat (10) @(posedge m_user_clk); //Wait for clear to go low
       m_rx_chdr.axis.tready = 1;
       fork
         begin
-          m_tx_chdr.push_ramp_pkt(1000, 64'd0, 64'h100, header);
+          m_tx_chdr.push_ramp_pkt(200, 64'd0, 64'h100, header);
         end
         begin
           m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
         end
       join
     crc_cache = stats.crc;    //Cache CRC for future test cases
-    `ASSERT_ERROR(stats.count==1001, "Bad packet: Length mismatch");
+    `ASSERT_ERROR(stats.count==201, "Bad packet: Length mismatch");
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Concurrent read and write (multiple packets)");

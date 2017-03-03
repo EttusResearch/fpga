@@ -177,37 +177,20 @@ module aurora_axis_mac #(
 
    assign loopback_tdata   = i_pip_tdata;
    assign loopback_tvalid  = i_pip_tvalid & bist_loopback_en_reg;
-
-   // Tag stream with the tlast escape sequence
-   axi_extract_tlast #(.WIDTH(64), .VALIDATE_CHECKSUM(PACKET_MODE)) axi_extract_tlast_i (
+   
+   axi_strip_preamble #(.WIDTH(64), .MAX_PKT_SIZE(MAX_PACKET_SIZE)) axi_strip_preamble_i (
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata(i_pip_tdata), .i_tvalid(i_pip_tvalid & ~bist_checker_en_reg & ~bist_loopback_en_reg), .i_tready(i_pip_tready),
-      .o_tdata(i_pkt_tdata), .o_tlast(i_pkt_tlast), .o_tvalid(i_pkt_tvalid), .o_tready(i_pkt_tready),
-      .checksum_error(checksum_err)
+      .o_tdata(i_gt_tdata), .o_tlast(i_gt_tlast), .o_tvalid(i_gt_tvalid), .o_tready(i_gt_tready),
+      .error(checksum_err)
    );
 
-   generate if (PACKET_MODE == 1) begin
-      axi_drop_packet #(.WIDTH(64), .MAX_PKT_SIZE(MAX_PACKET_SIZE)) ingress_pkt_gate_i (
-         .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
-         .i_tdata(i_pkt_tdata), .i_tlast(i_pkt_tlast), .i_tvalid(i_pkt_tvalid), .i_tready(i_pkt_tready),
-         .i_terror(checksum_err),
-         .o_tdata(i_gt_tdata), .o_tlast(i_gt_tlast), .o_tvalid(i_gt_tvalid), .o_tready(i_gt_tready)
-      );
-
-      axi_fifo_flop #(.WIDTH(65)) input_pipe_i1 (
-         .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
-         .i_tdata({i_gt_tlast, i_gt_tdata}), .i_tvalid(i_gt_tvalid), .i_tready(i_gt_tready),
-         .o_tdata({m_axis_tlast, m_axis_tdata}), .o_tvalid(m_axis_tvalid), .o_tready(m_axis_tready),
-         .space(), .occupied()
-      );
-   end else begin
-      axi_fifo_flop #(.WIDTH(65)) input_pipe_i1 (
-         .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
-         .i_tdata({i_pkt_tlast, i_pkt_tdata}), .i_tvalid(i_pkt_tvalid), .i_tready(i_pkt_tready),
-         .o_tdata({m_axis_tlast, m_axis_tdata}), .o_tvalid(m_axis_tvalid), .o_tready(m_axis_tready),
-         .space(), .occupied()
-      );
-   end endgenerate
+  axi_fifo_flop #(.WIDTH(65)) input_pipe_i1 (
+     .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
+     .i_tdata({i_gt_tlast, i_gt_tdata}), .i_tvalid(i_gt_tvalid), .i_tready(i_gt_tready),
+     .o_tdata({m_axis_tlast, m_axis_tdata}), .o_tvalid(m_axis_tvalid), .o_tready(m_axis_tready),
+     .space(), .occupied()
+  );
 
    always @(posedge sys_clk)
       if (sys_rst | clear_sysclk)
@@ -236,8 +219,8 @@ module aurora_axis_mac #(
       .space(), .occupied()
    );
 
-   // Remove tlast escape sequence
-   axi_embed_tlast #(.WIDTH(64), .ADD_CHECKSUM(PACKET_MODE)) axi_embed_tlast_i (
+   // Insert preamble and EOP
+   axi_add_preamble #(.WIDTH(64)) axi_add_preamble_i (
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata(o_pkt_tdata), .i_tlast(o_pkt_tlast), .i_tvalid(o_pkt_tvalid), .i_tready(o_pkt_tready),
       .o_tdata(o_pip_tdata), .o_tvalid(o_pip_tvalid), .o_tready(o_pip_tready & ~bist_gen_en_reg & ~bist_loopback_en_reg)
