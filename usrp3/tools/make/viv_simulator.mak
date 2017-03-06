@@ -47,7 +47,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 .SECONDEXPANSION:
 
 ##xsim:       Run the simulation using the Xilinx Vivado Simulator
-xsim: .check_tool $(DESIGN_SRCS) $(SIM_SRCS) $(INC_SRCS)
+xsim: .check_tool hls_ip $(DESIGN_SRCS) $(SIM_SRCS) $(INC_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
 ##xclean:     Cleanup Xilinx Vivado Simulator intermediate files
