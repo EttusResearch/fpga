@@ -12,7 +12,8 @@ module axi_dma_fifo
    parameter DEFAULT_MASK     = 30'hFF000000,
    parameter DEFAULT_TIMEOUT  = 12'd256,
    parameter SR_BASE          = 0,            //Base address for settings registers
-   parameter EXT_BIST         = 0             //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+   parameter EXT_BIST         = 0,            //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+   parameter MAX_PKT_LEN      = 12            //Log2 of maximum packet length
 ) (
    input bus_clk,
    input bus_reset, 
@@ -337,7 +338,7 @@ module axi_dma_fifo
    );
 
    //Insert package gate before output to absorb any intra-packet bubble cycles
-   axi_packet_gate #(.WIDTH(DWIDTH), .SIZE(11)) out_pkt_gate (
+   axi_packet_gate #(.WIDTH(DWIDTH), .SIZE(MAX_PKT_LEN)) out_pkt_gate (
       .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
       .i_terror(1'b0),
