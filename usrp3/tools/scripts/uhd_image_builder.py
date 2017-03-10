@@ -70,6 +70,9 @@ generate
 endgenerate
 """
 
+# List of blocks that are part of our library but that do not take part
+# in the process this tool provides
+BLACKLIST = {'radio_core', 'axi_dma_fifo'}
 
 def setup_parser():
     """
@@ -139,6 +142,14 @@ def create_vfiles(args):
     if not args.fill_with_fifos:
         num_ce = len(blocks)
     vfile = HEADER_TMPL.format(num_ce=num_ce)
+    blocks_in_blacklist = [block for block in blocks if block in BLACKLIST]
+    if len(blocks_in_blacklist):
+        print("[RFNoC ERROR]: The following blocks require special treatment and"\
+                " can't be instantiated with this tool:  ")
+        for element in blocks_in_blacklist:
+            print(" * ", element)
+        print("Remove them from the command and run the uhd_image_builder.py again.")
+        exit(0)
     print("--Using the following blocks to generate image:")
     block_count = {k: 0 for k in set(blocks)}
     for i, block in enumerate(blocks):

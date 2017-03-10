@@ -49,6 +49,9 @@ class MainWindow(QWidget):
         self.device = 'x310'
         self.buildTarget = 'X310_RFNOC_HG'
         self.max_allowed_blocks = 10
+        # List of blocks that are part of our library but that do not take place
+        # on the process this tool provides
+        self.blackList = {'noc_block_radio_core','noc_block_axi_dma_fifo','noc_block_pfb'}
 
         ##################################################
         # Buttons
@@ -258,8 +261,9 @@ class MainWindow(QWidget):
         for element in blocks:
             if element.endswith(suffix) and 'noc_block' in element :
                 element = element[:-len(suffix)]
-                block = QStandardItem(element.partition('noc_block_')[2])
-                parent.appendRow(block)
+                if element not in self.blackList:
+                    block = QStandardItem(element.partition('noc_block_')[2])
+                    parent.appendRow(block)
 
     def GRCpopulateList(self, parent, files):
         tree = ET.parse(files)
@@ -268,7 +272,7 @@ class MainWindow(QWidget):
             for param in blocks.iter('param'):
                 for key in param.iter('key'):
                     if 'fpga_module_name' in key.text:
-                        if param.findtext('value') == 'noc_block_radio_core': continue
+                        if param.findtext('value') in self.blackList: continue
                         block = QStandardItem(param.findtext('value').partition('noc_block_')[2])
                         parent.appendRow(block)
 
