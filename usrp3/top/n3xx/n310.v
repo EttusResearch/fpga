@@ -8,8 +8,8 @@ module n310
    //output FpgaGpioEn,
 
    input FPGA_REFCLK,
-   //input REF_1PPS_IN,
-   //input REF_1PPS_IN_MGMT,
+   input REF_1PPS_IN,
+   input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
    //output [1:0] CLK_MAINREF_SEL,
    output PWREN_CLK_DDR100MHZ,
@@ -53,7 +53,7 @@ module n310
    //output NPIO_2_TXSYNC_0_N, NPIO_2_TXSYNC_1_N,
 
    //GPS
-   //input GPS_1PPS,
+   input GPS_1PPS,
    //input GPS_1PPS_RAW,
    //input GPS_ALARM,
    //input GPS_LOCKOK,
@@ -65,7 +65,7 @@ module n310
    //input GPS_WARMUP,
 
    //Misc
-   //input ENET0_CLK125,
+   input ENET0_CLK125,
    //output ENET0_LED1A,
    //output ENET0_LED1B,
    //inout ENET0_PTP,
@@ -76,7 +76,7 @@ module n310
    //input [1:0] FPGA_TEST,// TODO :Check this ??
 
    //White Rabbit
-   //input WB_20MHZ_CLK,
+   input WB_20MHZ_CLK,
    output PWREN_CLK_WB_CDCM,
    output WB_CDCM_OD0,
    output WB_CDCM_OD1,
@@ -215,7 +215,7 @@ module n310
    input          DBA_CPLD_JTAG_TDI,
    output         DBA_CPLD_JTAG_TDO,
    output         DBA_CPLD_JTAG_TMS,
-   output         DBA_CPLD_JTAG_TCK
+   output         DBA_CPLD_JTAG_TCK,
 
 //   output         DbaMykSyncIn_p,
 //   output         DbaMykSyncIn_n,
@@ -228,8 +228,8 @@ module n310
 
    //input          DbaSwitcherClock
    //
-   //input USRPIO_A_MGTCLK_P,
-   //input USRPIO_A_MGTCLK_N,
+   input USRPIO_A_MGTCLK_P,
+   input USRPIO_A_MGTCLK_N,
    //input USRPIO_A_RX_0_P, USRPIO_A_RX_1_P, USRPIO_A_RX_2_P, USRPIO_A_RX_3_P,
    //input USRPIO_A_RX_0_N, USRPIO_A_RX_1_N, USRPIO_A_RX_2_N, USRPIO_A_RX_3_N,
    //output USRPIO_A_TX_0_P, USRPIO_A_TX_1_P, USRPIO_A_TX_2_P, USRPIO_A_TX_3_P,
@@ -254,8 +254,8 @@ module n310
    //inout  USRPIO_B_GP_32_P,
    //inout  USRPIO_B_GP_32_N,
    //input USRPIO_B_I2C_NINTRQ,
-   //input USRPIO_B_MGTCLK_P,
-   //input USRPIO_B_MGTCLK_N,
+   input USRPIO_B_MGTCLK_P,
+   input USRPIO_B_MGTCLK_N
    //input USRPIO_B_RX_0_P, USRPIO_B_RX_1_P, USRPIO_B_RX_2_P, USRPIO_B_RX_3_P,
    //input USRPIO_B_RX_0_N, USRPIO_B_RX_1_N, USRPIO_B_RX_2_N, USRPIO_B_RX_3_N,
    //output USRPIO_B_TX_0_P, USRPIO_B_TX_1_P, USRPIO_B_TX_2_P, USRPIO_B_TX_3_P,
@@ -271,8 +271,6 @@ module n310
    wire bus_clk;
    wire bus_rst;
    wire global_rst;
-
-   assign bus_rst = global_rst; //FIXME
 
   // Internal connections to PS
   //   GP0 -- General Purpose port 0, FPGA is the slave
@@ -499,6 +497,68 @@ module n310
       .I(FPGA_REFCLK),
       .O(ref_clk_10mhz));
 
+  ////////////////////////////////////////////////////////////////////
+  //
+  // Generate Radio Clocks from ... 
+  // FIXME this needs to be defined in final terms. Most of this is just copied from X310.
+  // CLK_IN was arbitrarily chosen. Input clk should be 200 MHz based on current clk_gen specs.
+  // Radio clock is normally 200MHz, radio_clk_2x 400MHz.
+  // In CPRI or LTE mode, radio clock is 184.32 MHz.
+  // radio_clk_2x is only to be used for clocking out TX samples to DAC
+  //
+  //----------------------------------------------------------------------------
+  //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+  //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+  //----------------------------------------------------------------------------
+  // CLK_OUT1___200.000______0.000______50.0_______92.799_____82.655
+  // CLK_OUT2___400.000____-45.000______50.0_______81.254_____82.655
+  // CLK_OUT3___400.000_____60.000______50.0_______81.254_____82.655
+  //
+  //----------------------------------------------------------------------------
+  // Input Clock   Freq (MHz)    Input Jitter (UI)
+  //----------------------------------------------------------------------------
+  // __primary_________200.000____________0.010
+  //
+  ////////////////////////////////////////////////////////////////////
+
+  wire radio_clk_locked;
+ 
+  assign radio_clk = bus_clk;
+  assign radio_clk_locked = 1'b1;
+  //radio_clk_gen radio_clk_gen (
+  //   .CLK_IN1_p(USRPIO_A_MGTCLK_P), .CLK_IN1_n(USRPIO_A_MGTCLK_P),
+  //   .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
+  //   .RESET(global_rst), .LOCKED(radio_clk_locked));
+
+  ////////////////////////////////////////////////////////////////////
+  //
+  // IJB. Radio PLL doesn't seem to lock at power up.
+  // Probably needs AD9610 to be programmed to 120 or 200MHz to get
+  // an input clock thats in the ball park for PLL configuration.
+  // Currently use busclk PLL lock signal to control this reset,
+  // but we should find a better solution, perhaps a S/W controllable
+  // reset like the ETH PHY uses so that we can reset this clock domain
+  // after programming the AD9610.
+  //
+  ////////////////////////////////////////////////////////////////////
+
+  //FIXME RESET SYNC may need more or'd inputs.
+  reset_sync radio_reset_sync (
+     .clk(radio_clk),
+     .reset_in(global_rst),
+     //FIXME EXAMPLE of various reset_in sources
+     //.reset_in(global_rst || !bus_clk_locked || sw_rst[1]),
+     .reset_out(radio_rst)
+  );
+
+  reset_sync int_reset_sync (
+     .clk(bus_clk),
+     .reset_in(global_rst),
+     .reset_out(bus_rst)
+  );
+
+
+
 
 `ifdef BUILD_1G
    wire  gige_refclk, gige_refclk_bufg;
@@ -598,6 +658,40 @@ module n310
      .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
     );
 `endif
+
+  ////////////////////////////////////////////////////////////////////
+  // PPS
+  // Support for internal, external, and GPSDO PPS inputs
+  // Every attempt to minimize propagation between the external PPS
+  // input and outputs to support daisy-chaining the signal.
+  ///////////////////////////////////////////////////////////////////
+
+  // Generate an internal PPS signal with a 25% duty cycle
+  wire int_pps;
+  pps_generator #(
+     .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
+  ) pps_gen (
+     .clk(ref_clk_10mhz), .reset(1'b0), .pps(int_pps)
+  );
+
+  // PPS MUX - selects internal, external, or gpsdo PPS
+  reg pps;
+  wire [1:0] pps_select;
+  wire pps_out_enb;
+  always @(*) begin
+     case(pps_select)
+        2'b00  :   pps = REF_1PPS_IN;
+        2'b01  :   pps = 1'b0;
+        2'b10  :   pps = int_pps;
+        2'b11  :   pps = GPS_1PPS;
+        default:   pps = 1'b0;
+     endcase
+  end
+
+  // PPS out and LED
+  assign REF_1PPS_OUT = pps & pps_out_enb;
+  assign PANEL_LED_PPS = ~pps;                                  // active low LED driver
+
 
 // ARM ethernet 0 bridge signals
   (* mark_debug = "true", keep = "true" *)
@@ -1130,7 +1224,7 @@ module n310
 
    wire             radio_clk;
    wire             radio_clk_locked;
-
+   
    wire [31:0]      rx0, rx1;
    wire [31:0]      tx0, tx1;
 
@@ -1212,13 +1306,6 @@ module n310
      else
        counter1 <= counter1 + 32'd1;
    end
-   reg [31:0] counter2;
-   always @(posedge sfp0_gt_refclk) begin
-     if (FCLK_RESET0)
-       counter2 <= 32'd0;
-     else
-       counter2 <= counter2 + 32'd1;
-   end
    reg [31:0] counter3;
    always @(posedge FCLK_CLK0) begin
      if (FCLK_RESET0)
@@ -1238,7 +1325,6 @@ module n310
    assign {SFP_0_LED_A, SFP_1_LED_A} = 2'b00;
 
    assign PANEL_LED_LINK = counter1[26];
-   assign PANEL_LED_PPS = counter2[26];
    assign PANEL_LED_REF = counter3[26];
    assign PANEL_LED_GPS = 1'b1;
 endmodule

@@ -31,11 +31,11 @@
 set_property PACKAGE_PIN   U26              [get_ports FPGA_REFCLK]
 set_property IOSTANDARD    LVCMOS33         [get_ports FPGA_REFCLK]
 #
-#set_property PACKAGE_PIN   AA18             [get_ports {REF_1PPS_IN}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN}]
+set_property PACKAGE_PIN   AA18             [get_ports {REF_1PPS_IN}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN}]
 #
-#set_property PACKAGE_PIN   AB19             [get_ports {REF_1PPS_IN_MGMT}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN_MGMT}]
+set_property PACKAGE_PIN   AB19             [get_ports {REF_1PPS_IN_MGMT}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN_MGMT}]
 #
 set_property PACKAGE_PIN   AA19             [get_ports {REF_1PPS_OUT}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_OUT}]
@@ -52,8 +52,8 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {PWREN_CLK_DDR100MHZ}]
 ## Bank 13, 3.3V
 #########################################################################################
 
-#set_property PACKAGE_PIN   W28              [get_ports {GPS_1PPS}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS}]
+set_property PACKAGE_PIN   W28              [get_ports {GPS_1PPS}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS}]
 #
 #set_property PACKAGE_PIN   U25              [get_ports {GPS_1PPS_RAW}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS_RAW}]
@@ -389,8 +389,8 @@ set_property PACKAGE_PIN   AH14             [get_ports {DBA_CPLD_JTAG_TDO}]
 #set_property PACKAGE_PIN   AJ16             [get_ports {DbaCh2TxDsaData[2]}]
 #set_property PACKAGE_PIN   AH18             [get_ports {DbaCh2TxDsaData[0]}]
 #set_property PACKAGE_PIN   AJ18             [get_ports {DbaCh2TxDsaData[1]}]
-#set_property PACKAGE_PIN   AF14             [get_ports {DbaFpgaClk_p}]
-#set_property PACKAGE_PIN   AG14             [get_ports {DbaFpgaClk_n}]
+set_property PACKAGE_PIN   AF14             [get_ports {DbaFpgaClk_p}]
+set_property PACKAGE_PIN   AG14             [get_ports {DbaFpgaClk_n}]
 #set_property PACKAGE_PIN   AG17             [get_ports {DbaFpgaSysref_p}]
 #set_property PACKAGE_PIN   AG16             [get_ports {DbaFpgaSysref_n}]
 #set_property PACKAGE_PIN   AD15             [get_ports {DbaCh2RxDsaData[3]}]
@@ -424,8 +424,8 @@ set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_MYK_SPI_*}]
 
 ### MGTs, Bank 112
 #
-#set_property PACKAGE_PIN   N8               [get_ports USRPIO_A_MGTCLK_P]
-#set_property PACKAGE_PIN   N7               [get_ports USRPIO_A_MGTCLK_N]
+set_property PACKAGE_PIN   N8               [get_ports USRPIO_A_MGTCLK_P]
+set_property PACKAGE_PIN   N7               [get_ports USRPIO_A_MGTCLK_N]
 #
 #set_property PACKAGE_PIN   P6               [get_ports USRPIO_A_RX_0_P]
 #set_property PACKAGE_PIN   P5               [get_ports USRPIO_A_RX_0_N]
@@ -542,8 +542,8 @@ set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_MYK_SPI_*}]
 #
 ### MGTs, Bank 111
 #
-#set_property PACKAGE_PIN   W8               [get_ports USRPIO_B_MGTCLK_P]
-#set_property PACKAGE_PIN   W7               [get_ports USRPIO_B_MGTCLK_N]
+set_property PACKAGE_PIN   W8               [get_ports USRPIO_B_MGTCLK_P]
+set_property PACKAGE_PIN   W7               [get_ports USRPIO_B_MGTCLK_N]
 #
 #set_property PACKAGE_PIN   AA4              [get_ports USRPIO_B_RX_0_P]
 #set_property PACKAGE_PIN   AA3              [get_ports USRPIO_B_RX_0_N]

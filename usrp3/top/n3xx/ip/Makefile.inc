@@ -14,7 +14,7 @@ include $(IP_DIR)/processing_system7_0/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 #include $(IP_DIR)/input_sample_fifo/Makefile.inc
 include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
-#include $(IP_DIR)/radio_clk_gen/Makefile.inc
+include $(IP_DIR)/radio_clk_gen/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 #include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc

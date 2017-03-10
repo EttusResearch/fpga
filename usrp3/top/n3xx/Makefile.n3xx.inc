@@ -50,7 +50,8 @@ n310_sfpp_io_core.v \
 n310.xdc \
 n310_ps.v \
 eth_switch.v \
-network_interface.v
+network_interface.v \
+timing.xdc
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)
