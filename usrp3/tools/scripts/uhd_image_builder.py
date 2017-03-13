@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Copyright 2010-2011,2014-2015 Ettus Research LLC
+Copyright 2016-2017 Ettus Research
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -109,7 +109,7 @@ def setup_parser():
         "-t", "--target",
         help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG,\
                 E310_RFNOC_sg3...]",
-         default=None)
+        default=None)
     parser.add_argument(
         "-g", "--GUI",
         help="Open Vivado GUI during the FPGA building process",
@@ -273,10 +273,10 @@ def build(args):
                 format(build_dir))
         os.chdir(build_dir)
         make_cmd = "source ./setupenv.sh "
-        if(args.clean_all):
+        if args.clean_all:
             make_cmd = make_cmd + "&& make cleanall "
         make_cmd = make_cmd + "&& make " + dtarget(args)
-        if(args.GUI):
+        if args.GUI:
             make_cmd = make_cmd + " GUI=1"
         ret_val = os.system(make_cmd)
         os.chdir(cwd)
@@ -324,7 +324,7 @@ def main():
     args = setup_parser().parse_args()
     vfile = create_vfiles(args)
     file_generator(args, vfile)
-    append_item_into_file(args.device,args.include_dir)
+    append_item_into_file(args.device, args.include_dir)
     if args.outfile is  None:
         return build(args)
     else:
@@ -334,4 +334,3 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-
