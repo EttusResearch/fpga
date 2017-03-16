@@ -335,7 +335,7 @@ module n310_eth_dispatch #(
                         header_ram_addr <= 0;
                         state <= FORWARD_XO;
                     end else if (!is_eth_dst_addr && !forward_ndest) begin
-                        header_ram_addr <= HEADER_RAM_SIZE - 1;
+                        header_ram_addr <= 0;
                         state <= FORWARD_CPU; //DROP_PACKET //TODO
                     end else if ((is_udp_dst_ports != 0) && is_chdr) begin
                         header_ram_addr <= 6;  // Jump to CHDR
