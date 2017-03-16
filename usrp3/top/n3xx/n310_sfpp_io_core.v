@@ -79,7 +79,7 @@ module n310_sfpp_io_core #(
 
    always @(posedge bus_clk) begin
       if (bus_rst) begin
-         mac_ctrl_reg <= 32'h0;
+         mac_ctrl_reg <= {31'h0, 1'b1}; // tx_enable on reset?
       end else if (reg_wr_req) begin
          case(reg_wr_addr)
             REG_MAC_CTRL_STATUS:
@@ -212,7 +212,7 @@ generate
         .tx_tready              (s_axis_tready),
         // Other
         .phy_ready              (xge_phy_resetdone),
-        .ctrl_tx_enable         (/*mac_ctrl_reg[0]*/1'b1), //FIXME: Remove hardcoded value
+        .ctrl_tx_enable         (mac_ctrl_reg[0]),
         .status_crc_error       (mac_status[0]),
         .status_fragment_error  (mac_status[1]),
         .status_txdfifo_ovflow  (mac_status[2]),
@@ -304,14 +304,14 @@ generate
          // Wishbone I/F
          .wb_clk_i(bus_clk_div2),
          .wb_rst_i(bus_rst_div2),
-         .wb_adr_i(wb_adr_i),
-         .wb_cyc_i(wb_cyc_i),
-         .wb_dat_i(wb_dat_o),
-         .wb_stb_i(wb_stb_i),
-         .wb_we_i(wb_we_i),
-         .wb_ack_o(wb_ack_o),
-         .wb_dat_o(wb_dat_i),
-         .wb_int_o(wb_int_o),
+         .wb_adr_i(),
+         .wb_cyc_i(),
+         .wb_dat_i(),
+         .wb_stb_i(),
+         .wb_we_i(),
+         .wb_ack_o(),
+         .wb_dat_o(),
+         .wb_int_o(),
          // Debug
          .debug_tx(), .debug_rx()
       );
