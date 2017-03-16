@@ -208,11 +208,15 @@ def append_item_into_file(device, include_dir):
 
     target_dir = device_dict(device.lower())
     if include_dir is not None:
-        for dirs in include_dir:
+        for directory in include_dir:
+            dirs = os.path.join(directory, '')
             checkdir_v(dirs)
             oot_srcs_file = os.path.join(dirs, 'Makefile.srcs')
             dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
                     target_dir, 'Makefile.srcs')
+            oot_srcs_list = readfile(oot_srcs_file)
+            oot_srcs_list = [w.replace('SOURCES_PATH', dirs) for w in oot_srcs_list]
+            dest_srcs_list = readfile(dest_srcs_file)
             prefixpattern = re.escape('$(addprefix ' + dirs + ', \\\n')
             linepattern = re.escape('RFNOC_OOT_SRCS = \\\n')
             oldfile = open(dest_srcs_file, 'r').read()
@@ -225,10 +229,12 @@ def append_item_into_file(device, include_dir):
                     return
                 else:
                     last_line = lines[-1]
-                    srcs = "".join(readfile(oot_srcs_file))
+                    srcs = "".join(oot_srcs_list)
             else:
                 last_line = prefixlines[-1]
-                srcs = "".join(compare(oot_srcs_file, dest_srcs_file))
+                notin = []
+                notin = [item for item in oot_srcs_list if item not in dest_srcs_list]
+                srcs = "".join(notin)
             newfile = oldfile.replace(last_line, last_line + srcs)
             open(dest_srcs_file, 'w').write(newfile)
 
@@ -307,7 +313,7 @@ def checkdir_v(include_dir):
     """
     Checks the existance of verilog files in the given include dir
     """
-    nfiles = glob.glob(include_dir+'*.v')
+    nfiles = glob.glob(os.path.join(include_dir,'')+'*.v')
     if len(nfiles) == 0:
         print('[ERROR] No verilog files found in the given directory')
         exit(0)
