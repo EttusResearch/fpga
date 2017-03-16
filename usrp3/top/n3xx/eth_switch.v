@@ -269,42 +269,24 @@ module eth_switch #(
    // Add pad of 6 empty bytes before MAC addresses of new Rxed packet so that IP
    // headers are alligned.
    //
-   reg c2e_tvalid_reg;
-   wire sof;
-   assign sof = ~c2e_tvalid_reg & c2e_tvalid;
-   always @(posedge clk) begin
-     if (reset)
-       c2e_tvalid_reg <= 1'b0;
-     else begin
-       c2e_tvalid_reg <= c2e_tvalid;
-     end
-   end
-   // 6 octet padding
-   assign c2e_tready = 1'b1;
-   xge64_to_axi64  #(.LABEL(1'b0)) arm_framer
-     (
-      .clk(clk),
-      .reset(reset),
-      .clear(clear),
-      .datain(c2e_tdata),
-      .occ(c2e_tuser[2:0]),
-      .sof(sof),
-      .eof(c2e_tlast),
-      .err(c2e_tuser[3]),
-      .valid(c2e_tvalid),
-      .axis_tdata(c2e_tdata_int2),
-      .axis_tuser(c2e_tuser_int2),
-      .axis_tlast(c2e_tlast_int2),
-      .axis_tvalid(c2e_tvalid_int2),
-      .axis_tready(c2e_tready_int2)
-      );
+  arm_framer inst_arm_framer
+  (
+    .clk(clk),
+    .reset(reset),
+    .clear(clear),
 
-   // xge64_to_axi64 block violates axi, added fifo to take care of tready
-   axi_fifo_short #(.WIDTH(69)) cpuout_fifo (
-    .clk(clk), .reset(reset), .clear(clear),
-    .i_tdata({c2e_tlast_int2,c2e_tdata_int2,c2e_tuser_int2}), .i_tvalid(c2e_tvalid_int2), .i_tready(c2e_tready_int2),
-    .o_tdata({c2e_tlast_int,c2e_tdata_int,c2e_tuser_int}), .o_tvalid(c2e_tvalid_int), .o_tready(c2e_tready_int),
-    .space(), .occupied());
+    .s_axis_tdata(c2e_tdata),
+    .s_axis_tuser(c2e_tuser),
+    .s_axis_tlast(c2e_tlast),
+    .s_axis_tvalid(c2e_tvalid),
+    .s_axis_tready(c2e_tready),
+
+    .m_axis_tdata(c2e_tdata_int),
+    .m_axis_tuser(c2e_tuser_int),
+    .m_axis_tlast(c2e_tlast_int),
+    .m_axis_tvalid(c2e_tvalid_int),
+    .m_axis_tready(c2e_tready_int)
+  );
 
    axi_mux4 #(.PRIO(0), .WIDTH(68)) eth_mux
      (.clk(clk), .reset(reset), .clear(clear),
