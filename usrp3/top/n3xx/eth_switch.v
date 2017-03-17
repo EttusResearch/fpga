@@ -137,7 +137,7 @@ module eth_switch #(
     .reset      (reset),
     .clear      (clear),
     //RegPort
-    .reg_clk    (bus_clk),
+    .reg_clk    (reg_clk),
     .reg_wr_req (reg_wr_req),
     .reg_wr_addr(reg_wr_addr),
     .reg_wr_data(reg_wr_data),

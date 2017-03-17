@@ -484,7 +484,7 @@ module n310
       .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
    ) fclk_inst (
       .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(FCLK_CLK0),   // 1-bit clock input
+      .C(gige_refclk),   // 1-bit clock input
       .CE(1'b1), // 1-bit clock enable input
       .D1(1'b0), // 1-bit data input (positive edge)
       .D2(1'b1), // 1-bit data input (negative edge)
@@ -499,7 +499,7 @@ module n310
 
   ////////////////////////////////////////////////////////////////////
   //
-  // Generate Radio Clocks from ... 
+  // Generate Radio Clocks from ...
   // FIXME this needs to be defined in final terms. Most of this is just copied from X310.
   // CLK_IN was arbitrarily chosen. Input clk should be 200 MHz based on current clk_gen specs.
   // Radio clock is normally 200MHz, radio_clk_2x 400MHz.
@@ -522,7 +522,7 @@ module n310
   ////////////////////////////////////////////////////////////////////
 
   wire radio_clk_locked;
- 
+
   assign radio_clk = bus_clk;
   assign radio_clk_locked = 1'b1;
   //radio_clk_gen radio_clk_gen (
@@ -860,7 +860,7 @@ module n310
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
-      .PORTNUM(8'd0)
+      .PORTNUM(8'd1)
    ) network_interface_1 (
       .areset(global_rst),
       .gt_refclk(sfp1_gt_refclk),
@@ -956,7 +956,7 @@ module n310
       .c2e_tready(arm_eth1_tx_tready)
    );
 
-
+  // TODO
   // loopback test
   /*
   assign      arm_eth0_rx_tdata = arm_eth1_tx_tdata;
@@ -1224,7 +1224,7 @@ module n310
 
    wire             radio_clk;
    wire             radio_clk_locked;
-   
+
    wire [31:0]      rx0, rx1;
    wire [31:0]      tx0, tx1;
 

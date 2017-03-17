@@ -100,8 +100,8 @@ module one_gig_eth_loopback_tb();
      .reset(GSR),                  // Asynchronous reset for entire core.
      .independent_clock(independent_clock),   //TODO: Which clock is this?
      .pma_reset_out(pma_reset),
-     .gt0_qplloutclk_in(1'b1),
-     .gt0_qplloutrefclk_in(1'b1),
+     .gt0_qplloutclk_in(gt0_qplloutclk),
+     .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
      // Tranceiver Interface
      .gtrefclk(gige_refclk),            // Reference clock for MGT: 125MHz, very high quality.
      .gtrefclk_bufg(gige_refclk_bufg),       // Reference clock routed through a BUFG
@@ -179,8 +179,8 @@ module one_gig_eth_loopback_tb();
      .reset(GSR),                  // Asynchronous reset for entire core.
      .independent_clock(independent_clock),   //TODO: Which clock is this?
      .pma_reset_out(),
-     .gt0_qplloutclk_in(1'b1),
-     .gt0_qplloutrefclk_in(1'b1),
+     .gt0_qplloutclk_in(gt0_qplloutclk),
+     .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
      // Tranceiver Interface
      .gtrefclk(gige_refclk),            // Reference clock for MGT: 125MHz, very high quality.
      .gtrefclk_bufg(gige_refclk_bufg),       // Reference clock routed through a BUFG

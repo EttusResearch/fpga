@@ -65,12 +65,12 @@ $(PACKET_PROC_SRCS) \
 #include $(BASE_DIR)/../sim/axi/Makefile.srcs
 
 # Define only one toplevel module
-SIM_TOP = ten_gig_eth_loopback_tb
+SIM_TOP = arm_to_sfp_tb
 # Simulation runtime in microseconds
 SIM_RUNTIME_US = 30000
 
 SIM_SRCS = \
-$(abspath ten_gig_eth_loopback_tb.sv) \
+$(abspath arm_to_sfp_tb.sv) \
 $(SIM_GENERAL_SRCS) \
 $(SIM_CONTROL_SRCS) \
 $(SIM_AXI_SRCS)

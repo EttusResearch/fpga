@@ -217,9 +217,10 @@ module network_interface
    `ifdef SFP0_1GBE
       .gt0_qplloutclk(gt0_qplloutclk),
       .gt0_qplloutrefclk(gt0_qplloutrefclk),
-      .pma_reset_out(pma_reset),
+      .pma_reset_out(pma_reset_out),
    `endif
    `ifdef SFP0_10GBE
+      .qpllreset(qpllreset),
       .qplllock(qplllock),
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
@@ -231,7 +232,7 @@ module network_interface
 
       .sfpp_rxlos(1'b0/*SFP_0_LOS*/),
       .sfpp_tx_fault(1'b0/*SFP_0_TXFAULT*/),
-      .sfpp_tx_disable(/*SFP_0_TXDISABLE*/),
+      .sfpp_tx_disable(sfpp_tx_disable),
 
       //RegPort
       .reg_wr_req(reg_wr_req),

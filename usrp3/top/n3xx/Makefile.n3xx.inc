@@ -58,7 +58,7 @@ SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(
 endif
 
 ifdef BUILD_1G
-SFP_SERDES_SRCS += $(abspath n310_1ge.xdc) $(ONE_GIGE_PHY_SRCS) $(IP_ONE_GIGE_PHY_XCI_SRCS)
+SFP_SERDES_SRCS += $(abspath n310_1ge.xdc) $(ONE_GIGE_PHY_SRCS) $(IP_ONE_GIGE_PHY_XCI_SRCS) $(abspath ../../lib/xge_interface/axi64_to_xge64.v)
 endif
 
 ifdef BUILD_AURORA
