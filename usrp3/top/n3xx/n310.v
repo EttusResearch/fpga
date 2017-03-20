@@ -484,7 +484,7 @@ module n310
       .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
    ) fclk_inst (
       .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(gige_refclk),   // 1-bit clock input
+      .C(FCLK_CLK0),   // 1-bit clock input
       .CE(1'b1), // 1-bit clock enable input
       .D1(1'b0), // 1-bit data input (positive edge)
       .D2(1'b1), // 1-bit data input (negative edge)
@@ -965,21 +965,6 @@ module n310
       .c2e_tready(arm_eth1_tx_tready)
    );
 
-  // TODO
-  // loopback test
-  /*
-  assign      arm_eth0_rx_tdata = arm_eth1_tx_tdata;
-  assign      arm_eth0_rx_tvalid = arm_eth1_tx_tvalid;
-  assign      arm_eth0_rx_tlast = arm_eth1_tx_tlast;
-  assign      arm_eth0_rx_tuser = arm_eth1_tx_tuser;
-  assign      arm_eth1_tx_tready = arm_eth0_rx_tready;
-
-  assign      arm_eth1_rx_tdata = arm_eth0_tx_tdata;
-  assign      arm_eth1_rx_tvalid = arm_eth0_tx_tvalid;
-  assign      arm_eth1_rx_tlast = arm_eth0_tx_tlast;
-  assign      arm_eth1_rx_tuser = arm_eth0_tx_tuser;
-  assign      arm_eth0_tx_tready = arm_eth1_rx_tready;
-*/
 
   assign      IRQ_F2P[0] = arm_eth0_rx_irq;
   assign      IRQ_F2P[1] = arm_eth0_tx_irq;
