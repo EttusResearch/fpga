@@ -20,6 +20,7 @@ include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
 include $(IP_DIR)/axi_interconnect/Makefile.inc
 include $(IP_DIR)/axis_fifo_to_axi4lite/Makefile.inc
+include $(IP_DIR)/axi_eth_dma/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
 
@@ -38,7 +39,9 @@ $(IP_BUS_CLK_GEN_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(IP_RADIO_CLK_GEN_SRCS) \
+$(IP_AXI_ETH_DMA_SRCS) \
 $(IP_PROCESSING_SYSTEM7_0_SRCS)
+
 
 IP_ONE_GIGE_PHY_XCI_SRCS = \
 $(IP_ONE_GIG_ETH_PCS_PMA_SRCS) \
@@ -77,6 +80,7 @@ $(IP_FIFO_SHORT_2CLK_OUTS) \
 $(IP_ONE_GIG_ETH_PCS_PMA_OUTS) \
 $(IP_PROCESSING_SYSTEM7_OUTS) \
 $(IP_RADIO_CLK_GEN_OUTS) \
+$(IP_AXI_ETH_DMA_OUTS) \
 $(IP_TEN_GIG_ETH_PCS_PMA_OUTS) \
 $(IP_AURORA_64B66B_PCS_PMA_OUTS)
 
