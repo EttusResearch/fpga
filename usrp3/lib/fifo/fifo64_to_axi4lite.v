@@ -100,7 +100,7 @@ module fifo64_to_axi4lite
     .o_tready(rx_tready)
   );
 
-  wire [3:0] rx_tkeep = (rx_tuser == 2'd0) ? 4'b1111 :
+  wire [3:0] rx_tkeep = ~rx_tlast ? 4'b1111 : (rx_tuser == 2'd0) ? 4'b1111 :
              (rx_tuser == 2'd1) ? 4'b0001 :
              (rx_tuser == 2'd2) ? 4'b0011 :
              (rx_tuser == 2'd3) ? 4'b0111 :
