@@ -20,6 +20,7 @@ include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
 include $(IP_DIR)/axi_interconnect/Makefile.inc
 include $(IP_DIR)/axis_fifo_to_axi4lite/Makefile.inc
+include $(IP_DIR)/axi_interrupt_controller/Makefile.inc
 include $(IP_DIR)/axi_eth_dma/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
@@ -34,6 +35,7 @@ $(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_32_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_64_SRCS) \
 $(IP_AXI_INTERCONNECT_SRCS) \
+$(IP_AXI_INTERRUPT_CONTROLLER_SRCS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_SRCS) \
 $(IP_BUS_CLK_GEN_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
@@ -70,6 +72,7 @@ $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
 $(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_OUTS) \
 $(IP_AXI_INTERCONNECT_OUTS) \
+$(IP_AXI_INTERRUPT_CONTROLLER_OUTS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_32_OUTS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_64_OUTS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_OUTS) \
