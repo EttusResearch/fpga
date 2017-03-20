@@ -39,6 +39,7 @@ module aurora_axis_mac #(
    output [31:0]     overruns,
    output [31:0]     soft_errors,
    output reg [31:0] checksum_errors,
+   output critical_err,
    // BIST Interface (Synchronous to sys_clk)
    input             bist_gen_en,
    input  [5:0]      bist_gen_rate,
@@ -182,7 +183,7 @@ module aurora_axis_mac #(
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata(i_pip_tdata), .i_tvalid(i_pip_tvalid & ~bist_checker_en_reg & ~bist_loopback_en_reg), .i_tready(i_pip_tready),
       .o_tdata(i_gt_tdata), .o_tlast(i_gt_tlast), .o_tvalid(i_gt_tvalid), .o_tready(i_gt_tready),
-      .error(checksum_err)
+      .crc_err(checksum_err), .pkt_dropped(), .crit_error(critical_err)
    );
 
   axi_fifo_flop #(.WIDTH(65)) input_pipe_i1 (
@@ -195,7 +196,7 @@ module aurora_axis_mac #(
    always @(posedge sys_clk)
       if (sys_rst | clear_sysclk)
          checksum_errors <= 32'd0;
-      else if ((PACKET_MODE == 1) && i_pkt_tvalid && i_pkt_tready && checksum_err)
+      else if (checksum_err)
          checksum_errors <= checksum_errors + 32'd1;
 
    // ----------------------------------------------

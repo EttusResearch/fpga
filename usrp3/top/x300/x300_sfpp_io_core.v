@@ -325,6 +325,7 @@ generate
          .overruns(overruns),
          .soft_errors(),
          .checksum_errors(checksum_errors),
+         .critical_err(mac_crit_err),
          // BIST Interface (Synchronous to sys_clk)
          .bist_gen_en(bist_gen_en),
          .bist_gen_rate(bist_gen_rate),
@@ -334,6 +335,16 @@ generate
          .bist_checker_samps(bist_checker_samps),
          .bist_checker_errors(bist_checker_errors)
       );
+      
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
 
       assign m_axis_tuser = 4'd0;
 
@@ -361,13 +372,15 @@ generate
          .out({mac_clear, phy_areset, bist_gen_rate, bist_loopback_en, bist_gen_en, bist_checker_en}), .changed()
       );
 
-      wire channel_up_bclk, hard_err_bclk, soft_err_bclk;
+      wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk;
       synchronizer #(.INITIAL_VAL(1'b0)) channel_up_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(channel_up), .out(channel_up_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) hard_err_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(hard_err), .out(hard_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) soft_err_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
+      synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk)); 
 
       reg [19:0]  bist_lock_latency;
       always @(posedge bus_clk) begin
@@ -377,8 +390,24 @@ generate
             bist_lock_latency <= bist_lock_latency + 20'd1;
       end
 
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
+
       wire [31:0] core_status = {
-         12'h0,                     //[31:20]
+         6'h0,                      //[31:26]
+         mac_crit_err_latch,        //[25]
+         1,                         //[24] mmcm_locked_bclk
+         1,                         //[23] gt_pll_locked_bclk
+         0,                         //[22] qpll_refclklost_bclk
+         1,                         //[21] qpll_lock_bclk
+         0,                         //[20] qpll_reset_bclk
          bist_lock_latency[19:4],   //[19:4]
          bist_checker_locked,       //[3]
          soft_err_bclk,             //[2]
