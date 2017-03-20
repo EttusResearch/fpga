@@ -76,7 +76,10 @@ module n310_core
   input  [63:0] e2v1_tdata,
   input         e2v1_tlast,
   input         e2v1_tvalid,
-  output        e2v1_tready
+  output        e2v1_tready,
+
+  output [2:0]  spi_mux,
+  output        cpld_reset
 );
 
   // Computation engines that need access to IO
@@ -165,9 +168,12 @@ module n310_core
   reg [31:0] scratch_reg;
   reg [7:0]  local_addr_reg;
 
+  assign spi_mux = scratch_reg[2:0];
+  assign cpld_reset = scratch_reg[3];
+
   always @ (posedge bus_clk)
     if (bus_rst) begin
-      scratch_reg <= 32'hdead_babe;
+      scratch_reg <= 32'h2;
     end
     else begin
     if (reg_wr_req)

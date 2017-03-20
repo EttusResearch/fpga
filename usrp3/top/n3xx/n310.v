@@ -212,8 +212,8 @@ module n310
    output         DBA_MYK_SPI_SCLK,
 //   input          DBA_MykIntrq,
 
-   input          DBA_CPLD_JTAG_TDI,
-   output         DBA_CPLD_JTAG_TDO,
+   output         DBA_CPLD_JTAG_TDI,
+   input          DBA_CPLD_JTAG_TDO,
    output         DBA_CPLD_JTAG_TMS,
    output         DBA_CPLD_JTAG_TCK,
 
@@ -1406,6 +1406,11 @@ module n310
   (* mark_debug = "true", keep = "true" *)
   wire [63:0] ps_gpio_in;
 
+  assign DBA_CPLD_JTAG_TCK = ps_gpio_out[0];
+  assign DBA_CPLD_JTAG_TDI = ps_gpio_out[1];
+  assign DBA_CPLD_JTAG_TMS = ps_gpio_out[2];
+  assign ps_gpio_in[3]     = DBA_CPLD_JTAG_TDO;
+
   // Processing System
   n310_ps inst_n310_ps
   (
@@ -1612,7 +1617,9 @@ module n310
    ///////////////////////////////////////////////////////
 
    // Drive CPLD Address line with PS GPIO
-   assign DBA_CPLD_ADDR             = ps_gpio_out[3:1];
+   wire [2:0]                         spi_mux;
+   wire                               cpld_reset;
+   assign DBA_CPLD_ADDR             = spi_mux;
 
    // SPI to CPLD
    assign DBA_CPLD_SPI_SCLK_ATR_RX2 = spi0_sclk;
@@ -1621,7 +1628,7 @@ module n310
    assign DBA_CPLD_SYNC_ATR_RX1     = 1'b0;
    assign DBA_CPLD_SPI_CSB_ATR_TX1  = spi0_ss0;
 
-   assign DBA_CPLD_RESET_N          = ps_gpio_out[0];
+   assign DBA_CPLD_RESET_N          = cpld_reset;
 
    assign DBA_MYK_SPI_CS_N          = spi0_ss1;
    assign DBA_MYK_SPI_SCLK          = spi0_sclk;
@@ -1708,7 +1715,9 @@ module n310
     .e2v1_tdata(e2v1_tdata),
     .e2v1_tlast(e2v1_tlast),
     .e2v1_tvalid(e2v1_tvalid),
-    .e2v1_tready(e2v1_tready)
+    .e2v1_tready(e2v1_tready),
+    .spi_mux(spi_mux),
+    .cpld_reset(cpld_reset)
   );
 
    reg [31:0] counter1;
