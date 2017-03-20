@@ -704,6 +704,7 @@ module n310
   wire        arm_eth0_tx_tready;
   (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth0_tx_tuser;
+  wire [7:0]  arm_eth0_tx_tkeep;
 
   (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth0_rx_tdata;
@@ -715,9 +716,12 @@ module n310
   wire        arm_eth0_rx_tready;
   (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth0_rx_tuser;
+  wire [7:0]  arm_eth0_rx_tkeep;
+
 
   (* mark_debug = "true", keep = "true" *)
-  wire        arm_eth0_irq;
+  wire        arm_eth0_rx_irq;
+  wire        arm_eth0_tx_irq;
 
   // ARM ethernet 1 bridge signals
   (* mark_debug = "true", keep = "true" *)
@@ -730,6 +734,8 @@ module n310
   wire        arm_eth1_tx_tready;
   (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth1_tx_tuser;
+  wire [7:0]  arm_eth1_tx_tkeep;
+
 
   (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth1_rx_tdata;
@@ -741,9 +747,12 @@ module n310
   wire        arm_eth1_rx_tready;
   (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth1_rx_tuser;
+  wire [7:0]  arm_eth1_rx_tkeep;
 
   (* mark_debug = "true", keep = "true" *)
-  wire        arm_eth1_irq;
+  wire        arm_eth1_tx_irq;
+  wire        arm_eth1_rx_irq;
+
 
    network_interface #(
 `ifdef SFP0_10GBE
@@ -837,14 +846,14 @@ module n310
 
       // Ethernet to CPU
       .e2c_tdata(arm_eth0_rx_tdata),
-      .e2c_tuser(arm_eth0_rx_tuser),
+      .e2c_tkeep(arm_eth0_rx_tkeep),
       .e2c_tlast(arm_eth0_rx_tlast),
       .e2c_tvalid(arm_eth0_rx_tvalid),
       .e2c_tready(arm_eth0_rx_tready),
 
       // CPU to Ethernet
       .c2e_tdata(arm_eth0_tx_tdata),
-      .c2e_tuser(arm_eth0_tx_tuser),
+      .c2e_tkeep(arm_eth0_tx_tkeep),
       .c2e_tlast(arm_eth0_tx_tlast),
       .c2e_tvalid(arm_eth0_tx_tvalid),
       .c2e_tready(arm_eth0_tx_tready)
@@ -943,14 +952,14 @@ module n310
 
       // Ethernet to CPU
       .e2c_tdata(arm_eth1_rx_tdata),
-      .e2c_tuser(arm_eth1_rx_tuser),
+      .e2c_tkeep(arm_eth1_rx_tkeep),
       .e2c_tlast(arm_eth1_rx_tlast),
       .e2c_tvalid(arm_eth1_rx_tvalid),
       .e2c_tready(arm_eth1_rx_tready),
 
       // CPU to Ethernet
       .c2e_tdata(arm_eth1_tx_tdata),
-      .c2e_tuser(arm_eth1_tx_tuser),
+      .c2e_tkeep(arm_eth1_tx_tkeep),
       .c2e_tlast(arm_eth1_tx_tlast),
       .c2e_tvalid(arm_eth1_tx_tvalid),
       .c2e_tready(arm_eth1_tx_tready)
@@ -972,8 +981,10 @@ module n310
   assign      arm_eth0_tx_tready = arm_eth1_rx_tready;
 */
 
-  assign      IRQ_F2P[0] = arm_eth0_irq;
-  assign      IRQ_F2P[1] = arm_eth1_irq;
+  assign      IRQ_F2P[0] = arm_eth0_rx_irq;
+  assign      IRQ_F2P[1] = arm_eth0_tx_irq;
+  assign      IRQ_F2P[2] = arm_eth1_rx_irq;
+  assign      IRQ_F2P[3] = arm_eth1_tx_irq;
 
   fifo64_to_axi4lite inst_fifo64_to_axi4lite0
   (

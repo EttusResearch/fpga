@@ -98,13 +98,13 @@ module network_interface
 
    // CPU
    output  [63:0]  e2c_tdata,
-   output  [3:0]   e2c_tuser,
+   output  [7:0]   e2c_tkeep,
    output          e2c_tlast,
    output          e2c_tvalid,
    input           e2c_tready,
 
    input   [63:0]  c2e_tdata,
-   input   [3:0]   c2e_tuser,
+   input   [7:0]   c2e_tkeep,
    input           c2e_tlast,
    input           c2e_tvalid,
    output          c2e_tready
@@ -185,6 +185,28 @@ module network_interface
       .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
    );
 
+   wire [3:0] e2c_tuser;
+
+   assign e2c_tkeep = ~e2c_tlast ? 8'b1111_1111
+                    : (e2c_tuser == 4'd0) ? 8'b1111_1111
+                    : (e2c_tuser == 4'd1) ? 8'b0000_0001
+                    : (e2c_tuser == 4'd2) ? 8'b0000_0011
+                    : (e2c_tuser == 4'd3) ? 8'b0000_0111
+                    : (e2c_tuser == 4'd4) ? 8'b0000_1111
+                    : (e2c_tuser == 4'd5) ? 8'b0001_1111
+                    : (e2c_tuser == 4'd6) ? 8'b0011_1111
+                    : 8'b0111_1111;
+
+   wire [3:0] c2e_tuser = ~c2e_tlast ? 4'd0
+                    : (c2e_tkeep == 8'b1111_1111) ? 4'd0
+                    : (c2e_tkeep == 8'b1111_1110) ? 4'd7
+                    : (c2e_tkeep == 8'b1111_1100) ? 4'd6
+                    : (c2e_tkeep == 8'b1111_1000) ? 4'd5
+                    : (c2e_tkeep == 8'b1111_0000) ? 4'd4
+                    : (c2e_tkeep == 8'b1110_0000) ? 4'd3
+                    : (c2e_tkeep == 8'b1100_0000) ? 4'd2
+                    : (c2e_tkeep == 8'b1000_0000) ? 4'd1
+                    : 4'd0;
 
    //////////////////////////////////////////////////////////////////////
    //
@@ -321,15 +343,17 @@ module network_interface
         .xi_tvalid(xi_tvalid),
         .xi_tready(xi_tready),
 
-        // Ethernet to CPU
-        .e2c_tdata(e2c_tdata),
+        // Ethernet to CPU, also endian swap here
+        .e2c_tdata({e2c_tdata[7:0], e2c_tdata[15:8], e2c_tdata[23:16], e2c_tdata[31:24],
+                    e2c_tdata[39:32], e2c_tdata[47:40], e2c_tdata[55:48], e2c_tdata[63:56]}),
         .e2c_tuser(e2c_tuser),
         .e2c_tlast(e2c_tlast),
         .e2c_tvalid(e2c_tvalid),
         .e2c_tready(e2c_tready),
 
-        // CPU to Ethernet
-        .c2e_tdata(c2e_tdata),
+        // CPU to Ethernet, also endian swap here
+        .c2e_tdata({c2e_tdata[7:0], c2e_tdata[15:8], c2e_tdata[23:16], c2e_tdata[31:24],
+                    c2e_tdata[39:32], c2e_tdata[47:40], c2e_tdata[55:48], c2e_tdata[63:56]}),
         .c2e_tuser(c2e_tuser),
         .c2e_tlast(c2e_tlast),
         .c2e_tvalid(c2e_tvalid),
