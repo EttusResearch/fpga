@@ -139,13 +139,13 @@ module axil_regport_master #(
       end
    end
 
-   axis_2clk_fifo #( .WIDTH(68), .MODE("SRL32"), .PIPELINE("NONE") ) wr_fifo_2clk_i (
-      .s_axis_areset(~s_axi_aresetn), .s_axis_aclk(s_axi_aclk),
-      .s_axis_tdata({s_axi_wstrb, wr_addr_cache, s_axi_wdata}),
-      .s_axis_tvalid(wr_fifo_valid), .s_axis_tready(wr_fifo_ready),
-      .m_axis_aclk(reg_clk),
-      .m_axis_tdata({reg_wr_keep, reg_wr_addr, reg_wr_data}),
-      .m_axis_tvalid(reg_wr_req), .m_axis_tready(1'b1)
+   axi_fifo_2clk #( .WIDTH(68)) wr_fifo_2clk_i (
+      .reset(~s_axi_aresetn), .i_aclk(s_axi_aclk),
+      .i_tdata({s_axi_wstrb, wr_addr_cache, s_axi_wdata}),
+      .i_tvalid(wr_fifo_valid), .i_tready(wr_fifo_ready),
+      .o_aclk(reg_clk),
+      .o_tdata({reg_wr_keep, reg_wr_addr, reg_wr_data}),
+      .o_tvalid(reg_wr_req), .o_tready(1'b1)
    );
 
    //----------------------------------------------------------
@@ -204,22 +204,22 @@ module axil_regport_master #(
       end
    end
 
-   axis_2clk_fifo #( .WIDTH(32), .MODE("SRL32"), .PIPELINE("NONE") ) readreq_fifo_2clk_i (
-      .s_axis_areset(~s_axi_aresetn), .s_axis_aclk(s_axi_aclk),
-      .s_axis_tdata({rd_addr_rel[AWIDTH-1:ADDR_LSB], {ADDR_LSB{1'b0}}}),
-      .s_axis_tvalid(s_axi_arready && s_axi_arvalid), .s_axis_tready(rdreq_fifo_ready),
-      .m_axis_aclk(reg_clk),
-      .m_axis_tdata(reg_rd_addr),
-      .m_axis_tvalid(reg_rd_req), .m_axis_tready(1'b1)
+   axi_fifo_2clk #( .WIDTH(32)) readreq_fifo_2clk_i (
+      .reset(~s_axi_aresetn), .i_aclk(s_axi_aclk),
+      .i_tdata({rd_addr_rel[AWIDTH-1:ADDR_LSB], {ADDR_LSB{1'b0}}}),
+      .i_tvalid(s_axi_arready && s_axi_arvalid), .i_tready(rdreq_fifo_ready),
+      .o_aclk(reg_clk),
+      .o_tdata(reg_rd_addr),
+      .o_tvalid(reg_rd_req), .o_tready(1'b1)
    );
 
-   axis_2clk_fifo #( .WIDTH(32), .MODE("SRL32"), .PIPELINE("NONE") ) rdresp_fifo_2clk_i (
-      .s_axis_areset(~s_axi_aresetn), .s_axis_aclk(reg_clk),
-      .s_axis_tdata(reg_rd_data),
-      .s_axis_tvalid(reg_rd_resp && read_pending), .s_axis_tready(/* lossy */),
-      .m_axis_aclk(s_axi_aclk),
-      .m_axis_tdata(rdresp_fifo_data),
-      .m_axis_tvalid(rdresp_fifo_valid), .m_axis_tready(s_axi_rvalid && (s_axi_rresp == 2'b00))
+   axi_fifo_2clk #( .WIDTH(32)) rdresp_fifo_2clk_i (
+      .reset(~s_axi_aresetn), .i_aclk(reg_clk),
+      .i_tdata(reg_rd_data),
+      .i_tvalid(reg_rd_resp && read_pending), .i_tready(/* lossy */),
+      .o_aclk(s_axi_aclk),
+      .o_tdata(rdresp_fifo_data),
+      .o_tvalid(rdresp_fifo_valid), .o_tready(s_axi_rvalid && (s_axi_rresp == 2'b00))
    );
 
 endmodule
