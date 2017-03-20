@@ -179,8 +179,8 @@ module n310_ps
   input             M_AXI_GP0_RVALID,
   output            M_AXI_GP0_RREADY,
   input [15:0]      IRQ_F2P,
-  input [31:0]      GPIO_I,
-  output [31:0]     GPIO_O,
+  input [63:0]      GPIO_I,
+  output [63:0]     GPIO_O,
   output            FCLK_CLK0,
   output            FCLK_RESET0,
   output            FCLK_CLK1,
@@ -452,6 +452,9 @@ module n310_ps
     .USB0_PORT_INDCTL(),
     .USB0_VBUS_PWRSELECT(),
     .USB0_VBUS_PWRFAULT(1'b0),
+
+    .GPIO_O(GPIO_O),
+    .GPIO_I(GPIO_I),
 
     .M_AXI_GP0_ARVALID(processing_system7_M_AXI_GP0_ARVALID),
     .M_AXI_GP0_AWVALID(processing_system7_M_AXI_GP0_AWVALID),
