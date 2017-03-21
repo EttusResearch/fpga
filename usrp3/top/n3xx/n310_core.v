@@ -16,27 +16,27 @@ module n310_core
   input         bus_clk,
   input         bus_rst,
 
-  input [31:0]  s_axi_awaddr,
-  input         s_axi_awvalid,
-  output        s_axi_awready,
+  input [REG_AWIDTH-1:0]   s_axi_awaddr,
+  input                    s_axi_awvalid,
+  output                   s_axi_awready,
 
-  input [31:0]  s_axi_wdata,
-  input [3:0]   s_axi_wstrb,
-  input         s_axi_wvalid,
-  output        s_axi_wready,
+  input [REG_DWIDTH-1:0]   s_axi_wdata,
+  input [REG_DWIDTH/8-1:0] s_axi_wstrb,
+  input                    s_axi_wvalid,
+  output                   s_axi_wready,
 
-  output [1:0]  s_axi_bresp,
-  output        s_axi_bvalid,
-  input         s_axi_bready,
+  output [1:0]             s_axi_bresp,
+  output                   s_axi_bvalid,
+  input                    s_axi_bready,
 
-  input [31:0]  s_axi_araddr,
-  input         s_axi_arvalid,
-  output        s_axi_arready,
+  input [REG_AWIDTH-1:0]   s_axi_araddr,
+  input                    s_axi_arvalid,
+  output                   s_axi_arready,
 
-  output [31:0] s_axi_rdata,
-  output [1:0]  s_axi_rresp,
-  output        s_axi_rvalid,
-  input         s_axi_rready,
+  output [REG_DWIDTH-1:0]  s_axi_rdata,
+  output [1:0]             s_axi_rresp,
+  output                   s_axi_rvalid,
+  input                    s_axi_rready,
 
   // Radio 0
   input  [31:0] rx0,
@@ -255,14 +255,14 @@ module n310_core
       .ce_clk(radio_clk),
       .ce_rst(radio_rst),
       //AXIS data to/from crossbar
-      .i_tdata(ioce_o_tdata[i+1]),
-      .i_tlast(ioce_o_tlast[i+1]),
-      .i_tvalid(ioce_o_tvalid[i+1]),
-      .i_tready(ioce_o_tready[i+1]),
-      .o_tdata(ioce_i_tdata[i+1]),
-      .o_tlast(ioce_i_tlast[i+1]),
-      .o_tvalid(ioce_i_tvalid[i+1]),
-      .o_tready(ioce_i_tready[i+1]),
+      .i_tdata(ioce_o_tdata[i]),
+      .i_tlast(ioce_o_tlast[i]),
+      .i_tvalid(ioce_o_tvalid[i]),
+      .i_tready(ioce_o_tready[i]),
+      .o_tdata(ioce_i_tdata[i]),
+      .o_tlast(ioce_i_tlast[i]),
+      .o_tvalid(ioce_i_tvalid[i]),
+      .o_tready(ioce_i_tready[i]),
       // Data ports connected to radio front end
       //.rx({rx_data[i+1],rx_data[i]}),
       //.rx_stb({rx_stb[i+1],rx_stb[i]}),
@@ -353,7 +353,9 @@ module n310_core
 
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
    axi_crossbar_wrapper #(
-      .BASE(32'h10),
+      .REG_BASE(32'h10),
+      .REG_DWIDTH(REG_DWIDTH),  // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .REG_AWIDTH(REG_AWIDTH),  // Width of the address bus
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
    inst_axi_crossbar_wrapper (
       .clk(bus_clk), .reset(bus_rst), .clear(0),

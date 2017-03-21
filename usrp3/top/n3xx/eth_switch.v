@@ -83,6 +83,15 @@ module eth_switch #(
     output  [31:0]  debug
    );
 
+   // FIXME: Declaration for hard-coded values
+
+   wire [47:0] mac_src_addr;
+   wire [47:0] my_mac_addr;
+   wire [31:0] ip_src_addr;
+   wire [31:0] my_ip_addr;
+   wire [15:0] udp_src_prt;
+   wire [15:0] my_udp_port;
+
    wire  [63:0]    v2ef_tdata;
    wire  [3:0]     v2ef_tuser;
    wire            v2ef_tlast, v2ef_tvalid, v2ef_tready;
@@ -216,7 +225,7 @@ module eth_switch #(
    axi_fifo #(.WIDTH(69),.SIZE(CPU_FIFOSIZE)) cpu_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({e2c_tlast_int2,e2c_tuser_int2,e2c_tdata_int2}), .i_tvalid(e2c_tvalid_int2), .i_tready(e2c_tready_int2),
-      .o_tdata({e2c_tlast,e2c_tuser,e2c_tdata}), .o_tvalid(e2c_tvalid), .o_tready(e2c_tready));
+      .o_tdata({e2c_tlast,e2c_tuser,e2c_tdata}), .o_tvalid(e2c_tvalid), .o_tready(e2c_tready), .space(), .occupied());
 
    // //////////////////////////////////////////////////////////////
    // Outgoing Ethernet path
@@ -248,7 +257,7 @@ module eth_switch #(
    axi_fifo #(.WIDTH(65),.SIZE(VITA_FIFOSIZE)) vitaout_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({v2e_tlast,v2e_tdata}), .i_tvalid(v2e_tvalid), .i_tready(v2e_tready),
-      .o_tdata({v2e_tlast_int,v2e_tdata_int}), .o_tvalid(v2e_tvalid_int), .o_tready(v2e_tready_int));
+      .o_tdata({v2e_tlast_int,v2e_tdata_int}), .o_tvalid(v2e_tvalid_int), .o_tready(v2e_tready_int), .space(), .occupied());
 
    n310_chdr_eth_framer #(.BASE(BASE)) my_eth_framer
      (.clk(clk), .reset(reset), .clear(clear),
@@ -263,7 +272,7 @@ module eth_switch #(
    axi_fifo #(.WIDTH(69),.SIZE(XO_FIFOSIZE)) xo_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({xi_tlast,xi_tuser,xi_tdata}), .i_tvalid(xi_tvalid), .i_tready(xi_tready),
-      .o_tdata({xi_tlast_int,xi_tuser_int,xi_tdata_int}), .o_tvalid(xi_tvalid_int), .o_tready(xi_tready_int));
+      .o_tdata({xi_tlast_int,xi_tuser_int,xi_tdata_int}), .o_tvalid(xi_tvalid_int), .o_tready(xi_tready_int), .space(), .occupied());
 
    // ARM FRAMER
    // Add pad of 6 empty bytes before MAC addresses of new Rxed packet so that IP
@@ -299,7 +308,7 @@ module eth_switch #(
    axi_fifo #(.WIDTH(69),.SIZE(ETHOUT_FIFOSIZE)) ethout_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({eth_tx_tlast_int,eth_tx_tuser_int,eth_tx_tdata_int}), .i_tvalid(eth_tx_tvalid_int), .i_tready(eth_tx_tready_int),
-      .o_tdata({eth_tx_tlast,eth_tx_tuser,eth_tx_tdata}), .o_tvalid(eth_tx_tvalid), .o_tready(eth_tx_tready));
+      .o_tdata({eth_tx_tlast,eth_tx_tuser,eth_tx_tdata}), .o_tvalid(eth_tx_tvalid), .o_tready(eth_tx_tready), .space(), .occupied());
 
 
 endmodule // eth_switch

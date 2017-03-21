@@ -5,6 +5,8 @@
 module n310_sfpp_io_core #(
    parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
    parameter [13:0] REG_BASE = 14'h0,
+   parameter        REG_DWIDTH = 32,
+   parameter        REG_AWIDTH = 14,
    parameter        PORTNUM  = 8'd0,
    parameter        MDIO_EN  = 0
 )(
@@ -38,13 +40,13 @@ module n310_sfpp_io_core #(
    output            m_axis_tvalid,
    input             m_axis_tready,
    // Register port
-   input             reg_wr_req,
-   input  [31:0]     reg_wr_addr,
-   input  [31:0]     reg_wr_data,
-   input             reg_rd_req,
-   input  [31:0]     reg_rd_addr,
-   output            reg_rd_resp,
-   output [31:0]     reg_rd_data,
+   input                    reg_wr_req,
+   input  [REG_AWIDTH-1:0]  reg_wr_addr,
+   input  [REG_DWIDTH-1:0]  reg_wr_data,
+   input                    reg_rd_req,
+   input  [REG_AWIDTH-1:0]  reg_rd_addr,
+   output                   reg_rd_resp,
+   output [REG_DWIDTH-1:0]  reg_rd_data,
    // GT Common
    input             gt0_qplloutclk,
    input             gt0_qplloutrefclk,
@@ -73,7 +75,7 @@ module n310_sfpp_io_core #(
       .clk(bus_clk), .rst(1'b0), .in(mac_status), .out(mac_status_bclk)
    );
 
-   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
+   synchronizer #( .STAGES(2), .WIDTH(16), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
       .clk(bus_clk), .rst(1'b0), .in(phy_status), .out(phy_status_bclk)
    );
 
@@ -223,6 +225,9 @@ generate
         .status_local_fault     (mac_status[7]),
         .status_remote_fault    (mac_status[8])
       );
+
+      // Remove Warning from XG build
+      assign pma_reset_out = 1'b0;
 
       assign phy_status  = {8'h00, xgmii_status};
 

@@ -12,9 +12,9 @@ module network_interface
 #(
    parameter DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
    parameter AWIDTH  = 14,    // Width of the address bus
-   parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-   parameter        PORTNUM  = 8'd0,
-   parameter        MDIO_EN  = 0
+   parameter PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
+   parameter PORTNUM  = 8'd0,
+   parameter MDIO_EN  = 0
 )(
    // Resets
    input         areset,
@@ -26,29 +26,29 @@ module network_interface
    input         misc_clk,
    input         bus_clk,
 
-   input         s_axi_aclk,
-   input         s_axi_aresetn,
-   input [31:0]  s_axi_awaddr,
-   input         s_axi_awvalid,
-   output        s_axi_awready,
+   input                s_axi_aclk,
+   input                s_axi_aresetn,
+   input [AWIDTH-1:0]   s_axi_awaddr,
+   input                s_axi_awvalid,
+   output               s_axi_awready,
 
-   input [31:0]  s_axi_wdata,
-   input [3:0]   s_axi_wstrb,
-   input         s_axi_wvalid,
-   output        s_axi_wready,
+   input [DWIDTH-1:0]   s_axi_wdata,
+   input [DWIDTH/8-1:0] s_axi_wstrb,
+   input                s_axi_wvalid,
+   output               s_axi_wready,
 
-   output [1:0]  s_axi_bresp,
-   output        s_axi_bvalid,
-   input         s_axi_bready,
+   output [1:0]         s_axi_bresp,
+   output               s_axi_bvalid,
+   input                s_axi_bready,
 
-   input [31:0]  s_axi_araddr,
-   input         s_axi_arvalid,
-   output        s_axi_arready,
+   input [AWIDTH-1:0]   s_axi_araddr,
+   input                s_axi_arvalid,
+   output               s_axi_arready,
 
-   output [31:0] s_axi_rdata,
-   output [1:0]  s_axi_rresp,
-   output        s_axi_rvalid,
-   input         s_axi_rready,
+   output [DWIDTH-1:0]  s_axi_rdata,
+   output [1:0]         s_axi_rresp,
+   output               s_axi_rvalid,
+   input                s_axi_rready,
 
    // SFP high-speed IO
    output        txp,
@@ -226,6 +226,8 @@ module network_interface
       .PROTOCOL("1GbE"),
 `endif
       .REG_BASE(14'h0),
+      .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .REG_AWIDTH (AWIDTH),         // Width of the address bus
       .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) sfpp_io_i (

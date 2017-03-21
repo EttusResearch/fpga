@@ -649,6 +649,9 @@ module n310
   //
   ////////////////////////////////////////////////////////////////////
 
+  // Radio Clock Generation
+
+  wire radio_clk;
   wire radio_clk_locked;
 
   assign radio_clk = bus_clk;
@@ -881,6 +884,28 @@ module n310
   wire        arm_eth1_tx_irq;
   wire        arm_eth1_rx_irq;
 
+
+  // Vita to Ethernet
+  wire  [63:0]  v2e0_tdata;
+  wire          v2e0_tlast;
+  wire          v2e0_tvalid;
+  wire          v2e0_tready;
+
+  wire  [63:0]  v2e1_tdata;
+  wire          v2e1_tlast;
+  wire          v2e1_tvalid;
+  wire          v2e1_tready;
+
+  // Ethernet to Vita
+  wire  [63:0]  e2v0_tdata;
+  wire          e2v0_tlast;
+  wire          e2v0_tvalid;
+  wire          e2v0_tready;
+
+  wire  [63:0]  e2v1_tdata;
+  wire          e2v1_tlast;
+  wire          e2v1_tvalid;
+  wire          e2v1_tready;
 
    network_interface #(
 `ifdef SFP0_10GBE
@@ -1612,11 +1637,6 @@ module n310
    //
    ///////////////////////////////////////////////////////
 
-   // Radio Clock Generation
-
-   wire             radio_clk;
-   wire             radio_clk_locked;
-
    wire [31:0]      rx0, rx1;
    wire [31:0]      tx0, tx1;
 
@@ -1658,15 +1678,15 @@ module n310
     .tx1(tx1),
 
     //DMA
-    .dmao_tdata(dmao_tdata),
-    .dmao_tlast(dmao_tlast),
-    .dmao_tvalid(dmao_tvalid),
-    .dmao_tready(dmao_tready),
+    .dmao_tdata(),
+    .dmao_tlast(),
+    .dmao_tvalid(),
+    .dmao_tready(),
 
-    .dmai_tdata(dmai_tdata),
-    .dmai_tlast(dmai_tlast),
-    .dmai_tvalid(dmai_tvalid),
-    .dmai_tready(dmai_tready),
+    .dmai_tdata(),
+    .dmai_tlast(),
+    .dmai_tvalid(),
+    .dmai_tready(),
 
     // VITA to Ethernet
     .v2e0_tdata(v2e0_tdata),

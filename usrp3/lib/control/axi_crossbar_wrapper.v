@@ -4,11 +4,13 @@
 
 module axi_crossbar_wrapper
 #(
-  parameter BASE        = 0,  // settings bus base address
+  parameter REG_BASE    = 0,  // settings bus base address
   parameter FIFO_WIDTH  = 64, // AXI4-STREAM data bus width
   parameter DST_WIDTH   = 16, // Width of DST field we are routing on.
   parameter NUM_INPUTS  = 2,  // number of input AXI4-STREAM buses
-  parameter NUM_OUTPUTS = 2   // number of output AXI4-STREAM buses
+  parameter NUM_OUTPUTS = 2,   // number of output AXI4-STREAM buses
+  parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
+  parameter REG_AWIDTH  = 14  // Width of the address bus
 )
 (
   input                                 clk,
@@ -16,12 +18,12 @@ module axi_crossbar_wrapper
   input                                 clear,
 
   input                                 reg_wr_req,
-  input [13:0]                          reg_wr_addr,
-  input [31:0]                          reg_wr_data,
+  input  [REG_AWIDTH-1:0]               reg_wr_addr,
+  input  [REG_DWIDTH-1:0]               reg_wr_data,
 
   input                                 reg_rd_req,
-  input [13:0]                          reg_rd_addr,
-  output [31:0]                         reg_rd_data,
+  input  [REG_AWIDTH-1:0]               reg_rd_addr,
+  output [REG_DWIDTH-1:0]               reg_rd_data,
   output                                reg_rd_resp,
 
   input [7:0]                           local_addr,
@@ -42,22 +44,22 @@ module axi_crossbar_wrapper
   (* mark_debug = "true"  *)
   wire        xbar_set_stb;
   (* mark_debug = "true"  *)
-  wire [31:0] xbar_set_data;
+  wire [REG_DWIDTH-1:0] xbar_set_data;
   (* mark_debug = "true"  *)
-  wire [31:0] xbar_set_addr;
+  wire [15:0] xbar_set_addr;
 
   (* mark_debug = "true"  *)
   wire        xbar_rb_stb;
   (* mark_debug = "true"  *)
-  wire [31:0] xbar_rb_addr;
+  wire [15:0] xbar_rb_addr;
   (* mark_debug = "true"  *)
-  wire [31:0] xbar_rb_data;
+  wire [REG_DWIDTH-1:0] xbar_rb_data;
 
   regport_to_settingsbus
   #(
-    .BASE(BASE),
-    .DWIDTH(32),
-    .AWIDTH(14)
+    .BASE(REG_BASE),
+    .DWIDTH(REG_DWIDTH),
+    .AWIDTH(REG_AWIDTH)
   )
   inst_regport_to_settingsbus
   (
@@ -96,7 +98,7 @@ module axi_crossbar_wrapper
 
     // settings bus for config
     .set_stb(xbar_set_stb),
-    .set_addr({2'b00, xbar_set_addr[31:2]}), // Settings bus is word aligned, so drop lower two LSBs.
+    .set_addr(xbar_set_addr), // Settings bus is word aligned, so drop lower two LSBs.
     .set_data(xbar_set_data),
     .rb_rd_stb(xbar_rb_stb),
     /* TODO: FIX THIS SHIT */

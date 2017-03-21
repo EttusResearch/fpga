@@ -21,7 +21,7 @@ module regport_to_settingsbus
   output reg              reg_rd_resp,
 
   output                  set_stb,
-  output                  set_addr,
+  output [AWIDTH-1:0]     set_addr,
   output [DWIDTH-1:0]     set_data,
 
   output                  rb_stb,

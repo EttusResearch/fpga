@@ -148,7 +148,7 @@ module eth_dispatch
     //---------------------------------------------------------
 
     // MAC address for the dispatcher module.
-    // This value is used to determine if the packet is meant 
+    // This value is used to determine if the packet is meant
     // for this device should be consumed
     wire [47:0]      my_mac;
     setting_reg #(.my_addr(BASE), .awidth(8), .width(32)) sr_my_mac_lsb
@@ -160,7 +160,7 @@ module eth_dispatch
 
     // IP address for the dispatcher module.
     // This value is used to determine if the packet is addressed
-    // to this device 
+    // to this device
     wire [31:0]      my_ip;
     setting_reg #(.my_addr(BASE+2), .awidth(8), .width(32)) sr_my_ip
         (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
@@ -196,7 +196,7 @@ module eth_dispatch
     // VITA port, crossover(XO) port or the ZPU. Note that the
     // XO and ZPU ports require fully framed Eth packets so data
     // from the RAM has to be replayed on the output. The state
-    // machine will hold off input packets until the header is 
+    // machine will hold off input packets until the header is
     // replayed. The state machine also supports dropping pkts.
 
     always @(posedge clk)
@@ -333,7 +333,7 @@ module eth_dispatch
     // As the packet header is pushed into the RAM, set classification
     // bits so that by the time the input state machine reaches the
     // CLASSIFY_PACKET state, the packet has been fully identified.
-    
+
     always @(posedge clk)
         if (reset || clear) begin
             is_eth_dst_addr <= 1'b0;
@@ -473,7 +473,7 @@ module eth_dispatch
     // The ZPU and XO ports are inherently slow consumers so they
     // get a large buffer. The VITA port is fast but high throughput
     // so even that needs a large FIFO.
-    
+
     axi_fifo #(.WIDTH(69),.SIZE(10))
     axi_fifo_zpu (
         .clk(clk),
@@ -522,5 +522,5 @@ module eth_dispatch
    fix_short_packet(.clk(clk), .reset(reset), .clear(clear),
 		    .i_tdata(vita_pre2_tdata), .i_tlast(vita_pre2_tlast), .i_tvalid(vita_pre2_tvalid), .i_tready(vita_pre2_tready),
 		    .o_tdata(vita_tdata), .o_tlast(vita_tlast), .o_tvalid(vita_tvalid), .o_tready(vita_tready));
-   
+
 endmodule // eth_dispatch
