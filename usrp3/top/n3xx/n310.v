@@ -1009,7 +1009,10 @@ module n310
       .c2e_tkeep(arm_eth0_tx_tkeep),
       .c2e_tlast(arm_eth0_tx_tlast),
       .c2e_tvalid(arm_eth0_tx_tvalid),
-      .c2e_tready(arm_eth0_tx_tready)
+      .c2e_tready(arm_eth0_tx_tready),
+
+      // LED
+      .activity_led(SFP_0_LED_A)
    );
 
    network_interface #(
@@ -1115,8 +1118,11 @@ module n310
       .c2e_tkeep(arm_eth1_tx_tkeep),
       .c2e_tlast(arm_eth1_tx_tlast),
       .c2e_tvalid(arm_eth1_tx_tvalid),
-      .c2e_tready(arm_eth1_tx_tready)
-   );
+      .c2e_tready(arm_eth1_tx_tready),
+
+      // LED
+      .activity_led(SFP_1_LED_A)
+  );
 
 
   assign      IRQ_F2P[0] = arm_eth0_rx_irq;
@@ -1743,7 +1749,6 @@ module n310
    //end
 
    assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
-   assign {SFP_0_LED_A, SFP_1_LED_A} = 2'b00;
 
    assign PANEL_LED_LINK = counter1[26];
    assign PANEL_LED_REF = counter3[26];

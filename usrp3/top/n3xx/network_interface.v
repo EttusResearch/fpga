@@ -107,7 +107,10 @@ module network_interface
    input   [7:0]   c2e_tkeep,
    input           c2e_tlast,
    input           c2e_tvalid,
-   output          c2e_tready
+   output          c2e_tready,
+
+   // MISC
+   output          activity_led
 );
 
    wire                reg_wr_req;
@@ -362,5 +365,13 @@ module network_interface
         .c2e_tready(c2e_tready),
         .debug()
     );
+
+  pulse_stretch inst_pulse_stretch0
+  (
+    .clk(bus_clk),
+    .rst(bus_rst),
+    .pulse(sfp_rx_tvalid & sfp_rx_tvalid || sfp_tx_tvalid & sfp_rx_tready),
+    .pulse_stretched(activity_led)
+  );
 
 endmodule
