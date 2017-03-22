@@ -197,7 +197,7 @@ module n310_eth_dispatch #(
           mac_reg[31:0]  <= reg_wr_data;
 
         REG_MAC_MSB:
-          mac_reg[47:32] <= reg_wr_data;
+          mac_reg[47:32] <= reg_wr_data[15:0];
 
         REG_IP:
           ip_reg        <= reg_wr_data;
@@ -211,31 +211,32 @@ module n310_eth_dispatch #(
         endcase
     end
 
-  always @ (posedge reg_clk)
+  always @ (posedge reg_clk) begin
     if (reg_rd_req) begin
       reg_rd_resp <= 1'b1;
-
       case (reg_rd_addr)
       REG_MAC_LSB:
-        reg_rd_data <= mac_reg;
+        reg_rd_data <= mac_reg[31:0];
 
       REG_MAC_MSB:
-        reg_rd_data <= mac_reg;
+        reg_rd_data <= mac_reg[47:32];
 
       REG_IP:
         reg_rd_data <= ip_reg;
 
       REG_PORT0:
-        reg_rd_data <= ip_reg;
+        reg_rd_data <= udp_port0;
 
       REG_PORT1:
-        reg_rd_data <= ip_reg;
+        reg_rd_data <= udp_port1;
 
       default:
         reg_rd_resp <= 1'b0;
       endcase
     end
-
+    if (reg_rd_resp)
+      reg_rd_resp <= 1'b0;
+  end
     //TODO: Change these to Reg Ports
     //---------------------------------------------------------
     // Settings regs
