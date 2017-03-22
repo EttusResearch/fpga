@@ -257,8 +257,8 @@ module network_interface
       .rxp(rxp),
       .rxn(rxn),
 
-      .sfpp_rxlos(1'b0/*SFP_0_LOS*/),
-      .sfpp_tx_fault(1'b0/*SFP_0_TXFAULT*/),
+      .sfpp_rxlos(sfpp_rxlos),
+      .sfpp_tx_fault(sfpp_tx_fault),
       .sfpp_tx_disable(sfpp_tx_disable),
 
       //RegPort
