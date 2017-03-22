@@ -17,7 +17,7 @@ module mdio_master #(
    input                  mdio_in,
    // Register ports
    input                  reg_wr_req,
-   input [31:0]           reg_wr_addr,
+   input [REG_AWIDTH-1:0] reg_wr_addr,
    input [31:0]           reg_wr_data,
    input                  reg_rd_req,
    input [REG_AWIDTH-1:0] reg_rd_addr,
@@ -766,4 +766,4 @@ module mdio_master #(
    end
 
 endmodule
- 
+

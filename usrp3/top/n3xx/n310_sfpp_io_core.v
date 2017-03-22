@@ -120,6 +120,7 @@ module n310_sfpp_io_core #(
    generate if (MDIO_EN == 1) begin
       mdio_master #(
          .REG_BASE      (REG_BASE + 32'h10),
+         .REG_AWIDTH    (REG_AWIDTH),
          .MDC_DIVIDER   (8'd200)
       ) mdio_master_i (
          .clk        (bus_clk),
@@ -244,7 +245,7 @@ generate
 
       one_gige_phy one_gige_phy_i
       (
-         .reset(areset),                  // Asynchronous reset for entire core.
+         .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
          .pma_reset_out(pma_reset_out),
          .independent_clock(bus_clk),
          .gt0_qplloutclk_in(gt0_qplloutclk),

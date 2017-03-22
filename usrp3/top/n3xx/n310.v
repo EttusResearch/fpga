@@ -9,7 +9,7 @@ module n310
 
    input FPGA_REFCLK,
    input REF_1PPS_IN,
-   input REF_1PPS_IN_MGMT,
+   //input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
    //output [1:0] CLK_MAINREF_SEL,
    output PWREN_CLK_DDR100MHZ,
@@ -71,7 +71,7 @@ module n310
    //inout ENET0_PTP,
    //output ENET0_PTP_DIR,
    //inout ATSHA204_SDA,
-   input FPGA_PL_RESETN, //??
+   input FPGA_PL_RESETN, // TODO:  Add to reset logic
    output PWREN_CLK_MAINREF,
    //input [1:0] FPGA_TEST,// TODO :Check this ??
 
@@ -606,19 +606,20 @@ module n310
 
    // Check Clock frequency through PPS_OUT
 
-   ODDR #(
-      .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
-      .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
-      .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
-   ) fclk_inst (
-      .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(FCLK_CLK0),   // 1-bit clock input
-      .CE(1'b1), // 1-bit clock enable input
-      .D1(1'b0), // 1-bit data input (positive edge)
-      .D2(1'b1), // 1-bit data input (negative edge)
-      .R(1'b0),   // 1-bit reset
-      .S(1'b0)    // 1-bit set
-   );
+   // TODO:  Only for DEBUG
+   //ODDR #(
+   //   .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
+   //   .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
+   //   .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
+   //) fclk_inst (
+   //   .Q(REF_1PPS_OUT),   // 1-bit DDR output
+   //   .C(FCLK_CLK0),   // 1-bit clock input
+   //   .CE(1'b1), // 1-bit clock enable input
+   //   .D1(1'b0), // 1-bit data input (positive edge)
+   //   .D2(1'b1), // 1-bit data input (negative edge)
+   //   .R(1'b0),   // 1-bit reset
+   //   .S(1'b0)    // 1-bit set
+   //);
 
   wire ref_clk_10mhz; //TODO: Check if this is 10 MHz
   IBUF FPGA_REFCLK_ibuf (
@@ -701,6 +702,13 @@ module n310
       .refclk(gige_refclk),
       .refclk_bufg(gige_refclk_bufg)
    );
+
+   // FIXME
+   assign SFP_0_RS0  = 1'b0;
+   assign SFP_0_RS1  = 1'b0;
+   assign SFP_1_RS0  = 1'b0;
+   assign SFP_1_RS1  = 1'b0;
+
 `endif
 
 `ifdef BUILD_10G
@@ -716,6 +724,12 @@ module n310
       .clk156(xgige_clk156),
       .dclk(xgige_dclk)
    );
+   // FIXME
+   assign SFP_0_RS0  = 1'b1;
+   assign SFP_0_RS1  = 1'b1;
+   assign SFP_1_RS0  = 1'b1;
+   assign SFP_1_RS1  = 1'b1;
+
 `endif
 
   BUFG bus_clk_buf (

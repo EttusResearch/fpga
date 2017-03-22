@@ -30,20 +30,20 @@
 # External 100 Ohm termination already in place!
 set_property PACKAGE_PIN   U26              [get_ports FPGA_REFCLK]
 set_property IOSTANDARD    LVCMOS33         [get_ports FPGA_REFCLK]
-#
+
 set_property PACKAGE_PIN   AA18             [get_ports {REF_1PPS_IN}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN}]
-#
-set_property PACKAGE_PIN   AB19             [get_ports {REF_1PPS_IN_MGMT}]
-set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN_MGMT}]
-#
+
+#set_property PACKAGE_PIN   AB19             [get_ports {REF_1PPS_IN_MGMT}]
+#set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_IN_MGMT}]
+
 set_property PACKAGE_PIN   AA19             [get_ports {REF_1PPS_OUT}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {REF_1PPS_OUT}]
 
 #set_property PACKAGE_PIN   N26              [get_ports {CLK_MAINREF_SEL[0]}]
 #set_property PACKAGE_PIN   N27              [get_ports {CLK_MAINREF_SEL[1]}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {CLK_MAINREF_SEL[*]}]
-#
+
 set_property PACKAGE_PIN   R21              [get_ports {PWREN_CLK_DDR100MHZ}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {PWREN_CLK_DDR100MHZ}]
 
@@ -159,9 +159,9 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS}]
 ##
 #########################################################################################
 
-#set_property PACKAGE_PIN   AC28             [get_ports {ENET0_CLK125}]
-#set_property IOSTANDARD    LVCMOS25         [get_ports {ENET0_CLK125}]
-#
+set_property PACKAGE_PIN   AC28             [get_ports {ENET0_CLK125}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {ENET0_CLK125}]
+
 #set_property PACKAGE_PIN   T30              [get_ports {ENET0_LED1A}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {ENET0_LED1A}]
 #
@@ -193,9 +193,9 @@ set_property IOSTANDARD    LVCMOS25         [get_ports {PWREN_CLK_MAINREF}]
 ##
 #########################################################################################
 
-#set_property PACKAGE_PIN   AD18             [get_ports {WB_20MHZ_CLK}]
-#set_property IOSTANDARD    LVCMOS33         [get_ports {WB_20MHZ_CLK}]
-#
+set_property PACKAGE_PIN   AD18             [get_ports {WB_20MHZ_CLK}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {WB_20MHZ_CLK}]
+
 set_property PACKAGE_PIN   W24              [get_ports {PWREN_CLK_WB_CDCM}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {PWREN_CLK_WB_CDCM}]
 
@@ -366,7 +366,6 @@ set_property PACKAGE_PIN   F3               [get_ports {DBA_CPLD_SPI_SCLK_ATR_RX
 #set_property PACKAGE_PIN   C2               [get_ports {DbaCh1RxDsaData[2]}]
 
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_ADDR[*]}]
-set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CH1*xDsa*[*]}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_SPI_*}]
 
 ## HR GPIO, Bank 10, 2.5V
@@ -391,8 +390,8 @@ set_property PACKAGE_PIN   AH14             [get_ports {DBA_CPLD_JTAG_TDO}]
 #set_property PACKAGE_PIN   AJ16             [get_ports {DbaCh2TxDsaData[2]}]
 #set_property PACKAGE_PIN   AH18             [get_ports {DbaCh2TxDsaData[0]}]
 #set_property PACKAGE_PIN   AJ18             [get_ports {DbaCh2TxDsaData[1]}]
-set_property PACKAGE_PIN   AF14             [get_ports {DbaFpgaClk_p}]
-set_property PACKAGE_PIN   AG14             [get_ports {DbaFpgaClk_n}]
+#set_property PACKAGE_PIN   AF14             [get_ports {DbaFpgaClk_p}]
+#set_property PACKAGE_PIN   AG14             [get_ports {DbaFpgaClk_n}]
 #set_property PACKAGE_PIN   AG17             [get_ports {DbaFpgaSysref_p}]
 #set_property PACKAGE_PIN   AG16             [get_ports {DbaFpgaSysref_n}]
 #set_property PACKAGE_PIN   AD15             [get_ports {DbaCh2RxDsaData[3]}]
@@ -425,10 +424,10 @@ set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_MYK_SPI_*}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {DbaSwitcherClock}]
 
 ### MGTs, Bank 112
-#
+
 set_property PACKAGE_PIN   N8               [get_ports USRPIO_A_MGTCLK_P]
 set_property PACKAGE_PIN   N7               [get_ports USRPIO_A_MGTCLK_N]
-#
+
 #set_property PACKAGE_PIN   P6               [get_ports USRPIO_A_RX_0_P]
 #set_property PACKAGE_PIN   P5               [get_ports USRPIO_A_RX_0_N]
 #set_property PACKAGE_PIN   T6               [get_ports USRPIO_A_RX_1_P]

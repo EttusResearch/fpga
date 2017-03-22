@@ -26,8 +26,8 @@ create_clock -name USRPIO_B_MGTCLK     -period 5.000   -waveform {0.000 2.500}  
 #*******************************************************************************
 ## Aliases for auto-generated clocks
 #FIXME add all clks
-create_generated_clock -name radio_clk                [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT0"}]
-create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT1"}]
+#create_generated_clock -name radio_clk                [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT0"}]
+#create_generated_clock -name radio_clk_2x             [get_pins -hierarchical -filter {NAME =~ "*radio_clk_gen/*/CLKOUT1"}]
 create_generated_clock -name bus_clk                  -source [get_pins bus_clk_buf/I]
 
 
@@ -35,7 +35,7 @@ create_generated_clock -name bus_clk                  -source [get_pins bus_clk_
 ## Asynchronous clock groups
 
 set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks radio_clk]
-set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks FPGA_REFCLK_10MHz]
+set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks ref_clk_10mhz]
 
 
 
