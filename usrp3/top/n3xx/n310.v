@@ -898,6 +898,8 @@ module n310
   wire        arm_eth1_tx_irq;
   wire        arm_eth1_rx_irq;
 
+  wire        eth_reset_0;
+  wire        eth_reset_1;
 
   // Vita to Ethernet
   wire  [63:0]  v2e0_tdata;
@@ -933,7 +935,7 @@ module n310
       .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
    ) network_interface_0 (
-      .areset(global_rst),
+      .areset(global_rst | eth_reset_0),  // Reset through PS
       .gt_refclk(sfp0_gt_refclk),
       .gb_refclk(sfp0_gb_refclk),
       .misc_clk(sfp0_misc_clk),
@@ -1041,7 +1043,7 @@ module n310
       .MDIO_EN(1'b1),
       .PORTNUM(8'd1)
    ) network_interface_1 (
-      .areset(global_rst),
+      .areset(global_rst | eth_reset_1), // Reset through PS
       .gt_refclk(sfp1_gt_refclk),
       .gb_refclk(sfp1_gb_refclk),
       .misc_clk(sfp1_misc_clk),
@@ -1217,7 +1219,7 @@ module n310
     .m_axi_mm2s_rvalid(S_AXI_HP0_RVALID),
     .m_axi_mm2s_rready(S_AXI_HP0_RREADY),
 
-    .mm2s_prmry_reset_out_n(),
+    .mm2s_prmry_reset_out_n(eth_reset_0),
     .m_axis_mm2s_tdata(arm_eth0_tx_tdata),
     .m_axis_mm2s_tkeep(arm_eth0_tx_tkeep),
     .m_axis_mm2s_tvalid(arm_eth0_tx_tvalid),
@@ -1329,7 +1331,7 @@ module n310
     .m_axi_mm2s_rvalid(S_AXI_HP1_RVALID),
     .m_axi_mm2s_rready(S_AXI_HP1_RREADY),
 
-    .mm2s_prmry_reset_out_n(),
+    .mm2s_prmry_reset_out_n(eth_reset_1),
     .m_axis_mm2s_tdata(arm_eth1_tx_tdata),
     .m_axis_mm2s_tkeep(arm_eth1_tx_tkeep),
     .m_axis_mm2s_tvalid(arm_eth1_tx_tvalid),
