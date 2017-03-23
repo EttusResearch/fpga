@@ -36,8 +36,6 @@
 //////////////////////////////////////////////////////////////////////
 
 
-`include "mac_defines.vh"
-
 module n310_xge_mac(/*AUTOARG*/
   // Outputs
   xgmii_txd, xgmii_txc, pkt_tx_full,
