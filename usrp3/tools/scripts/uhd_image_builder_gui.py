@@ -17,8 +17,12 @@
 """
 
 from __future__ import print_function
+import sip
+sip.setapi('QVariant', 2)
 import os
 import sys
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 import xml.etree.ElementTree as ET
 import uhd_image_builder
 import sip
