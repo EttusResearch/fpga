@@ -333,15 +333,15 @@ module n310_core
    wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tvalid;
    wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tready;
 
-   assign xbar_ce_i_tdata  = {ce_flat_i_tdata, ioce_flat_i_tdata};
-   assign xbar_ce_i_tvalid = {ce_i_tvalid, ioce_i_tvalid};
-   assign {ce_i_tready, ioce_i_tready} = xbar_ce_i_tready;
-   assign xbar_ce_i_tlast  = {ce_i_tlast, ioce_i_tlast};
+   assign xbar_ce_i_tdata                      = {ce_flat_i_tdata, ioce_flat_i_tdata};
+   assign xbar_ce_i_tvalid                     = {ce_i_tvalid, ioce_i_tvalid};
+   assign {ce_i_tready, ioce_i_tready}         = xbar_ce_i_tready;
+   assign xbar_ce_i_tlast                      = {ce_i_tlast, ioce_i_tlast};
 
-   assign xbar_ce_o_tdata  = {ce_flat_o_tdata, ioce_flat_o_tdata};
-   assign xbar_ce_o_tvalid = {ce_o_tvalid, ioce_o_tvalid};
-   assign {ce_o_tready, ioce_o_tready} = xbar_ce_o_tready;
-   assign xbar_ce_o_tlast  = {ce_o_tlast, ioce_o_tlast};
+   assign {ce_flat_o_tdata, ioce_flat_o_tdata} = xbar_ce_o_tdata;
+   assign {ce_o_tvalid, ioce_o_tvalid}         = xbar_ce_o_tvalid;
+   assign xbar_ce_o_tready                     = {ce_o_tready, ioce_o_tready};
+   assign {ce_o_tlast, ioce_o_tlast}           = xbar_ce_o_tlast;
 
    // //////////////////////////////////////////////////////////////////////
    // axi_crossbar ports
@@ -355,7 +355,7 @@ module n310_core
 
   // Base width of crossbar based on fixed components (ethernet, DMA)
    localparam XBAR_FIXED_PORTS = 3;
-   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
+   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE + NUM_IO_CE;
 
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
    axi_crossbar_wrapper #(
