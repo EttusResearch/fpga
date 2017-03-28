@@ -278,6 +278,8 @@ def build(args):
         make_cmd = make_cmd + "&& make " + dtarget(args)
         if args.GUI:
             make_cmd = make_cmd + " GUI=1"
+        # Wrap it into a bash call:
+        make_cmd = '/bin/bash -c "{0}"'.format(make_cmd)
         ret_val = os.system(make_cmd)
         os.chdir(cwd)
     return ret_val
