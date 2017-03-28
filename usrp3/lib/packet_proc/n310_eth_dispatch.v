@@ -186,8 +186,8 @@ module n310_eth_dispatch #(
     if (reset) begin
       mac_reg   <= 48'h00802F16C52F;
       ip_reg    <= 32'hC0A80A02;
-      udp_port0 <= 16'd0;
-      udp_port1 <= 16'd0;
+      udp_port0 <= 16'd49153;
+      udp_port1 <= 16'd49154;
     end
     else begin
       if (reg_wr_req)
@@ -219,7 +219,7 @@ module n310_eth_dispatch #(
         reg_rd_data <= mac_reg[31:0];
 
       REG_MAC_MSB:
-        reg_rd_data <= mac_reg[47:32];
+        reg_rd_data <= {16'b0,mac_reg[47:32]};
 
       REG_IP:
         reg_rd_data <= ip_reg;

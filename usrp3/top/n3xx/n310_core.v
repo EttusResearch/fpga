@@ -374,7 +374,7 @@ module n310_core
       .o_tlast({xbar_ce_o_tlast,dmao_tlast,v2e1_tlast,v2e0_tlast}),
       .o_tvalid({xbar_ce_o_tvalid,dmao_tvalid,v2e1_tvalid,v2e0_tvalid}),
       .o_tready({xbar_ce_o_tready,dmao_tready,v2e1_tready,v2e0_tready}),
-      .pkt_present({ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
+      .pkt_present({xbar_ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
       .reg_wr_req(reg_wr_req),
       .reg_wr_addr(reg_wr_addr),
       .reg_wr_data(reg_wr_data),

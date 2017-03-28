@@ -4,14 +4,18 @@
 // Adapts from internal VITA to ethernet packets.  Also handles CPU and ethernet crossover interfaces.
 
 module eth_switch #(
-    parameter BASE=0,
-    parameter XO_FIFOSIZE=10,
-    parameter CPU_FIFOSIZE=10,
-    parameter VITA_FIFOSIZE=10,
-    parameter ETHOUT_FIFOSIZE=10,
-    parameter REG_DWIDTH = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
-    parameter REG_AWIDTH = 32     // Width of the address bus
+    parameter BASE                     = 0,
+    parameter XO_FIFOSIZE              = 10,
+    parameter CPU_FIFOSIZE             = 10,
+    parameter VITA_FIFOSIZE            = 10,
+    parameter ETHOUT_FIFOSIZE          = 10,
+    parameter REG_DWIDTH               = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+    parameter REG_AWIDTH               = 14,    // Width of the address bus
+    parameter [47:0] DEFAULT_MAC_ADDR  = {8'h00, 8'h80, 8'h2f, 8'h16, 8'hc5, 8'h2f},
+    parameter [31:0] DEFAULT_IP_ADDR   = {8'd192, 8'd168, 8'd10, 8'd2},
+    parameter [31:0] DEFAULT_UDP_PORTS = {16'd49154, 16'd49153}
     )(
+
     input           clk,
     input           reset,
     input           clear,
@@ -26,8 +30,8 @@ module eth_switch #(
     // Register port: Read port (domain: reg_clk)
     input                       reg_rd_req,
     input   [REG_AWIDTH-1:0]    reg_rd_addr,
-    output                      reg_rd_resp,
-    output  [REG_DWIDTH-1:0]    reg_rd_data,
+    output reg                  reg_rd_resp,
+    output reg [REG_DWIDTH-1:0] reg_rd_data,
 
     // Eth ports
     output  [63:0]  eth_tx_tdata,
@@ -83,14 +87,77 @@ module eth_switch #(
     output  [31:0]  debug
    );
 
-   // FIXME: Declaration for hard-coded values
+   localparam REG_DISPATCH_BASE = BASE + 'h1008;
+   localparam REG_FRAMER_BASE   = BASE + 14'h2000;
 
-   wire [47:0] mac_src_addr;
-   wire [47:0] my_mac_addr;
-   wire [31:0] ip_src_addr;
-   wire [31:0] my_ip_addr;
-   wire [15:0] udp_src_prt;
-   wire [15:0] my_udp_port;
+  //---------------------------------------------------------
+  // Settings regs
+  //---------------------------------------------------------
+
+  localparam REG_MAC_LSB   = BASE + 'h0000;
+  localparam REG_MAC_MSB   = BASE + 'h0004;
+  localparam REG_IP        = BASE + 'h1000;
+  localparam REG_UDP       = BASE + 'h1004;
+
+  // MAC address for the dispatcher module.
+  // This value is used to determine if the packet is meant
+  // for this device should be consumed
+  // IP address for the dispatcher module.
+  // This value is used to determine if the packet is addressed
+  // to this device
+  // This module supports two destination ports
+  reg [47:0]      mac_reg;
+  reg [31:0]      ip_reg;
+  reg [15:0]      udp_port0, udp_port1;
+
+  always @(posedge reg_clk)
+    if (reset) begin
+      mac_reg               <= DEFAULT_MAC_ADDR;
+      ip_reg                <= DEFAULT_IP_ADDR;
+      {udp_port1,udp_port0} <= DEFAULT_UDP_PORTS;
+    end
+    else begin
+      if (reg_wr_req)
+        case (reg_wr_addr)
+
+        REG_MAC_LSB:
+          mac_reg[31:0]         <= reg_wr_data;
+
+        REG_MAC_MSB:
+          mac_reg[47:32]        <= reg_wr_data[15:0];
+
+        REG_IP:
+          ip_reg                <= reg_wr_data;
+
+        REG_UDP:
+          {udp_port1,udp_port0} <= reg_wr_data;
+
+        endcase
+    end
+
+  always @ (posedge reg_clk) begin
+    if (reg_rd_req) begin
+      reg_rd_resp <= 1'b1;
+      case (reg_rd_addr)
+        REG_MAC_LSB:
+          reg_rd_data <= mac_reg[31:0];
+
+        REG_MAC_MSB:
+          reg_rd_data <= {16'b0,mac_reg[47:32]};
+
+        REG_IP:
+          reg_rd_data <= ip_reg;
+
+        REG_UDP:
+          reg_rd_data <= {udp_port1, udp_port0};
+
+        default:
+          reg_rd_resp <= 1'b0;
+      endcase
+    end
+    if (reg_rd_resp)
+      reg_rd_resp <= 1'b0;
+  end
 
    wire  [63:0]    v2ef_tdata;
    wire  [3:0]     v2ef_tuser;
@@ -137,24 +204,18 @@ module eth_switch #(
    wire  [3:0]     e2c_tuser_int2;
    wire            e2c_tlast_int2, e2c_tvalid_int2, e2c_tready_int2;
 
-   n310_eth_dispatch #(
-    .BASE   (BASE),
-    .REG_DWIDTH (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-    .REG_AWIDTH (REG_AWIDTH)          // Width of the address bus
+   eth_dispatch #(
+    .BASE             (BASE[13:2]),
+    .AWIDTH           (12),
+    .DROP_UNKNOWN_MAC (0)
     ) eth_dispatch (
     .clk        (clk),
     .reset      (reset),
     .clear      (clear),
-    //RegPort
-    .reg_clk    (reg_clk),
-    .reg_wr_req (reg_wr_req),
-    .reg_wr_addr(reg_wr_addr),
-    .reg_wr_data(reg_wr_data),
-    .reg_wr_keep(/*unused*/),
-    .reg_rd_req (reg_rd_req),
-    .reg_rd_addr(reg_rd_addr),
-    .reg_rd_resp(reg_rd_resp),
-    .reg_rd_data(reg_rd_data),
+
+    .set_stb    (reg_wr_req),
+    .set_addr   (reg_wr_addr[13:2]),
+    .set_data   (reg_wr_data),
 
     .in_tdata   (epg_tdata_int),
     .in_tuser   (epg_tuser_int),
@@ -178,14 +239,11 @@ module eth_switch #(
     .xo_tlast   (xo_tlast),
     .xo_tvalid  (xo_tvalid),
     .xo_tready  (xo_tready),
-    // to other eth port
-    .mac_src_addr(mac_src_addr),
-    .ip_src_addr(ip_src_addr),
-    .udp_src_prt(udp_src_prt),
 
-    .my_mac_addr(my_mac_addr),
-    .my_ip_addr (my_ip_addr),
-    .my_udp_port(my_udp_port),
+    .my_mac(mac_reg),
+    .my_ip (ip_reg),
+    .my_port0(udp_port0), //FIXME
+    .my_port1(udp_port1), //FIXME
 
     .debug_flags(),
     .debug      ()
@@ -259,14 +317,28 @@ module eth_switch #(
       .i_tdata({v2e_tlast,v2e_tdata}), .i_tvalid(v2e_tvalid), .i_tready(v2e_tready),
       .o_tdata({v2e_tlast_int,v2e_tdata_int}), .o_tvalid(v2e_tvalid_int), .o_tready(v2e_tready_int), .space(), .occupied());
 
-   n310_chdr_eth_framer #(.BASE(BASE)) my_eth_framer
-     (.clk(clk), .reset(reset), .clear(clear),
-      .set_stb(set_stb), .set_addr(set_addr) , .set_data(set_data),
-      .in_tdata(v2e_tdata_int), .in_tlast(v2e_tlast_int), .in_tvalid(v2e_tvalid_int), .in_tready(v2e_tready_int),
-      .out_tdata(v2ef_tdata), .out_tuser(v2ef_tuser), .out_tlast(v2ef_tlast), .out_tvalid(v2ef_tvalid), .out_tready(v2ef_tready),
-      .mac_src(my_mac_addr), .mac_dst(mac_src_addr),
-      .ip_src(my_ip_addr),   .ip_dst(ip_src_addr),
-      .udp_src(my_udp_port), .udp_dst(udp_src_prt),
+   chdr_eth_framer #(
+     .BASE   (REG_FRAMER_BASE[13:2]),
+     .AWIDTH (12)
+     ) my_eth_framer (
+      .clk(clk),
+      .reset(reset),
+      .clear(clear),
+      .set_stb(reg_wr_req),
+      .set_addr(reg_wr_addr[13:2]),
+      .set_data(reg_wr_data),
+      .in_tdata(v2e_tdata_int),
+      .in_tlast(v2e_tlast_int),
+      .in_tvalid(v2e_tvalid_int),
+      .in_tready(v2e_tready_int),
+      .out_tdata(v2ef_tdata),
+      .out_tuser(v2ef_tuser),
+      .out_tlast(v2ef_tlast),
+      .out_tvalid(v2ef_tvalid),
+      .out_tready(v2ef_tready),
+      .mac_src(mac_reg),
+      .ip_src(ip_reg),
+      .udp_src(udp_port0),
       .debug());
 
    axi_fifo #(.WIDTH(69),.SIZE(XO_FIFOSIZE)) xo_fifo
