@@ -98,7 +98,7 @@ module axi_crossbar_wrapper
 
     // settings bus for config
     .set_stb(xbar_set_stb),
-    .set_addr(xbar_set_addr), // Settings bus is word aligned, so drop lower two LSBs.
+    .set_addr({4'b0000,xbar_set_addr[13:2]}),
     .set_data(xbar_set_data),
     .rb_rd_stb(xbar_rb_stb),
     /* TODO: FIX THIS SHIT */
