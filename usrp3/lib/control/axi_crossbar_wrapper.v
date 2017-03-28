@@ -41,27 +41,21 @@ module axi_crossbar_wrapper
   input [NUM_OUTPUTS-1:0]               o_tready
 );
 
-  (* mark_debug = "true"  *)
-  wire        xbar_set_stb;
-  (* mark_debug = "true"  *)
+  wire                  xbar_set_stb;
   wire [REG_DWIDTH-1:0] xbar_set_data;
-  (* mark_debug = "true"  *)
-  wire [15:0] xbar_set_addr;
+  wire [15:0]           xbar_set_addr;
 
-  (* mark_debug = "true"  *)
-  wire        xbar_rb_stb;
-  (* mark_debug = "true"  *)
-  wire [15:0] xbar_rb_addr;
-  (* mark_debug = "true"  *)
+  wire                  xbar_rb_stb;
+  wire [15:0]           xbar_rb_addr;
   wire [REG_DWIDTH-1:0] xbar_rb_data;
 
-  regport_to_settingsbus
+  regport_to_xbar_settingsbus
   #(
     .BASE(REG_BASE),
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH)
   )
-  inst_regport_to_settingsbus
+  inst_regport_to_xbar_settingsbus
   (
     .clk(clk),
     .reset(reset),

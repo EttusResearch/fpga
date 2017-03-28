@@ -1,7 +1,7 @@
 //
 // Copyright (c) 2017 Ettus Research
 //
-module regport_to_settingsbus
+module regport_to_xbar_settingsbus
 #(
   parameter BASE   = 0,
   parameter DWIDTH = 32,
