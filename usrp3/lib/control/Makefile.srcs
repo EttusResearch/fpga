@@ -42,6 +42,7 @@ synchronizer_impl.v \
 synchronizer.v \
 user_settings.v \
 axil_regport_master.v \
+axil_to_ni_regport.v \
 regport_resp_mux.v \
 regport_to_xbar_settingsbus.v \
 pulse_stretch.v \

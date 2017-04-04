@@ -165,15 +165,15 @@ module n310
    output         DBA_CPLD_SPI_CSB_ATR_TX1,
    output         DBA_CPLD_SPI_SCLK_ATR_RX2,
 
-   output         DBA_CH1_TX_DSA_LE,
-   output  [5:0]  DBA_CH1_TX_DSA_DATA,
-   output         DBA_CH1_RX_DSA_LE,
-   output  [5:0]  DBA_CH1_RX_DSA_DATA,
+//   output         DbaCh1TxDsaLe,
+//   output  [5:0]  DbaCh1TxDsaData,
+//   output         DbaCh1RxDsaLe,
+//   output  [5:0]  DbaCh1RxDsaData,
 
-   output         DBA_CH2_TX_DSA_LE,
-   output  [5:0]  DBA_CH2_TX_DSA_DATA,
-   output         DBA_CH2_RX_DSA_LE,
-   output  [5:0]  DBA_CH2_RX_DSA_DATA,
+//   output         DbaCh2TxDsaLe,
+//   output  [5:0]  DbaCh2TxDsaData,
+//   output         DbaCh2RxDsaLe,
+//   output  [5:0]  DbaCh2RxDsaData,
 
 //   output         DbaPDacSync_n,
 //   output         DbaPDacDin,
@@ -198,22 +198,23 @@ module n310
    output         DBA_CPLD_JTAG_TMS,
    output         DBA_CPLD_JTAG_TCK,
 
-   output         DBA_MYK_SYNC_IN_P,
-   output         DBA_MYK_SYNC_IN_N,
-   input          DBA_MYK_SYNC_OUT_P,
-   input          DBA_MYK_SYNC_OUT_N,
-   input          DBA_FPGA_CLK_P,
-   input          DBA_FPGA_CLK_N,
-   input          DBA_FPGA_SYSREF_P,
-   input          DBA_FPGA_SYSREF_N,
+//   output         DbaMykSyncIn_p,
+//   output         DbaMykSyncIn_n,
+//   input          DbaMykSyncOut_p,
+//   input          DbaMykSyncOut_n,
+//   input          DbaFpgaClk_p,
+//   input          DbaFpgaClk_n,
+//   input          DbaFpgaSysref_p,
+//   input          DbaFpgaSysref_n
 
+   //
    input USRPIO_A_MGTCLK_P,
    input USRPIO_A_MGTCLK_N,
    //input USRPIO_A_SW_CLK, //TODO: Check direction
-   input USRPIO_A_RX_0_P, USRPIO_A_RX_1_P, USRPIO_A_RX_2_P, USRPIO_A_RX_3_P,
-   input USRPIO_A_RX_0_N, USRPIO_A_RX_1_N, USRPIO_A_RX_2_N, USRPIO_A_RX_3_N,
-   output USRPIO_A_TX_0_P, USRPIO_A_TX_1_P, USRPIO_A_TX_2_P, USRPIO_A_TX_3_P,
-   output USRPIO_A_TX_0_N, USRPIO_A_TX_1_N, USRPIO_A_TX_2_N, USRPIO_A_TX_3_N,
+   //input USRPIO_A_RX_0_P, USRPIO_A_RX_1_P, USRPIO_A_RX_2_P, USRPIO_A_RX_3_P,
+   //input USRPIO_A_RX_0_N, USRPIO_A_RX_1_N, USRPIO_A_RX_2_N, USRPIO_A_RX_3_N,
+   //output USRPIO_A_TX_0_P, USRPIO_A_TX_1_P, USRPIO_A_TX_2_P, USRPIO_A_TX_3_P,
+   //output USRPIO_A_TX_0_N, USRPIO_A_TX_1_N, USRPIO_A_TX_2_N, USRPIO_A_TX_3_N,
 
    //inout  USRPIO_B_GP_0_P, USRPIO_B_GP_1_P, USRPIO_B_GP_2_P, USRPIO_B_GP_3_P,
    //inout  USRPIO_B_GP_0_N, USRPIO_B_GP_1_N, USRPIO_B_GP_2_N, USRPIO_B_GP_3_N,
@@ -514,50 +515,6 @@ module n310
   wire [1:0] M_AXI_GP0_RRESP_S4;
   wire [31:0] M_AXI_GP0_RDATA_S4;
 
-  wire M_AXI_GP0_ARVALID_S5;
-  wire M_AXI_GP0_AWVALID_S5;
-  wire M_AXI_GP0_BREADY_S5;
-  wire M_AXI_GP0_RREADY_S5;
-  wire M_AXI_GP0_WVALID_S5;
-  wire [11:0] M_AXI_GP0_ARID_S5;
-  wire [11:0] M_AXI_GP0_AWID_S5;
-  wire [11:0] M_AXI_GP0_WID_S5;
-  wire [31:0] M_AXI_GP0_ARADDR_S5;
-  wire [31:0] M_AXI_GP0_AWADDR_S5;
-  wire [31:0] M_AXI_GP0_WDATA_S5;
-  wire [3:0] M_AXI_GP0_WSTRB_S5;
-  wire M_AXI_GP0_ARREADY_S5;
-  wire M_AXI_GP0_AWREADY_S5;
-  wire M_AXI_GP0_BVALID_S5;
-  wire M_AXI_GP0_RLAST_S5;
-  wire M_AXI_GP0_RVALID_S5;
-  wire M_AXI_GP0_WREADY_S5;
-  wire [1:0] M_AXI_GP0_BRESP_S5;
-  wire [1:0] M_AXI_GP0_RRESP_S5;
-  wire [31:0] M_AXI_GP0_RDATA_S5;
-
-  wire M_AXI_GP0_ARVALID_S6;
-  wire M_AXI_GP0_AWVALID_S6;
-  wire M_AXI_GP0_BREADY_S6;
-  wire M_AXI_GP0_RREADY_S6;
-  wire M_AXI_GP0_WVALID_S6;
-  wire [11:0] M_AXI_GP0_ARID_S6;
-  wire [11:0] M_AXI_GP0_AWID_S6;
-  wire [11:0] M_AXI_GP0_WID_S6;
-  wire [31:0] M_AXI_GP0_ARADDR_S6;
-  wire [31:0] M_AXI_GP0_AWADDR_S6;
-  wire [31:0] M_AXI_GP0_WDATA_S6;
-  wire [3:0] M_AXI_GP0_WSTRB_S6;
-  wire M_AXI_GP0_ARREADY_S6;
-  wire M_AXI_GP0_AWREADY_S6;
-  wire M_AXI_GP0_BVALID_S6;
-  wire M_AXI_GP0_RLAST_S6;
-  wire M_AXI_GP0_RVALID_S6;
-  wire M_AXI_GP0_WREADY_S6;
-  wire [1:0] M_AXI_GP0_BRESP_S6;
-  wire [1:0] M_AXI_GP0_RRESP_S6;
-  wire [31:0] M_AXI_GP0_RDATA_S6;
-
   wire        M_AXI_GP0_ARVALID_S[N_AXILITE_SLAVES-1:0];
   wire        M_AXI_GP0_AWVALID_S[N_AXILITE_SLAVES-1:0];
   wire        M_AXI_GP0_BREADY_S[N_AXILITE_SLAVES-1:0];
@@ -628,6 +585,23 @@ module n310
    //assign WB_CDCM_OD1 = 1'b1;
    //assign WB_CDCM_OD0 = 1'b1;
 
+   // Check Clock frequency through PPS_OUT
+
+   // TODO:  Only for DEBUG
+   //ODDR #(
+   //   .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
+   //   .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
+   //   .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
+   //) fclk_inst (
+   //   .Q(REF_1PPS_OUT),   // 1-bit DDR output
+   //   .C(FCLK_CLK0),   // 1-bit clock input
+   //   .CE(1'b1), // 1-bit clock enable input
+   //   .D1(1'b0), // 1-bit data input (positive edge)
+   //   .D2(1'b1), // 1-bit data input (negative edge)
+   //   .R(1'b0),   // 1-bit reset
+   //   .S(1'b0)    // 1-bit set
+   //);
+
    /////////////////////////////////////////////////////////////////////
    //
    // 10MHz Reference clock
@@ -668,7 +642,14 @@ module n310
   // Radio Clock Generation
 
   wire radio_clk;
-  // FIXME: Shifted to RadioClocking.vhd
+  wire radio_clk_locked;
+
+  assign radio_clk = bus_clk;
+  assign radio_clk_locked = 1'b1;
+  //radio_clk_gen radio_clk_gen (
+  //   .CLK_IN1_p(USRPIO_A_MGTCLK_P), .CLK_IN1_n(USRPIO_A_MGTCLK_P),
+  //   .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
+  //   .RESET(global_rst), .LOCKED(radio_clk_locked));
 
   ////////////////////////////////////////////////////////////////////
   //
@@ -696,6 +677,9 @@ module n310
      .reset_in(global_rst),
      .reset_out(bus_rst)
   );
+
+
+
 
 `ifdef BUILD_1G
    wire  gige_refclk, gige_refclk_bufg;
@@ -1393,23 +1377,23 @@ module n310
     .s_axi_rresp(M_AXI_GP0_RRESP),
     .s_axi_rvalid(M_AXI_GP0_RVALID),
     .s_axi_rready(M_AXI_GP0_RREADY),
-    .m_axi_awaddr({M_AXI_GP0_AWADDR_S6, M_AXI_GP0_AWADDR_S5, M_AXI_GP0_AWADDR_S4, M_AXI_GP0_AWADDR_S3, M_AXI_GP0_AWADDR_S2, M_AXI_GP0_AWADDR_S1, M_AXI_GP0_AWADDR_S0}),
-    .m_axi_awvalid({M_AXI_GP0_AWVALID_S6, M_AXI_GP0_AWVALID_S5, M_AXI_GP0_AWVALID_S4, M_AXI_GP0_AWVALID_S3, M_AXI_GP0_AWVALID_S2, M_AXI_GP0_AWVALID_S1, M_AXI_GP0_AWVALID_S0}),
-    .m_axi_awready({M_AXI_GP0_AWREADY_S6, M_AXI_GP0_AWREADY_S5, M_AXI_GP0_AWREADY_S4, M_AXI_GP0_AWREADY_S3, M_AXI_GP0_AWREADY_S2, M_AXI_GP0_AWREADY_S1, M_AXI_GP0_AWREADY_S0}),
-    .m_axi_wdata({M_AXI_GP0_WDATA_S6, M_AXI_GP0_WDATA_S5, M_AXI_GP0_WDATA_S4, M_AXI_GP0_WDATA_S3, M_AXI_GP0_WDATA_S2, M_AXI_GP0_WDATA_S1, M_AXI_GP0_WDATA_S0}),
-    .m_axi_wstrb({M_AXI_GP0_WSTRB_S6, M_AXI_GP0_WSTRB_S5, M_AXI_GP0_WSTRB_S4, M_AXI_GP0_WSTRB_S3, M_AXI_GP0_WSTRB_S2, M_AXI_GP0_WSTRB_S1, M_AXI_GP0_WSTRB_S0}),
-    .m_axi_wvalid({M_AXI_GP0_WVALID_S6, M_AXI_GP0_WVALID_S5, M_AXI_GP0_WVALID_S4, M_AXI_GP0_WVALID_S3, M_AXI_GP0_WVALID_S2, M_AXI_GP0_WVALID_S1, M_AXI_GP0_WVALID_S0}),
-    .m_axi_wready({M_AXI_GP0_WREADY_S6, M_AXI_GP0_WREADY_S5, M_AXI_GP0_WREADY_S4, M_AXI_GP0_WREADY_S3, M_AXI_GP0_WREADY_S2, M_AXI_GP0_WREADY_S1, M_AXI_GP0_WREADY_S0}),
-    .m_axi_bresp({M_AXI_GP0_BRESP_S6, M_AXI_GP0_BRESP_S5, M_AXI_GP0_BRESP_S4, M_AXI_GP0_BRESP_S3, M_AXI_GP0_BRESP_S2, M_AXI_GP0_BRESP_S1, M_AXI_GP0_BRESP_S0}),
-    .m_axi_bvalid({M_AXI_GP0_BVALID_S6, M_AXI_GP0_BVALID_S5, M_AXI_GP0_BVALID_S4, M_AXI_GP0_BVALID_S3, M_AXI_GP0_BVALID_S2, M_AXI_GP0_BVALID_S1, M_AXI_GP0_BVALID_S0}),
-    .m_axi_bready({M_AXI_GP0_BREADY_S6, M_AXI_GP0_BREADY_S5, M_AXI_GP0_BREADY_S4, M_AXI_GP0_BREADY_S3, M_AXI_GP0_BREADY_S2, M_AXI_GP0_BREADY_S1, M_AXI_GP0_BREADY_S0}),
-    .m_axi_araddr({M_AXI_GP0_ARADDR_S6, M_AXI_GP0_ARADDR_S5, M_AXI_GP0_ARADDR_S4, M_AXI_GP0_ARADDR_S3, M_AXI_GP0_ARADDR_S2, M_AXI_GP0_ARADDR_S1, M_AXI_GP0_ARADDR_S0}),
-    .m_axi_arvalid({M_AXI_GP0_ARVALID_S6, M_AXI_GP0_ARVALID_S5, M_AXI_GP0_ARVALID_S4, M_AXI_GP0_ARVALID_S3, M_AXI_GP0_ARVALID_S2, M_AXI_GP0_ARVALID_S1, M_AXI_GP0_ARVALID_S0}),
-    .m_axi_arready({M_AXI_GP0_ARREADY_S6, M_AXI_GP0_ARREADY_S5, M_AXI_GP0_ARREADY_S4, M_AXI_GP0_ARREADY_S3, M_AXI_GP0_ARREADY_S2, M_AXI_GP0_ARREADY_S1, M_AXI_GP0_ARREADY_S0}),
-    .m_axi_rdata({M_AXI_GP0_RDATA_S6, M_AXI_GP0_RDATA_S5, M_AXI_GP0_RDATA_S4, M_AXI_GP0_RDATA_S3, M_AXI_GP0_RDATA_S2, M_AXI_GP0_RDATA_S1, M_AXI_GP0_RDATA_S0}),
-    .m_axi_rresp({M_AXI_GP0_RRESP_S6, M_AXI_GP0_RRESP_S5, M_AXI_GP0_RRESP_S4, M_AXI_GP0_RRESP_S3, M_AXI_GP0_RRESP_S2, M_AXI_GP0_RRESP_S1, M_AXI_GP0_RRESP_S0}),
-    .m_axi_rvalid({M_AXI_GP0_RVALID_S6, M_AXI_GP0_RVALID_S5, M_AXI_GP0_RVALID_S4, M_AXI_GP0_RVALID_S3, M_AXI_GP0_RVALID_S2, M_AXI_GP0_RVALID_S1, M_AXI_GP0_RVALID_S0}),
-    .m_axi_rready({M_AXI_GP0_RREADY_S6, M_AXI_GP0_RREADY_S5, M_AXI_GP0_RREADY_S4, M_AXI_GP0_RREADY_S3, M_AXI_GP0_RREADY_S2, M_AXI_GP0_RREADY_S1, M_AXI_GP0_RREADY_S0})
+    .m_axi_awaddr({M_AXI_GP0_AWADDR_S4, M_AXI_GP0_AWADDR_S3, M_AXI_GP0_AWADDR_S2, M_AXI_GP0_AWADDR_S1, M_AXI_GP0_AWADDR_S0}),
+    .m_axi_awvalid({M_AXI_GP0_AWVALID_S4, M_AXI_GP0_AWVALID_S3, M_AXI_GP0_AWVALID_S2, M_AXI_GP0_AWVALID_S1, M_AXI_GP0_AWVALID_S0}),
+    .m_axi_awready({M_AXI_GP0_AWREADY_S4, M_AXI_GP0_AWREADY_S3, M_AXI_GP0_AWREADY_S2, M_AXI_GP0_AWREADY_S1, M_AXI_GP0_AWREADY_S0}),
+    .m_axi_wdata({M_AXI_GP0_WDATA_S4, M_AXI_GP0_WDATA_S3, M_AXI_GP0_WDATA_S2, M_AXI_GP0_WDATA_S1, M_AXI_GP0_WDATA_S0}),
+    .m_axi_wstrb({M_AXI_GP0_WSTRB_S4, M_AXI_GP0_WSTRB_S3, M_AXI_GP0_WSTRB_S2, M_AXI_GP0_WSTRB_S1, M_AXI_GP0_WSTRB_S0}),
+    .m_axi_wvalid({M_AXI_GP0_WVALID_S4, M_AXI_GP0_WVALID_S3, M_AXI_GP0_WVALID_S2, M_AXI_GP0_WVALID_S1, M_AXI_GP0_WVALID_S0}),
+    .m_axi_wready({M_AXI_GP0_WREADY_S4, M_AXI_GP0_WREADY_S3, M_AXI_GP0_WREADY_S2, M_AXI_GP0_WREADY_S1, M_AXI_GP0_WREADY_S0}),
+    .m_axi_bresp({M_AXI_GP0_BRESP_S4, M_AXI_GP0_BRESP_S3, M_AXI_GP0_BRESP_S2, M_AXI_GP0_BRESP_S1, M_AXI_GP0_BRESP_S0}),
+    .m_axi_bvalid({M_AXI_GP0_BVALID_S4, M_AXI_GP0_BVALID_S3, M_AXI_GP0_BVALID_S2, M_AXI_GP0_BVALID_S1, M_AXI_GP0_BVALID_S0}),
+    .m_axi_bready({M_AXI_GP0_BREADY_S4, M_AXI_GP0_BREADY_S3, M_AXI_GP0_BREADY_S2, M_AXI_GP0_BREADY_S1, M_AXI_GP0_BREADY_S0}),
+    .m_axi_araddr({M_AXI_GP0_ARADDR_S4, M_AXI_GP0_ARADDR_S3, M_AXI_GP0_ARADDR_S2, M_AXI_GP0_ARADDR_S1, M_AXI_GP0_ARADDR_S0}),
+    .m_axi_arvalid({M_AXI_GP0_ARVALID_S4, M_AXI_GP0_ARVALID_S3, M_AXI_GP0_ARVALID_S2, M_AXI_GP0_ARVALID_S1, M_AXI_GP0_ARVALID_S0}),
+    .m_axi_arready({M_AXI_GP0_ARREADY_S4, M_AXI_GP0_ARREADY_S3, M_AXI_GP0_ARREADY_S2, M_AXI_GP0_ARREADY_S1, M_AXI_GP0_ARREADY_S0}),
+    .m_axi_rdata({M_AXI_GP0_RDATA_S4, M_AXI_GP0_RDATA_S3, M_AXI_GP0_RDATA_S2, M_AXI_GP0_RDATA_S1, M_AXI_GP0_RDATA_S0}),
+    .m_axi_rresp({M_AXI_GP0_RRESP_S4, M_AXI_GP0_RRESP_S3, M_AXI_GP0_RRESP_S2, M_AXI_GP0_RRESP_S1, M_AXI_GP0_RRESP_S0}),
+    .m_axi_rvalid({M_AXI_GP0_RVALID_S4, M_AXI_GP0_RVALID_S3, M_AXI_GP0_RVALID_S2, M_AXI_GP0_RVALID_S1, M_AXI_GP0_RVALID_S0}),
+    .m_axi_rready({M_AXI_GP0_RREADY_S4, M_AXI_GP0_RREADY_S3, M_AXI_GP0_RREADY_S2, M_AXI_GP0_RREADY_S1, M_AXI_GP0_RREADY_S0})
   );
 
   (* mark_debug = "true", keep = "true" *)
@@ -1649,6 +1633,7 @@ module n310
    assign DBA_CPLD_SPI_SCLK_ATR_RX2 = spi0_sclk;
    assign DBA_CPLD_SPI_SDI_ATR_TX2  = spi0_mosi;  // Slave In
    assign DBA_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
+   assign DBA_CPLD_SYNC_ATR_RX1     = 1'b0;
    assign DBA_CPLD_SPI_CSB_ATR_TX1  = spi0_ss0;
 
    assign DBA_CPLD_RESET_N          = cpld_reset;
@@ -1658,16 +1643,8 @@ module n310
    assign DBA_MYK_SPI_SDIO          = spi0_mosi;
 
    assign spi0_miso = DBA_MYK_SPI_SDO | DBA_CPLD_SPI_SDO;
+   //assign DbaCpldReset_n       = ~global_rst;
 
-   assign DBA_CH1_TX_DSA_LE   = 1'b1;
-   assign DBA_CH1_TX_DSA_DATA = 6'b0;
-   assign DBA_CH1_RX_DSA_LE   = 1'b1;
-   assign DBA_CH1_RX_DSA_DATA = 6'b0;
-
-   assign DBA_CH2_TX_DSA_LE   = 1'b1;
-   assign DBA_CH2_TX_DSA_DATA = 6'b0;
-   assign DBA_CH2_RX_DSA_LE   = 1'b1;
-   assign DBA_CH2_RX_DSA_DATA = 6'b0;
 
    ///////////////////////////////////////////////////////
    //
@@ -1675,37 +1652,14 @@ module n310
    //
    ///////////////////////////////////////////////////////
 
-   // Radio Clock Generation
-
-   wire  [31:0]     rx0;
-   wire  [31:0]     rx1;
-   wire  [31:0]     rx2;
-   wire  [31:0]     rx3;
-   wire  [31:0]     tx0;
-   wire  [31:0]     tx1;
-   wire  [31:0]     tx2;
-   wire  [31:0]     tx3;
-   wire             rx_stb; // FIXME: 2 bit
-   wire             tx_stb; // FIXME: 2 bit
-
-
-  //TODO: Remove testing RX counter
-  //always @(posedge sample_clk_1x) begin
-  //  if (bus_rst) begin
-  //    rx0 <= 32'b0;
-  //    rx1 <= 32'b0;
-  //  end else begin
-  //    rx0 <= rx0 + 1'b1;
-  //    if (rx0 == 32'hffff)
-  //      rx1 <= rx1 + 1'b1;
-  //  end
-  //end
+   wire [31:0]      rx0, rx1;
+   wire [31:0]      tx0, tx1;
 
   n310_core #(.REG_AWIDTH(14)) n310_core
   (
     //Clocks and resets
     .radio_clk(radio_clk),
-    .radio_rst(radio_rst),
+    .radio_rst(/*radio_rst*/global_rst),
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
@@ -1732,18 +1686,11 @@ module n310
     .s_axi_rvalid(M_AXI_GP0_RVALID_S4),
     .s_axi_rready(M_AXI_GP0_RREADY_S4),
 
-    // JESD204
+    // Radio 0 signals
     .rx0(rx0),
     .tx0(tx0),
-
     .rx1(rx1),
     .tx1(tx1),
-
-    .rx2(rx2),
-    .tx2(tx2),
-
-    .rx3(rx3),
-    .tx3(tx3),
 
     //DMA
     .dmao_tdata(),
@@ -1781,123 +1728,6 @@ module n310
     .cpld_reset(cpld_reset)
   );
 
-  // //////////////////////////////////////////////////////////////////////
-  //
-  // JESD204b CORE
-  //
-  // //////////////////////////////////////////////////////////////////////
-
-  wire  [3:0]  jesd_adc_rx_p;
-  wire  [3:0]  jesd_adc_rx_n;
-  wire  [3:0]  jesd_dac_tx_p;
-  wire  [3:0]  jesd_dac_tx_n;
-  wire         jesd_adc_sync;
-  wire         jesd_dac_sync;
-
-  // JESD204 core
-   assign jesd_adc_rx_p = {USRPIO_A_RX_3_P, USRPIO_A_RX_2_P, USRPIO_A_RX_1_P, USRPIO_A_RX_0_P};
-   assign jesd_adc_rx_n = {USRPIO_A_RX_3_N, USRPIO_A_RX_2_N, USRPIO_A_RX_1_N, USRPIO_A_RX_0_N};
-   assign {USRPIO_A_TX_3_P, USRPIO_A_TX_2_P, USRPIO_A_TX_1_P, USRPIO_A_TX_0_P} = jesd_dac_tx_p;
-   assign {USRPIO_A_TX_3_N, USRPIO_A_TX_2_N, USRPIO_A_TX_1_N, USRPIO_A_TX_0_N} = jesd_dac_tx_n;
-  // FIXME: Add 2 JESD cores.
-
-  jesd204_core_wrapper #(
-    .REG_BASE(0),
-    .REG_DWIDTH(32),
-    .REG_AWIDTH(14)
-  ) jesd204_core_wrapper (
-
-   //Clocks and resets
-   .areset(global_rst),
-   .bus_clk(bus_clk),
-   .bus_rst(bus_rst),
-   .db_fpga_clk_p(DBA_FPGA_CLK_P),
-   .db_fpga_clk_n(DBA_FPGA_CLK_N),
-   .sample_clk(radio_clk),
-
-   // AXI4-Lite: Write address port (domain: s_axi_aclk)
-   .s_axi_awaddr(M_AXI_GP0_AWADDR_S5),
-   .s_axi_awvalid(M_AXI_GP0_AWVALID_S5),
-   .s_axi_awready(M_AXI_GP0_AWREADY_S5),
-   // AXI4-Lite: Write data port (domain: s_axi_aclk)
-   .s_axi_wdata(M_AXI_GP0_WDATA_S5),
-   .s_axi_wstrb(M_AXI_GP0_WSTRB_S5),
-   .s_axi_wvalid(M_AXI_GP0_WVALID_S5),
-   .s_axi_wready(M_AXI_GP0_WREADY_S5),
-   // AXI4-Lite: Write response port (domain: s_axi_aclk)
-   .s_axi_bresp(M_AXI_GP0_BRESP_S5),
-   .s_axi_bvalid(M_AXI_GP0_BVALID_S5),
-   .s_axi_bready(M_AXI_GP0_BREADY_S5),
-   // AXI4-Lite: Read address port (domain: s_axi_aclk)
-   .s_axi_araddr(M_AXI_GP0_ARADDR_S5),
-   .s_axi_arvalid(M_AXI_GP0_ARVALID_S5),
-   .s_axi_arready(M_AXI_GP0_ARREADY_S5),
-   // AXI4-Lite: Read data port (domain: s_axi_aclk)
-   .s_axi_rdata(M_AXI_GP0_RDATA_S5),
-   .s_axi_rresp(M_AXI_GP0_RRESP_S5),
-   .s_axi_rvalid(M_AXI_GP0_RVALID_S5),
-   .s_axi_rready(M_AXI_GP0_RREADY_S5),
-   .rx0(rx0),
-   .rx1(rx1),
-   .rx_stb(rx_stb),
-   .tx0(tx0),
-   .tx1(tx1),
-   .tx_stb(tx_stb),
-   .lmk_sync(DBA_CPLD_SYNC_ATR_RX1),
-   .myk_reset(/*DBA_CPLD_RESET_N*/), //TODO
-   .jesd_dac_sync(jesd_dac_sync),
-   .jesd_adc_sync(jesd_adc_sync),
-
-   .jesd_refclk_p(USRPIO_A_MGTCLK_P),
-   .jesd_refclk_n(USRPIO_A_MGTCLK_N),
-   .jesd_adc_rx_p(jesd_adc_rx_p),
-   .jesd_adc_rx_n(jesd_adc_rx_n),
-   .jesd_dac_tx_p(jesd_dac_tx_p),
-   .jesd_dac_tx_n(jesd_dac_tx_n),
-   .myk_adc_sync_p(DBA_MYK_SYNC_IN_P),
-   .myk_adc_sync_n(DBA_MYK_SYNC_IN_N),
-   .myk_dac_sync_p(DBA_MYK_SYNC_OUT_P),
-   .myk_dac_sync_n(DBA_MYK_SYNC_OUT_N),
-   .fpga_sysref_p(DBA_FPGA_SYSREF_P),
-   .fpga_sysref_n(DBA_FPGA_SYSREF_N)
-  );
-
-  // FIXME: Placeholder for XBAR AXI DMA
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy
-  (
-    .s_axi_aclk(bus_clk),
-    .s_axi_areset(bus_rst),
-
-    .s_axi_awaddr(M_AXI_GP0_AWADDR_S6),
-    .s_axi_awvalid(M_AXI_GP0_AWVALID_S6),
-    .s_axi_awready(M_AXI_GP0_AWREADY_S6),
-
-    .s_axi_wdata(M_AXI_GP0_WDATA_S6),
-    .s_axi_wstrb(M_AXI_GP0_WSTRB_S6),
-    .s_axi_wvalid(M_AXI_GP0_WVALID_S6),
-    .s_axi_wready(M_AXI_GP0_WREADY_S6),
-
-    .s_axi_bresp(M_AXI_GP0_BRESP_S6),
-    .s_axi_bvalid(M_AXI_GP0_BVALID_S6),
-    .s_axi_bready(M_AXI_GP0_BREADY_S6),
-
-    .s_axi_araddr(M_AXI_GP0_ARADDR_S6),
-    .s_axi_arvalid(M_AXI_GP0_ARVALID_S6),
-    .s_axi_arready(M_AXI_GP0_ARREADY_S6),
-
-    .s_axi_rdata(M_AXI_GP0_RDATA_S6),
-    .s_axi_rresp(M_AXI_GP0_RRESP_S6),
-    .s_axi_rvalid(M_AXI_GP0_RVALID_S6),
-    .s_axi_rready(M_AXI_GP0_RREADY_S6)
-  );
-
-
-  // //////////////////////////////////////////////////////////////////////
-  //
-  // LEDS
-  //
-  // //////////////////////////////////////////////////////////////////////
-
    reg [31:0] counter1;
    always @(posedge bus_clk) begin
      if (FCLK_RESET0)
@@ -1906,34 +1736,23 @@ module n310
        counter1 <= counter1 + 32'd1;
    end
    reg [31:0] counter3;
-   always @(posedge radio_clk) begin
+   always @(posedge FCLK_CLK0) begin
      if (FCLK_RESET0)
        counter3 <= 32'd0;
      else
        counter3 <= counter3 + 32'd1;
    end
+   //reg [31:0] counter4;
+   //always @(posedge gmii_clk1) begin
+   //  if (FCLK_RESET0)
+   //    counter4 <= 32'd0;
+   //  else
+   //    counter4 <= counter4 + 32'd1;
+   //end
 
    assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
 
-   assign PANEL_LED_LINK = counter3[26];
-   assign PANEL_LED_REF = counter1[26]; //FIXME
-   assign PANEL_LED_GPS = jesd_dac_sync;
-
-   // Check Clock frequency through PPS_OUT
-
-   // TODO:  Only for DEBUG
-   ODDR #(
-      .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
-      .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
-      .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
-   ) fclk_inst (
-      .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(radio_clk),   // 1-bit clock input
-      .CE(1'b1), // 1-bit clock enable input
-      .D1(1'b0), // 1-bit data input (positive edge)
-      .D2(1'b1), // 1-bit data input (negative edge)
-      .R(1'b0),   // 1-bit reset
-      .S(1'b0)    // 1-bit set
-   );
-
+   assign PANEL_LED_LINK = counter1[26];
+   assign PANEL_LED_REF = counter3[26];
+   assign PANEL_LED_GPS = 1'b1;
 endmodule

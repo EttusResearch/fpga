@@ -202,7 +202,15 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {PANEL_LED_REF}]
 
 ## MGTs, Bank 109
 
+set_property PACKAGE_PIN   AH10             [get_ports {SFP_0_RX_P}]
+set_property PACKAGE_PIN   AH9              [get_ports {SFP_0_RX_N}]
+set_property PACKAGE_PIN   AK10             [get_ports {SFP_0_TX_P}]
+set_property PACKAGE_PIN   AK9              [get_ports {SFP_0_TX_N}]
 
+set_property PACKAGE_PIN   AJ8              [get_ports {SFP_1_RX_P}]
+set_property PACKAGE_PIN   AJ7              [get_ports {SFP_1_RX_N}]
+set_property PACKAGE_PIN   AK6              [get_ports {SFP_1_TX_P}]
+set_property PACKAGE_PIN   AK5              [get_ports {SFP_1_TX_N}]
 
 ## SFP+ 0, Slow Speed, Bank 13 3.3V
 
@@ -269,128 +277,92 @@ set_property PACKAGE_PIN   G1               [get_ports {DBA_CPLD_RESET_N}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_RESET_N}]
 
 set_property PACKAGE_PIN   H2               [get_ports {DBA_CPLD_ADDR[0]}]
+#set_property PACKAGE_PIN   D1               [get_ports {DbaCh1TxDsaData[5]}]
+#set_property PACKAGE_PIN   E1               [get_ports {DbaCh1TxDsaLe}]
 set_property PACKAGE_PIN   H1               [get_ports {DBA_CPLD_ADDR[2]}]
 set_property PACKAGE_PIN   J1               [get_ports {DBA_CPLD_ADDR[1]}]
+#set_property PACKAGE_PIN   A5               [get_ports {DbaCh1TxDsaData[3]}]
+#set_property PACKAGE_PIN   A4               [get_ports {DbaCh1TxDsaData[4]}]
 set_property PACKAGE_PIN   F5               [get_ports {DBA_CPLD_SPI_SDO}]
 set_property PACKAGE_PIN   E5               [get_ports {DBA_CPLD_SEL_ATR_SPI_N}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_SEL_ATR_SPI_N}]
+
+#set_property PACKAGE_PIN   E3               [get_ports {DbaCh1RxDsaData[0]}]
+#set_property PACKAGE_PIN   E2               [get_ports {DbaCh1RxDsaData[1]}]
+#set_property PACKAGE_PIN   A3               [get_ports {DbaCh1TxDsaData[2]}]
+#set_property PACKAGE_PIN   A2               [get_ports {DbaCh1TxDsaData[1]}]
 
 set_property PACKAGE_PIN   K1               [get_ports {DBA_CPLD_SYNC_ATR_RX1}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_SYNC_ATR_RX1}]
 
 set_property PACKAGE_PIN   L1               [get_ports {DBA_CPLD_SPI_SDI_ATR_TX2}]
+#set_property PACKAGE_PIN   C4               [get_ports {DbaCh1TxDsaData[0]}]
+#set_property PACKAGE_PIN   C3               [get_ports {DbaCh1RxDsaData[5]}]
 set_property PACKAGE_PIN   F4               [get_ports {DBA_CPLD_SPI_CSB_ATR_TX1}]
 set_property PACKAGE_PIN   F3               [get_ports {DBA_CPLD_SPI_SCLK_ATR_RX2}]
+#set_property PACKAGE_PIN   B1               [get_ports {DbaCh1RxDsaLe}]
+#set_property PACKAGE_PIN   B2               [get_ports {DbaCh1RxDsaData[3]}]
+#set_property PACKAGE_PIN   C1               [get_ports {DbaCh1RxDsaData[4]}]
+#set_property PACKAGE_PIN   C2               [get_ports {DbaCh1RxDsaData[2]}]
 
-set_property PACKAGE_PIN   E1               [get_ports {DBA_CH1_TX_DSA_LE}]
-set_property PACKAGE_PIN   C4               [get_ports {DBA_CH1_TX_DSA_DATA[0]}]
-set_property PACKAGE_PIN   A2               [get_ports {DBA_CH1_TX_DSA_DATA[1]}]
-set_property PACKAGE_PIN   A3               [get_ports {DBA_CH1_TX_DSA_DATA[2]}]
-set_property PACKAGE_PIN   A5               [get_ports {DBA_CH1_TX_DSA_DATA[3]}]
-set_property PACKAGE_PIN   A4               [get_ports {DBA_CH1_TX_DSA_DATA[4]}]
-set_property PACKAGE_PIN   D1               [get_ports {DBA_CH1_TX_DSA_DATA[5]}]
-set_property PACKAGE_PIN   B1               [get_ports {DBA_CH1_RX_DSA_LE}]
-set_property PACKAGE_PIN   E3               [get_ports {DBA_CH1_RX_DSA_DATA[0]}]
-set_property PACKAGE_PIN   E2               [get_ports {DBA_CH1_RX_DSA_DATA[1]}]
-set_property PACKAGE_PIN   C2               [get_ports {DBA_CH1_RX_DSA_DATA[2]}]
-set_property PACKAGE_PIN   B2               [get_ports {DBA_CH1_RX_DSA_DATA[3]}]
-set_property PACKAGE_PIN   C1               [get_ports {DBA_CH1_RX_DSA_DATA[4]}]
-set_property PACKAGE_PIN   C3               [get_ports {DBA_CH1_RX_DSA_DATA[5]}]
-
-set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CH1_*X_DSA_*}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_ADDR[*]}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {DBA_CPLD_SPI_*}]
 
 ## HR GPIO, Bank 10, 2.5V
 
-set_property PACKAGE_PIN   AG12             [get_ports {DBA_MYK_SYNC_IN_P}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_MYK_SYNC_IN_P}]
-
-set_property PACKAGE_PIN   AH12             [get_ports {DBA_MYK_SYNC_IN_N}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_MYK_SYNC_IN_N}]
-
+#set_property PACKAGE_PIN   AG12             [get_ports {DbaMykSyncIn_p}]
+#set_property PACKAGE_PIN   AH12             [get_ports {DbaMykSyncIn_n}]
 set_property PACKAGE_PIN   AJ13             [get_ports {DBA_MYK_SPI_SDO}]
 set_property PACKAGE_PIN   AJ14             [get_ports {DBA_MYK_SPI_SDIO}]
+#set_property PACKAGE_PIN   AG15             [get_ports {DbaCh2TxDsaLe}]
+#set_property PACKAGE_PIN   AF15             [get_ports {DbaCh2TxDsaData[5]}]
 set_property PACKAGE_PIN   AH13             [get_ports {DBA_CPLD_JTAG_TDI}]
 set_property PACKAGE_PIN   AH14             [get_ports {DBA_CPLD_JTAG_TDO}]
-
-set_property PACKAGE_PIN   AG15             [get_ports {DBA_CH2_TX_DSA_LE}]
-set_property PACKAGE_PIN   AH18             [get_ports {DBA_CH2_TX_DSA_DATA[0]}]
-set_property PACKAGE_PIN   AJ18             [get_ports {DBA_CH2_TX_DSA_DATA[1]}]
-set_property PACKAGE_PIN   AJ16             [get_ports {DBA_CH2_TX_DSA_DATA[2]}]
-set_property PACKAGE_PIN   AH17             [get_ports {DBA_CH2_TX_DSA_DATA[3]}]
-set_property PACKAGE_PIN   AH16             [get_ports {DBA_CH2_TX_DSA_DATA[4]}]
-set_property PACKAGE_PIN   AF15             [get_ports {DBA_CH2_TX_DSA_DATA[5]}]
-set_property PACKAGE_PIN   AC13             [get_ports {DBA_CH2_RX_DSA_LE}]
-set_property PACKAGE_PIN   AD15             [get_ports {DBA_CH2_RX_DSA_DATA[0]}]
-set_property PACKAGE_PIN   AD16             [get_ports {DBA_CH2_RX_DSA_DATA[1]}]
-set_property PACKAGE_PIN   AF17             [get_ports {DBA_CH2_RX_DSA_DATA[2]}]
-set_property PACKAGE_PIN   AF18             [get_ports {DBA_CH2_RX_DSA_DATA[3]}]
-set_property PACKAGE_PIN   AB12             [get_ports {DBA_CH2_RX_DSA_DATA[4]}]
-set_property PACKAGE_PIN   AC12             [get_ports {DBA_CH2_RX_DSA_DATA[5]}]
-
-set_property PACKAGE_PIN   AE12             [get_ports {DBA_MYK_SYNC_OUT_P}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_MYK_SYNC_OUT_P}]
-
-set_property PACKAGE_PIN   AF12             [get_ports {DBA_MYK_SYNC_OUT_N}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_MYK_SYNC_OUT_N}]
-
-set_property PACKAGE_PIN   AF14             [get_ports {DBA_FPGA_CLK_P}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_FPGA_CLK_P}]
-
-set_property PACKAGE_PIN   AG14             [get_ports {DBA_FPGA_CLK_N}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_FPGA_CLK_N}]
-
-set_property PACKAGE_PIN   AG17             [get_ports {DBA_FPGA_SYSREF_P}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_FPGA_SYSREF_P}]
-
-set_property PACKAGE_PIN   AG16             [get_ports {DBA_FPGA_SYSREF_N}]
-set_property IOSTANDARD    LVDS_25          [get_ports {DBA_FPGA_SYSREF_N}]
-
+#set_property PACKAGE_PIN   AK15             [get_ports {DbaMykGpio1}]
+#set_property PACKAGE_PIN   AJ15             [get_ports {DbaMykGpio4}]
+#set_property PACKAGE_PIN   AH16             [get_ports {DbaCh2TxDsaData[4]}]
+#set_property PACKAGE_PIN   AH17             [get_ports {DbaCh2TxDsaData[3]}]
+#set_property PACKAGE_PIN   AE12             [get_ports {DbaMykSyncOut_p}]
+#set_property PACKAGE_PIN   AF12             [get_ports {DbaMykSyncOut_n}]
+#set_property PACKAGE_PIN   AK12             [get_ports {DbaMykGpio13}]
+#set_property PACKAGE_PIN   AK13             [get_ports {DbaMykGpio0}]
+#set_property PACKAGE_PIN   AK16             [get_ports {DbaMykIntrq}]
+#set_property PACKAGE_PIN   AJ16             [get_ports {DbaCh2TxDsaData[2]}]
+#set_property PACKAGE_PIN   AH18             [get_ports {DbaCh2TxDsaData[0]}]
+#set_property PACKAGE_PIN   AJ18             [get_ports {DbaCh2TxDsaData[1]}]
+#set_property PACKAGE_PIN   AF14             [get_ports {DbaFpgaClk_p}]
+#set_property PACKAGE_PIN   AG14             [get_ports {DbaFpgaClk_n}]
+#set_property PACKAGE_PIN   AG17             [get_ports {DbaFpgaSysref_p}]
+#set_property PACKAGE_PIN   AG16             [get_ports {DbaFpgaSysref_n}]
+#set_property PACKAGE_PIN   AD15             [get_ports {DbaCh2RxDsaData[3]}]
+#set_property PACKAGE_PIN   AD16             [get_ports {DbaCh2RxDsaData[5]}]
 set_property PACKAGE_PIN   AE13             [get_ports {DBA_CPLD_JTAG_TMS}]
 set_property PACKAGE_PIN   AF13             [get_ports {DBA_CPLD_JTAG_TCK}]
-set_property PACKAGE_PIN   AE16             [get_ports {DBA_MYK_SPI_CS_N}]
-set_property PACKAGE_PIN   AE17             [get_ports {DBA_MYK_SPI_SCLK}]
-
 #set_property PACKAGE_PIN   AE15             [get_ports {DbaMykGpio15}]
+set_property PACKAGE_PIN   AE16             [get_ports {DBA_MYK_SPI_CS_N}]
+#set_property PACKAGE_PIN   AF17             [get_ports {DbaCh2RxDsaData[1]}]
+#set_property PACKAGE_PIN   AF18             [get_ports {DbaCh2RxDsaData[2]}]
 #set_property PACKAGE_PIN   AC16             [get_ports {DbaPDacSync_n}]
 #set_property PACKAGE_PIN   AC17             [get_ports {DbaPDacDin}]
 #set_property PACKAGE_PIN   AD13             [get_ports {DbaMykGpio12}]
 #set_property PACKAGE_PIN   AD14             [get_ports {DbaMykGpio14}]
+set_property PACKAGE_PIN   AE17             [get_ports {DBA_MYK_SPI_SCLK}]
 #set_property PACKAGE_PIN   AE18             [get_ports {DbaMykGpio3}]
+#set_property PACKAGE_PIN   AB12             [get_ports {DbaCh2RxDsaData[0]}]
+#set_property PACKAGE_PIN   AC12             [get_ports {DbaCh2RxDsaData[4]}]
+#set_property PACKAGE_PIN   AC13             [get_ports {DbaCh2RxDsaLe}]
 #set_property PACKAGE_PIN   AC14             [get_ports {DbaPDacSclk}]
-#set_property PACKAGE_PIN   AK15             [get_ports {DbaMykGpio1}]
-#set_property PACKAGE_PIN   AJ15             [get_ports {DbaMykGpio4}]
-#set_property PACKAGE_PIN   AK12             [get_ports {DbaMykGpio13}]
-#set_property PACKAGE_PIN   AK13             [get_ports {DbaMykGpio0}]
-#set_property PACKAGE_PIN   AK16             [get_ports {DbaMykIntrq}]
 
 set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_CPLD_JTAG*}]
 set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_MYK_SPI_*}]
-set_property IOSTANDARD    LVCMOS25         [get_ports {DBA_CH2_*X_DSA_*}]
+
+#set UsrpIoAHrPinsDiff [get_ports {DbaMykSyncIn_* DbaMykSyncOut_* DbaFpgaClk_* DbaFpgaSysref_*}]
+#set_property IOSTANDARD    LVDS_25          $UsrpIoAHrPinsDiff
 
 ### MGTs, Bank 112
 
 set_property PACKAGE_PIN   N8               [get_ports {USRPIO_A_MGTCLK_P}]
 set_property PACKAGE_PIN   N7               [get_ports {USRPIO_A_MGTCLK_N}]
-
-set_property PACKAGE_PIN   V6               [get_ports {USRPIO_A_RX_0_P}]
-set_property PACKAGE_PIN   V5               [get_ports {USRPIO_A_RX_0_N}]
-set_property PACKAGE_PIN   U4               [get_ports {USRPIO_A_RX_1_P}]
-set_property PACKAGE_PIN   U3               [get_ports {USRPIO_A_RX_1_N}]
-set_property PACKAGE_PIN   T6               [get_ports {USRPIO_A_RX_2_P}]
-set_property PACKAGE_PIN   T5               [get_ports {USRPIO_A_RX_2_N}]
-set_property PACKAGE_PIN   P6               [get_ports {USRPIO_A_RX_3_P}]
-set_property PACKAGE_PIN   P5               [get_ports {USRPIO_A_RX_3_N}]
-
-set_property PACKAGE_PIN   T2               [get_ports {USRPIO_A_TX_0_P}]
-set_property PACKAGE_PIN   T1               [get_ports {USRPIO_A_TX_0_N}]
-set_property PACKAGE_PIN   R4               [get_ports {USRPIO_A_TX_1_P}]
-set_property PACKAGE_PIN   R3               [get_ports {USRPIO_A_TX_1_N}]
-set_property PACKAGE_PIN   P2               [get_ports {USRPIO_A_TX_2_P}]
-set_property PACKAGE_PIN   P1               [get_ports {USRPIO_A_TX_2_N}]
-set_property PACKAGE_PIN   N4               [get_ports {USRPIO_A_TX_3_P}]
-set_property PACKAGE_PIN   N3               [get_ports {USRPIO_A_TX_3_N}]
 
 #set_property PACKAGE_PIN   P6               [get_ports USRPIO_A_RX_0_P]
 #set_property PACKAGE_PIN   P5               [get_ports USRPIO_A_RX_0_N]
@@ -408,8 +380,8 @@ set_property PACKAGE_PIN   N3               [get_ports {USRPIO_A_TX_3_N}]
 #set_property PACKAGE_PIN   P1               [get_ports {USRPIO_A_TX_2_N}]
 #set_property PACKAGE_PIN   N4               [get_ports {USRPIO_A_TX_3_P}]
 #set_property PACKAGE_PIN   N3               [get_ports {USRPIO_A_TX_3_N}]
-
-
+#
+#
 ### USRP IO B : ##########################################################################
 ###
 ##########################################################################################

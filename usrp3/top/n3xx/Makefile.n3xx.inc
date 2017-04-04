@@ -51,7 +51,10 @@ n310.xdc \
 n310_ps.v \
 eth_switch.v \
 network_interface.v \
-timing.xdc
+timing.xdc \
+jesd204_core_wrapper.v \
+Jesd204bXcvrCoreEttus.edf \
+Jesd204bXcvrCoreEttus_stub.v
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)

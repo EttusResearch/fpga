@@ -4,12 +4,10 @@
 //
 //////////////////////////////////////
 
-module n310_core
-#(
+module n310_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 32  // Width of the address bus
-)
-(
+)(
  //Clocks and resets
   input         radio_clk,
   input         radio_rst,
@@ -38,13 +36,21 @@ module n310_core
   output                   s_axi_rvalid,
   input                    s_axi_rready,
 
-  // Radio 0
+  // JESD204
   input  [31:0] rx0,
   output [31:0] tx0,
 
-  // Radio 1
-  input  [31:0]  rx1,
-  output [31:0]  tx1,
+  input  [31:0] rx1,
+  output [31:0] tx1,
+
+  input  [31:0] rx2,
+  output [31:0] tx2,
+
+  input  [31:0] rx3,
+  output [31:0] tx3,
+
+  //input         rx_stb,  //FIXME
+  //input         rx_stb,  //FIXME
 
   // DMA
   output [63:0] dmao_tdata,
@@ -82,6 +88,7 @@ module n310_core
   output        cpld_reset
 );
 
+  localparam NUM_CHANNELS = 2;
   // Computation engines that need access to IO
   localparam NUM_IO_CE = 2;
 
@@ -246,12 +253,25 @@ module n310_core
    // Radios
    //------------------------------------
 
+   // Data
+   wire [31:0] rx_data[0:3], tx_data[0:3];
+
+   wire        rx_stb[0:3], tx_stb[0:3];
+   assign rx_stb[0] = 1'b1;
+   assign rx_stb[1] = 1'b1;
+   assign rx_stb[2] = 1'b1;
+   assign rx_stb[3] = 1'b1;
+   assign tx_stb[0] = 1'b1;
+   assign tx_stb[1] = 1'b1;
+   assign tx_stb[2] = 1'b1;
+   assign tx_stb[3] = 1'b1;
+
    genvar i;
    generate for (i = 0; i < NUM_RADIO_CORES; i = i + 1) begin
 
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
-      .NUM_CHANNELS(2),
+      .NUM_CHANNELS(NUM_CHANNELS),
       .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
       .MTU(13)
    ) noc_block_radio_core_i (
@@ -270,10 +290,10 @@ module n310_core
       .o_tvalid(ioce_i_tvalid[i]),
       .o_tready(ioce_i_tready[i]),
       // Data ports connected to radio front end
-      //.rx({rx_data[i+1],rx_data[i]}),
-      //.rx_stb({rx_stb[i+1],rx_stb[i]}),
-      //.tx({tx_data[i+1],tx_data[i]}),
-      //.tx_stb({tx_stb[i+1],tx_stb[i]}),
+      .rx({rx_data[i*2+1],rx_data[i*2]}),
+      .rx_stb({rx_stb[i*2+1],rx_stb[i*2]}),
+      .tx({tx_data[i*2+1],tx_data[i*2]}),
+      .tx_stb({tx_stb[i*2+1],tx_stb[i*2]}),
       // Ctrl ports connected to radio front end
       //.ext_set_stb({ext_set_stb[i+1],ext_set_stb[i]}),
       //.ext_set_addr({ext_set_addr[i+1],ext_set_addr[i]}),
@@ -299,6 +319,32 @@ module n310_core
       //.miso({miso[i+1],miso[i]}),
       //Debug
       .debug()
+   );
+   end endgenerate
+
+   //////////////////////////////////////////////////////////////////////////////////////////////
+   // TX/RX FrontEnd
+   //////////////////////////////////////////////////////////////////////////////////////////////
+
+   wire  [31:0]     rx[0:3], tx[0:3];
+   assign {rx[0], rx[1]} = {rx0, rx1};
+   assign {rx[2], rx[3]} = {rx2, rx3};
+   assign {tx0, tx1} = {tx[0], tx[1]};
+   assign {tx2, tx3} = {tx[2], tx[3]};
+
+   generate for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
+
+   n310_tx_frontend n310_tx_frontend (
+      .tx_in(tx_data[i]),
+      .tx_out(tx[i])
+   );
+   end endgenerate
+
+   generate for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
+
+   n310_rx_frontend n310_rx_frontend (
+      .rx_in(rx[i]),
+      .rx_out(rx_data[i])
    );
    end endgenerate
 
@@ -383,6 +429,5 @@ module n310_core
       .reg_rd_data(reg_rd_data_xbar),
       .reg_rd_resp(reg_rd_resp_xbar)
       );
-
 
 endmodule //n310_core
