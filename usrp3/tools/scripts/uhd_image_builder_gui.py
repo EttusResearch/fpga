@@ -17,21 +17,19 @@
 """
 
 from __future__ import print_function
-import sip
-sip.setapi('QVariant', 2)
 import os
 import sys
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 import xml.etree.ElementTree as ET
 import uhd_image_builder
-import sip
-sip.setapi('QVariant', 2)
-from PyQt4 import QtGui
-from PyQt4.QtCore import pyqtSlot
-from PyQt4.QtCore import Qt, QModelIndex, SIGNAL
+from PyQt5 import QtWidgets
+from PyQt5 import QtGui
+from PyQt5.QtWidgets import QGridLayout
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import Qt, QModelIndex, pyqtSignal
 
-class MainWindow(QtGui.QWidget):
+class MainWindow(QtWidgets.QWidget):
     """
     UHD_IMAGE_BUILDER
     """
@@ -65,34 +63,38 @@ class MainWindow(QtGui.QWidget):
         ettus_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'lib',\
             'rfnoc', 'Makefile.srcs')
 
+        screen_size = QtWidgets.QDesktopWidget().screenGeometry(-1)
+        ##################################################
+        # Grid Layout
+        ##################################################
+        grid = QGridLayout()
+        grid.setSpacing(15)
         ##################################################
         # Buttons
         ##################################################
-        oot_btn = QtGui.QPushButton('Add OOT Blocks', self)
+        oot_btn = QtWidgets.QPushButton('Add OOT Blocks', self)
         oot_btn.setToolTip('Add your custom Out-of-tree blocks')
-        oot_btn.move(80, 420)
-        from_grc_btn = QtGui.QPushButton('Import from GRC', self)
-        from_grc_btn.move(340, 420)
-        show_file_btn = QtGui.QPushButton('Show instantiation File', self)
-        show_file_btn.move(540, 420)
-        add_btn = QtGui.QPushButton('>>', self)
-        add_btn.move(550, 100)
-        add_btn.setFixedSize(150, 50)
-        rem_btn = QtGui.QPushButton('<<', self)
-        rem_btn.move(550, 220)
-        rem_btn.setFixedSize(150, 50)
-        gen_bit_btn = QtGui.QPushButton('Generate .bit file', self)
-        gen_bit_btn.move(775, 420)
+        grid.addWidget(oot_btn, 9, 0)
+        from_grc_btn = QtWidgets.QPushButton('Import from GRC', self)
+        grid.addWidget(from_grc_btn, 9, 2)
+        show_file_btn = QtWidgets.QPushButton('Show instantiation File', self)
+        grid.addWidget(show_file_btn, 9, 1)
+        add_btn = QtWidgets.QPushButton('>>', self)
+        grid.addWidget(add_btn, 2, 2)
+        rem_btn = QtWidgets.QPushButton('<<', self)
+        grid.addWidget(rem_btn, 3, 2)
+        gen_bit_btn = QtWidgets.QPushButton('Generate .bit file', self)
+        grid.addWidget(gen_bit_btn, 9, 3)
 
         ##################################################
         # Checkbox
         ##################################################
-        self.fill_with_fifos = QtGui.QCheckBox('Fill with FIFOs', self)
-        self.fill_with_fifos.move(560, 300)
-        self.viv_gui = QtGui.QCheckBox('Open Vivado GUI', self)
-        self.viv_gui.move(560, 320)
-        self.cleanall = QtGui.QCheckBox('Clean IP', self)
-        self.cleanall.move(560, 340)
+        self.fill_with_fifos = QtWidgets.QCheckBox('Fill with FIFOs', self)
+        grid.addWidget(self.fill_with_fifos, 5, 2)
+        self.viv_gui = QtWidgets.QCheckBox('Open Vivado GUI', self)
+        grid.addWidget(self.viv_gui, 6, 2)
+        self.cleanall = QtWidgets.QCheckBox('Clean IP', self)
+        grid.addWidget(self.cleanall, 7, 2)
 
         ##################################################
         # Connection of the buttons with their signals
@@ -108,22 +110,20 @@ class MainWindow(QtGui.QWidget):
         # Panels - QTreeModels
         ##################################################
         ### Far-left Panel: Build targets
-        self.targets = QtGui.QTreeView(self)
-        self.targets.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.targets = QtWidgets.QTreeView(self)
+        self.targets.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.model_targets = QtGui.QStandardItemModel(self)
         self.model_targets.setHorizontalHeaderItem(0, QtGui.QStandardItem("Select build target"))
         self.targets.setModel(self.model_targets)
         self.populate_target('x300')
         self.populate_target('e300')
         self.targets.setCurrentIndex(self.model_targets.index(0, 0))
-        self.targets.show()
-        self.targets.move(20, 10)
-        self.targets.setFixedSize(250, 400)
+        grid.addWidget(self.targets, 0, 0, 8, 1)
 
         ### Central Panel: Available blocks
         ### Create tree to categorize Ettus Block and OOT Blocks in different lists
-        self.blocks_available = QtGui.QTreeView(self)
-        self.blocks_available.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.blocks_available = QtWidgets.QTreeView(self)
+        self.blocks_available.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.blocks_available.setContextMenuPolicy(Qt.CustomContextMenu)
         ettus_blocks = QtGui.QStandardItem("Ettus-provided Blocks")
         self.populate_list(ettus_blocks, ettus_sources)
@@ -139,25 +139,22 @@ class MainWindow(QtGui.QWidget):
             0, QtGui.QStandardItem("List of blocks available")
             )
         self.blocks_available.setModel(self.model_blocks_available)
-        self.blocks_available.move(290, 10)
-        self.blocks_available.setFixedSize(250, 400)
+        grid.addWidget(self.blocks_available, 0, 1, 8, 1)
 
-        self.targets.connect(self.targets.selectionModel(),
-                             SIGNAL('selectionChanged(QItemSelection, QItemSelection)'),
-                             self.ootlist) #check when the selection of this changes
+        self.targets.clicked.connect(self.ootlist)
 
         ### Far-right Panel: Blocks in current design
-        self.blocks_in_design = QtGui.QTreeView(self)
-        self.blocks_in_design.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.blocks_in_design = QtWidgets.QTreeView(self)
+        self.blocks_in_design.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.model_in_design = QtGui.QStandardItemModel(self)
         self.model_in_design.setHorizontalHeaderItem(
             0, QtGui.QStandardItem("Blocks in current design"))
         self.blocks_in_design.setModel(self.model_in_design)
-        self.blocks_in_design.move(710, 10)
-        self.blocks_in_design.setFixedSize(250, 400)
+        grid.addWidget(self.blocks_in_design, 0, 3, 8, 1)
 
-        self.setFixedSize(980, 460)
+        self.resize(screen_size.width()/1.4, screen_size.height()/1.7)
         self.setWindowTitle("uhd_image_builder.py GUI")
+        self.setLayout(grid)
         self.show()
 
     ##################################################
@@ -221,7 +218,7 @@ class MainWindow(QtGui.QWidget):
         Opens a dialog window to add manually the Out-of-tree module blocks
         """
         append_directory = []
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '')
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '')[0]
         if len(filename) > 0:
             append_directory.append(os.path.join(os.path.dirname(
                 os.path.join("", str(filename))), ''))
@@ -236,7 +233,7 @@ class MainWindow(QtGui.QWidget):
         Opens a dialog window to add manually the GRC description file, from where
         the RFNoC blocks will be parsed and added directly into the "Design" pannel
         """
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '/')
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/')[0]
         if len(filename) > 0:
             self.grc_populate_list(self.model_in_design, filename)
 
@@ -246,15 +243,15 @@ class MainWindow(QtGui.QWidget):
         are in the design pannel
         """
         # Create Warning message window
-        msg = QtGui.QMessageBox()
-        msg.setIcon(QtGui.QMessageBox.Warning)
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
         msg.setText("The following blocks are in your design but their sources"\
             " have not been added: \n\n {0}. \n\nPlease be sure of adding them"\
             "before continuing. Would you like to add them now?"\
             "".format(block_to_add))
         msg.setWindowTitle("No sources for design")
-        yes_btn = msg.addButton("Yes", QtGui.QMessageBox.YesRole)
-        no_btn = msg.addButton("No", QtGui.QMessageBox.NoRole)
+        yes_btn = msg.addButton("Yes", QtWidgets.QMessageBox.YesRole)
+        no_btn = msg.addButton("No", QtWidgets.QMessageBox.NoRole)
         msg.exec_()
         if msg.clickedButton() == yes_btn:
             self.file_dialog()
@@ -268,8 +265,8 @@ class MainWindow(QtGui.QWidget):
         Shows a warning message window when no blocks are found in the 'design' pannel
         """
         # Create Warning message window
-        msg = QtGui.QMessageBox()
-        msg.setIcon(QtGui.QMessageBox.Warning)
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
         msg.setText("There are no Blocks in the current design")
         msg.exec_()
 
@@ -278,8 +275,8 @@ class MainWindow(QtGui.QWidget):
         Shows a warning message window when too many blocks are found in the 'design' pannel
         """
         # Create Warning message window
-        msg = QtGui.QMessageBox()
-        msg.setIcon(QtGui.QMessageBox.Warning)
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
         msg.setText("You added {} blocks while the maximum allowed blocks for"\
                 " a {} device is {}. Please remove some of the blocks to "\
                 "continue with the design".format(number_of_blocks,
@@ -408,7 +405,7 @@ def main():
     """
     Main GUI method
     """
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     _window = MainWindow()
     sys.exit(app.exec_())
 
