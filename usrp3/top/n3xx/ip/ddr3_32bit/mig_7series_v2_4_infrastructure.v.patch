@@ -1,0 +1,16 @@
+88c88
+<    parameter UI_EXTRA_CLOCKS = "FALSE",
+---
+>    parameter UI_EXTRA_CLOCKS = "TRUE",
+103c103
+<    parameter MMCM_CLKOUT0_EN       = "FALSE",  // Enabled (or) Disable MMCM clkout0
+---
+>    parameter MMCM_CLKOUT0_EN       = "TRUE",  // Enabled (or) Disable MMCM clkout0
+360c360
+<     if (UI_EXTRA_CLOCKS == "TRUE") begin: gen_ui_extra_clocks
+---
+>     if (UI_EXTRA_CLOCKS == "TRUE") begin: gen_mmcm
+481c482
+<     end else begin: gen_mmcm
+---
+>     end else begin: gen_mmcm_no_extra_clks

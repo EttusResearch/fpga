@@ -132,6 +132,40 @@ module n310
    input SFP_1_RX_P, input SFP_1_RX_N,
    output SFP_1_TX_P, output SFP_1_TX_N,
 
+
+   ///////////////////////////////////
+   //
+   // DRAM Interface
+   //
+   ///////////////////////////////////
+   inout [31:0] ddr3_dq,     // Data pins. Input for Reads, Output for Writes.
+   inout [3:0] ddr3_dqs_n,   // Data Strobes. Input for Reads, Output for Writes.
+   inout [3:0] ddr3_dqs_p,
+   //
+   output [15:0] ddr3_addr,  // Address
+   output [2:0] ddr3_ba,     // Bank Address
+   output ddr3_ras_n,        // Row Address Strobe.
+   output ddr3_cas_n,        // Column address select
+   output ddr3_we_n,         // Write Enable
+   output ddr3_reset_n,      // SDRAM reset pin.
+   output [0:0] ddr3_ck_p,         // Differential clock
+   output [0:0] ddr3_ck_n,
+   output [0:0] ddr3_cke,    // Clock Enable
+   output [0:0] ddr3_cs_n,         // Chip Select
+   output [3:0] ddr3_dm,     // Data Mask [3] = UDM.U26, [2] = LDM.U26, ...
+   output [0:0] ddr3_odt,    // On-Die termination enable.
+   //
+   input sys_clk_p,          // Differential
+   input sys_clk_n,          // 100MHz clock source to generate DDR3 clocking.
+
+
+   ///////////////////////////////////
+   //
+   // Supporting I/O for SPF+ interfaces
+   //  (non high speed stuff)
+   //
+   ///////////////////////////////////
+
    //SFP+ 0, Slow Speed, Bank 13 3.3V
    //input SFP_0_I2C_NPRESENT,
    output SFP_0_LED_A,
@@ -1760,6 +1794,158 @@ module n310
     .PS_PORB(PS_PORB)
   );
 
+   ///////////////////////////////////////////////////////////////////////////////////
+   //
+   // Xilinx DDR3 Controller and PHY.
+   //
+   ///////////////////////////////////////////////////////////////////////////////////
+
+
+   wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (250MHz)
+   wire        ddr3_axi_clk_x2;        // 1/4 DDR external clock rate (250MHz)
+   wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
+   wire        ddr3_running;           // DRAM calibration complete.
+
+   // Slave Interface Write Address Ports
+   wire        s_axi_awid;
+   wire [31:0] s_axi_awaddr;
+   wire [7:0]  s_axi_awlen;
+   wire [2:0]  s_axi_awsize;
+   wire [1:0]  s_axi_awburst;
+   wire [0:0]  s_axi_awlock;
+   wire [3:0]  s_axi_awcache;
+   wire [2:0]  s_axi_awprot;
+   wire [3:0]  s_axi_awqos;
+   wire        s_axi_awvalid;
+   wire        s_axi_awready;
+   // Slave Interface Write Data Ports
+   wire [255:0] s_axi_wdata;
+   wire [31:0]  s_axi_wstrb;
+   wire     s_axi_wlast;
+   wire     s_axi_wvalid;
+   wire     s_axi_wready;
+   // Slave Interface Write Response Ports
+   wire     s_axi_bready;
+   wire     s_axi_bid;
+   wire [1:0]   s_axi_bresp;
+   wire     s_axi_bvalid;
+   // Slave Interface Read Address Ports
+   wire     s_axi_arid;
+   wire [31:0]  s_axi_araddr;
+   wire [7:0]   s_axi_arlen;
+   wire [2:0]   s_axi_arsize;
+   wire [1:0]   s_axi_arburst;
+   wire [0:0]   s_axi_arlock;
+   wire [3:0]   s_axi_arcache;
+   wire [2:0]   s_axi_arprot;
+   wire [3:0]   s_axi_arqos;
+   wire     s_axi_arvalid;
+   wire     s_axi_arready;
+   // Slave Interface Read Data Ports
+   wire     s_axi_rready;
+   wire     s_axi_rid;
+   wire [255:0] s_axi_rdata;
+   wire [1:0]   s_axi_rresp;
+   wire     s_axi_rlast;
+   wire     s_axi_rvalid;
+
+   reg      ddr3_axi_rst_reg_n;
+
+   // Copied this reset circuit from example design.
+   always @(posedge ddr3_axi_clk)
+     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
+
+
+   // Instantiate the DDR3 MIG core
+   //
+   // The top-level IP block has no parameters defined for some reason.
+   // Most of configurable parameters are hard-coded in the mig so get 
+   // some additional knobs we pull those out into verilog headers.
+   //
+   // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
+   // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
+
+   ddr3_32bit u_ddr3_32bit (
+      // Memory interface ports
+      .ddr3_addr                      (ddr3_addr),
+      .ddr3_ba                        (ddr3_ba),
+      .ddr3_cas_n                     (ddr3_cas_n),
+      .ddr3_ck_n                      (ddr3_ck_n),
+      .ddr3_ck_p                      (ddr3_ck_p),
+      .ddr3_cke                       (ddr3_cke),
+      .ddr3_ras_n                     (ddr3_ras_n),
+      .ddr3_reset_n                   (ddr3_reset_n),
+      .ddr3_we_n                      (ddr3_we_n),
+      .ddr3_dq                        (ddr3_dq),
+      .ddr3_dqs_n                     (ddr3_dqs_n),
+      .ddr3_dqs_p                     (ddr3_dqs_p),
+      .init_calib_complete            (ddr3_running),
+
+      .ddr3_cs_n                      (ddr3_cs_n),
+      .ddr3_dm                        (ddr3_dm),
+      .ddr3_odt                       (ddr3_odt),
+      // Application interface ports
+      .ui_clk                         (ddr3_axi_clk),  // 200Hz clock out
+      .ui_clk_x2                      (ddr3_axi_clk_x2), //300 MHz, not actually x2 for n310 design because of timing. 
+      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
+      .aresetn                        (ddr3_axi_rst_reg_n),
+      .app_sr_req                     (1'b0),
+      .app_sr_active                  (app_sr_active),
+      .app_ref_req                    (1'b0),
+      .app_ref_ack                    (app_ref_ack),
+      .app_zq_req                     (1'b0),
+      .app_zq_ack                     (app_zq_ack),
+      // Slave Interface Write Address Ports
+      .s_axi_awid                     (s_axi_awid),
+      .s_axi_awaddr                   (s_axi_awaddr),
+      .s_axi_awlen                    (s_axi_awlen),
+      .s_axi_awsize                   (s_axi_awsize),
+      .s_axi_awburst                  (s_axi_awburst),
+      .s_axi_awlock                   (s_axi_awlock),
+      .s_axi_awcache                  (s_axi_awcache),
+      .s_axi_awprot                   (s_axi_awprot),
+      .s_axi_awqos                    (s_axi_awqos),
+      .s_axi_awvalid                  (s_axi_awvalid),
+      .s_axi_awready                  (s_axi_awready),
+      // Slave Interface Write Data Ports
+      .s_axi_wdata                    (s_axi_wdata),
+      .s_axi_wstrb                    (s_axi_wstrb),
+      .s_axi_wlast                    (s_axi_wlast),
+      .s_axi_wvalid                   (s_axi_wvalid),
+      .s_axi_wready                   (s_axi_wready),
+      // Slave Interface Write Response Ports
+      .s_axi_bid                      (s_axi_bid),
+      .s_axi_bresp                    (s_axi_bresp),
+      .s_axi_bvalid                   (s_axi_bvalid),
+      .s_axi_bready                   (s_axi_bready),
+      // Slave Interface Read Address Ports
+      .s_axi_arid                     (s_axi_arid),
+      .s_axi_araddr                   (s_axi_araddr),
+      .s_axi_arlen                    (s_axi_arlen),
+      .s_axi_arsize                   (s_axi_arsize),
+      .s_axi_arburst                  (s_axi_arburst),
+      .s_axi_arlock                   (s_axi_arlock),
+      .s_axi_arcache                  (s_axi_arcache),
+      .s_axi_arprot                   (s_axi_arprot),
+      .s_axi_arqos                    (s_axi_arqos),
+      .s_axi_arvalid                  (s_axi_arvalid),
+      .s_axi_arready                  (s_axi_arready),
+      // Slave Interface Read Data Ports
+      .s_axi_rid                      (s_axi_rid),
+      .s_axi_rdata                    (s_axi_rdata),
+      .s_axi_rresp                    (s_axi_rresp),
+      .s_axi_rlast                    (s_axi_rlast),
+      .s_axi_rvalid                   (s_axi_rvalid),
+      .s_axi_rready                   (s_axi_rready),
+      // System Clock Ports
+      .sys_clk_p                       (sys_clk_p), 
+      .sys_clk_n                       (sys_clk_n),
+      .clk_ref_i                       (bus_clk),
+
+      .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+   );
+
+
   ///////////////////////////////////////////////////////
   //
   // DB Connections
@@ -1899,6 +2085,55 @@ module n310
     .dmai_tlast(),
     .dmai_tvalid(),
     .dmai_tready(),
+
+    // DRAM signals.
+    .ddr3_axi_clk              (ddr3_axi_clk),
+    .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
+    .ddr3_axi_rst              (ddr3_axi_rst),
+    .ddr3_running              (ddr3_running),
+    // Slave Interface Write Address Ports
+    .ddr3_axi_awid             (s_axi_awid),
+    .ddr3_axi_awaddr           (s_axi_awaddr),
+    .ddr3_axi_awlen            (s_axi_awlen),
+    .ddr3_axi_awsize           (s_axi_awsize),
+    .ddr3_axi_awburst          (s_axi_awburst),
+    .ddr3_axi_awlock           (s_axi_awlock),
+    .ddr3_axi_awcache          (s_axi_awcache),
+    .ddr3_axi_awprot           (s_axi_awprot),
+    .ddr3_axi_awqos            (s_axi_awqos),
+    .ddr3_axi_awvalid          (s_axi_awvalid),
+    .ddr3_axi_awready          (s_axi_awready),
+    // Slave Interface Write Data Ports
+    .ddr3_axi_wdata            (s_axi_wdata),
+    .ddr3_axi_wstrb            (s_axi_wstrb),
+    .ddr3_axi_wlast            (s_axi_wlast),
+    .ddr3_axi_wvalid           (s_axi_wvalid),
+    .ddr3_axi_wready           (s_axi_wready),
+    // Slave Interface Write Response Ports
+    .ddr3_axi_bid              (s_axi_bid),
+    .ddr3_axi_bresp            (s_axi_bresp),
+    .ddr3_axi_bvalid           (s_axi_bvalid),
+    .ddr3_axi_bready           (s_axi_bready),
+    // Slave Interface Read Address Ports
+    .ddr3_axi_arid             (s_axi_arid),
+    .ddr3_axi_araddr           (s_axi_araddr),
+    .ddr3_axi_arlen            (s_axi_arlen),
+    .ddr3_axi_arsize           (s_axi_arsize),
+    .ddr3_axi_arburst          (s_axi_arburst),
+    .ddr3_axi_arlock           (s_axi_arlock),
+    .ddr3_axi_arcache          (s_axi_arcache),
+    .ddr3_axi_arprot           (s_axi_arprot),
+    .ddr3_axi_arqos            (s_axi_arqos),
+    .ddr3_axi_arvalid          (s_axi_arvalid),
+    .ddr3_axi_arready          (s_axi_arready),
+    // Slave Interface Read Data Ports
+    .ddr3_axi_rid              (s_axi_rid),
+    .ddr3_axi_rdata            (s_axi_rdata),
+    .ddr3_axi_rresp            (s_axi_rresp),
+    .ddr3_axi_rlast            (s_axi_rlast),
+    .ddr3_axi_rvalid           (s_axi_rvalid),
+    .ddr3_axi_rready           (s_axi_rready),
+
 
     // VITA to Ethernet
     .v2e0_tdata(v2e0_tdata),

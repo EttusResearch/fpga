@@ -1,0 +1,24 @@
+247c247
+<    parameter MMCM_MULT_F           = 4,
+---
+>    parameter MMCM_MULT_F           = 6,
+251c251,252
+< 
+---
+>    parameter MMCM_CLKOUT0_DIVIDE    = 4,
+>                                      // write MMCM VCO divisor
+472c473
+<    parameter UI_EXTRA_CLOCKS = "FALSE",
+---
+>    parameter UI_EXTRA_CLOCKS = "TRUE",
+598a600,601
+>    output                                       ui_clk_x2,
+>    output                                       ui_clk_div2,
+939a943
+>      .MMCM_CLKOUT0_DIVIDE(MMCM_CLKOUT0_DIVIDE),
+957,958c961,962
+<        .ui_addn_clk_0    (),
+<        .ui_addn_clk_1    (),
+---
+>        .ui_addn_clk_0    (ui_clk_x2),
+>        .ui_addn_clk_1    (ui_clk_div2),

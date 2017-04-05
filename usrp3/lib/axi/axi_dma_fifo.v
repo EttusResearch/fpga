@@ -1126,5 +1126,14 @@ module axi_dma_fifo
       .debug()
    );
 
+  //ila_axi_dma_fifo inst_ila (
+  //  .clk(ce_clk), // input wire clk
+  //  .probe0(rb_bist_status), // input wire [3:0]  probe0  channel 0
+  //  .probe1(), // input wire [3:0]  probe0  channel 0
+  //);
+
+
+
+
  endmodule // axi_dma_fifo
 

@@ -75,6 +75,12 @@ ifdef SFP1_10GBE
 SFP_SERDES_SRCS += $(abspath n310_10ge_port1.xdc)
 endif
 
+ifndef NO_DRAM_FIFOS
+DRAM_SRCS = $(IP_DRAM_XCI_SRCS) $(abspath n310_dram.xdc)
+else
+DRAM_SRCS =
+endif
+
 ifdef HLS
 HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
 else

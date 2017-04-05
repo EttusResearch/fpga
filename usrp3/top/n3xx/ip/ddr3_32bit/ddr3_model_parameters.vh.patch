@@ -1,0 +1,12 @@
+75a76,78
+>     parameter TDQSCK_DLLDIS    =  TDQSCK; // tDQSCK     ps    for DLLDIS mode, timing not guaranteed
+> 
+> 
+116c119
+<     integer TZQCS              =  max( 64, ceil( 80000/TCK_MIN)); // tZQCS      tCK   ZQ Cal (Short) time
+---
+>     integer TZQCS; // tZQCS      tCK   ZQ Cal (Short) time
+184c187
+<     parameter MEM_BITS         =      10; // Set this parameter to control how many write data bursts can be stored in memory.  The default is 2^10=1024.
+---
+>     parameter MEM_BITS         =      16; // Set this parameter to control how many write data bursts can be stored in memory.  The default is 2^10=1024.
