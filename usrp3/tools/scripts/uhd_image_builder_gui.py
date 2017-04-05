@@ -1,33 +1,36 @@
 #!/usr/bin/env python
 """
- Copyright 2016-2017 Ettus Research
+Copyright 2016-2017 Ettus Research
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
 import os
 import sys
 import signal
-signal.signal(signal.SIGINT, signal.SIG_DFL)
 import xml.etree.ElementTree as ET
 import uhd_image_builder
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
+from PyQt5 import (QtGui,
+                   QtCore,
+                   QtWidgets)
 from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtCore import Qt, QModelIndex, pyqtSignal
+from PyQt5.QtCore import (pyqtSlot,
+                          Qt,
+                          QModelIndex)
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 class MainWindow(QtWidgets.QWidget):
     """
@@ -44,14 +47,22 @@ class MainWindow(QtWidgets.QWidget):
         self.device = 'x310'
         self.build_target = 'X310_RFNOC_HG'
         self.max_allowed_blocks = 10
+        self.cmd_dict = {"target": '-t {}'.format(self.build_target),
+                         "device": '-d {}'.format(self.device),
+                         "fill_fifos": '',
+                         "viv_gui": '',
+                         "cleanall": '',
+                         "show_file": ''}
+        self.cmd_name = ['./uhd_image_builder.py', ]
+        self.cmd_prefix = list(self.cmd_name)
         self.instantiation_file = os.path.join(uhd_image_builder.get_scriptpath(),
                                                '..', '..', 'top', self.target,
                                                'rfnoc_ce_auto_inst_' + self.device.lower() +
                                                '.v')
+
         # List of blocks that are part of our library but that do not take place
         # on the process this tool provides
         self.blacklist = ['noc_block_radio_core', 'noc_block_axi_dma_fifo', 'noc_block_pfb']
-
         self.init_gui()
 
     def init_gui(self):
@@ -62,8 +73,6 @@ class MainWindow(QtWidgets.QWidget):
 
         ettus_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'lib',\
             'rfnoc', 'Makefile.srcs')
-
-        screen_size = QtWidgets.QDesktopWidget().screenGeometry(-1)
         ##################################################
         # Grid Layout
         ##################################################
@@ -90,22 +99,24 @@ class MainWindow(QtWidgets.QWidget):
         # Checkbox
         ##################################################
         self.fill_with_fifos = QtWidgets.QCheckBox('Fill with FIFOs', self)
-        grid.addWidget(self.fill_with_fifos, 5, 2)
         self.viv_gui = QtWidgets.QCheckBox('Open Vivado GUI', self)
-        grid.addWidget(self.viv_gui, 6, 2)
         self.cleanall = QtWidgets.QCheckBox('Clean IP', self)
+        grid.addWidget(self.fill_with_fifos, 5, 2)
+        grid.addWidget(self.viv_gui, 6, 2)
         grid.addWidget(self.cleanall, 7, 2)
 
         ##################################################
-        # Connection of the buttons with their signals
+        # uhd_image_builder command display
         ##################################################
-        oot_btn.clicked.connect(self.file_dialog)
-        from_grc_btn.clicked.connect(self.file_grc_dialog)
-        show_file_btn.clicked.connect(self.show_file)
-        add_btn.clicked.connect(self.add_to_design)
-        rem_btn.clicked.connect(self.remove_from_design)
-        gen_bit_btn.clicked.connect(self.generate_bit)
-
+        label_cmd_display = QtWidgets.QLabel(self)
+        label_cmd_display.setText("uhd_image_builder command:")
+        label_cmd_display.setAlignment(QtCore.Qt.AlignRight)
+        grid.addWidget(label_cmd_display, 10, 0)
+        self.cmd_display = QtWidgets.QTextEdit(self)
+        self.cmd_display.setMaximumHeight(label_cmd_display.sizeHint().height() * 3)
+        self.cmd_display.setReadOnly(True)
+        self.cmd_display.setText("".join(self.cmd_name))
+        grid.addWidget(self.cmd_display, 10, 1, 1, 3)
         ##################################################
         # Panels - QTreeModels
         ##################################################
@@ -117,7 +128,6 @@ class MainWindow(QtWidgets.QWidget):
         self.targets.setModel(self.model_targets)
         self.populate_target('x300')
         self.populate_target('e300')
-        self.targets.setCurrentIndex(self.model_targets.index(0, 0))
         grid.addWidget(self.targets, 0, 0, 8, 1)
 
         ### Central Panel: Available blocks
@@ -141,8 +151,6 @@ class MainWindow(QtWidgets.QWidget):
         self.blocks_available.setModel(self.model_blocks_available)
         grid.addWidget(self.blocks_available, 0, 1, 8, 1)
 
-        self.targets.clicked.connect(self.ootlist)
-
         ### Far-right Panel: Blocks in current design
         self.blocks_in_design = QtWidgets.QTreeView(self)
         self.blocks_in_design.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -152,6 +160,47 @@ class MainWindow(QtWidgets.QWidget):
         self.blocks_in_design.setModel(self.model_in_design)
         grid.addWidget(self.blocks_in_design, 0, 3, 8, 1)
 
+        ##################################################
+        # Connection of the buttons with their signals
+        ##################################################
+        self.fill_with_fifos.clicked.connect(self.fill_slot)
+        self.fill_with_fifos.clicked.connect(self.cmd_display_slot)
+        self.viv_gui.clicked.connect(self.viv_gui_slot)
+        self.viv_gui.clicked.connect(self.cmd_display_slot)
+        self.cleanall.clicked.connect(self.cleanall_slot)
+        self.cleanall.clicked.connect(self.cmd_display_slot)
+        oot_btn.clicked.connect(self.file_dialog)
+        from_grc_btn.clicked.connect(self.blocks_to_add_slot)
+        from_grc_btn.clicked.connect(self.cmd_display_slot)
+        from_grc_btn.clicked.connect(self.file_grc_dialog)
+        add_btn.clicked.connect(self.add_to_design)
+        add_btn.clicked.connect(self.blocks_to_add_slot)
+        add_btn.clicked.connect(self.check_blk_num)
+        add_btn.clicked.connect(self.cmd_display_slot)
+        rem_btn.clicked.connect(self.remove_from_design)
+        rem_btn.clicked.connect(self.cmd_display_slot)
+        show_file_btn.clicked.connect(self.show_file)
+        show_file_btn.clicked.connect(self.cmd_display_slot)
+        show_file_btn.clicked.connect(self.run_command)
+        gen_bit_btn.clicked.connect(self.generate_bit)
+        gen_bit_btn.clicked.connect(self.cmd_display_slot)
+        gen_bit_btn.clicked.connect(self.run_command)
+        self.targets.clicked.connect(self.ootlist)
+        self.targets.clicked.connect(self.set_target_and_device)
+        self.targets.clicked.connect(self.cmd_display_slot)
+        self.targets.clicked.connect(self.check_blk_num)
+        self.blocks_available.doubleClicked.connect(self.add_to_design)
+        self.blocks_available.doubleClicked.connect(self.blocks_to_add_slot)
+        self.blocks_available.doubleClicked.connect(self.check_blk_num)
+        self.blocks_available.doubleClicked.connect(self.cmd_display_slot)
+        self.blocks_in_design.doubleClicked.connect(self.remove_from_design)
+        self.blocks_in_design.doubleClicked.connect(self.blocks_to_add_slot)
+        self.blocks_in_design.doubleClicked.connect(self.cmd_display_slot)
+
+        ##################################################
+        # Set a default size based on screen geometry
+        ##################################################
+        screen_size = QtWidgets.QDesktopWidget().screenGeometry(-1)
         self.resize(screen_size.width()/1.4, screen_size.height()/1.7)
         self.setWindowTitle("uhd_image_builder.py GUI")
         self.setLayout(grid)
@@ -160,6 +209,69 @@ class MainWindow(QtWidgets.QWidget):
     ##################################################
     # Slots and functions/actions
     ##################################################
+    @pyqtSlot()
+    def blocks_to_add_slot(self):
+        """
+        Retrieves a list of the blocks in design to be displayed in TextEdit
+        """
+        availables = []
+        blocks = []
+        availables = self.iter_tree(self.model_blocks_available, availables)
+        for i in range(self.model_in_design.rowCount()):
+            blocks.append(self.blocks_in_design.model().data(
+                self.blocks_in_design.model().index(i, 0)))
+        self.cmd_prefix = self.cmd_name + blocks
+
+    @pyqtSlot()
+    def check_blk_num(self):
+        """
+        Checks the amount of blocks in the design pannel
+        """
+        blk_count = self.model_in_design.rowCount()
+        if blk_count > self.max_allowed_blocks:
+            self.show_too_many_blocks_warning(blk_count)
+
+    @pyqtSlot()
+    def fill_slot(self):
+        """
+        Populates 'fill_fifos' value into the command dictionary
+        """
+        if self.fill_with_fifos.isChecked():
+            self.cmd_dict["fill_fifos"] = '--fill-with-fifos'
+        else:
+            self.cmd_dict["fill_fifos"] = ''
+
+    @pyqtSlot()
+    def viv_gui_slot(self):
+        """
+        Populates 'viv_gui' value into the command dictionary
+        """
+        if self.viv_gui.isChecked():
+            self.cmd_dict["viv_gui"] = '-g'
+        else:
+            self.cmd_dict["viv_gui"] = ''
+
+    @pyqtSlot()
+    def cleanall_slot(self):
+        """
+        Populates 'cleanall' value into the command dictionary
+        """
+        if self.cleanall.isChecked():
+            self.cmd_dict["cleanall"] = '-c'
+        else:
+            self.cmd_dict["cleanall"] = ''
+
+    @pyqtSlot()
+    def cmd_display_slot(self):
+        """
+        Displays the command to be run in a QTextEdit in realtime
+        """
+        text = [" ".join(self.cmd_prefix),]
+        for value in self.cmd_dict.values():
+            if value is not '':
+                text.append(value)
+        self.cmd_display.setText(" ".join(text))
+
     @pyqtSlot()
     def add_to_design(self):
         """
@@ -184,15 +296,33 @@ class MainWindow(QtWidgets.QWidget):
         """
         Show the rfnoc_ce_auto_inst file in the default text editor
         """
-        if self.generate_command(False):
-            os.system("xdg-open " + self.instantiation_file)
+        self.cmd_dict['show_file'] = '-o {}'.format(self.instantiation_file)
 
     @pyqtSlot()
     def generate_bit(self):
         """
         Runs the FPGA .bit generation command
         """
-        self.generate_command(True)
+        self.cmd_dict['show_file'] = ''
+
+    @pyqtSlot()
+    def run_command(self):
+        """
+        Executes the uhd_image_builder command based on user options
+        """
+        if self.check_no_blocks() and self.check_blk_not_in_sources():
+            command = self.cmd_display.toPlainText()
+            os.system(command)
+            if self.cmd_dict['show_file'] is not '':
+                os.system("xdg-open " + self.instantiation_file)
+
+    @pyqtSlot()
+    def set_target_and_device(self):
+        """
+        Populates the 'target' and 'device' values of the command directory
+        """
+        self.cmd_dict['target'] = '-t {}'.format(self.build_target)
+        self.cmd_dict['device'] = '-d {}'.format(self.device)
 
     @pyqtSlot()
     def ootlist(self):
@@ -218,14 +348,17 @@ class MainWindow(QtWidgets.QWidget):
         Opens a dialog window to add manually the Out-of-tree module blocks
         """
         append_directory = []
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '')[0]
-        if len(filename) > 0:
-            append_directory.append(os.path.join(os.path.dirname(
-                os.path.join("", str(filename))), ''))
-            uhd_image_builder.append_item_into_file(self.device, append_directory)
-            oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
-                self.target, 'Makefile.srcs')
-            self.populate_list(self.oot, oot_sources)
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/home/')[0]
+        try:
+            if len(filename) > 0:
+                append_directory.append(os.path.join(os.path.dirname(
+                    os.path.join("", str(filename))), ''))
+                uhd_image_builder.append_item_into_file(self.device, append_directory)
+                oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
+                    self.target, 'Makefile.srcs')
+                self.populate_list(self.oot, oot_sources)
+        except BaseException:
+            pass
 
     @pyqtSlot()
     def file_grc_dialog(self):
@@ -233,9 +366,21 @@ class MainWindow(QtWidgets.QWidget):
         Opens a dialog window to add manually the GRC description file, from where
         the RFNoC blocks will be parsed and added directly into the "Design" pannel
         """
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/')[0]
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/home/')[0]
         if len(filename) > 0:
             self.grc_populate_list(self.model_in_design, filename)
+
+    def check_no_blocks(self):
+        """
+        Checks if there are no blocks in the design pannel. Needs to be a
+        different slot because triggers from clicking signals from pannels
+        would be superfluous
+        """
+        blk_count = self.model_in_design.rowCount()
+        if blk_count == 0:
+            self.show_no_blocks_warning()
+            return False
+        return True
 
     def show_no_srcs_warning(self, block_to_add):
         """
@@ -319,21 +464,36 @@ class MainWindow(QtWidgets.QWidget):
                     block = QtGui.QStandardItem(element.partition('noc_block_')[2])
                     parent.appendRow(block)
 
+    @staticmethod
+    def show_not_xml_warning():
+        """
+        Shows a warning message window when no blocks are found in the 'design' pannel
+        """
+        # Create Warning message window
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setText("[ParseError]: The chosen file is not XML formatted")
+        msg.exec_()
+
     def grc_populate_list(self, parent, files):
         """
         Populates the 'Design' list with the RFNoC blocks found in a GRC file
         """
-        tree = ET.parse(files)
-        root = tree.getroot()
-        for blocks in root.iter('block'):
-            for param in blocks.iter('param'):
-                for key in param.iter('key'):
-                    if 'fpga_module_name' in key.text:
-                        if param.findtext('value') in self.blacklist:
-                            continue
-                        block = QtGui.QStandardItem(param.findtext('value').\
-                                partition('noc_block_')[2])
-                        parent.appendRow(block)
+        try:
+            tree = ET.parse(files)
+            root = tree.getroot()
+            for blocks in root.iter('block'):
+                for param in blocks.iter('param'):
+                    for key in param.iter('key'):
+                        if 'fpga_module_name' in key.text:
+                            if param.findtext('value') in self.blacklist:
+                                continue
+                            block = QtGui.QStandardItem(param.findtext('value').\
+                                    partition('noc_block_')[2])
+                            parent.appendRow(block)
+        except ET.ParseError:
+            self.show_not_xml_warning()
+            return
 
     def populate_target(self, selected_target):
         """
@@ -350,63 +510,30 @@ class MainWindow(QtWidgets.QWidget):
                     target = QtGui.QStandardItem(lines)
                     self.model_targets.appendRow(target)
 
-    def generate_command(self, flag=False):
+    def check_blk_not_in_sources(self):
         """
-        generates the FPGA build command
+        Checks if a block added from GRC flowgraph is not yet in the sources
+        list
         """
-        # pylint: disable=too-many-branches
         availables = []
-        to_design = []
         notin = []
-        max_flag = False
-        not_in_flag = False
         availables = self.iter_tree(self.model_blocks_available, availables)
-        self.max_allowed_blocks = 10 if self.target == 'x300' else 6
-        num_current_blocks = self.model_in_design.rowCount()
-        # Check if there are sources for the blocks in current design
-        if num_current_blocks == 0:
-            self.show_no_blocks_warning()
-            not_in_flag = True
-        else:
-            for i in range(self.model_in_design.rowCount()):
-                block_to_add = self.blocks_in_design.model().data(
-                    self.blocks_in_design.model().index(i, 0))
-                if str(block_to_add) not in availables:
-                    notin.append(str(block_to_add))
-                else:
-                    to_design.append(str(block_to_add))
-            # Check whether the number of blocks exceeds the stated maximum
-            if num_current_blocks > self.max_allowed_blocks:
-                self.show_too_many_blocks_warning(num_current_blocks)
-                max_flag = True
-            elif num_current_blocks < self.max_allowed_blocks and self.fill_with_fifos.isChecked():
-                for i in range(self.max_allowed_blocks - num_current_blocks):
-                    to_design.append('axi_fifo_loopback')
+        for i in range(self.model_in_design.rowCount()):
+            block_to_add = self.blocks_in_design.model().data(
+                self.blocks_in_design.model().index(i, 0))
+            if str(block_to_add) not in availables:
+                notin.append(str(block_to_add))
         if len(notin) > 0:
             self.show_no_srcs_warning(notin)
-            return
-        if not (not_in_flag or max_flag):
-            com = ' '.join(to_design)
-            command = "./uhd_image_builder.py " + com + ' -d ' + self.device + \
-                      ' -t ' + self.build_target
-            if flag is False:
-                command = command + ' -o ' + self.instantiation_file
-            if self.viv_gui.isChecked():
-                command = command + ' -g'
-            if self.cleanall.isChecked():
-                command = command + ' -c'
-            print(command)
-            os.system(command)
-            return True
-        else:
             return False
+        return True
 
 def main():
     """
     Main GUI method
     """
     app = QtWidgets.QApplication(sys.argv)
-    _window = MainWindow()
+    window = MainWindow()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
