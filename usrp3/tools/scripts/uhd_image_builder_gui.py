@@ -136,11 +136,14 @@ class MainWindow(QtWidgets.QWidget):
         self.blocks_available.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.blocks_available.setContextMenuPolicy(Qt.CustomContextMenu)
         ettus_blocks = QtGui.QStandardItem("Ettus-provided Blocks")
+        ettus_blocks.setEnabled(False)
+        ettus_blocks.setForeground(Qt.black)
         self.populate_list(ettus_blocks, ettus_sources)
-
         oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
             'x300', 'Makefile.srcs')
         self.oot = QtGui.QStandardItem("OOT Blocks for X300 devices")
+        self.oot.setEnabled(False)
+        self.oot.setForeground(Qt.black)
         self.populate_list(self.oot, oot_sources)
         self.model_blocks_available = QtGui.QStandardItemModel(self)
         self.model_blocks_available.appendRow(ettus_blocks)
@@ -148,6 +151,7 @@ class MainWindow(QtWidgets.QWidget):
         self.model_blocks_available.setHorizontalHeaderItem(
             0, QtGui.QStandardItem("List of blocks available")
             )
+        self.blocks_available.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.blocks_available.setModel(self.model_blocks_available)
         grid.addWidget(self.blocks_available, 0, 1, 8, 1)
 
@@ -157,6 +161,7 @@ class MainWindow(QtWidgets.QWidget):
         self.model_in_design = QtGui.QStandardItemModel(self)
         self.model_in_design.setHorizontalHeaderItem(
             0, QtGui.QStandardItem("Blocks in current design"))
+        self.blocks_in_design.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.blocks_in_design.setModel(self.model_in_design)
         grid.addWidget(self.blocks_in_design, 0, 3, 8, 1)
 
@@ -178,6 +183,7 @@ class MainWindow(QtWidgets.QWidget):
         add_btn.clicked.connect(self.check_blk_num)
         add_btn.clicked.connect(self.cmd_display_slot)
         rem_btn.clicked.connect(self.remove_from_design)
+        rem_btn.clicked.connect(self.blocks_to_add_slot)
         rem_btn.clicked.connect(self.cmd_display_slot)
         show_file_btn.clicked.connect(self.show_file)
         show_file_btn.clicked.connect(self.cmd_display_slot)
@@ -278,18 +284,21 @@ class MainWindow(QtWidgets.QWidget):
         Adds blocks from the 'available' pannel to the list to be added
         into the design
         """
-        index = self.blocks_available.currentIndex()
-        word = self.blocks_available.model().data(index)
-        element = QtGui.QStandardItem(word)
-        self.model_in_design.appendRow(element)
+        indexes = self.blocks_available.selectedIndexes()
+        for index in indexes:
+            word = self.blocks_available.model().data(index)
+            element = QtGui.QStandardItem(word)
+            if word is not None:
+                self.model_in_design.appendRow(element)
 
     @pyqtSlot()
     def remove_from_design(self):
         """
         Removes blocks from the list that is to be added into the design
         """
-        index = self.blocks_in_design.currentIndex()
-        self.model_in_design.removeRow(index.row())
+        indexes = self.blocks_in_design.selectedIndexes()
+        for index in indexes:
+            self.model_in_design.removeRow(index.row())
 
     @pyqtSlot()
     def show_file(self):
@@ -533,7 +542,7 @@ def main():
     Main GUI method
     """
     app = QtWidgets.QApplication(sys.argv)
-    window = MainWindow()
+    _window = MainWindow()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
