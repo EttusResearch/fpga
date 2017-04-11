@@ -366,6 +366,10 @@ class MainWindow(QtWidgets.QWidget):
         blk_count = self.model_in_design.rowCount()
         self.block_num.setText("{}/{}".format(blk_count,
                                               self.max_allowed_blocks))
+        self.instantiation_file = os.path.join(uhd_image_builder.get_scriptpath(),
+                                               '..', '..', 'top', self.target,
+                                               'rfnoc_ce_auto_inst_' + self.device.lower() +
+                                               '.v')
 
     @pyqtSlot()
     def ootlist(self):
