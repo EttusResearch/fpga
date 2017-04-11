@@ -20,8 +20,8 @@ from __future__ import print_function
 import os
 import sys
 import signal
+import threading
 import xml.etree.ElementTree as ET
-import uhd_image_builder
 from PyQt5 import (QtGui,
                    QtCore,
                    QtWidgets)
@@ -29,6 +29,7 @@ from PyQt5.QtWidgets import QGridLayout
 from PyQt5.QtCore import (pyqtSlot,
                           Qt,
                           QModelIndex)
+import uhd_image_builder
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -63,6 +64,7 @@ class MainWindow(QtWidgets.QWidget):
         # List of blocks that are part of our library but that do not take place
         # on the process this tool provides
         self.blacklist = ['noc_block_radio_core', 'noc_block_axi_dma_fifo', 'noc_block_pfb']
+        self.lock = threading.Lock()
         self.init_gui()
 
     def init_gui(self):
@@ -92,8 +94,8 @@ class MainWindow(QtWidgets.QWidget):
         grid.addWidget(add_btn, 2, 2)
         rem_btn = QtWidgets.QPushButton('<<', self)
         grid.addWidget(rem_btn, 3, 2)
-        gen_bit_btn = QtWidgets.QPushButton('Generate .bit file', self)
-        grid.addWidget(gen_bit_btn, 9, 3)
+        self.gen_bit_btn = QtWidgets.QPushButton('Generate .bit file', self)
+        grid.addWidget(self.gen_bit_btn, 9, 3)
 
         ##################################################
         # Checkbox
@@ -117,6 +119,7 @@ class MainWindow(QtWidgets.QWidget):
         self.cmd_display.setReadOnly(True)
         self.cmd_display.setText("".join(self.cmd_name))
         grid.addWidget(self.cmd_display, 10, 1, 1, 3)
+
         ##################################################
         # Panels - QTreeModels
         ##################################################
@@ -166,6 +169,25 @@ class MainWindow(QtWidgets.QWidget):
         grid.addWidget(self.blocks_in_design, 0, 3, 8, 1)
 
         ##################################################
+        # Informative Labels
+        ##################################################
+        block_num_hdr = QtWidgets.QLabel(self)
+        block_num_hdr.setText("Blocks in current design")
+        block_num_hdr.setStyleSheet(" QLabel {font-weight: bold; color: black}")
+        block_num_hdr.setAlignment(QtCore.Qt.AlignHCenter)
+        grid.addWidget(block_num_hdr, 0, 2)
+        self.block_num = QtWidgets.QLabel(self)
+        self.block_num.setText("-")
+        self.block_num.setAlignment(QtCore.Qt.AlignHCenter)
+        grid.addWidget(self.block_num, 1, 2)
+        self.block_num.setStyleSheet(" QLabel {color: green}")
+        self.generating_bitstream = QtWidgets.QLabel(self)
+        self.generating_bitstream.setText("")
+        self.generating_bitstream.setAlignment(QtCore.Qt.AlignHCenter)
+        grid.addWidget(self.generating_bitstream, 11, 0, 1, 5)
+        self.generating_bitstream.setStyleSheet(" QLabel {font-weight: bold; color: black}")
+
+        ##################################################
         # Connection of the buttons with their signals
         ##################################################
         self.fill_with_fifos.clicked.connect(self.fill_slot)
@@ -188,9 +210,9 @@ class MainWindow(QtWidgets.QWidget):
         show_file_btn.clicked.connect(self.show_file)
         show_file_btn.clicked.connect(self.cmd_display_slot)
         show_file_btn.clicked.connect(self.run_command)
-        gen_bit_btn.clicked.connect(self.generate_bit)
-        gen_bit_btn.clicked.connect(self.cmd_display_slot)
-        gen_bit_btn.clicked.connect(self.run_command)
+        self.gen_bit_btn.clicked.connect(self.generate_bit)
+        self.gen_bit_btn.clicked.connect(self.cmd_display_slot)
+        self.gen_bit_btn.clicked.connect(self.run_command)
         self.targets.clicked.connect(self.ootlist)
         self.targets.clicked.connect(self.set_target_and_device)
         self.targets.clicked.connect(self.cmd_display_slot)
@@ -223,7 +245,10 @@ class MainWindow(QtWidgets.QWidget):
         availables = []
         blocks = []
         availables = self.iter_tree(self.model_blocks_available, availables)
-        for i in range(self.model_in_design.rowCount()):
+        blk_count = self.model_in_design.rowCount()
+        self.block_num.setText("{}/{}".format(blk_count,
+                                              self.max_allowed_blocks))
+        for i in range(blk_count):
             blocks.append(self.blocks_in_design.model().data(
                 self.blocks_in_design.model().index(i, 0)))
         self.cmd_prefix = self.cmd_name + blocks
@@ -235,6 +260,7 @@ class MainWindow(QtWidgets.QWidget):
         """
         blk_count = self.model_in_design.rowCount()
         if blk_count > self.max_allowed_blocks:
+            self.block_num.setStyleSheet(" QLabel {font-weight:bold; color: red}")
             self.show_too_many_blocks_warning(blk_count)
 
     @pyqtSlot()
@@ -299,6 +325,10 @@ class MainWindow(QtWidgets.QWidget):
         indexes = self.blocks_in_design.selectedIndexes()
         for index in indexes:
             self.model_in_design.removeRow(index.row())
+        # Edit Informative Label formatting
+        blk_count = self.model_in_design.rowCount()
+        if blk_count <= self.max_allowed_blocks:
+            self.block_num.setStyleSheet(" QLabel {color: green}")
 
     @pyqtSlot()
     def show_file(self):
@@ -320,8 +350,8 @@ class MainWindow(QtWidgets.QWidget):
         Executes the uhd_image_builder command based on user options
         """
         if self.check_no_blocks() and self.check_blk_not_in_sources():
-            command = self.cmd_display.toPlainText()
-            os.system(command)
+            process = threading.Thread(target=self.generate_bitstream)
+            process.start()
             if self.cmd_dict['show_file'] is not '':
                 os.system("xdg-open " + self.instantiation_file)
 
@@ -329,9 +359,13 @@ class MainWindow(QtWidgets.QWidget):
     def set_target_and_device(self):
         """
         Populates the 'target' and 'device' values of the command directory
+        and the device dependent max_allowed_blocks in display
         """
         self.cmd_dict['target'] = '-t {}'.format(self.build_target)
         self.cmd_dict['device'] = '-d {}'.format(self.device)
+        blk_count = self.model_in_design.rowCount()
+        self.block_num.setText("{}/{}".format(blk_count,
+                                              self.max_allowed_blocks))
 
     @pyqtSlot()
     def ootlist(self):
@@ -461,7 +495,7 @@ class MainWindow(QtWidgets.QWidget):
         Populates the pannels with the blocks that are listed in the Makefile.srcs
         of our library
         """
-        #clean the list before populating it again
+        # Clean the list before populating it again
         parent.removeRows(0, parent.rowCount())
         suffix = '.v \\\n'
         with open(files) as fil:
@@ -536,6 +570,22 @@ class MainWindow(QtWidgets.QWidget):
             self.show_no_srcs_warning(notin)
             return False
         return True
+
+    def generate_bitstream(self):
+        """
+        Runs the bitstream generation command in a separate thread
+        """
+        self.lock.acquire()
+        self.gen_bit_btn.setEnabled(False)
+        command = self.cmd_display.toPlainText()
+        self.generating_bitstream.setText(
+            "[Generating BitStream]: The FPGA is currently being generated" + \
+            " with the blocks of the current design. See the terminal window" + \
+            " for further compilation details")
+        os.system(command)
+        self.lock.release()
+        self.gen_bit_btn.setEnabled(True)
+        self.generating_bitstream.setText("")
 
 def main():
     """
