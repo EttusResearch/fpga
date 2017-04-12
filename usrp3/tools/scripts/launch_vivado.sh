@@ -88,4 +88,9 @@ do
         echo "$line"
     fi
 done
-exit ${PIPESTATUS[0]}
+
+# Vivado does not typically exit with a helpful error code, even when it fails!...
+# exit ${PIPESTATUS[0]}
+
+# Check the xsim.log for errors
+exit `grep -i ^error xsim.log -c`
