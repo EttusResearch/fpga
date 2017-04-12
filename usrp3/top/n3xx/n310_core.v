@@ -270,7 +270,7 @@ module n310_core #(
    generate for (i = 0; i < NUM_RADIO_CORES; i = i + 1) begin
 
    noc_block_radio_core #(
-      .NOC_ID(64'h12AD_1000_0000_0001),
+      .NOC_ID(64'h12AD_1000_0000_0310),
       .NUM_CHANNELS(NUM_CHANNELS),
       .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
       .MTU(13)

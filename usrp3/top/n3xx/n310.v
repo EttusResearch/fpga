@@ -1704,8 +1704,8 @@ module n310
   n310_core #(.REG_AWIDTH(14)) n310_core
   (
     //Clocks and resets
-    .radio_clk(radio_clk),
-    .radio_rst(radio_rst),
+    .radio_clk(/*radio_clk*/bus_clk), //FIXME: Move to radio_clk
+    .radio_rst(/*radio_rst*/bus_rst), //FIXME: Move to radio_rst
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
