@@ -202,7 +202,15 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {PANEL_LED_REF}]
 
 ## MGTs, Bank 109
 
+set_property PACKAGE_PIN   AH9              [get_ports SFP_0_RX_N]
+set_property PACKAGE_PIN   AH10             [get_ports SFP_0_RX_P]
+set_property PACKAGE_PIN   AK9              [get_ports SFP_0_TX_N]
+set_property PACKAGE_PIN   AK10             [get_ports SFP_0_TX_P]
 
+set_property PACKAGE_PIN   AJ7              [get_ports SFP_1_RX_N]
+set_property PACKAGE_PIN   AJ8              [get_ports SFP_1_RX_P]
+set_property PACKAGE_PIN   AK5              [get_ports SFP_1_TX_N]
+set_property PACKAGE_PIN   AK6              [get_ports SFP_1_TX_P]
 
 ## SFP+ 0, Slow Speed, Bank 13 3.3V
 
