@@ -582,6 +582,7 @@ module n310
 
   wire [15:0] IRQ_F2P;
   wire FCLK_CLK0;
+  wire FCLK_CLK1;
   wire FCLK_RESET0;
   wire FCLK_RESET0N = ~FCLK_RESET0;
 
@@ -1905,8 +1906,15 @@ module n310
      else
        counter1 <= counter1 + 32'd1;
    end
-   reg [31:0] counter3;
+   reg [31:0] counter2;
    always @(posedge radio_clk) begin
+     if (FCLK_RESET0)
+       counter2 <= 32'd0;
+     else
+       counter2 <= counter2 + 32'd1;
+   end
+   reg [31:0] counter3;
+   always @(posedge gige_refclk) begin
      if (FCLK_RESET0)
        counter3 <= 32'd0;
      else
@@ -1915,9 +1923,9 @@ module n310
 
    assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
 
-   assign PANEL_LED_LINK = counter3[26];
-   assign PANEL_LED_REF = counter1[26]; //FIXME
-   assign PANEL_LED_GPS = jesd_dac_sync;
+   assign PANEL_LED_LINK = counter1[26];
+   assign PANEL_LED_REF = counter2[26];
+   assign PANEL_LED_GPS = counter3[26];
 
    // Check Clock frequency through PPS_OUT
 
@@ -1928,7 +1936,7 @@ module n310
       .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
    ) fclk_inst (
       .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(radio_clk),   // 1-bit clock input
+      .C(gige_refclk),   // 1-bit clock input
       .CE(1'b1), // 1-bit clock enable input
       .D1(1'b0), // 1-bit data input (positive edge)
       .D2(1'b1), // 1-bit data input (negative edge)

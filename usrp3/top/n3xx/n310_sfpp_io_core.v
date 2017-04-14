@@ -267,8 +267,8 @@ generate
          .gmii_rx_er(gmii_rx_er),        // Received control signal to client MAC.
          // Management: MDIO Interface
          .mdc(mdc),                      // Management Data Clock
-         .mdio_i(mdio_in),               // Management Data In
-         .mdio_o(mdio_out),              // Management Data Out
+         .mdio_i(mdio_m2s),              // Management Data In
+         .mdio_o(mdio_s2m),              // Management Data Out
          .mdio_t(),                       // Management Data Tristate
          .configuration_vector(5'd0),     // Alternative to MDIO interface.
          .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
@@ -303,21 +303,21 @@ generate
          .tx_tvalid(s_axis_tvalid),
          .tx_tready(s_axis_tready),
          // MDIO
-         .mdc(mdc),
-         .mdio_in(mdio_in),
-         .mdio_out(mdio_out),
-         .mdio_tri(),
-         // Wishbone I/F
-         .wb_clk_i(bus_clk_div2),
-         .wb_rst_i(bus_rst_div2),
-         .wb_adr_i(),
-         .wb_cyc_i(),
-         .wb_dat_i(),
-         .wb_stb_i(),
-         .wb_we_i(),
-         .wb_ack_o(),
-         .wb_dat_o(),
-         .wb_int_o(),
+         //.mdc(mdc),
+         //.mdio_in(mdio_in),
+         //.mdio_out(mdio_out),
+         //.mdio_tri(),
+         //// Wishbone I/F
+         //.wb_clk_i(bus_clk_div2),
+         //.wb_rst_i(bus_rst_div2),
+         //.wb_adr_i(),
+         //.wb_cyc_i(),
+         //.wb_dat_i(),
+         //.wb_stb_i(),
+         //.wb_we_i(),
+         //.wb_ack_o(),
+         //.wb_dat_o(),
+         //.wb_int_o(),
          // Debug
          .debug_tx(), .debug_rx()
       );
