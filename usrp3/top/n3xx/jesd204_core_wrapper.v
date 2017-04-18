@@ -144,6 +144,7 @@ module jesd204_core_wrapper #(
   reg  radio_clk_mmcm_reset;
   wire jesd_refclk_present;  //Read only
 
+  wire radio_clks_valid;
   wire fpga_clks_stable;
   wire sample_clk_1x;
   wire sample_clk_2x;
@@ -156,7 +157,7 @@ module jesd204_core_wrapper #(
       radio_clk3x_enable   <= 1'b0;
       radio_clk_mmcm_reset <= 1'b1;
       reg_port_ready_glob  <= 1'b0;
-      myk_reset            <= 1'b1; //Active Low reset
+      myk_reset            <= 1'b0; //Active Low reset
     end else begin
       if (reg_port_wr) begin
       reg_port_ready_glob <= 1'b1;
@@ -176,7 +177,11 @@ module jesd204_core_wrapper #(
       reg_port_ready_glob <= 1'b1;
       case ({2'b0,reg_port_addr})
         REG_RADIO_CLK_CTRL :
-          reg_port_rd_data_glob <= {28'b0, radio_clk_mmcm_reset, radio_clk3x_enable, radio_clk2x_enable, radio_clk1x_enable};
+          reg_port_rd_data_glob <= {27'b0, radio_clks_valid,     // Bit 4
+                                           radio_clk_mmcm_reset, // Bit 3
+                                           radio_clk3x_enable,   // Bit 2
+                                           radio_clk2x_enable,   // Bit 1
+                                           radio_clk1x_enable};  // Bit 0
         REG_JESD_REFCLK :
           reg_port_rd_data_glob <= {31'b0, jesd_refclk_present};
         REG_MYK_RESET :
@@ -221,7 +226,7 @@ module jesd204_core_wrapper #(
   Jesd204bXcvrCoreEttus jesd204_core
   (
       // Clocks and Reset
-     .aReset(areset),                    // FIXME: Async Reset
+     .aReset(areset),                    // Async Reset
      .bReset(bus_rst),                   // Sync Reset for regport = FALSE
      .BusClk(bus_clk),                   // Register bus and General Control
      .ReliableClk40(clk40),              // Must be stable BEFORE everything = 40 MHz clock //FIXME

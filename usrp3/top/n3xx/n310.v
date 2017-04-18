@@ -1614,6 +1614,7 @@ module n310
    // Drive CPLD Address line with PS GPIO
    wire [2:0]                         spi_mux;
    wire                               cpld_reset;
+   wire                               myk_reset;
    assign DBA_CPLD_ADDR             = spi_mux;
 
    // SPI to CPLD
@@ -1622,7 +1623,7 @@ module n310
    assign DBA_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
    assign DBA_CPLD_SPI_CSB_ATR_TX1  = spi0_ss0;
 
-   assign DBA_CPLD_RESET_N          = cpld_reset;
+   assign DBA_CPLD_RESET_N          = cpld_reset | myk_reset; //TODO: Clean up later
 
    assign DBA_MYK_SPI_CS_N          = spi0_ss1;
    assign DBA_MYK_SPI_SCLK          = spi0_sclk;
@@ -1815,7 +1816,7 @@ module n310
    .tx1(tx1),
    .tx_stb(tx_stb),
    .lmk_sync(DBA_CPLD_SYNC_ATR_RX1),
-   .myk_reset(/*DBA_CPLD_RESET_N*/), //TODO
+   .myk_reset(myk_reset),
    .jesd_dac_sync(jesd_dac_sync),
    .jesd_adc_sync(jesd_adc_sync),
 
