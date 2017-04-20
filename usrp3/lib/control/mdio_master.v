@@ -485,7 +485,7 @@ module mdio_master #(
             // Note that slaves drive the bus on the rising edge of MDC.
             // Writes and Address cycles have 10 driven by the master.
             TA1: begin
-	           if ((mdio_operation[12:11] == 2'b00) || (mdio_operation[12:11] == 2'b10))
+               if (mdio_operation[11] == 1'b0) // Write/Address
                begin
                   mdio_tri <= 1'b0;
                   mdio_out <= 1'b1;

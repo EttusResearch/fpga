@@ -13,11 +13,8 @@ module pulse_stretch
   parameter WIDTH = 64;
   parameter SCALE = 64'd12_500_000;
 
-  (* mark_debug = "true", keep = "true" *)
   reg [WIDTH-1:0] count;
-
-  (* mark_debug = "true", keep = "true" *)
-  reg        state;
+  reg             state;
 
   always @ (posedge clk)
     if (rst)

@@ -73,20 +73,20 @@ module jesd204_core_wrapper #(
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //
-  // JESD and Clocking Registers
+  // AXI-Lite interface to NI Regport
   //
   //////////////////////////////////////////////////////////////////////////////////////////////
 
-  (* mark_debug = "true" *) wire                  reg_port_rd;
-  (* mark_debug = "true" *) wire                  reg_port_wr;
-  (* mark_debug = "true" *) wire [REG_AWIDTH-1:0] reg_port_addr;
-  (* mark_debug = "true" *) wire [REG_DWIDTH-1:0] reg_port_wr_data;
-  (* mark_debug = "true" *) wire [REG_DWIDTH-1:0] reg_port_rd_data;
-  (* mark_debug = "true" *) wire                  reg_port_ready;
-  (* mark_debug = "true" *) wire [REG_DWIDTH-1:0] reg_port_rd_data_jesd;
-  (* mark_debug = "true" *) wire                  reg_port_ready_jesd;
-  (* mark_debug = "true" *) reg  [REG_DWIDTH-1:0] reg_port_rd_data_glob;
-  (* mark_debug = "true" *) reg                   reg_port_ready_glob;
+  wire                  reg_port_rd;
+  wire                  reg_port_wr;
+  wire [REG_AWIDTH-1:0] reg_port_addr;
+  wire [REG_DWIDTH-1:0] reg_port_wr_data;
+  wire [REG_DWIDTH-1:0] reg_port_rd_data;
+  wire                  reg_port_ready;
+  wire [REG_DWIDTH-1:0] reg_port_rd_data_jesd;
+  wire                  reg_port_ready_jesd;
+  reg  [REG_DWIDTH-1:0] reg_port_rd_data_glob;
+  reg                   reg_port_ready_glob;
 
   axil_to_ni_regport #(
     .RP_DWIDTH   (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64) //FIXME
@@ -127,18 +127,24 @@ module jesd204_core_wrapper #(
     .reg_port_out_ready(reg_port_ready)
   );
 
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // JESD and Clocking Registers
+  //
+  //////////////////////////////////////////////////////////////////////////////////////////////
+
   localparam REG_RADIO_CLK_CTRL     = REG_BASE + 'h0000;
   localparam REG_JESD_REFCLK        = REG_BASE + 'h0004;
   localparam REG_MYK_RESET          = REG_BASE + 'h0008;
 
   // Clocking Registers
-  (* mark_debug = "true" *) reg  radio_clk1x_enable;
-  (* mark_debug = "true" *) reg  radio_clk2x_enable;
-  (* mark_debug = "true" *) reg  radio_clk3x_enable;
-  (* mark_debug = "true" *) reg  radio_clk_mmcm_reset;
-  (* mark_debug = "true" *) wire jesd_refclk_present;  //Read only
+  reg  radio_clk1x_enable;
+  reg  radio_clk2x_enable;
+  reg  radio_clk3x_enable;
+  reg  radio_clk_mmcm_reset;
+  wire jesd_refclk_present;  //Read only
 
-  (* mark_debug = "true" *) wire fpga_clks_stable;
+  wire fpga_clks_stable;
   wire sample_clk_1x;
   wire sample_clk_2x;
   wire clk40;

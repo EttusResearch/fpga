@@ -19,18 +19,19 @@ module arm_framer (
   input             m_axis_tready
 );
 
-  localparam START      = 2'b00;
-  localparam IN_PKT    = 2'b01;
-  localparam EXTRA     = 2'b10;
-  (* mark_debug = "true" *) reg [63:0]  s_axis_tdata_reg;
-  (* mark_debug = "true" *) reg         s_axis_tvalid_reg;
-  (* mark_debug = "true" *) reg         s_axis_tlast_reg;
-  (* mark_debug = "true" *) reg [3:0]   s_axis_tuser_reg;
+  localparam START  = 2'b00;
+  localparam IN_PKT = 2'b01;
+  localparam EXTRA  = 2'b10;
 
-  (* mark_debug = "true" *) reg  [1:0]  state;
-  (* mark_debug = "true" *) wire        new_line;
-  (* mark_debug = "true" *) reg  [47:0] holding_reg;
-  (* mark_debug = "true" *) reg  [2:0] holding_user;
+  reg  [63:0] s_axis_tdata_reg;
+  reg  [3:0]  s_axis_tuser_reg;
+  reg         s_axis_tvalid_reg;
+  reg         s_axis_tlast_reg;
+
+  wire        new_line;
+  reg  [1:0]  state;
+  reg  [47:0] holding_reg;
+  reg  [2:0]  holding_user;
 
   assign new_line = (s_axis_tuser_reg[2:0] > 3'b010) || (s_axis_tuser_reg[2:0] == 3'b000);
   assign valid_beat = s_axis_tvalid_reg & m_axis_tready;

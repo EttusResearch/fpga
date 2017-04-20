@@ -83,6 +83,29 @@ module one_gig_eth_loopback_tb();
     end
   end
 
+   //-----------------------------------------------------------------
+   // MDIO Master
+   //-----------------------------------------------------------------
+   wire mdc, mdio_m2s, mdio_s2m;
+
+   mdio_master #(
+      .MDC_DIVIDER   (8'd200)
+   ) mdio_master_i (
+      .clk        (m_user_clk),
+      .rst        (GSR),
+      .mdc        (mdc),
+      .mdio_in    (mdio_s2m),
+      .mdio_out   (mdio_m2s),
+      .mdio_tri   (),
+      .reg_wr_req (/*reg_wr_req*/),
+      .reg_wr_addr(/*reg_wr_addr*/),
+      .reg_wr_data(/*reg_wr_data*/),
+      .reg_rd_req (/*reg_rd_req*/),
+      .reg_rd_addr(/*reg_rd_addr*/),
+      .reg_rd_data(/*reg_rd_data*/),
+      .reg_rd_resp(/*reg_rd_resp*/)
+   );
+
    //GT COMMON
    one_gig_eth_pcs_pma_gt_common core_gt_common_i
    (
@@ -98,7 +121,7 @@ module one_gig_eth_loopback_tb();
   one_gige_phy one_gige_phy_master_i
   (
      .reset(GSR),                  // Asynchronous reset for entire core.
-     .independent_clock(independent_clock),   //TODO: Which clock is this?
+     .independent_clock(independent_clock),
      .pma_reset_out(pma_reset),
      .gt0_qplloutclk_in(gt0_qplloutclk),
      .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
@@ -119,8 +142,8 @@ module one_gig_eth_loopback_tb();
      .gmii_rx_er(m_gmii_rx_er),        // Received control signal to client MAC.
      // Management: MDIO Interface
      .mdc(mdc),                      // Management Data Clock
-     .mdio_i(mdio_in),               // Management Data In
-     .mdio_o(mdio_out),              // Management Data Out
+     .mdio_i(mdio_m2s),               // Management Data In
+     .mdio_o(mdio_s2m),              // Management Data Out
      .mdio_t(),                       // Management Data Tristate
      .configuration_vector(5'd0),     // Alternative to MDIO interface.
      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
@@ -154,22 +177,6 @@ module one_gig_eth_loopback_tb();
          .tx_tlast(m_tx_chdr.axis.tlast),
          .tx_tvalid(m_tx_chdr.axis.tvalid),
          .tx_tready(m_tx_chdr.axis.tready),
-         // MDIO
-         .mdc(mdc),
-         .mdio_in(mdio_in),
-         .mdio_out(mdio_out),
-         .mdio_tri(),
-         // Wishbone I/F
-         .wb_clk_i(m_user_clk),
-         .wb_rst_i(GSR),
-         .wb_adr_i(wb_adr_i),
-         .wb_cyc_i(wb_cyc_i),
-         .wb_dat_i(wb_dat_o),
-         .wb_stb_i(wb_stb_i),
-         .wb_we_i(wb_we_i),
-         .wb_ack_o(wb_ack_o),
-         .wb_dat_o(wb_dat_i),
-         .wb_int_o(wb_int_o),
          // Debug
          .debug_tx(), .debug_rx()
       );
@@ -177,7 +184,7 @@ module one_gig_eth_loopback_tb();
   one_gige_phy one_gige_phy_slave_i
   (
      .reset(GSR),                  // Asynchronous reset for entire core.
-     .independent_clock(independent_clock),   //TODO: Which clock is this?
+     .independent_clock(independent_clock),
      .pma_reset_out(),
      .gt0_qplloutclk_in(gt0_qplloutclk),
      .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
@@ -198,8 +205,8 @@ module one_gig_eth_loopback_tb();
      .gmii_rx_er(s_gmii_rx_er),        // Received control signal to client MAC.
      // Management: MDIO Interface
      .mdc(mdc),                      // Management Data Clock
-     .mdio_i(mdio_in),               // Management Data In
-     .mdio_o(mdio_out),              // Management Data Out
+     .mdio_i(mdio_m2s),               // Management Data In
+     .mdio_o(mdio_s2m),              // Management Data Out
      .mdio_t(),                       // Management Data Tristate
      .configuration_vector(5'd0),     // Alternative to MDIO interface.
      .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
@@ -233,22 +240,6 @@ module one_gig_eth_loopback_tb();
          .tx_tlast(loop_tlast),
          .tx_tvalid(loop_tvalid),
          .tx_tready(loop_tready),
-         // MDIO
-         .mdc(mdc),
-         .mdio_in(mdio_in),
-         .mdio_out(mdio_out),
-         .mdio_tri(),
-         // Wishbone I/F
-         .wb_clk_i(m_user_clk /*bus_clk_div2*/),
-         .wb_rst_i(GSR /*bus_rst_div2*/),
-         .wb_adr_i(wb_adr_i),
-         .wb_cyc_i(wb_cyc_i),
-         .wb_dat_i(wb_dat_o),
-         .wb_stb_i(wb_stb_i),
-         .wb_we_i(wb_we_i),
-         .wb_ack_o(wb_ack_o),
-         .wb_dat_o(wb_dat_i),
-         .wb_int_o(wb_int_o),
          // Debug
          .debug_tx(), .debug_rx()
       );

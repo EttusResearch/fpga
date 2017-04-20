@@ -845,62 +845,40 @@ module n310
 
 
 // ARM ethernet 0 bridge signals
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth0_tx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_tx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_tx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_tx_tready;
-  (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth0_tx_tuser;
   wire [7:0]  arm_eth0_tx_tkeep;
 
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth0_rx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_rx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_rx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_rx_tready;
-  (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth0_rx_tuser;
   wire [7:0]  arm_eth0_rx_tkeep;
 
 
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth0_rx_irq;
   wire        arm_eth0_tx_irq;
 
   // ARM ethernet 1 bridge signals
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth1_tx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_tx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_tx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_tx_tready;
-  (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth1_tx_tuser;
   wire [7:0]  arm_eth1_tx_tkeep;
 
 
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] arm_eth1_rx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_rx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_rx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_rx_tready;
-  (* mark_debug = "true", keep = "true" *)
   wire [3:0]  arm_eth1_rx_tuser;
   wire [7:0]  arm_eth1_rx_tkeep;
 
-  (* mark_debug = "true", keep = "true" *)
   wire        arm_eth1_tx_irq;
   wire        arm_eth1_rx_irq;
 
@@ -1413,22 +1391,14 @@ module n310
     .m_axi_rready({M_AXI_GP0_RREADY_S6, M_AXI_GP0_RREADY_S5, M_AXI_GP0_RREADY_S4, M_AXI_GP0_RREADY_S3, M_AXI_GP0_RREADY_S2, M_AXI_GP0_RREADY_S1, M_AXI_GP0_RREADY_S0})
   );
 
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_sclk;
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_mosi;
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_miso;
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_ss0;
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_ss1;
-  (* mark_debug = "true", keep = "true" *)
   wire spi0_ss2;
 
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] ps_gpio_out;
-  (* mark_debug = "true", keep = "true" *)
   wire [63:0] ps_gpio_in;
 
   assign DBA_CPLD_JTAG_TCK = ps_gpio_out[0];

@@ -35,19 +35,13 @@ module fifo64_to_axi4lite
   output        irq
 );
 
-  wire clear_txn;
-  (* mark_debug = "true", keep = "true" *)
+  wire        clear_txn;
   wire [31:0] tx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        tx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        tx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        tx_tready;
-  (* mark_debug = "true", keep = "true" *)
-  wire [3:0] tx_tkeep;
-
-  wire [1:0] tx_tuser = (tx_tkeep == 4'b1111) ? 2'd0 :
+  wire [3:0]  tx_tkeep;
+  wire [1:0]  tx_tuser = (tx_tkeep == 4'b1111) ? 2'd0 :
                         (tx_tkeep == 4'b0001) ? 2'd1 :
                         (tx_tkeep == 4'b0011) ? 2'd2 :
                         (tx_tkeep == 4'b0111) ? 2'd3 : 2'd0;
@@ -69,20 +63,12 @@ module fifo64_to_axi4lite
   );
 
 
-  wire clear_rxn;
-  (* mark_debug = "true", keep = "true" *)
+  wire        clear_rxn;
   wire [31:0] rx_tdata;
-  (* mark_debug = "true", keep = "true" *)
   wire        rx_tlast;
-  (* mark_debug = "true", keep = "true" *)
   wire        rx_tvalid;
-  (* mark_debug = "true", keep = "true" *)
   wire        rx_tready;
-
-  (* mark_debug = "true", keep = "true" *)
-  //wire [3:0]  rx_tkeep;
-
-  wire [1:0] rx_tuser;
+  wire [1:0]  rx_tuser;
 
   axi_fifo64_to_fifo32 inst_axi_fifo64_to_fifo32
   (
