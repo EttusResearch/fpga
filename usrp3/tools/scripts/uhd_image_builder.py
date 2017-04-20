@@ -203,18 +203,19 @@ def append_re_line_sequence(filename, linepattern, newline):
         newfile = oldfile.replace(last_line, last_line + newline + '\n')
         open(filename, 'w').write(newfile)
 
-def create_oot_include(args):
+def create_oot_include(device, include_dirs):
     """
     Create the include file for OOT RFNoC sources
     """
-    target_dir = device_dict(args.device.lower())
+    oot_dir_list = []
+    target_dir = device_dict(device.lower())
     dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
             target_dir, 'Makefile.OOT.inc')
     incfile = open(dest_srcs_file, 'w')
     incfile.write(OOT_SRCS_FILE_HDR)
-    if args.include_dir is not None:
-        for dirs in args.include_dir:
-            currpath = os.path.abspath(dirs)
+    if include_dirs is not None:
+        for dirs in include_dirs:
+            currpath = os.path.abspath(str(dirs))
             if os.path.isdir(currpath) & (os.path.basename(currpath) == "rfnoc"):
                 # Case 1: Pointed directly to rfnoc directory
                 oot_path = os.path.dirname(currpath)
@@ -224,20 +225,22 @@ def create_oot_include(args):
             else:
                 print('No RFNoC module found at ' + os.path.abspath(currpath))
                 continue
-            print('Including RFNoC module at: ' + oot_path)
-            named_path = os.path.join('$(BASE_DIR)', get_relative_path(get_basedir(), oot_path))
-            incfile.write(OOT_DIR_TMPL.format(oot_dir=os.path.join(named_path, 'rfnoc')))
-            if os.path.isfile(os.path.join(oot_path, 'rfnoc', 'Makefile.inc')):
-                # Check for Makefile.inc
-                incfile.write(OOT_INC_TMPL)
-            elif os.path.isfile(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs')):
-                # Legacy: Check for fpga-src/Makefile.srcs
-                # Read, then append to file
-                curr_srcs = open(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs'), 'r').read()
-                incfile.write(OOT_SRCS_TMPL.format(sources=curr_srcs))
-            else:
-                print('No valid makefile found at ' + os.path.abspath(currpath))
-                continue
+            if (not oot_path in oot_dir_list):
+                oot_dir_list.append(oot_path)
+                named_path = os.path.join('$(BASE_DIR)', get_relative_path(get_basedir(), oot_path), 'rfnoc')
+                incfile.write(OOT_DIR_TMPL.format(oot_dir=named_path))
+                if os.path.isfile(os.path.join(oot_path, 'rfnoc', 'Makefile.inc')):
+                    # Check for Makefile.inc
+                    incfile.write(OOT_INC_TMPL)
+                elif os.path.isfile(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs')):
+                    # Legacy: Check for fpga-src/Makefile.srcs
+                    # Read, then append to file
+                    curr_srcs = open(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs'), 'r').read()
+                    curr_srcs = curr_srcs.replace('SOURCES_PATH', os.path.join(oot_path, 'rfnoc', 'fpga-src'))
+                    incfile.write(OOT_SRCS_TMPL.format(sources=curr_srcs))
+                else:
+                    print('No valid makefile found at ' + os.path.abspath(currpath))
+                    continue
     incfile.close()
 
 def append_item_into_file(device, include_dir):
@@ -399,7 +402,7 @@ def main():
     args = setup_parser().parse_args()
     vfile = create_vfiles(args)
     file_generator(args, vfile)
-    create_oot_include(args)
+    create_oot_include(args.device, args.include_dir)
     if args.outfile is  None:
         return build(args)
     else:
