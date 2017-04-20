@@ -37,7 +37,7 @@ include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(BASE_DIR)/x300/Makefile.srcs
+include $(BASE_DIR)/x300/Makefile.OOT.inc
 
 ##################################################
 # Sources

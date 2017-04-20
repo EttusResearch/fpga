@@ -32,8 +32,8 @@ include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(BASE_DIR)/e300/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
+include $(BASE_DIR)/e300/Makefile.OOT.inc
 
 ##################################################
 # Sources
