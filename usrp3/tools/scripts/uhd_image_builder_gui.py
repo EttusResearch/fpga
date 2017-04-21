@@ -47,9 +47,11 @@ class MainWindow(QtWidgets.QWidget):
         self.target = 'x300'
         self.device = 'x310'
         self.build_target = 'X310_RFNOC_HG'
+        self.oot_dirs = []
         self.max_allowed_blocks = 10
         self.cmd_dict = {"target": '-t {}'.format(self.build_target),
                          "device": '-d {}'.format(self.device),
+                         "include": '-I {}'.format(' '.join(self.oot_dirs)),
                          "fill_fifos": '',
                          "viv_gui": '',
                          "cleanall": '',
@@ -142,12 +144,10 @@ class MainWindow(QtWidgets.QWidget):
         ettus_blocks.setEnabled(False)
         ettus_blocks.setForeground(Qt.black)
         self.populate_list(ettus_blocks, ettus_sources)
-        oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
-            'x300', 'Makefile.srcs')
         self.oot = QtGui.QStandardItem("OOT Blocks for X300 devices")
         self.oot.setEnabled(False)
         self.oot.setForeground(Qt.black)
-        self.populate_list(self.oot, oot_sources)
+        self.refresh_oot_dirs()
         self.model_blocks_available = QtGui.QStandardItemModel(self)
         self.model_blocks_available.appendRow(ettus_blocks)
         self.model_blocks_available.appendRow(self.oot)
@@ -395,17 +395,12 @@ class MainWindow(QtWidgets.QWidget):
         Opens a dialog window to add manually the Out-of-tree module blocks
         """
         append_directory = []
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/home/')[0]
-        try:
-            if len(filename) > 0:
-                append_directory.append(os.path.join(os.path.dirname(
-                    os.path.join("", str(filename))), ''))
-                uhd_image_builder.append_item_into_file(self.device, append_directory)
-                oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
-                    self.target, 'Makefile.srcs')
-                self.populate_list(self.oot, oot_sources)
-        except BaseException:
-            pass
+        startpath = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', '..', '..')
+        new_oot = str(QtWidgets.QFileDialog.getExistingDirectory(self, 'RFNoC Out of Tree Directory', startpath))
+        if len(new_oot) > 0:
+            self.oot_dirs.append(new_oot)
+            uhd_image_builder.create_oot_include(self.device, self.oot_dirs)
+            self.refresh_oot_dirs()
 
     @pyqtSlot()
     def file_grc_dialog(self):
@@ -492,15 +487,16 @@ class MainWindow(QtWidgets.QWidget):
         Shows the Out-of-tree blocks that are available for a given device
         """
         parent.setText('OOT Blocks for {} devices'.format(target.upper()))
-        self.populate_list(parent, files)
+        self.refresh_oot_dirs()
 
-    def populate_list(self, parent, files):
+    def populate_list(self, parent, files, clear=True):
         """
         Populates the pannels with the blocks that are listed in the Makefile.srcs
         of our library
         """
         # Clean the list before populating it again
-        parent.removeRows(0, parent.rowCount())
+        if (clear):
+            parent.removeRows(0, parent.rowCount())
         suffix = '.v \\\n'
         with open(files) as fil:
             blocks = fil.readlines()
@@ -541,6 +537,27 @@ class MainWindow(QtWidgets.QWidget):
         except ET.ParseError:
             self.show_not_xml_warning()
             return
+
+    def refresh_oot_dirs(self):
+        """
+        Populates the OOT directory list from the OOT include file
+        """
+        oot_include = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
+            self.target, 'Makefile.OOT.inc')
+        dir_list = []
+        with open(oot_include, 'r') as fil:
+            text = fil.readlines()
+            for lines in text:
+                lines = lines.partition('$(BASE_DIR)/')
+                if (lines[1] == '$(BASE_DIR)/'):
+                    relpath = lines[2].replace('\n', '')
+                    ootpath = os.path.abspath(os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top', relpath))
+                    dir_list.append(ootpath)
+        if (len(dir_list) == 0):
+            self.oot.removeRows(0, parent.rowCount())
+        for (ii, oot) in enumerate(dir_list):
+            self.populate_list(self.oot, os.path.join(oot, 'fpga-src', 'Makefile.srcs'), clear=ii==0)
+        self.oot_dirs = dir_list
 
     def populate_target(self, selected_target):
         """
