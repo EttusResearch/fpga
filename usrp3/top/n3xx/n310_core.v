@@ -169,11 +169,9 @@ module n310_core #(
 
   localparam REG_GIT_HASH    = 14'h0;
   localparam REG_NUM_CE      = 14'h4;
-  localparam REG_LOCAL_ADDR  = 14'h8;
-  localparam REG_SCRATCH     = 14'hc;
+  localparam REG_SCRATCH     = 14'h8;
 
   reg [31:0] scratch_reg;
-  reg [7:0]  local_addr_reg;
 
   assign spi_mux = scratch_reg[2:0];
   assign cpld_reset = scratch_reg[3];
@@ -187,9 +185,6 @@ module n310_core #(
       case (reg_wr_addr)
         REG_SCRATCH:
           scratch_reg <= reg_wr_data;
-
-        REG_LOCAL_ADDR:
-          local_addr_reg  <= reg_wr_data;
       endcase
     end
 
@@ -207,9 +202,6 @@ module n310_core #(
 
         REG_NUM_CE:
           reg_rd_data_glob <= NUM_CE;
-
-        REG_LOCAL_ADDR:
-          reg_rd_data_glob <= local_addr_reg;
 
         REG_SCRATCH:
           reg_rd_data_glob <= scratch_reg;
@@ -411,7 +403,6 @@ module n310_core #(
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
    inst_axi_crossbar_wrapper (
       .clk(bus_clk), .reset(bus_rst), .clear(0),
-      .local_addr(local_addr_reg),
       .i_tdata({xbar_ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
       .i_tlast({xbar_ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
       .i_tvalid({xbar_ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),

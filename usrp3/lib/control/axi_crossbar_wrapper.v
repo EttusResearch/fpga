@@ -26,7 +26,6 @@ module axi_crossbar_wrapper
   output [REG_DWIDTH-1:0]               reg_rd_data,
   output                                reg_rd_resp,
 
-  input [7:0]                           local_addr,
   // Inputs
   input [(FIFO_WIDTH*NUM_INPUTS)-1:0]   i_tdata,
   input [NUM_INPUTS-1:0]                i_tvalid,
@@ -41,6 +40,13 @@ module axi_crossbar_wrapper
   input [NUM_OUTPUTS-1:0]               o_tready
 );
 
+  localparam XBAR_VERSION              = 32'b1;
+  localparam XBAR_NUM_PORTS            = NUM_INPUTS; //or NUM_OUTPUTS
+  localparam REG_XBAR_VERSION          = REG_BASE + 14'h0;
+  localparam REG_XBAR_NUM_PORTS        = REG_BASE + 14'h4;
+  localparam REG_XBAR_LOCAL_ADDR       = REG_BASE + 14'h8;
+  localparam REG_BASE_XBAR_SETTING_REG = REG_BASE + 14'h10;
+
   wire                  xbar_set_stb;
   wire [REG_DWIDTH-1:0] xbar_set_data;
   wire [15:0]           xbar_set_addr;
@@ -49,11 +55,68 @@ module axi_crossbar_wrapper
   wire [15:0]           xbar_rb_addr;
   wire [REG_DWIDTH-1:0] xbar_rb_data;
 
+  reg  [31:0]           local_addr_reg;
+  reg                   reg_rd_resp_glob;
+  reg  [REG_DWIDTH-1:0] reg_rd_data_glob;
+
+  wire [REG_DWIDTH-1:0] reg_rd_data_xbar;
+  wire                  reg_rd_resp_xbar;
+
+  regport_resp_mux #(.WIDTH(REG_DWIDTH)) inst_regport_resp_mux_xbar
+  (
+    .clk(clk),
+    .reset(reset),
+    .sla_rd_resp({reg_rd_resp_glob, reg_rd_resp_xbar}),
+    .sla_rd_data({reg_rd_data_glob, reg_rd_data_xbar}),
+    .mst_rd_resp(reg_rd_resp),
+    .mst_rd_data(reg_rd_data)
+  );
+
+  always @ (posedge clk)
+    if (reset) begin
+      local_addr_reg <= 32'h0;
+    end
+    else begin
+    if (reg_wr_req)
+      case (reg_wr_addr)
+        REG_XBAR_LOCAL_ADDR:
+          local_addr_reg  <= reg_wr_data;
+      endcase
+    end
+
+  always @ (posedge clk)
+    if (reset)
+      reg_rd_resp_glob <= 1'b0;
+
+    else begin
+      if (reg_rd_req) begin
+        reg_rd_resp_glob <= 1'b1;
+
+        case (reg_rd_addr)
+        REG_XBAR_VERSION:
+          reg_rd_data_glob <= XBAR_VERSION;
+
+        REG_XBAR_NUM_PORTS:
+          reg_rd_data_glob <= XBAR_NUM_PORTS;
+
+        REG_XBAR_LOCAL_ADDR:
+          reg_rd_data_glob <= local_addr_reg;
+
+        default:
+          reg_rd_resp_glob <= 1'b0;
+        endcase
+      end
+      else if (reg_rd_resp_glob) begin
+          reg_rd_resp_glob <= 1'b0;
+      end
+    end
+
   regport_to_xbar_settingsbus
   #(
-    .BASE(REG_BASE),
+    .BASE(REG_BASE_XBAR_SETTING_REG),
     .DWIDTH(REG_DWIDTH),
-    .AWIDTH(REG_AWIDTH)
+    .AWIDTH(REG_AWIDTH),
+    .SR_AWIDTH(12)
   )
   inst_regport_to_xbar_settingsbus
   (
@@ -65,8 +128,8 @@ module axi_crossbar_wrapper
     .reg_wr_data(reg_wr_data),
     .reg_rd_req(reg_rd_req),
     .reg_rd_addr(reg_rd_addr),
-    .reg_rd_data(reg_rd_data),
-    .reg_rd_resp(reg_rd_resp),
+    .reg_rd_data(reg_rd_data_xbar),
+    .reg_rd_resp(reg_rd_resp_xbar),
 
     .set_stb(xbar_set_stb),
     .set_addr(xbar_set_addr),
@@ -88,7 +151,7 @@ module axi_crossbar_wrapper
     .clk(clk),
     .reset(reset),
     .clear(1'b0),
-    .local_addr(local_addr),
+    .local_addr(local_addr_reg),
 
     // settings bus for config
     .set_stb(xbar_set_stb),
