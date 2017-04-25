@@ -18,6 +18,6 @@ fix_short_packet.v \
 ip_hdr_checksum.v \
 source_flow_control.v \
 vita_eth_framer.v \
-arm_framer.v \
+arm_deframer.v \
 ))
 

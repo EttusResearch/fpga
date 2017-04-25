@@ -2,7 +2,7 @@
 // Copyright 2017 Ettus Research
 //
 
-module arm_framer (
+module arm_deframer (
 
   input             clk,
   input             reset,

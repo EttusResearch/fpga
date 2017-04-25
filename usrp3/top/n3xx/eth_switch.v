@@ -1,97 +1,101 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2017 Ettus Research LLC
+// Copyright 2016-2017 Ettus Research
 //
-// Adapts from internal VITA to ethernet packets.  Also handles CPU and ethernet crossover interfaces.
+// Ethernet Switch
+// Adapts from internal VITA to ethernet packets. Also handles CPU and ethernet crossover interfaces.
+//
+//////////////////////////////////////////////////////////////////////
 
 module eth_switch #(
-    parameter BASE                     = 0,
-    parameter XO_FIFOSIZE              = 10,
-    parameter CPU_FIFOSIZE             = 10,
-    parameter VITA_FIFOSIZE            = 10,
-    parameter ETHOUT_FIFOSIZE          = 10,
-    parameter REG_DWIDTH               = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
-    parameter REG_AWIDTH               = 14,    // Width of the address bus
-    parameter [47:0] DEFAULT_MAC_ADDR  = {8'h00, 8'h80, 8'h2f, 8'h16, 8'hc5, 8'h2f},
-    parameter [31:0] DEFAULT_IP_ADDR   = {8'd192, 8'd168, 8'd10, 8'd2},
-    parameter [31:0] DEFAULT_UDP_PORTS = {16'd49154, 16'd49153}
-    )(
+  parameter BASE                     = 0,
+  parameter XO_FIFOSIZE              = 10,
+  parameter CPU_FIFOSIZE             = 10,
+  parameter VITA_FIFOSIZE            = 10,
+  parameter ETHOUT_FIFOSIZE          = 10,
+  parameter REG_DWIDTH               = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+  parameter REG_AWIDTH               = 14,    // Width of the address bus
+  parameter [47:0] DEFAULT_MAC_ADDR  = {8'h00, 8'h80, 8'h2f, 8'h16, 8'hc5, 8'h2f},
+  parameter [31:0] DEFAULT_IP_ADDR   = {8'd192, 8'd168, 8'd10, 8'd2},
+  parameter [31:0] DEFAULT_UDP_PORTS = {16'd49154, 16'd49153}
+  )(
 
-    input           clk,
-    input           reset,
-    input           clear,
+  input           clk,
+  input           reset,
+  input           clear,
 
-    input           reg_clk,
-    // Register port: Write port (domain: reg_clk)
-    input                       reg_wr_req,
-    input   [REG_AWIDTH-1:0]    reg_wr_addr,
-    input   [REG_DWIDTH-1:0]    reg_wr_data,
-    input   [REG_DWIDTH/8-1:0]  reg_wr_keep,
+  input           reg_clk,
+  // Register port: Write port (domain: reg_clk)
+  input                       reg_wr_req,
+  input   [REG_AWIDTH-1:0]    reg_wr_addr,
+  input   [REG_DWIDTH-1:0]    reg_wr_data,
+  input   [REG_DWIDTH/8-1:0]  reg_wr_keep,
 
-    // Register port: Read port (domain: reg_clk)
-    input                       reg_rd_req,
-    input   [REG_AWIDTH-1:0]    reg_rd_addr,
-    output reg                  reg_rd_resp,
-    output reg [REG_DWIDTH-1:0] reg_rd_data,
+  // Register port: Read port (domain: reg_clk)
+  input                       reg_rd_req,
+  input   [REG_AWIDTH-1:0]    reg_rd_addr,
+  output reg                  reg_rd_resp,
+  output reg [REG_DWIDTH-1:0] reg_rd_data,
 
-    // Eth ports
-    output  [63:0]  eth_tx_tdata,
-    output  [3:0]   eth_tx_tuser,
-    output          eth_tx_tlast,
-    output          eth_tx_tvalid,
-    input           eth_tx_tready,
+  // Eth ports
+  output  [63:0]  eth_tx_tdata,
+  output  [3:0]   eth_tx_tuser,
+  output          eth_tx_tlast,
+  output          eth_tx_tvalid,
+  input           eth_tx_tready,
 
-    input   [63:0]  eth_rx_tdata,
-    input   [3:0]   eth_rx_tuser,
-    input           eth_rx_tlast,
-    input           eth_rx_tvalid,
-    output          eth_rx_tready,
+  input   [63:0]  eth_rx_tdata,
+  input   [3:0]   eth_rx_tuser,
+  input           eth_rx_tlast,
+  input           eth_rx_tvalid,
+  output          eth_rx_tready,
 
-    // Vita router interface
-    output  [63:0]  e2v_tdata,
-    output          e2v_tlast,
-    output          e2v_tvalid,
-    input           e2v_tready,
+  // Vita router interface
+  output  [63:0]  e2v_tdata,
+  output          e2v_tlast,
+  output          e2v_tvalid,
+  input           e2v_tready,
 
-    input   [63:0]  v2e_tdata,
-    input           v2e_tlast,
-    input           v2e_tvalid,
-    output          v2e_tready,
+  input   [63:0]  v2e_tdata,
+  input           v2e_tlast,
+  input           v2e_tvalid,
+  output          v2e_tready,
 
-    // Ethernet crossover
-    output  [63:0]  xo_tdata,
-    output  [3:0]   xo_tuser,
-    output          xo_tlast,
-    output          xo_tvalid,
-    input           xo_tready,
+  // Ethernet crossover
+  output  [63:0]  xo_tdata,
+  output  [3:0]   xo_tuser,
+  output          xo_tlast,
+  output          xo_tvalid,
+  input           xo_tready,
 
-    input   [63:0]  xi_tdata,
-    input   [3:0]   xi_tuser,
-    input           xi_tlast,
-    input           xi_tvalid,
-    output          xi_tready,
+  input   [63:0]  xi_tdata,
+  input   [3:0]   xi_tuser,
+  input           xi_tlast,
+  input           xi_tvalid,
+  output          xi_tready,
 
-    // CPU
-    output  [63:0]  e2c_tdata,
-    output  [3:0]   e2c_tuser,
-    output          e2c_tlast,
-    output          e2c_tvalid,
-    input           e2c_tready,
+  // CPU
+  output  [63:0]  e2c_tdata,
+  output  [3:0]   e2c_tuser,
+  output          e2c_tlast,
+  output          e2c_tvalid,
+  input           e2c_tready,
 
-    input   [63:0]  c2e_tdata,
-    input   [3:0]   c2e_tuser,
-    input           c2e_tlast,
-    input           c2e_tvalid,
-    output          c2e_tready,
+  input   [63:0]  c2e_tdata,
+  input   [3:0]   c2e_tuser,
+  input           c2e_tlast,
+  input           c2e_tvalid,
+  output          c2e_tready,
 
-    // Debug
-    output  [31:0]  debug
-   );
+  // Debug
+  output  [31:0]  debug
+  );
 
-   localparam REG_DISPATCH_BASE = BASE + 'h1008;
-   localparam REG_FRAMER_BASE   = BASE + 14'h2000;
+  localparam REG_DISPATCH_BASE = BASE + 'h1008;
+  localparam REG_FRAMER_BASE   = BASE + 'h2000;
 
   //---------------------------------------------------------
-  // Settings regs
+  // Registers
   //---------------------------------------------------------
 
   localparam REG_MAC_LSB   = BASE + 'h0000;
@@ -163,9 +167,12 @@ module eth_switch #(
    wire  [3:0]     v2ef_tuser;
    wire            v2ef_tlast, v2ef_tvalid, v2ef_tready;
 
-   // //////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////////
+   //
    // Incoming Ethernet path
-   //  Includes FIFO on the output going to CPU
+   // Includes FIFO on the output going to CPU
+   //
+   ////////////////////////////////////////////////////////////////
 
    wire  [63:0]    epg_tdata_int;
    wire  [3:0]     epg_tuser_int;
@@ -242,8 +249,8 @@ module eth_switch #(
 
     .my_mac(mac_reg),
     .my_ip (ip_reg),
-    .my_port0(udp_port0), //FIXME
-    .my_port1(udp_port1), //FIXME
+    .my_port0(udp_port0),
+    .my_port1(udp_port1),
 
     .debug_flags(),
     .debug      ()
@@ -256,12 +263,12 @@ module eth_switch #(
       .space(), .occupied()
       );
 
-   // ARM DEFRAMER
+   // ARM FRAMER
    // Strip the 6 octet ethernet padding we used internally
    // before sending to ARM.
    // Put SOF into bit[3] of tuser.
    //
-   axi64_to_xge64 arm_deframer
+   axi64_to_xge64 arm_framer
      (
       .clk(clk),
       .reset(reset),
@@ -346,11 +353,11 @@ module eth_switch #(
       .i_tdata({xi_tlast,xi_tuser,xi_tdata}), .i_tvalid(xi_tvalid), .i_tready(xi_tready),
       .o_tdata({xi_tlast_int,xi_tuser_int,xi_tdata_int}), .o_tvalid(xi_tvalid_int), .o_tready(xi_tready_int), .space(), .occupied());
 
-   // ARM FRAMER
+   // ARM DEFRAMER
    // Add pad of 6 empty bytes before MAC addresses of new Rxed packet so that IP
    // headers are alligned.
    //
-  arm_framer inst_arm_framer
+  arm_deframer inst_arm_deframer
   (
     .clk(clk),
     .reset(reset),

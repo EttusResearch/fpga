@@ -198,6 +198,29 @@ module jesd204_core_wrapper #(
   assign sample_clk = sample_clk_1x;
   assign fpga_clks_stable = radio_clks_valid & radio_clk1x_enable & radio_clk2x_enable;
 
+  ////////////////////////////////////////////////////////////////////
+  //
+  // Generate Radio Clocks from DBA_FPGA_CLK_P/N
+  // Input clk can be 122.88MHz, 125MHz or 153.6MHz
+  //
+  //----------------------------------------------------------------------------
+  //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+  //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+  //----------------------------------------------------------------------------
+  // CLK_OUT1_____0.000_______0.000______50.0_______0.00________0.00
+  // CLK_OUT2_____0.000_______0.000______50.0_______0.00________0.00
+  // CLK_OUT3_____0.000_______0.000______50.0_______0.00________0.00
+  //
+  //----------------------------------------------------------------------------
+  // Input Clock   Freq (MHz)    Input Jitter (UI)
+  //----------------------------------------------------------------------------
+  // __primary_________125.000____________0.00
+  //
+  ////////////////////////////////////////////////////////////////////
+
+  // Radio Clock Generation
+
+
   RadioClocking radio_clocking_inst
   (
     .aReset(areset),
