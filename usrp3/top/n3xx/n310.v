@@ -153,7 +153,7 @@ module n310
    output SFP_1_TXDISABLE,
    input SFP_1_TXFAULT,
 
-   //USRP IO
+   //USRP IO A
    output         DBA_CPLD_RESET_N,
    output  [2:0]  DBA_CPLD_ADDR,
    input          DBA_CPLD_SPI_SDO,
@@ -173,23 +173,23 @@ module n310
    output         DBA_CH2_RX_DSA_LE,
    output  [5:0]  DBA_CH2_RX_DSA_DATA,
 
-//   output         DbaPDacSync_n,
-//   output         DbaPDacDin,
-//   output         DbaPDacSclk,
+//   output         DBA_PDAC_SYNC_N,
+//   output         DBA_PDAC_DIN,
+//   output         DBA_PDAC_SCLK,
 
-//   output         DbaMykGpio0,
-//   output         DbaMykGpio1,
-//   output         DbaMykGpio3,
-//   output         DbaMykGpio4,
-//   output         DbaMykGpio12,
-//   output         DbaMykGpio13,
-//   output         DbaMykGpio14,
-//   output         DbaMykGpio15,
+//   output         DBA_MYK_GPIO0,
+//   output         DBA_MYK_GPIO1,
+//   output         DBA_MYK_GPIO3,
+//   output         DBA_MYK_GPIO4,
+//   output         DBA_MYK_GPIO12,
+//   output         DBA_MYK_GPIO13,
+//   output         DBA_MYK_GPIO14,
+//   output         DBA_MYK_GPIO15,
    input          DBA_MYK_SPI_SDO,
    output         DBA_MYK_SPI_SDIO,
    output         DBA_MYK_SPI_CS_N,
    output         DBA_MYK_SPI_SCLK,
-//   input          DBA_MykIntrq,
+//   input          DBA_MYK_INTRQ,
 
    output         DBA_CPLD_JTAG_TDI,
    input          DBA_CPLD_JTAG_TDO,
@@ -225,32 +225,77 @@ module n310
    output         USRPIO_A_TX_2_N,
    output         USRPIO_A_TX_3_N,
 
-   //inout  USRPIO_B_GP_0_P, USRPIO_B_GP_1_P, USRPIO_B_GP_2_P, USRPIO_B_GP_3_P,
-   //inout  USRPIO_B_GP_0_N, USRPIO_B_GP_1_N, USRPIO_B_GP_2_N, USRPIO_B_GP_3_N,
-   //inout  USRPIO_B_GP_4_P, USRPIO_B_GP_5_P, USRPIO_B_GP_6_P, USRPIO_B_GP_7_P,
-   //inout  USRPIO_B_GP_4_N, USRPIO_B_GP_5_N, USRPIO_B_GP_6_N, USRPIO_B_GP_7_N,
-   //inout  USRPIO_B_GP_8_P, USRPIO_B_GP_9_P, USRPIO_B_GP_10_P, USRPIO_B_GP_11_P,
-   //inout  USRPIO_B_GP_8_N, USRPIO_B_GP_9_N, USRPIO_B_GP_10_N, USRPIO_B_GP_11_N,
-   //inout  USRPIO_B_GP_12_P, USRPIO_B_GP_13_P, USRPIO_B_GP_14_P, USRPIO_B_GP_15_P,
-   //inout  USRPIO_B_GP_12_N, USRPIO_B_GP_13_N, USRPIO_B_GP_14_N, USRPIO_B_GP_15_N,
-   //inout  USRPIO_B_GP_16_P, USRPIO_B_GP_17_P, USRPIO_B_GP_18_P, USRPIO_B_GP_19_P,
-   //inout  USRPIO_B_GP_16_N, USRPIO_B_GP_17_N, USRPIO_B_GP_18_N, USRPIO_B_GP_19_N,
-   //inout  USRPIO_B_GP_20_P, USRPIO_B_GP_21_P, USRPIO_B_GP_22_P, USRPIO_B_GP_23_P,
-   //inout  USRPIO_B_GP_20_N, USRPIO_B_GP_21_N, USRPIO_B_GP_22_N, USRPIO_B_GP_23_N,
-   //inout  USRPIO_B_GP_24_P, USRPIO_B_GP_25_P, USRPIO_B_GP_26_P, USRPIO_B_GP_27_P,
-   //inout  USRPIO_B_GP_24_N, USRPIO_B_GP_25_N, USRPIO_B_GP_26_N, USRPIO_B_GP_27_N,
-   //inout  USRPIO_B_GP_28_P, USRPIO_B_GP_29_P, USRPIO_B_GP_30_P, USRPIO_B_GP_31_P,
-   //inout  USRPIO_B_GP_28_N, USRPIO_B_GP_29_N, USRPIO_B_GP_30_N, USRPIO_B_GP_31_N,
-   //inout  USRPIO_B_GP_32_P,
-   //inout  USRPIO_B_GP_32_N,
-   input USRPIO_B_MGTCLK_P,
-   input USRPIO_B_MGTCLK_N
-   //input USRPIO_B_SW_CLK,
-   //input USRPIO_B_RX_0_P, USRPIO_B_RX_1_P, USRPIO_B_RX_2_P, USRPIO_B_RX_3_P,
-   //input USRPIO_B_RX_0_N, USRPIO_B_RX_1_N, USRPIO_B_RX_2_N, USRPIO_B_RX_3_N,
-   //output USRPIO_B_TX_0_P, USRPIO_B_TX_1_P, USRPIO_B_TX_2_P, USRPIO_B_TX_3_P,
-   //output USRPIO_B_TX_0_N, USRPIO_B_TX_1_N, USRPIO_B_TX_2_N, USRPIO_B_TX_3_N
+   //USRP IO A
+   output         DBB_CPLD_RESET_N,
+   output  [2:0]  DBB_CPLD_ADDR,
+   input          DBB_CPLD_SPI_SDO,
+   output         DBB_CPLD_SEL_ATR_SPI_N,
+//   output         DBB_CPLD_SYNC_ATR_RX1,
+   output         DBB_CPLD_SPI_SDI_ATR_TX2,
+   output         DBB_CPLD_SPI_CSB_ATR_TX1,
+   output         DBB_CPLD_SPI_SCLK_ATR_RX2,
 
+   output         DBB_CH1_TX_DSA_LE,
+   output  [5:0]  DBB_CH1_TX_DSA_DATA,
+   output         DBB_CH1_RX_DSA_LE,
+   output  [5:0]  DBB_CH1_RX_DSA_DATA,
+
+   output         DBB_CH2_TX_DSA_LE,
+   output  [5:0]  DBB_CH2_TX_DSA_DATA,
+   output         DBB_CH2_RX_DSA_LE,
+   output  [5:0]  DBB_CH2_RX_DSA_DATA,
+
+//   output         DBB_PDAC_SYNC_N,
+//   output         DBB_PDAC_DIN,
+//   output         DBB_PDAC_SCLK,
+
+//   output         DBB_MYK_GPIO0,
+//   output         DBB_MYK_GPIO1,
+//   output         DBB_MYK_GPIO3,
+//   output         DBB_MYK_GPIO4,
+//   output         DBB_MYK_GPIO12,
+//   output         DBB_MYK_GPIO13,
+//   output         DBB_MYK_GPIO14,
+//   output         DBB_MYK_GPIO15,
+   input          DBB_MYK_SPI_SDO,
+   output         DBB_MYK_SPI_SDIO,
+   output         DBB_MYK_SPI_CS_N,
+   output         DBB_MYK_SPI_SCLK,
+//   input          DBB_MYK_INTRQ,
+
+   output         DBB_CPLD_JTAG_TDI,
+   input          DBB_CPLD_JTAG_TDO,
+   output         DBB_CPLD_JTAG_TMS,
+   output         DBB_CPLD_JTAG_TCK
+
+//   output         DBB_MYK_SYNC_IN_P,
+//   output         DBB_MYK_SYNC_IN_N,
+//   input          DBB_MYK_SYNC_OUT_P,
+//   input          DBB_MYK_SYNC_OUT_N,
+//   input          DBB_FPGA_CLK_P,  // USRPIO_DEVCLK_P
+//   input          DBB_FPGA_CLK_N,  // USRPIO_DEVCLK_N
+//   input          DBB_FPGA_SYSREF_P,  // USRPIO_SYSREF_P
+//   input          DBB_FPGA_SYSREF_N,  // USRPIO_SYSREF_N
+
+//   input          USRPIO_B_MGTCLK_P,
+//   input          USRPIO_B_MGTCLK_N,
+//   input          USRPIO_B_SW_CLK,
+//   input          USRPIO_B_RX_0_P,
+//   input          USRPIO_B_RX_1_P,
+//   input          USRPIO_B_RX_2_P,
+//   input          USRPIO_B_RX_3_P,
+//   input          USRPIO_B_RX_0_N,
+//   input          USRPIO_B_RX_1_N,
+//   input          USRPIO_B_RX_2_N,
+//   input          USRPIO_B_RX_3_N,
+//   output         USRPIO_B_TX_0_P,
+//   output         USRPIO_B_TX_1_P,
+//   output         USRPIO_B_TX_2_P,
+//   output         USRPIO_B_TX_3_P,
+//   output         USRPIO_B_TX_0_N,
+//   output         USRPIO_B_TX_1_N,
+//   output         USRPIO_B_TX_2_N,
+//   output         USRPIO_B_TX_3_N
 );
 
   localparam N_AXILITE_SLAVES = 4;
@@ -784,7 +829,7 @@ module n310
   wire [1:0] pps_select;
   wire pps_out_enb;
   always @(*) begin
-     case(pps_select)
+     case(pps_select)                //FIXME: Driver?
         2'b00  :   pps = REF_1PPS_IN;
         2'b01  :   pps = 1'b0;
         2'b10  :   pps = int_pps;
@@ -794,7 +839,7 @@ module n310
   end
 
   // PPS out and LED
-  assign REF_1PPS_OUT = pps & pps_out_enb;
+  assign REF_1PPS_OUT = pps & pps_out_enb;   //FIXME: Driver?
   assign PANEL_LED_PPS = ~pps;               // active low LED driver
 
 
@@ -1395,6 +1440,12 @@ module n310
   wire spi0_ss0;
   wire spi0_ss1;
   wire spi0_ss2;
+  wire spi1_sclk;
+  wire spi1_mosi;
+  wire spi1_miso;
+  wire spi1_ss0;
+  wire spi1_ss1;
+  wire spi1_ss2;
 
   wire [63:0] ps_gpio_out;
   wire [63:0] ps_gpio_in;
@@ -1404,6 +1455,11 @@ module n310
   assign DBA_CPLD_JTAG_TMS = ps_gpio_out[2];
   assign ps_gpio_in[3]     = DBA_CPLD_JTAG_TDO;
 
+  assign DBB_CPLD_JTAG_TCK = ps_gpio_out[4];
+  assign DBB_CPLD_JTAG_TDI = ps_gpio_out[5];
+  assign DBB_CPLD_JTAG_TMS = ps_gpio_out[6];
+  assign ps_gpio_in[7]     = DBB_CPLD_JTAG_TDO;
+
   n310_ps inst_n310_ps
   (
     .SPI0_SCLK(spi0_sclk),
@@ -1412,6 +1468,13 @@ module n310
     .SPI0_SS0(spi0_ss0),
     .SPI0_SS1(spi0_ss1),
     .SPI0_SS2(spi0_ss2),
+
+    .SPI1_SCLK(spi1_sclk),
+    .SPI1_MOSI(spi1_mosi),
+    .SPI1_MISO(spi1_miso),
+    .SPI1_SS0(spi1_ss0),
+    .SPI1_SS1(spi1_ss1),
+    .SPI1_SS2(spi1_ss2),
 
     .M_AXI_GP0_ARVALID(M_AXI_GP0_ARVALID),
     .M_AXI_GP0_ARREADY(M_AXI_GP0_ARREADY),
@@ -1614,6 +1677,7 @@ module n310
   wire                               myk_reset;
   assign DBA_CPLD_ADDR             = spi_mux;
 
+  // DB A Connections
   // SPI to CPLD
   assign DBA_CPLD_SPI_SCLK_ATR_RX2 = spi0_sclk;
   assign DBA_CPLD_SPI_SDI_ATR_TX2  = spi0_mosi;  // Slave In
@@ -1625,7 +1689,9 @@ module n310
   assign DBA_MYK_SPI_CS_N          = spi0_ss1;
   assign DBA_MYK_SPI_SCLK          = spi0_sclk;
   assign DBA_MYK_SPI_SDIO          = spi0_mosi;
-  assign spi0_miso                 = DBA_MYK_SPI_SDO | DBA_CPLD_SPI_SDO;
+  assign spi0_miso                 = ~spi0_ss0 ? DBA_CPLD_SPI_SDO :
+                                     ~spi0_ss1 ? DBA_MYK_SPI_SDO :
+                                                 1'b0;
 
   assign DBA_CH1_TX_DSA_LE         = 1'b1;
   assign DBA_CH1_TX_DSA_DATA       = 6'b0;
@@ -1636,6 +1702,34 @@ module n310
   assign DBA_CH2_TX_DSA_DATA       = 6'b0;
   assign DBA_CH2_RX_DSA_LE         = 1'b1;
   assign DBA_CH2_RX_DSA_DATA       = 6'b0;
+
+  // DB B Connections
+  assign DBB_CPLD_ADDR             = spi_mux;
+
+  // SPI to CPLD
+  assign DBB_CPLD_SPI_SCLK_ATR_RX2 = spi1_sclk;
+  assign DBB_CPLD_SPI_SDI_ATR_TX2  = spi1_mosi;  // Slave In
+  assign DBB_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
+  assign DBB_CPLD_SPI_CSB_ATR_TX1  = spi1_ss0;
+
+  assign DBB_CPLD_RESET_N          = cpld_reset | myk_reset; //TODO: Clean up later
+
+  assign DBB_MYK_SPI_CS_N          = spi1_ss1;
+  assign DBB_MYK_SPI_SCLK          = spi1_sclk;
+  assign DBB_MYK_SPI_SDIO          = spi1_mosi;
+  assign spi1_miso                 = ~spi1_ss0 ? DBB_CPLD_SPI_SDO :
+                                     ~spi1_ss1 ? DBB_MYK_SPI_SDO :
+                                                 1'b0;
+
+  assign DBB_CH1_TX_DSA_LE         = 1'b1;
+  assign DBB_CH1_TX_DSA_DATA       = 6'b0;
+  assign DBB_CH1_RX_DSA_LE         = 1'b1;
+  assign DBB_CH1_RX_DSA_DATA       = 6'b0;
+
+  assign DBB_CH2_TX_DSA_LE         = 1'b1;
+  assign DBB_CH2_TX_DSA_DATA       = 6'b0;
+  assign DBB_CH2_RX_DSA_LE         = 1'b1;
+  assign DBB_CH2_RX_DSA_DATA       = 6'b0;
 
   ///////////////////////////////////////////////////////
   //
