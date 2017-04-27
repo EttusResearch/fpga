@@ -1393,6 +1393,7 @@ module n310
     .aclk(bus_clk),
     .aresetn(~bus_rst),
     .s_axi_awaddr(M_AXI_GP0_AWADDR),
+    .s_axi_awprot(3'b0),               //Recommended default value
     .s_axi_awready(M_AXI_GP0_AWREADY),
     .s_axi_awvalid(M_AXI_GP0_AWVALID),
     .s_axi_wdata(M_AXI_GP0_WDATA),
@@ -1403,6 +1404,7 @@ module n310
     .s_axi_bvalid(M_AXI_GP0_BVALID),
     .s_axi_bready(M_AXI_GP0_BREADY),
     .s_axi_araddr(M_AXI_GP0_ARADDR),
+    .s_axi_arprot(3'b0),               //Recommended default value
     .s_axi_arvalid(M_AXI_GP0_ARVALID),
     .s_axi_arready(M_AXI_GP0_ARREADY),
     .s_axi_rdata(M_AXI_GP0_RDATA),

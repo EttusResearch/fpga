@@ -75,15 +75,15 @@ module n310_sfpp_io_core #(
   reg         reg_rd_resp_glob = 1'b0;
   wire [31:0] reg_rd_data_mdio;
   reg  [31:0] mac_ctrl_reg, phy_ctrl_reg, readback_reg;
-  wire [31:0] mac_status;
+  wire [8:0] mac_status;
   wire [31:0] mac_status_bclk, phy_status_bclk;
 
   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) mac_status_sync_i (
-     .clk(bus_clk), .rst(1'b0), .in(mac_status), .out(mac_status_bclk)
+     .clk(bus_clk), .rst(1'b0), .in({23'b0, mac_status}), .out(mac_status_bclk)
   );
 
-  synchronizer #( .STAGES(2), .WIDTH(16), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
-     .clk(bus_clk), .rst(1'b0), .in(phy_status), .out(phy_status_bclk)
+  synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
+     .clk(bus_clk), .rst(1'b0), .in({16'b0, phy_status}), .out(phy_status_bclk)
   );
 
   always @(posedge bus_clk) begin
