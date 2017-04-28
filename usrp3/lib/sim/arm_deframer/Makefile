@@ -21,7 +21,7 @@ LIB_IP_DIR = $(BASE_DIR)/../lib/ip
 # *after* defining the IP_DIR
 
 DESIGN_SRCS += $(abspath \
-../../packet_proc/arm_framer.v \
+../../packet_proc/arm_deframer.v \
 ../../fifo/axi_mux4.v \
 )
 
@@ -29,10 +29,10 @@ DESIGN_SRCS += $(abspath \
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
-SIM_TOP = arm_framer_tb
+SIM_TOP = arm_deframer_tb
 
 SIM_SRCS = $(abspath \
-arm_framer_tb.sv \
+arm_deframer_tb.sv \
 )
 
 MODELSIM_USER_DO = $(abspath wave.do)

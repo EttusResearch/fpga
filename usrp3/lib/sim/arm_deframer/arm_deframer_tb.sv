@@ -1,3 +1,12 @@
+/////////////////////////////////////////////////////////////////////
+//
+// Copyright 2016-2017 Ettus Research
+//
+// Arm Deframer Testbench
+//
+// Arm Deframer adds a 6 bit padding to the ethernet frame
+//
+//////////////////////////////////////////////////////////////////////
 
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US 0.0001
@@ -9,8 +18,8 @@
 `include "sim_set_rb_lib.svh"
 
 // NOTE: The tesbench is not self-checking
-module arm_framer_tb();
-  `TEST_BENCH_INIT("arm_framer_tb",`NUM_TEST_CASES,`NS_PER_TICK);
+module arm_deframer_tb();
+  `TEST_BENCH_INIT("arm_deframer_tb",`NUM_TEST_CASES,`NS_PER_TICK);
   localparam CLK_PERIOD = $ceil(1e6/166.67e6);
   `DEFINE_CLK(clk, CLK_PERIOD, 50);
   `DEFINE_RESET(rst, 0, 100);
@@ -30,7 +39,7 @@ module arm_framer_tb();
   wire          c2e_tvalid_int2;
   wire          c2e_tready_int2;
 
-  arm_framer inst_arm_framer (
+  arm_deframer inst_arm_deframer (
    .clk               (clk),
    .reset             (rst),
    .clear             (clear),
@@ -109,6 +118,6 @@ module arm_framer_tb();
       @(posedge clk);
       @(posedge clk);
     `TEST_CASE_DONE(1);
-
+    `TEST_BENCH_DONE;
  end
 endmodule
