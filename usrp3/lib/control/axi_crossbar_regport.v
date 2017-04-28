@@ -2,7 +2,7 @@
 // Copyright (c) 2017 Ettus Research
 //
 
-module axi_crossbar_wrapper
+module axi_crossbar_regport
 #(
   parameter REG_BASE    = 0,  // settings bus base address
   parameter FIFO_WIDTH  = 64, // AXI4-STREAM data bus width

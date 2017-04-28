@@ -400,12 +400,12 @@ module n310_core #(
    localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE + NUM_IO_CE;
 
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-   axi_crossbar_wrapper #(
+   axi_crossbar_regport #(
       .REG_BASE(32'h10),
       .REG_DWIDTH(REG_DWIDTH),  // Width of the AXI4-Lite data bus (must be 32 or 64)
       .REG_AWIDTH(REG_AWIDTH),  // Width of the address bus
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
-   inst_axi_crossbar_wrapper (
+   inst_axi_crossbar_regport (
       .clk(bus_clk), .reset(bus_rst), .clear(0),
       .i_tdata({xbar_ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
       .i_tlast({xbar_ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),

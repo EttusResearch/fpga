@@ -10,7 +10,7 @@ ad5662_auto_spi.v \
 arb_qualify_master.v \
 axi_crossbar_intf.sv \
 axi_crossbar.v \
-axi_crossbar_wrapper.v \
+axi_crossbar_regport.v \
 axi_fifo_header.v \
 axi_forwarding_cam.v \
 axi_setting_reg.v \
