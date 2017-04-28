@@ -2,18 +2,16 @@
 // Copyright (c) 2017 National Instruments
 //
 
-module pulse_stretch
-(
+module pulse_stretch #(
+  parameter SCALE = 64'd12_500_000
+)(
   input clk,
   input rst,
   input pulse,
   output pulse_stretched
 );
 
-  parameter WIDTH = 64;
-  parameter SCALE = 64'd12_500_000;
-
-  reg [WIDTH-1:0] count;
+  reg [$clog2(SCALE)-1:0] count;
   reg             state;
 
   always @ (posedge clk)
@@ -29,7 +27,7 @@ module pulse_stretch
     end
 
     1'b1: begin
-      if (count >= 'd12_500_000)
+      if (count == SCALE)
         state <= 1'b0;
       else
         count <= count + 1'b1;

@@ -38,106 +38,106 @@
 
 
 module axil_regport_master #(
-   parameter DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
-   parameter AWIDTH  = 32,    // Width of the address bus
-   parameter WRBASE  = 32'h0, // Write address base
-   parameter RDBASE  = 32'h0, // Read address base
-   parameter TIMEOUT = 10     // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
+  parameter DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
+  parameter AWIDTH  = 32,    // Width of the address bus
+  parameter WRBASE  = 32'h0, // Write address base
+  parameter RDBASE  = 32'h0, // Read address base
+  parameter TIMEOUT = 10     // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
 )(
-   // Clock and reset
-   input                      s_axi_aclk,
-   input                      s_axi_aresetn,
-   input                      reg_clk,
-   // AXI4-Lite: Write address port (domain: s_axi_aclk)
-   input      [AWIDTH-1:0]    s_axi_awaddr,
-   input                      s_axi_awvalid,
-   output reg                 s_axi_awready,
-   // AXI4-Lite: Write data port (domain: s_axi_aclk)
-   input      [DWIDTH-1:0]    s_axi_wdata,
-   input      [DWIDTH/8-1:0]  s_axi_wstrb,
-   input                      s_axi_wvalid,
-   output reg                 s_axi_wready,
-   // AXI4-Lite: Write response port (domain: s_axi_aclk)
-   output reg [1:0]           s_axi_bresp,
-   output reg                 s_axi_bvalid,
-   input                      s_axi_bready,
-   // AXI4-Lite: Read address port (domain: s_axi_aclk)
-   input      [AWIDTH-1:0]    s_axi_araddr,
-   input                      s_axi_arvalid,
-   output reg                 s_axi_arready,
-   // AXI4-Lite: Read data port (domain: s_axi_aclk)
-   output reg [DWIDTH-1:0]    s_axi_rdata,
-   output reg [1:0]           s_axi_rresp,
-   output reg                 s_axi_rvalid,
-   input                      s_axi_rready,
-   // Register port: Write port (domain: reg_clk)
-   output                     reg_wr_req,
-   output     [AWIDTH-1:0]    reg_wr_addr,
-   output     [DWIDTH-1:0]    reg_wr_data,
-   output     [DWIDTH/8-1:0]  reg_wr_keep,
-   // Register port: Read port (domain: reg_clk)
-   output                     reg_rd_req,
-   output     [AWIDTH-1:0]    reg_rd_addr,
-   input                      reg_rd_resp,
-   input      [DWIDTH-1:0]    reg_rd_data
+  // Clock and reset
+  input                      s_axi_aclk,
+  input                      s_axi_aresetn,
+  input                      reg_clk,
+  // AXI4-Lite: Write address port (domain: s_axi_aclk)
+  input      [AWIDTH-1:0]    s_axi_awaddr,
+  input                      s_axi_awvalid,
+  output reg                 s_axi_awready,
+  // AXI4-Lite: Write data port (domain: s_axi_aclk)
+  input      [DWIDTH-1:0]    s_axi_wdata,
+  input      [DWIDTH/8-1:0]  s_axi_wstrb,
+  input                      s_axi_wvalid,
+  output reg                 s_axi_wready,
+  // AXI4-Lite: Write response port (domain: s_axi_aclk)
+  output reg [1:0]           s_axi_bresp,
+  output reg                 s_axi_bvalid,
+  input                      s_axi_bready,
+  // AXI4-Lite: Read address port (domain: s_axi_aclk)
+  input      [AWIDTH-1:0]    s_axi_araddr,
+  input                      s_axi_arvalid,
+  output reg                 s_axi_arready,
+  // AXI4-Lite: Read data port (domain: s_axi_aclk)
+  output reg [DWIDTH-1:0]    s_axi_rdata,
+  output reg [1:0]           s_axi_rresp,
+  output reg                 s_axi_rvalid,
+  input                      s_axi_rready,
+  // Register port: Write port (domain: reg_clk)
+  output                     reg_wr_req,
+  output     [AWIDTH-1:0]    reg_wr_addr,
+  output     [DWIDTH-1:0]    reg_wr_data,
+  output     [DWIDTH/8-1:0]  reg_wr_keep,
+  // Register port: Read port (domain: reg_clk)
+  output                     reg_rd_req,
+  output     [AWIDTH-1:0]    reg_rd_addr,
+  input                      reg_rd_resp,
+  input      [DWIDTH-1:0]    reg_rd_data
 );
 
-   //NOTE: clog2 only works when assigned to a parameter
-   //      localparam does not work
-   parameter ADDR_LSB = $clog2(DWIDTH/8); //Do not modify
+  //NOTE: clog2 only works when assigned to a parameter
+  //      localparam does not work
+  parameter ADDR_LSB = $clog2(DWIDTH/8); //Do not modify
 
-   //----------------------------------------------------------
-   // Write state machine
-   //----------------------------------------------------------
-   reg [AWIDTH-1:0]  wr_addr_cache;
-   wire              wr_fifo_valid, wr_fifo_ready;
-   wire [AWIDTH-1:0] wr_addr_rel = (s_axi_awaddr - WRBASE);
+  //----------------------------------------------------------
+  // Write state machine
+  //----------------------------------------------------------
+  reg [AWIDTH-1:0]  wr_addr_cache;
+  wire              wr_fifo_valid, wr_fifo_ready;
+  wire [AWIDTH-1:0] wr_addr_rel = (s_axi_awaddr - WRBASE);
 
-   // Generate s_axi_awready and latch write address
-   always @(posedge s_axi_aclk) begin
-      if (!s_axi_aresetn) begin
-         s_axi_awready <= 1'b0;
-         wr_addr_cache <= {AWIDTH{1'b0}};
-      end else begin
-         if (~s_axi_awready && s_axi_awvalid && s_axi_wvalid && wr_fifo_ready) begin
-            s_axi_awready <= 1'b1;
-            wr_addr_cache <= {wr_addr_rel[AWIDTH-1:ADDR_LSB], {ADDR_LSB{1'b0}}};
-         end else begin
-            s_axi_awready <= 1'b0;
-         end
-      end
-   end
+  // Generate s_axi_awready and latch write address
+  always @(posedge s_axi_aclk) begin
+     if (!s_axi_aresetn) begin
+        s_axi_awready <= 1'b0;
+        wr_addr_cache <= {AWIDTH{1'b0}};
+     end else begin
+        if (~s_axi_awready && s_axi_awvalid && s_axi_wvalid && wr_fifo_ready) begin
+           s_axi_awready <= 1'b1;
+           wr_addr_cache <= {wr_addr_rel[AWIDTH-1:ADDR_LSB], {ADDR_LSB{1'b0}}};
+        end else begin
+           s_axi_awready <= 1'b0;
+        end
+     end
+  end
 
-   // Generate s_axi_wready
-   always @(posedge s_axi_aclk) begin
-      if (!s_axi_aresetn) begin
-         s_axi_wready <= 1'b0;
-      end else begin
-         if (~s_axi_wready && s_axi_wvalid && s_axi_awvalid)
-            s_axi_wready <= 1'b1;
-         else
-            s_axi_wready <= 1'b0;
-      end
-   end
+  // Generate s_axi_wready
+  always @(posedge s_axi_aclk) begin
+     if (!s_axi_aresetn) begin
+        s_axi_wready <= 1'b0;
+     end else begin
+        if (~s_axi_wready && s_axi_wvalid && s_axi_awvalid)
+           s_axi_wready <= 1'b1;
+        else
+           s_axi_wready <= 1'b0;
+     end
+  end
 
-   // Generate write response
-   assign wr_fifo_valid = s_axi_awready && s_axi_awvalid && s_axi_wready && s_axi_wvalid && ~s_axi_bvalid;
+  // Generate write response
+  assign wr_fifo_valid = s_axi_awready && s_axi_awvalid && s_axi_wready && s_axi_wvalid && ~s_axi_bvalid;
 
-   always @(posedge s_axi_aclk) begin
-      if (!s_axi_aresetn) begin
-         s_axi_bvalid <= 1'b0;
-         s_axi_bresp <= 2'b0;
-      end else begin
-         if (wr_fifo_valid && wr_fifo_ready) begin
-             // indicates a valid write response is available
-            s_axi_bvalid <= 1'b1;
-            s_axi_bresp <= 2'b0; // 'OKAY' response
-         end else begin
-            if (s_axi_bready && s_axi_bvalid)
-               s_axi_bvalid <= 1'b0;
-         end
-      end
-   end
+  always @(posedge s_axi_aclk) begin
+     if (!s_axi_aresetn) begin
+        s_axi_bvalid <= 1'b0;
+        s_axi_bresp <= 2'b0;
+     end else begin
+        if (wr_fifo_valid && wr_fifo_ready) begin
+            // indicates a valid write response is available
+           s_axi_bvalid <= 1'b1;
+           s_axi_bresp <= 2'b0; // 'OKAY' response
+        end else begin
+           if (s_axi_bready && s_axi_bvalid)
+              s_axi_bvalid <= 1'b0;
+        end
+     end
+  end
 
    axi_fifo_2clk #( .WIDTH(DWIDTH/8 + AWIDTH + DWIDTH)) wr_fifo_2clk_i (
       .reset(~s_axi_aresetn), .i_aclk(s_axi_aclk),
