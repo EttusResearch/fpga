@@ -554,7 +554,7 @@ class MainWindow(QtWidgets.QWidget):
                     ootpath = os.path.abspath(os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top', relpath))
                     dir_list.append(ootpath)
         if (len(dir_list) == 0):
-            self.oot.removeRows(0, parent.rowCount())
+            self.oot.removeRows(0, self.oot.rowCount())
         for (ii, oot) in enumerate(dir_list):
             self.populate_list(self.oot, os.path.join(oot, 'fpga-src', 'Makefile.srcs'), clear=ii==0)
         self.oot_dirs = dir_list
