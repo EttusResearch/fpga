@@ -9,13 +9,13 @@ module jesd204_core_wrapper #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 16  // Width of the address bus
 )(
-  input         areset,
-  input         bus_clk,
-  input         bus_rst,
   input         db_fpga_clk_p,
   input         db_fpga_clk_n,
   output        sample_clk,
+  input         clk40,
 
+  input         s_axi_aclk,
+  input         s_axi_aresetn,
   // Regport access
   input [31:0]  s_axi_awaddr,
   input         s_axi_awvalid,
@@ -94,8 +94,8 @@ module jesd204_core_wrapper #(
     .TIMEOUT     (512)
   ) ni_regport_inst (
     // Clock and reset
-    .s_axi_aclk    (bus_clk),
-    .s_axi_areset  (bus_rst),
+    .s_axi_aclk    (s_axi_aclk),
+    .s_axi_areset  (~s_axi_aresetn),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
     .s_axi_awaddr  (s_axi_awaddr),
     .s_axi_awvalid (s_axi_awvalid),
@@ -148,10 +148,9 @@ module jesd204_core_wrapper #(
   wire fpga_clks_stable;
   wire sample_clk_1x;
   wire sample_clk_2x;
-  wire clk40;
 
-  always @(posedge bus_clk) begin
-    if (bus_rst) begin
+  always @(posedge s_axi_aclk) begin
+    if (~s_axi_aresetn) begin
       radio_clk1x_enable   <= 1'b0;
       radio_clk2x_enable   <= 1'b0;
       radio_clk3x_enable   <= 1'b0;
@@ -223,8 +222,8 @@ module jesd204_core_wrapper #(
 
   RadioClocking radio_clocking_inst
   (
-    .aReset(areset),
-    .BusClk(bus_clk),
+    .aReset(~s_axi_aresetn),
+    .BusClk(s_axi_aclk),
     .aRadioClkMmcmReset(radio_clk_mmcm_reset),   //Async reset to the RadioClkMmcm. driven by the RegPort
     .bRadioClk1xEnabled(radio_clk1x_enable),
     .bRadioClk2xEnabled(radio_clk2x_enable),
@@ -232,7 +231,7 @@ module jesd204_core_wrapper #(
     .bRadioClksValid(radio_clks_valid),          //Locked indication from the RadioClkMmcm in BusClk and aReset domain, Toggling indicator to the Window
     .pPsInc(1'b0),                   //Phase shift interface for the RadioClkMmcm
     .pPsEn(1'b0),
-    .PsClk(bus_clk),
+    .PsClk(s_axi_aclk),
     .pPsDone(),
     .FpgaClk_n(db_fpga_clk_n),
     .FpgaClk_p(db_fpga_clk_p),
@@ -241,17 +240,12 @@ module jesd204_core_wrapper #(
     .RadioClk3x()               //Open
   );
 
-  clk_gen clk40_gen (
-     .CLK_IN1(bus_clk),
-     .CLK_OUT1(clk40),
-     .RESET(bus_rst));
-
   Jesd204bXcvrCoreEttus jesd204_core
   (
       // Clocks and Reset
-     .aReset(areset),                    // Async Reset
-     .bReset(bus_rst),                   // Sync Reset for regport = FALSE
-     .BusClk(bus_clk),                   // Register bus and General Control
+     .aReset(~s_axi_aresetn),                    // Async Reset
+     .bReset(1'b0),                   // Sync Reset for regport = FALSE
+     .BusClk(s_axi_aclk),                   // Register bus and General Control
      .ReliableClk40(clk40),              // Must be stable BEFORE everything = 40 MHz clock //FIXME
      .FpgaClk1x(sample_clk_1x),          // 1x Sample Clock through MMCM and bufg
      .FpgaClk2x(sample_clk_2x),          // 2x Sample Clock through MMCM and bufg

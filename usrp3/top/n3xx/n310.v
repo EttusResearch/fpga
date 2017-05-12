@@ -306,6 +306,7 @@ module n310
   wire bus_clk;
   wire bus_rst;
   wire global_rst;
+  wire clk40;
 
   // Internal connections to PS
   // HP0 -- High Performance port 0, FPGA is the master
@@ -638,7 +639,12 @@ module n310
   wire [15:0] IRQ_F2P;
   wire        FCLK_CLK0;
   wire        FCLK_CLK1;
+  wire        FCLK_CLK2;
+  wire        FCLK_CLK3;
   wire        FCLK_RESET0;
+  wire        FCLK_RESET1;
+  wire        FCLK_RESET2;
+  wire        FCLK_RESET3;
   wire        FCLK_RESET0N = ~FCLK_RESET0;
 
   wire [1:0] USB0_PORT_INDCTL;
@@ -657,13 +663,20 @@ module n310
   // Configure SFP+ clocking
   //
   //////////////////////////////////////////////////////////////////////
-  //   Clocks : ---------------------------------------------------------------------------
-  //   BusClk (200)      : FCLK_CLK0        > BusClk
+  //
+  //   PL Clocks : ---------------------------------------------------------------------------
+  //   BusClk (200)      : FCLK_CLK3        > BusClk
   //   xgige_refclk (156): MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > xgige_refclk
   //   clk156            : MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > BUFG  > clk156
   //   gige_refclk (125) : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk
   //   gige_refclk_bufg  : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk_bufg
   //   RefClk (10)       : FPGA_REFCLK_P    >   IBUFDS > ref_clk_10mhz
+  //
+  //   PS Clocks to PL:
+  //   FCLK_CLK0 :      100 MHz
+  //   FCLK_CLK1 :       40 MHz
+  //   FCLK_CLK2 : 166.6667 MHz
+  //   FCLK_CLK3 :      200 MHz
   //
   /////////////////////////////////////////////////////////////////////
 
@@ -737,9 +750,12 @@ module n310
 
 `endif
 
-  BUFG bus_clk_buf (
-     .I(FCLK_CLK0),
-     .O(bus_clk));
+  clk_gen fpga_clk_mmcm (
+     .CLK_IN1(FCLK_CLK0),
+     .CLK_OUT1(bus_clk),
+     .CLK_OUT2(reg_clk),
+     .CLK_OUT3(clk40),
+     .RESET(FCLK_RESET0));
 
    wire  sfp0_gt_refclk, sfp1_gt_refclk;
    wire  sfp0_gb_refclk, sfp1_gb_refclk;
@@ -851,6 +867,13 @@ module n310
   wire [3:0]  arm_eth0_tx_tuser;
   wire [7:0]  arm_eth0_tx_tkeep;
 
+  wire [63:0] arm_eth0_tx_tdata_b;
+  wire        arm_eth0_tx_tvalid_b;
+  wire        arm_eth0_tx_tlast_b;
+  wire        arm_eth0_tx_tready_b;
+  wire [3:0]  arm_eth0_tx_tuser_b;
+  wire [7:0]  arm_eth0_tx_tkeep_b;
+
   wire [63:0] arm_eth0_rx_tdata;
   wire        arm_eth0_rx_tvalid;
   wire        arm_eth0_rx_tlast;
@@ -858,6 +881,12 @@ module n310
   wire [3:0]  arm_eth0_rx_tuser;
   wire [7:0]  arm_eth0_rx_tkeep;
 
+  wire [63:0] arm_eth0_rx_tdata_b;
+  wire        arm_eth0_rx_tvalid_b;
+  wire        arm_eth0_rx_tlast_b;
+  wire        arm_eth0_rx_tready_b;
+  wire [3:0]  arm_eth0_rx_tuser_b;
+  wire [7:0]  arm_eth0_rx_tkeep_b;
 
   wire        arm_eth0_rx_irq;
   wire        arm_eth0_tx_irq;
@@ -870,6 +899,12 @@ module n310
   wire [3:0]  arm_eth1_tx_tuser;
   wire [7:0]  arm_eth1_tx_tkeep;
 
+  wire [63:0] arm_eth1_tx_tdata_b;
+  wire        arm_eth1_tx_tvalid_b;
+  wire        arm_eth1_tx_tlast_b;
+  wire        arm_eth1_tx_tready_b;
+  wire [3:0]  arm_eth1_tx_tuser_b;
+  wire [7:0]  arm_eth1_tx_tkeep_b;
 
   wire [63:0] arm_eth1_rx_tdata;
   wire        arm_eth1_rx_tvalid;
@@ -878,14 +913,21 @@ module n310
   wire [3:0]  arm_eth1_rx_tuser;
   wire [7:0]  arm_eth1_rx_tkeep;
 
+  wire [63:0] arm_eth1_rx_tdata_b;
+  wire        arm_eth1_rx_tvalid_b;
+  wire        arm_eth1_rx_tlast_b;
+  wire        arm_eth1_rx_tready_b;
+  wire [3:0]  arm_eth1_rx_tuser_b;
+  wire [7:0]  arm_eth1_rx_tkeep_b;
+
   wire        arm_eth1_tx_irq;
   wire        arm_eth1_rx_irq;
 
   // Vita to Ethernet
-  wire  [63:0]  v2e0_tdata;
-  wire          v2e0_tlast;
-  wire          v2e0_tvalid;
-  wire          v2e0_tready;
+  (* mark_debug ="true" *) wire  [63:0]  v2e0_tdata;
+  (* mark_debug ="true" *) wire          v2e0_tlast;
+  (* mark_debug ="true" *) wire          v2e0_tvalid;
+  (* mark_debug ="true" *) wire          v2e0_tready;
 
   wire  [63:0]  v2e1_tdata;
   wire          v2e1_tlast;
@@ -893,10 +935,10 @@ module n310
   wire          v2e1_tready;
 
   // Ethernet to Vita
-  wire  [63:0]  e2v0_tdata;
-  wire          e2v0_tlast;
-  wire          e2v0_tvalid;
-  wire          e2v0_tready;
+  (* mark_debug ="true" *) wire  [63:0]  e2v0_tdata;
+  (* mark_debug ="true" *) wire          e2v0_tlast;
+  (* mark_debug ="true" *) wire          e2v0_tvalid;
+  (* mark_debug ="true" *) wire          e2v0_tready;
 
   wire  [63:0]  e2v1_tdata;
   wire          e2v1_tlast;
@@ -1000,18 +1042,18 @@ module n310
      .xi_tready(e10_tready),
 
      // Ethernet to CPU
-     .e2c_tdata(arm_eth0_rx_tdata),
-     .e2c_tkeep(arm_eth0_rx_tkeep),
-     .e2c_tlast(arm_eth0_rx_tlast),
-     .e2c_tvalid(arm_eth0_rx_tvalid),
-     .e2c_tready(arm_eth0_rx_tready),
+     .e2c_tdata(arm_eth0_rx_tdata_b),
+     .e2c_tkeep(arm_eth0_rx_tkeep_b),
+     .e2c_tlast(arm_eth0_rx_tlast_b),
+     .e2c_tvalid(arm_eth0_rx_tvalid_b),
+     .e2c_tready(arm_eth0_rx_tready_b),
 
      // CPU to Ethernet
-     .c2e_tdata(arm_eth0_tx_tdata),
-     .c2e_tkeep(arm_eth0_tx_tkeep),
-     .c2e_tlast(arm_eth0_tx_tlast),
-     .c2e_tvalid(arm_eth0_tx_tvalid),
-     .c2e_tready(arm_eth0_tx_tready),
+     .c2e_tdata(arm_eth0_tx_tdata_b),
+     .c2e_tkeep(arm_eth0_tx_tkeep_b),
+     .c2e_tlast(arm_eth0_tx_tlast_b),
+     .c2e_tvalid(arm_eth0_tx_tvalid_b),
+     .c2e_tready(arm_eth0_tx_tready_b),
 
      // LED
      .activity_led(SFP_0_LED_A)
@@ -1115,18 +1157,18 @@ module n310
       .xi_tready(e01_tready),
 
       // Ethernet to CPU
-      .e2c_tdata(arm_eth1_rx_tdata),
-      .e2c_tkeep(arm_eth1_rx_tkeep),
-      .e2c_tlast(arm_eth1_rx_tlast),
-      .e2c_tvalid(arm_eth1_rx_tvalid),
-      .e2c_tready(arm_eth1_rx_tready),
+      .e2c_tdata(arm_eth1_rx_tdata_b),
+      .e2c_tkeep(arm_eth1_rx_tkeep_b),
+      .e2c_tlast(arm_eth1_rx_tlast_b),
+      .e2c_tvalid(arm_eth1_rx_tvalid_b),
+      .e2c_tready(arm_eth1_rx_tready_b),
 
       // CPU to Ethernet
-      .c2e_tdata(arm_eth1_tx_tdata),
-      .c2e_tkeep(arm_eth1_tx_tkeep),
-      .c2e_tlast(arm_eth1_tx_tlast),
-      .c2e_tvalid(arm_eth1_tx_tvalid),
-      .c2e_tready(arm_eth1_tx_tready),
+      .c2e_tdata(arm_eth1_tx_tdata_b),
+      .c2e_tkeep(arm_eth1_tx_tkeep_b),
+      .c2e_tlast(arm_eth1_tx_tlast_b),
+      .c2e_tvalid(arm_eth1_tx_tvalid_b),
+      .c2e_tready(arm_eth1_tx_tready_b),
 
       // LED
       .activity_led(SFP_1_LED_A)
@@ -1146,11 +1188,11 @@ module n310
 
   axi_eth_dma inst_axi_eth_dma0
   (
-    .s_axi_lite_aclk(bus_clk),
-    .m_axi_sg_aclk(bus_clk),
-    .m_axi_mm2s_aclk(bus_clk),
-    .m_axi_s2mm_aclk(bus_clk),
-    .axi_resetn(~bus_rst),
+    .s_axi_lite_aclk(FCLK_CLK0),
+    .m_axi_sg_aclk(FCLK_CLK0),
+    .m_axi_mm2s_aclk(FCLK_CLK0),
+    .m_axi_s2mm_aclk(FCLK_CLK0),
+    .axi_resetn(FCLK_RESET0N),
 
     .s_axi_lite_awaddr(M_AXI_GP0_AWADDR_S0),
     .s_axi_lite_awvalid(M_AXI_GP0_AWVALID_S0),
@@ -1253,6 +1295,28 @@ module n310
     .axi_dma_tstvec()
   );
 
+  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_0_fifo_2clk_i (
+    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(FCLK_CLK0),
+    .s_axis_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
+    .s_axis_tvalid(arm_eth0_tx_tvalid),
+    .s_axis_tready(arm_eth0_tx_tready),
+    .m_axis_aclk(bus_clk),
+    .m_axis_tdata({arm_eth0_tx_tlast_b, arm_eth0_tx_tkeep_b, arm_eth0_tx_tdata_b}),
+    .m_axis_tvalid(arm_eth0_tx_tvalid_b),
+    .m_axis_tready(arm_eth0_tx_tready_b)
+  );
+
+  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_rx_0_fifo_2clk_i (
+    .s_axis_areset(bus_rst), .s_axis_aclk(bus_clk),
+    .s_axis_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
+    .s_axis_tvalid(arm_eth0_rx_tvalid_b),
+    .s_axis_tready(arm_eth0_rx_tready_b),
+    .m_axis_aclk(FCLK_CLK0),
+    .m_axis_tdata({arm_eth0_rx_tlast, arm_eth0_rx_tkeep, arm_eth0_rx_tdata}),
+    .m_axis_tvalid(arm_eth0_rx_tvalid),
+    .m_axis_tready(arm_eth0_rx_tready)
+  );
+
   /////////////////////////////////////////////////////////////////////
   //
   // Ethernet DMA 1
@@ -1267,11 +1331,11 @@ module n310
 
   axi_eth_dma inst_axi_eth_dma1
   (
-    .s_axi_lite_aclk(bus_clk),
-    .m_axi_sg_aclk(bus_clk),
-    .m_axi_mm2s_aclk(bus_clk),
-    .m_axi_s2mm_aclk(bus_clk),
-    .axi_resetn(~bus_rst),
+    .s_axi_lite_aclk(FCLK_CLK0),
+    .m_axi_sg_aclk(FCLK_CLK0),
+    .m_axi_mm2s_aclk(FCLK_CLK0),
+    .m_axi_s2mm_aclk(FCLK_CLK0),
+    .axi_resetn(FCLK_RESET0N),
 
     .s_axi_lite_awaddr(M_AXI_GP0_AWADDR_S2),
     .s_axi_lite_awvalid(M_AXI_GP0_AWVALID_S2),
@@ -1374,6 +1438,28 @@ module n310
     .axi_dma_tstvec()
   );
 
+  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_1_fifo_2clk_i (
+    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(FCLK_CLK0),
+    .s_axis_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
+    .s_axis_tvalid(arm_eth1_tx_tvalid),
+    .s_axis_tready(arm_eth1_tx_tready),
+    .m_axis_aclk(bus_clk),
+    .m_axis_tdata({arm_eth1_tx_tlast_b, arm_eth1_tx_tkeep_b, arm_eth1_tx_tdata_b}),
+    .m_axis_tvalid(arm_eth1_tx_tvalid_b),
+    .m_axis_tready(arm_eth1_tx_tready_b)
+  );
+
+  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_rx_1_fifo_2clk_i (
+    .s_axis_areset(bus_rst), .s_axis_aclk(bus_clk),
+    .s_axis_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
+    .s_axis_tvalid(arm_eth1_rx_tvalid_b),
+    .s_axis_tready(arm_eth1_rx_tready_b),
+    .m_axis_aclk(FCLK_CLK0),
+    .m_axis_tdata({arm_eth1_rx_tlast, arm_eth1_rx_tkeep, arm_eth1_rx_tdata}),
+    .m_axis_tvalid(arm_eth1_rx_tvalid),
+    .m_axis_tready(arm_eth1_rx_tready)
+  );
+
   /////////////////////////////////////////////////////////////////////
   //
   // AXI Interconnect
@@ -1390,8 +1476,8 @@ module n310
 
   axi_interconnect inst_axi_interconnect
   (
-    .aclk(bus_clk),
-    .aresetn(~bus_rst),
+    .aclk(FCLK_CLK0),
+    .aresetn(FCLK_RESET0N),
     .s_axi_awaddr(M_AXI_GP0_AWADDR),
     .s_axi_awprot(3'b0),               //Recommended default value
     .s_axi_awready(M_AXI_GP0_AWREADY),
@@ -1758,6 +1844,8 @@ module n310
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
+    .s_axi_aclk(FCLK_CLK0),
+    .s_axi_aresetn(FCLK_RESET0N),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
     .s_axi_awaddr(M_AXI_GP0_AWADDR_S4),
     .s_axi_awvalid(M_AXI_GP0_AWVALID_S4),
@@ -1857,13 +1945,13 @@ module n310
   ) jesd204_core_wrapper (
 
     //Clocks and resets
-    .areset(global_rst),
-    .bus_clk(bus_clk),
-    .bus_rst(bus_rst),
     .db_fpga_clk_p(DBA_FPGA_CLK_P),
     .db_fpga_clk_n(DBA_FPGA_CLK_N),
     .sample_clk(radio_clk),
+    .clk40(clk40),
 
+    .s_axi_aclk(FCLK_CLK0),
+    .s_axi_aresetn(FCLK_RESET0N),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
     .s_axi_awaddr(M_AXI_GP0_AWADDR_S5),
     .s_axi_awvalid(M_AXI_GP0_AWVALID_S5),
@@ -1914,8 +2002,8 @@ module n310
   // FIXME: Placeholder for XBAR AXI DMA
   axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy
   (
-    .s_axi_aclk(bus_clk),
-    .s_axi_areset(bus_rst),
+    .s_axi_aclk(FCLK_CLK0),
+    .s_axi_areset(FCLK_RESET0),
 
     .s_axi_awaddr(M_AXI_GP0_AWADDR_S6),
     .s_axi_awvalid(M_AXI_GP0_AWVALID_S6),

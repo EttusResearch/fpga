@@ -47,13 +47,13 @@ module n310_sfpp_io_core #(
   output            m_axis_tvalid,
   input             m_axis_tready,
   // Register port
-  input                    reg_wr_req,
-  input  [REG_AWIDTH-1:0]  reg_wr_addr,
-  input  [REG_DWIDTH-1:0]  reg_wr_data,
-  input                    reg_rd_req,
-  input  [REG_AWIDTH-1:0]  reg_rd_addr,
-  output                   reg_rd_resp,
-  output [REG_DWIDTH-1:0]  reg_rd_data,
+  input                       reg_wr_req,
+  input  [REG_AWIDTH-1:0]     reg_wr_addr,
+  input  [REG_DWIDTH-1:0]     reg_wr_data,
+  input                       reg_rd_req,
+  input  [REG_AWIDTH-1:0]     reg_rd_addr,
+  output reg                  reg_rd_resp,
+  output reg [REG_DWIDTH-1:0] reg_rd_data,
   // GT Common
   input             gt0_qplloutclk,
   input             gt0_qplloutrefclk,
@@ -116,8 +116,10 @@ module n310_sfpp_io_core #(
      end
   end
 
-  assign reg_rd_resp = reg_rd_resp_glob | reg_rd_resp_mdio;
-  assign reg_rd_data = reg_rd_resp_mdio ? reg_rd_data_mdio : readback_reg;
+  always @(posedge bus_clk) begin
+   reg_rd_resp <= reg_rd_resp_glob | reg_rd_resp_mdio;
+   reg_rd_data <= reg_rd_resp_mdio ? reg_rd_data_mdio : readback_reg;
+  end
 
   //-----------------------------------------------------------------
   // MDIO Master

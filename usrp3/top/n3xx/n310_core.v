@@ -18,6 +18,8 @@ module n310_core #(
   input         bus_clk,
   input         bus_rst,
 
+  input                    s_axi_aclk,
+  input                    s_axi_aresetn,
   input [REG_AWIDTH-1:0]   s_axi_awaddr,
   input                    s_axi_awvalid,
   output                   s_axi_awready,
@@ -134,8 +136,8 @@ module n310_core #(
     .TIMEOUT  (10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
   ) regport_master_i (
     // Clock and reset
-    .s_axi_aclk    (bus_clk),
-    .s_axi_aresetn (~bus_rst),
+    .s_axi_aclk    (s_axi_aclk),
+    .s_axi_aresetn (s_axi_aresetn),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
     .s_axi_awaddr  (s_axi_awaddr),
     .s_axi_awvalid (s_axi_awvalid),
