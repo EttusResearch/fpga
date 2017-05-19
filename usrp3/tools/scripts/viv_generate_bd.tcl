@@ -9,6 +9,11 @@ set bd_file         $::env(BD_FILE)               ;# Absolute path to BD/Tcl fil
 set src_ext [file extension $bd_file]             ;# BD or Tcl file?
 set part_name       $::env(PART_NAME)              ;# Full Xilinx part name
 set bd_name [file rootname [file tail $bd_file]]   ;# Extract IP name
+if {[info exists env(BD_IP_REPOS)]} {
+    set ip_repos [regsub -all {:} $::env(BD_IP_REPOS) { }] ;# Any supporting IP repos
+} else {
+    set ip_repos {}
+}
 
 # Delete any previous output cookie file
 file delete -force "$bd_file.out"
@@ -18,6 +23,8 @@ file delete -force "$bd_file.out"
 if [expr [lsearch {.tcl} $src_ext] >= 0] {
     puts "BUILDER: Generating Block Diagram from script: $bd_file"
     create_project -part $part_name -in_memory
+    set_property ip_repo_paths "{$ip_repos}" [current_project]
+    update_ip_catalog
     create_bd_design -dir . $bd_name
     source $bd_file
     report_ip_status
@@ -26,6 +33,8 @@ if [expr [lsearch {.tcl} $src_ext] >= 0] {
 } else {
     puts "BUILDER: Adding Block Diagram: $bd_file"
     create_project -part $part_name -in_memory
+    set_property ip_repo_paths "{$ip_repos}" [current_project]
+    update_ip_catalog
     add_files -norecurse $bd_file
     puts "BUILDER: Generating BD Target first pass..."
     generate_target all [get_files $bd_file] -force
