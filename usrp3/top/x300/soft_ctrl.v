@@ -380,7 +380,7 @@ module soft_ctrl
     //WIDTH = tdata+tuser+tlast = 69  
     axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) o_iop2_msg_fifo_2clk
     (.reset(reset),
-      .i_aclk(clk_div2), .i_tdata({o_iop2_msg_tdata_div2, o_iop2_msg_tlast_div2}), .i_tvalid(o_iop2_msg_tvalid_div2), .i_tready(o_iop2_msg_tready_div2),
+      .i_aclk(clk_div2), .i_tdata({o_iop2_msg_tdata_div2, 1'b1}), .i_tvalid(o_iop2_msg_tvalid_div2), .i_tready(o_iop2_msg_tready_div2),
       .o_aclk(clk), .o_tdata({o_iop2_msg_tdata, o_iop2_msg_tlast}), .o_tvalid(o_iop2_msg_tvalid), .o_tready(o_iop2_msg_tready));
     
     pcie_wb_reg_core #(.WB_ADDRW(aw), .WB_DATAW(dw)) pcie_reg_core 
@@ -392,7 +392,6 @@ module soft_ctrl
         .msgo_tdata(o_iop2_msg_tdata_div2), .msgo_tvalid(o_iop2_msg_tvalid_div2), .msgo_tready(o_iop2_msg_tready_div2),
         .debug(debug0)
     );
-    assign o_iop2_msg_tlast = o_iop2_msg_tvalid;
 
     ////////////////////////////////////////////////////////////////////
     // I2C2 -- Slave #c
