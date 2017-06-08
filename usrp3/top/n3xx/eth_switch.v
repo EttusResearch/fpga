@@ -92,7 +92,7 @@ module eth_switch #(
   );
 
   localparam REG_DISPATCH_BASE = BASE + 'h1008;
-  localparam REG_FRAMER_BASE   = BASE + 'h2000;
+  localparam REG_FRAMER_BASE   = BASE + 'h1000;
 
   //---------------------------------------------------------
   // Registers
