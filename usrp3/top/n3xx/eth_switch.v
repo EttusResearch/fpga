@@ -98,10 +98,15 @@ module eth_switch #(
   // Registers
   //---------------------------------------------------------
 
-  localparam REG_MAC_LSB   = BASE + 'h0000;
-  localparam REG_MAC_MSB   = BASE + 'h0004;
-  localparam REG_IP        = BASE + 'h1000;
-  localparam REG_UDP       = BASE + 'h1004;
+  localparam REG_MAC_LSB        = BASE + 'h0000;
+  localparam REG_MAC_MSB        = BASE + 'h0004;
+  localparam REG_IP             = BASE + 'h1000;
+  localparam REG_UDP            = BASE + 'h1004;
+  localparam REG_BRIDGE_MAC_LSB = BASE + 'h1010;
+  localparam REG_BRIDGE_MAC_MSB = BASE + 'h1014;
+  localparam REG_BRIDGE_IP      = BASE + 'h1018;
+  localparam REG_BRIDGE_UDP     = BASE + 'h101c;
+  localparam REG_BRIDGE_ENABLE  = BASE + 'h1020;
 
   // MAC address for the dispatcher module.
   // This value is used to determine if the packet is meant
@@ -113,29 +118,58 @@ module eth_switch #(
   reg [47:0]      mac_reg;
   reg [31:0]      ip_reg;
   reg [15:0]      udp_port0, udp_port1;
+  reg [47:0]      bridge_mac_reg;
+  reg [31:0]      bridge_ip_reg;
+  reg [15:0]      bridge_udp_port0, bridge_udp_port1;
+  reg             bridge_en;
+  wire [47:0]     my_mac;
+  wire [31:0]     my_ip;
+  wire [15:0]     my_udp_port0;
+
+  assign my_mac       = bridge_en ? bridge_mac_reg : mac_reg;
+  assign my_ip        = bridge_en ? bridge_ip_reg : ip_reg;
+  assign my_udp_port0 = bridge_en ? bridge_udp_port0 : udp_port0;
 
   always @(posedge reg_clk)
     if (reset) begin
-      mac_reg               <= DEFAULT_MAC_ADDR;
-      ip_reg                <= DEFAULT_IP_ADDR;
-      {udp_port1,udp_port0} <= DEFAULT_UDP_PORTS;
+      mac_reg                             <= DEFAULT_MAC_ADDR;
+      ip_reg                              <= DEFAULT_IP_ADDR;
+      {udp_port1,udp_port0}               <= DEFAULT_UDP_PORTS;
+      bridge_en                           <= 1'b0;
+      bridge_mac_reg                      <= DEFAULT_MAC_ADDR;
+      bridge_ip_reg                       <= DEFAULT_IP_ADDR;
+      {bridge_udp_port1,bridge_udp_port0} <= DEFAULT_UDP_PORTS;
     end
     else begin
       if (reg_wr_req)
         case (reg_wr_addr)
 
         REG_MAC_LSB:
-          mac_reg[31:0]         <= reg_wr_data;
+          mac_reg[31:0]                       <= reg_wr_data;
 
         REG_MAC_MSB:
-          mac_reg[47:32]        <= reg_wr_data[15:0];
+          mac_reg[47:32]                      <= reg_wr_data[15:0];
 
         REG_IP:
-          ip_reg                <= reg_wr_data;
+          ip_reg                              <= reg_wr_data;
 
         REG_UDP:
-          {udp_port1,udp_port0} <= reg_wr_data;
+          {udp_port1,udp_port0}               <= reg_wr_data;
 
+        REG_BRIDGE_MAC_LSB:
+          bridge_mac_reg[31:0]                <= reg_wr_data;
+
+        REG_BRIDGE_MAC_MSB:
+          bridge_mac_reg[47:32]               <= reg_wr_data[15:0];
+
+        REG_BRIDGE_IP:
+          bridge_ip_reg                       <= reg_wr_data;
+
+        REG_BRIDGE_UDP:
+          {bridge_udp_port1,bridge_udp_port0} <= reg_wr_data;
+
+        REG_BRIDGE_ENABLE:
+          bridge_en                           <= reg_wr_data[0];
         endcase
     end
 
@@ -154,6 +188,21 @@ module eth_switch #(
 
         REG_UDP:
           reg_rd_data <= {udp_port1, udp_port0};
+
+        REG_BRIDGE_MAC_LSB:
+          reg_rd_data <= bridge_mac_reg[31:0];
+
+        REG_BRIDGE_MAC_MSB:
+          reg_rd_data <= {16'b0,bridge_mac_reg[47:32]};
+
+        REG_BRIDGE_IP:
+          reg_rd_data <= bridge_ip_reg;
+
+        REG_BRIDGE_UDP:
+          reg_rd_data <= {bridge_udp_port1, bridge_udp_port0};
+
+        REG_BRIDGE_ENABLE:
+          reg_rd_data <= {31'b0,bridge_en};
 
         default:
           reg_rd_resp <= 1'b0;
@@ -247,10 +296,11 @@ module eth_switch #(
     .xo_tvalid  (xo_tvalid),
     .xo_tready  (xo_tready),
 
-    .my_mac(mac_reg),
-    .my_ip (ip_reg),
-    .my_port0(udp_port0),
-    .my_port1(udp_port1),
+    .eth_mac(mac_reg),
+    .bridge_mac(bridge_mac_reg),
+    .my_ip (my_ip),
+    .my_port0(my_udp_port0),
+    .my_port1(my_udp_port1),
 
     .debug_flags(),
     .debug      ()
@@ -343,9 +393,9 @@ module eth_switch #(
       .out_tlast(v2ef_tlast),
       .out_tvalid(v2ef_tvalid),
       .out_tready(v2ef_tready),
-      .mac_src(mac_reg),
-      .ip_src(ip_reg),
-      .udp_src(udp_port0),
+      .mac_src(my_mac),
+      .ip_src(my_ip),
+      .udp_src(my_udp_port0),
       .debug());
 
    axi_fifo #(.WIDTH(69),.SIZE(XO_FIFOSIZE)) xo_fifo

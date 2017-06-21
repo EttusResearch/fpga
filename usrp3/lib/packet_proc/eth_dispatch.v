@@ -76,7 +76,8 @@ module eth_dispatch #(
   input          xo_tready,
 
   // Device addresses
-  input  [47:0]  my_mac,
+  input  [47:0]  eth_mac,
+  input  [47:0]  bridge_mac,
   input  [31:0]  my_ip,
   input  [15:0]  my_port0,
   input  [15:0]  my_port1,
@@ -393,7 +394,7 @@ module eth_dispatch #(
                   // Look at upper 16bits of MAC Dst Addr.
                   if (in_tdata_reg[15:0] == 16'hFFFF)
                       is_eth_broadcast <= 1'b1;
-                  if (in_tdata_reg[15:0] == my_mac[47:32])
+                  if ((in_tdata_reg[15:0] == eth_mac[47:32]) | (in_tdata_reg[15:0] == bridge_mac[47:32]))
                       is_eth_dst_addr <= 1'b1;
               end
               2: begin
@@ -402,7 +403,7 @@ module eth_dispatch #(
                       is_eth_broadcast <= 1'b1;
                   else
                       is_eth_broadcast <= 1'b0;
-                  if (is_eth_dst_addr && (in_tdata_reg[63:32] == my_mac[31:0]))
+                  if (is_eth_dst_addr && ((in_tdata_reg[63:32] == eth_mac[31:0]) | (in_tdata_reg[63:32] == bridge_mac[31:0])))
                       is_eth_dst_addr <= 1'b1;
                   else
                       is_eth_dst_addr <= 1'b0;
