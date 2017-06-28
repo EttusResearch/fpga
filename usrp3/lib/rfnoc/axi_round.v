@@ -15,7 +15,10 @@ module axi_round
 
   generate
     if (WIDTH_IN == WIDTH_OUT) begin
-      assign out = i_tdata;
+      assign o_tdata = i_tdata;
+      assign o_tlast = i_tlast;
+      assign o_tvalid = i_tvalid;
+      assign i_tready = o_tready;
     end else begin
       wire round_corr,round_corr_trunc,round_corr_rtz,round_corr_nearest,round_corr_nearest_safe;
       wire [WIDTH_IN-WIDTH_OUT-1:0] err;
@@ -37,13 +40,13 @@ module axi_round
 
       assign err = i_tdata - {out,{(WIDTH_IN-WIDTH_OUT){1'b0}}};
 
+      axi_fifo #(.WIDTH(WIDTH_OUT+1), .SIZE(FIFOSIZE)) flop
+        (.clk(clk), .reset(reset), .clear(1'b0),
+         .i_tdata({i_tlast, out}), .i_tvalid(i_tvalid), .i_tready(i_tready),
+         .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
+         .occupied(), .space());
+
    end
   endgenerate
-
-    axi_fifo #(.WIDTH(WIDTH_OUT+1), .SIZE(FIFOSIZE)) flop
-      (.clk(clk), .reset(reset), .clear(1'b0),
-       .i_tdata({i_tlast, out}), .i_tvalid(i_tvalid), .i_tready(i_tready),
-       .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
-       .occupied(), .space());
 
 endmodule // axi_round

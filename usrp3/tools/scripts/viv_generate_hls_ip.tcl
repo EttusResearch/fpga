@@ -18,7 +18,7 @@ set_part $part_name
 set_top $hls_ip_name
 foreach src_file $hls_ip_srcs {
     set src_ext [file extension $src_file ]
-    if [expr [lsearch {.c .cpp} $src_ext] >= 0] {
+    if [expr [lsearch {.c .cpp .cc .h .hpp} $src_ext] >= 0] {
         puts "BUILDER: Adding C/C++ : $src_file"
         add_files $src_file
     } elseif [expr [lsearch {.tcl} $src_ext] >= 0] {

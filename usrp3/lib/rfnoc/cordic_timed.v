@@ -210,7 +210,7 @@ module cordic_timed #(
   i_mult (
     .clk(clk), .reset(reset | clear),
     .a_tdata(cordic_out_i_tdata), .a_tlast(cordic_out_tlast), .a_tvalid(cordic_out_tvalid), .a_tready(cordic_out_tready),
-    .b_tdata(scaling_tdata), .b_tlast(1'b0), .b_tvalid(scaling_tvalid), .b_tready(scaling_tready),
+    .b_tdata(scaling_tdata), .b_tlast(1'b0), .b_tvalid(cordic_out_tvalid /* aligning scaling_tdata with cordic_tdata */), .b_tready(scaling_tready),
     .p_tdata(scaled_i_tdata), .p_tlast(scaled_tlast), .p_tvalid(scaled_tvalid), .p_tready(scaled_tready));
 
   mult #(
@@ -223,7 +223,7 @@ module cordic_timed #(
   q_mult (
     .clk(clk), .reset(reset | clear),
     .a_tdata(cordic_out_q_tdata), .a_tlast(), .a_tvalid(cordic_out_tvalid), .a_tready(),
-    .b_tdata(scaling_tdata), .b_tlast(1'b0), .b_tvalid(scaling_tvalid), .b_tready(),
+    .b_tdata(scaling_tdata), .b_tlast(1'b0), .b_tvalid(cordic_out_tvalid /* aligning scaling_tdata with cordic_tdata */), .b_tready(),
     .p_tdata(scaled_q_tdata), .p_tlast(), .p_tvalid(), .p_tready(scaled_tready));
 
   wire [2*WIDTH-1:0] sample_tdata;

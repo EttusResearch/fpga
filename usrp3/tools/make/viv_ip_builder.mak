@@ -36,7 +36,7 @@ BUILD_VIVADO_IP = \
 	cd $(5); \
 	echo "BUILDER: Building IP..."; \
 	export VIV_ERR=0; \
-	$(TOOLS_DIR)/scripts/launch_vivado.sh -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_ip.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
+	$(TOOLS_DIR)/scripts/launch_vivado.py -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_ip.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) release; \
 	exit $$VIV_ERR
 
