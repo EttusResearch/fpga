@@ -72,6 +72,7 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         } elseif [expr [lsearch {.xci} $src_ext] >= 0] {
             puts "BUILDER: Adding IP      : $src_file"
             read_ip $src_file
+            set_property generate_synth_checkpoint true [get_files $src_file]
         } elseif [expr [lsearch {.ngc .edif} $src_ext] >= 0] {
             puts "BUILDER: Adding Netlist : $src_file"
             read_edif $src_file
@@ -81,6 +82,9 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         } elseif [expr [lsearch {.bxml} $src_ext] >= 0] {
             puts "BUILDER: Adding Block Design XML to list (added after IP regeneration): $src_file"
             append bd_files "$src_file "
+        } elseif [expr [lsearch {.dat} $src_ext] >= 0] {
+            puts "BUILDER: Adding Data File : $src_file"
+            add_files $src_file
         } else {
             puts "BUILDER: \[WARNING\] File ignored!!!: $src_file"
         }
