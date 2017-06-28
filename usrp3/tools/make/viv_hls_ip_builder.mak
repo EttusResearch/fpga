@@ -20,6 +20,7 @@ BUILD_VIVADO_HLS_IP = \
 	export HLS_IP_NAME=$(1); \
 	export PART_NAME=$(subst /,,$(2)); \
 	export HLS_IP_SRCS='$(3)'; \
+	export HLS_IP_INCLUDES='$(6)'; \
 	echo "BUILDER: Staging HLS IP in build directory..."; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) reserve; \
 	cp -rf $(4)/$(1)/* $(5)/$(1); \
@@ -40,6 +41,7 @@ BUILD_VIVADO_HLS_IP = \
 #       $3 = HLS_IP_SRCS (HLS IP source files relative to $4, HLS_IP_SRC_DIR)
 #       $4 = HLS_IP_SRC_DIR (Absolute path to the top level HLS IP src dir)
 #       $5 = HLS_IP_BUILD_DIR (Absolute path to the top level HLS IP build dir)
+#       $6 = HLS_INCLUDE_DIR (Optional: Absolute path to HLS include directory)
 # Prereqs:
 # - HLS_IP_OUTPUT_SRCS and HLS_IP_BUILD_TARGETS must be defined globally
 # -------------------------------------------------------------------
@@ -55,10 +57,11 @@ HLS_IP_BUILD_TARGETS += build_$(1)
 # adds them to the list of output source files
 build_$(1) : $$(HLS_IP_$(1)_OUTS)
 	$$(eval HLS_IP_OUTPUT_SRCS += $$(shell find $(5)/$(1)/solution/impl/verilog/ -name '*.v' -o -name '*.vhd' -o -name '*.xci'))
+	$$(eval HLS_IP_OUTPUT_INCS += $$(shell find $(5)/$(1)/solution/impl/verilog/ -name '*.dat'))
 
 # Build with HLS
 $$(HLS_IP_$(1)_OUTS) : $$(HLS_IP_$(1)_LIB_SRCS)
-	$$(call BUILD_VIVADO_HLS_IP,$(1),$(2),$$(HLS_IP_$(1)_LIB_SRCS),$(4),$(5))
+	$$(call BUILD_VIVADO_HLS_IP,$(1),$(2),$$(HLS_IP_$(1)_LIB_SRCS),$(4),$(5),$(6))
 
 .PHONEY : build_$(1)
 endef

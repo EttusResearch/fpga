@@ -18,6 +18,7 @@ module noc_block_addsub_tb();
   localparam NUM_STREAMS    = 2;  // Number of test bench streams
   `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   `RFNOC_ADD_BLOCK(noc_block_addsub, 0);
+  defparam noc_block_addsub.USE_HLS = 1;
 
   localparam SPP = 256; // Samples per packet
 
