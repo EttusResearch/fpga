@@ -325,7 +325,7 @@ def build(args):
         print("changing temporarily working directory to {0}".\
                 format(build_dir))
         os.chdir(build_dir)
-        make_cmd = "source ./setupenv.sh "
+        make_cmd = ". ./setupenv.sh "
         if args.clean_all:
             make_cmd = make_cmd + "&& make cleanall "
         make_cmd = make_cmd + "&& make " + dtarget(args)
