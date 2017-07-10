@@ -1,0 +1,8 @@
+*
+!.gitignore
+!Makefile
+!*.sv
+!*.do
+!*.tcl
+!*.m
+!*.bin
