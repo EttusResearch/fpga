@@ -1,10 +1,14 @@
 //
 // Copyright 2015 Ettus Research
 //
-// Assumes 32-bit elements (like sc16) carried over AXI
+// Assumes 32-bit elements (such as sc16) carried over AXI-Stream
 // SIMPLE_MODE          -- Automatically handle header (s_axis_data_tuser), packets must be consumed / produced 1-to-1
-// RESIZE_INPUT_PACKET  -- Resize input packets. m_axis_data_tlast will be based on pkt_length. Otherwise packet length based on actual input packet length (via i_tlast).
+// RESIZE_INPUT_PACKET  -- Resize input packets. m_axis_data_tlast will be based on m_axis_pkt_len_tdata. Otherwise packet length based on actual input packet length (via i_tlast).
 // RESIZE_OUTPUT_PACKET -- Resize output packets. s_axis_data_tlast will be ignored and instead use packet length in s_axis_tuser_data. Otherwise use s_axis_data_tlast.
+//
+// Note: When SIMPLE_MODE = 1 and RESIZE_OUTPUT_PACKET = 1, s_axis_data_tlast is ignored and output packets are sized according to the length
+//       of the input packet (via the packet length field in the received header). Useful if the user design wants output packet length to 
+//       match the input packet length without having to drive s_axis_data_tlast.
 //
 // *** Warning: Care should be taken when using RESIZE_INPUT_PACKET and/or RESIZE_OUTPUT_PACKET along with SIMPLE_MODE
 //              as issues could arise if packets are not produced / consumed in a 1:1 ratio. For instance, the header
