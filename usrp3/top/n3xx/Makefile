@@ -25,6 +25,7 @@ HG_DEFS=BUILD_1G=1 BUILD_10G=1 SFP0_1GBE=1 SFP1_10GBE=1 $(OPTIONS)
 XG_DEFS=BUILD_10G=1 SFP0_10GBE=1 SFP1_10GBE=1 $(OPTIONS)
 HA_DEFS=BUILD_1G=1 BUILD_AURORA=1 SFP0_1GBE=1 SFP1_AURORA=1 $(OPTIONS)
 XA_DEFS=BUILD_10G=1 BUILD_AURORA=1 SFP0_10GBE=1 SFP1_AURORA=1 $(OPTIONS)
+AA_DEFS= BUILD_AURORA=1 SFP0_AURORA=1 SFP1_AURORA=1 $(OPTIONS)
 
 # vivado_build($1=Target, $2=Device, $3=Definitions)
 vivado_build = make -f Makefile.n3xx.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 EXTRA_DEFS="$3"
@@ -64,6 +65,10 @@ N310_HA:  ##USRP N310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (E
 N310_XA:  ##USRP N310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
 	$(call vivado_build,bin,N310,$(XA_DEFS) N310=1)
 	$(call post_build,N310,XA)
+
+N310_AA:  ##USRP N310. Aurora on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+	$(call vivado_build,bin,N310,$(AA_DEFS) N310=1)
+	$(call post_build,N310,AA)
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."

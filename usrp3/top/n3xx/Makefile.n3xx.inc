@@ -64,7 +64,7 @@ SFP_SERDES_SRCS += $(abspath n310_1ge.xdc) $(ONE_GIGE_PHY_SRCS) $(IP_ONE_GIGE_PH
 endif
 
 ifdef BUILD_AURORA
-#SFP_SERDES_SRCS += $(abspath x300_aurora.xdc) $(AURORA_PHY_SRCS) $(IP_AURORA_XCI_SRCS)
+SFP_SERDES_SRCS += $(AURORA_PHY_SRCS) $(AURORA_PHY_1_SRCS) $(IP_AURORA_XCI_SRCS) $(abspath n310_aurora.xdc) $(abspath ../../lib/xge_interface/axi64_to_xge64.v) $(TEN_GIGE_PHY_SRCS)
 endif
 
 ifdef SFP0_10GBE

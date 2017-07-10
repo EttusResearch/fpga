@@ -18,7 +18,7 @@ ddr3_32bit/example_design/sim/ddr3_model_parameters.vh \
 )
 
 
-$(IP_DDR3_32BIT_SRCS) $(IP_DDR3_32BIT_OUTS) : $(IP_DIR)/ddr3_32bit/ddr3_32bit.xci $(IP_DIR)/ddr3_32bit/ddr3_32bit_mig_parameters.vh $(IP_DIR)/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh $(IP_DIR)/ddr3_32bit/mig_*.prj
+$(IP_DDR3_32BIT_SRCS) $(IP_DDR3_32BIT_OUTS) : $(IP_DIR)/ddr3_32bit/ddr3_32bit.xci $(IP_DIR)/ddr3_32bit/mig_*.prj
 	mkdir -p $(IP_BUILD_DIR)/ddr3_32bit
 	ln -fs mig_$(subst /,,$(PART_ID)).prj $(IP_BUILD_DIR)/ddr3_32bit/mig_a.prj
 	$(call BUILD_VIVADO_IP,ddr3_32bit,$(ARCH),$(PART_ID),$(IP_DIR),$(IP_BUILD_DIR),0)

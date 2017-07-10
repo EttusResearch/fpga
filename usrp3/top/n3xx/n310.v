@@ -16,7 +16,6 @@ module n310
    input REF_1PPS_IN,
    //input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
-
    //input NPIO_0_RX0_P,
    //input NPIO_0_RX0_N,
    //input NPIO_0_RX1_P,
@@ -123,6 +122,10 @@ module n310
 `endif
 
 `ifdef BUILD_10G
+   input MGT156MHZ_CLK1_P,
+   input MGT156MHZ_CLK1_N,
+`endif
+`ifdef BUILD_AURORA
    input MGT156MHZ_CLK1_P,
    input MGT156MHZ_CLK1_N,
 `endif
@@ -783,6 +786,23 @@ module n310
 
 `endif
 
+`ifdef BUILD_AURORA
+  wire aurora_refclk, aurora_clk156, aurora_init_clk;
+  aurora_phy_clk_gen aurora_clk_gen_i (
+    .areset(global_rst),
+    .refclk_p(MGT156MHZ_CLK1_P),
+    .refclk_n(MGT156MHZ_CLK1_N),
+    .refclk(aurora_refclk),
+    .clk156(aurora_clk156),
+    .init_clk(aurora_init_clk)
+  );
+
+   assign SFP_0_RS0  = 1'b1;
+   assign SFP_0_RS1  = 1'b1;
+   assign SFP_1_RS0  = 1'b1;
+   assign SFP_1_RS1  = 1'b1;
+`endif
+
   clk_gen fpga_clk_mmcm (
      .CLK_IN1(FCLK_CLK0),
      .CLK_OUT1(bus_clk),
@@ -804,6 +824,11 @@ module n310
    assign sfp0_gb_refclk = gige_refclk_bufg;
    assign sfp0_misc_clk  = gige_refclk_bufg;
 `endif
+`ifdef SFP0_AURORA
+   assign sfp0_gt_refclk = aurora_refclk;
+   assign sfp0_gb_refclk = aurora_clk156;
+   assign sfp0_misc_clk  = aurora_init_clk;
+`endif
 `ifdef SFP1_10GBE
    assign sfp1_gt_refclk = xgige_refclk;
    assign sfp1_gb_refclk = xgige_clk156;
@@ -813,6 +838,11 @@ module n310
    assign sfp1_gt_refclk = gige_refclk;
    assign sfp1_gb_refclk = gige_refclk_bufg;
    assign sfp1_misc_clk  = gige_refclk_bufg;
+`endif
+`ifdef SFP0_AURORA
+   assign sfp1_gt_refclk = aurora_refclk;
+   assign sfp1_gb_refclk = aurora_clk156;
+   assign sfp1_misc_clk  = aurora_init_clk;
 `endif
 
    wire          gt0_qplloutclk,gt0_qplloutrefclk;
@@ -856,6 +886,36 @@ module n310
      .qplloutrefclk(qplloutrefclk),
      .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
     );
+`endif
+
+`ifdef SFP0_AURORA
+  wire qpllrefclklost; 
+
+  wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
+  wire    [15:0]     qpll_drpdi_in_i = 16'h0;
+  wire               qpll_drpen_in_i =  1'b0;
+  wire               qpll_drpwe_in_i =  1'b0;
+  wire    [15:0]     qpll_drpdo_out_i;
+  wire               qpll_drprdy_out_i;
+
+  aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
+    .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
+    .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
+    .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk), 
+    //----------------------- Common Block - QPLL Ports ------------------------
+    .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
+    .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
+    .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
+    .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //from 1st sfp
+    //---------------------- Common DRP Ports ---------------------- //not really used???
+    .qpll_drpaddr_in           (qpll_drpaddr_in_i),
+    .qpll_drpdi_in             (qpll_drpdi_in_i),
+    .qpll_drpclk_in            (aurora_init_clk),
+    .qpll_drpdo_out            (qpll_drpdo_out_i), 
+    .qpll_drprdy_out           (qpll_drprdy_out_i), 
+    .qpll_drpen_in             (qpll_drpen_in_i), 
+    .qpll_drpwe_in             (qpll_drpwe_in_i)
+  );
 `endif
 
   ////////////////////////////////////////////////////////////////////
@@ -985,12 +1045,13 @@ module n310
   //////////////////////////////////////////////////////////////////////
 
   network_interface #(
-    `ifdef SFP0_10GBE
+`ifdef SFP0_10GBE
       .PROTOCOL("10GbE"),
-    `endif
-    `ifdef SFP0_1GBE
+`elsif SFP0_1GBE
       .PROTOCOL("1GbE"),
-    `endif
+`elsif SFP0_AURORA
+      .PROTOCOL("Aurora"),
+`endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
@@ -1010,6 +1071,13 @@ module n310
    `endif
    `ifdef SFP0_10GBE
      .qplllock(qplllock),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
+   `endif
+   `ifdef SFP0_AURORA
+     .qplllock(qplllock),
+     .qpllreset(qpllreset), 
+     .qpllrefclklost(qpllrefclklost), 
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
    `endif
@@ -1099,12 +1167,13 @@ module n310
   //////////////////////////////////////////////////////////////////////
 
   network_interface #(
-    `ifdef SFP1_10GBE
+`ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
-    `endif
-    `ifdef SFP1_1GBE
+`elsif SFP1_1GBE
       .PROTOCOL("1GbE"),
-    `endif
+`elsif SFP1_AURORA
+      .PROTOCOL("Aurora"),
+`endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
@@ -1128,6 +1197,12 @@ module n310
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
     `endif
+    `ifdef SFP1_AURORA
+      .qplllock(qplllock),
+      .qplloutclk(qplloutclk),
+      .qplloutrefclk(qplloutrefclk),
+     `endif
+
       .txp(SFP_1_TX_P),
       .txn(SFP_1_TX_N),
       .rxp(SFP_1_RX_P),

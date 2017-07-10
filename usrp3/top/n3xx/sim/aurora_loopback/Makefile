@@ -14,18 +14,20 @@ include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 # Design Specific
 #-------------------------------------------------
 # Define part using PART_ID (<device>/<package>/<speedgrade>)
-ARCH = kintex7
-PART_ID = xc7k410t/ffg900/-2
+ARCH = zynq
+PART_ID = xc7z100/ffg900/-2
 
 # Include makefiles and sources for the DUT and its dependencies
 include $(BASE_DIR)/../lib/fifo/Makefile.srcs
 include $(BASE_DIR)/../lib/axi/Makefile.srcs
 include $(BASE_DIR)/../lib/control/Makefile.srcs
+include $(BASE_DIR)/../lib/rfnoc/Makefile.srcs
 
 DESIGN_SRCS = $(abspath \
 $(FIFO_SRCS) \
 $(AXI_SRCS) \
 $(CONTROL_LIB_SRCS) \
+$(RFNOC_SRCS) \
 )
 
 #-------------------------------------------------
@@ -39,13 +41,14 @@ IP_DIR = ../../ip
 # *after* defining the IP_DIR
 include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
-include $(IP_DIR)/axi64_8k_2clk_fifo/Makefile.inc
+include $(IP_DIR)/axi64_4k_2clk_fifo/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(IP_AURORA_64B66B_PCS_PMA_SRCS) \
-$(IP_AXI64_8K_2CLK_FIFO_SRCS) \
+$(IP_AXI64_4K_2CLK_FIFO_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(AURORA_PHY_SRCS) \
+$(AURORA_PHY_1_SRCS) \
 )
 
 #-------------------------------------------------

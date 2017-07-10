@@ -22,8 +22,8 @@ module aurora_loopback_tb();
 
   wire XG_CLK_N = ~XG_CLK_P;
   wire SFP_LN0_P, SFP_LN0_N, SFP_LN1_P, SFP_LN1_N;
-  
-  localparam PACKET_MODE = 0;
+
+  localparam PACKET_MODE = 1;
 
   // Aurora Loopback Topology:
   //
@@ -51,6 +51,37 @@ module aurora_loopback_tb();
     .clk156(),
     .init_clk(aurora_init_clk)
   );
+  wire               qpllreset;
+  wire               qplllock;
+  wire               qplloutclk;
+  wire               qplloutrefclk;
+  wire               qpllrefclklost;
+  wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
+  wire    [15:0]     qpll_drpdi_in_i = 16'h0;
+  wire               qpll_drpen_in_i =  1'b0;
+  wire               qpll_drpwe_in_i =  1'b0;
+  wire    [15:0]     qpll_drpdo_out_i;
+  wire               qpll_drprdy_out_i;
+
+  aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
+    .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
+    .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
+    .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk),
+//----------------------- Common Block - QPLL Ports ------------------------
+    .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
+    .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
+    .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
+    .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //from 1st sfp
+//---------------------- Common DRP Ports ---------------------- //not really used???
+    .qpll_drpaddr_in           (qpll_drpaddr_in_i),
+    .qpll_drpdi_in             (qpll_drpdi_in_i),
+    .qpll_drpclk_in            (aurora_init_clk),
+    .qpll_drpdo_out            (qpll_drpdo_out_i),
+    .qpll_drprdy_out           (qpll_drprdy_out_i),
+    .qpll_drpen_in             (qpll_drpen_in_i),
+    .qpll_drpwe_in             (qpll_drpwe_in_i)
+  );
+
 
   wire [63:0] m_i_tdata, m_o_tdata;
   wire        m_i_tvalid, m_i_tready, m_o_tvalid;
@@ -61,18 +92,20 @@ module aurora_loopback_tb();
   wire [31:0] m_overruns, s_overruns;
   wire [31:0] m_soft_errors, s_soft_errors;
   reg         m_bist_gen, m_bist_check, s_bist_loopback;
-  reg  [4:0]  m_bist_rate;
+  reg  [5:0]  m_bist_rate;
   wire        m_bist_locked;
   wire [47:0] m_bist_samps, m_bist_errors;
 
-  cvita_stream_t m_tx_chdr (.clk(m_user_clk));
-  cvita_stream_t m_rx_chdr (.clk(s_user_clk));
+  cvita_master m_tx_chdr (.clk(m_user_clk));
+  cvita_slave m_rx_chdr (.clk(s_user_clk));
 
   aurora_phy_x1 #(.SIMULATION(1)) aurora_phy_master_i (
     // Resets
     .areset(GSR),
     // Clocks
     .refclk(aurora_refclk),
+    .qpllclk(qplloutclk),
+    .qpllrefclk(qplloutrefclk),
     .user_clk(m_user_clk),
     .init_clk(aurora_init_clk),
     .user_rst(m_user_rst),
@@ -90,13 +123,17 @@ module aurora_loopback_tb();
     .s_axi_arready(), .s_axi_arvalid(1'b0),
     .s_axi_rdata(), .s_axi_rvalid(), .s_axi_rresp(), .s_axi_rready(1'b1),
     // Status and Error Reporting Interface
-    .channel_up(m_channel_up), .hard_err(m_hard_err), .soft_err(m_soft_err)
+    .channel_up(m_channel_up), .hard_err(m_hard_err), .soft_err(m_soft_err),
+    .qplllock(qplllock),
+    .qpllreset(qpllreset),
+    .qpllrefclklost(qpllrefclklost)
   );
 
   aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_master_i (
     // Clocks and resets
     .phy_clk(m_user_clk), .phy_rst(m_user_rst),
     .sys_clk(m_user_clk), .sys_rst(m_user_rst),
+    .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(m_o_tdata), .phy_s_axis_tvalid(m_o_tvalid),
     .phy_m_axis_tdata(m_i_tdata), .phy_m_axis_tvalid(m_i_tvalid), .phy_m_axis_tready(m_i_tready),
@@ -118,6 +155,8 @@ module aurora_loopback_tb();
     .areset(GSR),
     // Clocks
     .refclk(aurora_refclk),
+    .qpllclk(qplloutclk),
+    .qpllrefclk(qplloutrefclk),
     .user_clk(s_user_clk),
     .init_clk(aurora_init_clk),
     .user_rst(s_user_rst),
@@ -136,13 +175,17 @@ module aurora_loopback_tb();
     .s_axi_arready(), .s_axi_arvalid(1'b0),
     .s_axi_rdata(), .s_axi_rvalid(), .s_axi_rresp(), .s_axi_rready(1'b1),
     // Status and Error Reporting Interface
-    .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err)
+    .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err),
+    .qplllock(qplllock),
+    .qpllreset(),
+    .qpllrefclklost()
   );
 
   aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_slave_i (
     // Clocks and resets
     .phy_clk(s_user_clk), .phy_rst(s_user_rst),
     .sys_clk(s_user_clk), .sys_rst(s_user_rst),
+    .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(s_o_tdata), .phy_s_axis_tvalid(s_o_tvalid),
     .phy_m_axis_tdata(s_i_tdata), .phy_m_axis_tvalid(s_i_tvalid), .phy_m_axis_tready(s_i_tready),
@@ -155,7 +198,7 @@ module aurora_loopback_tb();
     .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err),
     .overruns(s_overruns), .soft_errors(s_soft_errors),
     //BIST
-    .bist_gen_en(1'b0), .bist_checker_en(1'b0), .bist_loopback_en(s_bist_loopback), .bist_gen_rate(5'd0),
+    .bist_gen_en(1'b0), .bist_checker_en(1'b0), .bist_loopback_en(s_bist_loopback), .bist_gen_rate(6'd0),
     .bist_checker_locked(), .bist_checker_samps(), .bist_checker_errors()
   );
 
@@ -171,14 +214,14 @@ module aurora_loopback_tb();
     `TEST_CASE_START("Wait for reset");
     while (GSR) @(posedge XG_CLK_P);
     `TEST_CASE_DONE((~GSR));
-    
+
     m_bist_gen <= 1'b0;
-    m_bist_rate <= 5'd0;
+    m_bist_rate <= 6'd0;
     m_bist_check <= 1'b0;
     s_bist_loopback <= 1'b0;
-    
+
     m_tx_chdr.push_bubble();
-    
+
     `TEST_CASE_START("Wait for master channel to come up");
     while (m_channel_up !== 1'b1) @(posedge m_user_clk);
     `TEST_CASE_DONE(1'b1);
@@ -187,9 +230,10 @@ module aurora_loopback_tb();
     while (s_channel_up !== 1'b1) @(posedge s_user_clk);
     `TEST_CASE_DONE(1'b1);
 
-    `TEST_CASE_START("Run PRBS15 BIST");
+    `TEST_CASE_START("Run PRBS BIST");
     s_bist_loopback <= PACKET_MODE;
     @(posedge m_user_clk);
+    m_bist_rate <= 6'd60;
     m_bist_gen <= 1'b1;
     m_bist_check <= 1'b1;
     @(posedge m_user_clk);
@@ -204,8 +248,8 @@ module aurora_loopback_tb();
     `TEST_CASE_DONE(1'b1);
 
     header = '{
-      pkt_type:DATA, has_time:0, eob:0, seqno:12'h666,
-      length:0, sid:$random, timestamp:64'h0};
+      pkt_type:DATA, has_time:0, eob:0, seqnum:12'h666,
+      length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Fill up empty FIFO then drain (short packet)");
       m_rx_chdr.axis.tready = 0;
@@ -213,7 +257,8 @@ module aurora_loopback_tb();
       m_rx_chdr.axis.tready = 1;
       m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
       `ASSERT_ERROR(stats.count==16,            "Bad packet: Length mismatch");
-      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      `ASSERT_ERROR(header.src_sid==header_out.src_sid, "Bad packet: Wrong Src SID");
+      `ASSERT_ERROR(header.dst_sid==header_out.dst_sid, "Bad packet: Wrong Dst SID");
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Fill up empty FIFO then drain (long packet)");
@@ -222,25 +267,27 @@ module aurora_loopback_tb();
       m_rx_chdr.axis.tready = 1;
       m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
       `ASSERT_ERROR(stats.count==256,           "Bad packet: Length mismatch");
-      `ASSERT_ERROR(header.sid==header_out.sid, "Bad packet: Wrong SID");
+      `ASSERT_ERROR(header.src_sid==header_out.src_sid, "Bad packet: Wrong Src SID");
+      `ASSERT_ERROR(header.dst_sid==header_out.dst_sid, "Bad packet: Wrong Dst SID");
     `TEST_CASE_DONE(1);
 
     header = '{
-      pkt_type:DATA, has_time:1, eob:0, seqno:12'h666, 
-      length:0, sid:$random, timestamp:64'h0};
+      pkt_type:DATA, has_time:1, eob:0, seqnum:12'h666,
+      length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Concurrent read and write (single packet)");
+      repeat (10) @(posedge m_user_clk); //Wait for clear to go low
       m_rx_chdr.axis.tready = 1;
       fork
         begin
-          m_tx_chdr.push_ramp_pkt(1000, 64'd0, 64'h100, header);
+          m_tx_chdr.push_ramp_pkt(200, 64'd0, 64'h100, header);
         end
         begin
           m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
         end
       join
     crc_cache = stats.crc;    //Cache CRC for future test cases
-    `ASSERT_ERROR(stats.count==1000, "Bad packet: Length mismatch");
+    `ASSERT_ERROR(stats.count==201, "Bad packet: Length mismatch");
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Concurrent read and write (multiple packets)");
@@ -255,7 +302,7 @@ module aurora_loopback_tb();
         begin
           repeat (20) begin
             m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
-            `ASSERT_ERROR(stats.count==20,      "Bad packet: Length mismatch");
+            `ASSERT_ERROR(stats.count==21,      "Bad packet: Length mismatch");
             `ASSERT_ERROR(crc_cache==stats.crc, "Bad packet: Wrong CRC");
           end
         end
@@ -270,10 +317,10 @@ module aurora_loopback_tb();
 
     s_bist_loopback <= 1'b1;
 
-    `TEST_CASE_START("Run PRBS15 BIST (Loopback Mode)");
+    `TEST_CASE_START("Run PRBS BIST (Loopback Mode)");
     @(posedge m_user_clk);
     m_bist_gen <= 1'b1;
-    m_bist_rate <= 5'd4;
+    m_bist_rate <= 6'd60;
     m_bist_check <= 1'b1;
     @(posedge m_user_clk);
     while (m_bist_locked !== 1'b1) @(posedge m_user_clk);
@@ -294,6 +341,7 @@ module aurora_loopback_tb();
     `TEST_CASE_START("Validate no drops (slave)");
     `TEST_CASE_DONE((s_overruns === 32'd0));
 
+    `TEST_BENCH_DONE;
   end
 
 endmodule

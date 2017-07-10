@@ -62,12 +62,12 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS}]
 
 ## MGTs, Bank 110
 
-#set_property PACKAGE_PIN   AD6              [get_ports {NPIO_0_RX0_P}]
-#set_property PACKAGE_PIN   AD5              [get_ports {NPIO_0_RX0_N}]
+set_property PACKAGE_PIN   AD6              [get_ports {NPIO_0_RX0_P}]
+set_property PACKAGE_PIN   AD5              [get_ports {NPIO_0_RX0_N}]
 #set_property PACKAGE_PIN   AF6              [get_ports {NPIO_0_RX1_P}]
 #set_property PACKAGE_PIN   AF5              [get_ports {NPIO_0_RX1_N}]
-#set_property PACKAGE_PIN   AD2              [get_ports {NPIO_0_TX0_P}]
-#set_property PACKAGE_PIN   AD1              [get_ports {NPIO_0_TX0_N}]
+set_property PACKAGE_PIN   AD2              [get_ports {NPIO_0_TX0_P}]
+set_property PACKAGE_PIN   AD1              [get_ports {NPIO_0_TX0_N}]
 #set_property PACKAGE_PIN   AE4              [get_ports {NPIO_0_TX1_P}]
 #set_property PACKAGE_PIN   AE3              [get_ports {NPIO_0_TX1_N}]
 #
@@ -82,12 +82,12 @@ set_property IOSTANDARD    LVCMOS33         [get_ports {GPS_1PPS}]
 #
 ### MGTs, Bank 109
 #
-#set_property PACKAGE_PIN   AE8              [get_ports {NPIO_2_RX0_P}]
-#set_property PACKAGE_PIN   AE7              [get_ports {NPIO_2_RX0_N}]
+set_property PACKAGE_PIN   AE8              [get_ports {NPIO_2_RX0_P}]
+set_property PACKAGE_PIN   AE7              [get_ports {NPIO_2_RX0_N}]
 #set_property PACKAGE_PIN   AG8              [get_ports {NPIO_2_RX1_P}]
 #set_property PACKAGE_PIN   AG7              [get_ports {NPIO_2_RX1_N}]
-#set_property PACKAGE_PIN   AK2              [get_ports {NPIO_2_TX0_P}]
-#set_property PACKAGE_PIN   AK1              [get_ports {NPIO_2_TX0_N}]
+set_property PACKAGE_PIN   AK2              [get_ports {NPIO_2_TX0_P}]
+set_property PACKAGE_PIN   AK1              [get_ports {NPIO_2_TX0_N}]
 #set_property PACKAGE_PIN   AJ4              [get_ports {NPIO_2_TX1_P}]
 #set_property PACKAGE_PIN   AJ3              [get_ports {NPIO_2_TX1_N}]
 

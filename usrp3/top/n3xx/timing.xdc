@@ -43,7 +43,8 @@ create_generated_clock -name bus_clk [get_pins *fpga_clk_mmcm/inst/mmcm_adv_inst
 
 
 
-set_clock_groups -asynchronous -group [get_clocks clk_fpga_0 -include_generated_clocks]
+set_clock_groups -asynchronous -group [get_clocks bus_clk -include_generated_clocks]
+set_clock_groups -asynchronous -group [get_clocks user_clk_i -include_generated_clocks]
 set_clock_groups -asynchronous -group [get_clocks USRPIO_A_MGTCLK -include_generated_clocks]
 #set_clock_groups -asynchronous -group [get_clocks USRPIO_B_MGTCLK -include_generated_clocks]
 set_clock_groups -asynchronous -group [get_clocks sample_clk_A -include_generated_clocks]

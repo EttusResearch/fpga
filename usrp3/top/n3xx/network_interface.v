@@ -69,6 +69,7 @@ module network_interface #(
   input         gt0_qplloutrefclk,
   output        pma_reset_out,
   output        qpllreset,
+  output        qpllrefclklost,
   input         qplllock,
   input         qplloutclk,
   input         qplloutrefclk,
@@ -223,12 +224,7 @@ module network_interface #(
   wire        sfp_rx_tlast, sfp_tx_tlast, sfp_rx_tvalid, sfp_tx_tvalid, sfp_rx_tready, sfp_tx_tready;
 
   n310_sfpp_io_core #(
-    `ifdef SFP0_10GBE
-     .PROTOCOL("10GbE"),
-    `endif
-    `ifdef SFP0_1GBE
-     .PROTOCOL("1GbE"),
-    `endif
+     .PROTOCOL(PROTOCOL),
      .REG_BASE(14'h0),
      .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
      .REG_AWIDTH (AWIDTH),         // Width of the address bus
@@ -253,6 +249,14 @@ module network_interface #(
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
    `endif
+   `ifdef SFP0_AURORA
+     .qplllock(qplllock),
+     .qpllreset(qpllreset),
+     .qpllrefclklost(qpllrefclklost),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
+    `endif
+     
      .txp(txp),
      .txn(txn),
      .rxp(rxp),

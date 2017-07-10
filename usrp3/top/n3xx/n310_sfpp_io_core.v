@@ -48,7 +48,7 @@ module n310_sfpp_io_core #(
   input             m_axis_tready,
   // Register port
   input                       reg_wr_req,
-  input  [REG_AWIDTH-1:0]     reg_wr_addr,
+  input  [REG_AWIDTH-1:0]     reg_wr_addr, //14 bits
   input  [REG_DWIDTH-1:0]     reg_wr_data,
   input                       reg_rd_req,
   input  [REG_AWIDTH-1:0]     reg_rd_addr,
@@ -60,6 +60,7 @@ module n310_sfpp_io_core #(
   output            pma_reset_out,
   output [15:0]     phy_status,
   output            qpllreset,
+  output            qpllrefclklost,
   input             qplllock,
   input             qplloutclk,
   input             qplloutrefclk
@@ -70,31 +71,69 @@ module n310_sfpp_io_core #(
   //-----------------------------------------------------------------
   localparam REG_MAC_CTRL_STATUS = REG_BASE + 32'h0;
   localparam REG_PHY_CTRL_STATUS = REG_BASE + 32'h4;
+  localparam REG_AURORA_MAC_CTRL_STATUS = REG_BASE + 14'h2030;
+  localparam REG_AURORA_PHY_CTRL_STATUS = REG_BASE + 14'h2034;
+  localparam REG_AURORA_OVERRUNS = REG_BASE + 32'h2038;
+  localparam REG_CHECKSUM_ERRORS = REG_BASE + 32'h203C;
+  localparam REG_BIST_CHECKER_SAMPS = REG_BASE + 32'h2040;
+  localparam REG_BIST_CHECKER_ERRORS  = REG_BASE + 32'h2044;
+  localparam REG_AURORA_ENABLED_CHECK = REG_BASE + 32'h2048;
 
   wire        reg_rd_resp_mdio;
   reg         reg_rd_resp_glob = 1'b0;
   wire [31:0] reg_rd_data_mdio;
-  reg  [31:0] mac_ctrl_reg, phy_ctrl_reg, readback_reg;
-  wire [8:0] mac_status;
+  reg  [31:0] aurora_mac_ctrl_reg, mac_ctrl_reg, phy_ctrl_reg, readback_reg;
+  wire [8:0]  mac_status;
+  wire [31:0] core_status;
   wire [31:0] mac_status_bclk, phy_status_bclk;
+  //aurora control and status wires  
+  wire        mac_clear;
+  wire        phy_areset;
+  wire        bist_gen_en, bist_checker_en, bist_loopback_en;
+  wire [5:0]  bist_gen_rate;
+  wire [31:0] overruns;
+  wire [31:0] checksum_errors;
+  wire [47:0] bist_checker_samps;   //Scale num sample by 2^16
+  wire [47:0] bist_checker_errors;   //Dont scale errors
+  generate
+  if(PROTOCOL == "Aurora") begin
+ 
+  synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) mac_status_sync_i (
+     .clk(bus_clk), .rst(1'b0), .in({core_status}), .out(mac_status_bclk)
+  );
+
+  assign bist_checker_en = aurora_mac_ctrl_reg[0]; 
+  assign bist_gen_en = aurora_mac_ctrl_reg[1]; 
+  assign bist_loopback_en = aurora_mac_ctrl_reg[2]; 
+  assign bist_gen_rate = aurora_mac_ctrl_reg[8:3]; 
+  assign phy_areset = aurora_mac_ctrl_reg[9]; 
+  assign mac_clear = aurora_mac_ctrl_reg[10]; 
+
+  end else begin
 
   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) mac_status_sync_i (
      .clk(bus_clk), .rst(1'b0), .in({23'b0, mac_status}), .out(mac_status_bclk)
   );
+  end
+  endgenerate
 
   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) phy_status_sync_i (
      .clk(bus_clk), .rst(1'b0), .in({16'b0, phy_status}), .out(phy_status_bclk)
   );
 
+
   always @(posedge bus_clk) begin
      if (bus_rst) begin
         mac_ctrl_reg <= {31'h0, 1'b1}; // tx_enable on reset?
+        aurora_mac_ctrl_reg <= {31'h0, 1'b1}; // tx_enable on reset?
      end else if (reg_wr_req) begin
         case(reg_wr_addr)
            REG_MAC_CTRL_STATUS:
               mac_ctrl_reg <= reg_wr_data;
            REG_PHY_CTRL_STATUS:
               phy_ctrl_reg <= reg_wr_data;
+           REG_AURORA_MAC_CTRL_STATUS:
+              aurora_mac_ctrl_reg <= reg_wr_data;
         endcase
      end
   end
@@ -108,6 +147,20 @@ module n310_sfpp_io_core #(
               readback_reg <= mac_status_bclk;
            REG_PHY_CTRL_STATUS:
               readback_reg <= phy_status_bclk;
+           REG_AURORA_MAC_CTRL_STATUS:
+              readback_reg <= mac_status_bclk;
+           REG_AURORA_PHY_CTRL_STATUS:
+              readback_reg <= phy_status_bclk;
+           REG_AURORA_OVERRUNS:
+              readback_reg <= overruns;
+           REG_CHECKSUM_ERRORS:
+              readback_reg <= checksum_errors;
+           REG_BIST_CHECKER_SAMPS:
+              readback_reg <= bist_checker_samps[47:16];
+           REG_BIST_CHECKER_ERRORS:
+              readback_reg <= bist_checker_errors[31:0];
+           REG_AURORA_ENABLED_CHECK:
+              readback_reg <= 32'h40120124;//sorta spells out aurora.
            default:
               reg_rd_resp_glob <= 1'b0;
         endcase
@@ -315,11 +368,172 @@ generate
        .debug_tx(), .debug_rx()
     );
 
-  end else begin
+end else if (PROTOCOL == "Aurora") begin
 
-     //Invalid protocol
+      //-----------------------------------------------------------------
+      // Aurora
+      //-----------------------------------------------------------------
+      wire        au_user_clk, au_user_rst;
+      wire [63:0] i_tdata, o_tdata;
+      wire        i_tvalid, i_tready, o_tvalid;
+      wire        channel_up, hard_err, soft_err;
+
+      assign sfpp_tx_disable = 1'b0; // Always on.
+
+      aurora_phy_x1 aurora_phy_i (
+         // Resets
+         .areset(areset | phy_areset),
+         // Clocks
+         .refclk(gt_refclk),
+         .init_clk(misc_clk),
+         .user_clk(au_user_clk),
+         .user_rst(au_user_rst),
+         .qpllclk(qplloutclk), //to common core
+         .qpllrefclk(qplloutrefclk),
+         // GTX Serial I/O
+         .tx_p(txp),
+         .tx_n(txn),
+         .rx_p(rxp),
+         .rx_n(rxn),
+         // AXI4-Stream TX Interface
+         .s_axis_tdata(i_tdata),
+         .s_axis_tvalid(i_tvalid),
+         .s_axis_tready(i_tready),
+         // AXI4-Stream RX Interface
+         .m_axis_tdata(o_tdata),
+         .m_axis_tvalid(o_tvalid),
+         // AXI4-Lite Config Interface: TODO: Hook up to WB->AXI4Lite converter
+         .s_axi_awaddr(32'h0),
+         .s_axi_araddr(32'h0),
+         .s_axi_awvalid(1'b0),
+         .s_axi_awready(),
+         .s_axi_wdata(32'h0),
+         .s_axi_wvalid(1'b0),
+         .s_axi_wstrb(1'b0),
+         .s_axi_wready(),
+         .s_axi_bvalid(),
+         .s_axi_bresp(),
+         .s_axi_bready(1'b1),
+         .s_axi_arready(),
+         .s_axi_arvalid(1'b0),
+         .s_axi_rdata(),
+         .s_axi_rvalid(),
+         .s_axi_rresp(),
+         .s_axi_rready(1'b1),
+         // Status and Error Reporting Interface
+         .channel_up(channel_up),
+         .hard_err(hard_err),
+         .soft_err(soft_err),
+         .qplllock(qplllock),
+         .qpllreset(qpllreset),
+         .qpllrefclklost(qpllrefclklost)
+      );
+
+      assign phy_status = {14'd0, hard_err, channel_up};
+
+      wire           bist_checker_locked;
+
+      aurora_axis_mac #(
+         .PHY_ENDIANNESS ("LITTLE"),
+         .PACKET_MODE    (1),
+         .MAX_PACKET_SIZE(1024),
+         .BIST_ENABLED   (1)
+      ) aurora_mac_i (
+         // Clocks and resets
+         .phy_clk(au_user_clk), .phy_rst(au_user_rst),
+         .sys_clk(bus_clk), .sys_rst(bus_rst),
+         .clear(mac_clear),
+         // PHY Interface (Synchronous to phy_clk)
+         .phy_s_axis_tdata(o_tdata),
+         .phy_s_axis_tvalid(o_tvalid),
+         .phy_m_axis_tdata(i_tdata),
+         .phy_m_axis_tvalid(i_tvalid),
+         .phy_m_axis_tready(i_tready),
+         // User Interface (Synchronous to sys_clk)
+         .s_axis_tdata(s_axis_tdata),
+         .s_axis_tlast(s_axis_tlast),
+         .s_axis_tvalid(s_axis_tvalid),
+         .s_axis_tready(s_axis_tready),
+         .m_axis_tdata(m_axis_tdata),
+         .m_axis_tlast(m_axis_tlast),
+         .m_axis_tvalid(m_axis_tvalid),
+         .m_axis_tready(m_axis_tready),
+         // PHY Status Inputs (Synchronous to phy_clk)
+         .channel_up(channel_up),
+         .hard_err(hard_err),
+         .soft_err(soft_err),
+         // Status and Error Outputs (Synchronous to sys_clk)
+         .overruns(overruns),
+         .soft_errors(),
+         .checksum_errors(checksum_errors),
+         .critical_err(mac_crit_err),
+         // BIST Interface (Synchronous to sys_clk)
+         .bist_gen_en(bist_gen_en),
+         .bist_gen_rate(bist_gen_rate),
+         .bist_checker_en(bist_checker_en),
+         .bist_loopback_en(bist_loopback_en),
+         .bist_checker_locked(bist_checker_locked),
+         .bist_checker_samps(bist_checker_samps),
+         .bist_checker_errors(bist_checker_errors)
+      );
+      
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
+
+      assign m_axis_tuser = 4'd0;
+
+      wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk;
+      synchronizer #(.INITIAL_VAL(1'b0)) channel_up_sync (
+         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(channel_up), .out(channel_up_bclk));
+      synchronizer #(.INITIAL_VAL(1'b0)) hard_err_sync (
+         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(hard_err), .out(hard_err_bclk));
+      synchronizer #(.INITIAL_VAL(1'b0)) soft_err_sync (
+         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
+      synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk)); 
+
+      reg [19:0]  bist_lock_latency;
+      always @(posedge bus_clk) begin
+         if (!bist_checker_en && !bist_checker_locked)
+            bist_lock_latency <= 20'd0;
+         else if (bist_checker_en && !bist_checker_locked)
+            bist_lock_latency <= bist_lock_latency + 20'd1;
+      end
+
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
+
+      assign core_status = {
+         6'h0,                      //[31:26]
+         mac_crit_err_latch,        //[25]
+         1,                         //[24] mmcm_locked_bclk
+         1,                         //[23] gt_pll_locked_bclk
+         0,                         //[22] qpll_refclklost_bclk
+         1,                         //[21] qpll_lock_bclk
+         0,                         //[20] qpll_reset_bclk
+         bist_lock_latency[19:4],   //[19:4]
+         bist_checker_locked,       //[3]
+         soft_err_bclk,             //[2]
+         hard_err_bclk,             //[1]
+         channel_up_bclk            //[0]
+      };
 
   end
-endgenerate
 
+
+endgenerate
 endmodule

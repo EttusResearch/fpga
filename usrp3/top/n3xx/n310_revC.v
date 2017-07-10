@@ -12,15 +12,16 @@ module n310
    input REF_1PPS_IN,
    //input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
-
-   //input NPIO_0_RX0_P,
-   //input NPIO_0_RX0_N,
+`ifdef SFP1_AURORA
+   input NPIO_0_RX0_P,
+   input NPIO_0_RX0_N,
    //input NPIO_0_RX1_P,
    //input NPIO_0_RX1_N,
-   //output NPIO_0_TX0_P,
-   //output NPIO_0_TX0_N,
+   output NPIO_0_TX0_P,
+   output NPIO_0_TX0_N,
    //output NPIO_0_TX1_P,
    //output NPIO_0_TX1_N,
+`endif
    //input NPIO_1_RX0_P,
    //input NPIO_1_RX0_N,
    //input NPIO_1_RX1_P,
@@ -29,14 +30,16 @@ module n310
    //output NPIO_1_TX0_N,
    //output NPIO_1_TX1_P,
    //output NPIO_1_TX1_N,
-   //input NPIO_2_RX0_P,
-   //input NPIO_2_RX0_N,
+`ifdef SFP0_AURORA
+   input NPIO_2_RX0_P,
+   input NPIO_2_RX0_N,
    //input NPIO_2_RX1_P,
    //input NPIO_2_RX1_N,
-   //output NPIO_2_TX0_P,
-   //output NPIO_2_TX0_N,
+   output NPIO_2_TX0_P,
+   output NPIO_2_TX0_N,
    //output NPIO_2_TX1_P,
    //output NPIO_2_TX1_N,
+`endif
    //TODO: Uncomment when connected here
    //input NPIO_0_RXSYNC_0_P, NPIO_0_RXSYNC_1_P,
    //input NPIO_0_RXSYNC_0_N, NPIO_0_RXSYNC_1_N,
@@ -721,6 +724,17 @@ module n310
 
 `endif
 
+  wire aurora_refclk, aurora_clk156, aurora_init_clk;
+  aurora_phy_clk_gen aurora_clk_gen_i (
+    .areset(global_rst),
+    .refclk_p(MGT156MHZ_CLK1_P),
+    .refclk_n(MGT156MHZ_CLK1_N),
+    .refclk(aurora_refclk),
+    .clk156(aurora_clk156),
+    .init_clk(aurora_init_clk)
+  );
+
+
   BUFG bus_clk_buf (
      .I(FCLK_CLK0),
      .O(bus_clk));
@@ -739,6 +753,11 @@ module n310
    assign sfp0_gb_refclk = gige_refclk_bufg;
    assign sfp0_misc_clk  = gige_refclk_bufg;
 `endif
+`ifdef SFP0_AURORA
+   assign sfp0_gt_refclk = aurora_refclk;
+   assign sfp0_gb_refclk = aurora_clk156;
+   assign sfp0_misc_clk  = aurora_init_clk;
+`endif
 `ifdef SFP1_10GBE
    assign sfp1_gt_refclk = xgige_refclk;
    assign sfp1_gb_refclk = xgige_clk156;
@@ -748,6 +767,11 @@ module n310
    assign sfp1_gt_refclk = gige_refclk;
    assign sfp1_gb_refclk = gige_refclk_bufg;
    assign sfp1_misc_clk  = gige_refclk_bufg;
+`endif
+`ifdef SFP0_AURORA
+   assign sfp1_gt_refclk = aurora_refclk;
+   assign sfp1_gb_refclk = aurora_clk156;
+   assign sfp1_misc_clk  = aurora_init_clk;
 `endif
 
    wire          gt0_qplloutclk,gt0_qplloutrefclk;
@@ -916,6 +940,9 @@ module n310
 `ifdef SFP0_1GBE
       .PROTOCOL("1GbE"),
 `endif
+`ifdef SFP0_AURORA
+      .PROTOCOL("Aurora"),
+`endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
@@ -938,11 +965,17 @@ module n310
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
    `endif
+   `ifdef SFP0_AURORA
+      .txp(NPIO_2_TX0_P),
+      .txn(NPIO_2_TX0_N),
+      .rxp(NPIO_2_RX0_P),
+      .rxn(NPIO_2_RX0_N),
+   `else
       .txp(SFP_0_TX_P),
       .txn(SFP_0_TX_N),
       .rxp(SFP_0_RX_P),
       .rxn(SFP_0_RX_N),
-
+   `endif
       .sfpp_rxlos(SFP_0_LOS),
       .sfpp_tx_fault(SFP_0_TXFAULT),
       .sfpp_tx_disable(SFP_0_TXDISABLE),
@@ -1020,9 +1053,10 @@ module n310
    network_interface #(
 `ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
-`endif
-`ifdef SFP1_1GBE
+`elsif SFP1_1GBE
       .PROTOCOL("1GbE"),
+`elsif SFP1_AURORA
+      .PROTOCOL("Aurora1"),
 `endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
@@ -1047,10 +1081,17 @@ module n310
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
    `endif
+   `ifdef SFP1_AURORA
+      .txp(NPIO_0_TX0_P),
+      .txn(NPIO_0_TX0_N),
+      .rxp(NPIO_0_RX0_P),
+      .rxn(NPIO_0_RX0_N),
+   `else
       .txp(SFP_1_TX_P),
       .txn(SFP_1_TX_N),
       .rxp(SFP_1_RX_P),
       .rxn(SFP_1_RX_N),
+   `endif
 
       .sfpp_rxlos(SFP_1_LOS),
       .sfpp_tx_fault(SFP_1_TXFAULT),
