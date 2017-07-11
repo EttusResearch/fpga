@@ -83,7 +83,8 @@ foreach inc_src $inc_srcs {
 
 # Simulator independent config
 set_property top $sim_top [get_filesets $sim_fileset]
-set_property default_lib work [current_project]
+set_property default_lib xil_defaultlib [current_project]
+update_compile_order -fileset sim_1 -quiet
 
 # Select the simulator
 # WARNING: Do this first before setting simulator specific properties!
