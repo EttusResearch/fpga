@@ -7,7 +7,7 @@
 `define NUM_TEST_CASES 2
 
 `include "sim_exec_report.vh"
-`include "sim_rfnoc_lib.vh"
+`include "sim_rfnoc_lib.svh"
 
 module noc_block_schmidl_cox_tb();
   `TEST_BENCH_INIT("noc_block_schmild_cox_tb",`NUM_TEST_CASES,`NS_PER_TICK);
