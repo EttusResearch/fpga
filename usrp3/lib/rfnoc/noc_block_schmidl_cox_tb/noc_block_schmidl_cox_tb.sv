@@ -110,7 +110,7 @@ module noc_block_schmidl_cox_tb();
     for (int n = 0; n < NUM_PACKETS; n = n + 1) begin
       for (int l = 0; l < PACKET_LENGTH; l = l + 1) begin
         for (int k = 0; k < OFDM_SYMBOL_SIZE; k = k + 1) begin
-          tb_axis_data.pull_word({real_val,cplx_val},last);
+          tb_streamer.pull_word({real_val,cplx_val},last);
         end
       end
     end
