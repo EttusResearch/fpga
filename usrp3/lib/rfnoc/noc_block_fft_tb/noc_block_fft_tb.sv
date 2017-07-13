@@ -2,7 +2,7 @@
 // Copyright 2016 Ettus Research
 //
 `timescale 1ns/1ps
-`define SIM_TIMEOUT_US 40
+`define SIM_TIMEOUT_US 100
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 5
 `include "sim_exec_report.vh"
@@ -19,14 +19,13 @@ module noc_block_fft_tb();
   `RFNOC_ADD_BLOCK(noc_block_fft, 0 /* xbar port 0 */);
 
   // FFT specific settings
-  localparam [15:0] FFT_SIZE = 256;
-  localparam FFT_BIN         = FFT_SIZE/8 + FFT_SIZE/2; // 1/8 sample rate freq + FFT shift
-  wire [7:0] fft_size_log2   = $clog2(FFT_SIZE);        // Set FFT size
-  wire fft_direction         = 0;                       // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
-  wire [11:0] fft_scale      = 12'b011010101010;        // Conservative scaling of 1/N
-  // Padding of the control word depends on the FFT options enabled
-  wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
-
+  // FFT settings
+  localparam [31:0] FFT_SIZE         = 256;
+  localparam [31:0] FFT_SIZE_LOG2    = $clog2(FFT_SIZE);
+  localparam [31:0] FFT_DIRECTION    = noc_block_fft.FFT_FORWARD;  // Forward
+  localparam [31:0] FFT_SCALING      = 12'b011010101010;           // Conservative scaling of 1/N
+  localparam [31:0] FFT_SHIFT_CONFIG = 0;                          // Normal FFT shift
+  localparam FFT_BIN                 = FFT_SIZE/8 + FFT_SIZE/2;    // 1/8 sample rate freq + FFT shift
   localparam NUM_ITERATIONS  = 10;
 
   /********************************************************
@@ -70,8 +69,10 @@ module noc_block_fft_tb();
     ********************************************************/
     `TEST_CASE_START("Setup FFT registers");
     // Setup FFT
-    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
-    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, FFT_SIZE_LOG2);             // FFT size
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_DIRECTION, FFT_DIRECTION);             // FFT direction
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SCALING, FFT_SCALING);                 // FFT scaling
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SHIFT_CONFIG, FFT_SHIFT_CONFIG);       // FFT shift configuration
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable real/imag out
     `TEST_CASE_DONE(1);
 

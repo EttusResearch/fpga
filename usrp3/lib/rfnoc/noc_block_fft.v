@@ -4,8 +4,8 @@
 
 module noc_block_fft #(
   parameter EN_MAGNITUDE_OUT = 0,        // CORDIC based magnitude calculation
-  parameter EN_MAGNITUDE_APPROX_OUT = 0, // Multiplier-less, lower resource usage
-  parameter EN_MAGNITUDE_SQ_OUT = 0,     // Magnitude squared
+  parameter EN_MAGNITUDE_APPROX_OUT = 1, // Multiplier-less, lower resource usage
+  parameter EN_MAGNITUDE_SQ_OUT = 1,     // Magnitude squared
   parameter EN_FFT_SHIFT = 1,            // Center zero frequency bin
   parameter NOC_ID = 64'hFF70_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
@@ -67,8 +67,6 @@ module noc_block_fft #(
   // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-  localparam NUM_AXI_CONFIG_BUS = 1;
-
   wire [31:0] m_axis_data_tdata;
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
@@ -78,10 +76,6 @@ module noc_block_fft #(
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
-  
-  wire [31:0] m_axis_config_tdata;
-  wire        m_axis_config_tvalid;
-  wire        m_axis_config_tready;
 
   axi_wrapper #(
     .SIMPLE_MODE(1))
@@ -89,7 +83,7 @@ module noc_block_fft #(
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(), .set_addr(), .set_data(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),
@@ -131,9 +125,14 @@ module noc_block_fft #(
   localparam [31:0] SR_FFT_SCALING      = 135;
   localparam [31:0] SR_FFT_SHIFT_CONFIG = 136;
 
+  // FFT Output
   localparam [1:0] COMPLEX_OUT = 0;
   localparam [1:0] MAG_OUT     = 1;
   localparam [1:0] MAG_SQ_OUT  = 2;
+
+  // FFT Direction
+  localparam [0:0] FFT_REVERSE = 0;
+  localparam [0:0] FFT_FORWARD = 1;
 
   wire [1:0]  magnitude_out;
   wire [31:0] fft_data_o_tdata;

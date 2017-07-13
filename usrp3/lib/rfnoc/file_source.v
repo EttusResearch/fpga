@@ -1,11 +1,11 @@
 
-// Copyright 2015, Ettus Research
+// Copyright 2017, Ettus Research
 
 // Dummy data source.  Turn it on by setting a packet length in its setting reg, turn it off by setting 0.  
 // Will generate as fast as it can.
 
 module file_source #(
-  parameter SR_NEXT_DST            = 0,
+  parameter SR_ENABLE              = 0,
   parameter SR_PKT_LENGTH          = 1,
   parameter SR_RATE                = 2,
   parameter SR_SEND_TIME           = 3,
@@ -17,7 +17,7 @@ module file_source #(
   parameter FILE_LENGTH            = 65536, // Bytes
   parameter FILENAME="")
 (
-  input clk, input reset,
+  input clk, input reset, input [31:0] sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
@@ -48,9 +48,9 @@ module file_source #(
   wire [1:0]  swap_samples;
   wire [1:0]  endianness;
 
-  setting_reg #(.my_addr(SR_NEXT_DST), .width(32)) sr_sid (
+  setting_reg #(.my_addr(SR_ENABLE), .width(1)) sr_sid (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(sid), .changed(changed_sid));
+    .out(enable), .changed());
 
   setting_reg #(.my_addr(SR_PKT_LENGTH), .width(16)) sr_len (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
@@ -87,9 +87,6 @@ module file_source #(
       count <= 0;
       index <= 0;
     end else begin
-      if (changed_sid) begin
-        seqnum <= 0;
-      end
       case (state)
         IDLE : begin
           if (len != 0) begin
@@ -164,7 +161,7 @@ module file_source #(
     if (reset) begin
        line_timer <= 0;
     end else begin
-      if (line_timer == 0) begin
+      if (line_timer == 0 || line_timer == 1) begin
         line_timer <= rate;
       end else begin
         line_timer <= line_timer - 1;
@@ -172,7 +169,7 @@ module file_source #(
     end
   end
 
-  assign int_tvalid = ((state==HEAD)|(state==DATA)|(state==TIME)) & (line_timer==0);
+  assign int_tvalid = enable & ((state==HEAD)|(state==DATA)|(state==TIME)) & (line_timer==0 || line_timer==1);
 
   axi_packet_gate #(.WIDTH(64)) gate (
     .clk(clk), .reset(reset), .clear(1'b0),
