@@ -3,7 +3,7 @@
 //
 
 module schmidl_cox #(
-  parameter WINDOW_LEN=64,
+  parameter [$clog2(64+1)-1:0] WINDOW_LEN=64,
   parameter PREAMBLE_LEN=160,
   parameter SR_FRAME_LEN=0,
   parameter SR_GAP_LEN=1,
@@ -28,7 +28,7 @@ module schmidl_cox #(
   wire [31:0] n16_tdata, n17_tdata;
   wire [23:0] n18_tdata;
   wire [63:0] n5_tdata;
-  wire [79:0] n6_tdata;
+  wire [2*(32+$clog2(WINDOW_LEN+1))-1:0] n6_tdata;
   wire [63:0] n7_tdata;
   wire [39:0] n9_tdata;
   wire n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast;
@@ -72,7 +72,7 @@ module schmidl_cox #(
     .o_tdata(n5_tdata), .o_tlast(n5_tlast), .o_tvalid(n5_tvalid), .o_tready(n5_tready));
 
   // moving sum of I & Q for S&C metric
-  wire [39:0] i_ms, q_ms;
+  wire [32+$clog2(WINDOW_LEN+1)-1:0] i_ms, q_ms;
   moving_sum #(.MAX_LEN(WINDOW_LEN), .WIDTH(32)) moving_sum_corr_i (
     .clk(clk), .reset(reset), .clear(clear),
     .len(WINDOW_LEN),
@@ -89,7 +89,7 @@ module schmidl_cox #(
   wire [63:0] n6_round_tdata;
   wire        n6_round_tlast, n6_round_tvalid, n6_round_tready;
   axi_round_and_clip_complex #(
-    .WIDTH_IN(40),
+    .WIDTH_IN(32+$clog2(WINDOW_LEN+1)),
     .WIDTH_OUT(32),
     .CLIP_BITS(PRE_DIV_GAIN+1)) // +1 due to cmult causing a mag reduction by 2
   round_iq (
