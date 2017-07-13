@@ -174,6 +174,14 @@ module noc_block_radio_core_tb;
     end
   endtask
 
+  task automatic read_fifo_size_reg;
+    input integer radio_num;
+    output [63:0] readback;
+    begin
+      tb_streamer.read_fifo_size_reg(sid_noc_block_radio_core,readback,radio_num);
+    end
+  endtask
+
   task automatic read_radio_reg;
     input integer radio_num;
     input [7:0] addr;
@@ -405,6 +413,7 @@ module noc_block_radio_core_tb;
   initial begin : tb_main
     string s;
     logic [63:0] noc_id;
+    logic [63:0] fifo_size;
     int num_channels;
     logic [63:0] readback;
 
@@ -436,7 +445,11 @@ module noc_block_radio_core_tb;
     $display("Read NOC ID");
     read_radio_reg(0, RB_NOC_ID, noc_id);
     $display("Read NOC ID: %16x",noc_id);
+
     `ASSERT_ERROR(noc_id == noc_block_radio_core.NOC_ID, "Incorrect NOC ID");
+    // Test read back fifo size on one block. All setup using default STR_SINK_FIFO_SIZE from noc_shell of each block
+    read_fifo_size_reg(0,fifo_size);
+    `ASSERT_ERROR(fifo_size == 2**(noc_block_radio_core.noc_shell.STR_SINK_FIFOSIZE[0 +: 8]+3),"Wrong FIFO Size");
     `TEST_CASE_DONE(1);
 
     /********************************************************

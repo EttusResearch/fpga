@@ -644,6 +644,19 @@ interface rfnoc_block_streamer #(
     end
   endtask
 
+  // Read NoC shell FIFO size register
+  // Args:
+  // - dst_sid:     Destination SID (Stream ID)
+  // - readback:    Readback word
+  // - block_port:  Block port
+  task automatic read_fifo_size_reg (
+    input logic [15:0] _dst_sid = dst_sid[0],
+    output logic [63:0] readback,
+    input int unsigned block_port = 0);
+    begin
+      read_reg(_dst_sid, RB_FIFOSIZE, readback, block_port);
+    end
+  endtask
 endinterface
 
 // Setup a RFNoC simulation. Creates clocks (bus_clk, ce_clk), resets (bus_rst, ce_rst), an
