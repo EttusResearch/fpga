@@ -5,7 +5,8 @@
 module noc_block_file_source #(
   parameter NOC_ID = 64'h0000_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,
-  parameter FILENAME = "")
+  parameter FILENAME = "",
+  parameter FILE_LENGTH = 65536)
 (
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -79,7 +80,8 @@ module noc_block_file_source #(
     .SR_PKT_LENGTH(BASE+1),
     .SR_RATE(BASE+2),
     .SR_SEND_TIME(BASE+3),
-    .FILENAME(FILENAME))
+    .FILENAME(FILENAME),
+    .FILE_LENGTH(FILE_LENGTH))
   file_source (
     .clk(ce_clk), .reset(ce_rst), .sid({src_sid,next_dst_sid}),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
