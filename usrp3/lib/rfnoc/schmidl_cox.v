@@ -30,7 +30,7 @@ module schmidl_cox #(
   wire [63:0] n5_tdata;
   wire [79:0] n6_tdata;
   wire [63:0] n7_tdata;
-  wire [39:0] n9_tdata;
+  wire [32+$clog2(WINDOW_LEN+1)-1:0] n9_tdata;
   wire n0_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, n5_tlast, n6_tlast, n7_tlast, n8_tlast, n9_tlast;
   wire n10_tlast, n11_tlast, n12_tlast, n13_tlast, n14_tlast, n15_tlast, n16_tlast, n17_tlast, n18_tlast;
   wire n0_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, n5_tvalid, n6_tvalid, n7_tvalid, n8_tvalid, n9_tvalid;
@@ -150,16 +150,16 @@ module schmidl_cox #(
     .o_tdata(n8_tdata), .o_tlast(n8_tlast), .o_tvalid(n8_tvalid), .o_tready(n8_tready));
 
   // moving average of magnitude squared
-  moving_sum #(.MAX_LEN(2*WINDOW_LEN), .WIDTH(32)) moving_sum_energy (
+  moving_sum #(.MAX_LEN(WINDOW_LEN), .WIDTH(32)) moving_sum_energy (
     .clk(clk), .reset(reset), .clear(clear),
-    .len(2*WINDOW_LEN),
+    .len(WINDOW_LEN),
     .i_tdata(n8_tdata), .i_tlast(n8_tlast), .i_tvalid(n8_tvalid), .i_tready(n8_tready),
     .o_tdata(n9_tdata), .o_tlast(n9_tlast), .o_tvalid(n9_tvalid), .o_tready(n9_tready));
 
   wire [31:0] mag_square_tdata;
   wire        mag_square_tlast, mag_square_tvalid, mag_square_tready;
   axi_round_and_clip #(
-    .WIDTH_IN(40),
+    .WIDTH_IN(32+$clog2(WINDOW_LEN+1)),
     .WIDTH_OUT(32),
     .CLIP_BITS(PRE_DIV_GAIN-1))
   round_mag_square (
