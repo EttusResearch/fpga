@@ -26,8 +26,8 @@ module file_source #(
 
   initial begin
     if (FILENAME != "") begin
-      file = $fopen(FILENAME, "r");
-      file_length = $fread(mem,file,0,FILE_LENGTH);
+      file = $fopen(FILENAME, "rb");
+      file_length = $fread(mem,file,0);
       $display("Read %d lines", file_length);
     end
   end
