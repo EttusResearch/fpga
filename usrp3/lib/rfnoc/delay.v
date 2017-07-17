@@ -3,7 +3,7 @@
 //
 // FIXME I don't like the way this is implemented.  Should we remove the FIFO completely?
 
-module delay
+module delay_mod
   #(parameter MAX_LEN=1023,
     parameter WIDTH=16)
    (input clk, input reset, input clear,
