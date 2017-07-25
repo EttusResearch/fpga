@@ -372,6 +372,11 @@
         <spirit:displayName>Pad Value</spirit:displayName>
         <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.PAD_VALUE" spirit:bitStringLength="64">0xFFFFFFFFFFFFFFFF</spirit:value>
       </spirit:modelParameter>
+      <spirit:modelParameter xsi:type="spirit:nameValueTypeType" spirit:dataType="std_logic_vector">
+        <spirit:name>HOLD_ERROR</spirit:name>
+        <spirit:displayName>Hold Error</spirit:displayName>
+        <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.PAD_VALUE" spirit:bitStringLength="1">0x0</spirit:value>
+      </spirit:modelParameter>
     </spirit:modelParameters>
   </spirit:model>
   <spirit:fileSets>
@@ -422,7 +427,7 @@
         <xilinx:taxonomy>/EttusResearch</xilinx:taxonomy>
       </xilinx:taxonomies>
       <xilinx:displayName>cvita_chunker_v1_0</xilinx:displayName>
-      <xilinx:coreRevision>2</xilinx:coreRevision>
+      <xilinx:coreRevision>3</xilinx:coreRevision>
       <xilinx:upgrades>
         <xilinx:canUpgradeFrom>user.org:user:cvita_chunker:1.0</xilinx:canUpgradeFrom>
       </xilinx:upgrades>
