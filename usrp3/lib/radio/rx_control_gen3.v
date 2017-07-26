@@ -119,19 +119,17 @@ module rx_control_gen3 #(
   reg [15:0] lines_left_pkt;
 
   reg [11:0] seqnum_cnt;
+  wire [11:0] next_seqnum = (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid & (rx_reg_tuser[127:126] != 2'b11)) ? seqnum_cnt + 1'b1 : seqnum_cnt;
   always @(posedge clk) begin
     if (reset | clear | clear_halt) begin
       seqnum_cnt <= 'd0;
     end else begin
-      // Do not increment sequence number on error packets
-      if (rx_reg_tlast & rx_reg_tready & rx_reg_tvalid & (rx_reg_tuser[127:126] != 2'b11)) begin
-        seqnum_cnt <= seqnum_cnt + 1'b1;
-      end
+      seqnum_cnt <= next_seqnum;
     end
   end
 
-  wire [127:0] error_header = {2'b11, 1'b1,           1'b1, seqnum_cnt,                  16'h24, resp_sid,  vita_time};
-  wire [127:0] rx_header    = {2'b00, use_timestamps,  eob, seqnum_cnt, 16'h0 /* len ignored */,      sid, start_time};
+  wire [127:0] error_header = {2'b11, 1'b1,           1'b1, next_seqnum,                  16'h24, resp_sid,  vita_time};
+  wire [127:0] rx_header    = {2'b00, use_timestamps,  eob, next_seqnum, 16'h0 /* len ignored */,      sid, start_time};
 
   always @(posedge clk) begin
     if (reset | clear) begin
