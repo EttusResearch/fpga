@@ -115,7 +115,7 @@ module axi_dma_fifo
    // Settings and Readback
    //
    wire [2:0]         rb_addr;
-   wire               clear_bclk;
+   wire               clear_request;
    wire               supress_enable_bclk;
    wire [15:0]        supress_threshold_bclk;
    wire [11:0]        timeout_bclk;
@@ -155,7 +155,7 @@ module axi_dma_fifo
    setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(32), .at_reset({16'h0, DEFAULT_TIMEOUT[11:0], 2'b00, 1'b0, 1'b1})) sr_fifo_ctrl
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_bclk}));
+      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_request}));
 
    // SETTING: Base Address for FIFO in memory space
    // Fields:
@@ -186,10 +186,106 @@ module axi_dma_fifo
    end
 
    //
+   // State machine to synchronize flushing the pipeline
+   //
+   localparam ST_FIFO_IDLE       = 0;
+   localparam ST_FIFO_MID_PKT    = 1;
+   localparam ST_FIFO_FLUSH      = 2;
+   localparam ST_FIFO_CLEAR      = 3;
+   localparam ST_FIFO_CLEAR_DONE = 4;
+   reg [2:0] fifo_state;
+
+   reg flush, throttle;
+   reg clear_bclk, clear_busy;
+   wire clear_ack;
+   reg [15:0] wait_cnt;
+
+   always @(posedge bus_clk) begin
+     if (bus_reset) begin
+       clear_busy            <= 1'b0;
+       clear_bclk            <= 1'b0;
+       throttle              <= 1'b0;
+       flush                 <= 1'b0;
+       wait_cnt              <= 0;
+       fifo_state            <= ST_FIFO_IDLE;
+     end else begin
+       // State machine to gracefully flush pipeline and then
+       // clear
+       case (fifo_state)
+         // After getting a clear request, wait until output
+         // is not in the middle of a packet.
+         ST_FIFO_IDLE : begin
+           clear_busy        <= 1'b0;
+           clear_bclk        <= 1'b0;
+           throttle          <= 1'b0;
+           flush             <= 1'b0;
+           wait_cnt          <= 0;
+           if (o_tvalid & o_tready & ~o_tlast) begin
+             fifo_state      <= ST_FIFO_MID_PKT;
+           end else if (clear_request) begin
+             clear_busy      <= 1'b1;
+             flush           <= 1'b1;
+             fifo_state      <= ST_FIFO_FLUSH;
+           end
+         end
+         ST_FIFO_MID_PKT : begin
+           if (o_tvalid & o_tready & o_tlast) begin
+             if (clear_request) begin
+               clear_busy    <= 1'b1;
+               flush         <= 1'b1;
+               fifo_state    <= ST_FIFO_FLUSH;
+             end else begin
+               fifo_state    <= ST_FIFO_IDLE;
+             end
+           end
+         end
+         // Enable flush and wait until pipeline has been empty
+         // for 2^16-1 cycles, then throttle input and assert clear
+         ST_FIFO_FLUSH : begin
+           if (i_tvalid | o_tvalid_int) begin
+             wait_cnt        <= 0;
+           end else begin
+             if (wait_cnt == 16'hFFFF) begin
+               clear_bclk    <= 1'b1;
+               throttle      <= 1'b1;
+               flush         <= 1'b0;
+               wait_cnt      <= 0;
+               fifo_state    <= ST_FIFO_CLEAR;
+             end else begin
+               wait_cnt      <= wait_cnt + 1;
+             end
+           end
+         end
+         // Wait for clear to propagate to dram_clk domain
+         ST_FIFO_CLEAR : begin
+           if (clear_ack) begin
+             clear_busy      <= 1'b0;
+             clear_bclk      <= 1'b0;
+             fifo_state      <= ST_FIFO_CLEAR_DONE;
+           end
+         end
+         // Wait for clear request to deassert to allow
+         // data back into the fifo
+         ST_FIFO_CLEAR_DONE : begin
+           if (~clear_request) begin
+             throttle        <= 1'b0;
+             fifo_state      <= ST_FIFO_IDLE;
+           end
+         end
+         default : begin
+           fifo_state        <= ST_FIFO_IDLE;
+         end
+       endcase
+     end
+   end
+
+   //
    // Synchronize settings register values to dram_clk
    //
    wire clear;
    synchronizer #(.INITIAL_VAL(1'b1)) clear_sync_inst (.clk(dram_clk), .rst(1'b0), .in(clear_bclk), .out(clear));
+
+   synchronizer #(.INITIAL_VAL(1'b0)) clear_ack_sync_inst (.clk(bus_clk), .rst(1'b0), .in(clear), .out(clear_ack));
 
    wire               set_suppress_en;
    wire [15:0]        set_supress_threshold;
@@ -274,14 +370,15 @@ module axi_dma_fifo
       .rd_clk(bus_clk), .dout(status_out_bclk),
       .rd_en(1'b1), .empty(), .rd_data_count()
    );
-   assign rb_fifo_status[31]         = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
-   assign rb_fifo_status[30:27]      = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
+   assign rb_fifo_status[31]         = 1'b1;      //DRAM FIFO signature (validates existence of DRAM FIFO)
+   assign rb_fifo_status[30]         = clear_busy;
+   assign rb_fifo_status[29:27]      = 3'd0;
    assign rb_fifo_status[AWIDTH-4:0] = status_out_bclk[AWIDTH-4:0];   //FIFO fullness count in 64bit words (max 27 bits = 1GiB)
 
    ///////////////////////////////////////////////////////////////////////////////
    // Inline BIST for production testing
    //
-   wire       i_tready_int;
+   wire       i_tvalid_int, i_tready_int;
 
    wire [DWIDTH-1:0] i_tdata_fifo;
    wire       i_tvalid_fifo, i_tready_fifo, i_tlast_fifo;
@@ -289,7 +386,7 @@ module axi_dma_fifo
    wire [DWIDTH-1:0] i_tdata_bist;
    wire       i_tvalid_bist, i_tready_bist, i_tlast_bist;
 
-   wire       o_tvalid_int;
+   wire       o_tvalid_int, o_tready_int;
 
    wire [DWIDTH-1:0] o_tdata_fifo;
    wire       o_tvalid_fifo, o_tready_fifo, o_tlast_fifo;
@@ -302,13 +399,18 @@ module axi_dma_fifo
 
    axi_mux4 #(.PRIO(1), .WIDTH(DWIDTH), .BUFFER(1)) axi_mux (
       .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
-      .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid), .i0_tready(i_tready_int),
-      .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist), .i1_tready(i_tready_bist),
+      .i0_tdata(i_tdata), .i0_tlast(i_tlast), .i0_tvalid(i_tvalid_int), .i0_tready(i_tready_int),
+      .i1_tdata(i_tdata_bist), .i1_tlast(i_tlast_bist), .i1_tvalid(i_tvalid_bist_int), .i1_tready(i_tready_bist_int),
       .i2_tdata({DWIDTH{1'b0}}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
       .i3_tdata({DWIDTH{1'b0}}), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(i_tdata_fifo), .o_tlast(i_tlast_fifo), .o_tvalid(i_tvalid_fifo), .o_tready(i_tready_fifo)
    );
-   assign i_tready = i_tready_int & (~clear_bclk);
+
+   // Input throttle logic
+   assign i_tvalid_int      = throttle ? 1'b0 : i_tvalid;
+   assign i_tready          = throttle ? 1'b0 : i_tready_int;
+   assign i_tvalid_bist_int = throttle ? 1'b0 : i_tvalid_bist;
+   assign i_tready_bist     = throttle ? 1'b0 : i_tready_bist_int;
 
    wire       bist_running, bist_done;
    wire [1:0] bist_error;
@@ -342,9 +444,12 @@ module axi_dma_fifo
       .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
       .i_terror(1'b0),
-      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid_int), .o_tready(o_tready | clear_bclk)
+      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid_int), .o_tready(o_tready_int)
    );
-   assign o_tvalid = o_tvalid_int & (~clear_bclk);
+
+   // Flush logic
+   assign o_tvalid     = flush ? 1'b0 : o_tvalid_int;
+   assign o_tready_int = flush ? 1'b1 : o_tready;
 
    //
    // Buffer input in FIFO's. Embeded tlast signal using ESCape code.
