@@ -214,7 +214,6 @@ module noc_block_ddc #(
       wire sample_in_tvalid, sample_in_tready;
       wire sample_out_tvalid, sample_out_tready;
       wire nc;
-      wire warning_header_fifo_full;
       wire warning_long_throttle;
       wire error_extra_outputs;
       wire error_drop_pkt_lockup;
@@ -238,7 +237,6 @@ module noc_block_ddc #(
         .m_axis_data_tvalid(sample_in_tvalid), .m_axis_data_tready(sample_in_tready),
         .s_axis_data_tdata({1'b0,sample_out_tdata}), .s_axis_data_tlast(1'b0),
         .s_axis_data_tvalid(sample_out_tvalid), .s_axis_data_tready(sample_out_tready),
-        .warning_header_fifo_full(warning_header_fifo_full),
         .warning_long_throttle(warning_long_throttle),
         .error_extra_outputs(error_extra_outputs),
         .error_drop_pkt_lockup(error_drop_pkt_lockup));
