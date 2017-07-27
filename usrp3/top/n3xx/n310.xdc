@@ -4,20 +4,20 @@
 ## Bank 12, 2.5V LVCMOS
 #########################################################################################
 
-#set_property PACKAGE_PIN   AF25             [get_ports {FpgaGpio[0]}]
-#set_property PACKAGE_PIN   AE25             [get_ports {FpgaGpio[1]}]
-#set_property PACKAGE_PIN   AG26             [get_ports {FpgaGpio[2]}]
-#set_property PACKAGE_PIN   AG27             [get_ports {FpgaGpio[3]}]
-#set_property PACKAGE_PIN   AE26             [get_ports {FpgaGpio[4]}]
-#set_property PACKAGE_PIN   AB26             [get_ports {FpgaGpio[5]}]
-#set_property PACKAGE_PIN   AF27             [get_ports {FpgaGpio[6]}]
-#set_property PACKAGE_PIN   AA27             [get_ports {FpgaGpio[7]}]
-#set_property PACKAGE_PIN   AE27             [get_ports {FpgaGpio[8]}]
-#set_property PACKAGE_PIN   AC26             [get_ports {FpgaGpio[9]}]
-#set_property PACKAGE_PIN   AD25             [get_ports {FpgaGpio[10]}]
-#set_property PACKAGE_PIN   AD26             [get_ports {FpgaGpio[11]}]
+set_property PACKAGE_PIN   AF25             [get_ports {FPGA_GPIO[0]}]
+set_property PACKAGE_PIN   AE25             [get_ports {FPGA_GPIO[1]}]
+set_property PACKAGE_PIN   AG26             [get_ports {FPGA_GPIO[2]}]
+set_property PACKAGE_PIN   AG27             [get_ports {FPGA_GPIO[3]}]
+set_property PACKAGE_PIN   AE26             [get_ports {FPGA_GPIO[4]}]
+set_property PACKAGE_PIN   AB26             [get_ports {FPGA_GPIO[5]}]
+set_property PACKAGE_PIN   AF27             [get_ports {FPGA_GPIO[6]}]
+set_property PACKAGE_PIN   AA27             [get_ports {FPGA_GPIO[7]}]
+set_property PACKAGE_PIN   AE27             [get_ports {FPGA_GPIO[8]}]
+set_property PACKAGE_PIN   AC26             [get_ports {FPGA_GPIO[9]}]
+set_property PACKAGE_PIN   AD25             [get_ports {FPGA_GPIO[10]}]
+set_property PACKAGE_PIN   AD26             [get_ports {FPGA_GPIO[11]}]
 #
-#set_property IOSTANDARD    LVCMOS25         [get_ports {FpgaGpio[*]}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {FPGA_GPIO[*]}]
 
 
 ## Clocking : ###########################################################################

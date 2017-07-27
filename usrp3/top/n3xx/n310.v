@@ -9,8 +9,7 @@
 module n310
 (
 
-   //inout [11:0] FpgaGpio,
-   //output FpgaGpioEn,
+   inout [11:0] FPGA_GPIO,
 
    input FPGA_REFCLK_P,
    input FPGA_REFCLK_N,
@@ -1537,6 +1536,7 @@ module n310
 
   wire [63:0] ps_gpio_out;
   wire [63:0] ps_gpio_in;
+  wire [63:0] ps_gpio_tri;
 
   assign DBA_CPLD_JTAG_TCK = ps_gpio_out[0];
   assign DBA_CPLD_JTAG_TDI = ps_gpio_out[1];
@@ -1547,6 +1547,12 @@ module n310
   assign DBB_CPLD_JTAG_TDI = ps_gpio_out[5];
   assign DBB_CPLD_JTAG_TMS = ps_gpio_out[6];
   assign ps_gpio_in[7]     = DBB_CPLD_JTAG_TDO;
+
+  genvar i;
+  generate for (i=0; i<12; i=i+1) begin: io_tristate_gen
+    assign FPGA_GPIO[i] = ps_gpio_tri[32+i] ? 1'bz : ps_gpio_out[32+i];
+    assign ps_gpio_in[32+i] = FPGA_GPIO[i];
+  end endgenerate
 
   n310_ps inst_n310_ps
   (
@@ -1719,6 +1725,7 @@ module n310
 
     .GPIO_I(ps_gpio_in),
     .GPIO_O(ps_gpio_out),
+    .GPIO_T(ps_gpio_tri),
 
     .FCLK_CLK0(FCLK_CLK0),
     .FCLK_RESET0(FCLK_RESET0),

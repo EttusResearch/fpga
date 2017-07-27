@@ -188,6 +188,7 @@ module n310_ps
   input [15:0]      IRQ_F2P,
   input [63:0]      GPIO_I,
   output [63:0]     GPIO_O,
+  output [63:0]     GPIO_T,
   output            FCLK_CLK0,
   output            FCLK_RESET0,
   output            FCLK_CLK1,
@@ -477,6 +478,7 @@ module n310_ps
 
     .GPIO_O(GPIO_O),
     .GPIO_I(GPIO_I),
+    .GPIO_T(GPIO_T),
 
     .M_AXI_GP0_ARVALID(processing_system7_M_AXI_GP0_ARVALID),
     .M_AXI_GP0_AWVALID(processing_system7_M_AXI_GP0_AWVALID),
