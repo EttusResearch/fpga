@@ -563,14 +563,14 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Check 'Continue on next packet' policy",i);
       fork
       begin
-        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
+        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                       {4'b0101}, // Set continue on next packet & send error packets
                       readback);
         // Forcibly reset expected RX sequence number which will cause a sequence number gap
         send_radio_cmd(i, SR_CLEAR_RX_FC, 0, readback);
         send_tx_packet(i,SPP,0,1,0);
         // Check for seqnum error packet
-        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
       end
       begin
         check_tx_idle(i);
@@ -590,12 +590,12 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Check 'Continue on next burst' policy",i);
       fork
       begin
-        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
+        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                     {4'b1001}, // Set continue on next burst & send error packets
                     readback);
         send_radio_cmd(i, SR_CLEAR_RX_FC, 0, readback);
         send_tx_packet(i,SPP,0,0,0); // EOB specifically NOT set
-        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
       end
       begin
         check_tx_idle(i);
@@ -626,13 +626,13 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Check 'Always continue' policy",i);
       fork
       begin
-        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
+        send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                        {4'b0011}, // Set always continue & send error packets
                        readback);
         send_radio_cmd(i, SR_CLEAR_RX_FC, 0, readback);
         send_tx_packet(i,SPP,0,1,0);
         // We expect to get two responses: Sequence number error and EOB ACK 
-        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
+        check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
         check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
@@ -642,7 +642,7 @@ module noc_block_radio_core_tb;
       join
       $display("Radio %2d: Return radio to default policy",i);
       // Reset policy back to default
-      send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
+      send_radio_cmd(i, noc_block_radio_core.noc_shell.gen_noc_input_port[0].noc_input_port.noc_responder.packet_error_responder.SR_ERROR_POLICY,
                      {4'b0101},
                      readback);
       // Make sure we did not break anything

@@ -64,26 +64,27 @@ module noc_shell
     );
 
    `include "noc_shell_regs.vh"
+
    localparam RB_AWIDTH = 3;
    localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'b1;
    localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'b0;
 
-   wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
-		  cmdin_tdata,  ackout_tdata;
-   wire 	  dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast,
-		  cmdin_tlast,  ackout_tlast;
-   wire 	  dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid,
-		  cmdin_tvalid, ackout_tvalid;
-   wire 	  dataout_tready, datain_tready, fcin_tready, fcout_tready,
-		  cmdin_tready,  ackout_tready;
+   wire [63:0] dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata, cmdin_tdata, ackout_tdata;
+   wire dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast, cmdin_tlast, ackout_tlast;
+   wire dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid, cmdin_tvalid, ackout_tvalid;
+   wire dataout_tready, datain_tready, fcin_tready, fcout_tready, cmdin_tready, ackout_tready;
+
+   wire [OUTPUT_PORTS*64-1:0] str_src_throttle_tdata;
+   wire [OUTPUT_PORTS-1:0] str_src_throttle_tlast, str_src_throttle_tvalid, str_src_throttle_tready;
 
    wire [31:0] 	  debug_sfc;
 
    ///////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos to get the computation engine on its own clock
    ///////////////////////////////////////////////////////////////////////////////////////
-   wire [63:0] 	  i_tdata_b, o_tdata_b;
-   wire 	  i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
+   wire [63:0] i_tdata_b, o_tdata_b;
+   wire i_tlast_b, o_tlast_b, i_tvalid_b, o_tvalid_b, i_tready_b, o_tready_b;
+
    axi_fifo_2clk #(.WIDTH(65), .SIZE(5)) in_fifo   // Very little buffering needed here, only a clock domain crossing
      (.reset(bus_rst),
       .i_aclk(bus_clk), .i_tvalid(i_tvalid), .i_tready(i_tready), .i_tdata({i_tlast,i_tdata}),
@@ -117,8 +118,18 @@ module noc_shell
       .o2_tdata(cmdin_tdata), .o2_tlast(cmdin_tlast), .o2_tvalid(cmdin_tvalid), .o2_tready(cmdin_tready),
       .o3_tdata(ackin_tdata), .o3_tlast(ackin_tlast), .o3_tvalid(ackin_tvalid), .o3_tready(ackin_tready));
 
-   wire [INPUT_PORTS-1:0]  clear_rx_fc;
-   wire [OUTPUT_PORTS-1:0] clear_tx_fc;
+   reg [OUTPUT_PORTS-1:0] throttle_src;
+   wire [OUTPUT_PORTS-1:0] throttle_src_active;
+   reg [INPUT_PORTS-1:0] throttle_sink;
+   wire [INPUT_PORTS-1:0] throttle_sink_active;
+
+   wire [INPUT_PORTS-1:0] clear_rx_fc;
+   wire [INPUT_PORTS-1:0] clear_rx_stb;
+   reg [OUTPUT_PORTS-1:0] clear_tx_fc;
+   wire [OUTPUT_PORTS-1:0] clear_tx_stb;
+
+   wire [OUTPUT_PORTS-1:0] next_dst_sid_stb;
+   reg [OUTPUT_PORTS-1:0] next_dst_sid_set;
 
    wire [64*BLOCK_PORTS-1:0] cmdin_ports_tdata;
    wire [BLOCK_PORTS-1:0]    cmdin_ports_tvalid, cmdin_ports_tready, cmdin_ports_tlast;
@@ -197,9 +208,10 @@ module noc_shell
           .in(set_data[32*k+31:32*k]),.out(src_sid[16*k+15:16*k]),.changed());
 
        if (k < INPUT_PORTS) begin
+         assign clear_rx_fc[k] = clear_rx_stb[k];
          setting_reg #(.my_addr(SR_CLEAR_RX_FC), .at_reset(0)) sr_clear_rx_fc
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_rx_fc[k]));
+            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_rx_stb[k]));
          setting_reg #(.my_addr(SR_RESP_IN_DST_SID), .width(16), .at_reset(0)) sr_resp_in_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
             .in(set_data[32*k+31:32*k]),.out(resp_in_dst_sid[16*k+15:16*k]),.changed());
@@ -210,11 +222,11 @@ module noc_shell
          assign clear_tx_seqnum[k] = clear_tx_fc[k];
          setting_reg #(.my_addr(SR_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_tx_fc[k]));
+            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_tx_stb[k]));
          // Destination Stream ID of the next RFNoC block
          setting_reg #(.my_addr(SR_NEXT_DST_SID), .width(16), .at_reset(0)) sr_next_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(next_dst_sid[16*k+15:16*k]),.changed());
+            .in(set_data[32*k+31:32*k]),.out(next_dst_sid[16*k+15:16*k]),.changed(next_dst_sid_stb[k]));
          setting_reg #(.my_addr(SR_RESP_OUT_DST_SID), .width(16), .at_reset(0)) sr_resp_out_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
             .in(set_data[32*k+31:32*k]),.out(resp_out_dst_sid[16*k+15:16*k]),.changed());
@@ -235,39 +247,73 @@ module noc_shell
 
    genvar i;
    generate
-     if(OUTPUT_PORTS == 1) begin : gen_noc_output_port
+     for (i=0 ; i < OUTPUT_PORTS ; i = i + 1) begin : gen_noc_output_port
+       // If a clear is issued, throttle output until
+       // next_dst_sid has been programmed.
+       always @(posedge clk) begin
+         if (reset) begin
+           clear_tx_fc[i]        <= 1'b1;
+           throttle_src[i]       <= 1'b1;
+           next_dst_sid_set[i]   <= 1'b0;
+         end else begin
+           if (next_dst_sid_stb[i]) begin
+             next_dst_sid_set[i] <= 1'b1;
+           end
+           if (clear_tx_stb[i]) begin
+             throttle_src[i]     <= 1'b1;
+             next_dst_sid_set[i] <= 1'b0;
+           end else if (clear_tx_fc[i] & next_dst_sid_set[i]) begin
+             clear_tx_fc[i]      <= 1'b0;
+             throttle_src[i]     <= 1'b0;
+           end else if (throttle_src[i] & throttle_src_active[i]) begin
+             clear_tx_fc[i]      <= 1'b1;
+           end
+         end
+       end
+
+       axi_throttle #(
+         .INITIAL_STATE(1),
+         .WAIT_FOR_LAST(1), // Do not throttle mid-packet
+         .WIDTH(64))
+       axi_throttle_src (
+         .clk(clk), .reset(reset),
+         .enable(throttle_src[i]), .active(throttle_src_active[i]),
+         .i_tdata(str_src_tdata[64*i+63:64*i]), .i_tlast(str_src_tlast[i]),
+         .i_tvalid(str_src_tvalid[i]), .i_tready(str_src_tready[i]),
+         .o_tdata(str_src_throttle_tdata[64*i+63:64*i]), .o_tlast(str_src_throttle_tlast[i]),
+         .o_tvalid(str_src_throttle_tvalid[i]), .o_tready(str_src_throttle_tready[i]));
+
        noc_output_port #(
          .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
          .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN),
-         .PORT_NUM(0), .MTU(MTU), .USE_GATE(USE_GATE_MASK))
+         .PORT_NUM(i), .MTU(MTU[8*i+7:8*i]), .USE_GATE(USE_GATE_MASK[i]))
        noc_output_port (
-         .clk(clk), .reset(reset), .clear(clear_tx_fc),
-         .set_stb(set_stb[0]), .set_addr(set_addr[7:0]), .set_data(set_data[31:0]),
-         .dataout_tdata(dataout_tdata), .dataout_tlast(dataout_tlast), .dataout_tvalid(dataout_tvalid), .dataout_tready(dataout_tready),
-         .fcin_tdata(fcin_tdata), .fcin_tlast(fcin_tlast), .fcin_tvalid(fcin_tvalid), .fcin_tready(fcin_tready),
-         .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready));
-     end else begin : gen_noc_output_port
-       for (i=0 ; i < OUTPUT_PORTS ; i = i + 1) begin : loop
-         noc_output_port #(
-           .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
-           .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN),
-           .PORT_NUM(i), .MTU(MTU[8*i+7:8*i]), .USE_GATE(USE_GATE_MASK[i]))
-         noc_output_port (
-           .clk(clk), .reset(reset), .clear(clear_tx_fc[i]),
-           .set_stb(set_stb[i]), .set_addr(set_addr[8*i+7:8*i]), .set_data(set_data[32*i+31:32*i]),
-           .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
-           .dataout_tvalid(dataout_ports_tvalid[i]), .dataout_tready(dataout_ports_tready[i]),
-           .fcin_tdata(fcin_ports_tdata[64*i+63:64*i]), .fcin_tlast(fcin_ports_tlast[i]),
-           .fcin_tvalid(fcin_ports_tvalid[i]), .fcin_tready(fcin_ports_tready[i]),
-           .str_src_tdata(str_src_tdata[64*i+63:64*i]), .str_src_tlast(str_src_tlast[i]),
-           .str_src_tvalid(str_src_tvalid[i]), .str_src_tready(str_src_tready[i]));
-       end
+         .clk(clk), .reset(reset), .clear(clear_tx_fc[i]),
+         .set_stb(set_stb[i]), .set_addr(set_addr[8*i+7:8*i]), .set_data(set_data[32*i+31:32*i]),
+         .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
+         .dataout_tvalid(dataout_ports_tvalid[i]), .dataout_tready(dataout_ports_tready[i]),
+         .fcin_tdata(fcin_ports_tdata[64*i+63:64*i]), .fcin_tlast(fcin_ports_tlast[i]),
+         .fcin_tvalid(fcin_ports_tvalid[i]), .fcin_tready(fcin_ports_tready[i]),
+         .str_src_tdata(str_src_throttle_tdata[64*i+63:64*i]), .str_src_tlast(str_src_throttle_tlast[i]),
+         .str_src_tvalid(str_src_throttle_tvalid[i]), .str_src_tready(str_src_throttle_tready[i]));
+     end
+
+     if (OUTPUT_PORTS == 1) begin
+       assign dataout_tdata        = dataout_ports_tdata;
+       assign dataout_tlast        = dataout_ports_tlast;
+       assign dataout_tvalid       = dataout_ports_tvalid;
+       assign dataout_ports_tready = dataout_tready;
+       assign fcin_ports_tdata     = fcin_tdata;
+       assign fcin_ports_tlast     = fcin_tlast;
+       assign fcin_ports_tvalid    = fcin_tvalid;
+       assign fcin_tready          = fcin_ports_tready;
+     end else begin
        axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_mux (
-         .clk(clk), .reset(reset), .clear(|clear_tx_fc),
+         .clk(clk), .reset(reset), .clear(1'b0),
          .i_tdata(dataout_ports_tdata), .i_tlast(dataout_ports_tlast), .i_tvalid(dataout_ports_tvalid), .i_tready(dataout_ports_tready),
          .o_tdata(dataout_tdata), .o_tlast(dataout_tlast), .o_tvalid(dataout_tvalid), .o_tready(dataout_tready));
        axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_demux (
-         .clk(clk), .reset(reset), .clear(|clear_tx_fc),
+         .clk(clk), .reset(reset), .clear(1'b0),
          .header(header_fcin), .dest(header_fcin[3:0]),
          .i_tdata(fcin_tdata), .i_tlast(fcin_tlast), .i_tvalid(fcin_tvalid), .i_tready(fcin_tready),
          .o_tdata(fcin_ports_tdata), .o_tlast(fcin_ports_tlast), .o_tvalid(fcin_ports_tvalid), .o_tready(fcin_ports_tready));
@@ -287,44 +333,41 @@ module noc_shell
 
    genvar j;
    generate
-     if (INPUT_PORTS == 1) begin : gen_noc_input_port
+     for(j=0; j<INPUT_PORTS; j=j+1) begin : gen_noc_input_port
        noc_input_port #(
          .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
          .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
          .SR_ERROR_POLICY(SR_ERROR_POLICY),
-         .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE))
+         .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE[8*j+7:8*j]))
        noc_input_port (
-         .clk(clk), .reset(reset), .clear(clear_rx_fc),
-         .resp_sid({src_sid[15:0],resp_in_dst_sid[15:0]}),
-         .set_stb(set_stb[0]), .set_addr(set_addr[7:0]), .set_data(set_data[31:0]),
-         .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
-         .o_tdata(str_sink_tdata), .o_tlast(str_sink_tlast), .o_tvalid(str_sink_tvalid), .o_tready(str_sink_tready),
-         .fc_tdata(fcout_tdata), .fc_tlast(fcout_tlast), .fc_tvalid(fcout_tvalid), .fc_tready(fcout_tready));
-     end else begin : gen_noc_input_port
-       for(j=0; j<INPUT_PORTS; j=j+1) begin : loop
-         noc_input_port #(
-           .SR_FLOW_CTRL_CYCS_PER_ACK(SR_FLOW_CTRL_CYCS_PER_ACK),
-           .SR_FLOW_CTRL_PKTS_PER_ACK(SR_FLOW_CTRL_PKTS_PER_ACK),
-           .SR_ERROR_POLICY(SR_ERROR_POLICY),
-           .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE[8*j+7:8*j]))
-         noc_input_port (
-           .clk(clk), .reset(reset), .clear(clear_rx_fc[j]),
-           .resp_sid({src_sid[16*j+15:16*j],resp_in_dst_sid[16*j+15:16*j]}),
-           .set_stb(set_stb[j]), .set_addr(set_addr[8*j+7:8*j]), .set_data(set_data[32*j+31:32*j]),
-           .i_tdata(datain_ports_tdata[64*j+63:64*j]), .i_tlast(datain_ports_tlast[j]),
-           .i_tvalid(datain_ports_tvalid[j]), .i_tready(datain_ports_tready[j]),
-           .o_tdata(str_sink_tdata[64*j+63:64*j]), .o_tlast(str_sink_tlast[j]),
-           .o_tvalid(str_sink_tvalid[j]), .o_tready(str_sink_tready[j]),
-           .fc_tdata(fcout_ports_tdata[64*j+63:64*j]), .fc_tlast(fcout_ports_tlast[j]),
-           .fc_tvalid(fcout_ports_tvalid[j]), .fc_tready(fcout_ports_tready[j]));
-       end
+         .clk(clk), .reset(reset), .clear(clear_rx_fc[j]),
+         .resp_sid({src_sid[16*j+15:16*j],resp_in_dst_sid[16*j+15:16*j]}),
+         .set_stb(set_stb[j]), .set_addr(set_addr[8*j+7:8*j]), .set_data(set_data[32*j+31:32*j]),
+         .i_tdata(datain_ports_tdata[64*j+63:64*j]), .i_tlast(datain_ports_tlast[j]),
+         .i_tvalid(datain_ports_tvalid[j]), .i_tready(datain_ports_tready[j]),
+         .o_tdata(str_sink_tdata[64*j+63:64*j]), .o_tlast(str_sink_tlast[j]),
+         .o_tvalid(str_sink_tvalid[j]), .o_tready(str_sink_tready[j]),
+         .fc_tdata(fcout_ports_tdata[64*j+63:64*j]), .fc_tlast(fcout_ports_tlast[j]),
+         .fc_tvalid(fcout_ports_tvalid[j]), .fc_tready(fcout_ports_tready[j]));
+     end
+
+     if (INPUT_PORTS == 1) begin
+       assign datain_ports_tdata  = datain_tdata;
+       assign datain_ports_tlast  = datain_tlast;
+       assign datain_ports_tvalid = datain_tvalid;
+       assign datain_tready       = datain_ports_tready;
+       assign fcout_tdata         = fcout_ports_tdata;
+       assign fcout_tlast         = fcout_ports_tlast;
+       assign fcout_tvalid        = fcout_ports_tvalid;
+       assign fcout_ports_tready  = fcout_tready;
+     end else begin
        axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
-         .clk(clk), .reset(reset), .clear(|clear_rx_fc),
+         .clk(clk), .reset(reset), .clear(1'b0),
          .header(header_datain), .dest(header_datain[3:0]),
          .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
          .o_tdata(datain_ports_tdata), .o_tlast(datain_ports_tlast), .o_tvalid(datain_ports_tvalid), .o_tready(datain_ports_tready));
        axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_mux (
-         .clk(clk), .reset(reset), .clear(|clear_rx_fc),
+         .clk(clk), .reset(reset), .clear(1'b0),
          .i_tdata(fcout_ports_tdata), .i_tlast(fcout_ports_tlast), .i_tvalid(fcout_ports_tvalid), .i_tready(fcout_ports_tready),
          .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
      end
