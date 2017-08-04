@@ -81,6 +81,7 @@ axi_round.v \
 axi_clip.v \
 axi_serializer.v \
 axi_deserializer.v \
+axi_throttle.v \
 complex_to_mag_approx.v \
 fosphor/delay.v \
 fosphor/fifo_srl.v \
