@@ -21,9 +21,9 @@ localparam [7:0] SR_RX_CTRL_OUTPUT_FORMAT = 158;
 /* Daughter board control settings bus register */
 localparam [7:0] SR_MISC_OUTS            = 160;
 localparam [7:0] SR_SPI                  = 168; // 168-173
-localparam [7:0] SR_LEDS                 = 176; // 176-181
-localparam [7:0] SR_FP_GPIO              = 184; // 184-189
-localparam [7:0] SR_DB_GPIO              = 192; // 192-197
+localparam [7:0] SR_LEDS                 = 176; // 176-182
+localparam [7:0] SR_FP_GPIO              = 184; // 184-190
+localparam [7:0] SR_DB_GPIO              = 192; // 192-198
 /* NOTE: Upper 32 registers are reserved for the output settings bus (see noc_block_radio_core.v) */
 localparam [7:0] SR_EXTERNAL_BASE        = 224; // 224-255
 

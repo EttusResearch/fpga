@@ -79,8 +79,8 @@ module radio_core #(
     .rb_stb(db_rb_stb), .rb_addr(rb_addr), .rb_data(db_rb_data),
     .run_rx(run_rx), .run_tx(run_tx),
     .misc_ins(misc_ins), .misc_outs(misc_outs),
-    .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
-    .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
+    .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr), .fp_gpio_fab(32'h0 /* no fabric ctrl*/),
+    .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr), .db_gpio_fab(32'h0 /* no fabric ctrl*/)
     .leds(leds),
     .spi_clk(spi_clk), .spi_rst(spi_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso));
 

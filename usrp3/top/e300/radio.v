@@ -248,23 +248,26 @@ module radio #(
       .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
       .debug());
 
-   gpio_atr #(.BASE(SR_GPIO), .WIDTH(32)) gpio_atr
+   gpio_atr #(.BASE(SR_GPIO), .WIDTH(32), .FAB_CTRL_EN(0)) db_gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
-      .gpio_in(db_gpio_in), .gpio_out(db_gpio_out), .gpio_ddr(db_gpio_ddr), .gpio_sw_rb(gpio_readback));
+      .gpio_in(db_gpio_in), .gpio_out(db_gpio_out), .gpio_ddr(db_gpio_ddr),
+      .gpio_out_fab(32'h00000000 /* no fabric control */), .gpio_sw_rb(gpio_readback));
 
-   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32)) fp_gpio_atr
+   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32), .FAB_CTRL_EN(0)) fp_gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
-      .gpio_in(fp_gpio_in), .gpio_out(fp_gpio_out), .gpio_ddr(fp_gpio_ddr), .gpio_sw_rb(fp_gpio_readback));
+      .gpio_in(fp_gpio_in), .gpio_out(fp_gpio_out), .gpio_ddr(fp_gpio_ddr),
+      .gpio_out_fab(32'h00000000 /* no fabric control */), .gpio_sw_rb(fp_gpio_readback));
 
-   gpio_atr #(.BASE(SR_LEDS), .WIDTH(3), .DEFAULT_DDR(3'b111), .DEFAULT_IDLE(3'b000)) gpio_leds
+   gpio_atr #(.BASE(SR_LEDS), .WIDTH(3), .FAB_CTRL_EN(0), .DEFAULT_DDR(3'b111), .DEFAULT_IDLE(3'b000)) gpio_leds
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
-      .gpio_in(3'b000), .gpio_out(leds), .gpio_ddr(/*assumed outs*/), .gpio_sw_rb());
+      .gpio_in(3'b000), .gpio_out(leds), .gpio_ddr(/*assumed outs*/),
+      .gpio_out_fab(3'h0 /* no fabric control */), .gpio_sw_rb());
 
    timekeeper #(.SR_TIME_HI(SR_TIME), .SR_TIME_LO(SR_TIME+1), .SR_TIME_CTRL(SR_TIME+2)) timekeeper
      (.clk(radio_clk), .reset(radio_rst), .pps(pps), .sync_in(time_sync), .strobe(1'b1),

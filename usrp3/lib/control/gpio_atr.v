@@ -6,6 +6,7 @@
 module gpio_atr #(
   parameter BASE          = 0,
   parameter WIDTH         = 32,
+  parameter FAB_CTRL_EN   = 0,
   parameter DEFAULT_DDR   = 0,
   parameter DEFAULT_IDLE  = 0
 ) (
@@ -15,11 +16,12 @@ module gpio_atr #(
   input      [WIDTH-1:0]  gpio_in,                              //GPIO input state
   output reg [WIDTH-1:0]  gpio_out,                             //GPIO output state
   output reg [WIDTH-1:0]  gpio_ddr,                             //GPIO direction (0=input, 1=output)
+  input      [WIDTH-1:0]  gpio_out_fab,                         //GPIO driver bus from fabric
   output reg [WIDTH-1:0]  gpio_sw_rb                            //Readback value for software
 );
   genvar i;
 
-  wire [WIDTH-1:0]   in_idle, in_tx, in_rx, in_fdx, ddr_reg, atr_disable;
+  wire [WIDTH-1:0]   in_idle, in_tx, in_rx, in_fdx, ddr_reg, atr_disable, fabric_ctrl;
   reg [WIDTH-1:0]    ogpio, igpio;
 
   setting_reg #(.my_addr(BASE+0), .width(WIDTH), .at_reset(DEFAULT_IDLE)) reg_idle (
@@ -46,13 +48,21 @@ module gpio_atr #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
     .out(atr_disable),.changed());
 
+  generate if (FAB_CTRL_EN == 1) begin
+    setting_reg #(.my_addr(BASE+6), .width(WIDTH)) reg_fabric_ctrl (
+      .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr), .in(set_data),
+      .out(fabric_ctrl),.changed());
+  end else begin
+    assign fabric_ctrl = {WIDTH{1'b0}};
+  end endgenerate
+
   //Pipeline rx and tx signals for easier timing closure
   reg rx_d, tx_d;
   always @(posedge clk)
     {rx_d, tx_d} <= {rx, tx};
 
-  //ATR selection MUX
   generate for (i=0; i<WIDTH; i=i+1) begin: gpio_mux_gen
+    //ATR selection MUX
     always @(posedge clk) begin
       case({atr_disable[i], tx_d, rx_d})
         3'b000:   ogpio[i] <= in_idle[i];
@@ -62,11 +72,13 @@ module gpio_atr #(
         default:  ogpio[i] <= in_idle[i];   //If ATR mode is disabled, always use IDLE value
       endcase
     end
-  end endgenerate
 
-  //Pipeline input, output and direction
-  always @(posedge clk)
-    gpio_out <= ogpio;
+   //Pipeline input, output and direction
+   //For fabric access, insert MUX as close to the IO as possible
+   always @(posedge clk) begin
+     gpio_out[i] <= fabric_ctrl[i] ? gpio_out_fab[i] : ogpio[i];
+   end
+  end endgenerate
 
   always @(posedge clk)
     igpio <= gpio_in;
