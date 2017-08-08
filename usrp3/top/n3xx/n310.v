@@ -4,6 +4,10 @@
 //
 // N3xx TOP
 //
+// Rev C Brimstone MB
+//
+// Rev C Magnesium DB
+//
 //////////////////////////////////////////////////////////////////////
 
 module n310
@@ -16,6 +20,13 @@ module n310
    input REF_1PPS_IN,
    //input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
+
+   //TDC
+   inout aUnusedPinForTdcA0,
+   inout aUnusedPinForTdcA1,
+   inout aUnusedPinForTdcB0,
+   inout aUnusedPinForTdcB1,
+
    //input NPIO_0_RX0_P,
    //input NPIO_0_RX0_N,
    //input NPIO_0_RX1_P,
@@ -64,7 +75,7 @@ module n310
    //output ENET0_PTP_DIR,
    //inout ATSHA204_SDA,
    input FPGA_PL_RESETN, // TODO:  Add to reset logic
-   //input [1:0] FPGA_TEST,// TODO :Check this ??
+   output reg [1:0] FPGA_TEST,
    //input PWR_CLK_FPGA, // TODO: check direction
 
    //White Rabbit
@@ -190,148 +201,127 @@ module n310
    input SFP_1_TXFAULT,
 
    //USRP IO A
-   output         DBA_CPLD_RESET_N,
-   output  [2:0]  DBA_CPLD_ADDR,
-   input          DBA_CPLD_SPI_SDO,
-   output         DBA_CPLD_SEL_ATR_SPI_N,
-   output         DBA_CPLD_SYNC_ATR_RX1,
-   output         DBA_CPLD_SPI_SDI_ATR_TX2,
-   output         DBA_CPLD_SPI_CSB_ATR_TX1,
-   output         DBA_CPLD_SPI_SCLK_ATR_RX2,
+   output        DBA_CPLD_PS_SPI_SCLK,
+   output        DBA_CPLD_PS_SPI_LE,
+   output        DBA_CPLD_PS_SPI_SDI,
+   input         DBA_CPLD_PS_SPI_SDO,
+   output [1:0]  DBA_CPLD_PS_SPI_ADDR,
 
-   output         DBA_CH1_TX_DSA_LE,
-   output  [5:0]  DBA_CH1_TX_DSA_DATA,
-   output         DBA_CH1_RX_DSA_LE,
-   output  [5:0]  DBA_CH1_RX_DSA_DATA,
+   output        DBA_ATR_RX_1,
+   output        DBA_ATR_RX_2,
+   output        DBA_ATR_TX_1,
+   output        DBA_ATR_TX_2,
 
-   output         DBA_CH2_TX_DSA_LE,
-   output  [5:0]  DBA_CH2_TX_DSA_DATA,
-   output         DBA_CH2_RX_DSA_LE,
-   output  [5:0]  DBA_CH2_RX_DSA_DATA,
+   output [5:0]  DBA_CH1_TX_DSA_DATA,
+   output [5:0]  DBA_CH1_RX_DSA_DATA,
+   output [5:0]  DBA_CH2_TX_DSA_DATA,
+   output [5:0]  DBA_CH2_RX_DSA_DATA,
 
-//   output         DBA_PDAC_SYNC_N,
-//   output         DBA_PDAC_DIN,
-//   output         DBA_PDAC_SCLK,
+   output        DBA_CPLD_PL_SPI_SCLK,
+   output        DBA_CPLD_PL_SPI_LE,
+   output        DBA_CPLD_PL_SPI_SDI,
+   input         DBA_CPLD_PL_SPI_SDO,
+   output [2:0]  DBA_CPLD_PL_SPI_ADDR,
 
-//   output         DBA_MYK_GPIO0,
-//   output         DBA_MYK_GPIO1,
-//   output         DBA_MYK_GPIO3,
-//   output         DBA_MYK_GPIO4,
-//   output         DBA_MYK_GPIO12,
-//   output         DBA_MYK_GPIO13,
-//   output         DBA_MYK_GPIO14,
-//   output         DBA_MYK_GPIO15,
-   input          DBA_MYK_SPI_SDO,
-   output         DBA_MYK_SPI_SDIO,
-   output         DBA_MYK_SPI_CS_N,
-   output         DBA_MYK_SPI_SCLK,
-//   input          DBA_MYK_INTRQ,
+   output        DBA_MYK_SPI_SCLK,
+   output        DBA_MYK_SPI_CS_n,
+   input         DBA_MYK_SPI_SDO,
+   output        DBA_MYK_SPI_SDIO,
+   input         DBA_MYK_INTRQ,
 
-   output         DBA_CPLD_JTAG_TDI,
-   input          DBA_CPLD_JTAG_TDO,
-   output         DBA_CPLD_JTAG_TMS,
-   output         DBA_CPLD_JTAG_TCK,
+   output        DBA_MYK_SYNC_IN_n,
+   input         DBA_MYK_SYNC_OUT_n,
 
-   output         DBA_MYK_SYNC_IN_P,
-   output         DBA_MYK_SYNC_IN_N,
-   input          DBA_MYK_SYNC_OUT_P,
-   input          DBA_MYK_SYNC_OUT_N,
-   input          DBA_FPGA_CLK_P,  // USRPIO_DEVCLK_P
-   input          DBA_FPGA_CLK_N,  // USRPIO_DEVCLK_N
-   input          DBA_FPGA_SYSREF_P,  // USRPIO_SYSREF_P
-   input          DBA_FPGA_SYSREF_N,  // USRPIO_SYSREF_N
+   output        DBA_CPLD_JTAG_TCK,
+   output        DBA_CPLD_JTAG_TMS,
+   output        DBA_CPLD_JTAG_TDI,
+   input         DBA_CPLD_JTAG_TDO,
 
-   input          USRPIO_A_MGTCLK_P,
-   input          USRPIO_A_MGTCLK_N,
-//   input          USRPIO_A_SW_CLK,
-   input          USRPIO_A_RX_0_P,
-   input          USRPIO_A_RX_1_P,
-   input          USRPIO_A_RX_2_P,
-   input          USRPIO_A_RX_3_P,
-   input          USRPIO_A_RX_0_N,
-   input          USRPIO_A_RX_1_N,
-   input          USRPIO_A_RX_2_N,
-   input          USRPIO_A_RX_3_N,
-   output         USRPIO_A_TX_0_P,
-   output         USRPIO_A_TX_1_P,
-   output         USRPIO_A_TX_2_P,
-   output         USRPIO_A_TX_3_P,
-   output         USRPIO_A_TX_0_N,
-   output         USRPIO_A_TX_1_N,
-   output         USRPIO_A_TX_2_N,
-   output         USRPIO_A_TX_3_N,
+   output        DBA_MYK_GPIO_0,
+   output        DBA_MYK_GPIO_1,
+   output        DBA_MYK_GPIO_3,
+   output        DBA_MYK_GPIO_4,
+   output        DBA_MYK_GPIO_12,
+   output        DBA_MYK_GPIO_13,
+   output        DBA_MYK_GPIO_14,
+   output        DBA_MYK_GPIO_15,
 
-   //USRP IO A
-   output         DBB_CPLD_RESET_N,
-   output  [2:0]  DBB_CPLD_ADDR,
-   input          DBB_CPLD_SPI_SDO,
-   output         DBB_CPLD_SEL_ATR_SPI_N,
-//   output         DBB_CPLD_SYNC_ATR_RX1,
-   output         DBB_CPLD_SPI_SDI_ATR_TX2,
-   output         DBB_CPLD_SPI_CSB_ATR_TX1,
-   output         DBB_CPLD_SPI_SCLK_ATR_RX2,
+   input         DBA_FPGA_CLK_p,
+   input         DBA_FPGA_CLK_n,
+   input         DBA_FPGA_SYSREF_p,
+   input         DBA_FPGA_SYSREF_n,
 
-   output         DBB_CH1_TX_DSA_LE,
-   output  [5:0]  DBB_CH1_TX_DSA_DATA,
-   output         DBB_CH1_RX_DSA_LE,
-   output  [5:0]  DBB_CH1_RX_DSA_DATA,
+   input         USRPIO_A_MGTCLK_P,
+   input         USRPIO_A_MGTCLK_N,
 
-   output         DBB_CH2_TX_DSA_LE,
-   output  [5:0]  DBB_CH2_TX_DSA_DATA,
-   output         DBB_CH2_RX_DSA_LE,
-   output  [5:0]  DBB_CH2_RX_DSA_DATA,
+   input  [3:0]  USRPIO_A_RX_P,
+   input  [3:0]  USRPIO_A_RX_N,
+   output [3:0]  USRPIO_A_TX_P,
+   output [3:0]  USRPIO_A_TX_N,
 
-//   output         DBB_PDAC_SYNC_N,
-//   output         DBB_PDAC_DIN,
-//   output         DBB_PDAC_SCLK,
 
-//   output         DBB_MYK_GPIO0,
-//   output         DBB_MYK_GPIO1,
-//   output         DBB_MYK_GPIO3,
-//   output         DBB_MYK_GPIO4,
-//   output         DBB_MYK_GPIO12,
-//   output         DBB_MYK_GPIO13,
-//   output         DBB_MYK_GPIO14,
-//   output         DBB_MYK_GPIO15,
-   input          DBB_MYK_SPI_SDO,
-   output         DBB_MYK_SPI_SDIO,
-   output         DBB_MYK_SPI_CS_N,
-   output         DBB_MYK_SPI_SCLK,
-//   input          DBB_MYK_INTRQ,
+   //USRP IO B
+   output        DBB_CPLD_PS_SPI_SCLK,
+   output        DBB_CPLD_PS_SPI_LE,
+   output        DBB_CPLD_PS_SPI_SDI,
+   input         DBB_CPLD_PS_SPI_SDO,
+   output [1:0]  DBB_CPLD_PS_SPI_ADDR,
 
-   output         DBB_CPLD_JTAG_TDI,
-   input          DBB_CPLD_JTAG_TDO,
-   output         DBB_CPLD_JTAG_TMS,
-   output         DBB_CPLD_JTAG_TCK
+   output        DBB_ATR_RX_1,
+   output        DBB_ATR_RX_2,
+   output        DBB_ATR_TX_1,
+   output        DBB_ATR_TX_2,
 
-//   output         DBB_MYK_SYNC_IN_P,
-//   output         DBB_MYK_SYNC_IN_N,
-//   input          DBB_MYK_SYNC_OUT_P,
-//   input          DBB_MYK_SYNC_OUT_N,
-//   input          DBB_FPGA_CLK_P,  // USRPIO_DEVCLK_P
-//   input          DBB_FPGA_CLK_N,  // USRPIO_DEVCLK_N
-//   input          DBB_FPGA_SYSREF_P,  // USRPIO_SYSREF_P
-//   input          DBB_FPGA_SYSREF_N,  // USRPIO_SYSREF_N
+   output [5:0]  DBB_CH1_TX_DSA_DATA,
+   output [5:0]  DBB_CH1_RX_DSA_DATA,
+   output [5:0]  DBB_CH2_TX_DSA_DATA,
+   output [5:0]  DBB_CH2_RX_DSA_DATA,
 
-//   input          USRPIO_B_MGTCLK_P,
-//   input          USRPIO_B_MGTCLK_N,
-//   input          USRPIO_B_SW_CLK,
-//   input          USRPIO_B_RX_0_P,
-//   input          USRPIO_B_RX_1_P,
-//   input          USRPIO_B_RX_2_P,
-//   input          USRPIO_B_RX_3_P,
-//   input          USRPIO_B_RX_0_N,
-//   input          USRPIO_B_RX_1_N,
-//   input          USRPIO_B_RX_2_N,
-//   input          USRPIO_B_RX_3_N,
-//   output         USRPIO_B_TX_0_P,
-//   output         USRPIO_B_TX_1_P,
-//   output         USRPIO_B_TX_2_P,
-//   output         USRPIO_B_TX_3_P,
-//   output         USRPIO_B_TX_0_N,
-//   output         USRPIO_B_TX_1_N,
-//   output         USRPIO_B_TX_2_N,
-//   output         USRPIO_B_TX_3_N
+   output        DBB_CPLD_PL_SPI_SCLK,
+   output        DBB_CPLD_PL_SPI_LE,
+   output        DBB_CPLD_PL_SPI_SDI,
+   input         DBB_CPLD_PL_SPI_SDO,
+   output [2:0]  DBB_CPLD_PL_SPI_ADDR,
+
+   output        DBB_MYK_SPI_SCLK,
+   output        DBB_MYK_SPI_CS_n,
+   input         DBB_MYK_SPI_SDO,
+   output        DBB_MYK_SPI_SDIO,
+   input         DBB_MYK_INTRQ,
+
+   output        DBB_MYK_SYNC_IN_n,
+   input         DBB_MYK_SYNC_OUT_n,
+
+   output        DBB_CPLD_JTAG_TCK,
+   output        DBB_CPLD_JTAG_TMS,
+   output        DBB_CPLD_JTAG_TDI,
+   input         DBB_CPLD_JTAG_TDO,
+
+   output        DBB_MYK_GPIO_0,
+   output        DBB_MYK_GPIO_1,
+   output        DBB_MYK_GPIO_3,
+   output        DBB_MYK_GPIO_4,
+   output        DBB_MYK_GPIO_12,
+   output        DBB_MYK_GPIO_13,
+   output        DBB_MYK_GPIO_14,
+   output        DBB_MYK_GPIO_15,
+
+   input         DBB_FPGA_CLK_p,
+   input         DBB_FPGA_CLK_n,
+   input         DBB_FPGA_SYSREF_p,
+   input         DBB_FPGA_SYSREF_n,
+
+   input         USRPIO_B_MGTCLK_P,
+   input         USRPIO_B_MGTCLK_N,
+
+   input  [3:0]  USRPIO_B_RX_P,
+   input  [3:0]  USRPIO_B_RX_N,
+   output [3:0]  USRPIO_B_TX_P,
+   output [3:0]  USRPIO_B_TX_N
+
+
+
+
 );
 
   localparam N_AXILITE_SLAVES = 4;
@@ -342,7 +332,6 @@ module n310
   wire bus_clk;
   wire bus_rst;
   wire global_rst;
-  wire clk40;
 
   // Internal connections to PS
   // HP0 -- High Performance port 0, FPGA is the master
@@ -673,14 +662,9 @@ module n310
   wire [31:0] M_AXI_GP0_RDATA_S[N_AXILITE_SLAVES-1:0];
 
   wire [15:0] IRQ_F2P;
-  wire        FCLK_CLK0;
-  wire        FCLK_CLK1;
-  wire        FCLK_CLK2;
-  wire        FCLK_CLK3;
+  wire        clk100;
+  wire        clk40;
   wire        FCLK_RESET0;
-  wire        FCLK_RESET1;
-  wire        FCLK_RESET2;
-  wire        FCLK_RESET3;
   wire        FCLK_RESET0N = ~FCLK_RESET0;
 
   wire [1:0] USB0_PORT_INDCTL;
@@ -701,12 +685,11 @@ module n310
   //////////////////////////////////////////////////////////////////////
   //
   //   PL Clocks : ---------------------------------------------------------------------------
-  //   BusClk (200)      : FCLK_CLK3        > BusClk
   //   xgige_refclk (156): MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > xgige_refclk
   //   clk156            : MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > BUFG  > clk156
   //   gige_refclk (125) : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk
   //   gige_refclk_bufg  : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk_bufg
-  //   RefClk (10)       : FPGA_REFCLK_P    >   IBUFDS > ref_clk_10mhz
+  //   RefClk (10)       : FPGA_REFCLK_P    >   IBUFDS > ref_clk
   //
   //   PS Clocks to PL:
   //   FCLK_CLK0 :      100 MHz
@@ -722,14 +705,47 @@ module n310
   //
   //////////////////////////////////////////////////////////////////////
 
-  wire ref_clk_10mhz; //TODO: Check if this is 10 MHz
-  IBUFDS IBUFDS_10_MHz (
-       .O(ref_clk_10mhz),
+  wire ref_clk_buf;
+  wire ref_clk;
+
+  wire radio_clk;
+  wire radio_clkB;
+  wire radio_clk_2x;
+  wire radio_clk_2xB;
+
+  wire meas_clk_ref;
+  wire meas_clk;
+  wire meas_clk_reset;
+  wire meas_clk_locked;
+
+  // FPGA Reference Clock Buffering
+  //
+  // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
+  // to meet timing with the PPS signal.
+  IBUFDS IBUFDS_ref_clk (
+       .O(ref_clk_buf),
        .I(FPGA_REFCLK_P),
        .IB(FPGA_REFCLK_N)
    );
 
-  wire radio_clk;
+  BUFG BUFG_ref_clk (
+       .O(ref_clk),
+       .I(ref_clk_buf)
+   );
+
+  // Measurement Clock MMCM Instantiation
+  //
+  // This must be an MMCM to hit the weird rates we need for meas_clk.
+  MeasClkMmcm MeasClkMmcmx (
+    .clk_in1 (meas_clk_ref),
+    .clk_out1(meas_clk),
+    .reset   (meas_clk_reset),
+    .locked  (meas_clk_locked)
+  );
+
+
+
+  wire radio_rst;
 
   //FIXME RESET SYNC may need more or'd inputs.
   reset_sync radio_reset_sync (
@@ -803,13 +819,6 @@ module n310
    assign SFP_1_RS1  = 1'b1;
 `endif
 
-  clk_gen fpga_clk_mmcm (
-     .CLK_IN1(FCLK_CLK0),
-     .CLK_OUT1(bus_clk),
-     .CLK_OUT2(reg_clk),
-     .CLK_OUT3(clk40),
-     .RESET(FCLK_RESET0));
-  
   //If bus_clk freq ever changes, update this paramter accordingly.
   localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate. 
 
@@ -892,7 +901,7 @@ module n310
 `endif
 
 `ifdef SFP0_AURORA
-  wire qpllrefclklost; 
+  wire qpllrefclklost;
 
   wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
   wire    [15:0]     qpll_drpdi_in_i = 16'h0;
@@ -904,7 +913,7 @@ module n310
   aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
     .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
     .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
-    .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk), 
+    .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk),
     //----------------------- Common Block - QPLL Ports ------------------------
     .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
     .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
@@ -914,45 +923,57 @@ module n310
     .qpll_drpaddr_in           (qpll_drpaddr_in_i),
     .qpll_drpdi_in             (qpll_drpdi_in_i),
     .qpll_drpclk_in            (aurora_init_clk),
-    .qpll_drpdo_out            (qpll_drpdo_out_i), 
-    .qpll_drprdy_out           (qpll_drprdy_out_i), 
-    .qpll_drpen_in             (qpll_drpen_in_i), 
+    .qpll_drpdo_out            (qpll_drpdo_out_i),
+    .qpll_drprdy_out           (qpll_drprdy_out_i),
+    .qpll_drpen_in             (qpll_drpen_in_i),
     .qpll_drpwe_in             (qpll_drpwe_in_i)
   );
 `endif
 
   ////////////////////////////////////////////////////////////////////
   // PPS
-  // Support for internal, external, and GPSDO PPS inputs
-  // Every attempt to minimize propagation between the external PPS
-  // input and outputs to support daisy-chaining the signal.
+  // Support for internal or external inputs.
   ///////////////////////////////////////////////////////////////////
 
   // Generate an internal PPS signal with a 25% duty cycle
-  wire int_pps;
+  wire r_int_pps;
   pps_generator #(
      .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
   ) pps_gen (
-     .clk(ref_clk_10mhz), .reset(1'b0), .pps(int_pps)
+     .clk(ref_clk), .reset(1'b0), .pps(r_int_pps)
   );
 
-  // PPS MUX - selects internal, external, or gpsdo PPS
-  reg pps;
+  // PPS MUX - selects internal or external PPS.
   wire [1:0] pps_select;
   wire pps_out_enb;
-  always @(*) begin
-     case(pps_select)                //FIXME: Driver?
-        2'b00  :   pps = REF_1PPS_IN;
-        2'b01  :   pps = 1'b0;
-        2'b10  :   pps = int_pps;
-        2'b11  :   pps = GPS_1PPS;
-        default:   pps = 1'b0;
-     endcase
+  reg r_pps_select_ms = 1'b0;
+  reg r_pps_select    = 1'b0;
+  reg r_pps_ext_ms    = 1'b0;
+  reg r_pps_ext       = 1'b0;
+  reg pps_refclk      = 1'b0;
+  always @(posedge ref_clk) begin
+
+    // Capture the external PPS with a FF before sending to the select. To be safe,
+    // we double-synchronize the external signal. If we meet timing (which we should)
+    // then this is a two-cycle delay. If we don't meet timing, then it's 1-2 cycles
+    // and our system timing is thrown off--but at least our downstream logic doesn't
+    // go haywire!
+    r_pps_ext_ms <= REF_1PPS_IN;
+    r_pps_ext    <= r_pps_ext_ms;
+
+    r_pps_select_ms <= pps_select[0]; // pps_select[1:0] comes from a register in some unknown domain
+    r_pps_select    <= r_pps_select_ms;
+
+    if(r_pps_select)
+      pps_refclk <= r_int_pps; // pps_select = 1 = internal
+    else
+      pps_refclk <= r_pps_ext;
+
+    FPGA_TEST[1] <= pps_refclk;
   end
 
   // PPS out and LED
-  assign REF_1PPS_OUT = pps & pps_out_enb;   //FIXME: Driver?
-  assign PANEL_LED_PPS = ~pps;               // active low LED driver
+  assign PANEL_LED_PPS = pps_refclk;
 
 
 // ARM ethernet 0 bridge signals
@@ -1079,8 +1100,8 @@ module n310
    `endif
    `ifdef SFP0_AURORA
      .qplllock(qplllock),
-     .qpllreset(qpllreset), 
-     .qpllrefclklost(qpllrefclklost), 
+     .qpllreset(qpllreset),
+     .qpllrefclklost(qpllrefclklost),
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
    `endif
@@ -1096,7 +1117,7 @@ module n310
      .sfp_phy_status(sfp0_phy_status),
 
      // Clock and reset
-     .s_axi_aclk(FCLK_CLK0),
+     .s_axi_aclk(clk40),
      .s_axi_aresetn(FCLK_RESET0N),
      // AXI4-Lite: Write address port (domain: s_axi_aclk)
      .s_axi_awaddr(M_AXI_GP0_AWADDR_S1),
@@ -1218,7 +1239,7 @@ module n310
       .sfp_phy_status(sfp1_phy_status),
 
       // Clock and reset
-      .s_axi_aclk(FCLK_CLK0),
+      .s_axi_aclk(clk40),
       .s_axi_aresetn(FCLK_RESET0N),
       // AXI4-Lite: Write address port (domain: s_axi_aclk)
       .s_axi_awaddr(M_AXI_GP0_AWADDR_S3),
@@ -1299,10 +1320,10 @@ module n310
 
   axi_eth_dma inst_axi_eth_dma0
   (
-    .s_axi_lite_aclk(FCLK_CLK0),
-    .m_axi_sg_aclk(FCLK_CLK0),
-    .m_axi_mm2s_aclk(FCLK_CLK0),
-    .m_axi_s2mm_aclk(FCLK_CLK0),
+    .s_axi_lite_aclk(clk40),
+    .m_axi_sg_aclk(clk40),
+    .m_axi_mm2s_aclk(clk40),
+    .m_axi_s2mm_aclk(clk40),
     .axi_resetn(FCLK_RESET0N),
 
     .s_axi_lite_awaddr(M_AXI_GP0_AWADDR_S0),
@@ -1407,7 +1428,7 @@ module n310
   );
 
   axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_0_fifo_2clk_i (
-    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(FCLK_CLK0),
+    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(clk40),
     .s_axis_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
     .s_axis_tvalid(arm_eth0_tx_tvalid),
     .s_axis_tready(arm_eth0_tx_tready),
@@ -1422,7 +1443,7 @@ module n310
     .s_axis_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
     .s_axis_tvalid(arm_eth0_rx_tvalid_b),
     .s_axis_tready(arm_eth0_rx_tready_b),
-    .m_axis_aclk(FCLK_CLK0),
+    .m_axis_aclk(clk40),
     .m_axis_tdata({arm_eth0_rx_tlast, arm_eth0_rx_tkeep, arm_eth0_rx_tdata}),
     .m_axis_tvalid(arm_eth0_rx_tvalid),
     .m_axis_tready(arm_eth0_rx_tready)
@@ -1442,10 +1463,10 @@ module n310
 
   axi_eth_dma inst_axi_eth_dma1
   (
-    .s_axi_lite_aclk(FCLK_CLK0),
-    .m_axi_sg_aclk(FCLK_CLK0),
-    .m_axi_mm2s_aclk(FCLK_CLK0),
-    .m_axi_s2mm_aclk(FCLK_CLK0),
+    .s_axi_lite_aclk(clk40),
+    .m_axi_sg_aclk(clk40),
+    .m_axi_mm2s_aclk(clk40),
+    .m_axi_s2mm_aclk(clk40),
     .axi_resetn(FCLK_RESET0N),
 
     .s_axi_lite_awaddr(M_AXI_GP0_AWADDR_S2),
@@ -1550,7 +1571,7 @@ module n310
   );
 
   axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_1_fifo_2clk_i (
-    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(FCLK_CLK0),
+    .s_axis_areset(FCLK_RESET0), .s_axis_aclk(clk40),
     .s_axis_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
     .s_axis_tvalid(arm_eth1_tx_tvalid),
     .s_axis_tready(arm_eth1_tx_tready),
@@ -1565,7 +1586,7 @@ module n310
     .s_axis_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
     .s_axis_tvalid(arm_eth1_rx_tvalid_b),
     .s_axis_tready(arm_eth1_rx_tready_b),
-    .m_axis_aclk(FCLK_CLK0),
+    .m_axis_aclk(clk40),
     .m_axis_tdata({arm_eth1_rx_tlast, arm_eth1_rx_tkeep, arm_eth1_rx_tdata}),
     .m_axis_tvalid(arm_eth1_rx_tvalid),
     .m_axis_tready(arm_eth1_rx_tready)
@@ -1587,7 +1608,7 @@ module n310
 
   axi_interconnect inst_axi_interconnect
   (
-    .aclk(FCLK_CLK0),
+    .aclk(clk40),
     .aresetn(FCLK_RESET0N),
     .s_axi_awaddr(M_AXI_GP0_AWADDR),
     .s_axi_awprot(3'b0),               //Recommended default value
@@ -1839,14 +1860,14 @@ module n310
     .GPIO_O(ps_gpio_out),
     .GPIO_T(ps_gpio_tri),
 
-    .FCLK_CLK0(FCLK_CLK0),
+    .FCLK_CLK0(clk100),
     .FCLK_RESET0(FCLK_RESET0),
-    .FCLK_CLK1(FCLK_CLK1),
-    .FCLK_RESET1(FCLK_RESET1),
-    .FCLK_CLK2(FCLK_CLK2),
-    .FCLK_RESET2(FCLK_RESET2),
-    .FCLK_CLK3(FCLK_CLK3),
-    .FCLK_RESET3(FCLK_RESET3),
+    .FCLK_CLK1(clk40),
+    // .FCLK_RESET1(FCLK_RESET1),
+    .FCLK_CLK2(meas_clk_ref),
+    // .FCLK_RESET2(FCLK_RESET2),
+    .FCLK_CLK3(bus_clk),
+    // .FCLK_RESET3(FCLK_RESET3),
 
     // Outward connections to the pins
     .MIO(MIO),
@@ -1937,7 +1958,7 @@ module n310
    // Instantiate the DDR3 MIG core
    //
    // The top-level IP block has no parameters defined for some reason.
-   // Most of configurable parameters are hard-coded in the mig so get 
+   // Most of configurable parameters are hard-coded in the mig so get
    // some additional knobs we pull those out into verilog headers.
    //
    // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
@@ -1964,7 +1985,7 @@ module n310
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
       .ui_clk                         (ddr3_axi_clk),  // 200Hz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2), //300 MHz, not actually x2 for n310 design because of timing. 
+      .ui_clk_x2                      (ddr3_axi_clk_x2), //300 MHz, not actually x2 for n310 design because of timing.
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -2016,7 +2037,7 @@ module n310
       .s_axi_rvalid                   (s_axi_rvalid),
       .s_axi_rready                   (s_axi_rready),
       // System Clock Ports
-      .sys_clk_p                       (sys_clk_p), 
+      .sys_clk_p                       (sys_clk_p),
       .sys_clk_n                       (sys_clk_n),
       .clk_ref_i                       (bus_clk),
 
@@ -2026,69 +2047,130 @@ module n310
 
   ///////////////////////////////////////////////////////
   //
-  // DB Connections
+  // DB PS SPI Connections
   //
   ///////////////////////////////////////////////////////
 
-  // Drive CPLD Address line with PS GPIO
-  wire [2:0]                         spi_mux;
-  wire                               cpld_reset;
-  wire                               myk_reset;
-  assign DBA_CPLD_ADDR             = spi_mux;
+  // DB A SPI Connections
+  wire cpld_a_cs_n;
+  wire cpld_pl_a_cs_n;
+  wire lmk_a_cs_n;
+  wire dac_a_cs_n;
+  wire myk_a_cs_n;
 
-  // DB A Connections
-  // SPI to CPLD
-  assign DBA_CPLD_SPI_SCLK_ATR_RX2 = spi0_sclk;
-  assign DBA_CPLD_SPI_SDI_ATR_TX2  = spi0_mosi;  // Slave In
-  assign DBA_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
-  assign DBA_CPLD_SPI_CSB_ATR_TX1  = spi0_ss0;
+  // Split out the SCLK and MOSI data to Mykonos and the CPLD.
+  assign DBA_CPLD_PS_SPI_SCLK = spi0_sclk;
+  assign DBA_CPLD_PS_SPI_SDI  = spi0_mosi;
 
-  assign DBA_CPLD_RESET_N          = cpld_reset | myk_reset; //TODO: Clean up later
+  //vhook_warn PL SPI connected to the PS right now!
+  assign DBA_CPLD_PL_SPI_SCLK = spi0_sclk;
+  assign DBA_CPLD_PL_SPI_SDI  = spi0_mosi;
 
-  assign DBA_MYK_SPI_CS_N          = spi0_ss1;
-  assign DBA_MYK_SPI_SCLK          = spi0_sclk;
-  assign DBA_MYK_SPI_SDIO          = spi0_mosi;
-  assign spi0_miso                 = ~spi0_ss0 ? DBA_CPLD_SPI_SDO :
-                                     ~spi0_ss1 ? DBA_MYK_SPI_SDO :
-                                                 1'b0;
+  assign DBA_MYK_SPI_SCLK     = spi0_sclk;
+  assign DBA_MYK_SPI_SDIO     = spi0_mosi;
 
-  assign DBA_CH1_TX_DSA_LE         = 1'b1;
-  assign DBA_CH1_TX_DSA_DATA       = 6'b0;
-  assign DBA_CH1_RX_DSA_LE         = 1'b1;
-  assign DBA_CH1_RX_DSA_DATA       = 6'b0;
+  // Assign individual chip selects from PS SPI MASTER 0.
+  assign cpld_a_cs_n = spi0_ss0;
+  assign lmk_a_cs_n  = spi0_ss1;
+  assign dac_a_cs_n  = ps_gpio_out[8]; // DAC select driven through GPIO.
+  assign myk_a_cs_n  = spi0_ss2;
 
-  assign DBA_CH2_TX_DSA_LE         = 1'b1;
-  assign DBA_CH2_TX_DSA_DATA       = 6'b0;
-  assign DBA_CH2_RX_DSA_LE         = 1'b1;
-  assign DBA_CH2_RX_DSA_DATA       = 6'b0;
+  // Returned data mux from the SPI interfaces.
+  assign spi0_miso = ~myk_a_cs_n      ? DBA_MYK_SPI_SDO  : // From Mykonos
+                     DBA_CPLD_PS_SPI_SDO;
 
-  // DB B Connections
-  assign DBB_CPLD_ADDR             = spi_mux;
+  // For the PS SPI connection to the CPLD, we use the LE and ADDR lines as individual
+  // chip selects for the CPLD endpoint as well as the LMK and DAC endpoints.
+  // LE      = CPLD
+  // ADDR[0] = LMK
+  // ADDR[1] = DAC
+  assign DBA_CPLD_PS_SPI_LE       = cpld_a_cs_n;
+  assign DBA_CPLD_PL_SPI_LE       = cpld_pl_a_cs_n;
+  assign DBA_CPLD_PS_SPI_ADDR[0]  = lmk_a_cs_n;
+  assign DBA_CPLD_PS_SPI_ADDR[1]  = dac_a_cs_n;
+  assign DBA_MYK_SPI_CS_n         = myk_a_cs_n;
 
-  // SPI to CPLD
-  assign DBB_CPLD_SPI_SCLK_ATR_RX2 = spi1_sclk;
-  assign DBB_CPLD_SPI_SDI_ATR_TX2  = spi1_mosi;  // Slave In
-  assign DBB_CPLD_SEL_ATR_SPI_N    = 1'b0;       // Select SPI
-  assign DBB_CPLD_SPI_CSB_ATR_TX1  = spi1_ss0;
 
-  assign DBB_CPLD_RESET_N          = cpld_reset | myk_reset; //TODO: Clean up later
+  // Default the other control signals (just for now).
+  assign DBA_CH1_TX_DSA_DATA = 6'b0;
+  assign DBA_CH1_RX_DSA_DATA = 6'b0;
+  assign DBA_CH2_TX_DSA_DATA = 6'b0;
+  assign DBA_CH2_RX_DSA_DATA = 6'b0;
 
-  assign DBB_MYK_SPI_CS_N          = spi1_ss1;
-  assign DBB_MYK_SPI_SCLK          = spi1_sclk;
-  assign DBB_MYK_SPI_SDIO          = spi1_mosi;
-  assign spi1_miso                 = ~spi1_ss0 ? DBB_CPLD_SPI_SDO :
-                                     ~spi1_ss1 ? DBB_MYK_SPI_SDO :
-                                                 1'b0;
+  assign DBA_ATR_RX_1 = 1'b1;
+  assign DBA_ATR_RX_2 = 1'b1;
+  assign DBA_ATR_TX_1 = 1'b1;
+  assign DBA_ATR_TX_2 = 1'b1;
 
-  assign DBB_CH1_TX_DSA_LE         = 1'b1;
-  assign DBB_CH1_TX_DSA_DATA       = 6'b0;
-  assign DBB_CH1_RX_DSA_LE         = 1'b1;
-  assign DBB_CH1_RX_DSA_DATA       = 6'b0;
+  assign DBA_MYK_GPIO_0  = 1'b0;
+  assign DBA_MYK_GPIO_1  = 1'b0;
+  assign DBA_MYK_GPIO_3  = 1'b0;
+  assign DBA_MYK_GPIO_4  = 1'b0;
+  assign DBA_MYK_GPIO_12 = 1'b0;
+  assign DBA_MYK_GPIO_13 = 1'b0;
+  assign DBA_MYK_GPIO_14 = 1'b0;
+  assign DBA_MYK_GPIO_15 = 1'b0;
 
-  assign DBB_CH2_TX_DSA_LE         = 1'b1;
-  assign DBB_CH2_TX_DSA_DATA       = 6'b0;
-  assign DBB_CH2_RX_DSA_LE         = 1'b1;
-  assign DBB_CH2_RX_DSA_DATA       = 6'b0;
+
+
+  // DB B SPI Connections
+  wire cpld_b_cs_n;
+  wire cpld_pl_b_cs_n;
+  wire lmk_b_cs_n;
+  wire dac_b_cs_n;
+  wire myk_b_cs_n;
+
+  // Split out the SCLK and MOSI data to Mykonos and the CPLD.
+  assign DBB_CPLD_PS_SPI_SCLK = spi1_sclk;
+  assign DBB_CPLD_PS_SPI_SDI  = spi1_mosi;
+
+  assign DBB_MYK_SPI_SCLK     = spi1_sclk;
+  assign DBB_MYK_SPI_SDIO     = spi1_mosi;
+
+  // Assign individual chip selects from PS SPI MASTER 1.
+  assign cpld_b_cs_n = spi1_ss0;
+  assign lmk_b_cs_n  = spi1_ss1;
+  assign dac_b_cs_n  = ps_gpio_out[9]; // DAC select driven through GPIO.
+  assign myk_b_cs_n  = spi1_ss2;
+
+  // Returned data mux from the SPI interfaces.
+  assign spi1_miso = ~myk_b_cs_n      ? DBB_MYK_SPI_SDO  : // From Mykonos
+                     DBB_CPLD_PS_SPI_SDO;
+
+  // For the PS SPI connection to the CPLD, we use the LE and ADDR lines as individual
+  // chip selects for the CPLD endpoint as well as the LMK and DAC endpoints.
+  // LE      = CPLD
+  // ADDR[0] = LMK
+  // ADDR[1] = DAC
+  assign DBB_CPLD_PS_SPI_LE       = cpld_b_cs_n;
+  assign DBB_CPLD_PL_SPI_LE       = cpld_pl_b_cs_n;
+  assign DBB_CPLD_PS_SPI_ADDR[0]  = lmk_b_cs_n;
+  assign DBB_CPLD_PS_SPI_ADDR[1]  = dac_b_cs_n;
+  assign DBB_MYK_SPI_CS_n         = myk_b_cs_n;
+
+
+  // For now, default the DSAs to something low-power... is this right?
+  assign DBB_CH1_TX_DSA_DATA = 6'b0;
+  assign DBB_CH1_RX_DSA_DATA = 6'b0;
+  assign DBB_CH2_TX_DSA_DATA = 6'b0;
+  assign DBB_CH2_RX_DSA_DATA = 6'b0;
+
+  assign DBB_ATR_RX_1 = 1'b1;
+  assign DBB_ATR_RX_2 = 1'b1;
+  assign DBB_ATR_TX_1 = 1'b1;
+  assign DBB_ATR_TX_2 = 1'b1;
+
+  assign DBB_MYK_GPIO_0  = 1'b0;
+  assign DBB_MYK_GPIO_1  = 1'b0;
+  assign DBB_MYK_GPIO_3  = 1'b0;
+  assign DBB_MYK_GPIO_4  = 1'b0;
+  assign DBB_MYK_GPIO_12 = 1'b0;
+  assign DBB_MYK_GPIO_13 = 1'b0;
+  assign DBB_MYK_GPIO_14 = 1'b0;
+  assign DBB_MYK_GPIO_15 = 1'b0;
+
+
+
 
   ///////////////////////////////////////////////////////
   //
@@ -2104,18 +2186,28 @@ module n310
   wire  [31:0]     tx1;
   wire  [31:0]     tx2;
   wire  [31:0]     tx3;
-  wire             rx_stb; // FIXME: 2 bit
-  wire             tx_stb; // FIXME: 2 bit
+  wire  [3:0]      rx_stb;
+  wire  [3:0]      tx_stb;
+  wire pps_radioclk1x;
 
   n310_core #(.REG_AWIDTH(14), .BUS_CLK_RATE(BUS_CLK_RATE)) n310_core
   (
     //Clocks and resets
-    .radio_clk(/*radio_clk*/bus_clk), //FIXME: Move to radio_clk
-    .radio_rst(/*radio_rst*/bus_rst), //FIXME: Move to radio_rst
+    .radio_clk(radio_clk),
+    .radio_rst(radio_rst),
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
-    .s_axi_aclk(FCLK_CLK0),
+    // Clocking and PPS Controls/Inidcators
+    .pps(pps_radioclk1x),
+    .pps_select(pps_select),
+    .pps_out_enb(pps_out_enb),
+    .ref_clk_reset(),
+    .meas_clk_reset(meas_clk_reset),
+    .ref_clk_locked(1'b1),
+    .meas_clk_locked(meas_clk_locked),
+
+    .s_axi_aclk(clk40),
     .s_axi_aresetn(FCLK_RESET0N),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
     .s_axi_awaddr(M_AXI_GP0_AWADDR_S4),
@@ -2143,15 +2235,14 @@ module n310
     // JESD204
     .rx0(rx0),
     .tx0(tx0),
-
     .rx1(rx1),
     .tx1(tx1),
-
     .rx2(rx2),
     .tx2(tx2),
-
     .rx3(rx3),
     .tx3(tx3),
+    .rx_stb(rx_stb),
+    .tx_stb(tx_stb),
 
     //DMA
     .dmao_tdata(),
@@ -2233,119 +2324,337 @@ module n310
     .e2v1_tdata(e2v1_tdata),
     .e2v1_tlast(e2v1_tlast),
     .e2v1_tvalid(e2v1_tvalid),
-    .e2v1_tready(e2v1_tready),
-    .spi_mux(spi_mux),
-    .cpld_reset(cpld_reset)
+    .e2v1_tready(e2v1_tready)
   );
 
-  ////////////////////////////////////////////////////////////////////////
+  // //////////////////////////////////////////////////////////////////////
   //
-  // JESD204b CORE
+  // Daughterboard Cores
   //
-  ////////////////////////////////////////////////////////////////////////
+  // //////////////////////////////////////////////////////////////////////
 
-  wire  [3:0]  jesd_adc_rx_p;
-  wire  [3:0]  jesd_adc_rx_n;
-  wire  [3:0]  jesd_dac_tx_p;
-  wire  [3:0]  jesd_dac_tx_n;
-  wire         jesd_adc_sync;
-  wire         jesd_dac_sync;
+  //vhook_sigstart
+  wire aAdcSyncUnusedA;
+  wire aAdcSyncUnusedB;
+  wire aDacSyncUnusedA;
+  wire aDacSyncUnusedB;
+  wire aLmkSyncUnusedB;
+  wire [49:0] bRegPortInFlatA;
+  wire [49:0] bRegPortInFlatB;
+  wire [33:0] bRegPortOutFlatA;
+  wire [33:0] bRegPortOutFlatB;
+  wire rRSP_a_unused;
+  wire rRSP_b_unused;
+  wire rx_a_valid;
+  wire rx_b_valid;
+  wire sPpsUnusedB;
+  wire sRTC_a_unused;
+  wire sRTC_b_unused;
+  wire tx_a_rfi;
+  wire tx_b_rfi;
+  //vhook_sigend
 
-  // JESD204 core
-   assign jesd_adc_rx_p = {USRPIO_A_RX_3_P, USRPIO_A_RX_2_P, USRPIO_A_RX_1_P, USRPIO_A_RX_0_P};
-   assign jesd_adc_rx_n = {USRPIO_A_RX_3_N, USRPIO_A_RX_2_N, USRPIO_A_RX_1_N, USRPIO_A_RX_0_N};
-   assign {USRPIO_A_TX_3_P, USRPIO_A_TX_2_P, USRPIO_A_TX_1_P, USRPIO_A_TX_0_P} = jesd_dac_tx_p;
-   assign {USRPIO_A_TX_3_N, USRPIO_A_TX_2_N, USRPIO_A_TX_1_N, USRPIO_A_TX_0_N} = jesd_dac_tx_n;
-  // FIXME: Add 2 JESD cores.
+  wire          reg_portA_rd;
+  wire          reg_portA_wr;
+  wire [14-1:0] reg_portA_addr;
+  wire [32-1:0] reg_portA_wr_data;
+  wire [32-1:0] reg_portA_rd_data;
+  wire          reg_portA_ready;
+  wire          validA_unused;
 
-  jesd204_core_wrapper #(
-    .REG_BASE(0),
-    .REG_DWIDTH(32),
-    .REG_AWIDTH(14)
-  ) jesd204_core_wrapper (
+  assign bRegPortInFlatA = {2'b0, reg_portA_addr, reg_portA_wr_data, reg_portA_rd, reg_portA_wr};
+  assign {reg_portA_rd_data, validA_unused, reg_portA_ready} = bRegPortOutFlatA;
 
-    //Clocks and resets
-    .db_fpga_clk_p(DBA_FPGA_CLK_P),
-    .db_fpga_clk_n(DBA_FPGA_CLK_N),
-    .sample_clk(radio_clk),
-    .clk40(clk40),
+  //vhook   DbCore dba_core
+  //vhook_c aReset ~FCLK_RESET0N
+  //vhook_a bReset 1'b0
+  //vhook_a BusClk clk40
+  //vhook_a Clk40  clk40
+  //vhook_a MeasClk  meas_clk
+  //vhook_a FpgaClk_p DBA_FPGA_CLK_p
+  //vhook_a FpgaClk_n DBA_FPGA_CLK_n
+  //vhook_a SampleClk1xOut  radio_clk
+  //vhook_a SampleClk1x     radio_clk
+  //vhook_a SampleClk2xOut  radio_clk_2x
+  //vhook_a SampleClk2x     radio_clk_2x
+  //vhook_a bRegPortInFlat  bRegPortInFlatA
+  //vhook_a bRegPortOutFlat bRegPortOutFlatA
+  //vhook_a kSlotId  1'b0
+  //vhook_a sSysRefFpgaLvds_p DBA_FPGA_SYSREF_p
+  //vhook_a sSysRefFpgaLvds_n DBA_FPGA_SYSREF_n
+  //vhook_a aLmkSync DBA_CPLD_PL_SPI_ADDR[2]
+  //vhook_a JesdRefClk_p USRPIO_A_MGTCLK_P
+  //vhook_a JesdRefClk_n USRPIO_A_MGTCLK_N
+  //vhook_a aAdcRx_p   USRPIO_A_RX_P
+  //vhook_a aAdcRx_n   USRPIO_A_RX_N
+  //vhook_a aSyncAdcOut_n  DBA_MYK_SYNC_IN_n
+  //vhook_a aDacTx_p   USRPIO_A_TX_P
+  //vhook_a aDacTx_n   USRPIO_A_TX_N
+  //vhook_a aSyncDacIn_n   DBA_MYK_SYNC_OUT_n
+  //vhook_a aAdcSync aAdcSyncUnusedA
+  //vhook_a aDacSync aDacSyncUnusedA
+  //vhook_a sAdcDataValid     rx_a_valid
+  //vhook_a sAdcDataSamples0I rx0[31:16]
+  //vhook_a sAdcDataSamples0Q rx0[15:0]
+  //vhook_a sAdcDataSamples1I rx1[31:16]
+  //vhook_a sAdcDataSamples1Q rx1[15:0]
+  //vhook_a sDacReadyForInput tx_a_rfi
+  //vhook_a sDacDataSamples0I tx0[31:16]
+  //vhook_a sDacDataSamples0Q tx0[15:0]
+  //vhook_a sDacDataSamples1I tx1[31:16]
+  //vhook_a sDacDataSamples1Q tx1[15:0]
+  //vhook_a RefClk    ref_clk
+  //vhook_a rPpsPulse pps_refclk
+  //vhook_a rGatedPulseToPin aUnusedPinForTdcA0
+  //vhook_a sGatedPulseToPin aUnusedPinForTdcA1
+  //vhook_a sPps      pps_radioclk1x
+  //vhook_a sRTC sRTC_a_unused
+  //vhook_a rRSP rRSP_a_unused
+  DbCore
+    dba_core (
+      .aReset(~FCLK_RESET0N),                  //in  std_logic
+      .bReset(1'b0),                           //in  std_logic
+      .BusClk(clk40),                          //in  std_logic
+      .Clk40(clk40),                           //in  std_logic
+      .MeasClk(meas_clk),                      //in  std_logic
+      .FpgaClk_p(DBA_FPGA_CLK_p),              //in  std_logic
+      .FpgaClk_n(DBA_FPGA_CLK_n),              //in  std_logic
+      .SampleClk1xOut(radio_clk),              //out std_logic
+      .SampleClk1x(radio_clk),                 //in  std_logic
+      .SampleClk2xOut(radio_clk_2x),           //out std_logic
+      .SampleClk2x(radio_clk_2x),              //in  std_logic
+      .bRegPortInFlat(bRegPortInFlatA),        //in  std_logic_vector(49:0)
+      .bRegPortOutFlat(bRegPortOutFlatA),      //out std_logic_vector(33:0)
+      .kSlotId(1'b0),                          //in  std_logic
+      .sSysRefFpgaLvds_p(DBA_FPGA_SYSREF_p),   //in  std_logic
+      .sSysRefFpgaLvds_n(DBA_FPGA_SYSREF_n),   //in  std_logic
+      .aLmkSync(DBA_CPLD_PL_SPI_ADDR[2]),      //out std_logic
+      .JesdRefClk_p(USRPIO_A_MGTCLK_P),        //in  std_logic
+      .JesdRefClk_n(USRPIO_A_MGTCLK_N),        //in  std_logic
+      .aAdcRx_p(USRPIO_A_RX_P),                //in  std_logic_vector(3:0)
+      .aAdcRx_n(USRPIO_A_RX_N),                //in  std_logic_vector(3:0)
+      .aSyncAdcOut_n(DBA_MYK_SYNC_IN_n),       //out std_logic
+      .aDacTx_p(USRPIO_A_TX_P),                //out std_logic_vector(3:0)
+      .aDacTx_n(USRPIO_A_TX_N),                //out std_logic_vector(3:0)
+      .aSyncDacIn_n(DBA_MYK_SYNC_OUT_n),       //in  std_logic
+      .aAdcSync(aAdcSyncUnusedA),              //out std_logic
+      .aDacSync(aDacSyncUnusedA),              //out std_logic
+      .sAdcDataValid(rx_a_valid),              //out std_logic
+      .sAdcDataSamples0I(rx0[31:16]),          //out std_logic_vector(15:0)
+      .sAdcDataSamples0Q(rx0[15:0]),           //out std_logic_vector(15:0)
+      .sAdcDataSamples1I(rx1[31:16]),          //out std_logic_vector(15:0)
+      .sAdcDataSamples1Q(rx1[15:0]),           //out std_logic_vector(15:0)
+      .sDacReadyForInput(tx_a_rfi),            //out std_logic
+      .sDacDataSamples0I(tx0[31:16]),          //in  std_logic_vector(15:0)
+      .sDacDataSamples0Q(tx0[15:0]),           //in  std_logic_vector(15:0)
+      .sDacDataSamples1I(tx1[31:16]),          //in  std_logic_vector(15:0)
+      .sDacDataSamples1Q(tx1[15:0]),           //in  std_logic_vector(15:0)
+      .RefClk(ref_clk),                        //in  std_logic
+      .rPpsPulse(pps_refclk),                  //in  std_logic
+      .rGatedPulseToPin(aUnusedPinForTdcA0),   //inout std_logic
+      .sGatedPulseToPin(aUnusedPinForTdcA1),   //inout std_logic
+      .rRSP(rRSP_a_unused),                    //out std_logic
+      .sRTC(sRTC_a_unused),                    //out std_logic
+      .sPps(pps_radioclk1x));                  //out std_logic
 
-    .s_axi_aclk(FCLK_CLK0),
-    .s_axi_aresetn(FCLK_RESET0N),
+  assign rx_stb[0] = rx_a_valid;
+  assign rx_stb[1] = rx_a_valid;
+  assign tx_stb[0] = tx_a_rfi;
+  assign tx_stb[1] = tx_a_rfi;
+
+  axil_to_ni_regport #(
+    .RP_DWIDTH   (32),
+    .RP_AWIDTH   (14),
+    .TIMEOUT     (512)
+  ) ni_regportA_inst (
+    // Clock and reset
+    .s_axi_aclk    (clk40),
+    .s_axi_areset  (~FCLK_RESET0N),
     // AXI4-Lite: Write address port (domain: s_axi_aclk)
-    .s_axi_awaddr(M_AXI_GP0_AWADDR_S5),
-    .s_axi_awvalid(M_AXI_GP0_AWVALID_S5),
-    .s_axi_awready(M_AXI_GP0_AWREADY_S5),
+    .s_axi_awaddr  (M_AXI_GP0_AWADDR_S5),
+    .s_axi_awvalid (M_AXI_GP0_AWVALID_S5),
+    .s_axi_awready (M_AXI_GP0_AWREADY_S5),
     // AXI4-Lite: Write data port (domain: s_axi_aclk)
-    .s_axi_wdata(M_AXI_GP0_WDATA_S5),
-    .s_axi_wstrb(M_AXI_GP0_WSTRB_S5),
-    .s_axi_wvalid(M_AXI_GP0_WVALID_S5),
-    .s_axi_wready(M_AXI_GP0_WREADY_S5),
+    .s_axi_wdata   (M_AXI_GP0_WDATA_S5),
+    .s_axi_wstrb   (M_AXI_GP0_WSTRB_S5),
+    .s_axi_wvalid  (M_AXI_GP0_WVALID_S5),
+    .s_axi_wready  (M_AXI_GP0_WREADY_S5),
     // AXI4-Lite: Write response port (domain: s_axi_aclk)
-    .s_axi_bresp(M_AXI_GP0_BRESP_S5),
-    .s_axi_bvalid(M_AXI_GP0_BVALID_S5),
-    .s_axi_bready(M_AXI_GP0_BREADY_S5),
+    .s_axi_bresp   (M_AXI_GP0_BRESP_S5),
+    .s_axi_bvalid  (M_AXI_GP0_BVALID_S5),
+    .s_axi_bready  (M_AXI_GP0_BREADY_S5),
     // AXI4-Lite: Read address port (domain: s_axi_aclk)
-    .s_axi_araddr(M_AXI_GP0_ARADDR_S5),
-    .s_axi_arvalid(M_AXI_GP0_ARVALID_S5),
-    .s_axi_arready(M_AXI_GP0_ARREADY_S5),
+    .s_axi_araddr  (M_AXI_GP0_ARADDR_S5),
+    .s_axi_arvalid (M_AXI_GP0_ARVALID_S5),
+    .s_axi_arready (M_AXI_GP0_ARREADY_S5),
     // AXI4-Lite: Read data port (domain: s_axi_aclk)
-    .s_axi_rdata(M_AXI_GP0_RDATA_S5),
-    .s_axi_rresp(M_AXI_GP0_RRESP_S5),
-    .s_axi_rvalid(M_AXI_GP0_RVALID_S5),
-    .s_axi_rready(M_AXI_GP0_RREADY_S5),
-    .rx0(rx0),
-    .rx1(rx1),
-    .rx_stb(rx_stb),
-    .tx0(tx0),
-    .tx1(tx1),
-    .tx_stb(tx_stb),
-    .lmk_sync(DBA_CPLD_SYNC_ATR_RX1),
-    .myk_reset(myk_reset),
-    .jesd_dac_sync(jesd_dac_sync),
-    .jesd_adc_sync(jesd_adc_sync),
-
-    .jesd_refclk_p(USRPIO_A_MGTCLK_P),
-    .jesd_refclk_n(USRPIO_A_MGTCLK_N),
-    .jesd_adc_rx_p(jesd_adc_rx_p),
-    .jesd_adc_rx_n(jesd_adc_rx_n),
-    .jesd_dac_tx_p(jesd_dac_tx_p),
-    .jesd_dac_tx_n(jesd_dac_tx_n),
-    .myk_adc_sync_p(DBA_MYK_SYNC_IN_P),
-    .myk_adc_sync_n(DBA_MYK_SYNC_IN_N),
-    .myk_dac_sync_p(DBA_MYK_SYNC_OUT_P),
-    .myk_dac_sync_n(DBA_MYK_SYNC_OUT_N),
-    .fpga_sysref_p(DBA_FPGA_SYSREF_P),
-    .fpga_sysref_n(DBA_FPGA_SYSREF_N)
+    .s_axi_rdata   (M_AXI_GP0_RDATA_S5),
+    .s_axi_rresp   (M_AXI_GP0_RRESP_S5),
+    .s_axi_rvalid  (M_AXI_GP0_RVALID_S5),
+    .s_axi_rready  (M_AXI_GP0_RREADY_S5),
+    // Register port
+    .reg_port_in_rd    (reg_portA_rd),
+    .reg_port_in_wt    (reg_portA_wr),
+    .reg_port_in_addr  (reg_portA_addr),
+    .reg_port_in_data  (reg_portA_wr_data),
+    .reg_port_out_data (reg_portA_rd_data),
+    .reg_port_out_ready(reg_portA_ready)
   );
 
-  // FIXME: Placeholder for XBAR AXI DMA
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy
-  (
-    .s_axi_aclk(FCLK_CLK0),
-    .s_axi_areset(FCLK_RESET0),
 
-    .s_axi_awaddr(M_AXI_GP0_AWADDR_S6),
-    .s_axi_awvalid(M_AXI_GP0_AWVALID_S6),
-    .s_axi_awready(M_AXI_GP0_AWREADY_S6),
+  // Default to '1' since these are actually CS_n lines to the LOs.
+  assign DBA_CPLD_PL_SPI_ADDR[0] = 1'b1;
+  assign DBA_CPLD_PL_SPI_ADDR[1] = 1'b1;
 
-    .s_axi_wdata(M_AXI_GP0_WDATA_S6),
-    .s_axi_wstrb(M_AXI_GP0_WSTRB_S6),
-    .s_axi_wvalid(M_AXI_GP0_WVALID_S6),
-    .s_axi_wready(M_AXI_GP0_WREADY_S6),
+  assign DBB_CPLD_PL_SPI_ADDR[0] = 1'b1;
+  assign DBB_CPLD_PL_SPI_ADDR[1] = 1'b1;
 
-    .s_axi_bresp(M_AXI_GP0_BRESP_S6),
-    .s_axi_bvalid(M_AXI_GP0_BVALID_S6),
-    .s_axi_bready(M_AXI_GP0_BREADY_S6),
 
-    .s_axi_araddr(M_AXI_GP0_ARADDR_S6),
-    .s_axi_arvalid(M_AXI_GP0_ARVALID_S6),
-    .s_axi_arready(M_AXI_GP0_ARREADY_S6),
+  wire          reg_portB_rd;
+  wire          reg_portB_wr;
+  wire [14-1:0] reg_portB_addr;
+  wire [32-1:0] reg_portB_wr_data;
+  wire [32-1:0] reg_portB_rd_data;
+  wire          reg_portB_ready;
+  wire          validB_unused;
 
-    .s_axi_rdata(M_AXI_GP0_RDATA_S6),
-    .s_axi_rresp(M_AXI_GP0_RRESP_S6),
-    .s_axi_rvalid(M_AXI_GP0_RVALID_S6),
-    .s_axi_rready(M_AXI_GP0_RREADY_S6)
+  assign bRegPortInFlatB = {2'b0, reg_portB_addr, reg_portB_wr_data, reg_portB_rd, reg_portB_wr};
+  assign {reg_portB_rd_data, validB_unused, reg_portB_ready} = bRegPortOutFlatB;
+
+  //vhook   DbCore dbb_core
+  //vhook_c aReset ~FCLK_RESET0N
+  //vhook_a bReset 1'b0
+  //vhook_a BusClk clk40
+  //vhook_a Clk40  clk40
+  //vhook_a MeasClk  meas_clk
+  //vhook_a FpgaClk_p DBB_FPGA_CLK_p
+  //vhook_a FpgaClk_n DBB_FPGA_CLK_n
+  //vhook_a SampleClk1xOut  radio_clkB
+  //vhook_a SampleClk1x     radio_clk
+  //vhook_a SampleClk2xOut  radio_clk_2xB
+  //vhook_a SampleClk2x     radio_clk_2x
+  //vhook_a bRegPortInFlat  bRegPortInFlatB
+  //vhook_a bRegPortOutFlat bRegPortOutFlatB
+  //vhook_a kSlotId  1'b1
+  //vhook_a sSysRefFpgaLvds_p DBB_FPGA_SYSREF_p
+  //vhook_a sSysRefFpgaLvds_n DBB_FPGA_SYSREF_n
+  //vhook_a aLmkSync DBB_CPLD_PL_SPI_ADDR[2]
+  //vhook_a JesdRefClk_p USRPIO_B_MGTCLK_P
+  //vhook_a JesdRefClk_n USRPIO_B_MGTCLK_N
+  //vhook_a aAdcRx_p   USRPIO_B_RX_P
+  //vhook_a aAdcRx_n   USRPIO_B_RX_N
+  //vhook_a aSyncAdcOut_n  DBB_MYK_SYNC_IN_n
+  //vhook_a aDacTx_p   USRPIO_B_TX_P
+  //vhook_a aDacTx_n   USRPIO_B_TX_N
+  //vhook_a aSyncDacIn_n   DBB_MYK_SYNC_OUT_n
+  //vhook_a aAdcSync aAdcSyncUnusedB
+  //vhook_a aDacSync aDacSyncUnusedB
+  //vhook_a sAdcDataValid     rx_b_valid
+  //vhook_a sAdcDataSamples0I rx2[31:16]
+  //vhook_a sAdcDataSamples0Q rx2[15:0]
+  //vhook_a sAdcDataSamples1I rx3[31:16]
+  //vhook_a sAdcDataSamples1Q rx3[15:0]
+  //vhook_a sDacReadyForInput tx_b_rfi
+  //vhook_a sDacDataSamples0I tx2[31:16]
+  //vhook_a sDacDataSamples0Q tx2[15:0]
+  //vhook_a sDacDataSamples1I tx3[31:16]
+  //vhook_a sDacDataSamples1Q tx3[15:0]
+  //vhook_a RefClk    ref_clk
+  //vhook_a rPpsPulse pps_refclk
+  //vhook_a rGatedPulseToPin aUnusedPinForTdcB0
+  //vhook_a sGatedPulseToPin aUnusedPinForTdcB1
+  //vhook_a sPps sPpsUnusedB
+  //vhook_a sRTC sRTC_b_unused
+  //vhook_a rRSP rRSP_b_unused
+  DbCore
+    dbb_core (
+      .aReset(~FCLK_RESET0N),                  //in  std_logic
+      .bReset(1'b0),                           //in  std_logic
+      .BusClk(clk40),                          //in  std_logic
+      .Clk40(clk40),                           //in  std_logic
+      .MeasClk(meas_clk),                      //in  std_logic
+      .FpgaClk_p(DBB_FPGA_CLK_p),              //in  std_logic
+      .FpgaClk_n(DBB_FPGA_CLK_n),              //in  std_logic
+      .SampleClk1xOut(radio_clkB),             //out std_logic
+      .SampleClk1x(radio_clk),                 //in  std_logic
+      .SampleClk2xOut(radio_clk_2xB),          //out std_logic
+      .SampleClk2x(radio_clk_2x),              //in  std_logic
+      .bRegPortInFlat(bRegPortInFlatB),        //in  std_logic_vector(49:0)
+      .bRegPortOutFlat(bRegPortOutFlatB),      //out std_logic_vector(33:0)
+      .kSlotId(1'b1),                          //in  std_logic
+      .sSysRefFpgaLvds_p(DBB_FPGA_SYSREF_p),   //in  std_logic
+      .sSysRefFpgaLvds_n(DBB_FPGA_SYSREF_n),   //in  std_logic
+      .aLmkSync(DBB_CPLD_PL_SPI_ADDR[2]),      //out std_logic
+      .JesdRefClk_p(USRPIO_B_MGTCLK_P),        //in  std_logic
+      .JesdRefClk_n(USRPIO_B_MGTCLK_N),        //in  std_logic
+      .aAdcRx_p(USRPIO_B_RX_P),                //in  std_logic_vector(3:0)
+      .aAdcRx_n(USRPIO_B_RX_N),                //in  std_logic_vector(3:0)
+      .aSyncAdcOut_n(DBB_MYK_SYNC_IN_n),       //out std_logic
+      .aDacTx_p(USRPIO_B_TX_P),                //out std_logic_vector(3:0)
+      .aDacTx_n(USRPIO_B_TX_N),                //out std_logic_vector(3:0)
+      .aSyncDacIn_n(DBB_MYK_SYNC_OUT_n),       //in  std_logic
+      .aAdcSync(aAdcSyncUnusedB),              //out std_logic
+      .aDacSync(aDacSyncUnusedB),              //out std_logic
+      .sAdcDataValid(rx_b_valid),              //out std_logic
+      .sAdcDataSamples0I(rx2[31:16]),          //out std_logic_vector(15:0)
+      .sAdcDataSamples0Q(rx2[15:0]),           //out std_logic_vector(15:0)
+      .sAdcDataSamples1I(rx3[31:16]),          //out std_logic_vector(15:0)
+      .sAdcDataSamples1Q(rx3[15:0]),           //out std_logic_vector(15:0)
+      .sDacReadyForInput(tx_b_rfi),            //out std_logic
+      .sDacDataSamples0I(tx2[31:16]),          //in  std_logic_vector(15:0)
+      .sDacDataSamples0Q(tx2[15:0]),           //in  std_logic_vector(15:0)
+      .sDacDataSamples1I(tx3[31:16]),          //in  std_logic_vector(15:0)
+      .sDacDataSamples1Q(tx3[15:0]),           //in  std_logic_vector(15:0)
+      .RefClk(ref_clk),                        //in  std_logic
+      .rPpsPulse(pps_refclk),                  //in  std_logic
+      .rGatedPulseToPin(aUnusedPinForTdcB0),   //inout std_logic
+      .sGatedPulseToPin(aUnusedPinForTdcB1),   //inout std_logic
+      .rRSP(rRSP_b_unused),                    //out std_logic
+      .sRTC(sRTC_b_unused),                    //out std_logic
+      .sPps(sPpsUnusedB));                     //out std_logic
+
+  assign rx_stb[2] = rx_b_valid;
+  assign rx_stb[3] = rx_b_valid;
+  assign tx_stb[2] = tx_b_rfi;
+  assign tx_stb[3] = tx_b_rfi;
+
+  axil_to_ni_regport #(
+    .RP_DWIDTH   (32),
+    .RP_AWIDTH   (14),
+    .TIMEOUT     (512)
+  ) ni_regportB_inst (
+    // Clock and reset
+    .s_axi_aclk    (clk40),
+    .s_axi_areset  (~FCLK_RESET0N),
+    // AXI4-Lite: Write address port (domain: s_axi_aclk)
+    .s_axi_awaddr  (M_AXI_GP0_AWADDR_S6),
+    .s_axi_awvalid (M_AXI_GP0_AWVALID_S6),
+    .s_axi_awready (M_AXI_GP0_AWREADY_S6),
+    // AXI4-Lite: Write data port (domain: s_axi_aclk)
+    .s_axi_wdata   (M_AXI_GP0_WDATA_S6),
+    .s_axi_wstrb   (M_AXI_GP0_WSTRB_S6),
+    .s_axi_wvalid  (M_AXI_GP0_WVALID_S6),
+    .s_axi_wready  (M_AXI_GP0_WREADY_S6),
+    // AXI4-Lite: Write response port (domain: s_axi_aclk)
+    .s_axi_bresp   (M_AXI_GP0_BRESP_S6),
+    .s_axi_bvalid  (M_AXI_GP0_BVALID_S6),
+    .s_axi_bready  (M_AXI_GP0_BREADY_S6),
+    // AXI4-Lite: Read address port (domain: s_axi_aclk)
+    .s_axi_araddr  (M_AXI_GP0_ARADDR_S6),
+    .s_axi_arvalid (M_AXI_GP0_ARVALID_S6),
+    .s_axi_arready (M_AXI_GP0_ARREADY_S6),
+    // AXI4-Lite: Read data port (domain: s_axi_aclk)
+    .s_axi_rdata   (M_AXI_GP0_RDATA_S6),
+    .s_axi_rresp   (M_AXI_GP0_RRESP_S6),
+    .s_axi_rvalid  (M_AXI_GP0_RVALID_S6),
+    .s_axi_rready  (M_AXI_GP0_RREADY_S6),
+    // Register port
+    .reg_port_in_rd    (reg_portB_rd),
+    .reg_port_in_wt    (reg_portB_wr),
+    .reg_port_in_addr  (reg_portB_addr),
+    .reg_port_in_data  (reg_portB_wr_data),
+    .reg_port_out_data (reg_portB_rd_data),
+    .reg_port_out_ready(reg_portB_ready)
   );
 
 
@@ -2370,12 +2679,12 @@ module n310
        counter2 <= counter2 + 32'd1;
    end
    reg [31:0] counter3;
-   always @(posedge gige_refclk) begin
-     if (FCLK_RESET0)
-       counter3 <= 32'd0;
-     else
-       counter3 <= counter3 + 32'd1;
-   end
+   // always @(posedge gige_refclk) begin
+     // if (FCLK_RESET0)
+       // counter3 <= 32'd0;
+     // else
+       // counter3 <= counter3 + 32'd1;
+   // end
 
    assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
 
@@ -2386,18 +2695,18 @@ module n310
    // Check Clock frequency through PPS_OUT
 
    // TODO:  Only for DEBUG
-   ODDR #(
-      .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
-      .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
-      .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
-   ) fclk_inst (
-      .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      .C(gige_refclk),   // 1-bit clock input
-      .CE(1'b1), // 1-bit clock enable input
-      .D1(1'b0), // 1-bit data input (positive edge)
-      .D2(1'b1), // 1-bit data input (negative edge)
-      .R(1'b0),   // 1-bit reset
-      .S(1'b0)    // 1-bit set
-   );
+   // ODDR #(
+      // .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
+      // .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
+      // .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
+   // ) fclk_inst (
+      // .Q(REF_1PPS_OUT),   // 1-bit DDR output
+      // .C(gige_refclk),   // 1-bit clock input
+      // .CE(1'b1), // 1-bit clock enable input
+      // .D1(1'b0), // 1-bit data input (positive edge)
+      // .D2(1'b1), // 1-bit data input (negative edge)
+      // .R(1'b0),   // 1-bit reset
+      // .S(1'b0)    // 1-bit set
+   // );
 
 endmodule

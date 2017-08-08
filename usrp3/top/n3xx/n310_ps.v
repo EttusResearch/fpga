@@ -421,23 +421,14 @@ module n310_ps
 
   wire        processing_system7_FCLK_RESET0_N;
   wire        processing_system7_FCLK_CLK0;
-  wire        processing_system7_FCLK_RESET1_N;
   wire        processing_system7_FCLK_CLK1;
-  wire        processing_system7_FCLK_RESET2_N;
   wire        processing_system7_FCLK_CLK2;
-  wire        processing_system7_FCLK_RESET3_N;
   wire        processing_system7_FCLK_CLK3;
 
   assign FCLK_RESET0 = ~processing_system7_FCLK_RESET0_N;
   assign FCLK_CLK0 = processing_system7_FCLK_CLK0;
-
-  assign FCLK_RESET1 = ~processing_system7_FCLK_RESET1_N;
   assign FCLK_CLK1 = processing_system7_FCLK_CLK1;
-
-  assign FCLK_RESET2 = ~processing_system7_FCLK_RESET2_N;
   assign FCLK_CLK2 = processing_system7_FCLK_CLK2;
-
-  assign FCLK_RESET3 = ~processing_system7_FCLK_RESET3_N;
   assign FCLK_CLK3 = processing_system7_FCLK_CLK3;
 
   processing_system7_0 inst_processing_system7_0
@@ -507,7 +498,7 @@ module n310_ps
     .M_AXI_GP0_AWLEN(processing_system7_M_AXI_GP0_AWLEN),
     .M_AXI_GP0_AWQOS(processing_system7_M_AXI_GP0_AWQOS),
     .M_AXI_GP0_WSTRB(processing_system7_M_AXI_GP0_WSTRB),
-    .M_AXI_GP0_ACLK(FCLK_CLK0),
+    .M_AXI_GP0_ACLK(FCLK_CLK1),
     .M_AXI_GP0_ARREADY(processing_system7_M_AXI_GP0_ARREADY),
     .M_AXI_GP0_AWREADY(processing_system7_M_AXI_GP0_AWREADY),
     .M_AXI_GP0_BVALID(processing_system7_M_AXI_GP0_BVALID),
@@ -535,7 +526,7 @@ module n310_ps
     .S_AXI_HP0_WCOUNT(),
     .S_AXI_HP0_RACOUNT(),
     .S_AXI_HP0_WACOUNT(),
-    .S_AXI_HP0_ACLK(FCLK_CLK0),
+    .S_AXI_HP0_ACLK(FCLK_CLK1),
     .S_AXI_HP0_ARVALID(processing_system7_S_AXI_HP0_ARVALID),
     .S_AXI_HP0_AWVALID(processing_system7_S_AXI_HP0_AWVALID),
     .S_AXI_HP0_BREADY(processing_system7_S_AXI_HP0_BREADY),
@@ -577,7 +568,7 @@ module n310_ps
     .S_AXI_GP0_BID(processing_system7_S_AXI_GP0_BID),
     .S_AXI_GP0_RID(processing_system7_S_AXI_GP0_RID),
     .S_AXI_GP0_RDATA(processing_system7_S_AXI_GP0_RDATA),
-    .S_AXI_GP0_ACLK(FCLK_CLK0),
+    .S_AXI_GP0_ACLK(FCLK_CLK1),
     .S_AXI_GP0_ARVALID(processing_system7_S_AXI_GP0_ARVALID),
     .S_AXI_GP0_AWVALID(processing_system7_S_AXI_GP0_AWVALID),
     .S_AXI_GP0_BREADY(processing_system7_S_AXI_GP0_BREADY),
@@ -621,7 +612,7 @@ module n310_ps
     .S_AXI_HP1_WCOUNT(),
     .S_AXI_HP1_RACOUNT(),
     .S_AXI_HP1_WACOUNT(),
-    .S_AXI_HP1_ACLK(FCLK_CLK0),
+    .S_AXI_HP1_ACLK(FCLK_CLK1),
     .S_AXI_HP1_ARVALID(processing_system7_S_AXI_HP1_ARVALID),
     .S_AXI_HP1_AWVALID(processing_system7_S_AXI_HP1_AWVALID),
     .S_AXI_HP1_BREADY(processing_system7_S_AXI_HP1_BREADY),
@@ -663,7 +654,7 @@ module n310_ps
     .S_AXI_GP1_BID(processing_system7_S_AXI_GP1_BID),
     .S_AXI_GP1_RID(processing_system7_S_AXI_GP1_RID),
     .S_AXI_GP1_RDATA(processing_system7_S_AXI_GP1_RDATA),
-    .S_AXI_GP1_ACLK(FCLK_CLK0),
+    .S_AXI_GP1_ACLK(FCLK_CLK1),
     .S_AXI_GP1_ARVALID(processing_system7_S_AXI_GP1_ARVALID),
     .S_AXI_GP1_AWVALID(processing_system7_S_AXI_GP1_AWVALID),
     .S_AXI_GP1_BREADY(processing_system7_S_AXI_GP1_BREADY),
@@ -695,6 +686,9 @@ module n310_ps
 
     .IRQ_F2P(IRQ_F2P),
     .FCLK_CLK0(processing_system7_FCLK_CLK0),
+    .FCLK_CLK1(processing_system7_FCLK_CLK1),
+    .FCLK_CLK2(processing_system7_FCLK_CLK2),
+    .FCLK_CLK3(processing_system7_FCLK_CLK3),
     .FCLK_RESET0_N(processing_system7_FCLK_RESET0_N),
     .MIO(MIO),
     .DDR_CAS_n(DDR_CAS_n),
@@ -721,7 +715,7 @@ module n310_ps
 
   axi3_to_axi4lite_protocol_converter inst_axi3_to_axi4lite_protocol_converter
   (
-    .aclk(FCLK_CLK0),
+    .aclk(FCLK_CLK1),
     .aresetn(processing_system7_FCLK_RESET0_N),
     .s_axi_awid(processing_system7_M_AXI_GP0_AWID),
     .s_axi_awaddr(processing_system7_M_AXI_GP0_AWADDR),
@@ -784,7 +778,7 @@ module n310_ps
 
   axi4_to_axi3_protocol_converter_64 inst_axi4_to_axi3_protocol_converter_64_0
   (
-    .aclk(FCLK_CLK0),
+    .aclk(FCLK_CLK1),
     .aresetn(processing_system7_FCLK_RESET0_N),
     .s_axi_awid(S_AXI_HP0_AWID),
     .s_axi_awaddr(S_AXI_HP0_AWADDR),
@@ -865,7 +859,7 @@ module n310_ps
 
   axi4_to_axi3_protocol_converter_32 inst_axi4_to_axi3_protocol_converter_32_0
   (
-    .aclk(FCLK_CLK0),
+    .aclk(FCLK_CLK1),
     .aresetn(processing_system7_FCLK_RESET0_N),
     .s_axi_awid(S_AXI_GP0_AWID),
     .s_axi_awaddr(S_AXI_GP0_AWADDR),
@@ -946,7 +940,7 @@ module n310_ps
 
   axi4_to_axi3_protocol_converter_64 inst_axi4_to_axi3_protocol_converter_64_1
   (
-    .aclk(FCLK_CLK0),
+    .aclk(FCLK_CLK1),
     .aresetn(processing_system7_FCLK_RESET0_N),
     .s_axi_awid(S_AXI_HP1_AWID),
     .s_axi_awaddr(S_AXI_HP1_AWADDR),
@@ -1027,7 +1021,7 @@ module n310_ps
 
   axi4_to_axi3_protocol_converter_32 inst_axi4_to_axi3_protocol_converter_32_1
   (
-    .aclk(FCLK_CLK0),
+    .aclk(FCLK_CLK1),
     .aresetn(processing_system7_FCLK_RESET0_N),
     .s_axi_awid(S_AXI_GP1_AWID),
     .s_axi_awaddr(S_AXI_GP1_AWADDR),

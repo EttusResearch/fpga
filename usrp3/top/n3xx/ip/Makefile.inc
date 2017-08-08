@@ -15,6 +15,7 @@ include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/radio_clk_gen/Makefile.inc
 include $(IP_DIR)/clk_gen/Makefile.inc
+include $(IP_DIR)/MeasClkMmcm/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
@@ -38,6 +39,7 @@ $(IP_AXI_INTERCONNECT_SRCS) \
 $(IP_AXI_INTERRUPT_CONTROLLER_SRCS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_SRCS) \
 $(IP_BUS_CLK_GEN_SRCS) \
+$(IP_MEASCLK_MMCM_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(IP_RADIO_CLK_GEN_SRCS) \

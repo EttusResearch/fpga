@@ -19,6 +19,15 @@ module n310_core #(
   input         bus_clk,
   input         bus_rst,
 
+  // Clocking and PPS Controls/Inidcators
+  input            pps,
+  output reg[1:0]  pps_select,
+  output reg       pps_out_enb,
+  output reg       ref_clk_reset,
+  output reg       meas_clk_reset,
+  input            ref_clk_locked,
+  input            meas_clk_locked,
+
   input                    s_axi_aclk,
   input                    s_axi_aresetn,
   input [REG_AWIDTH-1:0]   s_axi_awaddr,
@@ -56,8 +65,8 @@ module n310_core #(
   input  [31:0] rx3,
   output [31:0] tx3,
 
-  //input         rx_stb,  //FIXME
-  //input         rx_stb,  //FIXME
+  input  [3:0]  rx_stb,
+  input  [3:0]  tx_stb,
 
   // DMA
   output [63:0] dmao_tdata,
@@ -140,10 +149,7 @@ module n310_core #(
   input  [63:0] e2v1_tdata,
   input         e2v1_tlast,
   input         e2v1_tvalid,
-  output        e2v1_tready,
-
-  output [2:0]  spi_mux,
-  output        cpld_reset
+  output        e2v1_tready
 );
 
   localparam NUM_CHANNELS = 2;
@@ -228,29 +234,53 @@ module n310_core #(
   localparam REG_GIT_HASH    = 14'h0;
   localparam REG_NUM_CE      = 14'h4;
   localparam REG_SCRATCH     = 14'h8;
+  localparam REG_CLOCK_CTRL   = 14'h0C;
 
   reg [31:0] scratch_reg;
-
-  assign spi_mux = scratch_reg[2:0];
-  assign cpld_reset = scratch_reg[3];
+  reg b_ref_clk_locked_ms;
+  reg b_ref_clk_locked;
+  reg b_meas_clk_locked_ms;
+  reg b_meas_clk_locked;
 
   always @ (posedge bus_clk)
     if (bus_rst) begin
-      scratch_reg <= 32'h2;
+      scratch_reg    <= 32'h0;
+      pps_select     <= 2'h1;
+      pps_out_enb    <= 1'b0;
+      ref_clk_reset  <= 1'b0;
+      meas_clk_reset <= 1'b0;
     end
     else begin
-    if (reg_wr_req)
-      case (reg_wr_addr)
-        REG_SCRATCH:
-          scratch_reg <= reg_wr_data;
-      endcase
+      if (reg_wr_req)
+        case (reg_wr_addr)
+          REG_SCRATCH:
+            scratch_reg <= reg_wr_data;
+          REG_CLOCK_CTRL: begin
+            pps_select     <= reg_wr_data[1:0];
+            pps_out_enb    <= reg_wr_data[4];
+            ref_clk_reset  <= reg_wr_data[8];
+            meas_clk_reset <= reg_wr_data[12];
+            end
+        endcase
     end
 
   always @ (posedge bus_clk)
-    if (bus_rst)
+    if (bus_rst) begin
       reg_rd_resp_glob <= 1'b0;
-
+      b_ref_clk_locked_ms  <= 1'b0;
+      b_ref_clk_locked     <= 1'b0;
+      b_meas_clk_locked_ms <= 1'b0;
+      b_meas_clk_locked    <= 1'b0;
+    end
     else begin
+
+      // double-sync the locked bits into the bus_clk domain before using them
+      b_ref_clk_locked_ms  <= ref_clk_locked;
+      b_ref_clk_locked     <= b_ref_clk_locked_ms;
+      b_meas_clk_locked_ms <= meas_clk_locked;
+      b_meas_clk_locked    <= b_meas_clk_locked_ms;
+
+
       if (reg_rd_req) begin
         reg_rd_resp_glob <= 1'b1;
 
@@ -263,6 +293,17 @@ module n310_core #(
 
         REG_SCRATCH:
           reg_rd_data_glob <= scratch_reg;
+
+        REG_CLOCK_CTRL: begin
+          reg_rd_data_glob <= 32'b0;
+          reg_rd_data_glob[1:0] <= pps_select;
+          reg_rd_data_glob[4]   <= pps_out_enb;
+          reg_rd_data_glob[8]   <= ref_clk_reset;
+          reg_rd_data_glob[9]   <= b_ref_clk_locked;
+          reg_rd_data_glob[12]  <= meas_clk_reset;
+          reg_rd_data_glob[13]  <= b_meas_clk_locked;
+          end
+
         default:
           reg_rd_resp_glob <= 1'b0;
         endcase
@@ -275,7 +316,7 @@ module n310_core #(
    //
    // ioce
    //
-   
+
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_o_tdata;
    wire     [NUM_IO_CE*64-1:0]  ioce_flat_i_tdata;
    wire     [63:0]              ioce_o_tdata[0:NUM_IO_CE-1];
@@ -552,16 +593,6 @@ module n310_core #(
    // Data
    wire [31:0] rx_data[0:3], tx_data[0:3];
 
-   wire        rx_stb[0:3], tx_stb[0:3];
-   assign rx_stb[0] = 1'b1;
-   assign rx_stb[1] = 1'b1;
-   assign rx_stb[2] = 1'b1;
-   assign rx_stb[3] = 1'b1;
-   assign tx_stb[0] = 1'b1;
-   assign tx_stb[1] = 1'b1;
-   assign tx_stb[2] = 1'b1;
-   assign tx_stb[3] = 1'b1;
-
    genvar i;
    generate for (i = FIRST_RADIO_CORE_INST; i < LAST_RADIO_CORE_INST; i = i + 1) begin
 
@@ -586,16 +617,16 @@ module n310_core #(
       .o_tvalid(ioce_i_tvalid[i]),
       .o_tready(ioce_i_tready[i]),
       // Data ports connected to radio front end
-      .rx({rx_data[i*2+1],rx_data[i*2]}),
-      .rx_stb({rx_stb[i*2+1],rx_stb[i*2]}),
-      .tx({tx_data[i*2+1],tx_data[i*2]}),
-      .tx_stb({tx_stb[i*2+1],tx_stb[i*2]}),
+      .rx(    {rx_data[(i-1)*2+1],rx_data[(i-1)*2]}), // all these ports are 0-based indexed
+      .rx_stb({rx_stb [(i-1)*2+1], rx_stb[(i-1)*2]}), // whereas the i is 1-based
+      .tx(    {tx_data[(i-1)*2+1],tx_data[(i-1)*2]}),
+      .tx_stb({tx_stb [(i-1)*2+1], tx_stb[(i-1)*2]}),
       // Ctrl ports connected to radio front end
       //.ext_set_stb({ext_set_stb[i+1],ext_set_stb[i]}),
       //.ext_set_addr({ext_set_addr[i+1],ext_set_addr[i]}),
       //.ext_set_data({ext_set_data[i+1],ext_set_data[i]}),
       //// Interfaces to front panel and daughter board
-      //.pps(pps_rclk),
+      .pps(pps),
       //.sync_in(time_sync_r),
       //.sync_out(sync_out[i]),
       //.misc_ins({misc_ins[i+1],misc_ins[i]}),

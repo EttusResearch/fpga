@@ -16,7 +16,6 @@ tx_control_gen3.v \
 noc_block_radio_core.v \
 n310_rx_frontend.v \
 n310_tx_frontend.v \
-RadioClocking.vhd \
 WrapBufg.vhd \
 ))
 

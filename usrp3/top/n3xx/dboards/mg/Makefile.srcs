@@ -1,0 +1,18 @@
+#
+# Copyright 2017 Ettus Research LLC
+#
+
+##################################################
+# DB IFC Sources
+##################################################
+MAGNESIUM_SRCS = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/db_ifc/, \
+DbCore.vhd \
+DaughterboardRegs.vhd \
+ClockingRegs.vhd \
+PkgMgPersonality.vhd \
+PkgDaughterboardRegMap.vhd \
+PkgClockingRegMap.vhd \
+PkgJesdConfig.vhd \
+RadioClocking.vhd \
+Jesd204bXcvrCore.edf \
+))
