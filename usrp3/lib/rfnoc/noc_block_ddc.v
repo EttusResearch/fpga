@@ -255,8 +255,8 @@ module noc_block_ddc #(
         .NUM_HB(NUM_HB),
         .CIC_MAX_DECIM(CIC_MAX_DECIM))
       ddc (
-        .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum[i]),
-        .clear(clear_user), // Use AXI Rate Change's clear user to reset block to initial state after EOB
+        .clk(ce_clk), .reset(ce_rst),
+        .clear(clear_user | clear_tx_seqnum[i]), // Use AXI Rate Change's clear user to reset block to initial state after EOB
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),
         .sample_in_tdata(sample_in_tdata), .sample_in_tlast(1'b0),
