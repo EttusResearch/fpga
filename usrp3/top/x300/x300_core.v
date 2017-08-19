@@ -103,6 +103,8 @@ module x300_core (
    output sfp1_wb_we,
    input sfp1_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
+   input [31:0] xadc_readback,
+
    // Time
    input pps,
    output [1:0] pps_select,
@@ -295,6 +297,7 @@ module x300_core (
       //Status signals
       .sfp0_phy_status(sfp0_phy_status),
       .sfp1_phy_status(sfp1_phy_status),
+      .xadc_readback(xadc_readback),
 
       // Debug
       .debug0(debug0), .debug1(debug1), .debug2(debug2)

@@ -4,7 +4,9 @@
 
 include $(TOOLS_DIR)/make/viv_ip_builder.mak
 
-IP_DDR3_32BIT_SRCS = $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit.xci
+IP_DDR3_32BIT_SRCS = \
+$(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit.xci \
+$(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/user_design/rtl/clocking/mig_7series_v2_4_tempmon.v
 
 IP_DDR3_32BIT_OUTS = $(addprefix $(IP_BUILD_DIR)/ddr3_32bit/, \
 ddr3_32bit.xci.out \

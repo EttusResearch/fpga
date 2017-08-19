@@ -484,7 +484,7 @@ parameter DEBUG_PORT            = "OFF",
 //***************************************************************************
 // Temparature monitor parameter
 //***************************************************************************
-parameter TEMP_MON_CONTROL      = "INTERNAL",
+parameter TEMP_MON_CONTROL      = "EXTERNAL",
                                   // # = "INTERNAL", "EXTERNAL"
 
 parameter RST_ACT_LOW           = 1

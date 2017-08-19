@@ -60,6 +60,7 @@ module bus_int #(
 
     input [15:0] sfp0_phy_status,
     input [15:0] sfp1_phy_status,
+    input [31:0] xadc_readback,
 
    // Debug
     output [31:0] debug0,
@@ -94,6 +95,7 @@ module bus_int #(
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_GIT_HASH     = 8'd10;
+   localparam RB_XADC_VALS    = 8'd11;
    localparam RB_CROSSBAR     = 8'd128;
 
    localparam COMPAT_MAJOR    = 16'h0021;
@@ -306,9 +308,9 @@ module bus_int #(
        RB_ETH_TYPE1: rb_data = {32'h0};
    `endif
 `endif
-       RB_GIT_HASH: rb_data = 32'h`GIT_HASH;
-
-       RB_CROSSBAR: rb_data = rb_data_crossbar;
+       RB_GIT_HASH:  rb_data = 32'h`GIT_HASH;
+       RB_XADC_VALS: rb_data = xadc_readback;
+       RB_CROSSBAR:  rb_data = rb_data_crossbar;
 
        default: rb_data = 32'h0;
      endcase // case (rb_addr)
