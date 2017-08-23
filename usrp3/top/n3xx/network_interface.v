@@ -374,7 +374,7 @@ module network_interface #(
   pulse_stretch inst_pulse_stretch0 (
     .clk(bus_clk),
     .rst(bus_rst),
-    .pulse(sfp_rx_tvalid & sfp_rx_tvalid || sfp_tx_tvalid & sfp_rx_tready),
+    .pulse(sfp_rx_tvalid & sfp_rx_tready || sfp_tx_tvalid & sfp_tx_tready),
     .pulse_stretched(activity_led)
   );
 
