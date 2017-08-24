@@ -39,7 +39,7 @@ module ofdm_peak_detector
 
   wire [2*WIDTH_SAMPLE-1:0] sample_dly_tdata;
   wire sample_dly_tvalid, sample_dly_tready;
-  delay #(.MAX_LEN_LOG2($clog2(SAMPLE_DELAY)), .WIDTH(2*WIDTH_SAMPLE)) delay_samples (
+  delay_fifo #(.MAX_LEN_LOG2($clog2(SAMPLE_DELAY)), .WIDTH(2*WIDTH_SAMPLE)) delay_samples (
     .clk(clk), .reset(reset), .clear(),
     .len(SAMPLE_DELAY),
     .i_tdata(sample_in_tdata), .i_tlast(1'b0), .i_tvalid(sample_in_tvalid), .i_tready(sample_in_tready),

@@ -1,9 +1,8 @@
 //
-// Copyright 2014 Ettus Research
+// Copyright 2017 Ettus Research
 //
-// FIXME I don't like the way this is implemented.  Should we remove the FIFO completely?
 
-module delay
+module delay_fifo
   #(parameter MAX_LEN=1023,
     parameter WIDTH=16)
    (input clk, input reset, input clear,
@@ -36,4 +35,4 @@ module delay
    assign o_tdata = full ? fifo_out : 0;
    assign o_tlast = i_tlast;
 
-endmodule // delay
+endmodule // delay_fifo

@@ -54,7 +54,7 @@ module schmidl_cox #(
     .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(),
     .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready());
 
-  delay #(.MAX_LEN(WINDOW_LEN), .WIDTH(32)) delay_input (
+  delay_fifo #(.MAX_LEN(WINDOW_LEN), .WIDTH(32)) delay_input (
     .clk(clk), .reset(reset), .clear(clear),
     .len(WINDOW_LEN),
     .i_tdata(n0_tdata), .i_tlast(n0_tlast), .i_tvalid(n0_tvalid), .i_tready(n0_tready),

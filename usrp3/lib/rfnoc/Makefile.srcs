@@ -40,7 +40,7 @@ schmidl_cox.v \
 split_stream.v \
 split_stream_fifo.v \
 conj.v \
-delay.v \
+delay_fifo.v \
 delay_type2.v \
 delay_type3.v \
 complex_to_magsq.v \

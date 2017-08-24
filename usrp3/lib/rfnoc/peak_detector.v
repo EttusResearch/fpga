@@ -41,7 +41,7 @@ module peak_detector
 
   wire [WIDTH-1:0] i_dly_tdata;
   wire i_dly_tvalid, i_dly_tready;
-  delay #(.MAX_LEN_LOG2($clog2(INPUT_DELAY)), .WIDTH(WIDTH)) delay_samples (
+  delay_fifo #(.MAX_LEN_LOG2($clog2(INPUT_DELAY)), .WIDTH(WIDTH)) delay_samples (
     .clk(clk), .reset(reset), .clear(),
     .len(INPUT_DELAY),
     .i_tdata(i_tdata), .i_tlast(1'b0), .i_tvalid(i_tvalid), .i_tready(i_tready),
