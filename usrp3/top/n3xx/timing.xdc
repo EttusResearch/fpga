@@ -10,6 +10,7 @@
 create_clock -name ref_clk             -period 100.000 -waveform {0.000 50.000}   [get_ports FPGA_REFCLK_P]
 create_clock -name MGT156MHZ_CLK1      -period 6.400   -waveform {0.000 3.200}    [get_ports MGT156MHZ_CLK1_P]
 
+
 # 125 MHz DB A & B Clocks
 set SampleClockPeriod 8.00
 create_clock -name DbaFpgaClk          -period $SampleClockPeriod  [get_ports DBA_FPGA_CLK_p]

@@ -4,7 +4,7 @@
 //
 // N3xx TOP
 //
-// Rev C Brimstone MB
+// Rev D Brimstone MB
 //
 // Rev C Magnesium DB
 //
@@ -705,7 +705,8 @@ module n310
   //
   //////////////////////////////////////////////////////////////////////
 
-  wire ref_clk_buf;
+  wire ref_clk_buf_inv;
+  wire ref_clk_inv;
   wire ref_clk;
 
   wire radio_clk;
@@ -722,16 +723,24 @@ module n310
   //
   // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
   // to meet timing with the PPS signal.
-  IBUFDS IBUFDS_ref_clk (
-       .O(ref_clk_buf),
-       .I(FPGA_REFCLK_P),
-       .IB(FPGA_REFCLK_N)
+
+  IBUFGDS ref_clk_ibuf (
+    .O(ref_clk_buf_inv),
+    .I(FPGA_REFCLK_N),
+    .IB(FPGA_REFCLK_P)
+  );
+
+  BUFG ref_clk_bufg (
+       .O(ref_clk_inv),
+       .I(ref_clk_buf_inv)
    );
 
-  BUFG BUFG_ref_clk (
-       .O(ref_clk),
-       .I(ref_clk_buf)
-   );
+  // For Rev D Motherboard, the REFCLK signal sent to the FPGA is inverted on the PCB.
+  // To fix this, add in an inverter after the BUFG, such that the re-inversion (to
+  // the correct polarity of the clock) is pulled into each flop that uses this clock.
+  // Tested with Vivado 2015.4 for correct behavior.
+  assign ref_clk = ~ref_clk_inv;
+
 
   // Measurement Clock MMCM Instantiation
   //
@@ -851,7 +860,7 @@ module n310
    assign sfp1_gb_refclk = gige_refclk_bufg;
    assign sfp1_misc_clk  = gige_refclk_bufg;
 `endif
-`ifdef SFP0_AURORA
+`ifdef SFP1_AURORA
    assign sfp1_gt_refclk = aurora_refclk;
    assign sfp1_gb_refclk = aurora_clk156;
    assign sfp1_misc_clk  = aurora_init_clk;
