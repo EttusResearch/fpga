@@ -236,7 +236,7 @@ def create_oot_include(device, include_dirs):
                     # Legacy: Check for fpga-src/Makefile.srcs
                     # Read, then append to file
                     curr_srcs = open(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs'), 'r').read()
-                    curr_srcs = curr_srcs.replace('SOURCES_PATH', os.path.join(oot_path, 'rfnoc', 'fpga-src'))
+                    curr_srcs = curr_srcs.replace('SOURCES_PATH', os.path.join(oot_path, 'rfnoc', 'fpga-src',''))
                     incfile.write(OOT_SRCS_TMPL.format(sources=curr_srcs))
                 else:
                     print('No valid makefile found at ' + os.path.abspath(currpath))
