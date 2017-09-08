@@ -809,6 +809,9 @@ module n310
      .CLK_OUT2(reg_clk),
      .CLK_OUT3(clk40),
      .RESET(FCLK_RESET0));
+  
+  //If bus_clk freq ever changes, update this paramter accordingly.
+  localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate. 
 
    wire  sfp0_gt_refclk, sfp1_gt_refclk;
    wire  sfp0_gb_refclk, sfp1_gb_refclk;
@@ -2104,7 +2107,7 @@ module n310
   wire             rx_stb; // FIXME: 2 bit
   wire             tx_stb; // FIXME: 2 bit
 
-  n310_core #(.REG_AWIDTH(14)) n310_core
+  n310_core #(.REG_AWIDTH(14), .BUS_CLK_RATE(BUS_CLK_RATE)) n310_core
   (
     //Clocks and resets
     .radio_clk(/*radio_clk*/bus_clk), //FIXME: Move to radio_clk

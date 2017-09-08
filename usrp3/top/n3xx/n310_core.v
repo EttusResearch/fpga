@@ -10,7 +10,8 @@
 
 module n310_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
-  parameter REG_AWIDTH  = 32  // Width of the address bus
+  parameter REG_AWIDTH  = 32,  // Width of the address bus
+  parameter BUS_CLK_RATE = 200000000 // BUS_CLK rate for dram_fifo BIST calculation
 )(
  //Clocks and resets
   input         radio_clk,
@@ -472,6 +473,7 @@ module n310_core #(
 
    noc_block_axi_dma_fifo #(
       .NUM_FIFOS(2),
+      .BUS_CLK_RATE(BUS_CLK_RATE), //200MHz
       .DEFAULT_FIFO_BASE({30'h02000000, 30'h00000000}),
       .DEFAULT_FIFO_SIZE({30'h01FFFFFF, 30'h01FFFFFF}),
       .STR_SINK_FIFOSIZE(14),
