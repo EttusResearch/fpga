@@ -11,8 +11,9 @@ module axi_dma_fifo
    parameter DEFAULT_BASE     = 30'h00000000,
    parameter DEFAULT_MASK     = 30'hFF000000,
    parameter DEFAULT_TIMEOUT  = 12'd256,
-   parameter SR_BASE          = 0,            //Base address for settings registers
-   parameter EXT_BIST         = 0,            //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+   parameter BUS_CLK_RATE     = 32'd166666666,  //Used to calc BIST. Default BUS_CLK_RATE matches x300 design (166.67e6)
+   parameter SR_BASE          = 0,              //Base address for settings registers
+   parameter EXT_BIST         = 0,              //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
    parameter MAX_PKT_LEN      = 12            //Log2 of maximum packet length
 ) (
    input bus_clk,
@@ -131,6 +132,7 @@ module axi_dma_fifo
    localparam RB_BIST_STATUS    = 3'd1;
    localparam RB_BIST_XFER_CNT  = 3'd2;
    localparam RB_BIST_CYC_CNT   = 3'd3;
+   localparam RB_BUS_CLK_RATE   = 3'd4;
 
    // SETTING: Readback Address Register
    // Fields:
@@ -139,6 +141,7 @@ module axi_dma_fifo
    //            - 1 = RB_BIST_STATUS
    //            - 2 = RB_BIST_XFER_CNT
    //            - 3 = RB_BIST_CYC_CNT
+   //            - 4 = RB_BUS_CLK_RATE
    //            - rest reserved
    setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'b000)) sr_readback
      (.clk(bus_clk), .rst(bus_reset),
@@ -181,6 +184,7 @@ module axi_dma_fifo
          RB_BIST_STATUS:      rb_data = {(EXT_BIST?1'b1:1'b0), 27'h0, rb_bist_status};
          RB_BIST_XFER_CNT:    rb_data = rb_bist_bw_ratio[79:48];
          RB_BIST_CYC_CNT:     rb_data = rb_bist_bw_ratio[31:0];
+         RB_BUS_CLK_RATE:     rb_data = BUS_CLK_RATE;
          default:             rb_data = 32'h0;
       endcase
    end
