@@ -29,7 +29,6 @@ module noc_block_radio_core_tb;
   /********************************************************
   ** DUT, due to non-standard I/O we cannot use `RFNOC_ADD_BLOCK()
   ********************************************************/
-  `include "radio_core_regs.vh"
   localparam NUM_CHANNELS = 2;
   localparam TX_STB_RATE = 2;
   localparam RX_STB_RATE = 2;
@@ -40,15 +39,21 @@ module noc_block_radio_core_tb;
   logic [NUM_CHANNELS-1:0] sync;
   logic [NUM_CHANNELS*32-1:0] misc_ins = 'd0;
   logic [NUM_CHANNELS*32-1:0] misc_outs, leds;
-  logic [NUM_CHANNELS*32-1:0] fp_gpio_in = 'd0;
-  logic [NUM_CHANNELS*32-1:0] db_gpio_in = 'd0;
+  logic [NUM_CHANNELS*32-1:0] fp_gpio_in = 'd0, fp_gpio_fab = 'd0;
+  logic [NUM_CHANNELS*32-1:0] db_gpio_in = 'd0, db_gpio_fab = 'd0;
   logic [NUM_CHANNELS*32-1:0] fp_gpio_out, fp_gpio_ddr, db_gpio_out, db_gpio_ddr;
   logic [NUM_CHANNELS*8-1:0] sen;
   logic [NUM_CHANNELS-1:0] sclk, mosi, miso = 'd0;
+  
+  wire [NUM_CHANNELS-1:0]    rx_running, tx_running;
+  wire [NUM_CHANNELS-1:0]    db_fe_set_stb, db_fe_rb_stb;
+  wire [NUM_CHANNELS*8-1:0]  db_fe_set_addr, db_fe_rb_addr;
+  wire [NUM_CHANNELS*32-1:0] db_fe_set_data;
+  wire [NUM_CHANNELS*64-1:0] db_fe_rb_data;
+
   noc_block_radio_core #(
-    .NUM_CHANNELS(NUM_CHANNELS),
-    .USE_SPI_CLK(1))
-  noc_block_radio_core (
+    .NUM_CHANNELS(NUM_CHANNELS)
+  ) noc_block_radio_core (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(radio_clk), .ce_rst(radio_rst),
     // noc_block_radio_core_* signals created by `RFNOC_BLOCK_CUSTOM() above
@@ -56,16 +61,34 @@ module noc_block_radio_core_tb;
     .i_tvalid(noc_block_radio_core_i_tvalid), .i_tready(noc_block_radio_core_i_tready),
     .o_tdata(noc_block_radio_core_o_tdata), .o_tlast(noc_block_radio_core_o_tlast),
     .o_tvalid(noc_block_radio_core_o_tvalid), .o_tready(noc_block_radio_core_o_tready),
-    .ext_set_stb(), .ext_set_addr(), .ext_set_data(),
     .rx_stb({NUM_CHANNELS{rx_stb}}), .rx(rx),
     .tx_stb({NUM_CHANNELS{tx_stb}}), .tx(tx),
+    .rx_running(rx_running), .tx_running(tx_running),
     .pps(pps), .sync_in(sync_in), .sync_out(),
-    .misc_ins(misc_ins), .misc_outs(misc_outs),
-    .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
-    .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr),
-    .leds(leds),
-    .spi_clk(bus_clk), .spi_rst(bus_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
-    .debug());
+    .db_fe_set_stb(db_fe_set_stb), .db_fe_set_addr(db_fe_set_addr), .db_fe_set_data(db_fe_set_data),
+    .db_fe_rb_stb(db_fe_rb_stb), .db_fe_rb_addr(db_fe_rb_addr), .db_fe_rb_data(db_fe_rb_data),
+    .debug()
+  );
+
+  genvar i;
+  generate for (i = 0; i < NUM_CHANNELS; i++) begin: dbch
+    db_control #(
+      .USE_SPI_CLK(1), .SR_BASE(160), .RB_BASE(16)
+    ) db_control_i (
+      .clk(radio_clk), .reset(radio_rst),
+      .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i*8+7:i*8]), .set_data(db_fe_set_data[i*32+31:i*32]),
+      .rb_stb(db_fe_rb_stb[i]), .rb_addr(db_fe_rb_addr[i*8+7:i*8]), .rb_data(db_fe_rb_data[i*64+63:i*64]),
+      .run_rx(rx_running[i]), .run_tx(tx_running[i]),
+      .misc_ins(misc_ins[i*32+31:i*32]), .misc_outs(misc_outs[i*32+31:i*32]),
+      .fp_gpio_in(fp_gpio_in[i*32+31:i*32]), .fp_gpio_out(fp_gpio_out[i*32+31:i*32]),
+      .fp_gpio_ddr(fp_gpio_ddr[i*32+31:i*32]), .fp_gpio_fab(fp_gpio_fab[i*32+31:i*32]),
+      .db_gpio_in(db_gpio_in[i*32+31:i*32]), .db_gpio_out(db_gpio_out[i*32+31:i*32]),
+      .db_gpio_ddr(db_gpio_ddr[i*32+31:i*32]), .db_gpio_fab(db_gpio_fab[i*32+31:i*32]),
+      .leds(leds[i*32+31:i*32]),
+      .spi_clk(bus_clk), .spi_rst(bus_rst), .sen(sen[i*8+7:i*8]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i])
+    );
+  end endgenerate
+
 
   // Mux to emulate frontend loopback test
   logic rxtx_loopback;
@@ -178,7 +201,7 @@ module noc_block_radio_core_tb;
       cvita_metadata_t md = '{eob:eob, has_time:has_time, timestamp:timestamp};
       logic [63:0] readback;
       // Set CODEC IDLE which sets TX output value when not actively transmitting
-      send_radio_cmd(radio_num, SR_CODEC_IDLE, TX_VERIF_WORD, readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_CODEC_IDLE, TX_VERIF_WORD, readback);
       // Send TX burst
       payload = {};
       // Generate ramp pattern for TX samples
@@ -209,13 +232,13 @@ module noc_block_radio_core_tb;
         $display("Radio %2d: Start RX, receive %5d samples",radio_num,num_samples);
       end
       // Set number of samples per packet
-      send_radio_cmd(radio_num, SR_RX_CTRL_MAXLEN, SPP, readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_MAXLEN, SPP, readback);
       // Receive a single packet immediately
-      send_radio_cmd(radio_num, SR_RX_CTRL_COMMAND,
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_COMMAND,
                      {1'b1 /* Start immediately */, chain_commands, reload, 1'b0 /* Stop */, 28'(num_samples)},
                      readback);
       // Have to set time lower bytes to trigger the command being stored, although time is not used.
-      send_radio_cmd(radio_num, SR_RX_CTRL_TIME_LO, 32'd0, readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_TIME_LO, 32'd0, readback);
     end
   endtask
 
@@ -233,14 +256,14 @@ module noc_block_radio_core_tb;
         $display("Radio %2d: Start RX, receive %5d samples and stop",radio_num,num_samples);
       end
       // Set number of samples per packet
-      send_radio_cmd(radio_num, SR_RX_CTRL_MAXLEN, SPP, readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_MAXLEN, SPP, readback);
       // Receive a single packet immediately
-      send_radio_cmd(radio_num, SR_RX_CTRL_COMMAND,
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_COMMAND,
                      {1'b0 /* Start immediately */, chain_commands, reload, 1'b0 /* Stop */, 28'(num_samples)},
                      readback);
       // Set start time
-      send_radio_cmd(radio_num, SR_RX_CTRL_TIME_HI, start_time[63:32], readback);
-      send_radio_cmd(radio_num, SR_RX_CTRL_TIME_LO, start_time[31:0], readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_TIME_HI, start_time[63:32], readback);
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_TIME_LO, start_time[31:0], readback);
     end
   endtask
 
@@ -249,7 +272,7 @@ module noc_block_radio_core_tb;
     begin
       logic [63:0] readback;
       $display("Radio %2d: Stop RX",radio_num);
-      send_radio_cmd(radio_num, SR_RX_CTRL_COMMAND,
+      send_radio_cmd(radio_num, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_RX_CTRL_COMMAND,
                      {1'b0 /* Start immediately */,1'b0 /* Chain commands */,1'b0 /* Reload */, 1'b1 /* Stop */, 28'(0)},
                      readback);
     end
@@ -428,14 +451,14 @@ module noc_block_radio_core_tb;
     // Settings register test readback on each radio core
     for (int i = 0; i < num_channels; i++) begin
       // Set test register
-      send_radio_cmd(i, SR_TEST, 32'hDEADBEEF, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TEST, 32'hDEADBEEF, readback);
       // Readback test register
-      read_radio_core_reg(i, RB_TEST, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_TEST, readback);
       $sformat(s, "Radio %2d: Failed loopback test word #1",i);
       `ASSERT_ERROR(readback[31:0] == 32'hDEADBEEF, s);
       // Second test word
-      send_radio_cmd(i, SR_TEST, 32'hFEEDFACE, readback);
-      read_radio_core_reg(i, RB_TEST, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TEST, 32'hFEEDFACE, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_TEST, readback);
       $sformat(s, "Radio %2d: Failed loopback test word #2",i);
       `ASSERT_ERROR(readback[31:0] == 32'hFEEDFACE, s);
       $display("Radio %2d: Passed register loopback test", i);
@@ -452,24 +475,24 @@ module noc_block_radio_core_tb;
     rxtx_loopback = 1;
     for (int i = 0; i < num_channels; i++) begin
       // Enable loopback mode
-      send_radio_cmd(i, SR_LOOPBACK, 32'h1, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_LOOPBACK, 32'h1, readback);
       // Set codec idle register with test word -- TX output will be set to the test word
-      send_radio_cmd(i, SR_CODEC_IDLE, 32'hCAFEF00D, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_CODEC_IDLE, 32'hCAFEF00D, readback);
       // Readback TX output and RX input. Both should be the test word due to loopback.
-      read_radio_core_reg(i, RB_TXRX, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_TXRX, readback);
       $sformat(s, "Radio %2d: Incorrect TX idle word #1", i);
       `ASSERT_ERROR(readback[63:32] == 32'hCAFEF00D, s);
       $sformat(s, "Radio %2d: Incorrect RX loopback word #1", i);
       `ASSERT_ERROR(readback[31:0] == 32'hCAFEF00D, s);
       // Second test word
-      send_radio_cmd(i, SR_CODEC_IDLE, 32'h00C0FFEE, readback);
-      read_radio_core_reg(i, RB_TXRX, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_CODEC_IDLE, 32'h00C0FFEE, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_TXRX, readback);
       $sformat(s, "Radio %2d: Incorrect TX idle word #2", i);
       `ASSERT_ERROR(readback[63:32] == 32'h00C0FFEE, s);
       $sformat(s, "Radio %2d: Incorrect RX loopback word #2", i);
       `ASSERT_ERROR(readback[31:0] == 32'h00C0FFEE, s);
       // Disable loopback mode
-      send_radio_cmd(i, SR_LOOPBACK, 32'h0, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_LOOPBACK, 32'h0, readback);
     end
     rxtx_loopback = 0;
     `TEST_CASE_DONE(1);
@@ -485,7 +508,7 @@ module noc_block_radio_core_tb;
       begin
         send_tx_packet(i,SPP,0 /* Has time */,1 /* EOB */,0);
         // Check for EOB ACK
-        check_radio_resp(i,1 /* Has time */,0 /* EOB */,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1 /* Has time */,0 /* EOB */,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -505,7 +528,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,0,0);
-        check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_UNDERRUN[63:32]);
+        check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_UNDERRUN[63:32]);
       end
       begin
         // Even with an underflow, TX output should still be valid.
@@ -516,7 +539,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,1,0);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -557,7 +580,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,1,0);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -593,7 +616,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,1,0);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -610,7 +633,7 @@ module noc_block_radio_core_tb;
         send_tx_packet(i,SPP,0,1,0);
         // We expect to get two responses: Sequence number error and EOB ACK 
         check_radio_resp(i,0,1,noc_block_radio_core.noc_shell.gen_noc_input_port.loop[0].noc_input_port.noc_responder.packet_error_responder.CODE_SEQ_ERROR[63:32]);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         // Even though there was a sequence number error, packet should still be passed through
@@ -626,7 +649,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,1,0);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -645,14 +668,14 @@ module noc_block_radio_core_tb;
     `TEST_CASE_START("TX Late Packet");
     for (int i = 0; i < num_channels; i++) begin
       // Get current VITA time
-      read_radio_core_reg(i, RB_VITA_TIME, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_VITA_TIME, readback);
       // If VITA time is 0, it must be broken as even if a previous test reset it, reading the register will 
       // take enough time to have it be non-zero
       `ASSERT_ERROR(readback != 0, "VITA Time cannot be 0!");
       fork
       begin
         send_tx_packet(i,SPP,1,1,readback/2);  // VITA time/2, that is one late packet!
-        check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_TIME_ERROR[63:32]);
+        check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_TIME_ERROR[63:32]);
       end
       begin
         // We don't send out packets that are late
@@ -663,7 +686,7 @@ module noc_block_radio_core_tb;
       fork
       begin
         send_tx_packet(i,SPP,0,1,0);
-        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_core.tx_control_gen3.CODE_EOB_ACK[63:32]);
+        check_radio_resp(i,1,0,noc_block_radio_core.gen[0].radio_datapath_core_i.tx_control_gen3.CODE_EOB_ACK[63:32]);
       end
       begin
         check_tx_burst(i,SPP);
@@ -697,7 +720,7 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Flush remaining RX packets", i);
       flush_rx(i);
       // Check overflow packet
-      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_OVERRUN);
+      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_datapath_core_i.rx_control_gen3.ERR_OVERRUN);
       // Normal RX should work without any issues
       start_rx(i,SPP,0,0);
       check_rx(i);
@@ -710,11 +733,11 @@ module noc_block_radio_core_tb;
     `TEST_CASE_START("RX Late Command");
     for (int i = 0; i < num_channels; i++) begin
       // Get current VITA time
-      read_radio_core_reg(i, RB_VITA_TIME, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_VITA_TIME, readback);
       // Start RX at VITA time/2, i.e. send a late command
       start_rx_timed(i,SPP,0,0,readback/2);
       // Wait for late command error packet
-      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_LATECMD);
+      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_datapath_core_i.rx_control_gen3.ERR_LATECMD);
       // Normal RX should work without any issues
       start_rx(i,SPP,0,0);
       check_rx(i);
@@ -727,11 +750,11 @@ module noc_block_radio_core_tb;
     `TEST_CASE_START("RX Broken Chain");
     for (int i = 0; i < num_channels; i++) begin
       // Get current VITA time
-      read_radio_core_reg(i, RB_VITA_TIME, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_VITA_TIME, readback);
       // Start RX with chain commands option, but don't send additional commands which will 'break' the chain
       start_rx(i,SPP,1,0);
       // Wait for broken chain error packet
-      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_core.rx_control_gen3.ERR_BROKENCHAIN);
+      check_radio_resp(i,1,1,noc_block_radio_core.gen[0].radio_datapath_core_i.rx_control_gen3.ERR_BROKENCHAIN);
       // Output should still be correct
       check_rx(i);
       // Normal RX should work without any issues
@@ -749,13 +772,13 @@ module noc_block_radio_core_tb;
       fork
       begin
         // Set slk divider
-        send_radio_cmd(i, SR_SPI, 10, readback);
+        send_radio_cmd(i, dbch[0].db_control_i.SR_SPI, 10, readback);
         // Set SPI parameters
-        send_radio_cmd(i, SR_SPI+1,
+        send_radio_cmd(i, dbch[0].db_control_i.SR_SPI+1,
                        {1'b1, 1'b1, 6'd8, 24'd1}, // {dataout_edge[0], datain_edge[0], num_bits[5:0], slave_select[23:0]}
                        readback);
         // Set SPI output and trigger SPI transaction
-        send_radio_cmd(i, SR_SPI+2, {spi_test_word,24'd0} /* Shift to upper bits */, readback);
+        send_radio_cmd(i, dbch[0].db_control_i.SR_SPI+2, {spi_test_word,24'd0} /* Shift to upper bits */, readback);
       end
       begin
         automatic logic [7:0] spi_shift_in;
@@ -770,7 +793,7 @@ module noc_block_radio_core_tb;
         end
       end
       join
-      read_radio_core_reg(i, RB_SPI, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_SPI, readback);
       `ASSERT_ERROR(readback[7:0] == 8'h5A, "Incorrect SPI readback!");
     end
     `TEST_CASE_DONE(1);
@@ -785,46 +808,46 @@ module noc_block_radio_core_tb;
       $display("Radio %2d: Check misc ins", i);
       test_word = $urandom();
       misc_ins[32*i +: 32] <= test_word;
-      read_radio_core_reg(i, RB_MISC_IO, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_MISC_IO, readback);
       `ASSERT_ERROR(readback[63:32] == test_word, "Incorrect misc ins!");
       // Check misc outs
       $display("Radio %2d: Check misc outs", i);
       test_word = $urandom();
-      send_radio_cmd(i, SR_MISC_OUTS, test_word, readback);
-      read_radio_core_reg(i, RB_MISC_IO, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_MISC_OUTS, test_word, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_MISC_IO, readback);
       `ASSERT_ERROR(readback[31:0] == test_word, "Incorrect misc outs readback!");
       `ASSERT_ERROR(misc_outs[32*i +: 32] == test_word, "Incorrect misc outs output!");
       // Check Front Panel GPIO ATR
       $display("Radio %2d: Check FP GPIO ATR input", i);
       // Enable tristate
-      send_radio_cmd(i, SR_FP_GPIO+4, 32'h0000_0000, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_FP_GPIO+4, 32'h0000_0000, readback);
       test_word = $urandom();
       fp_gpio_in[32*i +: 32] = test_word;
-      read_radio_core_reg(i, RB_FP_GPIO, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_FP_GPIO, readback);
       `ASSERT_ERROR(readback[31:0] == test_word, "Incorrect FP GPIO readback!");
       $display("Radio %2d: Check FP GPIO ATR output", i);
       // Disable tristate
-      send_radio_cmd(i, SR_FP_GPIO+4, 32'hFFFF_FFFF, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_FP_GPIO+4, 32'hFFFF_FFFF, readback);
       test_word = $urandom();
-      send_radio_cmd(i, SR_FP_GPIO, test_word, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_FP_GPIO, test_word, readback);
       `ASSERT_ERROR(fp_gpio_out[32*i +: 32] == test_word, "Incorrect FP GPIO output!");
       // Check Daughter board GPIO ATR
       $display("Radio %2d: Check DB GPIO ATR input", i);
-      send_radio_cmd(i, SR_DB_GPIO+4, 32'd0, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_DB_GPIO+4, 32'd0, readback);
       test_word = $urandom();
       db_gpio_in[32*i +: 32] = test_word;
-      read_radio_core_reg(i, RB_DB_GPIO, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_DB_GPIO, readback);
       `ASSERT_ERROR(readback[31:0] == test_word, "Incorrect DB GPIO readback!");
       $display("Radio %2d: Check DB GPIO ATR output", i);
-      send_radio_cmd(i, SR_DB_GPIO+4, 32'hFFFF_FFFF, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_DB_GPIO+4, 32'hFFFF_FFFF, readback);
       test_word = $urandom();
-      send_radio_cmd(i, SR_DB_GPIO, test_word, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_DB_GPIO, test_word, readback);
       `ASSERT_ERROR(db_gpio_out[32*i +: 32] == test_word, "Incorrect DB GPIO output!");
       // Check LEDs
       $display("Radio %2d: Check LEDs", i);
       test_word = $urandom();
-      send_radio_cmd(i, SR_LEDS, test_word, readback);
-      read_radio_core_reg(i, RB_LEDS, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_LEDS, test_word, readback);
+      read_radio_core_reg(i, dbch[0].db_control_i.RB_LEDS, readback);
       `ASSERT_ERROR(readback[31:0] == test_word, "Incorrect LEDs readback!");
       `ASSERT_ERROR(leds[32*i +: 32] == test_word, "Incorrect LEDs output!");
     end
@@ -841,25 +864,25 @@ module noc_block_radio_core_tb;
       pps = 1'b0;
       $display("Radio %2d: Clear FP GPIO", i);
       // Make sure GPIO is cleared
-      send_radio_cmd(i, SR_FP_GPIO, 32'd0, readback);
+      send_radio_cmd(i, dbch[0].db_control_i.SR_FP_GPIO, 32'd0, readback);
       $sformat(s, "Radio %2d: FP GPIO output not cleared! Expected: %d, Actual: %d", i, 32'd0, fp_gpio_out[32*i +: 32]);
       `ASSERT_ERROR(fp_gpio_out[32*i +: 32] == 32'd0, s);
       // Clear VITA time
-      send_radio_cmd(i, SR_TIME_HI, 32'd0, readback);
-      send_radio_cmd(i, SR_TIME_LO, 32'd0, readback);
-      send_radio_cmd(i, SR_TIME_CTRL, 3'd1 /* Set time now */, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_HI, 32'd0, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_LO, 32'd0, readback);
+      send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_CTRL, 3'd1 /* Set time now */, readback);
       // Get VITA time
-      read_radio_core_reg(i, RB_VITA_TIME, readback);
+      read_radio_core_reg(i, noc_block_radio_core.gen[0].radio_datapath_core_i.RB_VITA_TIME, readback);
       $sformat(s, "Radio %2d: VITA time not set. Expected: value <1000, Actual: %d", i, readback);
       `ASSERT_ERROR(readback < 1000, s);
       fork
       begin
-        send_radio_cmd(i, SR_TIME_HI, vita_time_set[63:32], readback);
-        send_radio_cmd(i, SR_TIME_LO, vita_time_set[31:0], readback);
-        send_radio_cmd(i, SR_TIME_CTRL, 3'd2 /* Set time next pps */, readback);
+        send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_HI, vita_time_set[63:32], readback);
+        send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_LO, vita_time_set[31:0], readback);
+        send_radio_cmd(i, noc_block_radio_core.gen[0].radio_datapath_core_i.SR_TIME_CTRL, 3'd2 /* Set time next pps */, readback);
         // Set GPIO to time that will be set on next PPS.
         $display("Radio %2d: Send timed command to set FP GPIO", i);
-        send_radio_cmd_timed(i, SR_FP_GPIO /* Set idle register */, rand32, vita_time_set, readback);
+        send_radio_cmd_timed(i, dbch[0].db_control_i.SR_FP_GPIO /* Set idle register */, rand32, vita_time_set, readback);
       end
       begin
         // Give time for other thread to get setup

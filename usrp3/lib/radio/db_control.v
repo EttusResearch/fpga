@@ -1,12 +1,13 @@
 //
 // Copyright 2016 Ettus Research LLC
 //
-// Note: Register addresses defined radio_core_regs.vh
 
 module db_control #(
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
-  parameter USE_SPI_CLK = 0
+  parameter USE_SPI_CLK = 0,
+  parameter SR_BASE     = 160,
+  parameter RB_BASE     = 16
 )(
   // Commands from Radio Core
   input clk, input reset,
@@ -20,7 +21,18 @@ module db_control #(
   output [31:0] leds,
   input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso
 );
-  `include "radio_core_regs.vh"
+
+  localparam [7:0] SR_MISC_OUTS = SR_BASE + 8'd0;
+  localparam [7:0] SR_SPI       = SR_BASE + 8'd8;
+  localparam [7:0] SR_LEDS      = SR_BASE + 8'd16;
+  localparam [7:0] SR_FP_GPIO   = SR_BASE + 8'd24;
+  localparam [7:0] SR_DB_GPIO   = SR_BASE + 8'd32;
+
+  localparam [7:0] RB_MISC_IO   = RB_BASE + 0;
+  localparam [7:0] RB_SPI       = RB_BASE + 1;
+  localparam [7:0] RB_LEDS      = RB_BASE + 2;
+  localparam [7:0] RB_DB_GPIO   = RB_BASE + 3;
+  localparam [7:0] RB_FP_GPIO   = RB_BASE + 4;
 
   /********************************************************
   ** Settings registers
