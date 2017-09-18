@@ -137,10 +137,12 @@ module n310
 `endif
 
 `ifdef BUILD_10G
-   input MGT156MHZ_CLK1_P,
-   input MGT156MHZ_CLK1_N,
+   `define BUILD_10G_OR_AURORA
 `endif
 `ifdef BUILD_AURORA
+   `define BUILD_10G_OR_AURORA
+`endif
+`ifdef BUILD_10G_OR_AURORA
    input MGT156MHZ_CLK1_P,
    input MGT156MHZ_CLK1_N,
 `endif
@@ -821,28 +823,32 @@ module n310
       .clk156(xgige_clk156),
       .dclk(xgige_dclk)
    );
+   
    // FIXME
    assign SFP_0_RS0  = 1'b1;
    assign SFP_0_RS1  = 1'b1;
    assign SFP_1_RS0  = 1'b1;
    assign SFP_1_RS1  = 1'b1;
+   `ifdef BUILD_AURORA
+      wire  aurora_refclk = xgige_refclk;
+      wire  aurora_clk156 = xgige_clk156;
+      wire  aurora_init_clk = xgige_dclk;
+   `endif
+`else
+   `ifdef BUILD_AURORA
+      wire  aurora_refclk;
+      wire  aurora_clk156;
+      wire  aurora_init_clk;
 
-`endif
-
-`ifdef BUILD_AURORA
-  aurora_phy_clk_gen aurora_clk_gen_i (
-    .areset(global_rst),
-    .refclk_p(MGT156MHZ_CLK1_P),
-    .refclk_n(MGT156MHZ_CLK1_N),
-    .refclk(aurora_refclk),
-    .clk156(aurora_clk156),
-    .init_clk(aurora_init_clk)
-  );
-
-   assign SFP_0_RS0  = 1'b1;
-   assign SFP_0_RS1  = 1'b1;
-   assign SFP_1_RS0  = 1'b1;
-   assign SFP_1_RS1  = 1'b1;
+      aurora_phy_clk_gen aurora_clk_gen_i (
+         .areset(global_rst ),
+         .refclk_p(MGT156MHZ_CLK1_P),
+         .refclk_n(MGT156MHZ_CLK1_N),
+         .refclk(aurora_refclk),
+         .clk156(aurora_clk156),
+         .init_clk(aurora_init_clk)
+      );
+   `endif
 `endif
 
   //If bus_clk freq ever changes, update this paramter accordingly.
@@ -896,21 +902,56 @@ module n310
    wire          e01_tlast, e01_tvalid, e01_tready;
    wire          e10_tlast, e10_tvalid, e10_tready;
 
-`ifdef SFP0_1GBE
-   //GT COMMON
-   one_gig_eth_pcs_pma_gt_common core_gt_common_i
-   (
-    .GTREFCLK0_IN                (gige_refclk) ,
-    .QPLLLOCK_OUT                (),
-    .QPLLLOCKDETCLK_IN           (bus_clk),
-    .QPLLOUTCLK_OUT              (gt0_qplloutclk),
-    .QPLLOUTREFCLK_OUT           (gt0_qplloutrefclk),
-    .QPLLREFCLKLOST_OUT          (),
-    .QPLLRESET_IN                (pma_reset)
-   );
-`endif
+`ifdef SFP0_1GBE //if SFP0 is 1 gig, use SFP1 common resources
+  `ifdef SFP1_10GBE
+    wire qpllrefclklost = 1'b0;
 
+    // Instantiate the 10GBASER/KR GT Common block
+    ten_gig_eth_pcs_pma_gt_common # (
+        .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
+    ten_gig_eth_pcs_pma_gt_common_block
+      (
+       .refclk(xgige_refclk),
+       .qpllreset(qpllreset), //from 2nd sfp
+       .qplllock(qplllock),
+       .qplloutclk(qplloutclk),
+       .qplloutrefclk(qplloutrefclk),
+       .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
+      );
+  `elsif SFP1_AURORA
+    wire qpllrefclklost; 
+  
+    wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
+    wire    [15:0]     qpll_drpdi_in_i = 16'h0;
+    wire               qpll_drpen_in_i =  1'b0;
+    wire               qpll_drpwe_in_i =  1'b0;
+    wire    [15:0]     qpll_drpdo_out_i;
+    wire               qpll_drprdy_out_i;
+  
+    aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
+      .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
+      .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
+      .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk), 
+      //----------------------- Common Block - QPLL Ports ------------------------
+      .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
+      .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
+      .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
+      .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //from 1st sfp
+      //---------------------- Common DRP Ports ---------------------- //not really used???
+      .qpll_drpaddr_in           (qpll_drpaddr_in_i),
+      .qpll_drpdi_in             (qpll_drpdi_in_i),
+      .qpll_drpclk_in            (aurora_init_clk),
+      .qpll_drpdo_out            (qpll_drpdo_out_i), 
+      .qpll_drprdy_out           (qpll_drprdy_out_i), 
+      .qpll_drpen_in             (qpll_drpen_in_i), 
+      .qpll_drpwe_in             (qpll_drpwe_in_i)
+    );
+  
+  `endif
+`endif
 `ifdef SFP0_10GBE
+
+  wire qpllrefclklost = 1'b0;
 
   // Instantiate the 10GBASER/KR GT Common block
   ten_gig_eth_pcs_pma_gt_common # (
@@ -918,7 +959,7 @@ module n310
   ten_gig_eth_pcs_pma_gt_common_block
     (
      .refclk(xgige_refclk),
-     .qpllreset(qpllreset),
+     .qpllreset(qpllreset), //from 2nd sfp
      .qplllock(qplllock),
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
@@ -1126,9 +1167,8 @@ module n310
      .bus_rst(bus_rst),
      .bus_clk(bus_clk),
    `ifdef SFP0_1GBE
-     .gt0_qplloutclk(gt0_qplloutclk),
-     .gt0_qplloutrefclk(gt0_qplloutrefclk),
-     .pma_reset_out(pma_reset),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
    `endif
    `ifdef SFP0_10GBE
      .qplllock(qplllock),
@@ -1247,11 +1287,6 @@ module n310
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
-    `ifdef SFP1_1GBE
-      .gt0_qplloutclk(gt0_qplloutclk),
-      .gt0_qplloutrefclk(gt0_qplloutrefclk),
-      .pma_reset_out(),
-    `endif
     `ifdef SFP1_10GBE
       .qpllreset(qpllreset),
       .qplllock(qplllock),

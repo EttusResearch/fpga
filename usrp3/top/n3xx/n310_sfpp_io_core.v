@@ -55,9 +55,6 @@ module n310_sfpp_io_core #(
   output reg                  reg_rd_resp,
   output reg [REG_DWIDTH-1:0] reg_rd_data,
   // GT Common
-  input             gt0_qplloutclk,
-  input             gt0_qplloutrefclk,
-  output            pma_reset_out,
   output [15:0]     phy_status,
   output            qpllreset,
   output            qpllrefclklost,
@@ -290,7 +287,6 @@ generate
     );
 
     // Remove Warning from XG build
-    assign pma_reset_out = 1'b0;
 
     assign phy_status  = {8'h00, xgmii_status};
 
@@ -308,10 +304,7 @@ generate
     one_gige_phy one_gige_phy_i
     (
        .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
-       .pma_reset_out(pma_reset_out),
        .independent_clock(bus_clk),
-       .gt0_qplloutclk_in(gt0_qplloutclk),
-       .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
        // Tranceiver Interface
        .gtrefclk(gt_refclk),            // Reference clock for MGT: 125MHz, very high quality.
        .gtrefclk_bufg(gb_refclk),       // Reference clock routed through a BUFG

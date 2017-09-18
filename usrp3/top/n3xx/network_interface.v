@@ -238,24 +238,11 @@ module network_interface #(
 
      .bus_rst(bus_rst),
      .bus_clk(bus_clk),
-   `ifdef SFP0_1GBE
-     .gt0_qplloutclk(gt0_qplloutclk),
-     .gt0_qplloutrefclk(gt0_qplloutrefclk),
-     .pma_reset_out(pma_reset_out),
-   `endif
-   `ifdef SFP0_10GBE
      .qpllreset(qpllreset),
      .qplllock(qplllock),
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
-   `endif
-   `ifdef SFP0_AURORA
-     .qplllock(qplllock),
-     .qpllreset(qpllreset),
      .qpllrefclklost(qpllrefclklost),
-     .qplloutclk(qplloutclk),
-     .qplloutrefclk(qplloutrefclk),
-    `endif
      
      .txp(txp),
      .txn(txn),
