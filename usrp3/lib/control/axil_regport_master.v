@@ -1,5 +1,5 @@
 //
-// Copyright 2016 Ettus Research
+// Copyright 2016-2017 Ettus Research
 //
 
 // An AXI4-Lite read/write register port adapter
@@ -23,8 +23,8 @@
 //;
 // READ Transaction:
 // - Transaction request completes in one cycle, with valid and address assertion
-// - Transaction response must complete in one cycle with resp and data
-//   - If resp is not asserted, then the read will timeout
+// - Transaction response must complete in at least one cycle with resp and data
+//   - resp must be asserted between 1 and pow(2, TIMEOUT) cycles otherwise the read will timeout
 //                      __    __    __    __    __
 //   clk             __|  |__|  |__|  |__|  |__|  |__
 //                            _____
@@ -216,10 +216,10 @@ module axil_regport_master #(
    axi_fifo_2clk #( .WIDTH(DWIDTH)) rdresp_fifo_2clk_i (
       .reset(~s_axi_aresetn), .i_aclk(reg_clk),
       .i_tdata(reg_rd_data),
-      .i_tvalid(reg_rd_resp && read_pending), .i_tready(/* lossy */),
+      .i_tvalid(reg_rd_resp), .i_tready(/* lossy */),
       .o_aclk(s_axi_aclk),
       .o_tdata(rdresp_fifo_data),
-      .o_tvalid(rdresp_fifo_valid), .o_tready(s_axi_rvalid && (s_axi_rresp == 2'b00))
+      .o_tvalid(rdresp_fifo_valid), .o_tready(~read_pending || (s_axi_rvalid && (s_axi_rresp == 2'b00)))
    );
 
 endmodule
