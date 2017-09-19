@@ -51,7 +51,7 @@ class MainWindow(QtWidgets.QWidget):
         self.max_allowed_blocks = 10
         self.cmd_dict = {"target": '-t {}'.format(self.build_target),
                          "device": '-d {}'.format(self.device),
-                         "include": '-I {}'.format(' '.join(self.oot_dirs)),
+                         "include": '',
                          "fill_fifos": '',
                          "viv_gui": '',
                          "cleanall": '',
@@ -555,9 +555,12 @@ class MainWindow(QtWidgets.QWidget):
                     dir_list.append(ootpath)
         if (len(dir_list) == 0):
             self.oot.removeRows(0, self.oot.rowCount())
+            self.cmd_dict["include"] = ''
+        else:
+            self.oot_dirs = dir_list
+            self.cmd_dict["include"] = '-I {}'.format(' '.join(self.oot_dirs))
         for (ii, oot) in enumerate(dir_list):
             self.populate_list(self.oot, os.path.join(oot, 'fpga-src', 'Makefile.srcs'), clear=ii==0)
-        self.oot_dirs = dir_list
 
     def populate_target(self, selected_target):
         """
