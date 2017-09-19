@@ -18,6 +18,10 @@ module n310
    input FPGA_REFCLK_P,
    input FPGA_REFCLK_N,
    input REF_1PPS_IN,
+   input WB_20MHz_P,
+   input WB_20MHz_N,
+   input NETCLK_REF_P,
+   input NETCLK_REF_N,
    //input REF_1PPS_IN_MGMT,
    output REF_1PPS_OUT,
 
@@ -706,6 +710,10 @@ module n310
   //////////////////////////////////////////////////////////////////////
 
   wire ref_clk_buf_inv;
+  //FIXME this for signal integrity checkonly please name it correctly when use
+  wire outWBclk;
+  wire outNetclk;
+  ////////////
   wire ref_clk_inv;
   wire ref_clk;
 
@@ -723,8 +731,17 @@ module n310
   //
   // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
   // to meet timing with the PPS signal.
-
-  IBUFGDS ref_clk_ibuf (
+   IBUFGDS ref_clk_ibuf (
+    .O(outWBclk),
+    .I(WB_20MHz_P),
+    .IB(WB_20MHz_N)
+  );
+  IBUFGDS ref_clk_ibuf1 (
+    .O(outNetclk),
+    .I(NETCLK_REF_P),
+    .IB(NETCLK_REF_N)
+  );
+  IBUFGDS ref_clk_ibuf2 (
     .O(ref_clk_buf_inv),
     .I(FPGA_REFCLK_N),
     .IB(FPGA_REFCLK_P)
