@@ -154,7 +154,7 @@ module n310_core #(
 
   localparam NUM_CHANNELS = 2;
   // Computation engines that need access to IO
-  localparam NUM_IO_CE = 2;
+  localparam NUM_IO_CE = 3;
 
   /////////////////////////////////////////////////////////////////////////////////
   // Global Registers
