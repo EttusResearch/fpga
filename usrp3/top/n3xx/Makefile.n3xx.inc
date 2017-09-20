@@ -18,9 +18,9 @@ IP_DIR = $(abspath ./ip)
 include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
 include $(IP_DIR)/Makefile.inc
-#include coregen_dsp/Makefile.srcs
-#include $(LIB_DIR)/ip/Makefile.inc
-#include $(LIB_DIR)/hls/Makefile.inc
+include coregen_dsp/Makefile.srcs
+include $(LIB_DIR)/ip/Makefile.inc
+include $(LIB_DIR)/hls/Makefile.inc
 include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/simple_gemac/Makefile.srcs
@@ -32,7 +32,7 @@ include $(LIB_DIR)/packet_proc/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
-#include $(LIB_DIR)/dsp/Makefile.srcs
+include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 #include $(LIB_DIR)/io_cap_gen/Makefile.srcs
