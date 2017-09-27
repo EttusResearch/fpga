@@ -591,88 +591,76 @@ module n310_core #(
    //------------------------------------
 
    // Data
-   wire [31:0] rx_data[0:3], tx_data[0:3];
+   wire [31:0] rx[0:3], rx_data[0:3], tx[0:3], tx_data[0:3];
+   wire        db_fe_set_stb[0:3];
+   wire [7:0]  db_fe_set_addr[0:3];
+   wire [31:0] db_fe_set_data[0:3];
+   wire        db_fe_rb_stb[0:3];
+   wire [7:0]  db_fe_rb_addr[0:3];
+   wire [64:0] db_fe_rb_data[0:3];
+   wire        rx_running[0:3], tx_running[0:3];
+
+   wire [NUM_RADIO_CORES-1:0] sync_out;
 
    genvar i;
    generate for (i = FIRST_RADIO_CORE_INST; i < LAST_RADIO_CORE_INST; i = i + 1) begin
-
-   noc_block_radio_core #(
-      .NOC_ID(64'h12AD_1000_0000_0310),
-      .NUM_CHANNELS(NUM_CHANNELS),
-      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
-      .MTU(13)
-   ) noc_block_radio_core_i (
-      //Clocks
-      .bus_clk(bus_clk),
-      .bus_rst(bus_rst),
-      .ce_clk(radio_clk),
-      .ce_rst(radio_rst),
-      //AXIS data to/from crossbar
-      .i_tdata(ioce_o_tdata[i]),
-      .i_tlast(ioce_o_tlast[i]),
-      .i_tvalid(ioce_o_tvalid[i]),
-      .i_tready(ioce_o_tready[i]),
-      .o_tdata(ioce_i_tdata[i]),
-      .o_tlast(ioce_i_tlast[i]),
-      .o_tvalid(ioce_i_tvalid[i]),
-      .o_tready(ioce_i_tready[i]),
-      // Data ports connected to radio front end
-      .rx(    {rx_data[(i-1)*2+1],rx_data[(i-1)*2]}), // all these ports are 0-based indexed
-      .rx_stb({rx_stb [(i-1)*2+1], rx_stb[(i-1)*2]}), // whereas the i is 1-based
-      .tx(    {tx_data[(i-1)*2+1],tx_data[(i-1)*2]}),
-      .tx_stb({tx_stb [(i-1)*2+1], tx_stb[(i-1)*2]}),
-      // Ctrl ports connected to radio front end
-      //.ext_set_stb({ext_set_stb[i+1],ext_set_stb[i]}),
-      //.ext_set_addr({ext_set_addr[i+1],ext_set_addr[i]}),
-      //.ext_set_data({ext_set_data[i+1],ext_set_data[i]}),
-      //// Interfaces to front panel and daughter board
-      .pps(pps),
-      //.sync_in(time_sync_r),
-      //.sync_out(sync_out[i]),
-      //.misc_ins({misc_ins[i+1],misc_ins[i]}),
-      //.misc_outs({misc_outs[i+1], misc_outs[i]}),
-      //.fp_gpio_in({fp_gpio_r_in[i+1],fp_gpio_r_in[i]}),
-      //.fp_gpio_out({fp_gpio_r_out[i+1],fp_gpio_r_out[i]}),
-      //.fp_gpio_ddr({fp_gpio_r_ddr[i+1],fp_gpio_r_ddr[i]}),
-      //.db_gpio_in({db_gpio_in[i+1],db_gpio_in[i]}),
-      //.db_gpio_out({db_gpio_out[i+1],db_gpio_out[i]}),
-      //.db_gpio_ddr({db_gpio_ddr[i+1],db_gpio_ddr[i]}),
-      //.leds({leds[i+1],leds[i]}),
-      //.spi_clk(radio_clk),
-      //.spi_rst(radio_rst),
-      //.sen({sen[i+1],sen[i]}),
-      //.sclk({sclk[i+1],sclk[i]}),
-      //.mosi({mosi[i+1],mosi[i]}),
-      //.miso({miso[i+1],miso[i]}),
-      //Debug
-      .debug()
-   );
+      noc_block_radio_core #(
+         .NOC_ID(64'h12AD_1000_0000_0310),
+         .NUM_CHANNELS(NUM_CHANNELS),
+         .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
+         .MTU(13)
+      ) noc_block_radio_core_i (
+         //Clocks
+         .bus_clk(bus_clk), .bus_rst(bus_rst),
+         .ce_clk(radio_clk), .ce_rst(radio_rst),
+         //AXIS data to/from crossbar
+         .i_tdata(ioce_o_tdata[i]), .i_tlast(ioce_o_tlast[i]), .i_tvalid(ioce_o_tvalid[i]), .i_tready(ioce_o_tready[i]),
+         .o_tdata(ioce_i_tdata[i]), .o_tlast(ioce_i_tlast[i]), .o_tvalid(ioce_i_tvalid[i]), .o_tready(ioce_i_tready[i]),
+         // Data ports connected to radio front end
+         .rx(    {rx_data[(i-1)*2+1],rx_data[(i-1)*2]}), // all these ports are 0-based indexed
+         .rx_stb({rx_stb [(i-1)*2+1], rx_stb[(i-1)*2]}), // whereas the i is 1-based
+         .tx(    {tx_data[(i-1)*2+1],tx_data[(i-1)*2]}),
+         .tx_stb({tx_stb [(i-1)*2+1], tx_stb[(i-1)*2]}),
+         // Timing and sync
+         .pps(pps), .sync_in(1'b0), .sync_out(sync_out[i]),
+         .rx_running({rx_running[(i-1)*2+1], rx_running[(i-1)*2]}),
+         .tx_running({tx_running[(i-1)*2+1], tx_running[(i-1)*2]}),
+         // Ctrl ports connected to radio dboard and front end core
+         .db_fe_set_stb ({db_fe_set_stb [(i-1)*2+1], db_fe_set_stb [(i-1)*2]}),
+         .db_fe_set_addr({db_fe_set_addr[(i-1)*2+1], db_fe_set_addr[(i-1)*2]}),
+         .db_fe_set_data({db_fe_set_data[(i-1)*2+1], db_fe_set_data[(i-1)*2]}),
+         .db_fe_rb_stb  ({db_fe_rb_stb  [(i-1)*2+1], db_fe_rb_stb  [(i-1)*2]}),
+         .db_fe_rb_addr ({db_fe_rb_addr [(i-1)*2+1], db_fe_rb_addr [(i-1)*2]}),
+         .db_fe_rb_data ({db_fe_rb_data [(i-1)*2+1], db_fe_rb_data [(i-1)*2]}),
+         //Debug
+         .debug()
+      );
    end endgenerate
 
    /////////////////////////////////////////////////////////////////////////////////
    // TX/RX FrontEnd
    /////////////////////////////////////////////////////////////////////////////////
 
-   wire  [31:0]     rx[0:3], tx[0:3];
    assign {rx[0], rx[1]} = {rx0, rx1};
    assign {rx[2], rx[3]} = {rx2, rx3};
    assign {tx0, tx1} = {tx[0], tx[1]};
    assign {tx2, tx3} = {tx[2], tx[3]};
 
    generate for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
-
-   n310_tx_frontend n310_tx_frontend (
-      .tx_in(tx_data[i]),
-      .tx_out(tx[i])
-   );
-   end endgenerate
-
-   generate for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
-
-   n310_rx_frontend n310_rx_frontend (
-      .rx_in(rx[i]),
-      .rx_out(rx_data[i])
-   );
+      n3xx_db_fe_core db_fe_core_i (
+         .clk(radio_clk), .reset(radio_rst),
+         .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i]), .set_data(db_fe_set_data[i]),
+         .rb_stb(db_fe_rb_stb[i]),  .rb_addr(db_fe_rb_addr[i]), .rb_data(db_fe_rb_data[i]),
+         .time_sync(sync_out[i < 2 ? 0 : 1]),
+         .tx_stb(tx_stb[i]), .tx_data_in(tx_data[i]), .tx_data_out(tx[i]), .tx_running(tx_running[i]),
+         .rx_stb(rx_stb[i]), .rx_data_in(rx[i]), .rx_data_out(rx_data[i]), .rx_running(rx_running[i]),
+         .misc_ins(32'h0), .misc_outs(),
+         .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(), .fp_gpio_fab(32'h0),
+         .db_gpio_in(32'h0), .db_gpio_out(), .db_gpio_ddr(), .db_gpio_fab(32'h0),
+         .leds(),
+         .spi_clk(1'b0), .spi_rst(1'b0),
+         .sen(), .sclk(), .mosi(), .miso(1'b0)
+      );
    end endgenerate
 
    /////////////////////////////////////////////////////////////////////////////////
@@ -754,6 +742,6 @@ module n310_core #(
       .reg_rd_addr(reg_rd_addr),
       .reg_rd_data(reg_rd_data_xbar),
       .reg_rd_resp(reg_rd_resp_xbar)
-      );
+   );
 
 endmodule //n310_core

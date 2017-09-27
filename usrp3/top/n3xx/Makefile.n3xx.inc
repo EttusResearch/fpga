@@ -50,6 +50,7 @@ n310_core.v \
 n310_sfpp_io_core.v \
 n310.xdc \
 n310_ps.v \
+n3xx_db_fe_core.v \
 eth_switch.v \
 network_interface.v \
 timing.xdc
