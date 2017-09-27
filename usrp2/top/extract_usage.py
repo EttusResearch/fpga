@@ -23,8 +23,6 @@ ALL_MAP_FILES = """\
 ./N2x0/build-N210R4/u2plus_map.map N210
 ./N2x0/build-N200R4/u2plus_map.map N200
 ./USRP2/build/u2_rev3_map.map USRP2
-./E1x0/build-E100/u1e_map.map E100
-./E1x0/build-E110/u1e_map.map E110
 ./B100/build-B100/B100_map.map B100
 """
 

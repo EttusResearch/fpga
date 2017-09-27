@@ -18,8 +18,6 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 - USRP N200: Spartan&reg; 3A-DSP 1800
 - USRP N210: Spartan&reg; 3A-DSP 3400
-- USRP E100: Spartan&reg; 3A-DSP 1800
-- USRP E110: Spartan&reg; 3A-DSP 3400
 
 ## Build Instructions
 
@@ -31,7 +29,6 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 - Navigate to `usrp2/top/{project}` where project is:
   + N2x0: For USRP N200 and USRP N210
-  + E1x0: For USRP E100 and USRP E110
 
 - To build a binary configuration bitstream run `make <target>`
   where the target is specific to each product. To get a list of supported targets run
@@ -53,16 +50,4 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - `build-<target>/u2plus.bin` : Configuration bitstream without header
 - `build-<target>/u2plus.syr` : Xilinx system report
 - `build-<target>/u2plus.twr` : Xilinx timing report
-
-### E1x0 Targets and Outputs
-
-#### Supported Targets
-- E100:  Builds the USRP E100 design.
-- E110:  Builds the USRP E110 design.
-
-#### Outputs
-- `build-<target>/E1x0.bit` : Configuration bitstream with header
-- `build-<target>/E1x0.bin` : Configuration bitstream without header
-- `build-<target>/E1x0.syr` : Xilinx system report
-- `build-<target>/E1x0.twr` : Xilinx timing report
 
