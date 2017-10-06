@@ -152,9 +152,11 @@ module n310_core #(
   output        e2v1_tready
 );
 
-  localparam NUM_CHANNELS = 2;
+  localparam NUM_CHANNELS = 1;
+  // Number of Radio Cores Instantiated
+  localparam NUM_RADIO_CORES = 4;
   // Computation engines that need access to IO
-  localparam NUM_IO_CE = 3;
+  localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
 
   /////////////////////////////////////////////////////////////////////////////////
   // Global Registers
@@ -580,8 +582,7 @@ module n310_core #(
    //
    /////////////////////////////////////////////////////////////////////////////
 
-   // Number of Radio Cores Instantiated
-   localparam NUM_RADIO_CORES = 2;
+
    localparam FIRST_RADIO_CORE_INST = 1;
    localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
    localparam RADIO_STR_FIFO_SIZE = 8'd11;
@@ -607,7 +608,7 @@ module n310_core #(
       noc_block_radio_core #(
          .NOC_ID(64'h12AD_1000_0000_0310),
          .NUM_CHANNELS(NUM_CHANNELS),
-         .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
+         .STR_SINK_FIFOSIZE({NUM_CHANNELS{RADIO_STR_FIFO_SIZE}}),
          .MTU(13)
       ) noc_block_radio_core_i (
          //Clocks
@@ -617,26 +618,25 @@ module n310_core #(
          .i_tdata(ioce_o_tdata[i]), .i_tlast(ioce_o_tlast[i]), .i_tvalid(ioce_o_tvalid[i]), .i_tready(ioce_o_tready[i]),
          .o_tdata(ioce_i_tdata[i]), .o_tlast(ioce_i_tlast[i]), .o_tvalid(ioce_i_tvalid[i]), .o_tready(ioce_i_tready[i]),
          // Data ports connected to radio front end
-         .rx(    {rx_data[(i-1)*2+1],rx_data[(i-1)*2]}), // all these ports are 0-based indexed
-         .rx_stb({rx_stb [(i-1)*2+1], rx_stb[(i-1)*2]}), // whereas the i is 1-based
-         .tx(    {tx_data[(i-1)*2+1],tx_data[(i-1)*2]}),
-         .tx_stb({tx_stb [(i-1)*2+1], tx_stb[(i-1)*2]}),
+         .rx(    {rx_data[i-FIRST_RADIO_CORE_INST]}), 
+         .rx_stb({rx_stb[i-FIRST_RADIO_CORE_INST]}),  
+         .tx(    {tx_data[i-FIRST_RADIO_CORE_INST]}),
+         .tx_stb({tx_stb[i-FIRST_RADIO_CORE_INST]}),
          // Timing and sync
          .pps(pps), .sync_in(1'b0), .sync_out(sync_out[i]),
-         .rx_running({rx_running[(i-1)*2+1], rx_running[(i-1)*2]}),
-         .tx_running({tx_running[(i-1)*2+1], tx_running[(i-1)*2]}),
+         .rx_running({rx_running[i-FIRST_RADIO_CORE_INST]}),
+         .tx_running({tx_running[i-FIRST_RADIO_CORE_INST]}),
          // Ctrl ports connected to radio dboard and front end core
-         .db_fe_set_stb ({db_fe_set_stb [(i-1)*2+1], db_fe_set_stb [(i-1)*2]}),
-         .db_fe_set_addr({db_fe_set_addr[(i-1)*2+1], db_fe_set_addr[(i-1)*2]}),
-         .db_fe_set_data({db_fe_set_data[(i-1)*2+1], db_fe_set_data[(i-1)*2]}),
-         .db_fe_rb_stb  ({db_fe_rb_stb  [(i-1)*2+1], db_fe_rb_stb  [(i-1)*2]}),
-         .db_fe_rb_addr ({db_fe_rb_addr [(i-1)*2+1], db_fe_rb_addr [(i-1)*2]}),
-         .db_fe_rb_data ({db_fe_rb_data [(i-1)*2+1], db_fe_rb_data [(i-1)*2]}),
+         .db_fe_set_stb ({db_fe_set_stb [i-FIRST_RADIO_CORE_INST]}),
+         .db_fe_set_addr({db_fe_set_addr[i-FIRST_RADIO_CORE_INST]}),
+         .db_fe_set_data({db_fe_set_data[i-FIRST_RADIO_CORE_INST]}),
+         .db_fe_rb_stb  ({db_fe_rb_stb  [i-FIRST_RADIO_CORE_INST]}),
+         .db_fe_rb_addr ({db_fe_rb_addr [i-FIRST_RADIO_CORE_INST]}),
+         .db_fe_rb_data ({db_fe_rb_data [i-FIRST_RADIO_CORE_INST]}),
          //Debug
          .debug()
       );
    end endgenerate
-
    /////////////////////////////////////////////////////////////////////////////////
    // TX/RX FrontEnd
    /////////////////////////////////////////////////////////////////////////////////
