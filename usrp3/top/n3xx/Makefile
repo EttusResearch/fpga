@@ -18,6 +18,8 @@
 # Debug Options
 # Uncomment the following line to add a debug UART on GPIO 10 & 11
 #OPTIONS += DEBUG_UART=1
+# Uncomment this line or add to make arg to omit radio_clk (sourced from db) and use bus_clk as radio_clk
+#OPTIONS += NO_DB=1
 
 GIGE_DEFS=BUILD_1G=1 SFP0_1GBE=1 SFP1_1GBE=1 $(OPTIONS)
 HG_DEFS=BUILD_1G=1 BUILD_10G=1 SFP0_1GBE=1 SFP1_10GBE=1 $(OPTIONS)

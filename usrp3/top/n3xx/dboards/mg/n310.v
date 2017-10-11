@@ -2393,8 +2393,13 @@ module n310
   n310_core #(.REG_AWIDTH(14), .BUS_CLK_RATE(BUS_CLK_RATE)) n310_core
   (
     //Clocks and resets
+`ifdef NO_DB
+    .radio_clk(bus_clk),
+    .radio_rst(bus_rst),
+`else
     .radio_clk(radio_clk),
     .radio_rst(radio_rst),
+`endif
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
