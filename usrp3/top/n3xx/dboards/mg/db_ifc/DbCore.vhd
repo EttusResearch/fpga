@@ -77,6 +77,7 @@ entity DbCore is
     sSysRefFpgaLvds_p,
     sSysRefFpgaLvds_n      : in  std_logic;
 
+    sSysRef                : out std_logic;
     aLmkSync               : out std_logic;
 
 
@@ -180,9 +181,10 @@ architecture RTL of DbCore is
       bRegPortInFlat        : in  STD_LOGIC_VECTOR(49 downto 0);
       bRegPortOutFlat       : out STD_LOGIC_VECTOR(33 downto 0);
       aLmkSync              : out STD_LOGIC;
-      fSysRefFpgaLvds_p     : in  STD_LOGIC;
-      fSysRefFpgaLvds_n     : in  STD_LOGIC;
+      cSysRefFpgaLvds_p     : in  STD_LOGIC;
+      cSysRefFpgaLvds_n     : in  STD_LOGIC;
       fSysRef               : out STD_LOGIC;
+      CaptureSysRefClk      : in  STD_LOGIC;
       JesdRefClk_p          : in  STD_LOGIC;
       JesdRefClk_n          : in  STD_LOGIC;
       bJesdRefClkPresent    : out STD_LOGIC;
@@ -364,7 +366,9 @@ begin
   --vhook_a FpgaClk1x        SampleClk1x
   --vhook_a FpgaClk2x        SampleClk2x
   --vhook_a ReliableClk40    Clk40
-  --vhook_a fSysRef          open
+  --vhook_a CaptureSysRefClk   SampleClk1xOutLcl
+  --vhook_a cSysRefFpgaLvds_p  sSysRefFpgaLvds_p
+  --vhook_a cSysRefFpgaLvds_n  sSysRefFpgaLvds_n
   --vhook_a {^f(.*)}         s$1
   Jesd204bXcvrCorex: Jesd204bXcvrCore
     port map (
@@ -378,9 +382,10 @@ begin
       bRegPortInFlat        => bJesdCoreRegPortInFlat,   --in  STD_LOGIC_VECTOR(49:0)
       bRegPortOutFlat       => bJesdCoreRegPortOutFlat,  --out STD_LOGIC_VECTOR(33:0)
       aLmkSync              => aLmkSync,                 --out STD_LOGIC
-      fSysRefFpgaLvds_p     => sSysRefFpgaLvds_p,        --in  STD_LOGIC
-      fSysRefFpgaLvds_n     => sSysRefFpgaLvds_n,        --in  STD_LOGIC
-      fSysRef               => open,                     --out STD_LOGIC
+      cSysRefFpgaLvds_p     => sSysRefFpgaLvds_p,        --in  STD_LOGIC
+      cSysRefFpgaLvds_n     => sSysRefFpgaLvds_n,        --in  STD_LOGIC
+      fSysRef               => sSysRef,                  --out STD_LOGIC
+      CaptureSysRefClk      => SampleClk1xOutLcl,        --in  STD_LOGIC
       JesdRefClk_p          => JesdRefClk_p,             --in  STD_LOGIC
       JesdRefClk_n          => JesdRefClk_n,             --in  STD_LOGIC
       bJesdRefClkPresent    => bJesdRefClkPresent,       --out STD_LOGIC
