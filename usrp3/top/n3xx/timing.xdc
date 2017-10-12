@@ -101,6 +101,9 @@ set_clock_groups -asynchronous -group [get_clocks {Db*FpgaClk*} -include_generat
 #*******************************************************************************
 ## PPS Input Timing
 
+# The external PPS is synchronous to the external reference clock, which is expected to
+# be at 10 MHz. Given [setup, hold] of [5ns, 5ns] at the inputs to the N310, we have an
+# adequate data valid window at the FPGA.
 set_input_delay -clock ref_clk -min  5.492 [get_ports REF_1PPS_IN]
 set_input_delay -clock ref_clk -max 98.674 [get_ports REF_1PPS_IN]
 
@@ -128,20 +131,70 @@ set_min_delay -to $AsyncMbOutputs 0.000
 #*******************************************************************************
 ## DB Timing
 #
-# Vastly asynchronous except for the SYNC lines.
-# And SPI, yeah that matters too.
+# SPI ports, DSA controls, ATR bits, Mykonos GPIO, Mykonos Interrupt
+
+# One of the PL_SPI_ADDR lines is used instead for the LMK SYNC strobe. This line is
+# driven asynchronously.
+set_output_delay -clock [get_clocks AsyncOutClk] 0.000 [get_ports DB*_CPLD_PL_SPI_ADDR[2]]
+set_max_delay -to [get_ports DB*_CPLD_PL_SPI_ADDR[2]] 50.000
+set_min_delay -to [get_ports DB*_CPLD_PL_SPI_ADDR[2]] 0.000
+
+# The ATR bits are driven from the DB-A radio clock. Although they are received async in
+# the CPLD, they should be tightly constrained in the FPGA to avoid any race conditions.
+# The best way to do this is a skew constraint across all the bits.
+# First, define one of the outputs as a clock (even though it isn't a clock).
+## THIS CONSTRAINT IS CURRENTLY UNUSED SINCE THE ATR BITS ARE DRIVEN CONSTANT '1' ##
+# maxSkew will most likely have to be tweaked
+
+# create_generated_clock -name AtrBusClk \
+  # -source [get_pins [all_fanin -flat -only_cells -startpoints_only [get_ports DBA_ATR_RX_1]]/C] \
+  # -divide_by 2 [get_ports DBA_ATR_RX_1]
+# set maxSkew 1.00
+# set maxDelay [expr {$maxSkew / 2}]
+# # Then add the output delay on each of the ports.
+# set_output_delay                        -clock [get_clocks AtrBusClk] -max -$maxDelay [get_ports DB*_ATR_*X_*]
+# set_output_delay -add_delay -clock_fall -clock [get_clocks AtrBusClk] -max -$maxDelay [get_ports DB*_ATR_*X_*]
+# set_output_delay                        -clock [get_clocks AtrBusClk] -min  $maxDelay [get_ports DB*_ATR_*X_*]
+# set_output_delay -add_delay -clock_fall -clock [get_clocks AtrBusClk] -min  $maxDelay [get_ports DB*_ATR_*X_*]
+# # Finally, make both the setup and hold checks use the same launching and latching edges.
+# set_multicycle_path -setup -to [get_clocks AtrBusClk] -start 0
+# set_multicycle_path -hold  -to [get_clocks AtrBusClk] -1
+
+
+# Mykonos GPIO is driven from the DB-A radio clock. It is received asynchronously inside
+# the chip, but should be (fairly) tightly controlled coming from the FPGA.
+## NEED CONSTRAINT HERE ##
+
+# Mykonos Interrupt is received asynchronously, and driven directly to the PS.
+set_input_delay -clock [get_clocks AsyncInClk] 0.000 [get_ports DB*_MYK_INTRQ]
+set_max_delay -from [get_ports DB*_MYK_INTRQ] 50.000
+set_min_delay -from [get_ports DB*_MYK_INTRQ] 0.000
 
 
 
 #*******************************************************************************
 ## SYSREF/SYNC JESD Timing
 #
-# Drive both outputs with respect to their virtual clock.
+# SYNC is async, SYSREF is tightly timed.
 
-# SYNC for both DBs is governed by the JESD core, which is solely driven by DB-A clock,
-# so we can lump all these outputs into one constraint... which should be pretty loose
-# because it's really an async output.
-set_output_delay -clock DbaFpgaClkV -min  0.000 [get_ports {DB*_MYK_SYNC_IN_n}]
-set_output_delay -clock DbaFpgaClkV -max  1.000 [get_ports {DB*_MYK_SYNC_IN_n}]
+# The SYNC output for both DBs is governed by the JESD cores, which are solely driven by
+# DB-A clock... but it is an asynchronous signal so we use the AsyncOutClk.
+set_output_delay -clock [get_clocks AsyncOutClk] 0.000 [get_ports DB*_MYK_SYNC_IN_n]
+set_max_delay -to [get_ports DB*_MYK_SYNC_IN_n] 50.000
+set_min_delay -to [get_ports DB*_MYK_SYNC_IN_n] 0.000
 
-# Need to add the input delay for DB*_MYK_SYNC_OUT_n
+# The SYNC input for both DBs is received by the DB-A clock inside the JESD cores... but
+# again, it is asynchronous and therefore uses the AsyncInClk.
+set_input_delay -clock [get_clocks AsyncInClk] 0.000 [get_ports DB*_MYK_SYNC_OUT_n]
+set_max_delay -from [get_ports DB*_MYK_SYNC_OUT_n] 50.000
+set_min_delay -from [get_ports DB*_MYK_SYNC_OUT_n] 0.000
+
+# SYSREF is driven by the LMK directly to the FPGA. Timing analysis was performed once
+# for the worst-case numbers across both DBs to produce one set of numbers for both DBs.
+# Since we easily meet setup and hold in Vivado, then this is an acceptable approach.
+# SYSREF is captured by the local clock from each DB, so we have two sets of constraints.
+set_input_delay -clock DbaFpgaClkV -min -0.906 [get_ports DBA_FPGA_SYSREF_*]
+set_input_delay -clock DbaFpgaClkV -max  0.646 [get_ports DBA_FPGA_SYSREF_*]
+
+set_input_delay -clock DbbFpgaClkV -min -0.906 [get_ports DBB_FPGA_SYSREF_*]
+set_input_delay -clock DbbFpgaClkV -max  0.646 [get_ports DBB_FPGA_SYSREF_*]
