@@ -45,15 +45,11 @@ include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
 # Sources
 ##################################################
 TOP_SRCS = \
-n310.v \
 n310_core.v \
 n310_sfpp_io_core.v \
-n310.xdc \
-n310_ps.v \
 n3xx_db_fe_core.v \
 eth_switch.v \
-network_interface.v \
-timing.xdc
+network_interface.v
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)
@@ -87,7 +83,7 @@ else
 HLS_IP_GEN_SRCS =
 endif
 
-DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
+DESIGN_SRCS = $(MAGNESIUM_TOP_SRCS) $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
@@ -96,7 +92,7 @@ $(SFP_SERDES_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS) \
-$(MAGNESIUM_SRCS) $(DB_COMMON_SRCS)
+$(MAGNESIUM_DB_SRCS) $(DB_COMMON_SRCS)
 
 SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 
