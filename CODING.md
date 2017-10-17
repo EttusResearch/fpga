@@ -76,6 +76,8 @@ dummy_module inst (
 );
 ```
 * Don't instantiate modules using positional arguments. Use the dot form illustrated above.
+* Every module requires a header giving a synopsis of its function below the
+  copyright header.
 
 ### Clocking and Resets
 
