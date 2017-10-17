@@ -517,6 +517,8 @@ set UsrpIoBHrPinsDiff [get_ports {DBB_FPGA_CLK_* DBB_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoBHrPinsDiff
 set_property DIFF_TERM     TRUE             $UsrpIoBHrPinsDiff
 
+set_property PULLUP TRUE [get_ports {DB*_CH*_*X_DSA_DATA[*]}]
+
 
 ### MGTs, Bank 112
 

@@ -3,6 +3,9 @@
 //
 
 module n3xx_db_fe_core #(
+  // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
+  // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
+  parameter USE_SPI_CLK = 0,
   parameter [7:0] SR_DB_FE_BASE = 160,
   parameter [7:0] RB_DB_FE_BASE = 16
 )(
@@ -22,22 +25,22 @@ module n3xx_db_fe_core #(
   input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso
 );
 
+
+  db_control #(
+    .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE)
+  ) db_control_i (
+    .clk(clk), .reset(reset),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .rb_stb(rb_stb), .rb_addr(rb_addr), .rb_data(rb_data),
+    .run_rx(rx_running), .run_tx(tx_running),
+    .misc_ins(misc_ins), .misc_outs(misc_outs),
+    .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr), .fp_gpio_fab(fp_gpio_fab),
+    .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr), .db_gpio_fab(db_gpio_fab),
+    .leds(leds),
+    .spi_clk(spi_clk), .spi_rst(spi_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso)
+  );
   //TODO: Flesh out this module
   assign tx_data_out = tx_data_in;
   assign rx_data_out = rx_data_in;
-
-  assign rb_stb = 1'b1;
-  assign rb_data = 64'h0;
-
-  assign misc_outs = 32'h0;
-  assign fp_gpio_out = 32'h0;
-  assign fp_gpio_ddr = 32'h0;
-  assign db_gpio_out = 32'h0;
-  assign db_gpio_ddr = 32'h0;
-  assign leds = 32'h0;
-
-  assign sen = 8'h0;
-  assign sclk = 1'b0;
-  assign mosi = 1'b0;
 
 endmodule

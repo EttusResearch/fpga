@@ -215,10 +215,10 @@ module n310
    output        DBA_ATR_TX_1,
    output        DBA_ATR_TX_2,
 
-   output [5:0]  DBA_CH1_TX_DSA_DATA,
-   output [5:0]  DBA_CH1_RX_DSA_DATA,
-   output [5:0]  DBA_CH2_TX_DSA_DATA,
-   output [5:0]  DBA_CH2_RX_DSA_DATA,
+   inout [5:0]  DBA_CH1_TX_DSA_DATA,
+   inout [5:0]  DBA_CH1_RX_DSA_DATA,
+   inout [5:0]  DBA_CH2_TX_DSA_DATA,
+   inout [5:0]  DBA_CH2_RX_DSA_DATA,
 
    output        DBA_CPLD_PL_SPI_SCLK,
    output        DBA_CPLD_PL_SPI_LE,
@@ -275,10 +275,10 @@ module n310
    output        DBB_ATR_TX_1,
    output        DBB_ATR_TX_2,
 
-   output [5:0]  DBB_CH1_TX_DSA_DATA,
-   output [5:0]  DBB_CH1_RX_DSA_DATA,
-   output [5:0]  DBB_CH2_TX_DSA_DATA,
-   output [5:0]  DBB_CH2_RX_DSA_DATA,
+   inout [5:0]  DBB_CH1_TX_DSA_DATA,
+   inout [5:0]  DBB_CH1_RX_DSA_DATA,
+   inout [5:0]  DBB_CH2_TX_DSA_DATA,
+   inout [5:0]  DBB_CH2_RX_DSA_DATA,
 
    output        DBB_CPLD_PL_SPI_SCLK,
    output        DBB_CPLD_PL_SPI_LE,
@@ -1130,8 +1130,8 @@ module n310
       .PORTNUM(8'd0)
   ) sfp_wrapper_0 (
 `ifdef SFP0_AURORA
-     //must reset all channels on quad when aurora mmcm is reset. 
-     //sfp1 is the master of the mmcm, so reset sfp0 as well. 
+     //must reset all channels on quad when aurora mmcm is reset.
+     //sfp1 is the master of the mmcm, so reset sfp0 as well.
      .areset(global_rst | sfp1_phy_areset),
 `else
      .areset(global_rst),     // TODO: Add Reset through PS
@@ -1145,7 +1145,7 @@ module n310
 
      .bus_rst(bus_rst),
      .bus_clk(bus_clk),
-     
+
      .qpllreset(),
      .qplllock(qplllock),
      .qplloutclk(qplloutclk),
@@ -1255,7 +1255,7 @@ module n310
       .PORTNUM(8'd1)
   ) sfp_wrapper_1 (
      .areset(global_rst),     // TODO: Add Reset through PS
-     
+
      .gt_refclk(sfp1_gt_refclk),
      .gb_refclk(sfp1_gb_refclk),
      .misc_clk(sfp1_misc_clk),
@@ -1265,7 +1265,7 @@ module n310
 
      .bus_rst(bus_rst),
      .bus_clk(bus_clk),
-     
+
      .qpllreset(qpllreset),
      .qplllock(qplllock),
      .qplloutclk(qplloutclk),
@@ -2450,6 +2450,13 @@ module n310
   // DB PS SPI Connections
   //
   ///////////////////////////////////////////////////////
+  wire [3:0] rx_atr;
+  wire [3:0] tx_atr;
+
+  wire [15:0] db_gpio_out[0:3];
+  wire [15:0] db_gpio_in[0:3];
+  wire [15:0] db_gpio_ddr[0:3];
+  wire [15:0] db_gpio_fab[0:3];
 
   // DB A SPI Connections
   wire cpld_a_cs_n;
@@ -2462,13 +2469,8 @@ module n310
   assign DBA_CPLD_PS_SPI_SCLK = spi0_sclk;
   assign DBA_CPLD_PS_SPI_SDI  = spi0_mosi;
 
-  //vhook_warn PL SPI connected to the PS right now!
-  assign DBA_CPLD_PL_SPI_SCLK = spi0_sclk;
-  assign DBA_CPLD_PL_SPI_SDI  = spi0_mosi;
-
   assign DBA_MYK_SPI_SCLK     = spi0_sclk;
   assign DBA_MYK_SPI_SDIO     = spi0_mosi;
-
   // Assign individual chip selects from PS SPI MASTER 0.
   assign cpld_a_cs_n = spi0_ss0;
   assign lmk_a_cs_n  = spi0_ss1;
@@ -2485,22 +2487,24 @@ module n310
   // ADDR[0] = LMK
   // ADDR[1] = DAC
   assign DBA_CPLD_PS_SPI_LE       = cpld_a_cs_n;
-  assign DBA_CPLD_PL_SPI_LE       = cpld_pl_a_cs_n;
   assign DBA_CPLD_PS_SPI_ADDR[0]  = lmk_a_cs_n;
   assign DBA_CPLD_PS_SPI_ADDR[1]  = dac_a_cs_n;
   assign DBA_MYK_SPI_CS_n         = myk_a_cs_n;
 
 
-  // Default the other control signals (just for now).
-  assign DBA_CH1_TX_DSA_DATA = 6'b0;
-  assign DBA_CH1_RX_DSA_DATA = 6'b0;
-  assign DBA_CH2_TX_DSA_DATA = 6'b0;
-  assign DBA_CH2_RX_DSA_DATA = 6'b0;
+   gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA0_inst (
+      .clk(radio_clk), .gpio_pins({DBA_CH1_TX_DSA_DATA,DBA_CH1_RX_DSA_DATA}),
+      .gpio_ddr(db_gpio_ddr[0]), .gpio_out(db_gpio_out[0]), .gpio_in(db_gpio_in[0])
+   );
+  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA1_inst (
+      .clk(radio_clk), .gpio_pins({DBA_CH2_TX_DSA_DATA,DBA_CH2_RX_DSA_DATA}),
+      .gpio_ddr(db_gpio_ddr[1]), .gpio_out(db_gpio_out[1]), .gpio_in(db_gpio_in[1])
+   );
 
-  assign DBA_ATR_RX_1 = 1'b1;
-  assign DBA_ATR_RX_2 = 1'b1;
-  assign DBA_ATR_TX_1 = 1'b1;
-  assign DBA_ATR_TX_2 = 1'b1;
+  assign DBA_ATR_RX_1 = rx_atr[0];
+  assign DBA_ATR_RX_2 = rx_atr[1];
+  assign DBA_ATR_TX_1 = tx_atr[0];
+  assign DBA_ATR_TX_2 = tx_atr[1];
 
   assign DBA_MYK_GPIO_0  = 1'b0;
   assign DBA_MYK_GPIO_1  = 1'b0;
@@ -2543,22 +2547,25 @@ module n310
   // ADDR[0] = LMK
   // ADDR[1] = DAC
   assign DBB_CPLD_PS_SPI_LE       = cpld_b_cs_n;
-  assign DBB_CPLD_PL_SPI_LE       = cpld_pl_b_cs_n;
   assign DBB_CPLD_PS_SPI_ADDR[0]  = lmk_b_cs_n;
   assign DBB_CPLD_PS_SPI_ADDR[1]  = dac_b_cs_n;
   assign DBB_MYK_SPI_CS_n         = myk_b_cs_n;
 
 
-  // For now, default the DSAs to something low-power... is this right?
-  assign DBB_CH1_TX_DSA_DATA = 6'b0;
-  assign DBB_CH1_RX_DSA_DATA = 6'b0;
-  assign DBB_CH2_TX_DSA_DATA = 6'b0;
-  assign DBB_CH2_RX_DSA_DATA = 6'b0;
 
-  assign DBB_ATR_RX_1 = 1'b1;
-  assign DBB_ATR_RX_2 = 1'b1;
-  assign DBB_ATR_TX_1 = 1'b1;
-  assign DBB_ATR_TX_2 = 1'b1;
+  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB0_inst (
+      .clk(radio_clk), .gpio_pins({DBB_CH1_TX_DSA_DATA,DBB_CH1_RX_DSA_DATA}),
+      .gpio_ddr(db_gpio_ddr[2]), .gpio_out(db_gpio_out[2]), .gpio_in(db_gpio_in[2])
+   );
+  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB1_inst (
+      .clk(radio_clk), .gpio_pins({DBB_CH2_TX_DSA_DATA,DBB_CH2_RX_DSA_DATA}),
+      .gpio_ddr(db_gpio_ddr[3]), .gpio_out(db_gpio_out[3]), .gpio_in(db_gpio_in[3])
+   );
+
+  assign DBB_ATR_RX_1 = rx_atr[2];
+  assign DBB_ATR_RX_2 = rx_atr[3];
+  assign DBB_ATR_TX_1 = tx_atr[2];
+  assign DBB_ATR_TX_2 = tx_atr[3];
 
   assign DBB_MYK_GPIO_0  = 1'b0;
   assign DBB_MYK_GPIO_1  = 1'b0;
@@ -2636,8 +2643,27 @@ module n310
     .s_axi_rresp(M_AXI_XBAR_RRESP),
     .s_axi_rvalid(M_AXI_XBAR_RVALID),
     .s_axi_rready(M_AXI_XBAR_RREADY),
-
-    // JESD204
+    //radios atr
+    .rx_atr(rx_atr),
+    .tx_atr(tx_atr),
+    //radios gpio dsa
+    .db_gpio_out0(db_gpio_out[0]),
+    .db_gpio_out1(db_gpio_out[1]),
+    .db_gpio_out2(db_gpio_out[2]),
+    .db_gpio_out3(db_gpio_out[3]),
+    .db_gpio_in0(db_gpio_in[0]),
+    .db_gpio_in1(db_gpio_in[1]),
+    .db_gpio_in2(db_gpio_in[2]),
+    .db_gpio_in3(db_gpio_in[3]),
+    .db_gpio_ddr0(db_gpio_ddr[0]),
+    .db_gpio_ddr1(db_gpio_ddr[1]),
+    .db_gpio_ddr2(db_gpio_ddr[2]),
+    .db_gpio_ddr3(db_gpio_ddr[3]),
+    .db_gpio_fab0(db_gpio_fab[0]),
+    .db_gpio_fab1(db_gpio_fab[1]),
+    .db_gpio_fab2(db_gpio_fab[2]),
+    .db_gpio_fab3(db_gpio_fab[3]),
+    //radios data
     .rx0(rx0),
     .tx0(tx0),
     .rx1(rx1),
@@ -2648,8 +2674,15 @@ module n310
     .tx3(tx3),
     .rx_stb(rx_stb),
     .tx_stb(tx_stb),
-
-
+    //cpld rx_lo tx_lo  spi
+    .sclk0(DBA_CPLD_PL_SPI_SCLK),
+    .sen0({DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
+    .mosi0(DBA_CPLD_PL_SPI_SDI),
+    .miso0(DBA_CPLD_PL_SPI_SDO),
+    .sclk1(DBB_CPLD_PL_SPI_SCLK),
+    .sen1({DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE}),
+    .mosi1(DBB_CPLD_PL_SPI_SDI),
+    .miso1(DBB_CPLD_PL_SPI_SDO),
     // DRAM signals.
     .ddr3_axi_clk              (ddr3_axi_clk),
     .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
@@ -2905,15 +2938,6 @@ module n310
     .reg_port_out_data (reg_portA_rd_data),
     .reg_port_out_ready(reg_portA_ready)
   );
-
-
-  // Default to '1' since these are actually CS_n lines to the LOs.
-  assign DBA_CPLD_PL_SPI_ADDR[0] = 1'b1;
-  assign DBA_CPLD_PL_SPI_ADDR[1] = 1'b1;
-
-  assign DBB_CPLD_PL_SPI_ADDR[0] = 1'b1;
-  assign DBB_CPLD_PL_SPI_ADDR[1] = 1'b1;
-
 
   wire          reg_portB_rd;
   wire          reg_portB_wr;

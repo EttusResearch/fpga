@@ -51,24 +51,49 @@ module n310_core #(
   output [1:0]             s_axi_rresp,
   output                   s_axi_rvalid,
   input                    s_axi_rready,
-
-  // JESD204
-  input  [31:0] rx0,
-  output [31:0] tx0,
-
-  input  [31:0] rx1,
-  output [31:0] tx1,
-
-  input  [31:0] rx2,
-  output [31:0] tx2,
-
-  input  [31:0] rx3,
-  output [31:0] tx3,
-
+  //radios gpio dsa 
+  output [15:0] db_gpio_out0,
+  output [15:0] db_gpio_out1,
+  output [15:0] db_gpio_out2,
+  output [15:0] db_gpio_out3,
+  output [15:0] db_gpio_ddr0,
+  output [15:0] db_gpio_ddr1,
+  output [15:0] db_gpio_ddr2,
+  output [15:0] db_gpio_ddr3,
+  input  [15:0] db_gpio_in0,
+  input  [15:0] db_gpio_in1,
+  input  [15:0] db_gpio_in2,
+  input  [15:0] db_gpio_in3,
+  input  [15:0] db_gpio_fab0,
+  input  [15:0] db_gpio_fab1,
+  input  [15:0] db_gpio_fab2,
+  input  [15:0] db_gpio_fab3,
+  //radios atr
+  output [3:0] rx_atr,
+  output [3:0] tx_atr,
+  //radios data
   input  [3:0]  rx_stb,
   input  [3:0]  tx_stb,
-
-  // DMA
+  input  [31:0] rx0,
+  output [31:0] tx0,
+  input  [31:0] rx1,
+  output [31:0] tx1,
+  // cpld 
+  output [7:0] sen0,
+  output sclk0,
+  output mosi0,
+  input miso0,
+  //radios data
+  input  [31:0] rx2,
+  output [31:0] tx2,
+  input  [31:0] rx3,
+  output [31:0] tx3,
+  //cpld 
+  output [7:0] sen1,
+  output sclk1,
+  output mosi1,
+  input miso1,
+   // DMA
   output [63:0] dmao_tdata,
   output        dmao_tlast,
   output        dmao_tvalid,
@@ -590,7 +615,8 @@ module n310_core #(
    //------------------------------------
    // Radios
    //------------------------------------
-
+   wire [7:0]  sen[0:3];
+   wire        sclk[0:3], mosi[0:3], miso[0:3];
    // Data
    wire [31:0] rx[0:3], rx_data[0:3], tx[0:3], tx_data[0:3];
    wire        db_fe_set_stb[0:3];
@@ -600,9 +626,16 @@ module n310_core #(
    wire [7:0]  db_fe_rb_addr[0:3];
    wire [64:0] db_fe_rb_data[0:3];
    wire        rx_running[0:3], tx_running[0:3];
-
    wire [NUM_RADIO_CORES-1:0] sync_out;
 
+   assign rx_atr[0] = rx_running[0];
+   assign rx_atr[1] = rx_running[1];
+   assign rx_atr[2] = rx_running[2];
+   assign rx_atr[3] = rx_running[3];
+   assign tx_atr[0] = tx_running[0];
+   assign tx_atr[1] = tx_running[1];
+   assign tx_atr[2] = tx_running[2];
+   assign tx_atr[3] = tx_running[3];
    genvar i;
    generate for (i = FIRST_RADIO_CORE_INST; i < LAST_RADIO_CORE_INST; i = i + 1) begin
       noc_block_radio_core #(
@@ -618,8 +651,8 @@ module n310_core #(
          .i_tdata(ioce_o_tdata[i]), .i_tlast(ioce_o_tlast[i]), .i_tvalid(ioce_o_tvalid[i]), .i_tready(ioce_o_tready[i]),
          .o_tdata(ioce_i_tdata[i]), .o_tlast(ioce_i_tlast[i]), .o_tvalid(ioce_i_tvalid[i]), .o_tready(ioce_i_tready[i]),
          // Data ports connected to radio front end
-         .rx(    {rx_data[i-FIRST_RADIO_CORE_INST]}), 
-         .rx_stb({rx_stb[i-FIRST_RADIO_CORE_INST]}),  
+         .rx(    {rx_data[i-FIRST_RADIO_CORE_INST]}),
+         .rx_stb({rx_stb[i-FIRST_RADIO_CORE_INST]}),
          .tx(    {tx_data[i-FIRST_RADIO_CORE_INST]}),
          .tx_stb({tx_stb[i-FIRST_RADIO_CORE_INST]}),
          // Timing and sync
@@ -640,11 +673,26 @@ module n310_core #(
    /////////////////////////////////////////////////////////////////////////////////
    // TX/RX FrontEnd
    /////////////////////////////////////////////////////////////////////////////////
-
+   wire [15:0] db_gpio_in[0:3];
+   wire [15:0] db_gpio_out[0:3];
+   wire [15:0] db_gpio_ddr[0:3];
+   wire [15:0] db_gpio_fab[0:3];
    assign {rx[0], rx[1]} = {rx0, rx1};
    assign {rx[2], rx[3]} = {rx2, rx3};
    assign {tx0, tx1} = {tx[0], tx[1]};
    assign {tx2, tx3} = {tx[2], tx[3]};
+   assign {miso[0], miso[2]} = {miso0, miso1};
+   assign {sclk0, sclk1} = {sclk[0], sclk[2]};
+   assign {sen0, sen1} = {sen[0], sen[2]} ;
+   assign {mosi0, mosi1} = {mosi[0], mosi[2]};
+   assign {db_gpio_out0, db_gpio_out1} = {db_gpio_out[0], db_gpio_out[1]};
+   assign {db_gpio_out2, db_gpio_out3} = {db_gpio_out[2], db_gpio_out[3]};
+   assign {db_gpio_ddr0, db_gpio_ddr1} = {db_gpio_ddr[0], db_gpio_ddr[1]};
+   assign {db_gpio_ddr2, db_gpio_ddr3} = {db_gpio_ddr[2], db_gpio_ddr[3]};
+   assign {db_gpio_in[0],db_gpio_in[1]} = {db_gpio_in0, db_gpio_in1};
+   assign {db_gpio_in[2],db_gpio_in[3]} = {db_gpio_in2, db_gpio_in3};
+   assign {db_gpio_fab[0],db_gpio_fab[1]} = {db_gpio_fab0, db_gpio_fab1};
+   assign {db_gpio_fab[2],db_gpio_fab[3]} = {db_gpio_fab2, db_gpio_fab3};
 
    generate for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
       n3xx_db_fe_core db_fe_core_i (
@@ -656,10 +704,11 @@ module n310_core #(
          .rx_stb(rx_stb[i]), .rx_data_in(rx[i]), .rx_data_out(rx_data[i]), .rx_running(rx_running[i]),
          .misc_ins(32'h0), .misc_outs(),
          .fp_gpio_in(32'h0), .fp_gpio_out(), .fp_gpio_ddr(), .fp_gpio_fab(32'h0),
-         .db_gpio_in(32'h0), .db_gpio_out(), .db_gpio_ddr(), .db_gpio_fab(32'h0),
+         .db_gpio_in(db_gpio_in[i]), .db_gpio_out(db_gpio_out[i]),
+         .db_gpio_ddr(db_gpio_ddr[i]), .db_gpio_fab(db_gpio_fab[i]),
          .leds(),
-         .spi_clk(1'b0), .spi_rst(1'b0),
-         .sen(), .sclk(), .mosi(), .miso(1'b0)
+         .spi_clk(radio_clk), .spi_rst(radio_rst),
+         .sen(sen[i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i])
       );
    end endgenerate
 
