@@ -13,4 +13,5 @@ create_generated_clock -name aurora_init_clk [get_pins -hierarchical -filter {NA
 
 set_clock_groups -asynchronous -group [get_clocks bus_clk] -group [get_clocks aurora_init_clk]
 
-set_false_path -to [get_pins -hierarchical -filter {NAME =~ "*network_interface*/*sfpp_io_*/*/rst_sync_sys_rst_i/*aurora_64b66b_pcs_pma_cdc_to_reg/D"}]
+set_false_path -to [get_pins -hierarchical -filter {NAME =~ "sfp_wrapper*/sfpp_io*/aurora_phy*/aurora_64b66b_pcs_pma*/*/gt_reset_sync/stg1_*_cdc_to_reg/D"}]
+

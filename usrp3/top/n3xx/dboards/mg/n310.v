@@ -128,12 +128,9 @@ module n310
    //
    ///////////////////////////////////
 
-   //input WB_CDCM_CLK1_P,
-   //input WB_CDCM_CLK1_N,
-
 `ifdef BUILD_1G
-   input WB_CDCM_CLK2_P,
-   input WB_CDCM_CLK2_N,
+   input NETCLK_P,
+   input NETCLK_N,
 `endif
 
 `ifdef BUILD_10G
@@ -656,8 +653,10 @@ module n310
   wire        bus_clk = FCLK_CLK3;
   wire        gige_refclk;
   wire        gige_refclk_bufg;
+  wire        xgige_refclk;
+  wire        xgige_clk156;
+  wire        xgige_dclk;
   wire        aurora_gt_refclk;
-  wire        aurora_misc_clk;
   wire        aurora_refclk;
   wire        aurora_clk156;
   wire        aurora_init_clk;
@@ -698,8 +697,8 @@ module n310
   //   PL Clocks : ---------------------------------------------------------------------------
   //   xgige_refclk (156): MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > xgige_refclk
   //   clk156            : MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > BUFG  > clk156
-  //   gige_refclk (125) : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk
-  //   gige_refclk_bufg  : WB_CDCM_CLK2_P   > GTX IBUF > IBUFDS_GTE2  > gige_refclk_bufg
+  //   gige_refclk (125) : NETCLK_P         > GTX IBUF > IBUFDS_GTE2  > gige_refclk
+  //   gige_refclk_bufg  : NETCLK_P         > GTX IBUF > IBUFDS_GTE2  > BUFG  > gige_refclk_bufg
   //   RefClk (10)       : FPGA_REFCLK_P    >   IBUFDS > ref_clk
   //
   //   PS Clocks to PL:
@@ -796,8 +795,8 @@ module n310
 `ifdef BUILD_1G
    one_gige_phy_clk_gen gige_clk_gen_i (
       .areset(global_rst),
-      .refclk_p(WB_CDCM_CLK2_P),
-      .refclk_n(WB_CDCM_CLK2_N),
+      .refclk_p(NETCLK_P),
+      .refclk_n(NETCLK_N),
       .refclk(gige_refclk),
       .refclk_bufg(gige_refclk_bufg)
    );
@@ -811,9 +810,6 @@ module n310
 `endif
 
 `ifdef BUILD_10G
-   wire  xgige_refclk;
-   wire  xgige_clk156;
-   wire  xgige_dclk;
 
    ten_gige_phy_clk_gen xgige_clk_gen_i (
       .areset(global_rst),
@@ -823,31 +819,31 @@ module n310
       .clk156(xgige_clk156),
       .dclk(xgige_dclk)
    );
-   
    // FIXME
    assign SFP_0_RS0  = 1'b1;
    assign SFP_0_RS1  = 1'b1;
    assign SFP_1_RS0  = 1'b1;
    assign SFP_1_RS1  = 1'b1;
    `ifdef BUILD_AURORA
-      wire  aurora_refclk = xgige_refclk;
-      wire  aurora_clk156 = xgige_clk156;
-      wire  aurora_init_clk = xgige_dclk;
+      assign  aurora_refclk = xgige_refclk;
+      assign  aurora_clk156 = xgige_clk156;
+      assign  aurora_init_clk = xgige_dclk;
    `endif
 `else
    `ifdef BUILD_AURORA
-      wire  aurora_refclk;
-      wire  aurora_clk156;
-      wire  aurora_init_clk;
-
       aurora_phy_clk_gen aurora_clk_gen_i (
-         .areset(global_rst ),
+         .areset(global_rst),
          .refclk_p(MGT156MHZ_CLK1_P),
          .refclk_n(MGT156MHZ_CLK1_N),
          .refclk(aurora_refclk),
          .clk156(aurora_clk156),
          .init_clk(aurora_init_clk)
       );
+
+   assign SFP_0_RS0  = 1'b1;
+   assign SFP_0_RS1  = 1'b1;
+   assign SFP_1_RS0  = 1'b1;
+   assign SFP_1_RS1  = 1'b1;
    `endif
 `endif
 
@@ -889,85 +885,37 @@ module n310
    assign sfp1_misc_clk  = aurora_init_clk;
 `endif
 
-   wire          gt0_qplloutclk,gt0_qplloutrefclk;
-   wire          pma_reset;
-   wire          qpllreset;
-   wire          qplllock;
-   wire          qplloutclk;
-   wire          qplloutrefclk;
-   wire  [15:0]  sfp0_phy_status;
-   wire  [15:0]  sfp1_phy_status;
-   wire  [63:0]  e01_tdata, e10_tdata;
-   wire  [3:0]   e01_tuser, e10_tuser;
-   wire          e01_tlast, e01_tvalid, e01_tready;
-   wire          e10_tlast, e10_tvalid, e10_tready;
+  wire          gt0_qplloutclk,gt0_qplloutrefclk;
+  wire          pma_reset;
+  wire          qpllreset;
+  wire          qplllock;
+  wire          qplloutclk;
+  wire          qplloutrefclk;
+  wire  [15:0]  sfp0_phy_status;
+  wire  [15:0]  sfp1_phy_status;
+  wire  [31:0]  sfp0_mac_status;
+  wire  [31:0]  sfp1_mac_status;
+  wire  [63:0]  e01_tdata, e10_tdata;
+  wire  [3:0]   e01_tuser, e10_tuser;
+  wire          e01_tlast, e01_tvalid, e01_tready;
+  wire          e10_tlast, e10_tvalid, e10_tready;
 
-`ifdef SFP0_1GBE //if SFP0 is 1 gig, use SFP1 common resources
-  `ifdef SFP1_10GBE
-    wire qpllrefclklost = 1'b0;
-
-    // Instantiate the 10GBASER/KR GT Common block
-    ten_gig_eth_pcs_pma_gt_common # (
-        .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
-    ten_gig_eth_pcs_pma_gt_common_block
-      (
-       .refclk(xgige_refclk),
-       .qpllreset(qpllreset), //from 2nd sfp
-       .qplllock(qplllock),
-       .qplloutclk(qplloutclk),
-       .qplloutrefclk(qplloutrefclk),
-       .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
-      );
-  `elsif SFP1_AURORA
-    wire qpllrefclklost; 
-  
-    wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
-    wire    [15:0]     qpll_drpdi_in_i = 16'h0;
-    wire               qpll_drpen_in_i =  1'b0;
-    wire               qpll_drpwe_in_i =  1'b0;
-    wire    [15:0]     qpll_drpdo_out_i;
-    wire               qpll_drprdy_out_i;
-  
-    aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
-      .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
-      .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
-      .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk), 
-      //----------------------- Common Block - QPLL Ports ------------------------
-      .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
-      .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
-      .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
-      .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //from 1st sfp
-      //---------------------- Common DRP Ports ---------------------- //not really used???
-      .qpll_drpaddr_in           (qpll_drpaddr_in_i),
-      .qpll_drpdi_in             (qpll_drpdi_in_i),
-      .qpll_drpclk_in            (aurora_init_clk),
-      .qpll_drpdo_out            (qpll_drpdo_out_i), 
-      .qpll_drprdy_out           (qpll_drprdy_out_i), 
-      .qpll_drpen_in             (qpll_drpen_in_i), 
-      .qpll_drpwe_in             (qpll_drpwe_in_i)
-    );
-  
-  `endif
-`endif
-`ifdef SFP0_10GBE
-
+`ifdef SFP1_10GBE
   wire qpllrefclklost = 1'b0;
 
   // Instantiate the 10GBASER/KR GT Common block
   ten_gig_eth_pcs_pma_gt_common # (
       .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
   ten_gig_eth_pcs_pma_gt_common_block
-    (
-     .refclk(xgige_refclk),
-     .qpllreset(qpllreset), //from 2nd sfp
-     .qplllock(qplllock),
-     .qplloutclk(qplloutclk),
-     .qplloutrefclk(qplloutrefclk),
-     .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
-    );
-`endif
-
-`ifdef SFP0_AURORA
+  (
+   .refclk(xgige_refclk),
+   .qpllreset(qpllreset), //from 2nd sfp
+   .qplllock(qplllock),
+   .qplloutclk(qplloutclk),
+   .qplloutrefclk(qplloutrefclk),
+   .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
+  );
+`elsif SFP1_AURORA
   wire qpllrefclklost;
 
   wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
@@ -982,10 +930,10 @@ module n310
     .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
     .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk),
     //----------------------- Common Block - QPLL Ports ------------------------
-    .GT0_QPLLLOCK_OUT          (qplllock), //from 1st sfp
-    .GT0_QPLLRESET_IN          (qpllreset), //from 1st sfp
+    .GT0_QPLLLOCK_OUT          (qplllock), //to sfp1
+    .GT0_QPLLRESET_IN          (qpllreset), //from sfp1
     .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
-    .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //from 1st sfp
+    .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //to sfp1
     //---------------------- Common DRP Ports ---------------------- //not really used???
     .qpll_drpaddr_in           (qpll_drpaddr_in_i),
     .qpll_drpdi_in             (qpll_drpdi_in_i),
@@ -997,6 +945,27 @@ module n310
   );
 `endif
 
+`ifdef BUILD_AURORA
+  wire aurora_tx_clk0, aurora_tx_clk1;
+  wire aurora_mmcm_reset0, aurora_mmcm_reset1;
+  wire au_user_clk;
+  wire au_sync_clk;
+  wire au_mmcm_locked;
+  wire sfp0_tx_out_clk, sfp1_tx_out_clk;
+  wire sfp0_gt_pll_lock, sfp1_gt_pll_lock;
+  wire sfp0_phy_areset, sfp1_phy_areset;
+  //just always use sfp1 for this because in all build combinations with
+  //Aurora, sfp1 is Aurora.
+  //Since sfp1 aurora core is the source of the mmcm clk, connect its reset to
+  //all other gtx channels on this quad.
+  aurora_phy_mmcm aurora_phy_mmcm_0 (
+    .aurora_tx_clk(sfp1_tx_out_clk),
+    .mmcm_reset(!sfp1_gt_pll_lock),
+    .user_clk(au_user_clk),
+    .sync_clk(au_sync_clk),
+    .mmcm_locked(au_mmcm_locked)
+  );
+`endif
   ////////////////////////////////////////////////////////////////////
   // PPS
   // Support for internal or external inputs.
@@ -1140,48 +1109,53 @@ module n310
   wire        i_cvita_dma_tready;
   wire        i_cvita_dma_tvalid;
 
+
   /////////////////////////////////////////////////////////////////////
   //
-  // Network Interface 0
+  // SFP Wrapper 0: Network Interface (1/10G or Aurora)
   //
   //////////////////////////////////////////////////////////////////////
 
-  network_interface #(
+  n310_sfp_wrapper #(
 `ifdef SFP0_10GBE
       .PROTOCOL("10GbE"),
-`elsif SFP0_1GBE
-      .PROTOCOL("1GbE"),
 `elsif SFP0_AURORA
       .PROTOCOL("Aurora"),
+`elsif SFP0_1GBE
+      .PROTOCOL("1GbE"),
 `endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
       .PORTNUM(8'd0)
-  ) network_interface_0 (
+  ) sfp_wrapper_0 (
+`ifdef SFP0_AURORA
+     //must reset all channels on quad when aurora mmcm is reset. 
+     //sfp1 is the master of the mmcm, so reset sfp0 as well. 
+     .areset(global_rst | sfp1_phy_areset),
+`else
      .areset(global_rst),     // TODO: Add Reset through PS
+`endif
      .gt_refclk(sfp0_gt_refclk),
      .gb_refclk(sfp0_gb_refclk),
      .misc_clk(sfp0_misc_clk),
+     .user_clk(au_user_clk),
+     .sync_clk(au_sync_clk),
+     .au_tx_out_clk(sfp0_tx_out_clk),
 
      .bus_rst(bus_rst),
      .bus_clk(bus_clk),
-   `ifdef SFP0_1GBE
-     .qplloutclk(qplloutclk),
-     .qplloutrefclk(qplloutrefclk),
-   `endif
-   `ifdef SFP0_10GBE
+     
+     .qpllreset(),
      .qplllock(qplllock),
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
-   `endif
-   `ifdef SFP0_AURORA
-     .qplllock(qplllock),
-     .qpllreset(qpllreset),
      .qpllrefclklost(qpllrefclklost),
-     .qplloutclk(qplloutclk),
-     .qplloutrefclk(qplloutrefclk),
-   `endif
+
+     .au_mmcm_locked(au_mmcm_locked),
+     .gt_pll_lock(sfp0_gt_pll_lock),
+     .phy_areset_out(sfp0_phy_areset),
+
      .txp(SFP_0_TX_P),
      .txn(SFP_0_TX_N),
      .rxp(SFP_0_RX_P),
@@ -1192,6 +1166,7 @@ module n310
      .sfpp_tx_disable(SFP_0_TXDISABLE),
 
      .sfp_phy_status(sfp0_phy_status),
+     .sfp_mac_status(sfp0_mac_status),
 
      // Clock and reset
      .s_axi_aclk(clk40),
@@ -1261,17 +1236,16 @@ module n310
      .activity_led(SFP_0_LED_A)
   );
 
+
   /////////////////////////////////////////////////////////////////////
   //
-  // Network Interface 1
+  // SFP Wrapper 1: Network Interface (1/10G or Aurora)
   //
   //////////////////////////////////////////////////////////////////////
 
-  network_interface #(
+  n310_sfp_wrapper #(
 `ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
-`elsif SFP1_1GBE
-      .PROTOCOL("1GbE"),
 `elsif SFP1_AURORA
       .PROTOCOL("Aurora"),
 `endif
@@ -1279,36 +1253,40 @@ module n310
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .MDIO_EN(1'b1),
       .PORTNUM(8'd1)
-  ) network_interface_1 (
-      .areset(global_rst),     // TODO: Add reset through PS
-      .gt_refclk(sfp1_gt_refclk),
-      .gb_refclk(sfp1_gb_refclk),
-      .misc_clk(sfp1_misc_clk),
+  ) sfp_wrapper_1 (
+     .areset(global_rst),     // TODO: Add Reset through PS
+     
+     .gt_refclk(sfp1_gt_refclk),
+     .gb_refclk(sfp1_gb_refclk),
+     .misc_clk(sfp1_misc_clk),
+     .user_clk(au_user_clk),
+     .sync_clk(au_sync_clk),
+     .au_tx_out_clk(sfp1_tx_out_clk),
 
-      .bus_rst(bus_rst),
-      .bus_clk(bus_clk),
-    `ifdef SFP1_10GBE
-      .qpllreset(qpllreset),
-      .qplllock(qplllock),
-      .qplloutclk(qplloutclk),
-      .qplloutrefclk(qplloutrefclk),
-    `endif
-    `ifdef SFP1_AURORA
-      .qplllock(qplllock),
-      .qplloutclk(qplloutclk),
-      .qplloutrefclk(qplloutrefclk),
-     `endif
+     .bus_rst(bus_rst),
+     .bus_clk(bus_clk),
+     
+     .qpllreset(qpllreset),
+     .qplllock(qplllock),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
+     .qpllrefclklost(qpllrefclklost),
 
-      .txp(SFP_1_TX_P),
-      .txn(SFP_1_TX_N),
-      .rxp(SFP_1_RX_P),
-      .rxn(SFP_1_RX_N),
+     .au_mmcm_locked(au_mmcm_locked),
+     .gt_pll_lock(sfp1_gt_pll_lock),
+     .phy_areset_out(sfp1_phy_areset),
 
-      .sfpp_rxlos(SFP_1_LOS),
-      .sfpp_tx_fault(SFP_1_TXFAULT),
-      .sfpp_tx_disable(SFP_1_TXDISABLE),
+     .txp(SFP_1_TX_P),
+     .txn(SFP_1_TX_N),
+     .rxp(SFP_1_RX_P),
+     .rxn(SFP_1_RX_N),
 
-      .sfp_phy_status(sfp1_phy_status),
+     .sfpp_rxlos(SFP_1_LOS),
+     .sfpp_tx_fault(SFP_1_TXFAULT),
+     .sfpp_tx_disable(SFP_1_TXDISABLE),
+
+     .sfp_phy_status(sfp1_phy_status),
+     .sfp_mac_status(sfp1_mac_status),
 
       // Clock and reset
       .s_axi_aclk(clk40),
@@ -1389,6 +1367,99 @@ module n310
 
   assign {S_AXI_HP0_AWID, S_AXI_HP0_ARID} = 12'd0;
   assign {S_AXI_GP0_AWID, S_AXI_GP0_ARID} = 12'd0;
+
+`ifdef SFP0_AURORA
+  //If inst Aurora, tie off each axi/axi-lite interface
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp0_eth_dma
+  (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_ETH_DMA0_AWADDR),
+    .s_axi_awvalid(M_AXI_ETH_DMA0_AWVALID),
+    .s_axi_awready(M_AXI_ETH_DMA0_AWREADY),
+
+    .s_axi_wdata(M_AXI_ETH_DMA0_WDATA),
+    .s_axi_wvalid(M_AXI_ETH_DMA0_WVALID),
+    .s_axi_wready(M_AXI_ETH_DMA0_WREADY),
+
+    .s_axi_bresp(M_AXI_ETH_DMA0_BRESP),
+    .s_axi_bvalid(M_AXI_ETH_DMA0_BVALID),
+    .s_axi_bready(M_AXI_ETH_DMA0_BREADY),
+
+    .s_axi_araddr(M_AXI_ETH_DMA0_ARADDR),
+    .s_axi_arvalid(M_AXI_ETH_DMA0_ARVALID),
+    .s_axi_arready(M_AXI_ETH_DMA0_ARREADY),
+
+    .s_axi_rdata(M_AXI_ETH_DMA0_RDATA),
+    .s_axi_rresp(M_AXI_ETH_DMA0_RRESP),
+    .s_axi_rvalid(M_AXI_ETH_DMA0_RVALID),
+    .s_axi_rready(M_AXI_ETH_DMA0_RREADY)
+
+  );
+  //S_AXI_GP0 outputs from axi_eth_dma, so needs some sort of controller/tie off
+  assign S_AXI_GP0_AWADDR = 32'h0;
+  assign S_AXI_GP0_AWLEN = 8'h0;
+  assign S_AXI_GP0_AWSIZE = 4'h0;
+  assign S_AXI_GP0_AWBURST = 3'h0;
+  assign S_AXI_GP0_AWPROT = 3'h0;
+  assign S_AXI_GP0_AWCACHE = 4'h0;
+  assign S_AXI_GP0_AWVALID = 1'b0;
+  //S_AXI_GP0_AWREADY output from PS
+  assign S_AXI_GP0_WDATA = 32'h0;
+  assign S_AXI_GP0_WSTRB = 4'h0;
+  assign S_AXI_GP0_WLAST = 1'b0;
+  assign S_AXI_GP0_WVALID = 1'b0;
+  //S_AXI_GP0_WREADY output from PS
+  //S_AXI_GP0_BRESP
+  //S_AXI_GP0_BVALID
+  assign S_AXI_GP0_BREADY = 1'b1;
+  assign S_AXI_GP0_ARADDR = 32'h0;
+  assign S_AXI_GP0_ARLEN = 8'h0;
+  assign S_AXI_GP0_ARSIZE = 3'h0;
+  assign S_AXI_GP0_ARBURST = 2'h0;
+  assign S_AXI_GP0_ARPROT = 3'h0;
+  assign S_AXI_GP0_ARCACHE = 4'h0;
+  assign S_AXI_GP0_ARVALID = 1'b0;
+  //S_AXI_GP0_ARREADY
+  //S_AXI_GP0_RDATA
+  //S_AXI_GP0_RRESP
+  //S_AXI_GP0_RLAST
+  //S_AXI_GP0_RVALID
+  assign S_AXI_GP0_RREADY = 1'b1;
+
+  //S_AXI_HP0 from axi_eth_dma
+  assign S_AXI_HP0_ARADDR = 32'h0;
+  assign S_AXI_HP0_ARLEN = 8'h0;
+  assign S_AXI_HP0_ARSIZE = 3'h0;
+  assign S_AXI_HP0_ARBURST = 2'h0;
+  assign S_AXI_HP0_ARPROT = 3'h0;
+  assign S_AXI_HP0_ARCACHE = 4'h0;
+  assign S_AXI_HP0_ARVALID = 1'b0;
+  //S_AXI_HP0_ARREADY
+  //S_AXI_HP0_RDATA
+  //S_AXI_HP0_RRESP
+  //S_AXI_HP0_RLAST
+  //S_AXI_HP0_RVALID
+  assign S_AXI_HP0_RREADY = 1'b1;
+  assign S_AXI_HP0_AWADDR = 32'h0;
+  assign S_AXI_HP0_AWLEN = 8'h0;
+  assign S_AXI_HP0_AWSIZE = 3'h0;
+  assign S_AXI_HP0_AWBURST = 2'h0;
+  assign S_AXI_HP0_AWPROT = 3'h0;
+  assign S_AXI_HP0_AWCACHE = 4'h0;
+  assign S_AXI_HP0_AWVALID = 1'b0;
+  //S_AXI_HP0_AWREADY
+  assign S_AXI_HP0_WDATA = 64'h0;
+  assign S_AXI_HP0_WSTRB = 8'h0;
+  assign S_AXI_HP0_WLAST = 1'b0;
+  assign S_AXI_HP0_WVALID = 1'b0;
+  //S_AXI_HP0_WREADY
+  //S_AXI_HP0_BRESP
+  //S_AXI_HP0_BVALID
+  assign S_AXI_HP0_BREADY = 1'b1;
+
+`else
 
   axi_eth_dma inst_axi_eth_dma0
   (
@@ -1521,6 +1592,7 @@ module n310
     .m_axis_tready(arm_eth0_rx_tready)
   );
 
+`endif
   /////////////////////////////////////////////////////////////////////
   //
   // Ethernet DMA 1
@@ -1532,6 +1604,98 @@ module n310
 
   assign {S_AXI_HP1_AWID, S_AXI_HP1_ARID} = 12'd0;
   assign {S_AXI_GP1_AWID, S_AXI_GP1_ARID} = 12'd0;
+  `ifdef SFP0_AURORA
+    //If inst Aurora, tie off each axi/axi-lite interface
+    axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp1_eth_dma
+    (
+      .s_axi_aclk(bus_clk),
+      .s_axi_areset(bus_rst),
+
+      .s_axi_awaddr(M_AXI_ETH_DMA1_AWADDR),
+      .s_axi_awvalid(M_AXI_ETH_DMA1_AWVALID),
+      .s_axi_awready(M_AXI_ETH_DMA1_AWREADY),
+
+      .s_axi_wdata(M_AXI_ETH_DMA1_WDATA),
+      .s_axi_wvalid(M_AXI_ETH_DMA1_WVALID),
+      .s_axi_wready(M_AXI_ETH_DMA1_WREADY),
+
+      .s_axi_bresp(M_AXI_ETH_DMA1_BRESP),
+      .s_axi_bvalid(M_AXI_ETH_DMA1_BVALID),
+      .s_axi_bready(M_AXI_ETH_DMA1_BREADY),
+
+      .s_axi_araddr(M_AXI_ETH_DMA1_ARADDR),
+      .s_axi_arvalid(M_AXI_ETH_DMA1_ARVALID),
+      .s_axi_arready(M_AXI_ETH_DMA1_ARREADY),
+
+      .s_axi_rdata(M_AXI_ETH_DMA1_RDATA),
+      .s_axi_rresp(M_AXI_ETH_DMA1_RRESP),
+      .s_axi_rvalid(M_AXI_ETH_DMA1_RVALID),
+      .s_axi_rready(M_AXI_ETH_DMA1_RREADY)
+
+    );
+    //S_AXI_GP0 outputs from axi_eth_dma, so needs some sort of controller/tie off
+    assign S_AXI_GP1_AWADDR = 32'h0;
+    assign S_AXI_GP1_AWLEN = 8'h0;
+    assign S_AXI_GP1_AWSIZE = 4'h0;
+    assign S_AXI_GP1_AWBURST = 3'h0;
+    assign S_AXI_GP1_AWPROT = 3'h0;
+    assign S_AXI_GP1_AWCACHE = 4'h0;
+    assign S_AXI_GP1_AWVALID = 1'b0;
+    //S_AXI_GP1_AWREADY output from PS
+    assign S_AXI_GP1_WDATA = 32'h0;
+    assign S_AXI_GP1_WSTRB = 4'h0;
+    assign S_AXI_GP1_WLAST = 1'b0;
+    assign S_AXI_GP1_WVALID = 1'b0;
+    //S_AXI_GP1_WREADY output from PS
+    //S_AXI_GP1_BRESP
+    //S_AXI_GP1_BVALID
+    assign S_AXI_GP1_BREADY = 1'b1;
+    assign S_AXI_GP1_ARADDR = 32'h0;
+    assign S_AXI_GP1_ARLEN = 8'h0;
+    assign S_AXI_GP1_ARSIZE = 3'h0;
+    assign S_AXI_GP1_ARBURST = 2'h0;
+    assign S_AXI_GP1_ARPROT = 3'h0;
+    assign S_AXI_GP1_ARCACHE = 4'h0;
+    assign S_AXI_GP1_ARVALID = 1'b0;
+    //S_AXI_GP1_ARREADY
+    //S_AXI_GP1_RDATA
+    //S_AXI_GP1_RRESP
+    //S_AXI_GP1_RLAST
+    //S_AXI_GP1_RVALID
+    assign S_AXI_GP1_RREADY = 1'b1;
+
+    //S_AXI_HP0 from axi_eth_dma
+    assign S_AXI_HP1_ARADDR = 32'h0;
+    assign S_AXI_HP1_ARLEN = 8'h0;
+    assign S_AXI_HP1_ARSIZE = 3'h0;
+    assign S_AXI_HP1_ARBURST = 2'h0;
+    assign S_AXI_HP1_ARPROT = 3'h0;
+    assign S_AXI_HP1_ARCACHE = 4'h0;
+    assign S_AXI_HP1_ARVALID = 1'b0;
+    //S_AXI_HP1_ARREADY
+    //S_AXI_HP1_RDATA
+    //S_AXI_HP1_RRESP
+    //S_AXI_HP1_RLAST
+    //S_AXI_HP1_RVALID
+    assign S_AXI_HP1_RREADY = 1'b1;
+    assign S_AXI_HP1_AWADDR = 32'h0;
+    assign S_AXI_HP1_AWLEN = 8'h0;
+    assign S_AXI_HP1_AWSIZE = 3'h0;
+    assign S_AXI_HP1_AWBURST = 2'h0;
+    assign S_AXI_HP1_AWPROT = 3'h0;
+    assign S_AXI_HP1_AWCACHE = 4'h0;
+    assign S_AXI_HP1_AWVALID = 1'b0;
+    //S_AXI_HP1_AWREADY
+    assign S_AXI_HP1_WDATA = 64'h0;
+    assign S_AXI_HP1_WSTRB = 8'h0;
+    assign S_AXI_HP1_WLAST = 1'b0;
+    assign S_AXI_HP1_WVALID = 1'b0;
+    //S_AXI_HP1_WREADY
+    //S_AXI_HP1_BRESP
+    //S_AXI_HP1_BVALID
+    assign S_AXI_HP1_BREADY = 1'b1;
+
+  `else
 
   axi_eth_dma inst_axi_eth_dma1
   (
@@ -1663,6 +1827,7 @@ module n310
     .m_axis_tvalid(arm_eth1_rx_tvalid),
     .m_axis_tready(arm_eth1_rx_tready)
   );
+`endif
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -2919,12 +3084,12 @@ module n310
        counter2 <= counter2 + 32'd1;
    end
    reg [31:0] counter3;
-   // always @(posedge gige_refclk) begin
-     // if (FCLK_RESET0)
-       // counter3 <= 32'd0;
-     // else
-       // counter3 <= counter3 + 32'd1;
-   // end
+   always @(posedge sfp0_gb_refclk) begin
+     if (clk40_rst)
+       counter3 <= 32'd0;
+     else
+       counter3 <= counter3 + 32'd1;
+   end
 
    assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
 

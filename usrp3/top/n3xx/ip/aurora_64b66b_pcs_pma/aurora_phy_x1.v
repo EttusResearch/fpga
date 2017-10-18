@@ -8,10 +8,11 @@ module aurora_phy_x1 #(
    // Clocks and Resets
    input             areset,
    input             refclk,
+   input             user_clk,
+   input             sync_clk,
    input             init_clk,
    input             qpllclk,
    input             qpllrefclk,
-   output            user_clk,
    output            user_rst,
    // GTX Serial I/O
    input             rx_p,
@@ -48,9 +49,11 @@ module aurora_phy_x1 #(
    output reg        hard_err,
    output reg        soft_err,
    input             qplllock,
+   input             qpllrefclklost,
    output            qpllreset,
-   output            qpllrefclklost
-
+   output            tx_out_clk_bufg,
+   input             mmcm_locked,
+   output            gt_pll_lock
 );
 
    //--------------------------------------------------------------
@@ -85,7 +88,7 @@ module aurora_phy_x1 #(
    localparam SYSRST_DEASSERT_CYC      = 32'd20;
 
    wire reset_iclk, pma_init, reset_pb;
-   wire gt_pll_lock, gt_pll_lock_iclk, mmcm_locked, mmcm_locked_iclk;
+   wire gt_pll_lock_iclk, mmcm_locked_iclk;
 
    synchronizer #( .STAGES(3), .INITIAL_VAL(1'b1) ) input_rst_sync_i (
       .clk(init_clk), .rst(1'b0), .in(areset), .out(reset_iclk)
@@ -166,101 +169,10 @@ module aurora_phy_x1 #(
    //--------------------------------------------------------------
 
    wire tx_out_clk, tx_out_clk_bufg;
-   wire sync_clk_i;
-   wire user_clk_i;
-   wire mmcm_fb_clk;
-   wire sync_clk;
 
-   localparam MULT        = 10;
-   localparam DIVIDE      = 5;
-   localparam CLK_PERIOD  = 3.103;
-   localparam OUT0_DIVIDE = 4;
-   localparam OUT1_DIVIDE = 2;
-   localparam OUT2_DIVIDE = 6;
-   localparam OUT3_DIVIDE = 8;
-
-   MMCME2_ADV #(
-      .BANDWIDTH            ("OPTIMIZED"),
-      .CLKOUT4_CASCADE      ("FALSE"),
-      .COMPENSATION         ("ZHOLD"),
-      .STARTUP_WAIT         ("FALSE"),
-      .DIVCLK_DIVIDE        (DIVIDE),
-      .CLKFBOUT_MULT_F      (MULT),
-      .CLKFBOUT_PHASE       (0.000),
-      .CLKFBOUT_USE_FINE_PS ("FALSE"),
-      .CLKOUT0_DIVIDE_F     (OUT0_DIVIDE),
-      .CLKOUT0_PHASE        (0.000),
-      .CLKOUT0_DUTY_CYCLE   (0.500),
-      .CLKOUT0_USE_FINE_PS  ("FALSE"),
-      .CLKIN1_PERIOD        (CLK_PERIOD),
-      .CLKOUT1_DIVIDE       (OUT1_DIVIDE),
-      .CLKOUT1_PHASE        (0.000),
-      .CLKOUT1_DUTY_CYCLE   (0.500),
-      .CLKOUT1_USE_FINE_PS  ("FALSE"),
-      .CLKOUT2_DIVIDE       (OUT2_DIVIDE),
-      .CLKOUT2_PHASE        (0.000),
-      .CLKOUT2_DUTY_CYCLE   (0.500),
-      .CLKOUT2_USE_FINE_PS  ("FALSE"),
-      .CLKOUT3_DIVIDE       (OUT3_DIVIDE),
-      .CLKOUT3_PHASE        (0.000),
-      .CLKOUT3_DUTY_CYCLE   (0.500),
-      .CLKOUT3_USE_FINE_PS  ("FALSE"),
-      .REF_JITTER1          (0.010)
-   ) mmcm_adv_inst (
-      .CLKFBOUT            (mmcm_fb_clk),
-      .CLKFBOUTB           (),
-      .CLKOUT0             (user_clk_i),
-      .CLKOUT0B            (),
-      .CLKOUT1             (sync_clk_i),
-      .CLKOUT1B            (),
-      .CLKOUT2             (),
-      .CLKOUT2B            (),
-      .CLKOUT3             (),
-      .CLKOUT3B            (),
-      .CLKOUT4             (),
-      .CLKOUT5             (),
-      .CLKOUT6             (),
-       // Input clock control
-      .CLKFBIN             (mmcm_fb_clk),
-      .CLKIN1              (tx_out_clk_bufg),
-      .CLKIN2              (1'b0),
-       // Tied to always select the primary input clock
-      .CLKINSEL            (1'b1),
-      // Ports for dynamic reconfiguration
-      .DADDR               (7'h0),
-      .DCLK                (1'b0),
-      .DEN                 (1'b0),
-      .DI                  (16'h0),
-      .DO                  (),
-      .DRDY                (),
-      .DWE                 (1'b0),
-      // Ports for dynamic phase shift
-      .PSCLK               (1'b0),
-      .PSEN                (1'b0),
-      .PSINCDEC            (1'b0),
-      .PSDONE              (),
-      // Other control and status signals
-      .LOCKED              (mmcm_locked),
-      .CLKINSTOPPED        (),
-      .CLKFBSTOPPED        (),
-      .PWRDWN              (1'b0),
-      .RST                 (!gt_pll_lock)
-   );
-
-   // BUFG for the feedback clock.  The feedback signal is phase aligned to the input
-   // and must come from the CLK0 or CLK2X output of the PLL.  In this case, we use
-   // the CLK0 output.
    BUFG txout_clock_net_i (
       .I(tx_out_clk),
       .O(tx_out_clk_bufg)
-   );
-   BUFG user_clk_net_i (
-      .I(user_clk_i),
-      .O(user_clk)
-   );
-   BUFG sync_clock_net_i (
-      .I(sync_clk_i),
-      .O(sync_clk)
    );
 
    //--------------------------------------------------------------
@@ -276,34 +188,8 @@ module aurora_phy_x1 #(
    assign gt_qpllclk_quad1_i = qpllclk;
    assign gt_qpllrefclk_quad1_i =  qpllrefclk;
    assign gt_qplllock_i = qplllock;
+   assign gt_qpllrefclklost_i = qpllrefclklost;
    assign qpllreset = gt_to_common_qpllreset_i;
-   assign qpllrefclklost = gt_qpllrefclklost_i;
-
-   //wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
-   //wire    [15:0]     qpll_drpdi_in_i = 16'h0;
-   //wire               qpll_drpen_in_i =  1'b0;
-   //wire               qpll_drpwe_in_i =  1'b0;
-   //wire    [15:0]     qpll_drpdo_out_i;
-   //wire               qpll_drprdy_out_i;
-
-   //aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
-   //   .gt_qpllclk_quad1_out      (gt_qpllclk_quad1_i),
-   //   .gt_qpllrefclk_quad1_out   (gt_qpllrefclk_quad1_i),
-   //   .GT0_GTREFCLK0_COMMON_IN   (refclk), 
-   //   //----------------------- Common Block - QPLL Ports ------------------------
-   //   .GT0_QPLLLOCK_OUT          (gt_qplllock_i),
-   //   .GT0_QPLLRESET_IN          (gt_to_common_qpllreset_i),
-   //   .GT0_QPLLLOCKDETCLK_IN     (init_clk),
-   //   .GT0_QPLLREFCLKLOST_OUT    (gt_qpllrefclklost_i),
-   //   //---------------------- Common DRP Ports ----------------------
-   //   .qpll_drpaddr_in           (qpll_drpaddr_in_i),
-   //   .qpll_drpdi_in             (qpll_drpdi_in_i),
-   //   .qpll_drpclk_in            (init_clk),
-   //   .qpll_drpdo_out            (qpll_drpdo_out_i), 
-   //   .qpll_drprdy_out           (qpll_drprdy_out_i), 
-   //   .qpll_drpen_in             (qpll_drpen_in_i), 
-   //  .qpll_drpwe_in             (qpll_drpwe_in_i)
-   //);
 
    //--------------------------------------------------------------
    // IP Instantiation

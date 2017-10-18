@@ -37,7 +37,6 @@ module aurora_loopback_tb();
 
   // Initialize DUT
   wire aurora_refclk, aurora_init_clk;
-  wire m_user_clk, s_user_clk;
   wire m_user_rst, s_user_rst;
   wire m_channel_up, s_channel_up;
   wire m_hard_err, s_hard_err;
@@ -82,6 +81,19 @@ module aurora_loopback_tb();
     .qpll_drpwe_in             (qpll_drpwe_in_i)
   );
 
+  wire au_master_tx_out_clk, au_slave_tx_out_clk;
+  wire au_master_gt_pll_lock, au_slave_gt_pll_lock;
+  wire au_user_clk, au_sync_clk, au_mmcm_locked;
+  wire au_master_phy_reset;
+
+  aurora_phy_mmcm aurora_phy_mmcm_0 (
+    .aurora_tx_clk(au_master_tx_out_clk),
+    .mmcm_reset(!au_master_gt_pll_lock),
+    .user_clk(au_user_clk),
+    .sync_clk(au_sync_clk),
+    .mmcm_locked(au_mmcm_locked)
+  );
+
 
   wire [63:0] m_i_tdata, m_o_tdata;
   wire        m_i_tvalid, m_i_tready, m_o_tvalid;
@@ -96,8 +108,8 @@ module aurora_loopback_tb();
   wire        m_bist_locked;
   wire [47:0] m_bist_samps, m_bist_errors;
 
-  cvita_master m_tx_chdr (.clk(m_user_clk));
-  cvita_slave m_rx_chdr (.clk(s_user_clk));
+  cvita_master m_tx_chdr (.clk(au_user_clk));
+  cvita_slave m_rx_chdr (.clk(au_user_clk));
 
   aurora_phy_x1 #(.SIMULATION(1)) aurora_phy_master_i (
     // Resets
@@ -106,7 +118,8 @@ module aurora_loopback_tb();
     .refclk(aurora_refclk),
     .qpllclk(qplloutclk),
     .qpllrefclk(qplloutrefclk),
-    .user_clk(m_user_clk),
+    .user_clk(au_user_clk),
+    .sync_clk(au_sync_clk),
     .init_clk(aurora_init_clk),
     .user_rst(m_user_rst),
     // GTX Serial I/O
@@ -126,13 +139,16 @@ module aurora_loopback_tb();
     .channel_up(m_channel_up), .hard_err(m_hard_err), .soft_err(m_soft_err),
     .qplllock(qplllock),
     .qpllreset(qpllreset),
-    .qpllrefclklost(qpllrefclklost)
+    .qpllrefclklost(qpllrefclklost),
+    .tx_out_clk_bufg(au_master_tx_out_clk),
+    .gt_pll_lock(au_master_gt_pll_lock),
+    .mmcm_locked(au_mmcm_locked)
   );
 
   aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_master_i (
     // Clocks and resets
-    .phy_clk(m_user_clk), .phy_rst(m_user_rst),
-    .sys_clk(m_user_clk), .sys_rst(m_user_rst),
+    .phy_clk(au_user_clk), .phy_rst(m_user_rst),
+    .sys_clk(au_user_clk), .sys_rst(m_user_rst),
     .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(m_o_tdata), .phy_s_axis_tvalid(m_o_tvalid),
@@ -157,7 +173,8 @@ module aurora_loopback_tb();
     .refclk(aurora_refclk),
     .qpllclk(qplloutclk),
     .qpllrefclk(qplloutrefclk),
-    .user_clk(s_user_clk),
+    .user_clk(au_user_clk),
+    .sync_clk(au_sync_clk),
     .init_clk(aurora_init_clk),
     .user_rst(s_user_rst),
     // GTX Serial I/O
@@ -178,13 +195,14 @@ module aurora_loopback_tb();
     .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err),
     .qplllock(qplllock),
     .qpllreset(),
-    .qpllrefclklost()
+    .qpllrefclklost(),
+    .mmcm_locked(au_mmcm_locked)
   );
 
   aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_slave_i (
     // Clocks and resets
-    .phy_clk(s_user_clk), .phy_rst(s_user_rst),
-    .sys_clk(s_user_clk), .sys_rst(s_user_rst),
+    .phy_clk(au_user_clk), .phy_rst(s_user_rst),
+    .sys_clk(au_user_clk), .sys_rst(s_user_rst),
     .clear(1'b0),
     // PHY Interface
     .phy_s_axis_tdata(s_o_tdata), .phy_s_axis_tvalid(s_o_tvalid),
@@ -223,27 +241,27 @@ module aurora_loopback_tb();
     m_tx_chdr.push_bubble();
 
     `TEST_CASE_START("Wait for master channel to come up");
-    while (m_channel_up !== 1'b1) @(posedge m_user_clk);
+    while (m_channel_up !== 1'b1) @(posedge au_user_clk);
     `TEST_CASE_DONE(1'b1);
 
     `TEST_CASE_START("Wait for slave channel to come up");
-    while (s_channel_up !== 1'b1) @(posedge s_user_clk);
+    while (s_channel_up !== 1'b1) @(posedge au_user_clk);
     `TEST_CASE_DONE(1'b1);
 
     `TEST_CASE_START("Run PRBS BIST");
     s_bist_loopback <= PACKET_MODE;
-    @(posedge m_user_clk);
+    @(posedge au_user_clk);
     m_bist_rate <= 6'd60;
     m_bist_gen <= 1'b1;
     m_bist_check <= 1'b1;
-    @(posedge m_user_clk);
-    while (m_bist_locked !== 1'b1) @(posedge m_user_clk);
-    repeat (512) @(posedge m_user_clk);
+    @(posedge au_user_clk);
+    while (m_bist_locked !== 1'b1) @(posedge au_user_clk);
+    repeat (512) @(posedge au_user_clk);
     `ASSERT_ERROR(m_bist_samps>256, "BIST: Num samples incorrect");
     `ASSERT_ERROR(m_bist_errors===36'd0, "BIST: Errors!");
-    @(posedge m_user_clk);
+    @(posedge au_user_clk);
     m_bist_gen <= 1'b0;
-    repeat (256) @(posedge m_user_clk);
+    repeat (256) @(posedge au_user_clk);
     m_bist_check <= 1'b0;
     `TEST_CASE_DONE(1'b1);
 
@@ -276,7 +294,7 @@ module aurora_loopback_tb();
       length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
     `TEST_CASE_START("Concurrent read and write (single packet)");
-      repeat (10) @(posedge m_user_clk); //Wait for clear to go low
+      repeat (10) @(posedge au_user_clk); //Wait for clear to go low
       m_rx_chdr.axis.tready = 1;
       fork
         begin
@@ -318,18 +336,18 @@ module aurora_loopback_tb();
     s_bist_loopback <= 1'b1;
 
     `TEST_CASE_START("Run PRBS BIST (Loopback Mode)");
-    @(posedge m_user_clk);
+    @(posedge au_user_clk);
     m_bist_gen <= 1'b1;
     m_bist_rate <= 6'd60;
     m_bist_check <= 1'b1;
-    @(posedge m_user_clk);
-    while (m_bist_locked !== 1'b1) @(posedge m_user_clk);
-    repeat (512) @(posedge m_user_clk);
+    @(posedge au_user_clk);
+    while (m_bist_locked !== 1'b1) @(posedge au_user_clk);
+    repeat (512) @(posedge au_user_clk);
     `ASSERT_ERROR(m_bist_samps>256, "BIST: Num samples incorrect");
     `ASSERT_ERROR(m_bist_errors===36'd0, "BIST: Errors!");
-    @(posedge m_user_clk);
+    @(posedge au_user_clk);
     m_bist_gen <= 1'b0;
-    repeat (256) @(posedge m_user_clk);
+    repeat (256) @(posedge au_user_clk);
     m_bist_check <= 1'b0;
     `TEST_CASE_DONE(1'b1);
 

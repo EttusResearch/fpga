@@ -65,11 +65,8 @@ module network_interface #(
   output [15:0] sfp_phy_status,
 
   //GT Common
-  input         gt0_qplloutclk,
-  input         gt0_qplloutrefclk,
-  output        pma_reset_out,
   output        qpllreset,
-  output        qpllrefclklost,
+  input         qpllrefclklost,
   input         qplllock,
   input         qplloutclk,
   input         qplloutrefclk,

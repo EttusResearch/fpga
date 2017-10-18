@@ -6,6 +6,7 @@
 // - mdio_master
 // - One Gige phy + MAC
 // - Ten Gige phy + MAC
+// - Aurora phy + MAC
 //
 //////////////////////////////////////////////////////////////////////
 
@@ -25,6 +26,9 @@ module n310_sfpp_io_core #(
   input             gb_refclk,
   input             misc_clk,
   input             bus_clk,
+  input             user_clk,
+  input             sync_clk,
+  output            au_tx_out_clk,
   // SFP high-speed IO
   output            txp,
   output            txn,
@@ -55,12 +59,18 @@ module n310_sfpp_io_core #(
   output reg                  reg_rd_resp,
   output reg [REG_DWIDTH-1:0] reg_rd_data,
   // GT Common
-  output [15:0]     phy_status,
-  output            qpllreset,
-  output            qpllrefclklost,
+  input             qpllrefclklost,
   input             qplllock,
   input             qplloutclk,
-  input             qplloutrefclk
+  input             qplloutrefclk,
+  input             mmcm_locked,
+  output [15:0]     phy_status,
+  output [31:0]     mac_status_bclk_out,
+  output            qpllreset,
+  output            gt_pll_lock,
+  output            phy_areset_out
+   
+
 
 );
   //-----------------------------------------------------------------
@@ -105,6 +115,9 @@ module n310_sfpp_io_core #(
   assign bist_gen_rate = aurora_mac_ctrl_reg[8:3]; 
   assign phy_areset = aurora_mac_ctrl_reg[9]; 
   assign mac_clear = aurora_mac_ctrl_reg[10]; 
+  
+  assign mac_status_bclk_out = mac_status_bclk;
+  assign phy_areset_out = phy_areset;
 
   end else begin
 
@@ -286,8 +299,6 @@ generate
       .status_remote_fault    (mac_status[8])
     );
 
-    // Remove Warning from XG build
-
     assign phy_status  = {8'h00, xgmii_status};
 
   end else if (PROTOCOL == "1GbE") begin
@@ -298,13 +309,20 @@ generate
     wire [7:0]  gmii_txd, gmii_rxd;
     wire        gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er;
     wire        gmii_clk;
+    wire gt0_qplloutclk, gt0_qplloutrefclk; //unused in 7-series Zynq
 
+    assign gt0_qplloutclk = 1'b0;
+    assign gt0_qplloutrefclk = 1'b0;
     assign sfpp_tx_disable = 1'b0; // Always on.
+    
 
     one_gige_phy one_gige_phy_i
     (
        .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
+       .pma_reset_out(/*unused*/),
        .independent_clock(bus_clk),
+       .gt0_qplloutclk_in(gt0_qplloutclk),
+       .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
        // Tranceiver Interface
        .gtrefclk(gt_refclk),            // Reference clock for MGT: 125MHz, very high quality.
        .gtrefclk_bufg(gb_refclk),       // Reference clock routed through a BUFG
@@ -366,22 +384,23 @@ end else if (PROTOCOL == "Aurora") begin
       //-----------------------------------------------------------------
       // Aurora
       //-----------------------------------------------------------------
-      wire        au_user_clk, au_user_rst;
+      wire        user_rst;
       wire [63:0] i_tdata, o_tdata;
       wire        i_tvalid, i_tready, o_tvalid;
       wire        channel_up, hard_err, soft_err;
 
       assign sfpp_tx_disable = 1'b0; // Always on.
-
+      
       aurora_phy_x1 aurora_phy_i (
          // Resets
          .areset(areset | phy_areset),
          // Clocks
          .refclk(gt_refclk),
          .init_clk(misc_clk),
-         .user_clk(au_user_clk),
-         .user_rst(au_user_rst),
-         .qpllclk(qplloutclk), //to common core
+         .user_clk(user_clk),
+         .sync_clk(sync_clk),
+         .user_rst(user_rst),
+         .qpllclk(qplloutclk), 
          .qpllrefclk(qplloutrefclk),
          // GTX Serial I/O
          .tx_p(txp),
@@ -419,7 +438,10 @@ end else if (PROTOCOL == "Aurora") begin
          .soft_err(soft_err),
          .qplllock(qplllock),
          .qpllreset(qpllreset),
-         .qpllrefclklost(qpllrefclklost)
+         .qpllrefclklost(qpllrefclklost),
+         .tx_out_clk_bufg(au_tx_out_clk),
+         .gt_pll_lock(gt_pll_lock),
+         .mmcm_locked(mmcm_locked)
       );
 
       assign phy_status = {14'd0, hard_err, channel_up};
@@ -433,7 +455,7 @@ end else if (PROTOCOL == "Aurora") begin
          .BIST_ENABLED   (1)
       ) aurora_mac_i (
          // Clocks and resets
-         .phy_clk(au_user_clk), .phy_rst(au_user_rst),
+         .phy_clk(user_clk), .phy_rst(user_rst),
          .sys_clk(bus_clk), .sys_rst(bus_rst),
          .clear(mac_clear),
          // PHY Interface (Synchronous to phy_clk)
@@ -470,19 +492,9 @@ end else if (PROTOCOL == "Aurora") begin
          .bist_checker_errors(bist_checker_errors)
       );
       
-       reg mac_crit_err_latch;
-       always @(posedge bus_clk) begin
-          if (bus_rst | mac_clear) begin
-             mac_crit_err_latch <= 1'b0;
-          end else begin
-             if (mac_crit_err_bclk)
-                mac_crit_err_latch <= 1'b1;
-          end
-       end
-
       assign m_axis_tuser = 4'd0;
 
-      wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk;
+      wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk, gt_pll_lock_bclk, mmcm_locked_bclk;
       synchronizer #(.INITIAL_VAL(1'b0)) channel_up_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(channel_up), .out(channel_up_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) hard_err_sync (
@@ -491,6 +503,8 @@ end else if (PROTOCOL == "Aurora") begin
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk)); 
+      synchronizer #(.INITIAL_VAL(1'b0)) gt_pll_lock_sync (
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(gt_pll_lock), .out(gt_pll_lock_bclk)); 
 
       reg [19:0]  bist_lock_latency;
       always @(posedge bus_clk) begin
@@ -514,10 +528,10 @@ end else if (PROTOCOL == "Aurora") begin
          6'h0,                      //[31:26]
          mac_crit_err_latch,        //[25]
          1,                         //[24] mmcm_locked_bclk
-         1,                         //[23] gt_pll_locked_bclk
-         0,                         //[22] qpll_refclklost_bclk
-         1,                         //[21] qpll_lock_bclk
-         0,                         //[20] qpll_reset_bclk
+         gt_pll_lock_bclk,          //[23] gt_pll_lock_bclk
+         qpllrefclklost,            //[22] qpll_refclklost_bclk
+         qplllock,                  //[21] qpll_lock_bclk
+         qpllreset,                 //[20] qpll_reset_bclk
          bist_lock_latency[19:4],   //[19:4]
          bist_checker_locked,       //[3]
          soft_err_bclk,             //[2]
