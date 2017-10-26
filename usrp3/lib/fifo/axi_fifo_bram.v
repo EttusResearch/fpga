@@ -150,7 +150,7 @@ module axi_fifo_bram
    // space and occupied are for diagnostics only
    // not guaranteed exact
 
-   localparam NUMLINES = (1<<SIZE);
+   localparam NUMLINES = (1<<SIZE)+1;   //Output register increases capacity by 1
    always @(posedge clk)
      if(reset)
        space <= NUMLINES;
