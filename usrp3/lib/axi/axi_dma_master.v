@@ -35,7 +35,7 @@ module axi_dma_master
    output [63 : 0] m_axi_wdata,   // Write data
    output [7 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
    output reg m_axi_wlast,        // Write last. This signal indicates the last transfer in a write burst
-   output [0 : 0] m_axi_wuser,    // User signal. Optional User-defined signal in the write data channel.
+   output m_axi_wuser,            // User signal. Optional User-defined signal in the write data channel.
    output m_axi_wvalid,           // Write valid. This signal indicates that valid write data and strobes are available. 
    input m_axi_wready,            // Write ready. This signal indicates that the slave can accept the write data.
    //

@@ -37,7 +37,6 @@ module noc_input_port #(
   noc_responder #(
     .SR_FLOW_CTRL_BYTES_PER_ACK(SR_FLOW_CTRL_BYTES_PER_ACK),
     .SR_ERROR_POLICY(SR_ERROR_POLICY),
-    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
     .USE_TIME(USE_TIME))
   noc_responder (
     .clk(clk), .reset(reset), .clear(clear),

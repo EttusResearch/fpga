@@ -207,8 +207,8 @@ module source_flow_control #(
     .seqnum(), .length(pkt_len),
     .src_sid(), .dst_sid(),
     .vita_time_stb(), .vita_time(),
-    .i_tdata(in_tdata), .i_tlast(), .i_tvalid(1'b0), .i_tready(),
-    .o_tdata(), .o_tlast(), .o_tvalid(), .o_tready());
+    .i_tdata(in_tdata), .i_tlast(1'b0), .i_tvalid(1'b0), .i_tready(),
+    .o_tdata(), .o_tlast(), .o_tvalid(), .o_tready(1'b0));
 
   reg [2:0] state;
   localparam ST_IDLE           = 0;
@@ -333,7 +333,7 @@ module source_flow_control #(
           in_tready  <= 1'b0;
         end
         ST_FC_ACK_PAYLOAD : begin
-          out_tdata  <= {16'd0,current_pkt_cnt,current_byte};
+          out_tdata  <= {current_pkt_cnt,current_byte};
           out_tlast  <= 1'b1;
           out_tvalid <= 1'b1;
           in_tready  <= 1'b0;

@@ -9,7 +9,6 @@
 module noc_responder #(
   parameter SR_FLOW_CTRL_BYTES_PER_ACK = 1,
   parameter SR_ERROR_POLICY = 2,
-  parameter STR_SINK_FIFOSIZE = 11,
   parameter USE_TIME = 0
 )(
   input clk, input reset, input clear,
@@ -32,7 +31,6 @@ module noc_responder #(
   wire seqnum_error;
   flow_control_responder #(
     .SR_FLOW_CTRL_BYTES_PER_ACK(SR_FLOW_CTRL_BYTES_PER_ACK),
-    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
     .USE_TIME(USE_TIME))
   flow_control_responder (
     .clk(clk), .reset(reset), .clear(clear),

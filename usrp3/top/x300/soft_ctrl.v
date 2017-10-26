@@ -203,6 +203,7 @@ module soft_ctrl
     assign {s8_dat_i, s8_ack} = 33'b0;
     //assign {s9_dat_i, s9_ack} = 33'b0;
     //assign {sa_dat_i, sa_ack} = 33'b0;
+    assign sa_dat_i = 32'b0;
     //assign {sb_dat_i, sb_ack} = 33'b0;
     //assign {sc_dat_i, sc_ack} = 33'b0;
     //assign {sd_dat_i, sd_ack} = 33'b0;
@@ -263,7 +264,7 @@ module soft_ctrl
     //clock cross fifo between bus_clk and bus_clk_div2 for axi stream input
     //WIDTH = tdata+tuser+tlast = 69  
     axi_fifo_2clk #(.WIDTH(69), .SIZE(5)) axi_stream_rx_fifo_2clk
-    (.reset(reset),
+    (.reset(rst),
       .i_aclk(clk), .i_tdata({rx_tdata, rx_tuser, rx_tlast}), .i_tvalid(rx_tvalid), .i_tready(rx_tready),
       .o_aclk(clk_div2), .o_tdata({rx_tdata_div2, rx_tuser_div2, rx_tlast_div2}), .o_tvalid(rx_tvalid_div2), .o_tready(rx_tready_div2));
     

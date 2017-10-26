@@ -522,7 +522,7 @@ module eth_dispatch
         .occupied()
     );
 
-   fix_short_packet(.clk(clk), .reset(reset), .clear(clear),
+   fix_short_packet fix_short_packet_vita (.clk(clk), .reset(reset), .clear(clear),
 		    .i_tdata(vita_pre2_tdata), .i_tlast(vita_pre2_tlast), .i_tvalid(vita_pre2_tvalid), .i_tready(vita_pre2_tready),
 		    .o_tdata(vita_tdata), .o_tlast(vita_tlast), .o_tvalid(vita_tvalid), .o_tready(vita_tready));
    
