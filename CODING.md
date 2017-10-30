@@ -17,10 +17,11 @@ helpful move for the team and future maintainability of the UHD FPGA codebase.
 
 ## General Coding Guidelines
 
-* Code layout: We use 3 spaces for indentation levels, and never tabs.
+* Code layout: We use 2 spaces for indentation levels, and never tabs.
 * Never submit code with trailing whitespace.
 * Code is read more often than it's written. Code readability is thus something
   worth optimizing for.
+* Try and keep line lengths to 79 characters, unless readability suffers.
 * Comment your code. Especially if your code is tricky or makes unique assumptions.
 * Use the following header at the top of each file:
 ```verilog
@@ -43,26 +44,26 @@ one line.
 * Indent begin/end as follows:
 ```verilog
 if (foo) begin
-   // Do something
+  // Do something
 end else if (bar) begin
-   case(xyz)
-      1'b0: begin
-         // Handle 0
-      end
-      default: begin
-         // Handle 1
-      end
-   endcase
+  case(xyz)
+    1'b0: begin
+      // Handle 0
+    end
+    default: begin
+      // Handle 1
+    end
+  endcase
 end else begin
-   // Do nothing
+  // Do nothing
 end
 ```
 * Instantiate and declare modules as follows:
 ```verilog
 dummy_module #(
-   .PARAM1(0), .PARAM2(1)
+  .PARAM1(0), .PARAM2(1)
 ) inst (
-   .clk(clk), .rst(rst)
+  .clk(clk), .rst(rst)
 );
 ```
 
@@ -78,9 +79,9 @@ dummy_module #(
 * Use Verilog 2001 ANSI-C style port declarations
 ```verilog
 (
-   ...
-   output reg  foo,
-   input  wire bar
+  ...
+  output reg  foo,
+  input  wire bar
 );
 ```
 * Declare inputs and outputs one per line. This makes searching and commenting easier.
@@ -92,7 +93,7 @@ outputs, keep them together.
 insert values for any signals automatically.
 ```verilog
 dummy_module inst (
-   .clk(clk), .rst(1'b0), .status(/* unused */)
+  .clk(clk), .rst(1'b0), .status(/* unused */)
 );
 ```
 * Don't instantiate modules using positional arguments. Use the dot form illustrated above.
@@ -128,28 +129,28 @@ We heavily use AXI buses in the design so here are some best practices for those
 * For module ports, use the master/slave naming convention as shown below. It makes connecting modules
 easier because a master always connects to a slave
 ```verilog
-   input  wire [63:0] s_axis_tdata,
-   input  wire        s_axis_tlast,
-   input  wire        s_axis_tvalid,
-   output wire        s_axis_tready,
-   output reg  [63:0] m_axis_tdata,
-   output reg         m_axis_tlast,
-   output reg         m_axis_tvalid,
-   input  wire        m_axis_tready,
+  input  wire [63:0] s_axis_tdata,
+  input  wire        s_axis_tlast,
+  input  wire        s_axis_tvalid,
+  output wire        s_axis_tready,
+  output reg  [63:0] m_axis_tdata,
+  output reg         m_axis_tlast,
+  output reg         m_axis_tvalid,
+  input  wire        m_axis_tready,
 ```
 * For connections between a master and slave, *do not* use the master/slave convention. Name the bus based
 on its function or underlying data.
 ```verilog
-   wire [63:0] axis_eth2xbar_tdata,
-   wire        axis_eth2xbar_tlast,
-   wire        axis_eth2xbar_tvalid,
-   wire        axis_eth2xbar_tready,
+  wire [63:0] axis_eth2xbar_tdata,
+  wire        axis_eth2xbar_tlast,
+  wire        axis_eth2xbar_tvalid,
+  wire        axis_eth2xbar_tready,
 
-   // If "axis" is obvious, drop the prefix
-   wire [63:0] samp_tdata,
-   wire        samp_tlast,
-   wire        samp_tvalid,
-   wire        samp_tready,
+  // If "axis" is obvious, drop the prefix
+  wire [63:0] samp_tdata,
+  wire        samp_tlast,
+  wire        samp_tvalid,
+  wire        samp_tready,
 ```
 
 
