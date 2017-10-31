@@ -33,11 +33,6 @@ module arm_deframer_tb();
   wire          c2e_tlast_int;
   wire          c2e_tvalid_int;
   wire          c2e_tready_int;
-  wire  [63:0]  c2e_tdata_int2;
-  wire  [3:0]   c2e_tuser_int2;
-  wire          c2e_tlast_int2;
-  wire          c2e_tvalid_int2;
-  wire          c2e_tready_int2;
 
   arm_deframer inst_arm_deframer (
    .clk               (clk),
@@ -54,12 +49,6 @@ module arm_deframer_tb();
    .m_axis_tvalid     (c2e_tvalid_int),
    .m_axis_tready     (c2e_tready_int)
   );
-
-  //axi_fifo_short #(.WIDTH(69)) cpuout_fifo (
-  //  .clk(clk), .reset(reset), .clear(clear),
-  //  .i_tdata({c2e_tlast_int2,c2e_tdata_int2,c2e_tuser_int2}), .i_tvalid(c2e_tvalid_int2), .i_tready(c2e_tready_int2),
-  //  .o_tdata({c2e_tlast_int,c2e_tdata_int,c2e_tuser_int}), .o_tvalid(c2e_tvalid_int), .o_tready(c2e_tready_int),
-  //  .space(), .occupied());
 
   axi_mux4 #(.PRIO(0), .WIDTH(68)) eth_mux
     (.clk(clk), .reset(reset), .clear(clear),

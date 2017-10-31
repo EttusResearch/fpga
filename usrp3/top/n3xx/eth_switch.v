@@ -403,10 +403,11 @@ module eth_switch #(
       .i_tdata({xi_tlast,xi_tuser,xi_tdata}), .i_tvalid(xi_tvalid), .i_tready(xi_tready),
       .o_tdata({xi_tlast_int,xi_tuser_int,xi_tdata_int}), .o_tvalid(xi_tvalid_int), .o_tready(xi_tready_int), .space(), .occupied());
 
-   // ARM DEFRAMER
-   // Add pad of 6 empty bytes before MAC addresses of new Rxed packet so that IP
-   // headers are alligned.
-   //
+   // Add pad of 6 empty bytes to the ethernet packet going from the CPU to the
+   // SFP. This padding added before MAC addresses aligns the source and
+   // destination IP addresses, UDP headers etc.
+   // Note that the xge_mac_wrapper strips this padding to recreate the ethernet
+   // packet
   arm_deframer inst_arm_deframer
   (
     .clk(clk),
