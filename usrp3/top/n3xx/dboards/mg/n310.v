@@ -2610,7 +2610,7 @@ module n310
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
 
-    // Clocking and PPS Controls/Inidcators
+    // Clocking and PPS Controls/Indicators
     .pps(pps_radioclk1x),
     .pps_select(pps_select),
     .pps_out_enb(pps_out_enb),
@@ -2771,7 +2771,6 @@ module n310
   //
   // //////////////////////////////////////////////////////////////////////
 
-  //vhook_sigstart
   wire aAdcSyncUnusedA;
   wire aAdcSyncUnusedB;
   wire aDacSyncUnusedA;
@@ -2790,7 +2789,6 @@ module n310
   wire sRTC_b_unused;
   wire tx_a_rfi;
   wire tx_b_rfi;
-  //vhook_sigend
 
   wire          reg_portA_rd;
   wire          reg_portA_wr;
@@ -2803,51 +2801,6 @@ module n310
   assign bRegPortInFlatA = {2'b0, reg_portA_addr, reg_portA_wr_data, reg_portA_rd, reg_portA_wr};
   assign {reg_portA_rd_data, validA_unused, reg_portA_ready} = bRegPortOutFlatA;
 
-  //vhook   DbCore dba_core
-  //vhook_c aReset ~FCLK_RESET0N
-  //vhook_a bReset 1'b0
-  //vhook_a BusClk clk40
-  //vhook_a Clk40  clk40
-  //vhook_a MeasClk  meas_clk
-  //vhook_a FpgaClk_p DBA_FPGA_CLK_p
-  //vhook_a FpgaClk_n DBA_FPGA_CLK_n
-  //vhook_a SampleClk1xOut  radio_clk
-  //vhook_a SampleClk1x     radio_clk
-  //vhook_a SampleClk2xOut  radio_clk_2x
-  //vhook_a SampleClk2x     radio_clk_2x
-  //vhook_a bRegPortInFlat  bRegPortInFlatA
-  //vhook_a bRegPortOutFlat bRegPortOutFlatA
-  //vhook_a kSlotId  1'b0
-  //vhook_a sSysRefFpgaLvds_p DBA_FPGA_SYSREF_p
-  //vhook_a sSysRefFpgaLvds_n DBA_FPGA_SYSREF_n
-  //vhook_a aLmkSync DBA_CPLD_PL_SPI_ADDR[2]
-  //vhook_a JesdRefClk_p USRPIO_A_MGTCLK_P
-  //vhook_a JesdRefClk_n USRPIO_A_MGTCLK_N
-  //vhook_a aAdcRx_p   USRPIO_A_RX_P
-  //vhook_a aAdcRx_n   USRPIO_A_RX_N
-  //vhook_a aSyncAdcOut_n  DBA_MYK_SYNC_IN_n
-  //vhook_a aDacTx_p   USRPIO_A_TX_P
-  //vhook_a aDacTx_n   USRPIO_A_TX_N
-  //vhook_a aSyncDacIn_n   DBA_MYK_SYNC_OUT_n
-  //vhook_a aAdcSync aAdcSyncUnusedA
-  //vhook_a aDacSync aDacSyncUnusedA
-  //vhook_a sAdcDataValid     rx_a_valid
-  //vhook_a sAdcDataSamples0I rx0[31:16]
-  //vhook_a sAdcDataSamples0Q rx0[15:0]
-  //vhook_a sAdcDataSamples1I rx1[31:16]
-  //vhook_a sAdcDataSamples1Q rx1[15:0]
-  //vhook_a sDacReadyForInput tx_a_rfi
-  //vhook_a sDacDataSamples0I tx0[31:16]
-  //vhook_a sDacDataSamples0Q tx0[15:0]
-  //vhook_a sDacDataSamples1I tx1[31:16]
-  //vhook_a sDacDataSamples1Q tx1[15:0]
-  //vhook_a RefClk    ref_clk
-  //vhook_a rPpsPulse pps_refclk
-  //vhook_a rGatedPulseToPin UNUSED_PIN_TDCA_0
-  //vhook_a sGatedPulseToPin UNUSED_PIN_TDCA_1
-  //vhook_a sPps      pps_radioclk1x
-  //vhook_a sRTC sRTC_a_unused
-  //vhook_a rRSP rRSP_a_unused
   DbCore
     dba_core (
       .aReset(clk40_rst),                  //in  std_logic
@@ -2950,51 +2903,6 @@ module n310
   assign bRegPortInFlatB = {2'b0, reg_portB_addr, reg_portB_wr_data, reg_portB_rd, reg_portB_wr};
   assign {reg_portB_rd_data, validB_unused, reg_portB_ready} = bRegPortOutFlatB;
 
-  //vhook   DbCore dbb_core
-  //vhook_c aReset ~FCLK_RESET0N
-  //vhook_a bReset 1'b0
-  //vhook_a BusClk clk40
-  //vhook_a Clk40  clk40
-  //vhook_a MeasClk  meas_clk
-  //vhook_a FpgaClk_p DBB_FPGA_CLK_p
-  //vhook_a FpgaClk_n DBB_FPGA_CLK_n
-  //vhook_a SampleClk1xOut  radio_clkB
-  //vhook_a SampleClk1x     radio_clk
-  //vhook_a SampleClk2xOut  radio_clk_2xB
-  //vhook_a SampleClk2x     radio_clk_2x
-  //vhook_a bRegPortInFlat  bRegPortInFlatB
-  //vhook_a bRegPortOutFlat bRegPortOutFlatB
-  //vhook_a kSlotId  1'b1
-  //vhook_a sSysRefFpgaLvds_p DBB_FPGA_SYSREF_p
-  //vhook_a sSysRefFpgaLvds_n DBB_FPGA_SYSREF_n
-  //vhook_a aLmkSync DBB_CPLD_PL_SPI_ADDR[2]
-  //vhook_a JesdRefClk_p USRPIO_B_MGTCLK_P
-  //vhook_a JesdRefClk_n USRPIO_B_MGTCLK_N
-  //vhook_a aAdcRx_p   USRPIO_B_RX_P
-  //vhook_a aAdcRx_n   USRPIO_B_RX_N
-  //vhook_a aSyncAdcOut_n  DBB_MYK_SYNC_IN_n
-  //vhook_a aDacTx_p   USRPIO_B_TX_P
-  //vhook_a aDacTx_n   USRPIO_B_TX_N
-  //vhook_a aSyncDacIn_n   DBB_MYK_SYNC_OUT_n
-  //vhook_a aAdcSync aAdcSyncUnusedB
-  //vhook_a aDacSync aDacSyncUnusedB
-  //vhook_a sAdcDataValid     rx_b_valid
-  //vhook_a sAdcDataSamples0I rx2[31:16]
-  //vhook_a sAdcDataSamples0Q rx2[15:0]
-  //vhook_a sAdcDataSamples1I rx3[31:16]
-  //vhook_a sAdcDataSamples1Q rx3[15:0]
-  //vhook_a sDacReadyForInput tx_b_rfi
-  //vhook_a sDacDataSamples0I tx2[31:16]
-  //vhook_a sDacDataSamples0Q tx2[15:0]
-  //vhook_a sDacDataSamples1I tx3[31:16]
-  //vhook_a sDacDataSamples1Q tx3[15:0]
-  //vhook_a RefClk    ref_clk
-  //vhook_a rPpsPulse pps_refclk
-  //vhook_a rGatedPulseToPin UNUSED_PIN_TDCB_0
-  //vhook_a sGatedPulseToPin UNUSED_PIN_TDCB_1
-  //vhook_a sPps sPpsUnusedB
-  //vhook_a sRTC sRTC_b_unused
-  //vhook_a rRSP rRSP_b_unused
   DbCore
     dbb_core (
       .aReset(clk40_rst),                  //in  std_logic

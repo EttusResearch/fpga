@@ -24,7 +24,7 @@ module n310_core #(
   input         bus_clk,
   input         bus_rst,
 
-  // Clocking and PPS Controls/Inidcators
+  // Clocking and PPS Controls/Indicators
   input            pps,
   output reg[1:0]  pps_select,
   output reg       pps_out_enb,
@@ -301,19 +301,18 @@ module n310_core #(
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
-    end
-    else begin
-      if (reg_wr_req)
-        case (reg_wr_addr)
-          REG_SCRATCH:
-            scratch_reg <= reg_wr_data;
-          REG_CLOCK_CTRL: begin
-            pps_select     <= reg_wr_data[1:0];
-            pps_out_enb    <= reg_wr_data[4];
-            ref_clk_reset  <= reg_wr_data[8];
-            meas_clk_reset <= reg_wr_data[12];
-            end
-        endcase
+    end else if (reg_wr_req) begin
+      case (reg_wr_addr)
+        REG_SCRATCH: begin
+          scratch_reg <= reg_wr_data;
+        end
+        REG_CLOCK_CTRL: begin
+          pps_select     <= reg_wr_data[1:0];
+          pps_out_enb    <= reg_wr_data[4];
+          ref_clk_reset  <= reg_wr_data[8];
+          meas_clk_reset <= reg_wr_data[12];
+        end
+      endcase
     end
 
   always @ (posedge bus_clk)
@@ -364,7 +363,7 @@ module n310_core #(
           reg_rd_data_glob[9]   <= b_ref_clk_locked;
           reg_rd_data_glob[12]  <= meas_clk_reset;
           reg_rd_data_glob[13]  <= b_meas_clk_locked;
-          end
+        end
 
         default:
           reg_rd_resp_glob <= 1'b0;
