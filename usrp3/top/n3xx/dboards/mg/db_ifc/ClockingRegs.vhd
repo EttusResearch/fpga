@@ -197,6 +197,8 @@ begin
       -- through at the same time pPsDone is asserted, then we store the done state as a
       -- sticky, bPsDone, which is only cleared by a read to this register.
       if RegRead(kPhaseShiftControl, bRegPortIn) then
+        -- The phase shift is always enabled for the feedback clock in RadioClocking.vhd
+        bRegPortOutLcl.Data(kPsEnabledForFdbClk) <= '1';
         bRegPortOutLcl.Data(kPsDone) <= bPsDone or pPsDoneDs;
         bPsDone            <= '0';
       elsif pPsDoneDs = '1' then
