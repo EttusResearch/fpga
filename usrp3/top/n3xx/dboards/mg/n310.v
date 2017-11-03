@@ -26,10 +26,10 @@ module n310
    output REF_1PPS_OUT,
 
    //TDC
-   inout aUnusedPinForTdcA0,
-   inout aUnusedPinForTdcA1,
-   inout aUnusedPinForTdcB0,
-   inout aUnusedPinForTdcB1,
+   inout UNUSED_PIN_TDCA_0,
+   inout UNUSED_PIN_TDCA_1,
+   inout UNUSED_PIN_TDCB_0,
+   inout UNUSED_PIN_TDCB_1,
 
    //input NPIO_0_RX0_P,
    //input NPIO_0_RX0_N,
@@ -2843,8 +2843,8 @@ module n310
   //vhook_a sDacDataSamples1Q tx1[15:0]
   //vhook_a RefClk    ref_clk
   //vhook_a rPpsPulse pps_refclk
-  //vhook_a rGatedPulseToPin aUnusedPinForTdcA0
-  //vhook_a sGatedPulseToPin aUnusedPinForTdcA1
+  //vhook_a rGatedPulseToPin UNUSED_PIN_TDCA_0
+  //vhook_a sGatedPulseToPin UNUSED_PIN_TDCA_1
   //vhook_a sPps      pps_radioclk1x
   //vhook_a sRTC sRTC_a_unused
   //vhook_a rRSP rRSP_a_unused
@@ -2889,8 +2889,8 @@ module n310
       .sDacDataSamples1Q(tx1[15:0]),           //in  std_logic_vector(15:0)
       .RefClk(ref_clk),                        //in  std_logic
       .rPpsPulse(pps_refclk),                  //in  std_logic
-      .rGatedPulseToPin(aUnusedPinForTdcA0),   //inout std_logic
-      .sGatedPulseToPin(aUnusedPinForTdcA1),   //inout std_logic
+      .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
+      .sGatedPulseToPin(UNUSED_PIN_TDCA_1),    //inout std_logic
       .rRSP(rRSP_a_unused),                    //out std_logic
       .sRTC(sRTC_a_unused),                    //out std_logic
       .sPps(pps_radioclk1x));                  //out std_logic
@@ -2990,8 +2990,8 @@ module n310
   //vhook_a sDacDataSamples1Q tx3[15:0]
   //vhook_a RefClk    ref_clk
   //vhook_a rPpsPulse pps_refclk
-  //vhook_a rGatedPulseToPin aUnusedPinForTdcB0
-  //vhook_a sGatedPulseToPin aUnusedPinForTdcB1
+  //vhook_a rGatedPulseToPin UNUSED_PIN_TDCB_0
+  //vhook_a sGatedPulseToPin UNUSED_PIN_TDCB_1
   //vhook_a sPps sPpsUnusedB
   //vhook_a sRTC sRTC_b_unused
   //vhook_a rRSP rRSP_b_unused
@@ -3036,8 +3036,8 @@ module n310
       .sDacDataSamples1Q(tx3[15:0]),           //in  std_logic_vector(15:0)
       .RefClk(ref_clk),                        //in  std_logic
       .rPpsPulse(pps_refclk),                  //in  std_logic
-      .rGatedPulseToPin(aUnusedPinForTdcB0),   //inout std_logic
-      .sGatedPulseToPin(aUnusedPinForTdcB1),   //inout std_logic
+      .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
+      .sGatedPulseToPin(UNUSED_PIN_TDCB_1),    //inout std_logic
       .rRSP(rRSP_b_unused),                    //out std_logic
       .sRTC(sRTC_b_unused),                    //out std_logic
       .sPps(sPpsUnusedB));                     //out std_logic

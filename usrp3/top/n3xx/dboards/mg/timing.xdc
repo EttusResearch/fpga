@@ -112,14 +112,14 @@ set_input_delay -clock ref_clk -max 98.674 [get_ports REF_1PPS_IN]
 #*******************************************************************************
 ## MB Async Ins/Outs
 
-set AsyncMbInputs [get_ports {SFP_*_LOS aUnusedPinForTdc*}]
+set AsyncMbInputs [get_ports {SFP_*_LOS UNUSED_PIN_TDC*}]
 
 set_input_delay -clock [get_clocks AsyncInClk] 0.000 $AsyncMbInputs
 set_max_delay -from $AsyncMbInputs 50.000
 set_min_delay -from $AsyncMbInputs 0.000
 
 
-set AsyncMbOutputs [get_ports {*LED* SFP_*TXDISABLE aUnusedPinForTdc* \
+set AsyncMbOutputs [get_ports {*LED* SFP_*TXDISABLE UNUSED_PIN_TDC* \
                                FPGA_TEST[*]}]
 
 set_output_delay -clock [get_clocks AsyncOutClk] 0.000 $AsyncMbOutputs

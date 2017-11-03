@@ -55,22 +55,22 @@ set_property IOSTANDARD LVCMOS33 [get_ports REF_1PPS_OUT]
 ## Bank 10, 2.5V
 #########################################################################################
 
-set_property PACKAGE_PIN   AB15             [get_ports {aUnusedPinForTdcA0}]
-set_property IOSTANDARD    LVCMOS25         [get_ports {aUnusedPinForTdcA0}]
-set_property PACKAGE_PIN   AB14             [get_ports {aUnusedPinForTdcA1}]
-set_property IOSTANDARD    LVCMOS25         [get_ports {aUnusedPinForTdcA1}]
-set_property IOB           TRUE             [get_ports {aUnusedPinForTdcA*}]
+set_property PACKAGE_PIN   AB15             [get_ports {UNUSED_PIN_TDCA_0}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCA_0}]
+set_property PACKAGE_PIN   AB14             [get_ports {UNUSED_PIN_TDCA_1}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCA_1}]
+set_property IOB           TRUE             [get_ports {UNUSED_PIN_TDCA_*}]
 
 
 ## TDC : ################################################################################
 ## Bank 11, 2.5V
 #########################################################################################
 
-set_property PACKAGE_PIN   W21              [get_ports {aUnusedPinForTdcB0}]
-set_property IOSTANDARD    LVCMOS25         [get_ports {aUnusedPinForTdcB0}]
-set_property PACKAGE_PIN   Y21              [get_ports {aUnusedPinForTdcB1}]
-set_property IOSTANDARD    LVCMOS25         [get_ports {aUnusedPinForTdcB1}]
-set_property IOB           TRUE             [get_ports {aUnusedPinForTdcB*}]
+set_property PACKAGE_PIN   W21              [get_ports {UNUSED_PIN_TDCB_0}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCB_0}]
+set_property PACKAGE_PIN   Y21              [get_ports {UNUSED_PIN_TDCB_1}]
+set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCB_1}]
+set_property IOB           TRUE             [get_ports {UNUSED_PIN_TDCB_*}]
 
 
 ## GPS : ################################################################################
