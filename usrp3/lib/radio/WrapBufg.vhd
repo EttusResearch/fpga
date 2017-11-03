@@ -6,9 +6,8 @@
 -- Date: 13 January 2012
 --
 --------------------------------------------------------------------------------
--- (c) 2012 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
+-- Copyright 2012 Ettus Research, A National Instruments Company
+-- SPDX-License-Identifier: GPL-3.0
 --------------------------------------------------------------------------------
 --
 -- Purpose: This is a simple wrapper around a BUFG to make instantiating BUFGCTRLs

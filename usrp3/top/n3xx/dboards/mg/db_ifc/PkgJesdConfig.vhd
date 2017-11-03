@@ -6,9 +6,8 @@
 -- Date: 11 March 2016
 --
 -------------------------------------------------------------------------------
--- (c) 2016 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
+-- Copyright 2016-2017 Ettus Research, A National Instruments Company
+-- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
 -- Purpose: JESD204B setup constants and functions. These constants are shared
@@ -143,7 +142,7 @@ package PkgJesdConfig is
   -- ADC Words from JESD204B RX Core. The array is 4 elements wide to accomodate the
   -- I & Q elements from both RX channels.
   subtype AdcWord_t is std_logic_vector(kAdcDataWidth - 1 downto 0);
-  type AdcWordArray_t is array(4 - 1 downto 0) of AdcWord_t; 
+  type AdcWordArray_t is array(4 - 1 downto 0) of AdcWord_t;
 
   -- Data types for manipulation and presentation to outside world.
   type AdcData_t is record
@@ -198,7 +197,7 @@ package body PkgJesdConfig is
   is
     variable ReturnVar : AdcDataFlat_t;
   begin
-    ReturnVar := (others => '0'); 
+    ReturnVar := (others => '0');
     -- MSB is I
     ReturnVar := AdcData.I & AdcData.Q;
     return ReturnVar;
@@ -224,7 +223,7 @@ package body PkgJesdConfig is
   is
     variable ReturnVar : DacDataFlat_t;
   begin
-    ReturnVar := (others => '0'); 
+    ReturnVar := (others => '0');
     -- MSB is I
     ReturnVar := DacData.I & DacData.Q;
     return ReturnVar;
@@ -242,8 +241,8 @@ package body PkgJesdConfig is
     ReturnVar.Q  := DacData(  kDacDataWidth - 1 downto 0);
     return ReturnVar;
   end function Unflatten;
-  
- 
+
+
 
 
 

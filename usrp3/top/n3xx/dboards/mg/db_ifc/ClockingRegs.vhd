@@ -6,9 +6,8 @@
 -- Date: 17 March 2016
 --
 -------------------------------------------------------------------------------
--- (c) 2016 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
+-- Copyright 2016-2017 Ettus Research, A National Instruments Company
+-- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
 -- Purpose:
