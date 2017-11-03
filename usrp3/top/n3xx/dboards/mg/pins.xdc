@@ -1,6 +1,6 @@
 
 
-## GPIO and FPGA_TEST: ###############################################################################
+## GPIO and FPGA_TEST: ##################################################################
 ## Bank 12, 3.3V LVCMOS
 #########################################################################################
 
@@ -142,9 +142,10 @@ set_property DIFF_TERM TRUE [get_ports NETCLK_REF_N]
 set_property IOSTANDARD    LVDS_25         [get_ports NETCLK_REF_*]
 
 
-## MGMT ports: ########################
-#
-######################################
+## MGMT : ###############################################################################
+##
+#########################################################################################
+
 #set_property PACKAGE_PIN   AH27             [get_ports {MGMT-GPIO0}]
 #set_property PACKAGE_PIN   AH26             [get_ports {MGMT-GPIO1}]
 #set_property PACKAGE_PIN   AC27             [get_ports {MGMT-JTAG-TCK}]
@@ -156,10 +157,12 @@ set_property IOSTANDARD    LVDS_25         [get_ports NETCLK_REF_*]
 #set_property PACKAGE_PIN   AA28             [get_ports {MGMT-SPI-MOSI}]
 #set_property PACKAGE_PIN   AE28             [get_ports {MGMT-SPI-RESET}]
 #set_property PACKAGE_PIN   AC28             [get_ports {MGMT-SPI-SCLK}]
-#############################################################################
-##QSFP: #################################################################
-#
-##########################################################################
+
+
+##QSFP : ################################################################################
+##
+#########################################################################################
+
 #set_property PACKAGE_PIN   AJ26             [get_ports {QSFP-I2C-SCL}]
 #set_property PACKAGE_PIN   AK26             [get_ports {QSFP-I2C-SDA}]
 #set_property PACKAGE_PIN   AK28             [get_ports {QSFP-INTL}]
@@ -436,9 +439,9 @@ set_property PACKAGE_PIN   N3               [get_ports {USRPIO_A_TX_N[3]}]
 #set_property PACKAGE_PIN   N3               [get_ports {USRPIO_A_TX_3_N}]
 
 
-### USRP IO B : ##########################################################################
-###
-##########################################################################################
+### USRP IO B : #########################################################################
+##
+#########################################################################################
 
 ## HP GPIO, Bank 33, 1.8V
 
