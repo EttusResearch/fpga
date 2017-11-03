@@ -36,20 +36,25 @@
 //////////////////////////////////////////////////////////////////////
 
 
-module n310_xge_mac(/*AUTOARG*/
+`include "defines.v"
+
+module xge_mac_wb(/*AUTOARG*/
   // Outputs
-  xgmii_txd, xgmii_txc, pkt_tx_full,
+  xgmii_txd, xgmii_txc, wb_int_o, wb_dat_o, wb_ack_o, pkt_tx_full,
   pkt_rx_val, pkt_rx_sop, pkt_rx_mod, pkt_rx_err, pkt_rx_eop,
   pkt_rx_data, pkt_rx_avail,
-  status_crc_error, status_fragment_error, status_txdfifo_ovflow,
-  status_txdfifo_udflow, status_rxdfifo_ovflow, status_rxdfifo_udflow,
-  status_pause_frame_rx, status_local_fault, status_remote_fault,
+  `ifdef MDIO
+  mdc, mdio_out, mdio_tri, xge_gpo,
+  `endif
   // Inputs
-  xgmii_rxd, xgmii_rxc, reset_xgmii_tx_n, reset_xgmii_rx_n,
+  xgmii_rxd, xgmii_rxc, wb_we_i, wb_stb_i, wb_rst_i, wb_dat_i,
+  wb_cyc_i, wb_clk_i, wb_adr_i, reset_xgmii_tx_n, reset_xgmii_rx_n,
   reset_156m25_n, pkt_tx_val, pkt_tx_sop, pkt_tx_mod, pkt_tx_eop,
-  pkt_tx_data, pkt_rx_ren, ctrl_tx_enable,
-  clk_xgmii_tx, clk_xgmii_rx, clk_156m25
-);
+  pkt_tx_data, pkt_rx_ren, clk_xgmii_tx, clk_xgmii_rx, clk_156m25
+  `ifdef MDIO
+  ,mdio_in, xge_gpi
+  `endif
+  );
 
 /*AUTOINPUT*/
 // Beginning of automatic inputs (from unused autoinst inputs)
@@ -65,9 +70,21 @@ input                   pkt_tx_val;             // To tx_eq0 of tx_enqueue.v
 input                   reset_156m25_n;         // To rx_dq0 of rx_dequeue.v, ...
 input                   reset_xgmii_rx_n;       // To rx_eq0 of rx_enqueue.v, ...
 input                   reset_xgmii_tx_n;       // To tx_dq0 of tx_dequeue.v, ...
+input [7:0]             wb_adr_i;               // To wishbone_if0 of wishbone_if.v
+input                   wb_clk_i;               // To sync_clk_wb0 of sync_clk_wb.v, ...
+input                   wb_cyc_i;               // To wishbone_if0 of wishbone_if.v
+input [31:0]            wb_dat_i;               // To wishbone_if0 of wishbone_if.v
+input                   wb_rst_i;               // To sync_clk_wb0 of sync_clk_wb.v, ...
+input                   wb_stb_i;               // To wishbone_if0 of wishbone_if.v
+input                   wb_we_i;                // To wishbone_if0 of wishbone_if.v
 input [7:0]             xgmii_rxc;              // To rx_eq0 of rx_enqueue.v
 input [63:0]            xgmii_rxd;              // To rx_eq0 of rx_enqueue.v
-input                   ctrl_tx_enable;         // From wishbone_if0 of wishbone_if.v
+`ifdef MDIO
+input 		        mdio_in;
+input [7:0]		xge_gpi;
+
+`endif
+
 // End of automatics
 
 /*AUTOOUTPUT*/
@@ -80,23 +97,24 @@ output [2:0]            pkt_rx_mod;             // From rx_dq0 of rx_dequeue.v
 output                  pkt_rx_sop;             // From rx_dq0 of rx_dequeue.v
 output                  pkt_rx_val;             // From rx_dq0 of rx_dequeue.v
 output                  pkt_tx_full;            // From tx_eq0 of tx_enqueue.v
+output                  wb_ack_o;               // From wishbone_if0 of wishbone_if.v
+output [31:0]           wb_dat_o;               // From wishbone_if0 of wishbone_if.v
+output                  wb_int_o;               // From wishbone_if0 of wishbone_if.v
 output [7:0]            xgmii_txc;              // From tx_dq0 of tx_dequeue.v
 output [63:0]           xgmii_txd;              // From tx_dq0 of tx_dequeue.v
+`ifdef MDIO
+output                  mdc;
+output                  mdio_out;
+output                  mdio_tri;               // Assert to tristate driver.
+output [7:0] 	        xge_gpo;
 
-output        status_crc_error;
-output        status_fragment_error;
-output        status_txdfifo_ovflow;
-output        status_txdfifo_udflow;
-output        status_rxdfifo_ovflow;
-output        status_rxdfifo_udflow;
-output        status_pause_frame_rx;
-output        status_local_fault;
-output        status_remote_fault;
+`endif
 
 // End of automatics
 
 /*AUTOWIRE*/
 // Beginning of automatic wires (for undeclared instantiated-module outputs)
+wire                    ctrl_tx_enable;         // From wishbone_if0 of wishbone_if.v
 wire                    ctrl_tx_enable_ctx;     // From sync_clk_xgmii_tx0 of sync_clk_xgmii_tx.v
 wire [1:0]              local_fault_msg_det;    // From rx_eq0 of rx_enqueue.v
 wire [1:0]              remote_fault_msg_det;   // From rx_eq0 of rx_enqueue.v
@@ -117,8 +135,26 @@ wire [7:0]              rxhfifo_rstatus;        // From rx_hold_fifo0 of rx_hold
 wire [63:0]             rxhfifo_wdata;          // From rx_eq0 of rx_enqueue.v
 wire                    rxhfifo_wen;            // From rx_eq0 of rx_enqueue.v
 wire [7:0]              rxhfifo_wstatus;        // From rx_eq0 of rx_enqueue.v
+wire                    status_crc_error;       // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_crc_error_tog;   // From rx_eq0 of rx_enqueue.v
+wire                    status_fragment_error;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_fragment_error_tog;// From rx_eq0 of rx_enqueue.v
+wire                    status_local_fault;     // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_local_fault_crx; // From fault_sm0 of fault_sm.v
 wire                    status_local_fault_ctx; // From sync_clk_xgmii_tx0 of sync_clk_xgmii_tx.v
+wire                    status_pause_frame_rx;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_pause_frame_rx_tog;// From rx_eq0 of rx_enqueue.v
+wire                    status_remote_fault;    // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_remote_fault_crx;// From fault_sm0 of fault_sm.v
 wire                    status_remote_fault_ctx;// From sync_clk_xgmii_tx0 of sync_clk_xgmii_tx.v
+wire                    status_rxdfifo_ovflow;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_rxdfifo_ovflow_tog;// From rx_eq0 of rx_enqueue.v
+wire                    status_rxdfifo_udflow;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_rxdfifo_udflow_tog;// From rx_dq0 of rx_dequeue.v
+wire                    status_txdfifo_ovflow;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_txdfifo_ovflow_tog;// From tx_eq0 of tx_enqueue.v
+wire                    status_txdfifo_udflow;  // From sync_clk_wb0 of sync_clk_wb.v
+wire                    status_txdfifo_udflow_tog;// From tx_dq0 of tx_dequeue.v
 wire                    txdfifo_ralmost_empty;  // From tx_data_fifo0 of tx_data_fifo.v
 wire [63:0]             txdfifo_rdata;          // From tx_data_fifo0 of tx_data_fifo.v
 wire                    txdfifo_rempty;         // From tx_data_fifo0 of tx_data_fifo.v
@@ -152,10 +188,10 @@ rx_enqueue rx_eq0(/*AUTOINST*/
                   .rxhfifo_wen          (rxhfifo_wen),
                   .local_fault_msg_det  (local_fault_msg_det[1:0]),
                   .remote_fault_msg_det (remote_fault_msg_det[1:0]),
-                  .status_crc_error_tog (status_crc_error),
-                  .status_fragment_error_tog(status_fragment_error),
-                  .status_rxdfifo_ovflow_tog(status_rxdfifo_ovflow),
-                  .status_pause_frame_rx_tog(status_pause_frame_rx),
+                  .status_crc_error_tog (status_crc_error_tog),
+                  .status_fragment_error_tog(status_fragment_error_tog),
+                  .status_rxdfifo_ovflow_tog(status_rxdfifo_ovflow_tog),
+                  .status_pause_frame_rx_tog(status_pause_frame_rx_tog),
                   // Inputs
                   .clk_xgmii_rx         (clk_xgmii_rx),
                   .reset_xgmii_rx_n     (reset_xgmii_rx_n),
@@ -177,7 +213,7 @@ rx_dequeue rx_dq0(/*AUTOINST*/
                   .pkt_rx_err           (pkt_rx_err),
                   .pkt_rx_mod           (pkt_rx_mod[2:0]),
                   .pkt_rx_avail         (pkt_rx_avail),
-                  .status_rxdfifo_udflow_tog(status_rxdfifo_udflow),
+                  .status_rxdfifo_udflow_tog(status_rxdfifo_udflow_tog),
                   // Inputs
                   .clk_156m25           (clk_156m25),
                   .reset_156m25_n       (reset_156m25_n),
@@ -224,7 +260,7 @@ tx_enqueue tx_eq0 (/*AUTOINST*/
                    .txdfifo_wdata       (txdfifo_wdata[63:0]),
                    .txdfifo_wstatus     (txdfifo_wstatus[7:0]),
                    .txdfifo_wen         (txdfifo_wen),
-                   .status_txdfifo_ovflow_tog(status_txdfifo_ovflow),
+                   .status_txdfifo_ovflow_tog(status_txdfifo_ovflow_tog),
                    // Inputs
                    .clk_156m25          (clk_156m25),
                    .reset_156m25_n      (reset_156m25_n),
@@ -245,7 +281,7 @@ tx_dequeue tx_dq0(/*AUTOINST*/
                   .txhfifo_wen          (txhfifo_wen),
                   .xgmii_txd            (xgmii_txd[63:0]),
                   .xgmii_txc            (xgmii_txc[7:0]),
-                  .status_txdfifo_udflow_tog(status_txdfifo_udflow),
+                  .status_txdfifo_udflow_tog(status_txdfifo_udflow_tog),
                   // Inputs
                   .clk_xgmii_tx         (clk_xgmii_tx),
                   .reset_xgmii_tx_n     (reset_xgmii_tx_n),
@@ -299,13 +335,37 @@ tx_hold_fifo tx_hold_fifo0(/*AUTOINST*/
 
 fault_sm fault_sm0(/*AUTOINST*/
                    // Outputs
-                   .status_local_fault_crx(status_local_fault),
-                   .status_remote_fault_crx(status_remote_fault),
+                   .status_local_fault_crx(status_local_fault_crx),
+                   .status_remote_fault_crx(status_remote_fault_crx),
                    // Inputs
                    .clk_xgmii_rx        (clk_xgmii_rx),
                    .reset_xgmii_rx_n    (reset_xgmii_rx_n),
                    .local_fault_msg_det (local_fault_msg_det[1:0]),
                    .remote_fault_msg_det(remote_fault_msg_det[1:0]));
+
+sync_clk_wb sync_clk_wb0(/*AUTOINST*/
+                         // Outputs
+                         .status_crc_error      (status_crc_error),
+                         .status_fragment_error (status_fragment_error),
+                         .status_txdfifo_ovflow (status_txdfifo_ovflow),
+                         .status_txdfifo_udflow (status_txdfifo_udflow),
+                         .status_rxdfifo_ovflow (status_rxdfifo_ovflow),
+                         .status_rxdfifo_udflow (status_rxdfifo_udflow),
+                         .status_pause_frame_rx (status_pause_frame_rx),
+                         .status_local_fault    (status_local_fault),
+                         .status_remote_fault   (status_remote_fault),
+                         // Inputs
+                         .wb_clk_i              (wb_clk_i),
+                         .wb_rst_i              (wb_rst_i),
+                         .status_crc_error_tog  (status_crc_error_tog),
+                         .status_fragment_error_tog(status_fragment_error_tog),
+                         .status_txdfifo_ovflow_tog(status_txdfifo_ovflow_tog),
+                         .status_txdfifo_udflow_tog(status_txdfifo_udflow_tog),
+                         .status_rxdfifo_ovflow_tog(status_rxdfifo_ovflow_tog),
+                         .status_rxdfifo_udflow_tog(status_rxdfifo_udflow_tog),
+                         .status_pause_frame_rx_tog(status_pause_frame_rx_tog),
+                         .status_local_fault_crx(status_local_fault_crx),
+                         .status_remote_fault_crx(status_remote_fault_crx));
 
 sync_clk_xgmii_tx sync_clk_xgmii_tx0(/*AUTOINST*/
                                      // Outputs
@@ -316,14 +376,48 @@ sync_clk_xgmii_tx sync_clk_xgmii_tx0(/*AUTOINST*/
                                      .clk_xgmii_tx      (clk_xgmii_tx),
                                      .reset_xgmii_tx_n  (reset_xgmii_tx_n),
                                      .ctrl_tx_enable    (ctrl_tx_enable),
-                                     .status_local_fault_crx(status_local_fault),
-                                     .status_remote_fault_crx(status_remote_fault));
+                                     .status_local_fault_crx(status_local_fault_crx),
+                                     .status_remote_fault_crx(status_remote_fault_crx));
 
-// IJB. This module has only inputs and is treated as a black box by XST which causes a fatal error.
-// Commented out. Original pupose/intent unknown.
+   // IJB. This module has only inputs and is treated as a black box by XST which causes a fatal error.
+   // Commented out. Original pupose/intent unknown.
 //sync_clk_core sync_clk_core0(/*AUTOINST*/
 //                             // Inputs
 //                            .clk_xgmii_tx      (clk_xgmii_tx),
 //                             .reset_xgmii_tx_n  (reset_xgmii_tx_n));
+
+wishbone_if wishbone_if0(/*AUTOINST*/
+                         // Outputs
+                         .wb_dat_o              (wb_dat_o[31:0]),
+                         .wb_ack_o              (wb_ack_o),
+                         .wb_int_o              (wb_int_o),
+                         .ctrl_tx_enable        (ctrl_tx_enable),
+                         // Inputs
+                         .wb_clk_i              (wb_clk_i),
+                         .wb_rst_i              (wb_rst_i),
+                         .wb_adr_i              (wb_adr_i[7:0]),
+                         .wb_dat_i              (wb_dat_i[31:0]),
+                         .wb_we_i               (wb_we_i),
+                         .wb_stb_i              (wb_stb_i),
+                         .wb_cyc_i              (wb_cyc_i),
+                         .status_crc_error      (status_crc_error),
+                         .status_fragment_error (status_fragment_error),
+                         .status_txdfifo_ovflow (status_txdfifo_ovflow),
+                         .status_txdfifo_udflow (status_txdfifo_udflow),
+                         .status_rxdfifo_ovflow (status_rxdfifo_ovflow),
+                         .status_rxdfifo_udflow (status_rxdfifo_udflow),
+                         .status_pause_frame_rx (status_pause_frame_rx),
+                         .status_local_fault    (status_local_fault),
+                         .status_remote_fault   (status_remote_fault)
+			 // Customization
+			 `ifdef MDIO
+			 ,.mdc(mdc),
+			 .mdio_in(mdio_in),
+			 .mdio_out(mdio_out),
+			 .mdio_tri(mdio_tri),
+			 .xge_gpo(xge_gpo),
+			 .xge_gpi(xge_gpi)
+			 `endif
+);
 
 endmodule

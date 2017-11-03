@@ -69,7 +69,7 @@ module n310_sfpp_io_core #(
   output            qpllreset,
   output            gt_pll_lock,
   output            phy_areset_out
-   
+
 
 
 );
@@ -93,7 +93,7 @@ module n310_sfpp_io_core #(
   wire [8:0]  mac_status;
   wire [31:0] core_status;
   wire [31:0] mac_status_bclk, phy_status_bclk;
-  //aurora control and status wires  
+  //aurora control and status wires
   wire        mac_clear;
   wire        phy_areset;
   wire        bist_gen_en, bist_checker_en, bist_loopback_en;
@@ -104,18 +104,18 @@ module n310_sfpp_io_core #(
   wire [47:0] bist_checker_errors;   //Dont scale errors
   generate
   if(PROTOCOL == "Aurora") begin
- 
+
   synchronizer #( .STAGES(2), .WIDTH(32), .INITIAL_VAL(32'h0) ) mac_status_sync_i (
      .clk(bus_clk), .rst(1'b0), .in({core_status}), .out(mac_status_bclk)
   );
 
-  assign bist_checker_en = aurora_mac_ctrl_reg[0]; 
-  assign bist_gen_en = aurora_mac_ctrl_reg[1]; 
-  assign bist_loopback_en = aurora_mac_ctrl_reg[2]; 
-  assign bist_gen_rate = aurora_mac_ctrl_reg[8:3]; 
-  assign phy_areset = aurora_mac_ctrl_reg[9]; 
-  assign mac_clear = aurora_mac_ctrl_reg[10]; 
-  
+  assign bist_checker_en = aurora_mac_ctrl_reg[0];
+  assign bist_gen_en = aurora_mac_ctrl_reg[1];
+  assign bist_loopback_en = aurora_mac_ctrl_reg[2];
+  assign bist_gen_rate = aurora_mac_ctrl_reg[8:3];
+  assign phy_areset = aurora_mac_ctrl_reg[9];
+  assign mac_clear = aurora_mac_ctrl_reg[10];
+
   assign mac_status_bclk_out = mac_status_bclk;
   assign phy_areset_out = phy_areset;
 
@@ -264,7 +264,7 @@ generate
       .qplloutrefclk	    (qplloutrefclk)
     );
 
-    n310_xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
+    xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
     (
       // XGMII
       .xgmii_clk              (gb_refclk),
@@ -314,7 +314,7 @@ generate
     assign gt0_qplloutclk = 1'b0;
     assign gt0_qplloutrefclk = 1'b0;
     assign sfpp_tx_disable = 1'b0; // Always on.
-    
+
 
     one_gige_phy one_gige_phy_i
     (
@@ -390,7 +390,7 @@ end else if (PROTOCOL == "Aurora") begin
       wire        channel_up, hard_err, soft_err;
 
       assign sfpp_tx_disable = 1'b0; // Always on.
-      
+
       aurora_phy_x1 aurora_phy_i (
          // Resets
          .areset(areset | phy_areset),
@@ -400,7 +400,7 @@ end else if (PROTOCOL == "Aurora") begin
          .user_clk(user_clk),
          .sync_clk(sync_clk),
          .user_rst(user_rst),
-         .qpllclk(qplloutclk), 
+         .qpllclk(qplloutclk),
          .qpllrefclk(qplloutrefclk),
          // GTX Serial I/O
          .tx_p(txp),
@@ -491,7 +491,7 @@ end else if (PROTOCOL == "Aurora") begin
          .bist_checker_samps(bist_checker_samps),
          .bist_checker_errors(bist_checker_errors)
       );
-      
+
       assign m_axis_tuser = 4'd0;
 
       wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk, gt_pll_lock_bclk, mmcm_locked_bclk;
@@ -502,9 +502,9 @@ end else if (PROTOCOL == "Aurora") begin
       synchronizer #(.INITIAL_VAL(1'b0)) soft_err_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
-        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk)); 
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) gt_pll_lock_sync (
-        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(gt_pll_lock), .out(gt_pll_lock_bclk)); 
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(gt_pll_lock), .out(gt_pll_lock_bclk));
 
       reg [19:0]  bist_lock_latency;
       always @(posedge bus_clk) begin
