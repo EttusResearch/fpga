@@ -87,6 +87,13 @@ architecture RTL of ClockingRegs is
          bRadioClksValid_ms,
          bRadioClksValid : std_logic;
 
+
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of bRadioClksValid_ms : signal is "true";
+  attribute ASYNC_REG of bRadioClksValid    : signal is "true";
+  attribute ASYNC_REG of pPsDoneDs_ms       : signal is "true";
+  attribute ASYNC_REG of pPsDoneDs          : signal is "true";
+
 begin
 
   -- Locals to outputs.

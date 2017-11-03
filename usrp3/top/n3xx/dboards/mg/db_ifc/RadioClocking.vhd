@@ -12,6 +12,12 @@
 --
 -- Purpose:
 --
+-- Instantiates a MMCM to produce 1x, 2x, and 3x versions of the Radio Clock
+-- coming from the FPGA input pin. Handles all the buffering for the input clock.
+-- Additionally allows the clocks to be turned on and off, and phase shifted.
+--
+-- NOTE: This module hard-codes the MMCM settings for a SPECIFIC clock rate!
+--
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -83,6 +89,10 @@ architecture rtl of RadioClocking is
          bEnableRadioClk3xBufgOutput : std_logic;
 
   signal aRadioClkMmcmResetInternal  : std_logic;
+
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of bRadioClkMmcmLocked_ms : signal is "true";
+  attribute ASYNC_REG of bRadioClkMmcmLocked    : signal is "true";
 
 begin
 
