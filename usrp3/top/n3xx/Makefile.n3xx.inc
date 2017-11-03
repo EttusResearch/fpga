@@ -52,6 +52,9 @@ n3xx_db_fe_core.v \
 eth_switch.v \
 network_interface.v
 
+MB_XDC = \
+mb_timing.xdc
+
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)
 endif
@@ -84,7 +87,10 @@ else
 HLS_IP_GEN_SRCS =
 endif
 
-DESIGN_SRCS = $(MAGNESIUM_TOP_SRCS) $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
+# The XDC files must be read in a specific order, motherboard first and then daughterboard.
+# Outside of that, all the other sources can be read in any order desired.
+DESIGN_SRCS = $(abspath $(MB_XDC)) $(MAGNESIUM_DB_XDC) $(MAGNESIUM_TOP_SRCS) \
+$(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \

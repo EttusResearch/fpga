@@ -227,10 +227,15 @@ set_property IOSTANDARD LVCMOS33 [get_ports PANEL_LED_REF]
 ##
 #########################################################################################
 
-## Clocks, Enable = Bank 13 3.3V
+## Clocks, Bank 109 and 110
 
-#set_property PACKAGE_PIN   AC8              [get_ports {WB_CDCM_CLK1_P}]
-#set_property PACKAGE_PIN   AC7              [get_ports {WB_CDCM_CLK1_N}]
+# These need to have the internal buffer in the FPGA enabled at all times to avoid
+# damage to the part. Therefore declare them here in the top level pins file.
+set_property PACKAGE_PIN   AA8              [get_ports {MGT156MHZ_CLK1_P}]
+set_property PACKAGE_PIN   AA7              [get_ports {MGT156MHZ_CLK1_N}]
+
+set_property PACKAGE_PIN   AF10             [get_ports {NETCLK_P}]
+set_property PACKAGE_PIN   AF9              [get_ports {NETCLK_N}]
 
 ## MGTs, Bank 109
 
@@ -248,7 +253,7 @@ set_property PACKAGE_PIN   AK6              [get_ports SFP_1_TX_P]
 
 #set_property PACKAGE_PIN   V23              [get_ports {SFP_0_I2C_NPRESENT}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_I2C_NPRESENT}]
-#
+
 set_property PACKAGE_PIN N26 [get_ports SFP_0_LED_A]
 set_property IOSTANDARD LVCMOS33 [get_ports SFP_0_LED_A]
 
@@ -269,12 +274,12 @@ set_property IOSTANDARD LVCMOS33 [get_ports SFP_0_TXDISABLE]
 
 set_property PACKAGE_PIN W24 [get_ports SFP_0_TXFAULT]
 set_property IOSTANDARD LVCMOS33 [get_ports SFP_0_TXFAULT]
-#
-### SFP+ 1, Slow Speed, Bank 13 3.3V
-#
+
+## SFP+ 1, Slow Speed, Bank 13 3.3V
+
 #set_property PACKAGE_PIN   T27              [get_ports {SFP_1_I2C_NPRESENT}]
 #set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_I2C_NPRESENT}]
-#
+
 set_property PACKAGE_PIN N27 [get_ports SFP_1_LED_A]
 set_property IOSTANDARD LVCMOS33 [get_ports SFP_1_LED_A]
 
@@ -349,10 +354,10 @@ set_property PACKAGE_PIN AK16 [get_ports DBA_MYK_INTRQ]
 set_property PACKAGE_PIN AJ16 [get_ports {DBA_CH2_TX_DSA_DATA[2]}]
 set_property PACKAGE_PIN AH18 [get_ports {DBA_CH2_TX_DSA_DATA[0]}]
 set_property PACKAGE_PIN AJ18 [get_ports {DBA_CH2_TX_DSA_DATA[1]}]
-set_property PACKAGE_PIN AF14 [get_ports DBA_FPGA_CLK_p]
-set_property PACKAGE_PIN AG14 [get_ports DBA_FPGA_CLK_n]
-set_property PACKAGE_PIN AG17 [get_ports DBA_FPGA_SYSREF_p]
-set_property PACKAGE_PIN AG16 [get_ports DBA_FPGA_SYSREF_n]
+set_property PACKAGE_PIN AF14 [get_ports DBA_FPGA_CLK_P]
+set_property PACKAGE_PIN AG14 [get_ports DBA_FPGA_CLK_N]
+set_property PACKAGE_PIN AG17 [get_ports DBA_FPGA_SYSREF_P]
+set_property PACKAGE_PIN AG16 [get_ports DBA_FPGA_SYSREF_N]
 set_property PACKAGE_PIN AD15 [get_ports {DBA_CH2_RX_DSA_DATA[3]}]
 set_property PACKAGE_PIN AD16 [get_ports {DBA_CH2_RX_DSA_DATA[5]}]
 set_property PACKAGE_PIN AE13 [get_ports DBA_CPLD_JTAG_TMS]
@@ -492,10 +497,10 @@ set_property PACKAGE_PIN   AJ23             [get_ports {DBB_MYK_INTRQ}]
 set_property PACKAGE_PIN   AJ24             [get_ports {DBB_CH2_TX_DSA_DATA[2]}]
 set_property PACKAGE_PIN   AG24             [get_ports {DBB_CH2_TX_DSA_DATA[0]}]
 set_property PACKAGE_PIN   AG25             [get_ports {DBB_CH2_TX_DSA_DATA[1]}]
-set_property PACKAGE_PIN   AG21             [get_ports {DBB_FPGA_CLK_p}]
-set_property PACKAGE_PIN   AH21             [get_ports {DBB_FPGA_CLK_n}]
-set_property PACKAGE_PIN   AE22             [get_ports {DBB_FPGA_SYSREF_p}]
-set_property PACKAGE_PIN   AF22             [get_ports {DBB_FPGA_SYSREF_n}]
+set_property PACKAGE_PIN   AG21             [get_ports {DBB_FPGA_CLK_P}]
+set_property PACKAGE_PIN   AH21             [get_ports {DBB_FPGA_CLK_N}]
+set_property PACKAGE_PIN   AE22             [get_ports {DBB_FPGA_SYSREF_P}]
+set_property PACKAGE_PIN   AF22             [get_ports {DBB_FPGA_SYSREF_N}]
 set_property PACKAGE_PIN   AJ25             [get_ports {DBB_CH2_RX_DSA_DATA[3]}]
 set_property PACKAGE_PIN   AK25             [get_ports {DBB_CH2_RX_DSA_DATA[5]}]
 set_property PACKAGE_PIN   AB21             [get_ports {DBB_CPLD_JTAG_TMS}]

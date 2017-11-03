@@ -19,6 +19,9 @@ Jesd204bXcvrCore.edf \
 
 MAGNESIUM_TOP_SRCS = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
 n310.v \
+))
+
+MAGNESIUM_DB_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
+db_timing.xdc \
 pins.xdc \
-timing.xdc \
 ))

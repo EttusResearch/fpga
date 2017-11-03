@@ -139,10 +139,11 @@ module n310
 `ifdef BUILD_AURORA
    `define BUILD_10G_OR_AURORA
 `endif
-`ifdef BUILD_10G_OR_AURORA
+
+   // This clock input must always be enabled with a buffer regardless of the build
+   // target to avoid damage to the FPGA.
    input MGT156MHZ_CLK1_P,
    input MGT156MHZ_CLK1_N,
-`endif
 
    input SFP_0_RX_P, input SFP_0_RX_N,
    output SFP_0_TX_P, output SFP_0_TX_N,
@@ -249,10 +250,10 @@ module n310
    output        DBA_MYK_GPIO_14,
    output        DBA_MYK_GPIO_15,
 
-   input         DBA_FPGA_CLK_p,
-   input         DBA_FPGA_CLK_n,
-   input         DBA_FPGA_SYSREF_p,
-   input         DBA_FPGA_SYSREF_n,
+   input         DBA_FPGA_CLK_P,
+   input         DBA_FPGA_CLK_N,
+   input         DBA_FPGA_SYSREF_P,
+   input         DBA_FPGA_SYSREF_N,
 
    input         USRPIO_A_MGTCLK_P,
    input         USRPIO_A_MGTCLK_N,
@@ -309,10 +310,10 @@ module n310
    output        DBB_MYK_GPIO_14,
    output        DBB_MYK_GPIO_15,
 
-   input         DBB_FPGA_CLK_p,
-   input         DBB_FPGA_CLK_n,
-   input         DBB_FPGA_SYSREF_p,
-   input         DBB_FPGA_SYSREF_n,
+   input         DBB_FPGA_CLK_P,
+   input         DBB_FPGA_CLK_N,
+   input         DBB_FPGA_SYSREF_P,
+   input         DBB_FPGA_SYSREF_N,
 
    input         USRPIO_B_MGTCLK_P,
    input         USRPIO_B_MGTCLK_N,
@@ -793,6 +794,8 @@ module n310
   );
 
 `ifdef BUILD_1G
+   // FIXME if 1G is used then this needs to happen. Otherwise, NETCLK needs to have
+   // a buffer instantiated on it with a DONT_TOUCH attribute.
    one_gige_phy_clk_gen gige_clk_gen_i (
       .areset(global_rst),
       .refclk_p(NETCLK_P),
@@ -2808,8 +2811,8 @@ module n310
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
       .MeasClk(meas_clk),                      //in  std_logic
-      .FpgaClk_p(DBA_FPGA_CLK_p),              //in  std_logic
-      .FpgaClk_n(DBA_FPGA_CLK_n),              //in  std_logic
+      .FpgaClk_p(DBA_FPGA_CLK_P),              //in  std_logic
+      .FpgaClk_n(DBA_FPGA_CLK_N),              //in  std_logic
       .SampleClk1xOut(radio_clk),              //out std_logic
       .SampleClk1x(radio_clk),                 //in  std_logic
       .SampleClk2xOut(radio_clk_2x),           //out std_logic
@@ -2817,8 +2820,8 @@ module n310
       .bRegPortInFlat(bRegPortInFlatA),        //in  std_logic_vector(49:0)
       .bRegPortOutFlat(bRegPortOutFlatA),      //out std_logic_vector(33:0)
       .kSlotId(1'b0),                          //in  std_logic
-      .sSysRefFpgaLvds_p(DBA_FPGA_SYSREF_p),   //in  std_logic
-      .sSysRefFpgaLvds_n(DBA_FPGA_SYSREF_n),   //in  std_logic
+      .sSysRefFpgaLvds_p(DBA_FPGA_SYSREF_P),   //in  std_logic
+      .sSysRefFpgaLvds_n(DBA_FPGA_SYSREF_N),   //in  std_logic
       .aLmkSync(DBA_CPLD_PL_SPI_ADDR[2]),      //out std_logic
       .JesdRefClk_p(USRPIO_A_MGTCLK_P),        //in  std_logic
       .JesdRefClk_n(USRPIO_A_MGTCLK_N),        //in  std_logic
@@ -2910,8 +2913,8 @@ module n310
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
       .MeasClk(meas_clk),                      //in  std_logic
-      .FpgaClk_p(DBB_FPGA_CLK_p),              //in  std_logic
-      .FpgaClk_n(DBB_FPGA_CLK_n),              //in  std_logic
+      .FpgaClk_p(DBB_FPGA_CLK_P),              //in  std_logic
+      .FpgaClk_n(DBB_FPGA_CLK_N),              //in  std_logic
       .SampleClk1xOut(radio_clkB),             //out std_logic
       .SampleClk1x(radio_clk),                 //in  std_logic
       .SampleClk2xOut(radio_clk_2xB),          //out std_logic
@@ -2919,8 +2922,8 @@ module n310
       .bRegPortInFlat(bRegPortInFlatB),        //in  std_logic_vector(49:0)
       .bRegPortOutFlat(bRegPortOutFlatB),      //out std_logic_vector(33:0)
       .kSlotId(1'b1),                          //in  std_logic
-      .sSysRefFpgaLvds_p(DBB_FPGA_SYSREF_p),   //in  std_logic
-      .sSysRefFpgaLvds_n(DBB_FPGA_SYSREF_n),   //in  std_logic
+      .sSysRefFpgaLvds_p(DBB_FPGA_SYSREF_P),   //in  std_logic
+      .sSysRefFpgaLvds_n(DBB_FPGA_SYSREF_N),   //in  std_logic
       .aLmkSync(DBB_CPLD_PL_SPI_ADDR[2]),      //out std_logic
       .JesdRefClk_p(USRPIO_B_MGTCLK_P),        //in  std_logic
       .JesdRefClk_n(USRPIO_B_MGTCLK_N),        //in  std_logic

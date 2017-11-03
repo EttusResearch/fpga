@@ -1,18 +1,14 @@
 #
-# Copyright 2014 Ettus Research LLC
+# Copyright 2017 Ettus Research, A National Instruments Company
+# SPDX-License-Identifier: GPL-3.0
 #
 
-set_property PACKAGE_PIN   AF10             [get_ports {NETCLK_P}]
-set_property PACKAGE_PIN   AF9              [get_ports {NETCLK_N}]
 
-#IOSTANDARD not required because this is a GT terminal
-#set_property IOSTANDARD    LVDS_25  [get_ports {ETH_CLK_*}]
-
-create_clock -name NETCLK -period 8.000 -waveform {0.000 4.000} [get_ports NETCLK_P]
-
-set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks NETCLK]
-set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks -of_objects [get_pins sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*/core_clocking_i/mmcm_*/CLKOUT0]]
-set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks -of_objects [get_pins sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*/core_clocking_i/mmcm_*/CLKOUT1]]
+# No need for any asynchronous clock groups between clk100 and the recovered clocks,
+# because clk100 already has a blanket asynchronous constraint from the top level XDC.
+set_clock_groups -asynchronous -group [get_clocks clk100] -group [get_clocks net_clk]
+set_clock_groups -asynchronous -group [get_clocks clk100] -group [get_clocks -of_objects [get_pins sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*/core_clocking_i/mmcm_*/CLKOUT0]]
+set_clock_groups -asynchronous -group [get_clocks clk100] -group [get_clocks -of_objects [get_pins sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*/core_clocking_i/mmcm_*/CLKOUT1]]
 
 set_false_path -to [get_pins -hier -filter {NAME =~ sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*reset_sync*/PRE}]
 set_false_path -to [get_pins -hier -filter {NAME =~ sfp_wrapper*/*network_interface_*/*sfpp_io_*/one_gige_phy_i/*/pma_reset_pipe_reg*/PRE}]
