@@ -5,7 +5,6 @@
 include $(TOOLS_DIR)/make/viv_ip_builder.mak
 
 ONE_GIGE_PHY_SRCS = \
-$(IP_DIR)/one_gig_eth_pcs_pma/one_gige_phy_clk_gen.v \
 $(IP_DIR)/one_gig_eth_pcs_pma/one_gige_phy.v \
 $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_support.v \
 $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_clocking.v \

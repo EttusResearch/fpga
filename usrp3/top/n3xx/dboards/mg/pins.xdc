@@ -29,12 +29,20 @@ set_property IOSTANDARD LVCMOS33 [get_ports {FPGA_GPIO[*]}]
 
 ## Clocking : ###########################################################################
 ## Bank 9, 2.5V
+##
+## All of these are inputs and all require internal termination to meet voltage
+## swing requirements at the pin.
 #########################################################################################
 
-set_property PACKAGE_PIN AC18 [get_ports FPGA_REFCLK_N]
-set_property PACKAGE_PIN AC19 [get_ports FPGA_REFCLK_P]
-set_property IOSTANDARD LVDS_25 [get_ports FPGA_REFCLK_*]
-set_property DIFF_TERM TRUE [get_ports FPGA_REFCLK_*]
+set_property PACKAGE_PIN   AC18             [get_ports FPGA_REFCLK_N]
+set_property PACKAGE_PIN   AC19             [get_ports FPGA_REFCLK_P]
+set_property IOSTANDARD    LVDS_25          [get_ports FPGA_REFCLK_*]
+set_property DIFF_TERM     TRUE             [get_ports FPGA_REFCLK_*]
+
+set_property PACKAGE_PIN   AD18             [get_ports NETCLK_REF_P]
+set_property PACKAGE_PIN   AD19             [get_ports NETCLK_REF_N]
+set_property DIFF_TERM     TRUE             [get_ports NETCLK_REF_*]
+set_property IOSTANDARD    LVDS_25          [get_ports NETCLK_REF_*]
 
 
 ## Clocking : ###########################################################################
@@ -129,17 +137,6 @@ set_property IOSTANDARD LVCMOS33 [get_ports FPGA_PL_RESETN]
 # set_property PACKAGE_PIN   A8               [get_ports {PUDC_N}]
 # set_property IOSTANDARD    LVDCI_15         [get_ports {PUDC_N}]
 
-set_property PACKAGE_PIN   AA18             [get_ports {WB_20MHz_P}]
-set_property PACKAGE_PIN   AA19             [get_ports {WB_20MHz_N}]
-set_property DIFF_TERM TRUE [get_ports WB_20MHz_P]
-set_property DIFF_TERM TRUE [get_ports WB_20MHz_N]
-set_property IOSTANDARD    LVDS_25         [get_ports {WB_20MHz_*}]
-
-set_property PACKAGE_PIN   AD18             [get_ports NETCLK_REF_P]
-set_property PACKAGE_PIN   AD19             [get_ports NETCLK_REF_N]
-set_property DIFF_TERM TRUE [get_ports NETCLK_REF_P]
-set_property DIFF_TERM TRUE [get_ports NETCLK_REF_N]
-set_property IOSTANDARD    LVDS_25         [get_ports NETCLK_REF_*]
 
 
 ## MGMT : ###############################################################################
@@ -189,15 +186,15 @@ set_property IOSTANDARD    LVDS_25         [get_ports NETCLK_REF_*]
 #set_property PACKAGE_PIN   AH2              [get_ports {QSFP-TX3_P}]
 
 ## White Rabbit : #######################################################################
-##
+## Clock input to Bank 9 requires internal termination to meet signal voltage swing
+## specification at input.
 #########################################################################################
 
-#set_property PACKAGE_PIN   AA19             [get_ports {WB_20MHZ_N}]
-#set_property IOSTANDARD    LVCMOS25         [get_ports {WB_20MHZ_N}]
-#
-#set_property PACKAGE_PIN   AA18             [get_ports {WB_20MHZ_P}]
-#set_property IOSTANDARD    LVCMOS25         [get_ports {WB_20MHZ_P}]
-#
+set_property PACKAGE_PIN   AA18             [get_ports WB_20MHz_P]
+set_property PACKAGE_PIN   AA19             [get_ports WB_20MHz_N]
+set_property DIFF_TERM     TRUE             [get_ports WB_20MHz_*]
+set_property IOSTANDARD    LVDS_25          [get_ports WB_20MHz_*]
+
 #set_property PACKAGE_PIN   T29              [get_ports {WB_DAC_DIN}]
 #set_property PACKAGE_PIN   T28              [get_ports {WB_DAC_NCLR}]
 #set_property PACKAGE_PIN   T30              [get_ports {WB_DAC_NLDAC}]

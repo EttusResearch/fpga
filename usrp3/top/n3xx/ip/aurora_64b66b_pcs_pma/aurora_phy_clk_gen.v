@@ -4,29 +4,15 @@
 
 module aurora_phy_clk_gen 
 (
-   input  areset,
-   input  refclk_p,
-   input  refclk_n,
-
-   output refclk,
+   output refclk_ibuf,
    output clk156,
    output init_clk
 );
 
-   wire clk156_buf;
    wire init_clk_buf;
-   wire clkfbout;
-   
-   IBUFDS_GTE2 ibufds_inst (
-      .O     (refclk),
-      .ODIV2 (),
-      .CEB   (1'b0),
-      .I     (refclk_p),
-      .IB    (refclk_n)
-   );
 
    BUFG clk156_bufg_inst (
-      .I (refclk),
+      .I (refclk_ibuf),
       .O (clk156) 
    );
 

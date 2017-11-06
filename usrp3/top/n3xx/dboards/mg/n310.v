@@ -128,20 +128,10 @@ module n310
    //
    ///////////////////////////////////
 
-`ifdef BUILD_1G
+   // These clock inputs must always be enabled with a buffer regardless of the build
+   // target to avoid damage to the FPGA.
    input NETCLK_P,
    input NETCLK_N,
-`endif
-
-`ifdef BUILD_10G
-   `define BUILD_10G_OR_AURORA
-`endif
-`ifdef BUILD_AURORA
-   `define BUILD_10G_OR_AURORA
-`endif
-
-   // This clock input must always be enabled with a buffer regardless of the build
-   // target to avoid damage to the FPGA.
    input MGT156MHZ_CLK1_P,
    input MGT156MHZ_CLK1_N,
 
@@ -657,7 +647,6 @@ module n310
   wire        xgige_refclk;
   wire        xgige_clk156;
   wire        xgige_dclk;
-  wire        aurora_gt_refclk;
   wire        aurora_refclk;
   wire        aurora_clk156;
   wire        aurora_init_clk;
@@ -717,10 +706,10 @@ module n310
   //////////////////////////////////////////////////////////////////////
 
   wire ref_clk_buf_inv;
-  //FIXME this for signal integrity checkonly please name it correctly when use
-  wire outWBclk;
-  wire outNetclk;
-  ////////////
+
+  wire wr_refclk_buf;
+  wire netclk_buf;
+
   wire ref_clk_inv;
   wire ref_clk;
   wire ref_clk_reset;
@@ -736,29 +725,51 @@ module n310
   wire meas_clk_locked;
 
   // FPGA Reference Clock Buffering
-  //
   // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
   // to meet timing with the PPS signal.
-   IBUFGDS ref_clk_ibuf (
-    .O(outWBclk),
-    .I(WB_20MHz_P),
-    .IB(WB_20MHz_N)
-  );
-  IBUFGDS ref_clk_ibuf1 (
-    .O(outNetclk),
-    .I(NETCLK_REF_P),
-    .IB(NETCLK_REF_N)
-  );
-  IBUFGDS ref_clk_ibuf2 (
+  IBUFGDS ref_clk_ibuf (
     .O(ref_clk_buf_inv),
     .I(FPGA_REFCLK_N),
     .IB(FPGA_REFCLK_P)
   );
 
   BUFG ref_clk_bufg (
-       .O(ref_clk_inv),
-       .I(ref_clk_buf_inv)
-   );
+    .O(ref_clk_inv),
+    .I(ref_clk_buf_inv)
+  );
+
+  // Instantiate buffers on each of these differential clock inputs with DONT_TOUCH
+  // attributes in order to preserve the internal termination regardless of whether
+  // these clocks are used in the design.  The lack of termination would place the
+  // voltage swings for these pins outside the acceptable range for the FPGA inputs.
+  (* dont_touch = "true" *) IBUFGDS wr_refclk_ibuf (
+    .I (WB_20MHz_P),
+    .IB(WB_20MHz_N),
+    .O (wr_refclk_buf)
+  );
+
+  (* dont_touch = "true" *) IBUFGDS netclk_ref_ibuf (
+    .I (NETCLK_REF_P),
+    .IB(NETCLK_REF_N),
+    .O (netclk_buf)
+  );
+
+  (* dont_touch = "true" *) IBUFDS_GTE2 gige_refclk_ibuf (
+    .ODIV2(),
+    .CEB  (1'b0),
+    .I (NETCLK_P),
+    .IB(NETCLK_N),
+    .O (gige_refclk)
+  );
+
+  (* dont_touch = "true" *) IBUFDS_GTE2 ten_gige_refclk_ibuf (
+    .ODIV2(),
+    .CEB  (1'b0),
+    .I (MGT156MHZ_CLK1_P),
+    .IB(MGT156MHZ_CLK1_N),
+    .O (xgige_refclk)
+  );
+
 
   // For Rev D Motherboard, the REFCLK signal sent to the FPGA is inverted on the PCB.
   // To fix this, add in an inverter after the BUFG, such that the re-inversion (to
@@ -794,31 +805,24 @@ module n310
   );
 
 `ifdef BUILD_1G
-   // FIXME if 1G is used then this needs to happen. Otherwise, NETCLK needs to have
-   // a buffer instantiated on it with a DONT_TOUCH attribute.
-   one_gige_phy_clk_gen gige_clk_gen_i (
-      .areset(global_rst),
-      .refclk_p(NETCLK_P),
-      .refclk_n(NETCLK_N),
-      .refclk(gige_refclk),
-      .refclk_bufg(gige_refclk_bufg)
-   );
 
-   // FIXME
-   assign SFP_0_RS0  = 1'b0;
-   assign SFP_0_RS1  = 1'b0;
-   assign SFP_1_RS0  = 1'b0;
-   assign SFP_1_RS1  = 1'b0;
+  BUFG bufg_gige_refclk_i (
+    .I(gige_refclk),
+    .O(gige_refclk_bufg)
+  );
+
+  // FIXME
+  assign SFP_0_RS0  = 1'b0;
+  assign SFP_0_RS1  = 1'b0;
+  assign SFP_1_RS0  = 1'b0;
+  assign SFP_1_RS1  = 1'b0;
 
 `endif
 
 `ifdef BUILD_10G
 
    ten_gige_phy_clk_gen xgige_clk_gen_i (
-      .areset(global_rst),
-      .refclk_p(MGT156MHZ_CLK1_P),
-      .refclk_n(MGT156MHZ_CLK1_N),
-      .refclk(xgige_refclk),
+      .refclk_ibuf(xgige_refclk),
       .clk156(xgige_clk156),
       .dclk(xgige_dclk)
    );
@@ -834,11 +838,9 @@ module n310
    `endif
 `else
    `ifdef BUILD_AURORA
+      assign  aurora_refclk = xgige_refclk;
       aurora_phy_clk_gen aurora_clk_gen_i (
-         .areset(global_rst),
-         .refclk_p(MGT156MHZ_CLK1_P),
-         .refclk_n(MGT156MHZ_CLK1_N),
-         .refclk(aurora_refclk),
+         .refclk_ibuf(xgige_refclk),
          .clk156(aurora_clk156),
          .init_clk(aurora_init_clk)
       );
