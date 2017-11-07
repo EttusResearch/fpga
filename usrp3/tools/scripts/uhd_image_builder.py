@@ -45,12 +45,12 @@ wire ce_rst = radio_rst;
 """
 
 BLOCK_TMPL = """
-noc_block_{blockname} {instname} (
+noc_block_{blockname} {blockparameters} {instname} (
   .bus_clk(bus_clk), .bus_rst(bus_rst),
-  .ce_clk(ce_clk), .ce_rst(ce_rst),
+  .ce_clk({clock}_clk), .ce_rst({clock}_rst),
   .i_tdata(ce_o_tdata[{n}]), .i_tlast(ce_o_tlast[{n}]), .i_tvalid(ce_o_tvalid[{n}]), .i_tready(ce_o_tready[{n}]),
   .o_tdata(ce_i_tdata[{n}]), .o_tlast(ce_i_tlast[{n}]), .o_tvalid(ce_i_tvalid[{n}]), .o_tready(ce_i_tready[{n}]),
-  .debug(ce_debug[{n}])
+  .debug(ce_debug[{n}]){extraports}
 );
 """
 
@@ -94,6 +94,11 @@ def setup_parser():
         nargs='+',
         default=None)
     parser.add_argument(
+        "-y", "--yml",
+        help="YML file definition of onboard blocks\
+              (overrides the 'block' positional arguments)",
+        default=None)
+    parser.add_argument(
         "-m", "--max-num-blocks", type=int,
         help="Maximum number of blocks (Max. Allowed for x310|x300: 10,\
                 for e300: 6)",
@@ -133,20 +138,87 @@ def setup_parser():
     )
     return parser
 
-def create_vfiles(args):
+def get_default_parameters():
+    default = {"clock" : "ce",
+               "parameters" : None,
+               "extraports" : None}
+    return default
+
+
+def parse_yml(ymlfile):
+    """
+    Parse an input yaml file with a list of blocks and parameters!
+    """
+    try:
+        import yaml
+    except ImportError:
+        print('[ERROR] Could not import yaml module')
+        exit(1)
+
+    with open(ymlfile, 'r') as f:
+        data = yaml.load(f)
+    blocks = []
+    params = []
+    for val in data:
+        print(val['block'])
+        blocks.append(val['block'])
+        blockparams = get_default_parameters()
+        if "clock" in val:
+            blockparams["clock"] = val["clock"]
+        if "parameters" in val:
+            blockparams["parameters"] = val["parameters"]
+        if "extraports" in val:
+            blockparams["extraports"] = val["extraports"]
+        print(blockparams)
+        params.append(blockparams)
+    print(data)
+    return blocks, params
+
+def format_param_str(parameters):
+    """
+    Take a single block parameter dictionary and format as a verilog string
+    """
+    paramstr = ""
+    if parameters:
+        paramstrlist = []
+        for key in parameters.keys():
+            value = ""
+            if not (parameters[key] is None):
+                value = parameters[key]
+            currstr = ".%s(%s)" % (str.upper(key), value)
+            paramstrlist.append(currstr)
+        paramstr = "#(%s)" % (", ".join(paramstrlist))
+    return paramstr
+
+def format_port_str(extraports):
+    """
+    Take a single dictionary and format as a verilog string representing extra block ports
+    """
+    portstr = ""
+    if extraports:
+        portstrlist = []
+        for key in extraports.keys():
+            value = ""
+            if not (extraports[key] is None):
+                value = extraports[key]
+            currstr = ".%s(%s)" % (key, value)
+            portstrlist.append(currstr)
+        portstr = ",\n  %s" % (",\n  ".join(portstrlist))
+    return portstr
+
+def create_vfiles(blocks, blockparams, max_num_blocks, fill_with_fifos=False):
     """
     Returns the verilogs
     """
-    blocks = args.blocks
     if len(blocks) == 0:
         print("[GEN_RFNOC_INST ERROR] No blocks specified!")
         exit(1)
-    if len(blocks) > args.max_num_blocks:
+    if len(blocks) > max_num_blocks:
         print("[GEN_RFNOC_INST ERROR] Trying to connect {} blocks, max is {}".\
-                format(len(blocks), args.max_num_blocks))
+                format(len(blocks), max_num_blocks))
         exit(1)
-    num_ce = args.max_num_blocks
-    if not args.fill_with_fifos:
+    num_ce = max_num_blocks
+    if not fill_with_fifos:
         num_ce = len(blocks)
     vfile = HEADER_TMPL.format(num_ce=num_ce)
     blocks_in_blacklist = [block for block in blocks if block in BLACKLIST]
@@ -159,13 +231,18 @@ def create_vfiles(args):
         exit(0)
     print("--Using the following blocks to generate image:")
     block_count = {k: 0 for k in set(blocks)}
-    for i, block in enumerate(blocks):
+    for i, (block, params) in enumerate(zip(blocks, blockparams)):
         block_count[block] += 1
         instname = "inst_{}{}".format(block, "" \
                 if block_count[block] == 1 else block_count[block])
         print("    * {}".format(block))
-        vfile += BLOCK_TMPL.format(blockname=block, instname=instname, n=i)
-    if args.fill_with_fifos:
+        vfile += BLOCK_TMPL.format(blockname=block,
+                                   blockparameters=format_param_str(params["parameters"]),
+                                   instname=instname,
+                                   n=i,
+                                   clock=params["clock"],
+                                   extraports=format_port_str(params["extraports"]))
+    if fill_with_fifos:
         vfile += FILL_FIFO_TMPL.format(fifo_start=len(blocks))
     return vfile
 
@@ -400,7 +477,13 @@ def get_relative_path(base, target):
 def main():
     " Go, go, go! "
     args = setup_parser().parse_args()
-    vfile = create_vfiles(args)
+    if args.yml:
+        print("Using yml file. Ignoring command line blocks arguments")
+        blocks, params = parse_yml(args.yml)
+    else:
+        blocks = args.blocks
+        params = [get_default_parameters()]*len(blocks)
+    vfile = create_vfiles(blocks, params, args.max_num_blocks, args.fill_with_fifos)
     file_generator(args, vfile)
     create_oot_include(args.device, args.include_dir)
     if args.outfile is  None:
