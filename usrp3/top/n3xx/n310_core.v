@@ -190,9 +190,18 @@ module n310_core #(
   localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
 
   /////////////////////////////////////////////////////////////////////////////////
-  // Global Registers
+  // Motherboard Registers
   /////////////////////////////////////////////////////////////////////////////////
-  localparam REG_BASE_MISC = 0; // axi interconnect takes care of that
+
+  // Register base
+  localparam REG_BASE_MISC  = 14'h0;
+  localparam REG_BASE_XBAR  = 14'h1000;
+
+  // Misc Registers
+  localparam REG_GIT_HASH   = REG_BASE_MISC + 14'h0;
+  localparam REG_NUM_CE     = REG_BASE_MISC + 14'h4;
+  localparam REG_SCRATCH    = REG_BASE_MISC + 14'h8;
+  localparam REG_CLOCK_CTRL = REG_BASE_MISC + 14'h0C;
 
   wire                     reg_wr_req;
   wire [REG_AWIDTH-1:0]    reg_wr_addr;
@@ -263,11 +272,6 @@ module n310_core #(
     .reg_rd_resp   (reg_rd_resp),
     .reg_rd_data   (reg_rd_data)
   );
-
-  localparam REG_GIT_HASH    = 14'h0;
-  localparam REG_NUM_CE      = 14'h4;
-  localparam REG_SCRATCH     = 14'h8;
-  localparam REG_CLOCK_CTRL   = 14'h0C;
 
   reg [31:0] scratch_reg;
   reg b_ref_clk_locked_ms;
@@ -776,12 +780,12 @@ module n310_core #(
 
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
    axi_crossbar_regport #(
-      .REG_BASE(32'h10),
+      .REG_BASE(REG_BASE_XBAR),
       .REG_DWIDTH(REG_DWIDTH),  // Width of the AXI4-Lite data bus (must be 32 or 64)
       .REG_AWIDTH(REG_AWIDTH),  // Width of the address bus
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
    inst_axi_crossbar_regport (
-      .clk(bus_clk), .reset(bus_rst), .clear(0),
+      .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata({xbar_ce_i_tdata,dmai_tdata,e2v1_tdata,e2v0_tdata}),
       .i_tlast({xbar_ce_i_tlast,dmai_tlast,e2v1_tlast,e2v0_tlast}),
       .i_tvalid({xbar_ce_i_tvalid,dmai_tvalid,e2v1_tvalid,e2v0_tvalid}),
