@@ -13,8 +13,7 @@
 
 - block: fosphor
   parameters:
-    - name: MTU
-      value: 12
+    MTU: 12
 
 - block: axi_fifo_loopback
   parameters:

@@ -4,10 +4,8 @@
 
 - block: ddc
   parameters:
-    - name: NOC_ID
-      value: 64'hDDC0_0000_0000_0001
-    - name: NUM_CHAINS
-      value: 1
+    NOC_ID: 64'hDDC0_0000_0000_0001
+    NUM_CHAINS: 1
 
 - block: duc
   parameters:

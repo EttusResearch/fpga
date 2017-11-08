@@ -159,8 +159,8 @@ def format_param_str(params):
     paramstr = ""
     if params:
         paramstrlist = []
-        for param in params:
-            currstr = ".%s(%s)" % (str.upper(param["name"]), param["value"])
+        for key in params.keys():
+            currstr = ".%s(%s)" % (str.upper(key), params[key])
             paramstrlist.append(currstr)
         paramstr = "#(%s)" % (", ".join(paramstrlist))
     return paramstr
