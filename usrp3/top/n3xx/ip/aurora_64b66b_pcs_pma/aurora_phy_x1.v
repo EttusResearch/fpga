@@ -178,15 +178,18 @@ module aurora_phy_x1 #(
    //--------------------------------------------------------------
    // GT Common
    //--------------------------------------------------------------
-
    wire gt_qpllclk_quad1_i;
    wire gt_qpllrefclk_quad1_i;
+   wire gt_qpllclk_quad2_i;
+   wire gt_qpllrefclk_quad2_i;
    wire gt_to_common_qpllreset_i;
    wire gt_qpllrefclklost_i; 
    wire gt_qplllock_i; 
    
    assign gt_qpllclk_quad1_i = qpllclk;
    assign gt_qpllrefclk_quad1_i =  qpllrefclk;
+   assign gt_qpllclk_quad2_i = qpllclk;
+   assign gt_qpllrefclk_quad2_i = qpllrefclk;
    assign gt_qplllock_i = qplllock;
    assign gt_qpllrefclklost_i = qpllrefclklost;
    assign qpllreset = gt_to_common_qpllreset_i;
@@ -198,8 +201,7 @@ module aurora_phy_x1 #(
    wire        gt_rxcdrovrden_i  = 1'b0;
    wire [2:0]  loopback_i        = 3'b000;
    wire        power_down_i      = 1'b0;
-
-   aurora_64b66b_pcs_pma aurora_64b66b_pcs_pma_i (
+aurora_64b66b_pcs_pma aurora_64b66b_pcs_pma_i (
       .refclk1_in                (refclk),
       // TX AXI4-S Interface
       .s_axi_tx_tdata            (s_axis_tdata),
@@ -264,5 +266,4 @@ module aurora_phy_x1 #(
       .sys_reset_out             (user_rst),
       .tx_out_clk                (tx_out_clk)
    );
-
- endmodule
+endmodule

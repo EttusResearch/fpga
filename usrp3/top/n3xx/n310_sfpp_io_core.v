@@ -64,6 +64,7 @@ module n310_sfpp_io_core #(
   input             qplloutclk,
   input             qplloutrefclk,
   input             mmcm_locked,
+
   output [15:0]     phy_status,
   output [31:0]     mac_status_bclk_out,
   output            qpllreset,
@@ -75,21 +76,21 @@ module n310_sfpp_io_core #(
 );
   //-----------------------------------------------------------------
   // Registers
+  // When Aurora protocol is used, REG_BASE is 2030
   //-----------------------------------------------------------------
   localparam REG_MAC_CTRL_STATUS = REG_BASE + 32'h0;
   localparam REG_PHY_CTRL_STATUS = REG_BASE + 32'h4;
-  localparam REG_AURORA_MAC_CTRL_STATUS = REG_BASE + 14'h2030;
-  localparam REG_AURORA_PHY_CTRL_STATUS = REG_BASE + 14'h2034;
-  localparam REG_AURORA_OVERRUNS = REG_BASE + 32'h2038;
-  localparam REG_CHECKSUM_ERRORS = REG_BASE + 32'h203C;
-  localparam REG_BIST_CHECKER_SAMPS = REG_BASE + 32'h2040;
-  localparam REG_BIST_CHECKER_ERRORS  = REG_BASE + 32'h2044;
-  localparam REG_AURORA_ENABLED_CHECK = REG_BASE + 32'h2048;
+  localparam REG_PROTOCOL_CHECK  = REG_BASE + 32'h8; //only on non aurora configs
+  localparam REG_AURORA_OVERRUNS = REG_BASE + 32'h8;
+  localparam REG_CHECKSUM_ERRORS = REG_BASE + 32'hC;
+  localparam REG_BIST_CHECKER_SAMPS = REG_BASE + 32'h10;
+  localparam REG_BIST_CHECKER_ERRORS  = REG_BASE + 32'h14;
+  localparam REG_AURORA_ENABLED_CHECK = REG_BASE + 32'h18;
 
   wire        reg_rd_resp_mdio;
   reg         reg_rd_resp_glob = 1'b0;
   wire [31:0] reg_rd_data_mdio;
-  reg  [31:0] aurora_mac_ctrl_reg, mac_ctrl_reg, phy_ctrl_reg, readback_reg;
+  reg  [31:0] mac_ctrl_reg, phy_ctrl_reg, readback_reg;
   wire [8:0]  mac_status;
   wire [31:0] core_status;
   wire [31:0] mac_status_bclk, phy_status_bclk;
@@ -102,6 +103,20 @@ module n310_sfpp_io_core #(
   wire [31:0] checksum_errors;
   wire [47:0] bist_checker_samps;   //Scale num sample by 2^16
   wire [47:0] bist_checker_errors;   //Dont scale errors
+  wire [1:0]  protocol_check;
+
+  generate
+  if(PROTOCOL == "Aurora") begin
+    assign protocol_check = 2'b11;
+  end else if (PROTOCOL == "10GbE") begin
+    assign protocol_check = 2'b10;
+  end else if (PROTOCOL == "1GbE") begin
+    assign protocol_check = 2'b01;
+  end else begin
+    assign protocol_check = 2'b00;
+  end
+  endgenerate
+
   generate
   if(PROTOCOL == "Aurora") begin
 
@@ -109,13 +124,13 @@ module n310_sfpp_io_core #(
      .clk(bus_clk), .rst(1'b0), .in({core_status}), .out(mac_status_bclk)
   );
 
-  assign bist_checker_en = aurora_mac_ctrl_reg[0];
-  assign bist_gen_en = aurora_mac_ctrl_reg[1];
-  assign bist_loopback_en = aurora_mac_ctrl_reg[2];
-  assign bist_gen_rate = aurora_mac_ctrl_reg[8:3];
-  assign phy_areset = aurora_mac_ctrl_reg[9];
-  assign mac_clear = aurora_mac_ctrl_reg[10];
-
+  assign bist_checker_en = mac_ctrl_reg[0]; 
+  assign bist_gen_en = mac_ctrl_reg[1]; 
+  assign bist_loopback_en = mac_ctrl_reg[2]; 
+  assign bist_gen_rate = mac_ctrl_reg[8:3]; 
+  assign phy_areset = mac_ctrl_reg[9]; 
+  assign mac_clear = mac_ctrl_reg[10]; 
+  
   assign mac_status_bclk_out = mac_status_bclk;
   assign phy_areset_out = phy_areset;
 
@@ -135,50 +150,64 @@ module n310_sfpp_io_core #(
   always @(posedge bus_clk) begin
      if (bus_rst) begin
         mac_ctrl_reg <= {31'h0, 1'b1}; // tx_enable on reset?
-        aurora_mac_ctrl_reg <= {31'h0, 1'b1}; // tx_enable on reset?
      end else if (reg_wr_req) begin
         case(reg_wr_addr)
            REG_MAC_CTRL_STATUS:
               mac_ctrl_reg <= reg_wr_data;
            REG_PHY_CTRL_STATUS:
               phy_ctrl_reg <= reg_wr_data;
-           REG_AURORA_MAC_CTRL_STATUS:
-              aurora_mac_ctrl_reg <= reg_wr_data;
         endcase
      end
   end
-
-  always @(posedge bus_clk) begin
-     // No reset handling needed for readback
-     if (reg_rd_req) begin
-        reg_rd_resp_glob <= 1'b1;
-        case(reg_rd_addr)
-           REG_MAC_CTRL_STATUS:
-              readback_reg <= mac_status_bclk;
-           REG_PHY_CTRL_STATUS:
-              readback_reg <= phy_status_bclk;
-           REG_AURORA_MAC_CTRL_STATUS:
-              readback_reg <= mac_status_bclk;
-           REG_AURORA_PHY_CTRL_STATUS:
-              readback_reg <= phy_status_bclk;
-           REG_AURORA_OVERRUNS:
-              readback_reg <= overruns;
-           REG_CHECKSUM_ERRORS:
-              readback_reg <= checksum_errors;
-           REG_BIST_CHECKER_SAMPS:
-              readback_reg <= bist_checker_samps[47:16];
-           REG_BIST_CHECKER_ERRORS:
-              readback_reg <= bist_checker_errors[31:0];
-           REG_AURORA_ENABLED_CHECK:
-              readback_reg <= 32'h40120124;//sorta spells out aurora.
-           default:
-              reg_rd_resp_glob <= 1'b0;
-        endcase
-     end
-     if (reg_rd_resp_glob) begin
-        reg_rd_resp_glob <= 1'b0;
-     end
+  generate
+  if(PROTOCOL == "Aurora") begin
+    always @(posedge bus_clk) begin
+       // No reset handling needed for readback
+       if (reg_rd_req) begin
+          reg_rd_resp_glob <= 1'b1;
+          case(reg_rd_addr)
+             REG_MAC_CTRL_STATUS:
+                readback_reg <= mac_status_bclk;
+             REG_PHY_CTRL_STATUS:
+                readback_reg <= phy_status_bclk;
+             REG_AURORA_OVERRUNS:
+                readback_reg <= overruns;
+             REG_CHECKSUM_ERRORS:
+                readback_reg <= checksum_errors;
+             REG_BIST_CHECKER_SAMPS:
+                readback_reg <= bist_checker_samps[47:16];
+             REG_BIST_CHECKER_ERRORS:
+                readback_reg <= bist_checker_errors[31:0];
+             REG_AURORA_ENABLED_CHECK:
+                readback_reg <= {30'b0, protocol_check};
+             default:
+                reg_rd_resp_glob <= 1'b0;
+          endcase
+       end if (reg_rd_resp_glob) begin
+          reg_rd_resp_glob <= 1'b0;
+       end
+    end
+  end else begin
+    always @(posedge bus_clk) begin
+       // No reset handling needed for readback
+       if (reg_rd_req) begin
+          reg_rd_resp_glob <= 1'b1;
+          case(reg_rd_addr)
+             REG_MAC_CTRL_STATUS:
+                readback_reg <= mac_status_bclk;
+             REG_PHY_CTRL_STATUS:
+                readback_reg <= phy_status_bclk;
+             REG_PROTOCOL_CHECK:
+                readback_reg <= {30'b0, protocol_check};
+             default:
+                reg_rd_resp_glob <= 1'b0;
+          endcase
+       end if (reg_rd_resp_glob) begin
+          reg_rd_resp_glob <= 1'b0;
+       end
+    end
   end
+  endgenerate
 
   always @(posedge bus_clk) begin
    reg_rd_resp <= reg_rd_resp_glob | reg_rd_resp_mdio;
