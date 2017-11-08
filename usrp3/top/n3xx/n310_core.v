@@ -1,10 +1,14 @@
-/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2016-2017 Ettus Research
+// Copyright 2016-2017 Ettus Research, A National Instruments Company
 //
-// n3xx_core
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: n3xx_core
+// Description:
+// - Motherboard registers
 // - Crossbar
-// - Radio 0 and Radio 1
+// - Radios
+// - DMA fifo
 //
 /////////////////////////////////////////////////////////////////////
 
@@ -13,6 +17,7 @@ module n310_core #(
   parameter REG_AWIDTH  = 32,  // Width of the address bus
   parameter BUS_CLK_RATE = 200000000 // BUS_CLK rate for dram_fifo BIST calculation
 )(
+
  //Clocks and resets
   input         radio_clk,
   input         radio_rst,
@@ -28,6 +33,7 @@ module n310_core #(
   input            ref_clk_locked,
   input            meas_clk_locked,
 
+  // AXI lite interface
   input                    s_axi_aclk,
   input                    s_axi_aresetn,
   input [REG_AWIDTH-1:0]   s_axi_awaddr,
@@ -51,7 +57,8 @@ module n310_core #(
   output [1:0]             s_axi_rresp,
   output                   s_axi_rvalid,
   input                    s_axi_rready,
-  //radios gpio dsa 
+
+  //radios gpio dsa
   output [15:0] db_gpio_out0,
   output [15:0] db_gpio_out1,
   output [15:0] db_gpio_out2,
@@ -78,7 +85,7 @@ module n310_core #(
   output [31:0] tx0,
   input  [31:0] rx1,
   output [31:0] tx1,
-  // cpld 
+  // cpld
   output [7:0] sen0,
   output sclk0,
   output mosi0,
@@ -88,7 +95,7 @@ module n310_core #(
   output [31:0] tx2,
   input  [31:0] rx3,
   output [31:0] tx3,
-  //cpld 
+  //cpld
   output [7:0] sen1,
   output sclk1,
   output mosi1,
@@ -153,7 +160,6 @@ module n310_core #(
   input [1:0]     ddr3_axi_rresp,
   input           ddr3_axi_rlast,
   input           ddr3_axi_rvalid,
-
 
   // v2e (vita to ethernet) and e2v (eth to vita)
   output [63:0] v2e0_tdata,
@@ -601,12 +607,12 @@ module n310_core #(
 
       .debug()
    );
+
    /////////////////////////////////////////////////////////////////////////////////////////////
    //
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////
-
 
    localparam FIRST_RADIO_CORE_INST = 1;
    localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
@@ -670,6 +676,7 @@ module n310_core #(
          .debug()
       );
    end endgenerate
+
    /////////////////////////////////////////////////////////////////////////////////
    // TX/RX FrontEnd
    /////////////////////////////////////////////////////////////////////////////////

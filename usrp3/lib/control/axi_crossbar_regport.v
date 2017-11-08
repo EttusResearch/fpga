@@ -42,10 +42,11 @@ module axi_crossbar_regport
 
   localparam XBAR_VERSION              = 32'b1;
   localparam XBAR_NUM_PORTS            = NUM_INPUTS; //or NUM_OUTPUTS
-  localparam REG_XBAR_VERSION          = REG_BASE + 14'h0;
-  localparam REG_XBAR_NUM_PORTS        = REG_BASE + 14'h4;
-  localparam REG_XBAR_LOCAL_ADDR       = REG_BASE + 14'h8;
-  localparam REG_BASE_XBAR_SETTING_REG = REG_BASE + 14'h10;
+
+  localparam REG_XBAR_VERSION          = REG_BASE + 14'h10;
+  localparam REG_XBAR_NUM_PORTS        = REG_BASE + 14'h14;
+  localparam REG_XBAR_LOCAL_ADDR       = REG_BASE + 14'h18;
+  localparam REG_BASE_XBAR_SETTING_REG = REG_BASE + 14'h20;
 
   wire                  xbar_set_stb;
   wire [REG_DWIDTH-1:0] xbar_set_data;
