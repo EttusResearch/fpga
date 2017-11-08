@@ -188,6 +188,8 @@ module n310_core #(
   localparam NUM_RADIO_CORES = 4;
   // Computation engines that need access to IO
   localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
+  localparam COMPAT_MAJOR = 16'b1;
+  localparam COMPAT_MINOR = 16'b0;
 
   /////////////////////////////////////////////////////////////////////////////////
   // Motherboard Registers
@@ -198,10 +200,24 @@ module n310_core #(
   localparam REG_BASE_XBAR  = 14'h1000;
 
   // Misc Registers
-  localparam REG_GIT_HASH   = REG_BASE_MISC + 14'h0;
-  localparam REG_NUM_CE     = REG_BASE_MISC + 14'h4;
-  localparam REG_SCRATCH    = REG_BASE_MISC + 14'h8;
-  localparam REG_CLOCK_CTRL = REG_BASE_MISC + 14'h0C;
+  localparam REG_DESIGN_REV  = REG_BASE_MISC + 14'h0;
+  localparam REG_DATESTAMP   = REG_BASE_MISC + 14'h4;
+  localparam REG_GIT_HASH    = REG_BASE_MISC + 14'h8;
+  localparam REG_BUS_COUNTER = REG_BASE_MISC + 14'hC;
+  localparam REG_NUM_CE      = REG_BASE_MISC + 14'h10;
+  localparam REG_SCRATCH     = REG_BASE_MISC + 14'h14;
+  localparam REG_CLOCK_CTRL  = REG_BASE_MISC + 14'h18;
+
+  reg [31:0] scratch_reg = 32'b0;
+  reg [31:0] datestamp = 32'b0;
+  reg [31:0] bus_counter = 32'h0;
+
+  always @(posedge bus_clk) begin
+     if (bus_rst)
+        bus_counter <= 32'd0;
+     else
+        bus_counter <= bus_counter + 32'd1;
+  end
 
   wire                     reg_wr_req;
   wire [REG_AWIDTH-1:0]    reg_wr_addr;
@@ -273,7 +289,6 @@ module n310_core #(
     .reg_rd_data   (reg_rd_data)
   );
 
-  reg [31:0] scratch_reg;
   reg b_ref_clk_locked_ms;
   reg b_ref_clk_locked;
   reg b_meas_clk_locked_ms;
@@ -322,8 +337,18 @@ module n310_core #(
         reg_rd_resp_glob <= 1'b1;
 
         case (reg_rd_addr)
+        REG_DESIGN_REV:
+          reg_rd_data_glob <= {COMPAT_MAJOR, COMPAT_MINOR};
+
+        // Placeholder for datestamp
+        REG_DATESTAMP:
+          reg_rd_data_glob <= datestamp;
+
         REG_GIT_HASH:
           reg_rd_data_glob <= 32'h`GIT_HASH;
+
+        REG_BUS_COUNTER:
+          reg_rd_data_glob <= bus_counter;
 
         REG_NUM_CE:
           reg_rd_data_glob <= NUM_CE;
