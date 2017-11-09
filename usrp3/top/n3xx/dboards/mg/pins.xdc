@@ -34,8 +34,8 @@ set_property IOSTANDARD LVCMOS33 [get_ports {FPGA_GPIO[*]}]
 ## swing requirements at the pin.
 #########################################################################################
 
-set_property PACKAGE_PIN   AC18             [get_ports FPGA_REFCLK_N]
-set_property PACKAGE_PIN   AC19             [get_ports FPGA_REFCLK_P]
+set_property PACKAGE_PIN   AC18             [get_ports FPGA_REFCLK_P]
+set_property PACKAGE_PIN   AC19             [get_ports FPGA_REFCLK_N]
 set_property IOSTANDARD    LVDS_25          [get_ports FPGA_REFCLK_*]
 set_property DIFF_TERM     TRUE             [get_ports FPGA_REFCLK_*]
 

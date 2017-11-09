@@ -705,15 +705,12 @@ module n310
   //
   //////////////////////////////////////////////////////////////////////
 
-  wire ref_clk_buf_inv;
 
   wire wr_refclk_buf;
   wire netclk_buf;
 
-  wire ref_clk_inv;
+  wire ref_clk_buf;
   wire ref_clk;
-  wire ref_clk_reset;
-  wire ref_clk_locked;
 
   wire radio_clk;
   wire radio_clkB;
@@ -728,14 +725,14 @@ module n310
   // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
   // to meet timing with the PPS signal.
   IBUFGDS ref_clk_ibuf (
-    .O(ref_clk_buf_inv),
-    .I(FPGA_REFCLK_N),
-    .IB(FPGA_REFCLK_P)
+    .O(ref_clk_buf),
+    .I(FPGA_REFCLK_P),
+    .IB(FPGA_REFCLK_N)
   );
 
   BUFG ref_clk_bufg (
-    .O(ref_clk_inv),
-    .I(ref_clk_buf_inv)
+    .O(ref_clk),
+    .I(ref_clk_buf)
   );
 
   // Instantiate buffers on each of these differential clock inputs with DONT_TOUCH
@@ -769,13 +766,6 @@ module n310
     .IB(MGT156MHZ_CLK1_N),
     .O (xgige_refclk)
   );
-
-
-  // For Rev D Motherboard, the REFCLK signal sent to the FPGA is inverted on the PCB.
-  // To fix this, add in an inverter after the BUFG, such that the re-inversion (to
-  // the correct polarity of the clock) is pulled into each flop that uses this clock.
-  // Tested with Vivado 2015.4 for correct behavior.
-  assign ref_clk = ~ref_clk_inv;
 
 
   // Measurement Clock MMCM Instantiation
