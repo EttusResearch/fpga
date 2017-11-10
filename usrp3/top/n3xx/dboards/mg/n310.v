@@ -638,10 +638,10 @@ module n310
   wire        FCLK_CLK1;
   wire        FCLK_CLK2;
   wire        FCLK_CLK3;
-  wire        clk100 = FCLK_CLK0;
-  wire        clk40 = FCLK_CLK1;
-  wire        meas_clk_ref = FCLK_CLK2;
-  wire        bus_clk = FCLK_CLK3;
+  wire        clk100;
+  wire        clk40;
+  wire        meas_clk_ref;
+  wire        bus_clk;
   wire        gige_refclk;
   wire        gige_refclk_bufg;
   wire        xgige_refclk;
@@ -667,9 +667,25 @@ module n310
   wire        clk40_rstn = FCLK_RESET1_N;
   wire        clk40_rst = ~clk40_rstn;
 
-  wire [1:0] USB0_PORT_INDCTL;
-  wire       USB0_VBUS_PWRSELECT;
-  wire       USB0_VBUS_PWRFAULT;
+  wire [1:0]  USB0_PORT_INDCTL;
+  wire        USB0_VBUS_PWRSELECT;
+  wire        USB0_VBUS_PWRFAULT;
+
+  wire        ref_clk;
+  wire        wr_refclk_buf;
+  wire        netclk_buf;
+  wire        meas_clk;
+  wire        meas_clk_reset;
+  wire        meas_clk_locked;
+  reg         pps_out_refclk;
+  wire [3:0]  pps_select;
+  wire        pps_out_enb;
+  wire        pps_refclk;
+  wire        export_pps_refclk;
+  wire        radio_clk;
+  wire        radio_clkB;
+  wire        radio_clk_2x;
+  wire        radio_clk_2xB;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -678,105 +694,73 @@ module n310
   //////////////////////////////////////////////////////////////////////
   por_gen por_gen(.clk(bus_clk), .reset_out(global_rst));
 
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // Timing
+  //
   //////////////////////////////////////////////////////////////////////
+
+  // Clocks from the PS
   //
-  // Configure SFP+ clocking
-  //
-  //////////////////////////////////////////////////////////////////////
-  //
-  //   PL Clocks : ---------------------------------------------------------------------------
-  //   xgige_refclk (156): MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > xgige_refclk
-  //   clk156            : MGT156MHZ_CLK1_P > GTX IBUF > IBUFDS_GTE2  > BUFG  > clk156
-  //   gige_refclk (125) : NETCLK_P         > GTX IBUF > IBUFDS_GTE2  > gige_refclk
-  //   gige_refclk_bufg  : NETCLK_P         > GTX IBUF > IBUFDS_GTE2  > BUFG  > gige_refclk_bufg
-  //   RefClk (10)       : FPGA_REFCLK_P    >   IBUFDS > ref_clk
-  //
-  //   PS Clocks to PL:
+  // These clocks appear to have BUFGs already instantiated by the ip generator.
+  // Simply rename them here for clarity.
   //   FCLK_CLK0 :      100 MHz
   //   FCLK_CLK1 :       40 MHz
   //   FCLK_CLK2 : 166.6667 MHz
   //   FCLK_CLK3 :      200 MHz
-  //
-  /////////////////////////////////////////////////////////////////////
+  assign clk100       = FCLK_CLK0;
+  assign clk40        = FCLK_CLK1;
+  assign meas_clk_ref = FCLK_CLK2;
+  assign bus_clk      = FCLK_CLK3;
 
-  /////////////////////////////////////////////////////////////////////
-  //
-  // 10MHz Reference clock
-  //
-  //////////////////////////////////////////////////////////////////////
-
-
-  wire wr_refclk_buf;
-  wire netclk_buf;
-
-  wire ref_clk_buf;
-  wire ref_clk;
-
-  wire radio_clk;
-  wire radio_clkB;
-  wire radio_clk_2x;
-  wire radio_clk_2xB;
-
-  wire meas_clk;
-  wire meas_clk_reset;
-  wire meas_clk_locked;
-
-  // FPGA Reference Clock Buffering
-  // Only require an IBUF and BUFG here, since an MMCM is (thankfully) not needed
-  // to meet timing with the PPS signal.
-  IBUFGDS ref_clk_ibuf (
-    .O(ref_clk_buf),
-    .I(FPGA_REFCLK_P),
-    .IB(FPGA_REFCLK_N)
+  n3xx_clocking n3xx_clocking_i (
+     .FPGA_REFCLK_P(FPGA_REFCLK_P),
+     .FPGA_REFCLK_N(FPGA_REFCLK_N),
+     .ref_clk(ref_clk),
+     .WB_20MHz_P(WB_20MHz_P),
+     .WB_20MHz_N(WB_20MHz_N),
+     .wr_refclk_buf(wr_refclk_buf),
+     .NETCLK_REF_P(NETCLK_REF_P),
+     .NETCLK_REF_N(NETCLK_REF_N),
+     .netclk_buf(netclk_buf),
+     .NETCLK_P(NETCLK_P),
+     .NETCLK_N(NETCLK_N),
+     .gige_refclk_buf(gige_refclk),
+     .MGT156MHZ_CLK1_P(MGT156MHZ_CLK1_P),
+     .MGT156MHZ_CLK1_N(MGT156MHZ_CLK1_N),
+     .xgige_refclk_buf(xgige_refclk),
+     .meas_clk_ref(meas_clk_ref),
+     .meas_clk(meas_clk),
+     .meas_clk_reset(meas_clk_reset),
+     .meas_clk_locked(meas_clk_locked),
+     .ext_pps_from_pin(REF_1PPS_IN),
+     .gps_pps_from_pin(GPS_1PPS),
+     .pps_select(pps_select),
+     .pps_refclk(pps_refclk)
   );
 
-  BUFG ref_clk_bufg (
-    .O(ref_clk),
-    .I(ref_clk_buf)
-  );
+  // Drive the LED with the post-mux copy of the PPS in order for visual feedback that
+  // the selected PPS source is valid. No need for IOB packing on an LED.
+  assign PANEL_LED_PPS = pps_refclk;
 
-  // Instantiate buffers on each of these differential clock inputs with DONT_TOUCH
-  // attributes in order to preserve the internal termination regardless of whether
-  // these clocks are used in the design.  The lack of termination would place the
-  // voltage swings for these pins outside the acceptable range for the FPGA inputs.
-  (* dont_touch = "true" *) IBUFGDS wr_refclk_ibuf (
-    .I (WB_20MHz_P),
-    .IB(WB_20MHz_N),
-    .O (wr_refclk_buf)
+  // Drive the rear panel connector with another controllable copy of the post-mux PPS
+  // that SW can enable/disable. The user is free to hack this to be whatever
+  // they desire. Flop the PPS signal one more time in order that it can be packed into
+  // an IOB.
+  synchronizer #(
+    .FALSE_PATH_TO_IN(0)
+  ) pps_export_dsync (
+    .clk(ref_clk), .rst(1'b0), .in(pps_out_enb), .out(export_pps_refclk)
   );
-
-  (* dont_touch = "true" *) IBUFGDS netclk_ref_ibuf (
-    .I (NETCLK_REF_P),
-    .IB(NETCLK_REF_N),
-    .O (netclk_buf)
-  );
-
-  (* dont_touch = "true" *) IBUFDS_GTE2 gige_refclk_ibuf (
-    .ODIV2(),
-    .CEB  (1'b0),
-    .I (NETCLK_P),
-    .IB(NETCLK_N),
-    .O (gige_refclk)
-  );
-
-  (* dont_touch = "true" *) IBUFDS_GTE2 ten_gige_refclk_ibuf (
-    .ODIV2(),
-    .CEB  (1'b0),
-    .I (MGT156MHZ_CLK1_P),
-    .IB(MGT156MHZ_CLK1_N),
-    .O (xgige_refclk)
-  );
-
-
-  // Measurement Clock MMCM Instantiation
-  //
-  // This must be an MMCM to hit the weird rates we need for meas_clk.
-  MeasClkMmcm MeasClkMmcmx (
-    .clk_in1 (meas_clk_ref),
-    .clk_out1(meas_clk),
-    .reset   (meas_clk_reset),
-    .locked  (meas_clk_locked)
-  );
+  always @(posedge ref_clk) begin
+    if(export_pps_refclk)
+      pps_out_refclk <= pps_refclk;
+    else
+      pps_out_refclk <= 1'b0;
+  end
+  // Local to output.
+  assign REF_1PPS_OUT  = pps_out_refclk;
 
 
   //FIXME RESET SYNC may need more or'd inputs.
@@ -961,50 +945,6 @@ module n310
     .mmcm_locked(au_mmcm_locked)
   );
 `endif
-  ////////////////////////////////////////////////////////////////////
-  // PPS
-  // Support for internal or external inputs.
-  ///////////////////////////////////////////////////////////////////
-
-  // Generate an internal PPS signal with a 25% duty cycle
-  wire r_int_pps;
-  pps_generator #(
-     .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
-  ) pps_gen (
-     .clk(ref_clk), .reset(1'b0), .pps(r_int_pps)
-  );
-
-  // PPS MUX - selects internal or external PPS.
-  wire [1:0] pps_select;
-  wire pps_out_enb;
-  reg r_pps_select_ms = 1'b0;
-  reg r_pps_select    = 1'b0;
-  reg r_pps_ext_ms    = 1'b0;
-  reg r_pps_ext       = 1'b0;
-  reg pps_refclk      = 1'b0;
-  always @(posedge ref_clk) begin
-
-    // Capture the external PPS with a FF before sending to the select. To be safe,
-    // we double-synchronize the external signal. If we meet timing (which we should)
-    // then this is a two-cycle delay. If we don't meet timing, then it's 1-2 cycles
-    // and our system timing is thrown off--but at least our downstream logic doesn't
-    // go haywire!
-    r_pps_ext_ms <= REF_1PPS_IN;
-    r_pps_ext    <= r_pps_ext_ms;
-
-    r_pps_select_ms <= pps_select[0]; // pps_select[1:0] comes from a register in some unknown domain
-    r_pps_select    <= r_pps_select_ms;
-
-    if(r_pps_select)
-      pps_refclk <= r_int_pps; // pps_select = 1 = internal
-    else
-      pps_refclk <= r_pps_ext;
-
-    FPGA_TEST[1] <= pps_refclk;
-  end
-
-  // PPS out and LED
-  assign PANEL_LED_PPS = pps_refclk;
 
 
 // ARM ethernet 0 bridge signals
@@ -2798,7 +2738,7 @@ module n310
 
   DbCore
     dba_core (
-      .aReset(clk40_rst),                  //in  std_logic
+      .aReset(clk40_rst),                      //in  std_logic
       .bReset(1'b0),                           //in  std_logic
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
@@ -2900,7 +2840,7 @@ module n310
 
   DbCore
     dbb_core (
-      .aReset(clk40_rst),                  //in  std_logic
+      .aReset(clk40_rst),                      //in  std_logic
       .bReset(1'b0),                           //in  std_logic
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
@@ -3023,22 +2963,5 @@ module n310
    assign PANEL_LED_LINK = counter1[26];
    assign PANEL_LED_REF = counter2[26];
    assign PANEL_LED_GPS = counter3[26];
-
-   // Check Clock frequency through PPS_OUT
-
-   // TODO:  Only for DEBUG
-   // ODDR #(
-      // .DDR_CLK_EDGE("SAME_EDGE"), // "OPPOSITE_EDGE" or "SAME_EDGE"
-      // .INIT(1'b0),    // Initial value of Q: 1'b0 or 1'b1
-      // .SRTYPE("SYNC") // Set/Reset type: "SYNC" or "ASYNC"
-   // ) fclk_inst (
-      // .Q(REF_1PPS_OUT),   // 1-bit DDR output
-      // .C(gige_refclk),   // 1-bit clock input
-      // .CE(1'b1), // 1-bit clock enable input
-      // .D1(1'b0), // 1-bit data input (positive edge)
-      // .D2(1'b1), // 1-bit data input (negative edge)
-      // .R(1'b0),   // 1-bit reset
-      // .S(1'b0)    // 1-bit set
-   // );
 
 endmodule

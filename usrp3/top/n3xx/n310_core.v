@@ -25,7 +25,7 @@ module n310_core #(
 
   // Clocking and PPS Controls/Indicators
   input            pps,
-  output reg[1:0]  pps_select,
+  output reg[3:0]  pps_select = 4'h1,
   output reg       pps_out_enb,
   output reg       ref_clk_reset,
   output reg       meas_clk_reset,
@@ -300,7 +300,7 @@ module n310_core #(
   always @ (posedge bus_clk) begin
     if (bus_rst) begin
       scratch_reg    <= 32'h0;
-      pps_select     <= 2'h1;
+      pps_select     <= 4'h1;
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
@@ -310,7 +310,7 @@ module n310_core #(
           scratch_reg <= reg_wr_data;
         end
         REG_CLOCK_CTRL: begin
-          pps_select     <= reg_wr_data[1:0];
+          pps_select     <= reg_wr_data[3:0];
           pps_out_enb    <= reg_wr_data[4];
           ref_clk_reset  <= reg_wr_data[8];
           meas_clk_reset <= reg_wr_data[12];
@@ -361,7 +361,7 @@ module n310_core #(
 
         REG_CLOCK_CTRL: begin
           reg_rd_data_glob <= 32'b0;
-          reg_rd_data_glob[1:0] <= pps_select;
+          reg_rd_data_glob[3:0] <= pps_select;
           reg_rd_data_glob[4]   <= pps_out_enb;
           reg_rd_data_glob[8]   <= ref_clk_reset;
           reg_rd_data_glob[9]   <= b_ref_clk_locked;

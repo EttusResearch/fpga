@@ -7,8 +7,9 @@
 #*******************************************************************************
 ## Motherboard Clocks
 
-# 10/20/25 MHz reference clock from rear panel connector
-set REF_CLK_PERIOD 100.00
+# 10/20/25 MHz reference clock from rear panel connector. Constrain to the fastest
+# possible clock rate.
+set REF_CLK_PERIOD 40.00
 create_clock -name ref_clk       -period $REF_CLK_PERIOD  [get_ports FPGA_REFCLK_P]
 # 125 MHz RJ45 Ethernet clock
 create_clock -name ge_phy_clk    -period 8.000            [get_ports ENET0_CLK125]
@@ -59,8 +60,8 @@ set_input_jitter [get_clocks bus_clk]      $bus_clk_jitter
 
 
 # TDC Measurement Clock
-create_generated_clock -name meas_clk_fb [get_pins {MeasClkMmcmx/inst/mmcm_adv_inst/CLKFBOUT}]
-create_generated_clock -name meas_clk    [get_pins {MeasClkMmcmx/inst/mmcm_adv_inst/CLKOUT0}]
+create_generated_clock -name meas_clk_fb [get_pins {n3xx_clocking_i/MeasClkMmcmx/inst/mmcm_adv_inst/CLKFBOUT}]
+create_generated_clock -name meas_clk    [get_pins {n3xx_clocking_i/MeasClkMmcmx/inst/mmcm_adv_inst/CLKOUT0}]
 
 
 
@@ -79,16 +80,20 @@ set_clock_groups -asynchronous -group [get_clocks meas_clk_ref -include_generate
 #*******************************************************************************
 ## PPS Input Timing
 
+# Timing analysis is performed in the "Brimstone Digital Interface Timing" gdoc. All the
+# following min/max delays are derived therein.
+
 # The external PPS is synchronous to the external reference clock, which is expected to
-# be at 10 MHz. Given [setup, hold] of [5ns, 5ns] at the inputs to the N310, we have an
-# adequate data valid window at the FPGA.
-set_input_delay -clock ref_clk -min  5.492                           [get_ports REF_1PPS_IN]
-set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 1.326}] [get_ports REF_1PPS_IN]
+# be at 10 MHz. Given [setup, hold] of [5ns, 5ns] at the rear panel inputs of the N310,
+# we have an adequate data valid window at the FPGA. However, since we overconstrain the
+# reference clock to 25 MHz, we use the alternative period here for setup analysis.
+set_input_delay -clock ref_clk -min  5.061                           [get_ports REF_1PPS_IN]
+set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 1.115}] [get_ports REF_1PPS_IN]
 
 # The GPS PPS is also synchronous to the external reference clock (since there is a
-# switch on the clock input outside the FPGA).
-# set_input_delay -clock ref_clk -min  5.492                           [get_ports GPS_1PPS]
-# set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 1.326}] [get_ports GPS_1PPS]
+# switch on the clock input outside the FPGA). Again, use the overconstrained period.
+set_input_delay -clock ref_clk -min  1.234                           [get_ports GPS_1PPS]
+set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 2.111}] [get_ports GPS_1PPS]
 
 
 
