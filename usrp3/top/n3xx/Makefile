@@ -48,29 +48,39 @@ post_build = @\
 
 all:      N310_HG N310_XG ##(Default target)
 
-N310_1G:  ##USRP N310. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
+##USRP N310. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
+N310_1G:  build/usrp_n310_fpga_1G.dts
 	$(call vivado_build,bin,N310,$(GIGE_DEFS) N310=1)
 	$(call post_build,N310,1G)
 
-N310_HG:  ##USRP N310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
+##USRP N310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
+N310_HG:  build/usrp_n310_fpga_HG.dts
 	$(call vivado_build,bin,N310,$(HG_DEFS) N310=1)
 	$(call post_build,N310,HG)
 
-N310_XG:  ##USRP N310. 10GigE on both SFP+ ports. DRAM TX FIFO.
+##USRP N310. 10GigE on both SFP+ ports. DRAM TX FIFO.
+N310_XG: build/usrp_n310_fpga_XG.dts
 	$(call vivado_build,bin,N310,$(XG_DEFS) N310=1)
 	$(call post_build,N310,XG)
 
-N310_HA:  ##USRP N310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##USRP N310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+N310_HA: build/usrp_n310_fpga_HA.dts
 	$(call vivado_build,bin,N310,$(HA_DEFS) N310=1)
 	$(call post_build,N310,HA)
 
-N310_XA:  ##USRP N310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##USRP N310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+N310_XA: build/usrp_n310_fpga_XA.dts
 	$(call vivado_build,bin,N310,$(XA_DEFS) N310=1)
 	$(call post_build,N310,XA)
 
-N310_AA:  ##USRP N310. Aurora on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##USRP N310. Aurora on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+N310_AA: build/usrp_n310_fpga_AA.dts
 	$(call vivado_build,bin,N310,$(AA_DEFS) N310=1)
 	$(call post_build,N310,AA)
+
+build/%.dts: dts/%.dts dts/*.dtsi
+	-mkdir -p build
+	${CC} -o $@ -E -I dts -nostdinc -undef -x assembler-with-cpp -D__DTS__ $<
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."
