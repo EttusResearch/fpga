@@ -11,7 +11,7 @@
 `default_nettype none
 module cvita_chunker # (
    parameter PAD_VALUE = 64'hFFFFFFFF_FFFFFFFF,
-             HOLD_ERROR = 1'b1
+             HOLD_ERROR = 1'b1 // If high, hold error until reset, else pulse
 ) (
    input wire          clk,
    input wire          reset,
