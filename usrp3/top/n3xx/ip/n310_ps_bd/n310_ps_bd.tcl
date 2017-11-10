@@ -556,10 +556,10 @@ CONFIG.DOUT_WIDTH {8} \
   # Create address segments
   create_bd_addr_seg -range 0x4000 -offset 0x40000000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_ETH_DMA0/Reg] SEG_M_AXI_ETH_DMA0_Reg
   create_bd_addr_seg -range 0x4000 -offset 0x40008000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_ETH_DMA1/Reg] SEG_M_AXI_ETH_DMA1_Reg
-  create_bd_addr_seg -range 0x4000 -offset 0x40014000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_JESD0/Reg] SEG_M_AXI_JESD_Reg
+  create_bd_addr_seg -range 0x4000 -offset 0x40014000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_JESD0/Reg] SEG_M_AXI_JESD0_Reg
   create_bd_addr_seg -range 0x4000 -offset 0x40004000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_NET0/Reg] SEG_M_AXI_NET0_Reg
   create_bd_addr_seg -range 0x4000 -offset 0x4000C000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_NET1/Reg] SEG_M_AXI_NET1_Reg
-  create_bd_addr_seg -range 0x4000 -offset 0x40018000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_JESD1/Reg] SEG_M_AXI_XBAR_DMA_Reg
+  create_bd_addr_seg -range 0x4000 -offset 0x40018000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_JESD1/Reg] SEG_M_AXI_JESD1_Reg
   create_bd_addr_seg -range 0x4000 -offset 0x40010000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs M_AXI_XBAR/Reg] SEG_M_AXI_XBAR_Reg
   create_bd_addr_seg -range 0x10000 -offset 0x43CA0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_0/s_axi/axi_lite] SEG_axi_dmac_0_axi_lite
   create_bd_addr_seg -range 0x10000 -offset 0x43CB0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_1/s_axi/axi_lite] SEG_axi_dmac_1_axi_lite
