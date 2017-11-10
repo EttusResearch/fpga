@@ -91,7 +91,7 @@ module xge_mac_wrapper #(
    wire        eth_tx_sof;
    wire        eth_tx_valid;
 
-   n310_xge_mac xge_mac (
+   xge_mac xge_mac (
       // Clocks and Resets
       .clk_156m25             (xgmii_clk),
       .clk_xgmii_rx           (xgmii_clk),

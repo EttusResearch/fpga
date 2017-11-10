@@ -41,7 +41,7 @@ module gmii_to_axis
   output [31:0] debug_tx
 );
 
-  wire clear = 0;
+  wire clear = 1'b0;
   wire [7:0] rx_data, tx_data;
   wire tx_clk, tx_valid, tx_error, tx_ack;
   wire rx_clk, rx_valid, rx_error, rx_ack;
@@ -121,7 +121,7 @@ module gmii_to_axis
   (
     .clk(rx_clk),
     .reset(rx_reset),
-    .clear(0),
+    .clear(clear),
     .rx_data(rx_data),
     .rx_valid(rx_valid),
     .rx_error(rx_error),
@@ -139,7 +139,7 @@ module gmii_to_axis
   (
     .clk(rx_clk),
     .reset(rx_reset),
-    .clear(0),
+    .clear(clear),
     .ll_data(rx_ll_data),
     .ll_eof(rx_ll_eof),
     .ll_error(rx_ll_error),
@@ -206,7 +206,7 @@ module gmii_to_axis
   (
     .clk(tx_clk),
     .reset(tx_reset),
-    .clear(0),
+    .clear(clear),
     .axi64_tdata(tx_tdata_int),
     .axi64_tlast(tx_tlast_int),
     .axi64_tuser(tx_tuser_int),

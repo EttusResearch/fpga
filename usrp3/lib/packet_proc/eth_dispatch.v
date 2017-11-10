@@ -27,7 +27,7 @@
 //
 // Ethernet Broadcast (Dst MAC = ff:ff:ff:ff:ff:ff). Forward to both CPU and XO MAC.
 // ? Ethernet Multicast (Dst MAC = USRP_NEXT_HOP). Forward only to CPU.
-// ? Ethernet Multicast (Dst MAC = Unknown). Forward only to XO. //TODO: CHECK
+// ? Ethernet Multicast (Dst MAC = Unknown). Forward to XO and CPU.
 // Ethernet Unicast (Dst MAC = Unknown). Forward only to XO.
 // Ethernet Unicast (Dst MAC = local). Look deeper......
 // IP Broadcast. Forward to both CPU and XO MAC. (Should be coverd by Eth broadcast)
@@ -173,46 +173,6 @@ module eth_dispatch #(
   setting_reg #(.my_addr(REG_ICMP_CTRL), .awidth(AWIDTH), .width(16)) sr_icmp_ctrl
       (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out({my_icmp_type, my_icmp_code}),.changed());
-
-  // TODO: Keep ONE
-  //reg       forward_ndest, forward_bcast;
-  //reg [7:0] my_icmp_type, my_icmp_code;
-  //
-  //always @(posedge reg_clk)
-  //  if (reset) begin
-  //    forward_ndest <= 1'b0;
-  //    forward_bcast <= 1'b0;
-  //    my_icmp_type  <= 8'b0;
-  //    my_icmp_code  <= 8'b0;
-  //  end
-  //  else begin
-  //    if (reg_wr_req)
-  //      case (reg_wr_addr)
-  //        REG_FWD_CTRL:
-  //          {forward_ndest, forward_bcast} <= reg_wr_data[1:0];
-
-  //        REG_ICMP_CTRL:
-  //          {my_icmp_type, my_icmp_code}   <= reg_wr_data[15:0];
-  //      endcase
-  //  end
-
-  //always @ (posedge reg_clk) begin
-  //  if (reg_rd_req) begin
-  //    reg_rd_resp <= 1'b1;
-  //    case (reg_rd_addr)
-  //      REG_FWD_CTRL:
-  //        reg_rd_data <= {30'b0,forward_ndest, forward_bcast};
-
-  //      REG_ICMP_CTRL:
-  //        reg_rd_data <= {16'b0,my_icmp_type, my_icmp_code};
-
-  //      default:
-  //        reg_rd_resp <= 1'b0;
-  //    endcase
-  //  end
-  //  if (reg_rd_resp)
-  //    reg_rd_resp <= 1'b0;
-  //end
 
   //---------------------------------------------------------
   // Packet Forwarding State machine.

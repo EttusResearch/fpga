@@ -188,7 +188,14 @@ module network_interface #(
   );
 
   wire [3:0] e2c_tuser;
+  wire [3:0] c2e_tuser;
 
+  // In AXI Stream, tkeep is the byte qualifier that indicates
+  // whether the content of the associated byte
+  // of TDATA is processed as part of the data stream.
+  // tuser as used in eth_switch is the numbier of valid bytes
+
+  // Converting tuser to tkeep for ingress packets
   assign e2c_tkeep = ~e2c_tlast ? 8'b1111_1111
                    : (e2c_tuser == 4'd0) ? 8'b1111_1111
                    : (e2c_tuser == 4'd1) ? 8'b0000_0001
@@ -199,7 +206,8 @@ module network_interface #(
                    : (e2c_tuser == 4'd6) ? 8'b0011_1111
                    : 8'b0111_1111;
 
-  wire [3:0] c2e_tuser = ~c2e_tlast ? 4'd0
+  // Converting tkeep to tuser for egress packets
+  assign c2e_tuser = ~c2e_tlast ? 4'd0
                    : (c2e_tkeep == 8'b1111_1111) ? 4'd0
                    : (c2e_tkeep == 8'b1111_1110) ? 4'd7
                    : (c2e_tkeep == 8'b1111_1100) ? 4'd6
@@ -226,7 +234,7 @@ module network_interface #(
      .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
      .REG_AWIDTH (AWIDTH),         // Width of the address bus
      .MDIO_EN(1'b1),
-     .PORTNUM(8'd0)
+     .PORTNUM(PORTNUM)
   ) sfpp_io_i (
      .areset(areset),
      .gt_refclk(gt_refclk),
@@ -240,7 +248,7 @@ module network_interface #(
      .qplloutclk(qplloutclk),
      .qplloutrefclk(qplloutrefclk),
      .qpllrefclklost(qpllrefclklost),
-     
+
      .txp(txp),
      .txn(txn),
      .rxp(rxp),
@@ -291,7 +299,6 @@ module network_interface #(
      .clear(1'b0),
 
      //RegPort
-     .reg_clk(bus_clk),
      .reg_wr_req(reg_wr_req),
      .reg_wr_addr(reg_wr_addr),
      .reg_wr_data(reg_wr_data),

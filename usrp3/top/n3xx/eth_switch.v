@@ -24,14 +24,13 @@ module eth_switch #(
   input           reset,
   input           clear,
 
-  input           reg_clk,
-  // Register port: Write port (domain: reg_clk)
+  // Register port: Write port (domain: clk)
   input                       reg_wr_req,
   input   [REG_AWIDTH-1:0]    reg_wr_addr,
   input   [REG_DWIDTH-1:0]    reg_wr_data,
   input   [REG_DWIDTH/8-1:0]  reg_wr_keep,
 
-  // Register port: Read port (domain: reg_clk)
+  // Register port: Read port (domain: clk)
   input                       reg_rd_req,
   input   [REG_AWIDTH-1:0]    reg_rd_addr,
   output reg                  reg_rd_resp,
@@ -130,7 +129,7 @@ module eth_switch #(
   assign my_ip        = bridge_en ? bridge_ip_reg : ip_reg;
   assign my_udp_port0 = bridge_en ? bridge_udp_port0 : udp_port0;
 
-  always @(posedge reg_clk)
+  always @(posedge clk)
     if (reset) begin
       mac_reg                             <= DEFAULT_MAC_ADDR;
       ip_reg                              <= DEFAULT_IP_ADDR;
@@ -173,8 +172,14 @@ module eth_switch #(
         endcase
     end
 
-  always @ (posedge reg_clk) begin
-    if (reg_rd_req) begin
+  always @ (posedge clk) begin
+    // Deassert read response after one clock cycle
+    reg_rd_resp <= 1'b0;
+    if (reset) begin
+      reg_rd_data <= 32'b0;
+      reg_rd_resp <= 1'b0;
+    end else if (reg_rd_req) begin
+      // Assert read respone one cycle after read request
       reg_rd_resp <= 1'b1;
       case (reg_rd_addr)
         REG_MAC_LSB:
@@ -205,11 +210,9 @@ module eth_switch #(
           reg_rd_data <= {31'b0,bridge_en};
 
         default:
-          reg_rd_resp <= 1'b0;
+          reg_rd_data <= 32'b0;
       endcase
     end
-    if (reg_rd_resp)
-      reg_rd_resp <= 1'b0;
   end
 
    wire  [63:0]    v2ef_tdata;
@@ -427,18 +430,19 @@ module eth_switch #(
     .m_axis_tready(c2e_tready_int)
   );
 
-   axi_mux4 #(.PRIO(0), .WIDTH(68)) eth_mux
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i0_tdata({c2e_tuser_int,c2e_tdata_int}), .i0_tlast(c2e_tlast_int), .i0_tvalid(c2e_tvalid_int), .i0_tready(c2e_tready_int),
-      .i1_tdata({v2ef_tuser,v2ef_tdata}), .i1_tlast(v2ef_tlast), .i1_tvalid(v2ef_tvalid), .i1_tready(v2ef_tready),
-      .i2_tdata({xi_tuser_int,xi_tdata_int}), .i2_tlast(xi_tlast_int), .i2_tvalid(xi_tvalid_int), .i2_tready(xi_tready_int),
-      .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),
-      .o_tdata({eth_tx_tuser_int,eth_tx_tdata_int}), .o_tlast(eth_tx_tlast_int), .o_tvalid(eth_tx_tvalid_int), .o_tready(eth_tx_tready_int));
+  // Mux data from 3 sources - CPU, CHDR(XBAR), CROSSOVER into eth_tx
+  axi_mux4 #(.PRIO(0), .WIDTH(68)) eth_mux
+    (.clk(clk), .reset(reset), .clear(clear),
+     .i0_tdata({c2e_tuser_int,c2e_tdata_int}), .i0_tlast(c2e_tlast_int), .i0_tvalid(c2e_tvalid_int), .i0_tready(c2e_tready_int),
+     .i1_tdata({v2ef_tuser,v2ef_tdata}), .i1_tlast(v2ef_tlast), .i1_tvalid(v2ef_tvalid), .i1_tready(v2ef_tready),
+     .i2_tdata({xi_tuser_int,xi_tdata_int}), .i2_tlast(xi_tlast_int), .i2_tvalid(xi_tvalid_int), .i2_tready(xi_tready_int),
+     .i3_tdata(), .i3_tlast(), .i3_tvalid(1'b0), .i3_tready(),
+     .o_tdata({eth_tx_tuser_int,eth_tx_tdata_int}), .o_tlast(eth_tx_tlast_int), .o_tvalid(eth_tx_tvalid_int), .o_tready(eth_tx_tready_int));
 
-   axi_fifo #(.WIDTH(69),.SIZE(ETHOUT_FIFOSIZE)) ethout_fifo
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata({eth_tx_tlast_int,eth_tx_tuser_int,eth_tx_tdata_int}), .i_tvalid(eth_tx_tvalid_int), .i_tready(eth_tx_tready_int),
-      .o_tdata({eth_tx_tlast,eth_tx_tuser,eth_tx_tdata}), .o_tvalid(eth_tx_tvalid), .o_tready(eth_tx_tready), .space(), .occupied());
+  axi_fifo #(.WIDTH(69),.SIZE(ETHOUT_FIFOSIZE)) ethout_fifo
+    (.clk(clk), .reset(reset), .clear(clear),
+     .i_tdata({eth_tx_tlast_int,eth_tx_tuser_int,eth_tx_tdata_int}), .i_tvalid(eth_tx_tvalid_int), .i_tready(eth_tx_tready_int),
+     .o_tdata({eth_tx_tlast,eth_tx_tuser,eth_tx_tdata}), .o_tvalid(eth_tx_tvalid), .o_tready(eth_tx_tready), .space(), .occupied());
 
 
 endmodule // eth_switch

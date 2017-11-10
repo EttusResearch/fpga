@@ -24,7 +24,7 @@ module chdr_eth_framer #(
   input                reset,
   input                clear,
   input                set_stb,
-  input  [AWIDTH-1:0]  set_addr, //TODO
+  input  [AWIDTH-1:0]  set_addr,
   input  [31:0]        set_data,
   input  [63:0]        in_tdata,
   input                in_tlast,
@@ -41,7 +41,6 @@ module chdr_eth_framer #(
   output [31:0]        debug
   );
 
-  //FIXME: Make them simpler
   localparam [11:0] REG_LOCAL_DST_IP          = BASE + 'h400;
   localparam [11:0] REG_LOCAL_DST_UDP_MAC_MSB = BASE + 'h500;
   localparam [11:0] REG_LOCAL_DST_MAC_LSB     = BASE + 'h600;
@@ -129,7 +128,7 @@ module chdr_eth_framer #(
      .clkb(clk), .enb(1'b1), .web(1'b0), .addrb(sid[7:0]), .dib(32'hFFFF_FFFF), .dob(mac_local_dst[31:0]));
 
   // Tables of MAC/IP/UDP addresses for REMOTE sid/local_addr
-  // FIXME: Support only for 16 local_address
+  // Support only for 16 local_address
 
   ram_2port #(.DWIDTH(32), .AWIDTH(4)) ram_ip_remote
     (.clka(clk), .ena(1'b1), .wea(set_stb & (set_addr[7:4] == REG_REMOTE_DST_IP[7:4])), .addra(set_addr[3:0]), .dia(set_data), .doa(),

@@ -8,7 +8,6 @@
 // - 1/10G: wrapper around network interface
 //
 //////////////////////////////////////////////////////////////////////
-
 module n310_sfp_wrapper #(
    parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
    parameter [13:0] REG_BASE = 14'h0,
@@ -82,7 +81,7 @@ module n310_sfp_wrapper #(
    input         au_mmcm_locked,
    output        gt_pll_lock,
    output        phy_areset_out,
-   
+
 
    // Vita router interface
    output  [63:0]  e2v_tdata,
@@ -130,16 +129,16 @@ module n310_sfp_wrapper #(
    if(PROTOCOL == "Aurora") begin
 
       //set unused wires to default value
-      assign xo_tdata = 64'h0; 
-      assign xo_tuser = 4'h0; 
-      assign xo_tlast = 1'b0; 
-      assign xo_tvalid = 1'b0; 
-      assign xi_tready = 1'b1; 
-      assign e2c_tdata = 64'h0; 
-      assign e2c_tkeep = 8'h0; 
-      assign e2c_tlast = 1'b0; 
-      assign e2c_tvalid = 1'b0; 
-      assign c2e_tready = 1'b1; 
+      assign xo_tdata = 64'h0;
+      assign xo_tuser = 4'h0;
+      assign xo_tlast = 1'b0;
+      assign xo_tvalid = 1'b0;
+      assign xi_tready = 1'b1;
+      assign e2c_tdata = 64'h0;
+      assign e2c_tkeep = 8'h0;
+      assign e2c_tlast = 1'b0;
+      assign e2c_tvalid = 1'b0;
+      assign c2e_tready = 1'b1;
       //////////////////////////////////////////////////////////////////////
       //
       // AXI4-Lite to RegPort (PS to PL Register Access)
@@ -153,7 +152,7 @@ module n310_sfp_wrapper #(
       wire  [AWIDTH-1:0]  sfp_reg_rd_addr;
       wire                sfp_reg_rd_resp;
       wire  [DWIDTH-1:0]  sfp_reg_rd_data;
-      
+
       axil_regport_master #(
          .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
          .AWIDTH(AWIDTH),     // Width of the address bus
@@ -228,7 +227,7 @@ module n310_sfp_wrapper #(
          .txn(txn),
          .rxp(rxp),
          .rxn(rxn),
-        
+
          .sfpp_rxlos(sfpp_rxlos),
          .sfpp_tx_fault(sfpp_tx_fault),
          .sfpp_tx_disable(sfpp_tx_disable),
@@ -248,7 +247,7 @@ module n310_sfp_wrapper #(
          .s_axis_tlast(v2e_tlast),
          .s_axis_tvalid(v2e_tvalid),
          .s_axis_tready(v2e_tready),
-      
+
          // Ethernet to Vita
          .m_axis_tdata(e2v_tdata),
          .m_axis_tuser(),
@@ -273,7 +272,7 @@ module n310_sfp_wrapper #(
 
    end else begin
 
-   
+
       //set unused wires to default value
       assign au_tx_out_clk = 1'b0;
       assign gt_pll_lock = 1'b0;
@@ -296,11 +295,11 @@ module n310_sfp_wrapper #(
          .misc_clk(misc_clk),
          .bus_rst(bus_rst),
          .bus_clk(bus_clk),
-         
+
          .qplllock(qplllock),
          .qplloutclk(qplloutclk),
          .qplloutrefclk(qplloutrefclk),
-         
+
          .txp(txp),
          .txn(txn),
          .rxp(rxp),
