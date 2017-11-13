@@ -38,6 +38,7 @@ module rx_control_gen3 #(
   reg [127:0] rx_reg_tuser, error_tuser;
 
   wire overflow = rx_reg_tvalid & ~rx_reg_tready;
+  reg [63:0] overflow_time;
 
   wire [31:0] command_i;
   wire [63:0] time_i;
@@ -131,7 +132,7 @@ module rx_control_gen3 #(
     end
   end
 
-  wire [127:0] error_header = {2'b11, 1'b1,           1'b1, next_seqnum,                  16'h24, resp_sid,  vita_time};
+  wire [127:0] error_header = {2'b11,           1'b1, 1'b1, next_seqnum,                  16'h24, resp_sid, overflow_time};
   wire [127:0] rx_header    = {2'b00, use_timestamps,  eob, next_seqnum, 16'h0 /* len ignored */,      sid, start_time};
 
   always @(posedge clk) begin
@@ -235,6 +236,7 @@ module rx_control_gen3 #(
             rx_reg_tuser   <= rx_header; // Update tuser with EOB set
             error          <= ERR_OVERRUN;
             ibs_state      <= IBS_ERR_WAIT_FOR_READY;
+            overflow_time  <= vita_time;
           end
         end
 
