@@ -369,6 +369,9 @@ set_property PACKAGE_PIN AC12 [get_ports {DBA_CH2_RX_DSA_DATA[4]}]
 set_property PACKAGE_PIN AC13 [get_ports {DBA_CPLD_PL_SPI_ADDR[2]}]
 set_property PACKAGE_PIN AC14 [get_ports DBA_CPLD_PL_SPI_SCLK]
 
+# set_property PACKAGE_PIN AB25     [get_ports DBA_SWITCHER_CLOCK]
+# set_property IOSTANDARD  LVCMOS33 [get_ports DBA_SWITCHER_CLOCK]
+
 
 set_property DRIVE 4 [get_ports DBA_MYK_SYNC_IN_n]
 
@@ -382,9 +385,6 @@ set UsrpIoAHrPinsDiff [get_ports {DBA_FPGA_CLK_* DBA_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoAHrPinsDiff
 set_property DIFF_TERM     TRUE             $UsrpIoAHrPinsDiff
 
-
-# set_property PACKAGE_PIN   AD20             [get_ports {DbaSwitcherClock}]
-# set_property IOSTANDARD    LVCMOS33         [get_ports {DbaSwitcherClock}]
 
 ### MGTs, Bank 112
 
@@ -503,6 +503,9 @@ set_property PACKAGE_PIN   AC24             [get_ports {DBB_CH2_RX_DSA_DATA[0]}]
 set_property PACKAGE_PIN   AD24             [get_ports {DBB_CH2_RX_DSA_DATA[4]}]
 set_property PACKAGE_PIN   AH23             [get_ports {DBB_CPLD_PL_SPI_ADDR[2]}]
 set_property PACKAGE_PIN   AH24             [get_ports {DBB_CPLD_PL_SPI_SCLK}]
+
+# set_property PACKAGE_PIN AA25     [get_ports DBB_SWITCHER_CLOCK]
+# set_property IOSTANDARD  LVCMOS33 [get_ports DBB_SWITCHER_CLOCK]
 
 
 set_property DRIVE    4         [get_ports {DBB_MYK_SYNC_IN_n}]
