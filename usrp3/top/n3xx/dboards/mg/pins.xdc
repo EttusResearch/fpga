@@ -371,15 +371,23 @@ set_property PACKAGE_PIN AC14 [get_ports DBA_CPLD_PL_SPI_SCLK]
 
 # set_property PACKAGE_PIN AB25     [get_ports DBA_SWITCHER_CLOCK]
 # set_property IOSTANDARD  LVCMOS33 [get_ports DBA_SWITCHER_CLOCK]
+# set_property DRIVE       4        [get_ports DBA_SWITCHER_CLOCK]
+# set_property SLEW        SLOW     [get_ports DBA_SWITCHER_CLOCK]
 
-
-set_property DRIVE 4 [get_ports DBA_MYK_SYNC_IN_n]
+# During SI measurements with default drive strength, many of the FPGA-driven lines to
+# the DB were showing high over/undershoot. Therefore for single-ended lines to the DBs
+# we are decreasing the drive strength to the minimum value (4mA) and explicitly
+# declaring the (default) slew rate as SLOW.
 
 set UsrpIoAHpPinsSe [get_ports {DBA_CPLD_PS_* DBA_CH1_* DBA_ATR*}]
 set_property IOSTANDARD    LVCMOS18         $UsrpIoAHpPinsSe
+set_property DRIVE         4                $UsrpIoAHpPinsSe
+set_property SLEW          SLOW             $UsrpIoAHpPinsSe
 
 set UsrpIoAHrPinsSe [get_ports {DBA_MYK_SPI_* DBA_MYK_INTRQ DBA_CPLD_PL_* DBA_CPLD_JTAG_* DBA_MYK_SYNC* DBA_CH2* DBA_MYK_GPIO*}]
 set_property IOSTANDARD    LVCMOS25         $UsrpIoAHrPinsSe
+set_property DRIVE         4                $UsrpIoAHrPinsSe
+set_property SLEW          SLOW             $UsrpIoAHrPinsSe
 
 set UsrpIoAHrPinsDiff [get_ports {DBA_FPGA_CLK_* DBA_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoAHrPinsDiff
@@ -506,15 +514,23 @@ set_property PACKAGE_PIN   AH24             [get_ports {DBB_CPLD_PL_SPI_SCLK}]
 
 # set_property PACKAGE_PIN AA25     [get_ports DBB_SWITCHER_CLOCK]
 # set_property IOSTANDARD  LVCMOS33 [get_ports DBB_SWITCHER_CLOCK]
+# set_property DRIVE       4        [get_ports DBB_SWITCHER_CLOCK]
+# set_property SLEW        SLOW     [get_ports DBB_SWITCHER_CLOCK]
 
-
-set_property DRIVE    4         [get_ports {DBB_MYK_SYNC_IN_n}]
+# During SI measurements with default drive strength, many of the FPGA-driven lines to
+# the DB were showing high over/undershoot. Therefore for single-ended lines to the DBs
+# we are decreasing the drive strength to the minimum value (4mA) and explicitly
+# declaring the (default) slew rate as SLOW.
 
 set UsrpIoBHpPinsSe [get_ports {DBB_CPLD_PS_* DBB_CH1_* DBB_ATR*}]
 set_property IOSTANDARD    LVCMOS18         $UsrpIoBHpPinsSe
+set_property DRIVE         4                $UsrpIoBHpPinsSe
+set_property SLEW          SLOW             $UsrpIoBHpPinsSe
 
 set UsrpIoBHrPinsSe [get_ports {DBB_MYK_SPI_* DBB_MYK_INTRQ DBB_CPLD_PL_* DBB_CPLD_JTAG_* DBB_MYK_SYNC* DBB_CH2* DBB_MYK_GPIO*}]
 set_property IOSTANDARD    LVCMOS25         $UsrpIoBHrPinsSe
+set_property DRIVE         4                $UsrpIoBHrPinsSe
+set_property SLEW          SLOW             $UsrpIoBHrPinsSe
 
 set UsrpIoBHrPinsDiff [get_ports {DBB_FPGA_CLK_* DBB_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoBHrPinsDiff
