@@ -2,8 +2,7 @@
 // Copyright (c) 2017 Ettus Research
 //
 
-module axi_crossbar_regport
-#(
+module axi_crossbar_regport #(
   parameter REG_BASE    = 0,  // settings bus base address
   parameter FIFO_WIDTH  = 64, // AXI4-STREAM data bus width
   parameter DST_WIDTH   = 16, // Width of DST field we are routing on.
@@ -11,8 +10,7 @@ module axi_crossbar_regport
   parameter NUM_OUTPUTS = 2,   // number of output AXI4-STREAM buses
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 14  // Width of the address bus
-)
-(
+)(
   input                                 clk,
   input                                 reset,
   input                                 clear,
@@ -47,13 +45,17 @@ module axi_crossbar_regport
   localparam REG_XBAR_NUM_PORTS        = REG_BASE + 14'h14;
   localparam REG_XBAR_LOCAL_ADDR       = REG_BASE + 14'h18;
   localparam REG_BASE_XBAR_SETTING_REG = REG_BASE + 14'h20;
+  localparam REG_END_ADDR_XBAR_SETTING_REG = REG_BASE + 14'h1000;
+
+  // Settings bus address width
+  localparam SR_AWIDTH = 12;
 
   wire                  xbar_set_stb;
   wire [REG_DWIDTH-1:0] xbar_set_data;
-  wire [15:0]           xbar_set_addr;
+  wire [SR_AWIDTH-1:0]  xbar_set_addr;
 
   wire                  xbar_rb_stb;
-  wire [15:0]           xbar_rb_addr;
+  wire [SR_AWIDTH-1:0]  xbar_rb_addr;
   wire [REG_DWIDTH-1:0] xbar_rb_data;
 
   reg  [31:0]           local_addr_reg;
@@ -115,9 +117,11 @@ module axi_crossbar_regport
   regport_to_xbar_settingsbus
   #(
     .BASE(REG_BASE_XBAR_SETTING_REG),
+    .END_ADDR(REG_END_ADDR_XBAR_SETTING_REG),
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH),
-    .SR_AWIDTH(12)
+    .SR_AWIDTH(SR_AWIDTH),
+    .DEALIGN(1)
   )
   inst_regport_to_xbar_settingsbus
   (
@@ -142,7 +146,7 @@ module axi_crossbar_regport
 
   axi_crossbar
   #(
-    .BASE(0), // TODO: Set to 0 as logic for other values has not been tested
+    .BASE(0), // Set to 0 as logic for other values has not been tested
     .FIFO_WIDTH(FIFO_WIDTH),
     .DST_WIDTH(DST_WIDTH),
     .NUM_INPUTS(NUM_INPUTS),
@@ -156,11 +160,10 @@ module axi_crossbar_regport
 
     // settings bus for config
     .set_stb(xbar_set_stb),
-    .set_addr({4'b0000,xbar_set_addr[13:2]}),
+    .set_addr({4'b0000,xbar_set_addr}),
     .set_data(xbar_set_data),
     .rb_rd_stb(xbar_rb_stb),
-    /* TODO: FIX THIS SHIT */
-    .rb_addr(xbar_rb_addr[`LOG2(NUM_INPUTS)+`LOG2(NUM_OUTPUTS)-1+2:2]), // Also word aligned
+    .rb_addr(xbar_rb_addr[$clog2(NUM_INPUTS)+$clog2(NUM_OUTPUTS)-1:0]),
     .rb_data(xbar_rb_data),
 
     // inputs, real men flatten busses
