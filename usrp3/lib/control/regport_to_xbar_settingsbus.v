@@ -1,8 +1,27 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2017 Ettus Research
+// Copyright 2017 Ettus Research, A National Instruments Company
 //
-module regport_to_xbar_settingsbus
-#(
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: regport_to_xbar_settingsbus
+// Description:
+//   Converts regport to xbar setting bus.
+//   The module is designed only for the crossbar. The readback bus for the
+//   rfnoc crossbar reads from the same address as it writes to. Also
+//   there is an extra cycle delay in read data in the crossbar, which is
+//   why the rb_stb needs to be delayed by a cycle.
+//
+//   DEALIGN: Set to 1 in case of settings bus. The settings bus does not
+//   use word aligned address and hence the address needs to be shifted by 2
+//   to convert to set_addr.
+//
+//   Care must be taken when DEALIGN = 1. set_addr has the width SR_AWIDTH
+//   Address MSB get chopped off in case (SR_AWIDTH + 2) != AWIDTH
+//
+/////////////////////////////////////////////////////////////////////
+
+module regport_to_xbar_settingsbus #(
   parameter BASE   = 14'h0,
   parameter END_ADDR = 14'h3FFF,
   parameter DWIDTH = 32,
@@ -10,8 +29,7 @@ module regport_to_xbar_settingsbus
   parameter SR_AWIDTH = 12,
   // Dealign for settings bus by shifting by 2
   parameter DEALIGN = 0
-)
-(
+)(
   input                   clk,
   input                   reset,
 
@@ -33,10 +51,10 @@ module regport_to_xbar_settingsbus
   input  [DWIDTH-1:0]     rb_data
 );
 
-reg              reg_rd_req_delay;
-reg              reg_rd_req_delay2;
+reg               reg_rd_req_delay;
+reg               reg_rd_req_delay2;
 wire [AWIDTH-1:0] set_addr_int;
-reg [AWIDTH-1:0] rb_addr_int;
+reg [AWIDTH-1:0]  rb_addr_int;
 
 always @(posedge clk)
   begin

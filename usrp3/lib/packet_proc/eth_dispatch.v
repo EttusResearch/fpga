@@ -1,42 +1,44 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2014 Ettus Research, A National Instruments Company
 //
-// Ethernet dispatcher
-//  Incoming ethernet packets are examined and sent to the correct destination
-//  There are 3 destinations, CPU, other ethernet port (out), and vita router
-//  Packets going to the vita router will have the ethernet/ip/udp headers stripped off.
+// SPDX-License-Identifier: LGPL-3.0
 //
-//  To make things simpler, we start out by sending all packets to cpu and out port.
-//  By the end of the eth/ip/udp headers, we can determine where the correct destination is.
-//  If the correct destination is vita, we send an error indication on the cpu and out ports,
-//  which will cause the axi_packet_gate to drop those packets, and send the vita frame to
-//  the vita port.
+// Module: eth_dispatch
+// Description:
+//   Incoming ethernet packets are examined and sent to the correct destination
+//   There are 3 destinations, CPU, other ethernet port (out), and vita router
+//   Packets going to the vita router will have the ethernet/ip/udp headers stripped off.
 //
-//  If at the end of the headers we determine the packet should go to cpu, then we send an
-//  error indication on the out port, the rest of the packet to cpu and nothing on vita.
-//  If it should go to out, we send the error indication to cpu, the rest of the packet to out,
-//  and nothing on vita.
+//   To make things simpler, we start out by sending all packets to cpu and out port.
+//   By the end of the eth/ip/udp headers, we can determine where the correct destination is.
+//   If the correct destination is vita, we send an error indication on the cpu and out ports,
+//   which will cause the axi_packet_gate to drop those packets, and send the vita frame to
+//   the vita port.
 //
-//  Downstream we should have adequate fifo space, otherwise we could get backed up here.
+//   If at the end of the headers we determine the packet should go to cpu, then we send an
+//   error indication on the out port, the rest of the packet to cpu and nothing on vita.
+//   If it should go to out, we send the error indication to cpu, the rest of the packet to out,
+//   and nothing on vita.
 //
-//  No tuser bits sent to vita, as vita assumes there are no errors and that occupancy is
-//  indicated by the length field of the vita header.
-
+//   Downstream we should have adequate fifo space, otherwise we could get backed up here.
 //
-// Rules for forwarding:
+//   No tuser bits sent to vita, as vita assumes there are no errors and that occupancy is
+//   indicated by the length field of the vita header.
 //
-// Ethernet Broadcast (Dst MAC = ff:ff:ff:ff:ff:ff). Forward to both CPU and XO MAC.
-// ? Ethernet Multicast (Dst MAC = USRP_NEXT_HOP). Forward only to CPU.
-// ? Ethernet Multicast (Dst MAC = Unknown). Forward to XO and CPU.
-// Ethernet Unicast (Dst MAC = Unknown). Forward only to XO.
-// Ethernet Unicast (Dst MAC = local). Look deeper......
-// IP Broadcast. Forward to both CPU and XO MAC. (Should be coverd by Eth broadcast)
-// IP Multicast. ? Unknow Action.
-// IP Unicast (Dst IP = local). Look deeper....
-// UDP (Port = Listed) and its a VRLP packet. Forward only to VITA Radio Core.
-// UDP (Port = Unknown). Forward only to CPU.
+//   Rules for forwarding:
+//     Ethernet Broadcast (Dst MAC = ff:ff:ff:ff:ff:ff). Forward to both CPU and XO MAC.
+//     ? Ethernet Multicast (Dst MAC = USRP_NEXT_HOP). Forward only to CPU.
+//     ? Ethernet Multicast (Dst MAC = Unknown). Forward to XO and CPU.
+//     Ethernet Unicast (Dst MAC = Unknown). Forward only to XO.
+//     Ethernet Unicast (Dst MAC = local). Look deeper......
+//     IP Broadcast. Forward to both CPU and XO MAC. (Should be coverd by Eth broadcast)
+//     IP Multicast. ? Unknow Action.
+//     IP Unicast (Dst IP = local). Look deeper....
+//     UDP (Port = Listed) and its a VRLP packet. Forward only to VITA Radio Core.
+//     UDP (Port = Unknown). Forward only to CPU.
 //
-//
+/////////////////////////////////////////////////////////////////////
 
 module eth_dispatch #(
   parameter BASE=0,

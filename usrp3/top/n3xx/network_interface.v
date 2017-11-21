@@ -1,20 +1,24 @@
 /////////////////////////////////////////////////////////////////////
 //
-// Copyright 2016-2017 Ettus Research
+// Copyright 2017 Ettus Research, A National Instruments Company
 //
-// Description: This module has the following blocks:
+// SPDX-License-Identifier: LGPL-3.0
 //
-// - sfpp_io_core - Ethernet PHY and MAC
-// - eth_switch - Route packets to ARM, CROSSOVER and AXI_CROSSBAR
-// - regport - Control all registers - MDIO, MAC, IP/UDP
+// Module: network_interface
+// Description:
+// This module has the following blocks:
+//   - regport - Control all registers - MDIO, MAC, IP/UDP
+//   - sfpp_io_core - Ethernet PHY and MAC for 1GbE and 10GbE protocols
+//   - eth_switch - Classify packets and route them to CPU, CROSSOVER and AXI_CROSSBAR
+//   - pulse_stretch - drive activity LEDs on SFPs.
 //
 /////////////////////////////////////////////////////////////////////
 
 module network_interface #(
-  parameter DWIDTH  = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
-  parameter AWIDTH  = 14,    // Width of the address bus
-  parameter PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-  parameter PORTNUM  = 8'd0,
+  parameter DWIDTH  = 32,        // Width of the AXI4-Lite data bus (must be 32 or 64)
+  parameter AWIDTH  = 14,        // Width of the address bus
+  parameter PROTOCOL = "10GbE",  // Must be {10GbE, 1GbE, Aurora}
+  parameter PORTNUM  = 8'd0,     // SFP port number
   parameter MDIO_EN  = 0
   )(
   // Resets
@@ -27,6 +31,7 @@ module network_interface #(
   input         misc_clk,
   input         bus_clk,
 
+  // AXI lite interface for registers
   input                s_axi_aclk,
   input                s_axi_aresetn,
   input [AWIDTH-1:0]   s_axi_awaddr,
@@ -112,6 +117,7 @@ module network_interface #(
   output          activity_led
   );
 
+  // Register Base Address
   localparam REG_BASE_SFP_IO = 14'h0;
   localparam REG_BASE_ETH_SWITCH = 14'h1000;
 
@@ -135,59 +141,59 @@ module network_interface #(
   wire                reg_rd_resp_mdio;
 
   axil_regport_master #(
-     .DWIDTH   (DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-     .AWIDTH   (AWIDTH),     // Width of the address bus
-     .WRBASE   (0),          // Write address base
-     .RDBASE   (0),          // Read address base
-     .TIMEOUT  (10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
+    .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .AWIDTH(AWIDTH),     // Width of the address bus
+    .WRBASE(0),          // Write address base
+    .RDBASE(0),          // Read address base
+    .TIMEOUT(10)         // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
   ) network_regport_master_i (
-     // Clock and reset
-     .s_axi_aclk    (s_axi_aclk),
-     .s_axi_aresetn (s_axi_aresetn),
-     // AXI4-Lite: Write address port (domain: s_axi_aclk)
-     .s_axi_awaddr  (s_axi_awaddr),
-     .s_axi_awvalid (s_axi_awvalid),
-     .s_axi_awready (s_axi_awready),
-     // AXI4-Lite: Write data port (domain: s_axi_aclk)
-     .s_axi_wdata   (s_axi_wdata),
-     .s_axi_wstrb   (s_axi_wstrb),
-     .s_axi_wvalid  (s_axi_wvalid),
-     .s_axi_wready  (s_axi_wready),
-     // AXI4-Lite: Write response port (domain: s_axi_aclk)
-     .s_axi_bresp   (s_axi_bresp),
-     .s_axi_bvalid  (s_axi_bvalid),
-     .s_axi_bready  (s_axi_bready),
-     // AXI4-Lite: Read address port (domain: s_axi_aclk)
-     .s_axi_araddr  (s_axi_araddr),
-     .s_axi_arvalid (s_axi_arvalid),
-     .s_axi_arready (s_axi_arready),
-     // AXI4-Lite: Read data port (domain: s_axi_aclk)
-     .s_axi_rdata   (s_axi_rdata),
-     .s_axi_rresp   (s_axi_rresp),
-     .s_axi_rvalid  (s_axi_rvalid),
-     .s_axi_rready  (s_axi_rready),
-     // Register port: Write port (domain: reg_clk)
-     .reg_clk       (bus_clk),
-     .reg_wr_req    (reg_wr_req),
-     .reg_wr_addr   (reg_wr_addr),
-     .reg_wr_data   (reg_wr_data),
-     .reg_wr_keep   (/*unused*/),
-     // Register port: Read port (domain: reg_clk)
-     .reg_rd_req    (reg_rd_req),
-     .reg_rd_addr   (reg_rd_addr),
-     .reg_rd_resp   (reg_rd_resp),
-     .reg_rd_data   (reg_rd_data)
+    // Clock and reset
+    .s_axi_aclk    (s_axi_aclk),
+    .s_axi_aresetn (s_axi_aresetn),
+    // AXI4-Lite: Write address port (domain: s_axi_aclk)
+    .s_axi_awaddr  (s_axi_awaddr),
+    .s_axi_awvalid (s_axi_awvalid),
+    .s_axi_awready (s_axi_awready),
+    // AXI4-Lite: Write data port (domain: s_axi_aclk)
+    .s_axi_wdata   (s_axi_wdata),
+    .s_axi_wstrb   (s_axi_wstrb),
+    .s_axi_wvalid  (s_axi_wvalid),
+    .s_axi_wready  (s_axi_wready),
+    // AXI4-Lite: Write response port (domain: s_axi_aclk)
+    .s_axi_bresp   (s_axi_bresp),
+    .s_axi_bvalid  (s_axi_bvalid),
+    .s_axi_bready  (s_axi_bready),
+    // AXI4-Lite: Read address port (domain: s_axi_aclk)
+    .s_axi_araddr  (s_axi_araddr),
+    .s_axi_arvalid (s_axi_arvalid),
+    .s_axi_arready (s_axi_arready),
+    // AXI4-Lite: Read data port (domain: s_axi_aclk)
+    .s_axi_rdata   (s_axi_rdata),
+    .s_axi_rresp   (s_axi_rresp),
+    .s_axi_rvalid  (s_axi_rvalid),
+    .s_axi_rready  (s_axi_rready),
+    // Register port: Write port (domain: reg_clk)
+    .reg_clk       (bus_clk),
+    .reg_wr_req    (reg_wr_req),
+    .reg_wr_addr   (reg_wr_addr),
+    .reg_wr_data   (reg_wr_data),
+    .reg_wr_keep   (/*unused*/),
+    // Register port: Read port (domain: reg_clk)
+    .reg_rd_req    (reg_rd_req),
+    .reg_rd_addr   (reg_rd_addr),
+    .reg_rd_resp   (reg_rd_resp),
+    .reg_rd_data   (reg_rd_data)
   );
 
   // Regport Mux for response
-   regport_resp_mux #(
-     .WIDTH      (DWIDTH),
-     .NUM_SLAVES (2)
+  regport_resp_mux #(
+    .WIDTH      (DWIDTH),
+    .NUM_SLAVES (2)
   ) network_reg_resp_mux_i(
-     .clk(bus_clk), .reset(bus_rst),
-     .sla_rd_resp({reg_rd_resp_misc, reg_rd_resp_mdio}),
-     .sla_rd_data({reg_rd_data_misc, reg_rd_data_mdio}),
-     .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
+    .clk(bus_clk), .reset(bus_rst),
+    .sla_rd_resp({reg_rd_resp_misc, reg_rd_resp_mdio}),
+    .sla_rd_data({reg_rd_data_misc, reg_rd_data_mdio}),
+    .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
   );
 
   wire [3:0] e2c_tuser;
@@ -232,58 +238,57 @@ module network_interface #(
   wire        sfp_rx_tlast, sfp_tx_tlast, sfp_rx_tvalid, sfp_tx_tvalid, sfp_rx_tready, sfp_tx_tready;
 
   n310_sfpp_io_core #(
-     .PROTOCOL(PROTOCOL),
-     .REG_BASE(REG_BASE_SFP_IO),
-     .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-     .REG_AWIDTH (AWIDTH),         // Width of the address bus
-     .MDIO_EN(1'b1),
-     .PORTNUM(PORTNUM)
+    .PROTOCOL(PROTOCOL),         // Protocol - 1GbE/10GbE
+    .REG_BASE(REG_BASE_SFP_IO),  // Register base address
+    .REG_DWIDTH(DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH(AWIDTH),         // Width of the address bus
+    .MDIO_EN(1'b1),
+    .PORTNUM(PORTNUM)            // SFP Port Number
   ) sfpp_io_i (
-     .areset(areset),
-     .gt_refclk(gt_refclk),
-     .gb_refclk(gb_refclk),
-     .misc_clk(misc_clk),
+    .areset(areset),
+    .gt_refclk(gt_refclk),
+    .gb_refclk(gb_refclk),
+    .misc_clk(misc_clk),
 
-     .bus_rst(bus_rst),
-     .bus_clk(bus_clk),
-     .qpllreset(qpllreset),
-     .qplllock(qplllock),
-     .qplloutclk(qplloutclk),
-     .qplloutrefclk(qplloutrefclk),
-     .qpllrefclklost(qpllrefclklost),
+    .bus_rst(bus_rst),
+    .bus_clk(bus_clk),
+    .qpllreset(qpllreset),
+    .qplllock(qplllock),
+    .qplloutclk(qplloutclk),
+    .qplloutrefclk(qplloutrefclk),
+    .qpllrefclklost(qpllrefclklost),
 
-     .txp(txp),
-     .txn(txn),
-     .rxp(rxp),
-     .rxn(rxn),
+    .txp(txp),
+    .txn(txn),
+    .rxp(rxp),
+    .rxn(rxn),
 
-     .sfpp_rxlos(sfpp_rxlos),
-     .sfpp_tx_fault(sfpp_tx_fault),
-     .sfpp_tx_disable(sfpp_tx_disable),
+    .sfpp_rxlos(sfpp_rxlos),
+    .sfpp_tx_fault(sfpp_tx_fault),
+    .sfpp_tx_disable(sfpp_tx_disable),
 
-     //RegPort
-     .reg_wr_req(reg_wr_req),
-     .reg_wr_addr(reg_wr_addr),
-     .reg_wr_data(reg_wr_data),
-     .reg_rd_req(reg_rd_req),
-     .reg_rd_addr(reg_rd_addr),
-     .reg_rd_resp(reg_rd_resp_mdio),
-     .reg_rd_data(reg_rd_data_mdio),
+    //RegPort
+    .reg_wr_req(reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
+    .reg_rd_req(reg_rd_req),
+    .reg_rd_addr(reg_rd_addr),
+    .reg_rd_resp(reg_rd_resp_mdio),
+    .reg_rd_data(reg_rd_data_mdio),
 
-     .s_axis_tdata(sfp_tx_tdata),
-     .s_axis_tuser(sfp_tx_tuser),
-     .s_axis_tlast(sfp_tx_tlast),
-     .s_axis_tvalid(sfp_tx_tvalid),
-     .s_axis_tready(sfp_tx_tready),
+    .s_axis_tdata(sfp_tx_tdata),
+    .s_axis_tuser(sfp_tx_tuser),
+    .s_axis_tlast(sfp_tx_tlast),
+    .s_axis_tvalid(sfp_tx_tvalid),
+    .s_axis_tready(sfp_tx_tready),
 
-     .m_axis_tdata(sfp_rx_tdata),
-     .m_axis_tuser(sfp_rx_tuser),
-     .m_axis_tlast(sfp_rx_tlast),
-     .m_axis_tvalid(sfp_rx_tvalid),
-     .m_axis_tready(sfp_rx_tready),
+    .m_axis_tdata(sfp_rx_tdata),
+    .m_axis_tuser(sfp_rx_tuser),
+    .m_axis_tlast(sfp_rx_tlast),
+    .m_axis_tvalid(sfp_rx_tvalid),
+    .m_axis_tready(sfp_rx_tready),
 
-     .phy_status(sfp_phy_status)
-
+    .phy_status(sfp_phy_status)
   );
 
   //////////////////////////////////////////////////////////////////////
@@ -293,76 +298,76 @@ module network_interface #(
   //////////////////////////////////////////////////////////////////////
 
   eth_switch #(
-    .BASE(REG_BASE_ETH_SWITCH),
-    .REG_DWIDTH (DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
-    .REG_AWIDTH (AWIDTH)         // Width of the address bus
+    .BASE(REG_BASE_ETH_SWITCH), // Base Address
+    .REG_DWIDTH(DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH(AWIDTH)         // Width of the address bus
   ) eth_switch (
-     .clk(bus_clk),
-     .reset(bus_rst),
-     .clear(1'b0),
+    .clk(bus_clk),
+    .reset(bus_rst),
+    .clear(1'b0),
 
-     //RegPort
-     .reg_wr_req(reg_wr_req),
-     .reg_wr_addr(reg_wr_addr),
-     .reg_wr_data(reg_wr_data),
-     .reg_wr_keep(/*unused*/),
-     .reg_rd_req(reg_rd_req),
-     .reg_rd_addr(reg_rd_addr),
-     .reg_rd_resp(reg_rd_resp_misc),
-     .reg_rd_data(reg_rd_data_misc),
+    //RegPort
+    .reg_wr_req(reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
+    .reg_wr_keep(/*unused*/),
+    .reg_rd_req(reg_rd_req),
+    .reg_rd_addr(reg_rd_addr),
+    .reg_rd_resp(reg_rd_resp_misc),
+    .reg_rd_data(reg_rd_data_misc),
 
-     // SFP
-     .eth_tx_tdata(sfp_tx_tdata),
-     .eth_tx_tuser(sfp_tx_tuser),
-     .eth_tx_tlast(sfp_tx_tlast),
-     .eth_tx_tvalid(sfp_tx_tvalid),
-     .eth_tx_tready(sfp_tx_tready),
-     .eth_rx_tdata(sfp_rx_tdata),
-     .eth_rx_tuser(sfp_rx_tuser),
-     .eth_rx_tlast(sfp_rx_tlast),
-     .eth_rx_tvalid(sfp_rx_tvalid),
-     .eth_rx_tready(sfp_rx_tready),
+    // SFP
+    .eth_tx_tdata(sfp_tx_tdata),
+    .eth_tx_tuser(sfp_tx_tuser),
+    .eth_tx_tlast(sfp_tx_tlast),
+    .eth_tx_tvalid(sfp_tx_tvalid),
+    .eth_tx_tready(sfp_tx_tready),
+    .eth_rx_tdata(sfp_rx_tdata),
+    .eth_rx_tuser(sfp_rx_tuser),
+    .eth_rx_tlast(sfp_rx_tlast),
+    .eth_rx_tvalid(sfp_rx_tvalid),
+    .eth_rx_tready(sfp_rx_tready),
 
-     // Ethernet to Vita
-     .e2v_tdata(e2v_tdata),
-     .e2v_tlast(e2v_tlast),
-     .e2v_tvalid(e2v_tvalid),
-     .e2v_tready(e2v_tready),
+    // Ethernet to Vita
+    .e2v_tdata(e2v_tdata),
+    .e2v_tlast(e2v_tlast),
+    .e2v_tvalid(e2v_tvalid),
+    .e2v_tready(e2v_tready),
 
-     // Vita to Ethernet
-     .v2e_tdata(v2e_tdata),
-     .v2e_tlast(v2e_tlast),
-     .v2e_tvalid(v2e_tvalid),
-     .v2e_tready(v2e_tready),
+    // Vita to Ethernet
+    .v2e_tdata(v2e_tdata),
+    .v2e_tlast(v2e_tlast),
+    .v2e_tvalid(v2e_tvalid),
+    .v2e_tready(v2e_tready),
 
-     // Crossover
-     .xo_tdata(xo_tdata),
-     .xo_tuser(xo_tuser),
-     .xo_tlast(xo_tlast),
-     .xo_tvalid(xo_tvalid),
-     .xo_tready(xo_tready),
-     .xi_tdata(xi_tdata),
-     .xi_tuser(xi_tuser),
-     .xi_tlast(xi_tlast),
-     .xi_tvalid(xi_tvalid),
-     .xi_tready(xi_tready),
+    // Crossover
+    .xo_tdata(xo_tdata),
+    .xo_tuser(xo_tuser),
+    .xo_tlast(xo_tlast),
+    .xo_tvalid(xo_tvalid),
+    .xo_tready(xo_tready),
+    .xi_tdata(xi_tdata),
+    .xi_tuser(xi_tuser),
+    .xi_tlast(xi_tlast),
+    .xi_tvalid(xi_tvalid),
+    .xi_tready(xi_tready),
 
-     // Ethernet to CPU, also endian swap here
-     .e2c_tdata({e2c_tdata[7:0], e2c_tdata[15:8], e2c_tdata[23:16], e2c_tdata[31:24],
-                 e2c_tdata[39:32], e2c_tdata[47:40], e2c_tdata[55:48], e2c_tdata[63:56]}),
-     .e2c_tuser(e2c_tuser),
-     .e2c_tlast(e2c_tlast),
-     .e2c_tvalid(e2c_tvalid),
-     .e2c_tready(e2c_tready),
+    // Ethernet to CPU, also endian swap here
+    .e2c_tdata({e2c_tdata[7:0], e2c_tdata[15:8], e2c_tdata[23:16], e2c_tdata[31:24],
+                e2c_tdata[39:32], e2c_tdata[47:40], e2c_tdata[55:48], e2c_tdata[63:56]}),
+    .e2c_tuser(e2c_tuser),
+    .e2c_tlast(e2c_tlast),
+    .e2c_tvalid(e2c_tvalid),
+    .e2c_tready(e2c_tready),
 
-     // CPU to Ethernet, also endian swap here
-     .c2e_tdata({c2e_tdata[7:0], c2e_tdata[15:8], c2e_tdata[23:16], c2e_tdata[31:24],
-                 c2e_tdata[39:32], c2e_tdata[47:40], c2e_tdata[55:48], c2e_tdata[63:56]}),
-     .c2e_tuser(c2e_tuser),
-     .c2e_tlast(c2e_tlast),
-     .c2e_tvalid(c2e_tvalid),
-     .c2e_tready(c2e_tready),
-     .debug()
+    // CPU to Ethernet, also endian swap here
+    .c2e_tdata({c2e_tdata[7:0], c2e_tdata[15:8], c2e_tdata[23:16], c2e_tdata[31:24],
+                c2e_tdata[39:32], c2e_tdata[47:40], c2e_tdata[55:48], c2e_tdata[63:56]}),
+    .c2e_tuser(c2e_tuser),
+    .c2e_tlast(c2e_tlast),
+    .c2e_tvalid(c2e_tvalid),
+    .c2e_tready(c2e_tready),
+    .debug()
    );
 
   pulse_stretch inst_pulse_stretch0 (
@@ -372,4 +377,4 @@ module network_interface #(
     .pulse_stretched(activity_led)
   );
 
-endmodule
+endmodule // network_interface

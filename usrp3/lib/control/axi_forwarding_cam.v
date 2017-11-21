@@ -211,8 +211,6 @@ module axi_forwarding_cam
   //
   genvar m;
   reg [31:0] statistics [0:NUM_OUTPUTS-1];
-  // TODO: Implement clear statistics logic
-  reg clear_statistics = 1'b0;
 
   generate
     for (m = 0; m < NUM_OUTPUTS; m = m + 1) begin: generate_stats

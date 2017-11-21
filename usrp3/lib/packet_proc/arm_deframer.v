@@ -1,3 +1,4 @@
+/////////////////////////////////////////////////////////////////////
 //
 // Copyright 2017 Ettus Research, A National Instruments Company
 //
@@ -5,12 +6,13 @@
 //
 // Module: arm_deframer
 // Description:
-// Adds 6 bytes of Zeros at the beginning of every packet. It aligns the
-// 64-bit words of the ethernet packet to be used later for classifying the
-// packets. The module is based on xge64_to_axi64 and has lesser
-// functionality.
-// Note that the block only works for padding 6 bytes.
+//   Adds 6 bytes of Zeros at the beginning of every packet. It aligns the
+//   64-bit words of the ethernet packet to be used later for classifying the
+//   packets. The module is based on xge64_to_axi64 and has lesser
+//   functionality.
+//   Note that the block only works for padding 6 bytes.
 //
+/////////////////////////////////////////////////////////////////////
 
 module arm_deframer (
 
@@ -167,4 +169,4 @@ module arm_deframer (
     endcase
   end
 
-endmodule
+endmodule // arm_deframer

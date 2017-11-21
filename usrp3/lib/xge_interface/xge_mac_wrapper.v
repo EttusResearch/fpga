@@ -1,23 +1,22 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2016 Ettus Research LLC
+// Copyright 2016 Ettus Research, A National Instruments Company
 //
-
-
+// SPDX-License-Identifier: LGPL-3.0
 //
-// Wrap XGE MAC so that:
+// Module: xge_mac_wrapper_wb
+// Description:
+//   Wrap XGE MAC
 //
-// *) Signals are crossed between the MAC's own 156.25MHz clock domain and the
-// main FPGA clock domain.
-// *) 6 byte Padding is added at RX, including metadata so that IP headers become aligned.
-// *) 6 Byte padding is stripped at TX, so that Eth header data starts immediately.
-// *) TX & RX can buffer at least an MTU sized packet
-// *) On TX, to not start an Ethernet Tx until a complete packet is present in the
-// last Tx FIFO so that the MAC doesn't underrun.
+//   *) Signals are crossed between the MAC's own 156.25MHz clock domain and the
+//   main FPGA clock domain.
+//   *) 6 byte Padding is added at RX, including metadata so that IP headers become aligned.
+//   *) 6 Byte padding is stripped at TX, so that Eth header data starts immediately.
+//   *) TX & RX can buffer at least an MTU sized packet
+//   *) On TX, to not start an Ethernet Tx until a complete packet is present in the
+//   last Tx FIFO so that the MAC doesn't underrun.
 //
-
-//
-// Copyright 2016 Ettus Research
-//
+/////////////////////////////////////////////////////////////////////
 
 module xge_mac_wrapper #(
    parameter PORTNUM = 8'd0

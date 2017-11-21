@@ -1,6 +1,14 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2017 Ettus Research
+// Copyright 2017 Ettus Research, A National Instruments Company
 //
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: axi_crossbar_regport
+// Description:
+//   - axi_crossbar with regport interface for register/CAM access
+//
+//////////////////////////////////////////////////////////////////////
 
 module axi_crossbar_regport #(
   parameter REG_BASE    = 0,  // settings bus base address
@@ -65,8 +73,10 @@ module axi_crossbar_regport #(
   wire [REG_DWIDTH-1:0] reg_rd_data_xbar;
   wire                  reg_rd_resp_xbar;
 
-  regport_resp_mux #(.WIDTH(REG_DWIDTH)) inst_regport_resp_mux_xbar
-  (
+  regport_resp_mux #(
+    .WIDTH(REG_DWIDTH),
+    .NUM_SLAVES(2)
+  ) inst_regport_resp_mux_xbar (
     .clk(clk),
     .reset(reset),
     .sla_rd_resp({reg_rd_resp_glob, reg_rd_resp_xbar}),
@@ -75,7 +85,8 @@ module axi_crossbar_regport #(
     .mst_rd_data(reg_rd_data)
   );
 
-  always @ (posedge clk)
+  // Read Registers
+  always @ (posedge clk) begin
     if (reset) begin
       local_addr_reg <= 32'h0;
     end
@@ -86,8 +97,10 @@ module axi_crossbar_regport #(
           local_addr_reg  <= reg_wr_data;
       endcase
     end
+  end
 
-  always @ (posedge clk)
+  // Write Registers
+  always @ (posedge clk) begin
     if (reset)
       reg_rd_resp_glob <= 1'b0;
 
@@ -113,18 +126,16 @@ module axi_crossbar_regport #(
           reg_rd_resp_glob <= 1'b0;
       end
     end
+  end
 
-  regport_to_xbar_settingsbus
-  #(
+  regport_to_xbar_settingsbus #(
     .BASE(REG_BASE_XBAR_SETTING_REG),
     .END_ADDR(REG_END_ADDR_XBAR_SETTING_REG),
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH),
     .SR_AWIDTH(SR_AWIDTH),
     .DEALIGN(1)
-  )
-  inst_regport_to_xbar_settingsbus
-  (
+  ) inst_regport_to_xbar_settingsbus (
     .clk(clk),
     .reset(reset),
 
@@ -144,15 +155,13 @@ module axi_crossbar_regport #(
     .rb_data(xbar_rb_data)
   );
 
-  axi_crossbar
-  #(
+  axi_crossbar #(
     .BASE(0), // Set to 0 as logic for other values has not been tested
     .FIFO_WIDTH(FIFO_WIDTH),
     .DST_WIDTH(DST_WIDTH),
     .NUM_INPUTS(NUM_INPUTS),
     .NUM_OUTPUTS(NUM_OUTPUTS)
-  ) axi_crossbar
-  (
+  ) axi_crossbar (
     .clk(clk),
     .reset(reset),
     .clear(1'b0),
@@ -180,6 +189,5 @@ module axi_crossbar_regport #(
     .pkt_present(pkt_present)
   );
 
-
-endmodule
+endmodule // axi_crossbar_regport
 

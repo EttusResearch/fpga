@@ -1,13 +1,19 @@
+/////////////////////////////////////////////////////////////////////
 //
 // Copyright 2017 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0
 //
-// Module: regport_to_settingbus
+// Module: regport_to_settingsbus
 // Description:
-// Converts regport write bus to the a setting bus
-// Care must be taken when DEALIGN = 1. set_addr has the width SR_AWIDTH
-// Address MSB might get chopped off in case (SR_AWIDTH + 2) != AWIDTH
+//   Converts regport write bus to the a setting bus
+//   DEALIGN: Set to 1 in case of settings bus. The settings bus does not
+//   use word aligned address and hence the address needs to be shifted by 2
+//   to convert to set_addr.
+//   Care must be taken when DEALIGN = 1. set_addr has the width SR_AWIDTH
+//   Address MSB might get chopped off in case (SR_AWIDTH + 2) != AWIDTH
+//
+/////////////////////////////////////////////////////////////////////
 
 module regport_to_settingsbus #(
   parameter BASE   = 14'h0,
@@ -17,11 +23,7 @@ module regport_to_settingsbus #(
   parameter SR_AWIDTH = 12,
   // Dealign for settings bus by shifting by 2
   parameter DEALIGN = 0
-)
-(
-  input                   clk,
-  input                   reset,
-
+)(
   input                   reg_wr_req,
   input [AWIDTH-1:0]      reg_wr_addr,
   input [DWIDTH-1:0]      reg_wr_data,
@@ -41,4 +43,4 @@ module regport_to_settingsbus #(
                             : set_addr_int[SR_AWIDTH-1:0];
   assign set_data = reg_wr_data;
 
-endmodule
+endmodule // regport_to_settingsbus

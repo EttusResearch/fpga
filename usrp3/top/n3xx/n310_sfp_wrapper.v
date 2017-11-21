@@ -1,384 +1,384 @@
 ///////////////////////////////////////////////////////////////////
 //
-// Copyright 2016-2017 Ettus Research
+// Copyright 2017 Ettus Research, A National Instruments Company
 //
-// n310_sfp_wrapper
-// Reduces clutter at top level.
-// - Aurora: wraps up sfpp_io, axil_regport and axi_dummy
-// - 1/10G: wrapper around network interface
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: n310_sfp_wrapper
+// Description:
+//   Reduces clutter at top level.
+//   - Aurora: wraps up sfpp_io, axil_regport and axi_dummy
+//   - 1/10G: wrapper around network interface
 //
 //////////////////////////////////////////////////////////////////////
+
 module n310_sfp_wrapper #(
-   parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
-   parameter [13:0] REG_BASE = 14'h0,
-   parameter        DWIDTH = 32,
-   parameter        AWIDTH = 14,
-   parameter        PORTNUM  = 8'd0,
-   parameter        MDIO_EN  = 0
-)(
+  parameter        PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
+  parameter [13:0] REG_BASE = 14'h0,
+  parameter        DWIDTH = 32,
+  parameter        AWIDTH = 14,
+  parameter        PORTNUM  = 8'd0,
+  parameter        MDIO_EN  = 0
+  )(
 
-   // Resets
-   input         areset,
-   input         bus_rst,
+  // Resets
+  input         areset,
+  input         bus_rst,
 
-   // Clocks
-   input         gt_refclk,
-   input         gb_refclk,
-   input         misc_clk,
-   input         bus_clk,
-   input         user_clk,
-   input         sync_clk,
-   output        au_tx_out_clk,
+  // Clocks
+  input         gt_refclk,
+  input         gb_refclk,
+  input         misc_clk,
+  input         bus_clk,
+  input         user_clk,
+  input         sync_clk,
+  output        au_tx_out_clk,
 
-   //Axi-lite
-   input                s_axi_aclk,
-   input                s_axi_aresetn,
-   input [AWIDTH-1:0]   s_axi_awaddr,
-   input                s_axi_awvalid,
-   output               s_axi_awready,
+  //Axi-lite
+  input                s_axi_aclk,
+  input                s_axi_aresetn,
+  input [AWIDTH-1:0]   s_axi_awaddr,
+  input                s_axi_awvalid,
+  output               s_axi_awready,
 
-   input [DWIDTH-1:0]   s_axi_wdata,
-   input [DWIDTH/8-1:0] s_axi_wstrb,
-   input                s_axi_wvalid,
-   output               s_axi_wready,
+  input [DWIDTH-1:0]   s_axi_wdata,
+  input [DWIDTH/8-1:0] s_axi_wstrb,
+  input                s_axi_wvalid,
+  output               s_axi_wready,
 
-   output [1:0]         s_axi_bresp,
-   output               s_axi_bvalid,
-   input                s_axi_bready,
+  output [1:0]         s_axi_bresp,
+  output               s_axi_bvalid,
+  input                s_axi_bready,
 
-   input [AWIDTH-1:0]   s_axi_araddr,
-   input                s_axi_arvalid,
-   output               s_axi_arready,
+  input [AWIDTH-1:0]   s_axi_araddr,
+  input                s_axi_arvalid,
+  output               s_axi_arready,
 
-   output [DWIDTH-1:0]  s_axi_rdata,
-   output [1:0]         s_axi_rresp,
-   output               s_axi_rvalid,
-   input                s_axi_rready,
+  output [DWIDTH-1:0]  s_axi_rdata,
+  output [1:0]         s_axi_rresp,
+  output               s_axi_rvalid,
+  input                s_axi_rready,
 
-   // SFP high-speed IO
-   output        txp,
-   output        txn,
-   input         rxp,
-   input         rxn,
+  // SFP high-speed IO
+  output        txp,
+  output        txn,
+  input         rxp,
+  input         rxn,
 
-   // SFP low-speed IO
-   input         sfpp_rxlos,
-   input         sfpp_tx_fault,
-   output        sfpp_tx_disable,
+  // SFP low-speed IO
+  input         sfpp_rxlos,
+  input         sfpp_tx_fault,
+  output        sfpp_tx_disable,
 
-   //Status signals
-   output [15:0] sfp_phy_status,
-   output [31:0] sfp_mac_status,
+  //Status signals
+  output [15:0] sfp_phy_status,
+  output [31:0] sfp_mac_status,
 
-   //GT Common
-   input         qpllrefclklost,
-   input         qplllock,
-   input         qplloutclk,
-   input         qplloutrefclk,
-   output        qpllreset,
+  //GT Common
+  input         qpllrefclklost,
+  input         qplllock,
+  input         qplloutclk,
+  input         qplloutrefclk,
+  output        qpllreset,
 
-   //Aurora MMCM
-   input         au_mmcm_locked,
-   output        gt_pll_lock,
-   output        phy_areset_out,
+  //Aurora MMCM
+  input         au_mmcm_locked,
+  output        gt_pll_lock,
+  output        phy_areset_out,
 
 
-   // Vita router interface
-   output  [63:0]  e2v_tdata,
-   output          e2v_tlast,
-   output          e2v_tvalid,
-   input           e2v_tready,
+  // Vita router interface
+  output  [63:0]  e2v_tdata,
+  output          e2v_tlast,
+  output          e2v_tvalid,
+  input           e2v_tready,
 
-   input   [63:0]  v2e_tdata,
-   input           v2e_tlast,
-   input           v2e_tvalid,
-   output          v2e_tready,
+  input   [63:0]  v2e_tdata,
+  input           v2e_tlast,
+  input           v2e_tvalid,
+  output          v2e_tready,
 
-   // Ethernet crossover
-   output  [63:0]  xo_tdata,
-   output  [3:0]   xo_tuser,
-   output          xo_tlast,
-   output          xo_tvalid,
-   input           xo_tready,
+  // Ethernet crossover
+  output  [63:0]  xo_tdata,
+  output  [3:0]   xo_tuser,
+  output          xo_tlast,
+  output          xo_tvalid,
+  input           xo_tready,
 
-   input   [63:0]  xi_tdata,
-   input   [3:0]   xi_tuser,
-   input           xi_tlast,
-   input           xi_tvalid,
-   output          xi_tready,
+  input   [63:0]  xi_tdata,
+  input   [3:0]   xi_tuser,
+  input           xi_tlast,
+  input           xi_tvalid,
+  output          xi_tready,
 
-   // CPU
-   output  [63:0]  e2c_tdata,
-   output  [7:0]   e2c_tkeep,
-   output          e2c_tlast,
-   output          e2c_tvalid,
-   input           e2c_tready,
+  // CPU
+  output  [63:0]  e2c_tdata,
+  output  [7:0]   e2c_tkeep,
+  output          e2c_tlast,
+  output          e2c_tvalid,
+  input           e2c_tready,
 
-   input   [63:0]  c2e_tdata,
-   input   [7:0]   c2e_tkeep,
-   input           c2e_tlast,
-   input           c2e_tvalid,
-   output          c2e_tready,
+  input   [63:0]  c2e_tdata,
+  input   [7:0]   c2e_tkeep,
+  input           c2e_tlast,
+  input           c2e_tvalid,
+  output          c2e_tready,
 
-   // MISC
-   output          activity_led
+  // MISC
+  output          activity_led
 
 );
 
-   generate
-   if(PROTOCOL == "Aurora") begin
+  generate
+  if(PROTOCOL == "Aurora") begin
 
-      //set unused wires to default value
-      assign xo_tdata = 64'h0;
-      assign xo_tuser = 4'h0;
-      assign xo_tlast = 1'b0;
-      assign xo_tvalid = 1'b0;
-      assign xi_tready = 1'b1;
-      assign e2c_tdata = 64'h0;
-      assign e2c_tkeep = 8'h0;
-      assign e2c_tlast = 1'b0;
-      assign e2c_tvalid = 1'b0;
-      assign c2e_tready = 1'b1;
-      //////////////////////////////////////////////////////////////////////
-      //
-      // AXI4-Lite to RegPort (PS to PL Register Access)
-      //
-      //////////////////////////////////////////////////////////////////////
+    //set unused wires to default value
+    assign xo_tdata = 64'h0;
+    assign xo_tuser = 4'h0;
+    assign xo_tlast = 1'b0;
+    assign xo_tvalid = 1'b0;
+    assign xi_tready = 1'b1;
+    assign e2c_tdata = 64'h0;
+    assign e2c_tkeep = 8'h0;
+    assign e2c_tlast = 1'b0;
+    assign e2c_tvalid = 1'b0;
+    assign c2e_tready = 1'b1;
 
-      wire                sfp_reg_wr_req;
-      wire  [AWIDTH-1:0]  sfp_reg_wr_addr;
-      wire  [DWIDTH-1:0]  sfp_reg_wr_data;
-      wire                sfp_reg_rd_req;
-      wire  [AWIDTH-1:0]  sfp_reg_rd_addr;
-      wire                sfp_reg_rd_resp;
-      wire  [DWIDTH-1:0]  sfp_reg_rd_data;
+    // AXI4-Lite to RegPort (PS to PL Register Access)
+    wire                sfp_reg_wr_req;
+    wire  [AWIDTH-1:0]  sfp_reg_wr_addr;
+    wire  [DWIDTH-1:0]  sfp_reg_wr_data;
+    wire                sfp_reg_rd_req;
+    wire  [AWIDTH-1:0]  sfp_reg_rd_addr;
+    wire                sfp_reg_rd_resp;
+    wire  [DWIDTH-1:0]  sfp_reg_rd_data;
 
-      axil_regport_master #(
-         .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .AWIDTH(AWIDTH),     // Width of the address bus
-         .WRBASE(0),          // Write address base
-         .RDBASE(0),          // Read address base
-         .TIMEOUT(10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
-      ) sfp0_regport_master_i (
-         // Clock and reset
-         .s_axi_aclk(s_axi_aclk),
-         .s_axi_aresetn(s_axi_aresetn),
-         // AXI4-Lite: Write address port (domain: s_axi_aclk)
-         .s_axi_awaddr(s_axi_awaddr),
-         .s_axi_awvalid(s_axi_awvalid),
-         .s_axi_awready(s_axi_awready),
-         // AXI4-Lite: Write data port (domain: s_axi_aclk)
-         .s_axi_wdata(s_axi_wdata),
-         .s_axi_wstrb(s_axi_wstrb),
-         .s_axi_wvalid(s_axi_wvalid),
-         .s_axi_wready(s_axi_wready),
-         // AXI4-Lite: Write response port (domain: s_axi_aclk)
-         .s_axi_bresp(s_axi_bresp),
-         .s_axi_bvalid(s_axi_bvalid),
-         .s_axi_bready(s_axi_bready),
-         // AXI4-Lite: Read address port (domain: s_axi_aclk)
-         .s_axi_araddr(s_axi_araddr),
-         .s_axi_arvalid(s_axi_arvalid),
-         .s_axi_arready(s_axi_arready),
-         // AXI4-Lite: Read data port (domain: s_axi_aclk)
-         .s_axi_rdata(s_axi_rdata),
-         .s_axi_rresp(s_axi_rresp),
-         .s_axi_rvalid(s_axi_rvalid),
-         .s_axi_rready(s_axi_rready),
-         // Register port: Write port (domain: reg_clk)
-         .reg_clk       (bus_clk),
-         .reg_wr_req    (sfp_reg_wr_req),
-         .reg_wr_addr   (sfp_reg_wr_addr),
-         .reg_wr_data   (sfp_reg_wr_data),
-         .reg_wr_keep   (/*unused*/),
-         // Register port: Read port (domain: reg_clk)
-         .reg_rd_req    (sfp_reg_rd_req),
-         .reg_rd_addr   (sfp_reg_rd_addr),
-         .reg_rd_resp   (sfp_reg_rd_resp),
-         .reg_rd_data   (sfp_reg_rd_data)
-      );
+    axil_regport_master #(
+      .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .AWIDTH(AWIDTH),     // Width of the address bus
+      .WRBASE(0),          // Write address base
+      .RDBASE(0),          // Read address base
+      .TIMEOUT(10)         // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
+    ) sfp0_regport_master_i (
+      // Clock and reset
+      .s_axi_aclk(s_axi_aclk),
+      .s_axi_aresetn(s_axi_aresetn),
+      // AXI4-Lite: Write address port (domain: s_axi_aclk)
+      .s_axi_awaddr(s_axi_awaddr),
+      .s_axi_awvalid(s_axi_awvalid),
+      .s_axi_awready(s_axi_awready),
+      // AXI4-Lite: Write data port (domain: s_axi_aclk)
+      .s_axi_wdata(s_axi_wdata),
+      .s_axi_wstrb(s_axi_wstrb),
+      .s_axi_wvalid(s_axi_wvalid),
+      .s_axi_wready(s_axi_wready),
+      // AXI4-Lite: Write response port (domain: s_axi_aclk)
+      .s_axi_bresp(s_axi_bresp),
+      .s_axi_bvalid(s_axi_bvalid),
+      .s_axi_bready(s_axi_bready),
+      // AXI4-Lite: Read address port (domain: s_axi_aclk)
+      .s_axi_araddr(s_axi_araddr),
+      .s_axi_arvalid(s_axi_arvalid),
+      .s_axi_arready(s_axi_arready),
+      // AXI4-Lite: Read data port (domain: s_axi_aclk)
+      .s_axi_rdata(s_axi_rdata),
+      .s_axi_rresp(s_axi_rresp),
+      .s_axi_rvalid(s_axi_rvalid),
+      .s_axi_rready(s_axi_rready),
+      // Register port: Write port (domain: reg_clk)
+      .reg_clk       (bus_clk),
+      .reg_wr_req    (sfp_reg_wr_req),
+      .reg_wr_addr   (sfp_reg_wr_addr),
+      .reg_wr_data   (sfp_reg_wr_data),
+      .reg_wr_keep   (/*unused*/),
+      // Register port: Read port (domain: reg_clk)
+      .reg_rd_req    (sfp_reg_rd_req),
+      .reg_rd_addr   (sfp_reg_rd_addr),
+      .reg_rd_resp   (sfp_reg_rd_resp),
+      .reg_rd_data   (sfp_reg_rd_data)
+    );
 
-      n310_sfpp_io_core #(
-         .PROTOCOL(PROTOCOL),
-         .REG_BASE(REG_BASE),
-         .REG_DWIDTH(DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(AWIDTH),         // Width of the address bus
-         .MDIO_EN(MDIO_EN),
-         .PORTNUM(PORTNUM)
-      ) sfpp_io_i (
-         //must reset all channels on quad when sfp1 gtx core is reset
-         .areset(areset),
-         .gt_refclk(gt_refclk),
-         .gb_refclk(gb_refclk),
-         .misc_clk(misc_clk),
-         .user_clk(user_clk),
-         .sync_clk(sync_clk),
-         .au_tx_out_clk(au_tx_out_clk),
+    n310_sfpp_io_core #(
+      .PROTOCOL(PROTOCOL),
+      .REG_BASE(REG_BASE),
+      .REG_DWIDTH(DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .REG_AWIDTH(AWIDTH),         // Width of the address bus
+      .MDIO_EN(MDIO_EN),
+      .PORTNUM(PORTNUM)
+    ) sfpp_io_i (
+      //must reset all channels on quad when sfp1 gtx core is reset
+      .areset(areset),
+      .gt_refclk(gt_refclk),
+      .gb_refclk(gb_refclk),
+      .misc_clk(misc_clk),
+      .user_clk(user_clk),
+      .sync_clk(sync_clk),
+      .au_tx_out_clk(au_tx_out_clk),
 
-         .bus_rst(bus_rst),
-         .bus_clk(bus_clk),
-         .qpllreset(qpllreset),
-         .qplllock(qplllock),
-         .qplloutclk(qplloutclk),
-         .qplloutrefclk(qplloutrefclk),
-         .qpllrefclklost(qpllrefclklost),
+      .bus_rst(bus_rst),
+      .bus_clk(bus_clk),
+      .qpllreset(qpllreset),
+      .qplllock(qplllock),
+      .qplloutclk(qplloutclk),
+      .qplloutrefclk(qplloutrefclk),
+      .qpllrefclklost(qpllrefclklost),
 
-         .txp(txp),
-         .txn(txn),
-         .rxp(rxp),
-         .rxn(rxn),
+      .txp(txp),
+      .txn(txn),
+      .rxp(rxp),
+      .rxn(rxn),
 
-         .sfpp_rxlos(sfpp_rxlos),
-         .sfpp_tx_fault(sfpp_tx_fault),
-         .sfpp_tx_disable(sfpp_tx_disable),
+      .sfpp_rxlos(sfpp_rxlos),
+      .sfpp_tx_fault(sfpp_tx_fault),
+      .sfpp_tx_disable(sfpp_tx_disable),
 
-         //RegPort
-         .reg_wr_req(sfp_reg_wr_req),
-         .reg_wr_addr(sfp_reg_wr_addr),
-         .reg_wr_data(sfp_reg_wr_data),
-         .reg_rd_req(sfp_reg_rd_req),
-         .reg_rd_addr(sfp_reg_rd_addr),
-         .reg_rd_resp(sfp_reg_rd_resp),
-         .reg_rd_data(sfp_reg_rd_data),
+      //RegPort
+      .reg_wr_req(sfp_reg_wr_req),
+      .reg_wr_addr(sfp_reg_wr_addr),
+      .reg_wr_data(sfp_reg_wr_data),
+      .reg_rd_req(sfp_reg_rd_req),
+      .reg_rd_addr(sfp_reg_rd_addr),
+      .reg_rd_resp(sfp_reg_rd_resp),
+      .reg_rd_data(sfp_reg_rd_data),
 
-         // Vita to Ethernet
-         .s_axis_tdata(v2e_tdata),
-         .s_axis_tuser(4'b0),
-         .s_axis_tlast(v2e_tlast),
-         .s_axis_tvalid(v2e_tvalid),
-         .s_axis_tready(v2e_tready),
+      // Vita to Ethernet
+      .s_axis_tdata(v2e_tdata),
+      .s_axis_tuser(4'b0),
+      .s_axis_tlast(v2e_tlast),
+      .s_axis_tvalid(v2e_tvalid),
+      .s_axis_tready(v2e_tready),
 
-         // Ethernet to Vita
-         .m_axis_tdata(e2v_tdata),
-         .m_axis_tuser(),
-         .m_axis_tlast(e2v_tlast),
-         .m_axis_tvalid(e2v_tvalid),
-         .m_axis_tready(e2v_tready),
+      // Ethernet to Vita
+      .m_axis_tdata(e2v_tdata),
+      .m_axis_tuser(),
+      .m_axis_tlast(e2v_tlast),
+      .m_axis_tvalid(e2v_tvalid),
+      .m_axis_tready(e2v_tready),
 
-         .mac_status_bclk_out(sfp_mac_status),
-         .phy_status(sfp_phy_status),
-         .mmcm_locked(au_mmcm_locked),
-         .gt_pll_lock(gt_pll_lock),
-         .phy_areset_out(phy_areset_out)
-      );
+      .mac_status_bclk_out(sfp_mac_status),
+      .phy_status(sfp_phy_status),
+      .mmcm_locked(au_mmcm_locked),
+      .gt_pll_lock(gt_pll_lock),
+      .phy_areset_out(phy_areset_out)
+    );
 
-      pulse_stretch inst_pulse_stretch (
-        .clk(bus_clk),
-        .rst(bus_rst),
-        .pulse(e2v0_tvalid & e2v0_tready || v2e0_tvalid & v2e0_tready),
-        .pulse_stretched(activity_led)
-      );
+    pulse_stretch inst_pulse_stretch (
+      .clk(bus_clk),
+      .rst(bus_rst),
+      .pulse(e2v0_tvalid & e2v0_tready || v2e0_tvalid & v2e0_tready),
+      .pulse_stretched(activity_led)
+    );
 
+  end else begin // (if PROTOCOL == "Aurora")
 
-   end else begin
+    //set unused wires to default value
+    assign au_tx_out_clk = 1'b0;
+    assign gt_pll_lock = 1'b0;
+    assign phy_areset_out = 1'b0;
 
+    /////////////////////////////////////////////////////////////////////
+    //
+    // Network Interface
+    //
+    //////////////////////////////////////////////////////////////////////
 
-      //set unused wires to default value
-      assign au_tx_out_clk = 1'b0;
-      assign gt_pll_lock = 1'b0;
-      assign phy_areset_out = 1'b0;
-      /////////////////////////////////////////////////////////////////////
-      //
-      // Network Interface 0
-      //
-      //////////////////////////////////////////////////////////////////////
-      network_interface #(
-          .PROTOCOL(PROTOCOL),
-          .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-          .AWIDTH(AWIDTH),     // Width of the address bus
-          .MDIO_EN(MDIO_EN),
-          .PORTNUM(PORTNUM)
-      ) network_interface_i (
-         .areset(areset),     // TODO: Add Reset through PS
-         .gt_refclk(gt_refclk),
-         .gb_refclk(gb_refclk),
-         .misc_clk(misc_clk),
-         .bus_rst(bus_rst),
-         .bus_clk(bus_clk),
+    network_interface #(
+      .PROTOCOL(PROTOCOL),
+      .DWIDTH(DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .AWIDTH(AWIDTH),     // Width of the address bus
+      .MDIO_EN(MDIO_EN),
+      .PORTNUM(PORTNUM)
+    ) network_interface_i (
+      .areset(areset),     // TODO: Add Reset through PS
+      .gt_refclk(gt_refclk),
+      .gb_refclk(gb_refclk),
+      .misc_clk(misc_clk),
+      .bus_rst(bus_rst),
+      .bus_clk(bus_clk),
 
-         .qplllock(qplllock),
-         .qplloutclk(qplloutclk),
-         .qplloutrefclk(qplloutrefclk),
+      .qplllock(qplllock),
+      .qplloutclk(qplloutclk),
+      .qplloutrefclk(qplloutrefclk),
 
-         .txp(txp),
-         .txn(txn),
-         .rxp(rxp),
-         .rxn(rxn),
+      .txp(txp),
+      .txn(txn),
+      .rxp(rxp),
+      .rxn(rxn),
 
-         .sfpp_rxlos(sfpp_rxlos),
-         .sfpp_tx_fault(sfpp_tx_fault),
-         .sfpp_tx_disable(sfpp_tx_disable),
+      .sfpp_rxlos(sfpp_rxlos),
+      .sfpp_tx_fault(sfpp_tx_fault),
+      .sfpp_tx_disable(sfpp_tx_disable),
 
-         .sfp_phy_status(sfp_phy_status),
+      .sfp_phy_status(sfp_phy_status),
 
-         // Clock and reset
-         .s_axi_aclk(s_axi_aclk),
-         .s_axi_aresetn(s_axi_aresetn),
-         // AXI4-Lite: Write address port (domain: s_axi_aclk)
-         .s_axi_awaddr(s_axi_awaddr),
-         .s_axi_awvalid(s_axi_awvalid),
-         .s_axi_awready(s_axi_awready),
-         // AXI4-Lite: Write data port (domain: s_axi_aclk)
-         .s_axi_wdata(s_axi_wdata),
-         .s_axi_wstrb(s_axi_wstrb),
-         .s_axi_wvalid(s_axi_wvalid),
-         .s_axi_wready(s_axi_wready),
-         // AXI4-Lite: Write response port (domain: s_axi_aclk)
-         .s_axi_bresp(s_axi_bresp),
-         .s_axi_bvalid(s_axi_bvalid),
-         .s_axi_bready(s_axi_bready),
-         // AXI4-Lite: Read address port (domain: s_axi_aclk)
-         .s_axi_araddr(s_axi_araddr),
-         .s_axi_arvalid(s_axi_arvalid),
-         .s_axi_arready(s_axi_arready),
-         // AXI4-Lite: Read data port (domain: s_axi_aclk)
-         .s_axi_rdata(s_axi_rdata),
-         .s_axi_rresp(s_axi_rresp),
-         .s_axi_rvalid(s_axi_rvalid),
-         .s_axi_rready(s_axi_rready),
+      // Clock and reset
+      .s_axi_aclk(s_axi_aclk),
+      .s_axi_aresetn(s_axi_aresetn),
+      // AXI4-Lite: Write address port (domain: s_axi_aclk)
+      .s_axi_awaddr(s_axi_awaddr),
+      .s_axi_awvalid(s_axi_awvalid),
+      .s_axi_awready(s_axi_awready),
+      // AXI4-Lite: Write data port (domain: s_axi_aclk)
+      .s_axi_wdata(s_axi_wdata),
+      .s_axi_wstrb(s_axi_wstrb),
+      .s_axi_wvalid(s_axi_wvalid),
+      .s_axi_wready(s_axi_wready),
+      // AXI4-Lite: Write response port (domain: s_axi_aclk)
+      .s_axi_bresp(s_axi_bresp),
+      .s_axi_bvalid(s_axi_bvalid),
+      .s_axi_bready(s_axi_bready),
+      // AXI4-Lite: Read address port (domain: s_axi_aclk)
+      .s_axi_araddr(s_axi_araddr),
+      .s_axi_arvalid(s_axi_arvalid),
+      .s_axi_arready(s_axi_arready),
+      // AXI4-Lite: Read data port (domain: s_axi_aclk)
+      .s_axi_rdata(s_axi_rdata),
+      .s_axi_rresp(s_axi_rresp),
+      .s_axi_rvalid(s_axi_rvalid),
+      .s_axi_rready(s_axi_rready),
 
-         // Ethernet to Vita
-         .e2v_tdata(e2v_tdata),
-         .e2v_tlast(e2v_tlast),
-         .e2v_tvalid(e2v_tvalid),
-         .e2v_tready(e2v_tready),
+      // Ethernet to Vita
+      .e2v_tdata(e2v_tdata),
+      .e2v_tlast(e2v_tlast),
+      .e2v_tvalid(e2v_tvalid),
+      .e2v_tready(e2v_tready),
 
-         // Vita to Ethernet
-         .v2e_tdata(v2e_tdata),
-         .v2e_tlast(v2e_tlast),
-         .v2e_tvalid(v2e_tvalid),
-         .v2e_tready(v2e_tready),
+      // Vita to Ethernet
+      .v2e_tdata(v2e_tdata),
+      .v2e_tlast(v2e_tlast),
+      .v2e_tvalid(v2e_tvalid),
+      .v2e_tready(v2e_tready),
 
-         // Crossover
-         .xo_tdata(xo_tdata),
-         .xo_tuser(xo_tuser),
-         .xo_tlast(xo_tlast),
-         .xo_tvalid(xo_tvalid),
-         .xo_tready(xo_tready),
-         .xi_tdata(xi_tdata),
-         .xi_tuser(xi_tuser),
-         .xi_tlast(xi_tlast),
-         .xi_tvalid(xi_tvalid),
-         .xi_tready(xi_tready),
+      // Crossover
+      .xo_tdata(xo_tdata),
+      .xo_tuser(xo_tuser),
+      .xo_tlast(xo_tlast),
+      .xo_tvalid(xo_tvalid),
+      .xo_tready(xo_tready),
+      .xi_tdata(xi_tdata),
+      .xi_tuser(xi_tuser),
+      .xi_tlast(xi_tlast),
+      .xi_tvalid(xi_tvalid),
+      .xi_tready(xi_tready),
 
-         // Ethernet to CPU
-         .e2c_tdata(e2c_tdata),
-         .e2c_tkeep(e2c_tkeep),
-         .e2c_tlast(e2c_tlast),
-         .e2c_tvalid(e2c_tvalid),
-         .e2c_tready(e2c_tready),
+      // Ethernet to CPU
+      .e2c_tdata(e2c_tdata),
+      .e2c_tkeep(e2c_tkeep),
+      .e2c_tlast(e2c_tlast),
+      .e2c_tvalid(e2c_tvalid),
+      .e2c_tready(e2c_tready),
 
-         // CPU to Ethernet
-         .c2e_tdata(c2e_tdata),
-         .c2e_tkeep(c2e_tkeep),
-         .c2e_tlast(c2e_tlast),
-         .c2e_tvalid(c2e_tvalid),
-         .c2e_tready(c2e_tready),
+      // CPU to Ethernet
+      .c2e_tdata(c2e_tdata),
+      .c2e_tkeep(c2e_tkeep),
+      .c2e_tlast(c2e_tlast),
+      .c2e_tvalid(c2e_tvalid),
+      .c2e_tready(c2e_tready),
 
-         // LED
-         .activity_led(activity_led)
-      );
-   end
-   endgenerate
+      // LED
+      .activity_led(activity_led)
+    );
+  end
+  endgenerate
 
-endmodule
+endmodule // n310_sfp_wrapper

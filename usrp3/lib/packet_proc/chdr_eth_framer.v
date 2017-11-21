@@ -1,10 +1,17 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2014 Ettus Research LLC
+// Copyright 2014-2017 Ettus Research, A National Instruments Company
 //
-// chdr_eth_framer
-//  Takes a CHDR stream in and adds udp, ip, and ethernet framing
-//  Next 4 control write ports on a RAM indexed by destination field of stream ID
+// SPDX-License-Identifier: LGPL-3.0
 //
+// Module: chdr_eth_framer
+// Description:
+//  - Takes a CHDR stream in and adds udp, ip, and ethernet framing
+//  - Use a RAM indexed by destination field of stream ID
+//    - Local RAM: For local host packets
+//    - Remote RAM: For remote host with different local_addr
+//
+/////////////////////////////////////////////////////////////////////
 
 module chdr_eth_framer #(
   parameter BASE   = 0,

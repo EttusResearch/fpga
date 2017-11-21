@@ -1,6 +1,15 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2012 Ettus Research LLC
+// Copyright 2012 Ettus Research, A National Instruments Company
 //
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: axi_crossbar
+// Description:
+//   - Control Registers
+//   - CAM to setup routing between RFNoC blocks
+//
+/////////////////////////////////////////////////////////////////////
 
 module axi_crossbar
   #(

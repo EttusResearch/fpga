@@ -1,24 +1,26 @@
+/////////////////////////////////////////////////////////////////////
 //
-// Copyright 2013 Ettus Research LLC
+// Copyright 2013 Ettus Research, A National Instruments Company
 //
-
-
+// SPDX-License-Identifier: LGPL-3.0
 //
-// Wrap XGE MAC so that:
+// Module: xge_mac_wrapper_wb
+// Description:
+//   Wrap XGE MAC + wishbone interface
 //
-// *) Signals are crossed between the MAC's own 156.25MHz clock domain and the
-// main FPGA clock domain.
-// *) 6 byte Padding is added at RX, including metadata so that IP headers become aligned.
-// *) 6 Byte padding is stripped at TX, so that Eth header data starts immediately.
-// *) TX & RX can buffer at least an MTU sized packet
-// *) On TX, to not start an Ethernet Tx until a complete packet is present in the
-// last Tx FIFO so that the MAC doesn't underrun.
+//   *) Signals are crossed between the MAC's own 156.25MHz clock domain and the
+//   main FPGA clock domain.
+//   *) 6 byte Padding is added at RX, including metadata so that IP headers become aligned.
+//   *) 6 Byte padding is stripped at TX, so that Eth header data starts immediately.
+//   *) TX & RX can buffer at least an MTU sized packet
+//   *) On TX, to not start an Ethernet Tx until a complete packet is present in the
+//   last Tx FIFO so that the MAC doesn't underrun.
 //
+/////////////////////////////////////////////////////////////////////
 
 module xge_mac_wrapper_wb
   #(parameter PORTNUM=8'd0)
-
-   (
+  (
     // XGMII
     input xgmii_clk,
     output [63:0] xgmii_txd,
@@ -99,7 +101,7 @@ module xge_mac_wrapper_wb
    wire        eth_tx_sof;
    wire        eth_tx_valid;
 
-   xge_mac xge_mac
+   xge_mac_wb xge_mac_wb
      (
       // Outputs
       .pkt_rx_avail               (eth_rx_avail),
