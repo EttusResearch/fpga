@@ -6,20 +6,16 @@
 include $(IP_DIR)/axi64_4k_2clk_fifo/Makefile.inc
 include $(IP_DIR)/axi64_8k_2clk_fifo/Makefile.inc
 include $(IP_DIR)/axi_intercon_2x64_256_bd/Makefile.inc
-#include $(IP_DIR)/bus_clk_gen/Makefile.inc
 include $(IP_DIR)/ddr3_32bit/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 #include $(IP_DIR)/input_sample_fifo/Makefile.inc
 include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
-include $(IP_DIR)/radio_clk_gen/Makefile.inc
-include $(IP_DIR)/clk_gen/Makefile.inc
 include $(IP_DIR)/MeasClkMmcm/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
 include $(IP_DIR)/axis_fifo_to_axi4lite/Makefile.inc
-include $(IP_DIR)/axi_interrupt_controller/Makefile.inc
 include $(IP_DIR)/axi_eth_dma/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
@@ -36,14 +32,10 @@ $(IP_AXI64_8K_2CLK_FIFO_SRCS) \
 $(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_32_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_64_SRCS) \
-$(IP_AXI_INTERRUPT_CONTROLLER_SRCS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_SRCS) \
-$(IP_BUS_CLK_GEN_SRCS) \
 $(IP_MEASCLK_MMCM_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
-$(IP_RADIO_CLK_GEN_SRCS) \
-$(IP_CLK_GEN_SRCS) \
 $(IP_AXI_ETH_DMA_SRCS)
 
 IP_ONE_GIGE_PHY_XCI_SRCS = \
@@ -53,7 +45,7 @@ IP_TEN_GIGE_PHY_XCI_SRCS = \
 $(IP_TEN_GIG_ETH_PCS_PMA_SRCS)
 
 IP_AURORA_XCI_SRCS = \
-$(IP_AURORA_64B66B_PCS_PMA_SRCS) 
+$(IP_AURORA_64B66B_PCS_PMA_SRCS)
 
 IP_DRAM_XCI_SRCS = \
 $(IP_DDR3_32BIT_SRCS)
@@ -71,19 +63,15 @@ $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
 $(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_OUTS) \
 $(IP_AXI_INTERCONNECT_OUTS) \
-$(IP_AXI_INTERRUPT_CONTROLLER_OUTS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_32_OUTS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_64_OUTS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_OUTS) \
-$(IP_BUS_CLK_GEN_OUTS) \
 $(IP_FIFO_4K_2CLK_OUTS) \
 $(IP_FIFO_SHORT_2CLK_OUTS) \
 $(IP_ONE_GIG_ETH_PCS_PMA_OUTS) \
-$(IP_RADIO_CLK_GEN_OUTS) \
-$(IP_CLK_GEN_OUTS) \
 $(IP_AXI_ETH_DMA_OUTS) \
 $(IP_TEN_GIG_ETH_PCS_PMA_OUTS) \
-$(IP_AURORA_64B66B_PCS_PMA_OUTS) 
+$(IP_AURORA_64B66B_PCS_PMA_OUTS)
 
 BD_OUTPUTS = \
 $(IP_AXI_INTERCON_2X64_256_BD_OUTS) \
