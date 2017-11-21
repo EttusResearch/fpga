@@ -174,7 +174,8 @@ module n310_sfpp_io_core #(
            default:
               reg_rd_resp_glob <= 1'b0;
         endcase
-     end if (reg_rd_resp_glob) begin
+     end
+     if (reg_rd_resp_glob) begin
         reg_rd_resp_glob <= 1'b0;
      end
   end

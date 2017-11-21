@@ -90,22 +90,35 @@ module eth_switch #(
   output  [31:0]  debug
   );
 
-  localparam REG_DISPATCH_BASE = BASE + 'h1008;
-  localparam REG_FRAMER_BASE   = BASE + 'h1000;
-
   //---------------------------------------------------------
   // Registers
   //---------------------------------------------------------
 
+  // Allocate one full page for MAC
   localparam REG_MAC_LSB        = BASE + 'h0000;
   localparam REG_MAC_MSB        = BASE + 'h0004;
+
+  // Source IP address
   localparam REG_IP             = BASE + 'h1000;
+  // Source UDP Port
   localparam REG_UDP            = BASE + 'h1004;
+
+  // Base Address for eth_dispatch
+  localparam REG_BASE_DISPATCH  = BASE + 'h1008;
+
+  // Registers for Bridge Network Mode in CPU
   localparam REG_BRIDGE_MAC_LSB = BASE + 'h1010;
   localparam REG_BRIDGE_MAC_MSB = BASE + 'h1014;
   localparam REG_BRIDGE_IP      = BASE + 'h1018;
   localparam REG_BRIDGE_UDP     = BASE + 'h101c;
   localparam REG_BRIDGE_ENABLE  = BASE + 'h1020;
+
+  // Base address for chdr_eth_framer
+  localparam REG_BASE_FRAMER    = BASE + 'h2000;
+  localparam REG_END_ADDR_FRAMER    = BASE + 'h2FFF;
+
+  // Setting register width
+  localparam SR_AWIDTH = 12;
 
   // MAC address for the dispatcher module.
   // This value is used to determine if the packet is meant
@@ -173,13 +186,9 @@ module eth_switch #(
     end
 
   always @ (posedge clk) begin
-    // Deassert read response after one clock cycle
-    reg_rd_resp <= 1'b0;
-    if (reset) begin
-      reg_rd_data <= 32'b0;
-      reg_rd_resp <= 1'b0;
-    end else if (reg_rd_req) begin
-      // Assert read respone one cycle after read request
+    // No reset handling required for readback
+    if (reg_rd_req) begin
+      // Assert read response one cycle after read request
       reg_rd_resp <= 1'b1;
       case (reg_rd_addr)
         REG_MAC_LSB:
@@ -210,8 +219,12 @@ module eth_switch #(
           reg_rd_data <= {31'b0,bridge_en};
 
         default:
-          reg_rd_data <= 32'b0;
+          reg_rd_resp <= 1'b0;
       endcase
+    end
+    // Deassert read response after one clock cycle
+    if (reg_rd_resp) begin
+      reg_rd_resp <= 1'b0;
     end
   end
 
@@ -263,18 +276,43 @@ module eth_switch #(
    wire  [3:0]     e2c_tuser_int2;
    wire            e2c_tlast_int2, e2c_tvalid_int2, e2c_tready_int2;
 
+   wire                  dispatch_set_stb;
+   wire [SR_AWIDTH-1:0]  dispatch_set_addr;
+   wire [REG_DWIDTH-1:0] dispatch_set_data;
+
+   // Convert regport to setting bus
+   regport_to_settingsbus #(
+    .BASE(REG_BASE_DISPATCH),
+    .END_ADDR(REG_BASE_DISPATCH + 14'h8), // has 2 register for now
+    .DWIDTH(REG_DWIDTH),
+    .AWIDTH(REG_AWIDTH),
+    .SR_AWIDTH(SR_AWIDTH),
+    .DEALIGN(1)
+   )
+   inst_eth_dispatch_settingsbus
+   (
+    .clk(clk),
+    .reset(reset),
+    .reg_wr_req(reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
+    .set_stb(dispatch_set_stb),
+    .set_addr(dispatch_set_addr),
+    .set_data(dispatch_set_data)
+   );
+
    eth_dispatch #(
-    .BASE             (BASE[13:2]),
-    .AWIDTH           (12),
+    .BASE             (0),
+    .AWIDTH           (SR_AWIDTH),
     .DROP_UNKNOWN_MAC (0)
     ) eth_dispatch (
     .clk        (clk),
     .reset      (reset),
     .clear      (clear),
 
-    .set_stb    (reg_wr_req),
-    .set_addr   (reg_wr_addr[13:2]),
-    .set_data   (reg_wr_data),
+    .set_stb    (dispatch_set_stb),
+    .set_addr   (dispatch_set_addr),
+    .set_data   (disptach_set_data),
 
     .in_tdata   (epg_tdata_int),
     .in_tuser   (epg_tuser_int),
@@ -377,16 +415,41 @@ module eth_switch #(
       .i_tdata({v2e_tlast,v2e_tdata}), .i_tvalid(v2e_tvalid), .i_tready(v2e_tready),
       .o_tdata({v2e_tlast_int,v2e_tdata_int}), .o_tvalid(v2e_tvalid_int), .o_tready(v2e_tready_int), .space(), .occupied());
 
+   wire                  framer_set_stb;
+   wire [SR_AWIDTH-1:0]  framer_set_addr;
+   wire [REG_DWIDTH-1:0] framer_set_data;
+
+   // Convert regport to setting bus
+   regport_to_settingsbus #(
+     .BASE(REG_BASE_FRAMER),
+     .END_ADDR(REG_END_ADDR_FRAMER),
+     .DWIDTH(REG_DWIDTH),
+     .AWIDTH(REG_AWIDTH),
+     .SR_AWIDTH(SR_AWIDTH),
+     .DEALIGN(1)
+   )
+   inst_eth_framer_settingsbus
+   (
+    .clk(clk),
+    .reset(reset),
+    .reg_wr_req(reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
+    .set_stb(framer_set_stb),
+    .set_addr(framer_set_addr),
+    .set_data(framer_set_data)
+   );
+
    chdr_eth_framer #(
-     .BASE   (REG_FRAMER_BASE[13:2]),
-     .AWIDTH (12)
+     .BASE   (0),
+     .AWIDTH (SR_AWIDTH)
      ) my_eth_framer (
       .clk(clk),
       .reset(reset),
       .clear(clear),
-      .set_stb(reg_wr_req),
-      .set_addr(reg_wr_addr[13:2]),
-      .set_data(reg_wr_data),
+      .set_stb(framer_set_stb),
+      .set_addr(framer_set_addr),
+      .set_data(framer_set_data),
       .in_tdata(v2e_tdata_int),
       .in_tlast(v2e_tlast_int),
       .in_tvalid(v2e_tvalid_int),

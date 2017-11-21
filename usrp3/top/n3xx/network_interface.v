@@ -112,6 +112,9 @@ module network_interface #(
   output          activity_led
   );
 
+  localparam REG_BASE_SFP_IO = 14'h0;
+  localparam REG_BASE_ETH_SWITCH = 14'h1000;
+
   //////////////////////////////////////////////////////////////////////
   //
   // AXI4-Lite to RegPort (PS to PL Register Access)
@@ -230,7 +233,7 @@ module network_interface #(
 
   n310_sfpp_io_core #(
      .PROTOCOL(PROTOCOL),
-     .REG_BASE(14'h0),
+     .REG_BASE(REG_BASE_SFP_IO),
      .REG_DWIDTH (DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
      .REG_AWIDTH (AWIDTH),         // Width of the address bus
      .MDIO_EN(1'b1),
@@ -290,7 +293,7 @@ module network_interface #(
   //////////////////////////////////////////////////////////////////////
 
   eth_switch #(
-    .BASE(14'h1000),
+    .BASE(REG_BASE_ETH_SWITCH),
     .REG_DWIDTH (DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
     .REG_AWIDTH (AWIDTH)         // Width of the address bus
   ) eth_switch (

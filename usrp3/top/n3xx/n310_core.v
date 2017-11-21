@@ -57,7 +57,6 @@ module n310_core #(
   output [1:0]             s_axi_rresp,
   output                   s_axi_rvalid,
   input                    s_axi_rready,
-
   //radios gpio dsa
   output [15:0] db_gpio_out0,
   output [15:0] db_gpio_out1,
@@ -234,8 +233,10 @@ module n310_core #(
   wire  [REG_DWIDTH-1:0]   reg_rd_data_xbar;
   wire                     reg_rd_resp_xbar;
 
-  regport_resp_mux #(.WIDTH(REG_DWIDTH)) inst_regport_resp_mux
-  (
+  regport_resp_mux #(
+    .WIDTH(REG_DWIDTH),
+    .NUM_SLAVES (2)
+  ) inst_regport_resp_mux (
     .clk(bus_clk),
     .reset(bus_rst),
     .sla_rd_resp({reg_rd_resp_glob, reg_rd_resp_xbar}),

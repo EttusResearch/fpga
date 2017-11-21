@@ -157,8 +157,8 @@ module eth_dispatch #(
   // Settings regs
   //---------------------------------------------------------
 
-  localparam REG_FWD_CTRL  = BASE + 'h402;
-  localparam REG_ICMP_CTRL = BASE + 'h403;
+  localparam REG_FWD_CTRL  = BASE + 'h0 ;
+  localparam REG_ICMP_CTRL = BASE + 'h1;
 
   // forward_ndest: Forward to crossover path if MAC Addr in packet
   //                does not match "my_mac"

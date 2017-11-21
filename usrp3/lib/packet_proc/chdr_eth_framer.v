@@ -3,17 +3,7 @@
 //
 // chdr_eth_framer
 //  Takes a CHDR stream in and adds udp, ip, and ethernet framing
-//  Uses 8 setting reg addresses.  First 4 are simple registers:
-//    BASE+0 : Upper 16 bits of ethernet src mac
-//    BASE+1 : Lower 32 bits of ethernet src mac
-//    BASE+2 : IP src address
-//    BASE+3 : UDP src port
-//
 //  Next 4 control write ports on a RAM indexed by destination field of stream ID
-//    BASE+4 : Dest SID for next 3 regs
-//    BASE+5 : Dest IP
-//    BASE+6 : Dest UDP port, upper 16 bits of dest mac
-//    BASE+7 : Lower 32 bits of dest mac
 //
 
 module chdr_eth_framer #(
@@ -41,13 +31,13 @@ module chdr_eth_framer #(
   output [31:0]        debug
   );
 
-  localparam [11:0] REG_LOCAL_DST_IP          = BASE + 'h400;
-  localparam [11:0] REG_LOCAL_DST_UDP_MAC_MSB = BASE + 'h500;
-  localparam [11:0] REG_LOCAL_DST_MAC_LSB     = BASE + 'h600;
+  localparam [11:0] REG_LOCAL_DST_IP          = BASE + 'h0;
+  localparam [11:0] REG_LOCAL_DST_UDP_MAC_MSB = BASE + 'h100;
+  localparam [11:0] REG_LOCAL_DST_MAC_LSB     = BASE + 'h200;
 
-  localparam [11:0] REG_REMOTE_DST_IP          = BASE + 'h040;
-  localparam [11:0] REG_REMOTE_DST_UDP_MAC_MSB = BASE + 'h080;
-  localparam [11:0] REG_REMOTE_DST_MAC_LSB     = BASE + 'h0c0;
+  localparam [11:0] REG_REMOTE_DST_IP          = BASE + 'h340;
+  localparam [11:0] REG_REMOTE_DST_UDP_MAC_MSB = BASE + 'h380;
+  localparam [11:0] REG_REMOTE_DST_MAC_LSB     = BASE + 'h3c0;
 
   reg [7:0] 	  sid;
   reg [15:0] 	  chdr_len;
