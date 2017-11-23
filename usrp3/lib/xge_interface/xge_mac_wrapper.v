@@ -59,10 +59,18 @@ module xge_mac_wrapper #(
    //
 
    wire xgmii_reset, ctrl_tx_enable_xclk;
+   wire phy_ready_xgmiiclk, sys_rst_xgmiiclk;
+
+   synchronizer #(
+      .INITIAL_VAL(1'b0), .STAGES(3)
+   ) phy_ready_sync_i (
+      .clk(xgmii_clk), .rst(1'b0 /* no reset */), .in(phy_ready), .out(phy_ready_xgmiiclk)
+   );
+
    synchronizer #(
       .INITIAL_VAL(1'b1), .STAGES(3)
-   ) xgmii_reset_sync_i (
-      .clk(xgmii_clk), .rst(1'b0 /* no reset */), .in(!phy_ready || sys_rst), .out(xgmii_reset)
+   ) sys_rst_sync_i (
+      .clk(xgmii_clk), .rst(1'b0 /* no reset */), .in(sys_rst), .out(sys_rst_xgmiiclk)
    );
 
    synchronizer #(
@@ -70,6 +78,8 @@ module xge_mac_wrapper #(
    ) tx_enabled_sync_i (
       .clk(xgmii_clk), .rst(1'b0 /* no reset */), .in(ctrl_tx_enable), .out(ctrl_tx_enable_xclk)
    );
+
+   assign xgmii_reset = !phy_ready_xgmiiclk || sys_rst_xgmiiclk;
 
    //
    // 10G MAC
