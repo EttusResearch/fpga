@@ -134,7 +134,7 @@ module axi_crossbar_regport #(
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH),
     .SR_AWIDTH(SR_AWIDTH),
-    .DEALIGN(1)
+    .ADDRESSING("WORD")
   ) inst_regport_to_xbar_settingsbus (
     .clk(clk),
     .reset(reset),

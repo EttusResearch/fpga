@@ -304,10 +304,11 @@ module eth_switch #(
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH),
     .SR_AWIDTH(SR_AWIDTH),
-    .DEALIGN(1)
+    .ADDRESSING("WORD")
   )
-  inst_eth_dispatch_settingsbus
-  (
+  inst_eth_dispatch_settingsbus (
+    .clk(clk),
+    .reset(reset),
     .reg_wr_req(reg_wr_req),
     .reg_wr_addr(reg_wr_addr),
     .reg_wr_data(reg_wr_data),
@@ -472,10 +473,11 @@ module eth_switch #(
     .DWIDTH(REG_DWIDTH),
     .AWIDTH(REG_AWIDTH),
     .SR_AWIDTH(SR_AWIDTH),
-    .DEALIGN(1)
+    .ADDRESSING("WORD")
   )
-  inst_eth_framer_settingsbus
-  (
+  inst_eth_framer_settingsbus (
+    .clk(clk),
+    .reset(reset),
     .reg_wr_req(reg_wr_req),
     .reg_wr_addr(reg_wr_addr),
     .reg_wr_data(reg_wr_data),

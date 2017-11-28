@@ -12,12 +12,9 @@
 //   there is an extra cycle delay in read data in the crossbar, which is
 //   why the rb_stb needs to be delayed by a cycle.
 //
-//   DEALIGN: Set to 1 in case of settings bus. The settings bus does not
-//   use word aligned address and hence the address needs to be shifted by 2
+//   ADDRESSING: Set to "WORD" in case of settings bus. The settings bus
+//   uses word addressing and hence the address needs to be shifted by
 //   to convert to set_addr.
-//
-//   Care must be taken when DEALIGN = 1. set_addr has the width SR_AWIDTH
-//   Address MSB get chopped off in case (SR_AWIDTH + 2) != AWIDTH
 //
 /////////////////////////////////////////////////////////////////////
 
@@ -28,8 +25,9 @@ module regport_to_xbar_settingsbus #(
   parameter AWIDTH = 14,
   parameter SR_AWIDTH = 12,
   // Dealign for settings bus by shifting by 2
-  parameter DEALIGN = 0
-)(
+  parameter ADDRESSING = "WORD",
+  parameter SHIFT = $clog2(DWIDTH/8)
+  )(
   input                   clk,
   input                   reset,
 
@@ -51,13 +49,12 @@ module regport_to_xbar_settingsbus #(
   input  [DWIDTH-1:0]     rb_data
 );
 
-reg               reg_rd_req_delay;
-reg               reg_rd_req_delay2;
-wire [AWIDTH-1:0] set_addr_int;
-reg [AWIDTH-1:0]  rb_addr_int;
+  reg               reg_rd_req_delay;
+  reg               reg_rd_req_delay2;
+  wire [AWIDTH-1:0] set_addr_int;
+  reg [AWIDTH-1:0]  rb_addr_int;
 
-always @(posedge clk)
-  begin
+  always @(posedge clk) begin
     if (reset) begin
       reg_rd_req_delay <= 1'b0;
       reg_rd_req_delay2 <= 1'b0;
@@ -84,20 +81,33 @@ always @(posedge clk)
     end
   end
 
-// Strobe asserted only when address is between BASE and END ADDR
-assign set_stb = reg_wr_req & (reg_wr_addr >= BASE) & (reg_wr_addr <= END_ADDR);
-assign set_addr_int = reg_wr_addr - BASE;
-assign set_addr = DEALIGN ? {2'b0, set_addr_int[SR_AWIDTH-1:2]}
-                          : set_addr_int[SR_AWIDTH-1:0];
-assign set_data = reg_wr_data;
+  // Write mode of settings bus
+  regport_to_settingsbus #(
+    .BASE(BASE),
+    .END_ADDR(END_ADDR),
+    .DWIDTH(DWIDTH),
+    .AWIDTH(AWIDTH),
+    .SR_AWIDTH(SR_AWIDTH),
+    .ADDRESSING(ADDRESSING)
+   ) xbar_write_settings_bus (
+    .clk(clk),
+    .reset(reset),
+    .reg_wr_req(reg_wr_req),
+    .reg_wr_addr(reg_wr_addr),
+    .reg_wr_data(reg_wr_data),
 
-assign rb_addr = DEALIGN ? {2'b0, rb_addr_int[SR_AWIDTH-1:2]}
-                          : rb_addr_int[SR_AWIDTH-1:0];
-// Strobe asserted two cycle after read request only when address is between BASE and END ADDR
-// This is specific to the xbar as the xbar delays read data by an extra clock
-// cycle to relax timing.
-assign rb_stb  = reg_rd_req_delay2 & (reg_rd_addr >= BASE) & (reg_rd_addr <= END_ADDR);
-assign reg_rd_resp = rb_stb;
-assign reg_rd_data = rb_data;
+    .set_stb(set_stb),
+    .set_addr(set_addr),
+    .set_data(set_data)
+  );
+
+  assign rb_addr = (ADDRESSING == "WORD") ? {{SHIFT{1'b0}}, rb_addr_int[SR_AWIDTH-1:SHIFT]}
+                                          : rb_addr_int[SR_AWIDTH-1:0];
+  // Strobe asserted two cycle after read request only when address is between BASE and END ADDR
+  // This is specific to the xbar as the xbar delays read data by an extra clock
+  // cycle to relax timing.
+  assign rb_stb  = reg_rd_req_delay2 && (reg_rd_addr >= BASE) && (reg_rd_addr <= END_ADDR);
+  assign reg_rd_resp = rb_stb;
+  assign reg_rd_data = rb_data;
 
 endmodule
