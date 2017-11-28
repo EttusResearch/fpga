@@ -127,11 +127,11 @@ begin
   RadioClkMmcm: MMCME2_ADV
     generic map(
       COMPENSATION         => "ZHOLD",
-      BANDWIDTH            => "OPTIMIZED", -- VCO Freq 750 MHz
-      CLKFBOUT_MULT_F      => 6.000,    -- 125 MHz, Feedback
-      CLKOUT0_DIVIDE_F     => 6.000,    -- 125 MHz, Data Clock 1x, RadioClk1xPll
-      CLKOUT1_DIVIDE       => 3,        -- 250 MHz, Data Clock 2x, RadioClk2xPll
-      CLKOUT2_DIVIDE       => 2,        -- 375 MHz, Data Clock 3x, RadioClk3xPll
+      BANDWIDTH            => "OPTIMIZED",
+      CLKFBOUT_MULT_F      => 6.000,    -- Feedback
+      CLKOUT0_DIVIDE_F     => 6.000,    -- Data Clock 1x, RadioClk1xPll
+      CLKOUT1_DIVIDE       => 3,        -- Data Clock 2x, RadioClk2xPll
+      CLKOUT2_DIVIDE       => 2,        -- Data Clock 3x, RadioClk3xPll
       CLKOUT3_DIVIDE       => 1,        -- unused
       CLKOUT4_DIVIDE       => 1,        -- unused
       CLKOUT5_DIVIDE       => 1,        -- unused
@@ -153,7 +153,7 @@ begin
       CLKOUT6_DUTY_CYCLE   => 0.500,
       DIVCLK_DIVIDE        => 1,
       REF_JITTER1          => 0.010,
-      CLKIN1_PERIOD        => 8.000,    -- 125 MHz
+      CLKIN1_PERIOD        => 6.510,    -- 153.6 MHz max
       CLKFBOUT_USE_FINE_PS => true,
       CLKOUT0_USE_FINE_PS  => false,
       CLKOUT1_USE_FINE_PS  => false,

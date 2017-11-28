@@ -7,8 +7,9 @@
 #*******************************************************************************
 ## Daughterboard Clocks
 
-# 125 MHz DB A & B Clocks
-set SAMPLE_CLK_PERIOD 8.00
+# 122.88, 125, and 153.6 MHz Sample Clocks are allowable. Constrain the paths to the max
+# rate in order to support all rates in a single FPGA image.
+set SAMPLE_CLK_PERIOD 6.510
 create_clock -name fpga_clk_a  -period $SAMPLE_CLK_PERIOD  [get_ports DBA_FPGA_CLK_P]
 create_clock -name fpga_clk_b  -period $SAMPLE_CLK_PERIOD  [get_ports DBB_FPGA_CLK_P]
 create_clock -name mgt_clk_dba -period $SAMPLE_CLK_PERIOD  [get_ports USRPIO_A_MGTCLK_P]
