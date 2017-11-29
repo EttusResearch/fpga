@@ -55,7 +55,7 @@ proc create_root_design { parentCell } {
   # Create interface ports
   set DDR [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:ddrx_rtl:1.0 DDR ]
   set GPIO_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 GPIO_0 ]
-  set o_cvita_dma [ create_bd_intf_port -mode Master -vlnv ettus.org:interfaces:chdr_rtl:1.0 o_cvita_dma ]
+  set o_cvita_dma [ create_bd_intf_port -mode Master -vlnv ettus.com:interfaces:chdr_rtl:1.0 o_cvita_dma ]
   set M_AXI_ETH_DMA0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_ETH_DMA0 ]
   set_property -dict [ list \
 CONFIG.ADDR_WIDTH {32} \
@@ -161,7 +161,7 @@ CONFIG.NUM_READ_OUTSTANDING {2} \
 CONFIG.NUM_WRITE_OUTSTANDING {2} \
 CONFIG.PROTOCOL {AXI4LITE} \
  ] $M_AXI_XBAR
-  set i_cvita_dma [ create_bd_intf_port -mode Slave -vlnv ettus.org:interfaces:chdr_rtl:1.0 i_cvita_dma ]
+  set i_cvita_dma [ create_bd_intf_port -mode Slave -vlnv ettus.com:interfaces:chdr_rtl:1.0 i_cvita_dma ]
   set S_AXI_GP0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 S_AXI_GP0 ]
   set_property -dict [ list \
 CONFIG.ADDR_WIDTH {32} \

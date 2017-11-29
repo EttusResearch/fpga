@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <spirit:component xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <spirit:vendor>ettus.org</spirit:vendor>
+  <spirit:vendor>ettus.com</spirit:vendor>
   <spirit:library>ip</spirit:library>
   <spirit:name>cvita_to_axis</spirit:name>
   <spirit:version>1.0</spirit:version>
   <spirit:busInterfaces>
     <spirit:busInterface>
       <spirit:name>i</spirit:name>
-      <spirit:busType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
-      <spirit:abstractionType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
+      <spirit:busType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
+      <spirit:abstractionType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
       <spirit:slave/>
       <spirit:portMaps>
         <spirit:portMap>
@@ -17,14 +17,6 @@
           </spirit:logicalPort>
           <spirit:physicalPort>
             <spirit:name>i_tvalid</spirit:name>
-          </spirit:physicalPort>
-        </spirit:portMap>
-        <spirit:portMap>
-          <spirit:logicalPort>
-            <spirit:name>tready</spirit:name>
-          </spirit:logicalPort>
-          <spirit:physicalPort>
-            <spirit:name>i_tready</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
         <spirit:portMap>
@@ -43,6 +35,14 @@
             <spirit:name>i_tlast</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>tready</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>i_tready</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
       </spirit:portMaps>
     </spirit:busInterface>
     <spirit:busInterface>
@@ -56,7 +56,7 @@
             <spirit:name>TVALID</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>m_axis_tvalid</spirit:name>
+            <spirit:name>o_tvalid</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
         <spirit:portMap>
@@ -64,7 +64,7 @@
             <spirit:name>TLAST</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>m_axis_tlast</spirit:name>
+            <spirit:name>o_tlast</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
         <spirit:portMap>
@@ -72,7 +72,7 @@
             <spirit:name>TDATA</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>m_axis_tdata</spirit:name>
+            <spirit:name>o_tdata</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
         <spirit:portMap>
@@ -80,7 +80,7 @@
             <spirit:name>TREADY</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>m_axis_tready</spirit:name>
+            <spirit:name>o_tready</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
       </spirit:portMaps>
@@ -115,14 +115,14 @@
         <spirit:displayName>Synthesis</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:synthesis</spirit:envIdentifier>
         <spirit:language>Verilog</spirit:language>
-        <spirit:modelName>cvita_to_axis</spirit:modelName>
+        <spirit:modelName>data_swapper_64</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagesynthesis_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>6b3a19af</spirit:value>
+            <spirit:value>cfcdd5d3</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -131,14 +131,14 @@
         <spirit:displayName>Simulation</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:simulation</spirit:envIdentifier>
         <spirit:language>Verilog</spirit:language>
-        <spirit:modelName>cvita_to_axis</spirit:modelName>
+        <spirit:modelName>data_swapper_64</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>6b3a19af</spirit:value>
+            <spirit:value>cfcdd5d3</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -164,12 +164,39 @@
           <spirit:direction>in</spirit:direction>
           <spirit:wireTypeDefs>
             <spirit:wireTypeDef>
-              <spirit:typeName>std_logic</spirit:typeName>
+              <spirit:typeName>wire</spirit:typeName>
               <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
               <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
             </spirit:wireTypeDef>
           </spirit:wireTypeDefs>
         </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>swap_lanes</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long">2</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+          <spirit:driver>
+            <spirit:defaultValue spirit:format="long">4</spirit:defaultValue>
+          </spirit:driver>
+        </spirit:wire>
+        <spirit:vendorExtensions>
+          <xilinx:portInfo>
+            <xilinx:enablement>
+              <xilinx:isEnabled xilinx:resolve="dependent" xilinx:id="PORT_ENABLEMENT.swap_lanes" xilinx:dependency="0">false</xilinx:isEnabled>
+            </xilinx:enablement>
+          </xilinx:portInfo>
+        </spirit:vendorExtensions>
       </spirit:port>
       <spirit:port>
         <spirit:name>i_tdata</spirit:name>
@@ -186,9 +213,6 @@
               <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
             </spirit:wireTypeDef>
           </spirit:wireTypeDefs>
-          <spirit:driver>
-            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
-          </spirit:driver>
         </spirit:wire>
       </spirit:port>
       <spirit:port>
@@ -202,9 +226,6 @@
               <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
             </spirit:wireTypeDef>
           </spirit:wireTypeDefs>
-          <spirit:driver>
-            <spirit:defaultValue spirit:format="long">1</spirit:defaultValue>
-          </spirit:driver>
         </spirit:wire>
       </spirit:port>
       <spirit:port>
@@ -218,9 +239,6 @@
               <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
             </spirit:wireTypeDef>
           </spirit:wireTypeDefs>
-          <spirit:driver>
-            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
-          </spirit:driver>
         </spirit:wire>
       </spirit:port>
       <spirit:port>
@@ -237,7 +255,7 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
-        <spirit:name>m_axis_tdata</spirit:name>
+        <spirit:name>o_tdata</spirit:name>
         <spirit:wire>
           <spirit:direction>out</spirit:direction>
           <spirit:vector>
@@ -254,7 +272,7 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
-        <spirit:name>m_axis_tlast</spirit:name>
+        <spirit:name>o_tlast</spirit:name>
         <spirit:wire>
           <spirit:direction>out</spirit:direction>
           <spirit:wireTypeDefs>
@@ -267,7 +285,7 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
-        <spirit:name>m_axis_tvalid</spirit:name>
+        <spirit:name>o_tvalid</spirit:name>
         <spirit:wire>
           <spirit:direction>out</spirit:direction>
           <spirit:wireTypeDefs>
@@ -280,7 +298,7 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
-        <spirit:name>m_axis_tready</spirit:name>
+        <spirit:name>o_tready</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:wireTypeDefs>
@@ -290,9 +308,6 @@
               <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
             </spirit:wireTypeDef>
           </spirit:wireTypeDefs>
-          <spirit:driver>
-            <spirit:defaultValue spirit:format="long">0</spirit:defaultValue>
-          </spirit:driver>
         </spirit:wire>
       </spirit:port>
     </spirit:ports>
@@ -301,15 +316,15 @@
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagesynthesis_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>../../packet_proc/cvita_to_axis.v</spirit:name>
+        <spirit:name>../../io_port2/data_swapper_64.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_6b3a19af</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_cfcdd5d3</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>../../packet_proc/cvita_to_axis.v</spirit:name>
+        <spirit:name>../../io_port2/data_swapper_64.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
         <spirit:userFileType>USED_IN_ipstatic</spirit:userFileType>
       </spirit:file>
@@ -341,21 +356,19 @@
       </xilinx:taxonomies>
       <xilinx:displayName>cvita_to_axis_v1_0</xilinx:displayName>
       <xilinx:vendorDisplayName>Ettus Research</xilinx:vendorDisplayName>
-      <xilinx:vendorURL>http://www.ettus.org</xilinx:vendorURL>
-      <xilinx:coreRevision>2</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2017-07-20T18:08:25Z</xilinx:coreCreationDateTime>
+      <xilinx:vendorURL>http://www.ettus.com</xilinx:vendorURL>
+      <xilinx:coreRevision>3</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2017-11-10T01:33:31Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="nopcore"/>
-        <xilinx:tag xilinx:name="user.org:user:cvita_to_axis:1.0_ARCHIVE_LOCATION">/home/alex/Documents/fpgadev-eiscat/usrp3/lib/vivado_ipi/cvita_to_axis</xilinx:tag>
-        <xilinx:tag xilinx:name="ettus.org:user:cvita_to_axis:1.0_ARCHIVE_LOCATION">/home/alex/Documents/fpgadev-eiscat/usrp3/lib/vivado_ipi/cvita_to_axis</xilinx:tag>
-        <xilinx:tag xilinx:name="ettus.org:ip:cvita_to_axis:1.0_ARCHIVE_LOCATION">/home/alex/Documents/fpgadev-eiscat/usrp3/lib/vivado_ipi/cvita_to_axis</xilinx:tag>
+        <xilinx:tag xilinx:name="ettus.com:ip:cvita_to_axis:1.0_ARCHIVE_LOCATION">usrp3/lib/vivado_ipi/cvita_to_axis</xilinx:tag>
       </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2015.4</xilinx:xilinxVersion>
-      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="be2cc691"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="f9198d0d"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="13e2aafd"/>
+      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="12e624c3"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="6f230560"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="145177c8"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="71525c82"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>

@@ -43,10 +43,10 @@ proc create_hier_cell_dma { parentCell nameHier numPorts } {
   #########################
   # Pin list
   #########################
-  create_bd_intf_pin -mode Master -vlnv ettus.org:interfaces:chdr_rtl:1.0 o_cvita_dma
+  create_bd_intf_pin -mode Master -vlnv ettus.com:interfaces:chdr_rtl:1.0 o_cvita_dma
   create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_RX_DMA
   create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_TX_DMA
-  create_bd_intf_pin -mode Slave -vlnv ettus.org:interfaces:chdr_rtl:1.0 i_cvita_dma
+  create_bd_intf_pin -mode Slave -vlnv ettus.com:interfaces:chdr_rtl:1.0 i_cvita_dma
   create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi_rx_dmac
   create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi_tx_dmac
   create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi_regfile
@@ -68,10 +68,10 @@ proc create_hier_cell_dma { parentCell nameHier numPorts } {
   # Create instance: tx
   create_hier_cell_tx_dma $hier_obj tx $numPorts
 
-  set axis_to_cvita_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:axis_to_cvita:1.0 axis_to_cvita_0]
+  set axis_to_cvita_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:axis_to_cvita:1.0 axis_to_cvita_0]
 
   # Used to set frame size of RX DMA engines
-  set axi_regfile_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:axi_regfile:1.0 axi_regfile_0 ]
+  set axi_regfile_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:axi_regfile:1.0 axi_regfile_0 ]
   set_property -dict [ list \
 CONFIG.NUM_REGS $numPorts \
  ] $axi_regfile_0
@@ -106,9 +106,9 @@ CONFIG.DIN_WIDTH {12} \
 CONFIG.DOUT_WIDTH {8} \
  ] $xlslice_3
 
-  set cvita_dest_lookup_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:cvita_dest_lookup:1.0 cvita_dest_lookup_0 ]
+  set cvita_dest_lookup_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_dest_lookup:1.0 cvita_dest_lookup_0 ]
 
-  set cvita_to_axis_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:cvita_to_axis:1.0 cvita_to_axis_0 ]
+  set cvita_to_axis_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_to_axis:1.0 cvita_to_axis_0 ]
 
   set util_reduced_logic_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_reduced_logic:2.0 util_reduced_logic_0 ]
   set_property -dict [ list \

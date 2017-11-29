@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <spirit:component xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <spirit:vendor>ettus.org</spirit:vendor>
+  <spirit:vendor>ettus.com</spirit:vendor>
   <spirit:library>ip</spirit:library>
   <spirit:name>cvita_dest_lookup</spirit:name>
   <spirit:version>1.0</spirit:version>
   <spirit:busInterfaces>
     <spirit:busInterface>
       <spirit:name>i</spirit:name>
-      <spirit:busType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
-      <spirit:abstractionType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
+      <spirit:busType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
+      <spirit:abstractionType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
       <spirit:slave/>
       <spirit:portMaps>
         <spirit:portMap>
@@ -47,8 +47,8 @@
     </spirit:busInterface>
     <spirit:busInterface>
       <spirit:name>o</spirit:name>
-      <spirit:busType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
-      <spirit:abstractionType spirit:vendor="ettus.org" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
+      <spirit:busType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr" spirit:version="1.0"/>
+      <spirit:abstractionType spirit:vendor="ettus.com" spirit:library="interfaces" spirit:name="chdr_rtl" spirit:version="1.0"/>
       <spirit:master/>
       <spirit:portMaps>
         <spirit:portMap>
@@ -443,7 +443,7 @@
         <xilinx:family xilinx:lifeCycle="Production">zynq</xilinx:family>
       </xilinx:supportedFamilies>
       <xilinx:taxonomies>
-        <xilinx:taxonomy>/Ettus</xilinx:taxonomy>
+        <xilinx:taxonomy>/EttusResearch</xilinx:taxonomy>
       </xilinx:taxonomies>
       <xilinx:displayName>cvita_dest_lookup_v1_0</xilinx:displayName>
       <xilinx:vendorDisplayName>Ettus Research</xilinx:vendorDisplayName>
@@ -454,9 +454,7 @@
       <xilinx:coreCreationDateTime>2017-07-20T17:48:18Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="nopcore"/>
-        <xilinx:tag xilinx:name="user.org:user:cvita_dest_lookup:1.0_ARCHIVE_LOCATION">ip/cvita_dest_lookup</xilinx:tag>
-        <xilinx:tag xilinx:name="ettus.org:user:cvita_dest_lookup:1.0_ARCHIVE_LOCATION">ip/cvita_dest_lookup</xilinx:tag>
-        <xilinx:tag xilinx:name="ettus.org:ip:cvita_dest_lookup:1.0_ARCHIVE_LOCATION">/home/alex/Documents/fpgadev-eiscat/usrp3/lib/vivado_ipi/cvita_dest_lookup</xilinx:tag>
+        <xilinx:tag xilinx:name="ettus.com:ip:cvita_dest_lookup:1.0_ARCHIVE_LOCATION">usrp3/lib/vivado_ipi/cvita_dest_lookup</xilinx:tag>
       </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>

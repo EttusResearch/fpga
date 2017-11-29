@@ -61,12 +61,12 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
      CONFIG.SYNC_TRANSFER_START {false} \
   ] $axi_rx_dmac
 
-  set axis_to_cvita_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:axis_to_cvita:1.0 axis_to_cvita_0]
+  set axis_to_cvita_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:axis_to_cvita:1.0 axis_to_cvita_0]
 
   # NOTE: cvita_chunker is used to force incoming packets to elongate to MTU
-  set cvita_chunker_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:cvita_chunker:1.0 cvita_chunker_0 ]
+  set cvita_chunker_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_chunker:1.0 cvita_chunker_0 ]
 
-  set cvita_to_axis_0 [ create_bd_cell -type ip -vlnv ettus.org:ip:cvita_to_axis:1.0 cvita_to_axis_0]
+  set cvita_to_axis_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_to_axis:1.0 cvita_to_axis_0]
 
   set reset_inv [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 reset_inv ]
   set_property -dict [ list \
