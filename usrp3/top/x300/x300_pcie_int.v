@@ -257,7 +257,10 @@ module x300_pcie_int #(
             );
 
             data_swapper_64 tx_data_swapper (
-                .swap_lanes(`GET_SWAP_BUS(dmatx_swap,i)), .i_tdata(`GET_DMA_BUS(dmatx_tdata_in,i)), .o_tdata(`GET_DMA_BUS(dmatx_tdata_swap,i))
+                .clk(1'b0),
+                .swap_lanes(`GET_SWAP_BUS(dmatx_swap,i)), .i_tdata(`GET_DMA_BUS(dmatx_tdata_in,i)), .o_tdata(`GET_DMA_BUS(dmatx_tdata_swap,i)),
+                .i_tvalid(1'b1), .i_tlast(1'b1), .o_tready(1'b1), // Not actually used
+                .i_tready(), .o_tvalid(), .o_tlast()
             );
 
             cvita_dechunker tx_dma_dechunker (
@@ -344,7 +347,10 @@ module x300_pcie_int #(
             );
 
             data_swapper_64 rx_data_swapper (
-                .swap_lanes(`GET_SWAP_BUS(dmarx_swap,j)), .i_tdata(`GET_DMA_BUS(dmarx_tdata_pad,j)), .o_tdata(`GET_DMA_BUS(dmarx_tdata_swap,j))
+                .clk(1'b0),
+                .swap_lanes(`GET_SWAP_BUS(dmarx_swap,j)), .i_tdata(`GET_DMA_BUS(dmarx_tdata_pad,j)), .o_tdata(`GET_DMA_BUS(dmarx_tdata_swap,j)),
+                .i_tvalid(1'b1), .i_tlast(1'b1), .o_tready(1'b1), // Not actually used
+                .i_tready(), .o_tvalid(), .o_tlast()
             );
 
             pcie_lossy_samp_gate rx_samp_gate (
