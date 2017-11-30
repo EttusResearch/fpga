@@ -36,7 +36,7 @@
 //////////////////////////////////////////////////////////////////////
 
 
-module xge_mac(/*AUTOARG*/
+module xge_mac (/*AUTOARG*/
   // Outputs
   xgmii_txd, xgmii_txc, pkt_tx_full,
   pkt_rx_val, pkt_rx_sop, pkt_rx_mod, pkt_rx_err, pkt_rx_eop,

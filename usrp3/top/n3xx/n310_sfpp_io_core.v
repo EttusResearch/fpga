@@ -265,8 +265,10 @@ generate
       .qplloutrefclk	    (qplloutrefclk)
     );
 
-    xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
-    (
+    xge_mac_wrapper #(
+      .PORTNUM(PORTNUM),
+      .WISHBONE(0)
+    ) xge_mac_wrapper_i (
       // XGMII
       .xgmii_clk              (gb_refclk),
       .xgmii_txd              (xgmii_txd),
@@ -297,7 +299,17 @@ generate
       .status_rxdfifo_udflow  (mac_status[5]),
       .status_pause_frame_rx  (mac_status[6]),
       .status_local_fault     (mac_status[7]),
-      .status_remote_fault    (mac_status[8])
+      .status_remote_fault    (mac_status[8]),
+      .wb_ack_o               (),
+      .wb_dat_o               (),
+      .wb_adr_i               (1'b0),
+      .wb_clk_i               (1'b0),
+      .wb_cyc_i               (1'b0),
+      .wb_dat_i               (1'b0),
+      .wb_rst_i               (1'b0),
+      .wb_stb_i               (1'b0),
+      .wb_we_i                (1'b0),
+      .wb_int_o               ()
     );
 
     assign phy_status  = {8'h00, xgmii_status};

@@ -7,5 +7,4 @@ axi_count_packets_in_fifo.v \
 xge64_to_axi64.v \
 xge_handshake.v \
 xge_mac_wrapper.v \
-xge_mac_wrapper_wb.v \
 ))
