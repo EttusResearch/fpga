@@ -18,7 +18,7 @@ fragment@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		firmware-name = "usrp_n310_hg.bin";
+		firmware-name = "n3xx.bin";
 	};
 };
 

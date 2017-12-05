@@ -16,7 +16,7 @@ fragment@0 {
 	__overlay__ {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		firmware-name = "usrp_n310_xg.bin";
+		firmware-name = "n3xx.bin";
 	};
 };
 
