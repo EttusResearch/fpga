@@ -379,6 +379,9 @@ set_property PACKAGE_PIN AC14 [get_ports DBA_CPLD_PL_SPI_SCLK]
 # set_property DRIVE       4        [get_ports DBA_SWITCHER_CLOCK]
 # set_property SLEW        SLOW     [get_ports DBA_SWITCHER_CLOCK]
 
+# To minimize skew on these lines to the CPLD, request their packing in an IOB.
+set_property IOB TRUE [get_ports DBA_ATR_*X_*]
+
 # During SI measurements with default drive strength, many of the FPGA-driven lines to
 # the DB were showing high over/undershoot. Therefore for single-ended lines to the DBs
 # we are decreasing the drive strength to the minimum value (4mA) and explicitly
@@ -397,6 +400,8 @@ set_property SLEW          SLOW             $UsrpIoAHrPinsSe
 set UsrpIoAHrPinsDiff [get_ports {DBA_FPGA_CLK_* DBA_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoAHrPinsDiff
 set_property DIFF_TERM     TRUE             $UsrpIoAHrPinsDiff
+
+set_property PULLUP TRUE [get_ports {DBA_CH*_*X_DSA_DATA[*]}]
 
 
 ### MGTs, Bank 112
@@ -527,6 +532,9 @@ set_property PACKAGE_PIN   AH24             [get_ports {DBB_CPLD_PL_SPI_SCLK}]
 # we are decreasing the drive strength to the minimum value (4mA) and explicitly
 # declaring the (default) slew rate as SLOW.
 
+# To minimize skew on these lines to the CPLD, request their packing in an IOB.
+set_property IOB TRUE [get_ports DBB_ATR_*X_*]
+
 set UsrpIoBHpPinsSe [get_ports {DBB_CPLD_PS_* DBB_CH1_* DBB_ATR*}]
 set_property IOSTANDARD    LVCMOS18         $UsrpIoBHpPinsSe
 set_property DRIVE         4                $UsrpIoBHpPinsSe
@@ -541,7 +549,7 @@ set UsrpIoBHrPinsDiff [get_ports {DBB_FPGA_CLK_* DBB_FPGA_SYSREF_*}]
 set_property IOSTANDARD    LVDS_25          $UsrpIoBHrPinsDiff
 set_property DIFF_TERM     TRUE             $UsrpIoBHrPinsDiff
 
-set_property PULLUP TRUE [get_ports {DB*_CH*_*X_DSA_DATA[*]}]
+set_property PULLUP TRUE [get_ports {DBB_CH*_*X_DSA_DATA[*]}]
 
 
 ### MGTs, Bank 112

@@ -1,6 +1,6 @@
 #
 # Copyright 2017 Ettus Research, A National Instruments Company
-# SPDX-License-Identifier: GPL-3.0
+# SPDX-License-Identifier: LGPL-3.0
 #
 
 
@@ -100,15 +100,19 @@ set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 2.111}] [get_ports 
 #*******************************************************************************
 ## MB Async Ins/Outs
 
-set ASYNC_MB_INPUTS [get_ports {SFP_*_LOS UNUSED_PIN_TDC*}]
+set ASYNC_MB_INPUTS [get_ports {SFP_*_LOS SFP_*_TXFAULT UNUSED_PIN_TDC*}]
 
 set_input_delay -clock [get_clocks async_in_clk] 0.000 $ASYNC_MB_INPUTS
 set_max_delay -from $ASYNC_MB_INPUTS 50.000
 set_min_delay -from $ASYNC_MB_INPUTS 0.000
 
 
+# REF_1PPS_OUT is included in this list because timing is not currently analyzed on this
+# output circuit. It would be possible to analyze the board trace delays and compute the
+# data valid window on the output compared to the reference clock input... but that
+# is #FutureWork for another day.
 set ASYNC_MB_OUTPUTS [get_ports {*LED* SFP_*TXDISABLE UNUSED_PIN_TDC* \
-                               FPGA_TEST[*]}]
+                               FPGA_TEST[*] REF_1PPS_OUT}]
 
 set_output_delay -clock [get_clocks async_out_clk] 0.000 $ASYNC_MB_OUTPUTS
 set_max_delay -to $ASYNC_MB_OUTPUTS 50.000

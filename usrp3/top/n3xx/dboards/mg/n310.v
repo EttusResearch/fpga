@@ -2385,6 +2385,8 @@ module n310
   ///////////////////////////////////////////////////////
   wire [3:0] rx_atr;
   wire [3:0] tx_atr;
+  (* IOB = "true" *) reg  [3:0] rx_atr_reg;
+  (* IOB = "true" *) reg  [3:0] tx_atr_reg;
 
   wire [15:0] db_gpio_out[0:3];
   wire [15:0] db_gpio_in[0:3];
@@ -2425,19 +2427,20 @@ module n310
   assign DBA_MYK_SPI_CS_n         = myk_a_cs_n;
 
 
-   gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA0_inst (
-      .clk(radio_clk), .gpio_pins({DBA_CH1_TX_DSA_DATA,DBA_CH1_RX_DSA_DATA}),
-      .gpio_ddr(db_gpio_ddr[0]), .gpio_out(db_gpio_out[0]), .gpio_in(db_gpio_in[0])
-   );
+  // Direction is always an output, so set the ddr bits to 1'b1
+  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA0_inst (
+    .clk(radio_clk), .gpio_pins({DBA_CH1_TX_DSA_DATA,DBA_CH1_RX_DSA_DATA}),
+    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[0]), .gpio_in(db_gpio_in[0])
+  );
   gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA1_inst (
-      .clk(radio_clk), .gpio_pins({DBA_CH2_TX_DSA_DATA,DBA_CH2_RX_DSA_DATA}),
-      .gpio_ddr(db_gpio_ddr[1]), .gpio_out(db_gpio_out[1]), .gpio_in(db_gpio_in[1])
-   );
+    .clk(radio_clk), .gpio_pins({DBA_CH2_TX_DSA_DATA,DBA_CH2_RX_DSA_DATA}),
+    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[1]), .gpio_in(db_gpio_in[1])
+  );
 
-  assign DBA_ATR_RX_1 = rx_atr[0];
-  assign DBA_ATR_RX_2 = rx_atr[1];
-  assign DBA_ATR_TX_1 = tx_atr[0];
-  assign DBA_ATR_TX_2 = tx_atr[1];
+  assign DBA_ATR_RX_1 = rx_atr_reg[0];
+  assign DBA_ATR_RX_2 = rx_atr_reg[1];
+  assign DBA_ATR_TX_1 = tx_atr_reg[0];
+  assign DBA_ATR_TX_2 = tx_atr_reg[1];
 
   assign DBA_MYK_GPIO_0  = 1'b0;
   assign DBA_MYK_GPIO_1  = 1'b0;
@@ -2485,20 +2488,20 @@ module n310
   assign DBB_MYK_SPI_CS_n         = myk_b_cs_n;
 
 
-
+  // Direction is always an output, so set the ddr bits to 1'b1
   gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB0_inst (
-      .clk(radio_clk), .gpio_pins({DBB_CH1_TX_DSA_DATA,DBB_CH1_RX_DSA_DATA}),
-      .gpio_ddr(db_gpio_ddr[2]), .gpio_out(db_gpio_out[2]), .gpio_in(db_gpio_in[2])
-   );
+    .clk(radio_clk), .gpio_pins({DBB_CH1_TX_DSA_DATA,DBB_CH1_RX_DSA_DATA}),
+    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[2]), .gpio_in(db_gpio_in[2])
+  );
   gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB1_inst (
-      .clk(radio_clk), .gpio_pins({DBB_CH2_TX_DSA_DATA,DBB_CH2_RX_DSA_DATA}),
-      .gpio_ddr(db_gpio_ddr[3]), .gpio_out(db_gpio_out[3]), .gpio_in(db_gpio_in[3])
-   );
+    .clk(radio_clk), .gpio_pins({DBB_CH2_TX_DSA_DATA,DBB_CH2_RX_DSA_DATA}),
+    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[3]), .gpio_in(db_gpio_in[3])
+  );
 
-  assign DBB_ATR_RX_1 = rx_atr[2];
-  assign DBB_ATR_RX_2 = rx_atr[3];
-  assign DBB_ATR_TX_1 = tx_atr[2];
-  assign DBB_ATR_TX_2 = tx_atr[3];
+  assign DBB_ATR_RX_1 = rx_atr_reg[2];
+  assign DBB_ATR_RX_2 = rx_atr_reg[3];
+  assign DBB_ATR_TX_1 = tx_atr_reg[2];
+  assign DBB_ATR_TX_2 = tx_atr_reg[3];
 
   assign DBB_MYK_GPIO_0  = 1'b0;
   assign DBB_MYK_GPIO_1  = 1'b0;
@@ -2697,6 +2700,13 @@ module n310
     .e2v1_tvalid(e2v1_tvalid),
     .e2v1_tready(e2v1_tready)
   );
+
+  // Register the ATR bits once between sending them out to the CPLD to avoid
+  // glitches on the outputs!
+  always @(posedge radio_clk) begin
+    rx_atr_reg <= rx_atr;
+    tx_atr_reg <= tx_atr;
+  end
 
   // //////////////////////////////////////////////////////////////////////
   //
