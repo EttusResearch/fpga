@@ -12,7 +12,10 @@
 module duc #(
   parameter SR_PHASE_INC_ADDR = 0,
   parameter SR_SCALE_ADDR     = 1,
-  parameter SR_INTERP_ADDR    = 2
+  parameter SR_INTERP_ADDR    = 2,
+  parameter NUM_HB            = 2,
+  parameter CIC_MAX_INTERP    = 128
+
 )(
   input clk, input reset, input clear,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
@@ -114,11 +117,20 @@ module duc #(
   sign_extend #(.bits_in(WIDTH), .bits_out(CWIDTH)) sign_extend_in_q (
     .in(i_tdata[WIDTH-1:0]), .out(o_tdata_extd[CWIDTH-1:0]));
 
-  // Halfband 1
+  // Halfband 1 wires
   wire i_tready_hb1;
   wire [2*CWIDTH-1:0] o_tdata_hb1;
   wire o_tvalid_hb1, o_tready_hb1;
-
+  // Halfband 2 wires
+  wire i_tready_hb2;
+  wire [2*CWIDTH-1:0] o_tdata_hb2;
+  wire o_tvalid_hb2, o_tready_hb2;
+  // Halfband 3 wires
+  wire i_tready_hb3;
+  wire [2*CWIDTH-1:0] o_tdata_hb3;
+  wire o_tvalid_hb3, o_tready_hb3;
+  generate
+  if( NUM_HB > 0 ) begin
   axi_hb47 halfband1 (
     .aclk(clk),
     .aresetn(~(reset | clear | reset_on_change)),
@@ -129,12 +141,11 @@ module duc #(
     .m_axis_data_tready(o_tready_hb1),
     .m_axis_data_tdata(o_tdata_hb1)
   );
-
-  // Halfband 2
-  wire i_tready_hb2;
-  wire [2*CWIDTH-1:0] o_tdata_hb2;
-  wire o_tvalid_hb2, o_tready_hb2;
-
+  end else begin
+  assign o_tdata_hb1 = 'h0;
+  assign o_tvalid_hb1 = 1'h0;
+  end
+  if( NUM_HB > 1 ) begin
   axi_hb47 halfband2 (
     .aclk(clk),
     .aresetn(~(reset | clear | reset_on_change)),
@@ -145,7 +156,26 @@ module duc #(
     .m_axis_data_tready(o_tready_hb2),
     .m_axis_data_tdata(o_tdata_hb2)
   );
-
+  end else begin
+  assign o_tdata_hb2 = 'h0;
+  assign o_tvalid_hb2 = 1'h0;
+  end
+  if( NUM_HB > 2 ) begin
+  axi_hb47 halfband3 (
+    .aclk(clk),
+    .aresetn(~(reset | clear | reset_on_change)),
+    .s_axis_data_tvalid(o_tvalid_hb2),
+    .s_axis_data_tready(i_tready_hb3),
+    .s_axis_data_tdata({o_tdata_hb2[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb2[CWIDTH-1:0] << 2}),
+    .m_axis_data_tvalid(o_tvalid_hb3),
+    .m_axis_data_tready(o_tready_hb3),
+    .m_axis_data_tdata(o_tdata_hb3)
+  );
+  end else begin
+  assign o_tdata_hb3 = 'h0;
+  assign o_tvalid_hb3 = 1'h0;
+  end
+  endgenerate
  /**************************************************************************
   * Halfband selection multiplexing
   *************************************************************************/
@@ -155,13 +185,15 @@ module duc #(
   wire o_tready_cic;
 
   assign o_tdata_halfbands = (hb_rate == 2'b0) ? o_tdata_extd :
-                             (hb_rate == 2'b1) ? {o_tdata_hb1[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb1[CWIDTH-1:0] << 2} :
-                                                 {o_tdata_hb2[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb2[CWIDTH-1:0] << 2};
+                             (hb_rate == 2'b1) ?  {o_tdata_hb1[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb1[CWIDTH-1:0] << 2} :
+                             (hb_rate == 2'b10) ? {o_tdata_hb2[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb2[CWIDTH-1:0] << 2} :
+                                                  {o_tdata_hb3[2*CWIDTH-1:CWIDTH] << 2, o_tdata_hb3[CWIDTH-1:0] << 2};
   // Clearing valid on rate change as the halfbands take 2 cycles to clear
   assign o_tvalid_halfbands = reset_on_live_change ? 1'b0 :
-                              (hb_rate == 2'b0)    ? i_tvalid :
-                              (hb_rate == 2'b1)    ? o_tvalid_hb1 :
-                                                     o_tvalid_hb2;
+                              (hb_rate == 2'b0)    ?  i_tvalid :
+                              (hb_rate == 2'b1)    ?  o_tvalid_hb1 :
+                              (hb_rate == 2'b10)    ? o_tvalid_hb2 :
+                                                      o_tvalid_hb3;
   // Throttle input data while rate change is going on
   assign i_tready     =  reset_on_live_change ? 1'b0 :
                          (hb_rate == 2'b0)    ? i_tready_cic :
@@ -169,7 +201,11 @@ module duc #(
   assign o_tready_hb1 =  reset_on_live_change ? 1'b0 :
                          (hb_rate == 2'b1)    ? i_tready_cic :
                                                 i_tready_hb2;
-  assign o_tready_hb2 =  reset_on_live_change ? 1'b0 : i_tready_cic;
+  assign o_tready_hb2 =  reset_on_live_change ? 1'b0 :
+                         (hb_rate == 2'b10)   ? i_tready_cic :
+                                                i_tready_hb3;
+
+  assign o_tready_hb3 =  reset_on_live_change ? 1'b0 : i_tready_cic;
 
  /**************************************************************************
   * Ettus CIC; the Xilinx CIC has a minimum interpolation of 4,
@@ -188,14 +224,14 @@ module duc #(
     .out_stb(to_cic_stb), .out_last(), .out_data(to_cic_data)
   );
 
-  cic_interpolate #(.WIDTH(CWIDTH), .N(4), .MAX_RATE(128)) cic_interpolate_i (
+  cic_interpolate #(.WIDTH(CWIDTH), .N(4), .MAX_RATE(CIC_MAX_INTERP)) cic_interpolate_i (
     .clk(clk), .reset(reset | clear | reset_on_change),
     .rate_stb(reset_on_change),
     .rate(cic_interp_rate), .strobe_in(to_cic_stb), .strobe_out(from_cic_stb),
     .signal_in(to_cic_data[2*CWIDTH-1:CWIDTH]), .signal_out(i_cic)
   );
 
-  cic_interpolate #(.WIDTH(CWIDTH), .N(4), .MAX_RATE(128)) cic_interpolate_q (
+  cic_interpolate #(.WIDTH(CWIDTH), .N(4), .MAX_RATE(CIC_MAX_INTERP)) cic_interpolate_q (
     .clk(clk), .reset(reset | clear | reset_on_change),
     .rate_stb(reset_on_change),
     .rate(cic_interp_rate), .strobe_in(to_cic_stb), .strobe_out(),

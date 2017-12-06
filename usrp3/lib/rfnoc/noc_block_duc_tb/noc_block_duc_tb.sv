@@ -30,6 +30,8 @@ module noc_block_duc_tb();
   wire [11:0] fft_scale      = 12'b101010101010;        // Conservative scaling of 1/N
   // Padding of the control word depends on the FFT options enabled
   wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
+  int num_hb; //default 2
+  int cic_max_interp; //default 128
 
   // DUC
   wire [7:0] SR_N_ADDR           = noc_block_duc.SR_N_ADDR;
@@ -38,6 +40,9 @@ module noc_block_duc_tb();
   wire [7:0] SR_FREQ_ADDR        = noc_block_duc.SR_FREQ_ADDR;
   wire [7:0] SR_INTERP_ADDR      = noc_block_duc.SR_INTERP_ADDR;
   wire [7:0] SR_SCALE_IQ_ADDR    = noc_block_duc.SR_SCALE_IQ_ADDR;
+  wire [7:0] RB_NUM_HB           = noc_block_duc.RB_NUM_HB;
+  wire [7:0] RB_CIC_MAX_INTERP   = noc_block_duc.RB_CIC_MAX_INTERP;
+
 
   localparam SPP                 = FFT_SIZE;
   localparam PKT_SIZE_BYTES      = 4*SPP;
@@ -51,20 +56,18 @@ module noc_block_duc_tb();
       logic [7:0] hb_enables = 2'b0;
 
       int _interp_rate = interp_rate;
-      `ASSERT_ERROR(interp_rate <= 512, "Interpolation rate cannot exceed 512!");
-      `ASSERT_ERROR((interp_rate <= 128) || // CIC goes to 128, after that, we need either 1 or 2 halfbands
-                    (interp_rate <= 256  && interp_rate[0] == 1'b0) ||
-                    (interp_rate <= 512  && interp_rate[1:0] == 2'b0),
-                    "Invalid interpolation rate!");
 
       // Calculate which half bands to enable and whatever is left over set the CIC
-      while ((_interp_rate[0] == 0) && (hb_enables < 2)) begin
+      while ((_interp_rate[0] == 0) && (hb_enables < num_hb)) begin
         hb_enables += 1'b1;
         _interp_rate = _interp_rate >> 1;
       end
 
       // CIC rate cannot be set to 0
       cic_rate = (_interp_rate[7:0] == 8'd0) ? 8'd1 : _interp_rate[7:0];
+      `ASSERT_ERROR(hb_enables <= num_hb, "Enabled halfbands may not exceed total number of half bands.");
+      `ASSERT_ERROR(cic_rate > 0 && cic_rate <= cic_max_interp,
+       "CIC Decimation rate must be positive, not exceed the max cic interpolation rate, and cannot equal 0!");
 
       // Setup DUC
       $display("Set interpolation to %0d", interp_rate);
@@ -157,6 +160,12 @@ module noc_block_duc_tb();
     $display("Note: This test will take a long time!");
     `RFNOC_CONNECT(noc_block_tb, noc_block_duc, SC16, SPP);
     `RFNOC_CONNECT(noc_block_duc, noc_block_tb, SC16, SPP);
+     //readback regs
+    tb_streamer.read_user_reg(sid_noc_block_duc, RB_NUM_HB, num_hb);
+    $display("NUM_HB = %d", num_hb);
+    tb_streamer.read_user_reg(sid_noc_block_duc, RB_CIC_MAX_INTERP, cic_max_interp);
+    $display("CIC_MAX_INTERP = %d", cic_max_interp);
+
     send_ones(1);    // HBs enabled: 0, CIC rate: 1
     send_ones(2);    // HBs enabled: 1, CIC rate: 1
     send_ones(3);    // HBs enabled: 0, CIC rate: 3

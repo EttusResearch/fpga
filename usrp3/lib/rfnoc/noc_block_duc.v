@@ -3,10 +3,13 @@
 //
 
 module noc_block_duc #(
-  parameter NOC_ID = 64'hD0C0_0000_0000_0000,
+  parameter NOC_ID            = 64'hD0C0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 12,
-  parameter NUM_CHAINS = 1
-
+  parameter NUM_CHAINS        = 1,
+  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MINOR  = 32'h0,
+  parameter NUM_HB            = 2,
+  parameter CIC_MAX_INTERP    = 128
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -26,7 +29,7 @@ module noc_block_duc #(
   wire [NUM_CHAINS*64-1:0]      set_time;
   wire [NUM_CHAINS-1:0]         set_has_time;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
-  wire [64*NUM_CHAINS-1:0]      rb_data;
+  reg  [64*NUM_CHAINS-1:0]      rb_data;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -83,6 +86,19 @@ module noc_block_duc #(
   localparam SR_INTERP_ADDR    = 131;
   localparam SR_FREQ_ADDR      = 132;
   localparam SR_SCALE_IQ_ADDR  = 133;
+  localparam RB_COMPAT_NUM    = 0;
+  localparam RB_NUM_HB        = 1;
+  localparam RB_CIC_MAX_INTERP = 2;
+  localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
+
+  // TODO Readback register for number of FIR filter taps
+  always @*
+    case(rb_addr[7:0])
+      RB_COMPAT_NUM     : rb_data[63:0] <= {COMPAT_NUM};
+      RB_NUM_HB         : rb_data[63:0] <= {NUM_HB};
+      RB_CIC_MAX_INTERP : rb_data[63:0] <= {CIC_MAX_INTERP};
+      default           : rb_data[63:0] <= 64'h0BADC0DE0BADC0DE;
+  endcase
 
   genvar i;
   generate
@@ -202,7 +218,9 @@ module noc_block_duc #(
       //
       ////////////////////////////////////////////////////////////
       duc #(
-        .SR_INTERP_ADDR(SR_INTERP_ADDR))
+        .SR_INTERP_ADDR(SR_INTERP_ADDR),
+        .NUM_HB(NUM_HB),
+        .CIC_MAX_INTERP(CIC_MAX_INTERP))
       duc (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_duc),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),

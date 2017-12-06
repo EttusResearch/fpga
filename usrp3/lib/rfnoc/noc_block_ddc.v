@@ -3,9 +3,13 @@
 //
 
 module noc_block_ddc #(
-  parameter NOC_ID = 64'hDDC0_0000_0000_0000,
+  parameter NOC_ID            = 64'hDDC0_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 12,
-  parameter NUM_CHAINS = 2
+  parameter NUM_CHAINS        = 2,
+  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MINOR  = 32'h0,
+  parameter NUM_HB            = 3,
+  parameter CIC_MAX_DECIM     = 255
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -26,7 +30,7 @@ module noc_block_ddc #(
   wire [NUM_CHAINS-1:0]         set_has_time;
   wire [NUM_CHAINS-1:0]         rb_stb;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
-  wire [64*NUM_CHAINS-1:0]      rb_data;
+  reg [64*NUM_CHAINS-1:0]      rb_data;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -84,6 +88,20 @@ module noc_block_ddc #(
   localparam SR_DECIM_ADDR    = 134;
   localparam SR_MUX_ADDR      = 135;
   localparam SR_COEFFS_ADDR   = 136;
+  localparam RB_COMPAT_NUM    = 0;
+  localparam RB_NUM_HB        = 1;
+  localparam RB_CIC_MAX_DECIM = 2;
+  localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
+
+  // TODO Readback register for number of FIR filter taps
+  always @*
+    case(rb_addr[7:0])
+      RB_COMPAT_NUM    : rb_data[63:0] <= {COMPAT_NUM};
+      RB_NUM_HB        : rb_data[63:0] <= {NUM_HB};
+      RB_CIC_MAX_DECIM : rb_data[63:0] <= {CIC_MAX_DECIM};
+      default          : rb_data[63:0] <= 64'h0BADC0DE0BADC0DE;
+  endcase
+
 
   genvar i;
   generate
@@ -234,7 +252,9 @@ module noc_block_ddc #(
         .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR),
         .SR_DECIM_ADDR(SR_DECIM_ADDR),
         .SR_MUX_ADDR(SR_MUX_ADDR),
-        .SR_COEFFS_ADDR(SR_COEFFS_ADDR))
+        .SR_COEFFS_ADDR(SR_COEFFS_ADDR),
+        .NUM_HB(NUM_HB),
+        .CIC_MAX_DECIM(CIC_MAX_DECIM))
       ddc (
         .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum[i]),
         .clear(clear_user), // Use AXI Rate Change's clear user to reset block to initial state after EOB
