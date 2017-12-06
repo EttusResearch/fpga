@@ -3,18 +3,19 @@
 // There are various obligations put on this code not present in regular BRAM based FIFO's
 //
 // 1) Bursts are way more efficient, use local small FIFO's to interact with DRAM
-// 2) Never cross a 4KByte address boundry within a single transaction, this is an AXI4 rule.
+// 2) Never cross a 4KByte address boundary within a single transaction, this is an AXI4 rule.
 // 3) 2^SIZE must be greater than 4KB so that the 4KByte page protection also deals with FIFO wrap corner case.
 //
 module axi_dma_fifo 
 #(
+   parameter SIMULATION       = 0,             // Shorten flush counter for simulation
    parameter DEFAULT_BASE     = 30'h00000000,
    parameter DEFAULT_MASK     = 30'hFF000000,
    parameter DEFAULT_TIMEOUT  = 12'd256,
-   parameter BUS_CLK_RATE     = 32'd166666666,  //Used to calc BIST. Default BUS_CLK_RATE matches x300 design (166.67e6)
-   parameter SR_BASE          = 0,              //Base address for settings registers
-   parameter EXT_BIST         = 0,              //If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
-   parameter MAX_PKT_LEN      = 12            //Log2 of maximum packet length
+   parameter BUS_CLK_RATE     = 32'd166666666,  // Used to calc BIST. Default BUS_CLK_RATE matches x300 design (166.67e6)
+   parameter SR_BASE          = 0,              // Base address for settings registers
+   parameter EXT_BIST         = 0,              // If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
+   parameter MAX_PKT_LEN      = 12              // Log2 of maximum packet length
 ) (
    input bus_clk,
    input bus_reset, 
@@ -34,14 +35,14 @@ module axi_dma_fifo
    output [3 : 0] m_axi_awqos,    // Quality of Service, QoS. The QoS identifier sent for each write transaction
    output [3 : 0] m_axi_awregion, // Region identifier. Permits a single physical interface on a slave to be re-used.
    output [0 : 0] m_axi_awuser,   // User signal. Optional User-defined signal in the write address channel.
-   output m_axi_awvalid,      // Write address valid. This signal indicates that the channel is signaling valid write addr
+   output m_axi_awvalid,          // Write address valid. This signal indicates that the channel is signaling valid write addr
    input m_axi_awready,           // Write address ready. This signal indicates that the slave is ready to accept an address
    //
    // AXI Write data channel.
    //
    output [63 : 0] m_axi_wdata,   // Write data
    output [7 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
-   output m_axi_wlast,        // Write last. This signal indicates the last transfer in a write burst
+   output m_axi_wlast,            // Write last. This signal indicates the last transfer in a write burst
    output [0 : 0] m_axi_wuser,    // User signal. Optional User-defined signal in the write data channel.
    output m_axi_wvalid,           // Write valid. This signal indicates that valid write data and strobes are available. 
    input m_axi_wready,            // Write ready. This signal indicates that the slave can accept the write data.
@@ -52,7 +53,7 @@ module axi_dma_fifo
    input [1 : 0] m_axi_bresp,     // Write response. This signal indicates the status of the write transaction.
    input [0 : 0] m_axi_buser,     // User signal. Optional User-defined signal in the write response channel.
    input m_axi_bvalid,            // Write response valid. This signal indicates that the channel is signaling a valid response
-   output m_axi_bready,       // Response ready. This signal indicates that the master can accept a write response
+   output m_axi_bready,           // Response ready. This signal indicates that the master can accept a write response
    //
    // AXI Read address channel
    //
@@ -199,6 +200,9 @@ module axi_dma_fifo
    localparam ST_FIFO_CLEAR_DONE = 4;
    reg [2:0] fifo_state;
 
+   // Use reduced flush count for simulation to keep simulation time reasonable
+   localparam FLUSH_COUNT = SIMULATION ? 16'h000F : 16'hFFFF;
+
    reg flush, throttle;
    reg clear_bclk, clear_busy;
    wire clear_ack;
@@ -243,13 +247,13 @@ module axi_dma_fifo
              end
            end
          end
-         // Enable flush and wait until pipeline has been empty
-         // for 2^16-1 cycles, then throttle input and assert clear
+         // Enable flush and wait until pipeline has been empty for FLUSH_COUNT
+         // cycles, then throttle input and assert clear.
          ST_FIFO_FLUSH : begin
            if (i_tvalid | o_tvalid_int) begin
              wait_cnt        <= 0;
            end else begin
-             if (wait_cnt == 16'hFFFF) begin
+             if (wait_cnt == FLUSH_COUNT) begin
                clear_bclk    <= 1'b1;
                throttle      <= 1'b1;
                flush         <= 1'b0;

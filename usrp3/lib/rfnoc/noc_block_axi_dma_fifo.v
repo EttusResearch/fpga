@@ -11,7 +11,8 @@ module noc_block_axi_dma_fifo #(
   parameter [NUM_FIFOS*30-1:0] DEFAULT_FIFO_BASE = {NUM_FIFOS{30'h00000000}}, //Default base addr for each FIFO (configurable via setting reg)
   parameter [NUM_FIFOS*30-1:0] DEFAULT_FIFO_SIZE = {NUM_FIFOS{30'h01FFFFFF}}, //Default size of each FIFO (configurable via setting reg)
   parameter [NUM_FIFOS*12-1:0] DEFAULT_BURST_TIMEOUT = {NUM_FIFOS{12'd256}}, //Timeout (in memory clock cycles) for issuing smaller than optimal bursts
-  parameter EXTENDED_DRAM_BIST = 0              //Prune out additional BIST features for production
+  parameter EXTENDED_DRAM_BIST = 0,             //Prune out additional BIST features for production
+  parameter SIMULATION = 0                      //Indicate if this is simulation or synthesis
 )(
   //
   // Clocks and Resets
@@ -191,6 +192,7 @@ module noc_block_axi_dma_fifo #(
       assign s_axis_data_tready = str_src_tready[i];
 
       axi_dma_fifo #(
+        .SIMULATION(SIMULATION),
         .DEFAULT_BASE(DEFAULT_FIFO_BASE[(30*(i+1))-1:30*i]),
         .DEFAULT_MASK(~(DEFAULT_FIFO_SIZE[(30*(i+1))-1:30*i])),
         .DEFAULT_TIMEOUT(DEFAULT_BURST_TIMEOUT[(12*(i+1))-1:12*i]),

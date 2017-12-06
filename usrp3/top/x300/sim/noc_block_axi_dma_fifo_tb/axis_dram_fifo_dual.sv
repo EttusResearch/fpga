@@ -62,7 +62,8 @@ module axis_dram_fifo_dual #(
   noc_block_axi_dma_fifo #(
     .NUM_FIFOS(2),
     .DEFAULT_FIFO_BASE({30'h00020000, 30'h00000000}),
-    .DEFAULT_FIFO_SIZE({30'h0001FFFF, 30'h0001FFFF})
+    .DEFAULT_FIFO_SIZE({30'h0001FFFF, 30'h0001FFFF}),
+    .SIMULATION(1)
   ) inst_noc_block_dram_fifo (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ddr3_axi_clk_x2), .ce_rst(ddr3_axi_rst),
