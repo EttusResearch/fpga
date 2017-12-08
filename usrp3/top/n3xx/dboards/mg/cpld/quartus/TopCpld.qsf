@@ -311,3 +311,4 @@ set_global_assignment -name VHDL_FILE ./../PkgMgCpld.vhd
 set_global_assignment -name VHDL_FILE ./../PkgSetup.vhd
 set_global_assignment -name VHDL_FILE ./../TopCpld.vhd
 set_global_assignment -name TOP_LEVEL_ENTITY TopCpld
+set_global_assignment -name SEED 11

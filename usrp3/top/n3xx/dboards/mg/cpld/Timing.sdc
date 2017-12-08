@@ -1,9 +1,9 @@
 #
 # Copyright 2017 Ettus Research, A National Instruments Company
-# SPDX-License-Identifier: GPL-3.0
+# SPDX-License-Identifier: LGPL-3.0
 #
 
-# All the magic numbers come from "Mg Digital Interface Timing: SPI at CPLD tab" timing
+# All the magic numbers come from "Mg Digital Interface Timing" timing
 # analysis spreadsheet. Analysis should be re-performed every time a board rev occurs
 # that affects the CPLD interfaces.
 
@@ -13,19 +13,20 @@
 # - PsClk to LE (sync and async paths)
 # - PsClk to SDO
 
-set PsSdiInputDelayMax  15.445
-set PsSdiInputDelayMin -15.378
-
-# Maximum 5 MHz clock rate!
-create_clock -name PsClk -period 200 [get_ports {PsSpiSck}]
+# Maximum 4 MHz clock rate! This is heavily limited by the read data turnaround time...
+# and could be up to 20 MHz if only performing writes.
+create_clock -name PsClk -period 250 [get_ports {PsSpiSck}]
 
 # SDI is both registered in the CPLD and used as a direct passthrough. First constrain
 # the input delay on the local paths inside the CPLD. Passthrough constraints
 # are handled elsewhere.
-#
-# SDI is driven from the FPGA on the falling edge of the Clk. Worst-case data-clock skew
-# is around 15ns. Complete timing analysis is performed and recorded elsewhere. This
-# constraint matches the FPGA output constraint.
+
+set PsSdiInputDelayMax  22.303
+set PsSdiInputDelayMin -19.019
+
+# SDI is driven from the PS on the falling edge of the Clk. Worst-case data-clock skew
+# is around +/-20ns due to FPGA routing delays and board buffering. Complete timing
+# analysis is performed and recorded elsewhere.
 set_input_delay -clock PsClk -max $PsSdiInputDelayMax [get_ports sPsSpiSdi] -clock_fall
 set_input_delay -clock PsClk -min $PsSdiInputDelayMin [get_ports sPsSpiSdi] -clock_fall
 
@@ -39,12 +40,14 @@ set_input_delay -clock PsClk -min $PsSdiInputDelayMin [get_ports sPsSpiLe] -cloc
 set_false_path -from [get_ports {sPsSpiLe}] -to [get_pins sPsMosiIndex[*]|*]
 set_false_path -from [get_ports {sPsSpiLe}] -to [get_pins sPsMisoIndex[*]|*]
 
-# SDO is given a very loose output constraint.
-set PsSdiOutputDelayMax  15
-set PsSdiOutputDelayMin -15
+# Constrain MISO as snugly as possible through the CPLD without making the tools work
+# too hard. At a 200 ns period, this sets the clock-to-out for the CPLD at [10, 65]ns.
+# Math for Max = T_clk/2 - 60 = 250/2 - 60 = 65 ns.
+set PsSdoOutputDelayMax  60
+set PsSdoOutputDelayMin -10
 
-set_output_delay -clock PsClk -max $PsSdiOutputDelayMax [get_ports sPsSpiSdo]
-set_output_delay -clock PsClk -min $PsSdiOutputDelayMin [get_ports sPsSpiSdo]
+set_output_delay -clock PsClk -max $PsSdoOutputDelayMax [get_ports sPsSpiSdo]
+set_output_delay -clock PsClk -min $PsSdoOutputDelayMin [get_ports sPsSpiSdo]
 
 
 
@@ -54,19 +57,18 @@ set_output_delay -clock PsClk -min $PsSdiOutputDelayMin [get_ports sPsSpiSdo]
 # - PlClk to LE (sync and async paths)
 # - PlClk to SDO
 
-set PlSdiInputDelayMax  15.445
-set PlSdiInputDelayMin -15.378
-
 # Maximum 5 MHz clock rate!
 create_clock -name PlClk -period 200 [get_ports {PlSpiSck}]
 
 # SDI is both registered in the CPLD and used as a direct passthrough. First constrain
 # the input delay on the local paths inside the CPLD. Passthrough constraints
 # are handled elsewhere.
-#
+
+set PlSdiInputDelayMax  10.445
+set PlSdiInputDelayMin -10.378
+
 # SDI is driven from the FPGA on the falling edge of the Clk. Worst-case data-clock skew
-# is around 15ns. Complete timing analysis is performed and recorded elsewhere. This
-# constraint matches the FPGA output constraint.
+# is around +/-10ns. Complete timing analysis is performed and recorded elsewhere.
 set_input_delay -clock PlClk -max $PlSdiInputDelayMax [get_ports lPlSpiSdi] -clock_fall
 set_input_delay -clock PlClk -min $PlSdiInputDelayMin [get_ports lPlSpiSdi] -clock_fall
 
@@ -80,12 +82,14 @@ set_input_delay -clock PlClk -min $PlSdiInputDelayMin [get_ports lPlSpiLe] -cloc
 set_false_path -from [get_ports {lPlSpiLe}] -to [get_pins {lPlMosiIndex[*]|*}]
 set_false_path -from [get_ports {lPlSpiLe}] -to [get_pins {lPlMisoIndex[*]|*}]
 
-# SDO is given a very loose output constraint.
-set PlSdiOutputDelayMax  15
-set PlSdiOutputDelayMin -15
+# Constrain MISO as snugly as possible through the CPLD without making the tools work
+# too hard. At a 200 ns period, this sets the clock-to-out for the CPLD at [10, 65]ns.
+# Math for Max = T_clk/2 - 35 = 200/2 - 35 = 65 ns.
+set PlSdoOutputDelayMax  35
+set PlSdoOutputDelayMin -10
 
-set_output_delay -clock PlClk -max $PlSdiOutputDelayMax [get_ports lPlSpiSdo]
-set_output_delay -clock PlClk -min $PlSdiOutputDelayMin [get_ports lPlSpiSdo]
+set_output_delay -clock PlClk -max $PlSdoOutputDelayMax [get_ports lPlSpiSdo]
+set_output_delay -clock PlClk -min $PlSdoOutputDelayMin [get_ports lPlSpiSdo]
 
 
 
@@ -114,8 +118,8 @@ set_max_delay -to [get_ports {aDacSync_n aLmkSpiCs_n}] $SpiMaxDelay
 set_min_delay -to [get_ports {aDacSync_n aLmkSpiCs_n}] $SpiMinDelay
 set_max_delay -to [get_ports {aDacSck aLmkSpiSck}] $SpiMaxDelay
 set_min_delay -to [get_ports {aDacSck aLmkSpiSck}] $SpiMinDelay
-set_max_delay -from [get_ports {aLmkClkinSel*}] [expr $SpiMaxDelay + $PsSdiOutputDelayMax]
-set_min_delay -from [get_ports {aLmkClkinSel*}] [expr $SpiMinDelay + $PsSdiOutputDelayMin]
+set_max_delay -from [get_ports {aLmkClkinSel*}] [expr $SpiMaxDelay + $PsSdoOutputDelayMax]
+set_min_delay -from [get_ports {aLmkClkinSel*}] [expr $SpiMinDelay + $PsSdoOutputDelayMin]
 
 # PL
 set_max_delay -to [get_ports {aRxLoDin aTxLoDin}] [expr $PlSdiInputDelayMax + $SpiMaxDelay]
@@ -124,8 +128,8 @@ set_max_delay -to [get_ports {aRxLoCs_n aTxLoCs_n}] $SpiMaxDelay
 set_min_delay -to [get_ports {aRxLoCs_n aTxLoCs_n}] $SpiMinDelay
 set_max_delay -to [get_ports {aRxLoSck aTxLoSck}] $SpiMaxDelay
 set_min_delay -to [get_ports {aRxLoSck aTxLoSck}] $SpiMinDelay
-set_max_delay -from [get_ports {aTxLoMuxOut aRxLoMuxOut}] [expr $SpiMaxDelay + $PlSdiOutputDelayMax]
-set_min_delay -from [get_ports {aTxLoMuxOut aRxLoMuxOut}] [expr $SpiMinDelay + $PlSdiOutputDelayMin]
+set_max_delay -from [get_ports {aTxLoMuxOut aRxLoMuxOut}] [expr $SpiMaxDelay + $PlSdoOutputDelayMax]
+set_min_delay -from [get_ports {aTxLoMuxOut aRxLoMuxOut}] [expr $SpiMinDelay + $PlSdoOutputDelayMin]
 
 
 
