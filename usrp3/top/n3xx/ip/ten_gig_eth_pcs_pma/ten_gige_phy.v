@@ -31,8 +31,7 @@ module ten_gige_phy
    input             qplllock,
    input             qplloutclk,
    input             qplloutrefclk,
-   output            rxclk //TEMP
-
+   output            tx_out_clk
 );
 
    reg [63:0]  xgmii_txd_reg;
@@ -183,12 +182,13 @@ module ten_gige_phy
    );
 
    assign txusrclk2 = txusrclk;
+   assign tx_out_clk = txclk322;
 
    // Instantiate the 10GBASER/KR Block Level
    ten_gig_eth_pcs_pma ten_gig_eth_pcs_pma_i (
       .coreclk(clk156),
       .dclk(dclk),
-      .rxrecclk_out(rxclk),
+      .rxrecclk_out(),
       .txusrclk(txusrclk),
       .txusrclk2(txusrclk2),
       .txoutclk(txclk322),

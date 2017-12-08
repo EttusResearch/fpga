@@ -4,7 +4,7 @@
 
 module aurora_phy_mmcm 
 (
-   input  aurora_tx_clk,
+   input  aurora_tx_clk_unbuf,
    input  mmcm_reset,
    output user_clk,
    output sync_clk,
@@ -14,6 +14,12 @@ module aurora_phy_mmcm
   wire mmcm_fb_clk;
   wire user_clk_i;
   wire sync_clk_i;
+  wire aurora_tx_clk;
+
+  BUFG txout_clock_net_i (
+    .I(aurora_tx_clk_unbuf),
+    .O(aurora_tx_clk)
+  );
 
   localparam MULT        = 10;
   localparam DIVIDE      = 5;

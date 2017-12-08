@@ -59,9 +59,9 @@ fragment@1 {
 			status = "okay";
 		};
 
-		uio@4000e000 {
+		uio@4000c000 {
 			compatible = "usrp-uio";
-			reg = <0x4000e000 0x2000>;
+			reg = <0x4000c000 0x1000>;
 			reg-names = "misc-auro-regs1";
 			status = "okay";
 		};

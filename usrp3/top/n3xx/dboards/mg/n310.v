@@ -807,12 +807,6 @@ module n310
     .O(gige_refclk_bufg)
   );
 
-  // FIXME
-  assign SFP_0_RS0  = 1'b0;
-  assign SFP_0_RS1  = 1'b0;
-  assign SFP_1_RS0  = 1'b0;
-  assign SFP_1_RS1  = 1'b0;
-
 `endif
 
 `ifdef BUILD_10G
@@ -893,10 +887,6 @@ module n310
   wire          qplllock;
   wire          qplloutclk;
   wire          qplloutrefclk;
-  wire  [15:0]  sfp0_phy_status;
-  wire  [15:0]  sfp1_phy_status;
-  wire  [31:0]  sfp0_mac_status;
-  wire  [31:0]  sfp1_mac_status;
   wire  [63:0]  e01_tdata, e10_tdata;
   wire  [3:0]   e01_tuser, e10_tuser;
   wire          e01_tlast, e01_tvalid, e01_tready;
@@ -961,31 +951,25 @@ module n310
   wire au_user_clk;
   wire au_sync_clk;
   wire au_mmcm_locked;
-  wire channel_phy_areset;
   wire sfp0_tx_out_clk, sfp1_tx_out_clk;
   wire sfp0_gt_pll_lock, sfp1_gt_pll_lock;
-  wire sfp0_phy_areset, sfp1_phy_areset;
   wire npio0_tx_out_clk, npio1_tx_out_clk;
   wire npio0_gt_pll_lock, npio1_gt_pll_lock;
-  wire npio0_phy_areset, npio1_phy_areset;
 `ifdef SFP1_AURORA 
   assign au_tx_clk = sfp1_tx_out_clk;
   assign au_mmcm_reset = !sfp1_gt_pll_lock;
-  assign channel_phy_areset = sfp1_phy_areset;
 `elsif NPIO0
   assign au_tx_clk = npio0_tx_out_clk;
   assign au_mmcm_reset = !npio0_gt_pll_lock;
-  assign channel_phy_areset = npio0_phy_areset;
 `elsif NPIO1
   assign au_tx_clk = npio1_tx_out_clk;
   assign au_mmcm_reset = !npio1_gt_pll_lock;
-  assign channel_phy_areset = npio1_phy_areset;
 `endif
   //must reset all channels on quad when resetting mmcm
   //The source of this channel reset depends on which channel is the source of
   //the tx_out_clk.
   aurora_phy_mmcm aurora_phy_mmcm_0 (
-    .aurora_tx_clk(au_tx_clk),
+    .aurora_tx_clk_unbuf(au_tx_clk),
     .mmcm_reset(au_mmcm_reset),
     .user_clk(au_user_clk),
     .sync_clk(au_sync_clk),
@@ -1045,30 +1029,24 @@ module n310
   wire au_user_clk_qsfp;
   wire au_sync_clk_qsfp;
   wire au_mmcm_locked_qsfp;
-  wire channel_qsfp_phy_areset;
   wire qsfp0_tx_out_clk, qsfp1_tx_out_clk, qsfp2_tx_out_clk, qsfp3_tx_out_clk;
   wire qsfp0_gt_pll_lock, qsfp1_gt_pll_lock, qsfp2_gt_pll_lock, qsfp3_gt_pll_lock;
-  wire qsfp0_phy_areset, qsfp1_phy_areset, qsfp2_phy_areset, qsfp3_phy_areset;
 //only use out clk from 1 GT channel on the quad.
 `ifdef QSFP0
   assign au_tx_clk_qsfp = qsfp0_tx_out_clk;
   assign au_mmcm_reset_qsfp = !qsfp0_gt_pll_lock;
-  assign channel_qsfp_phy_areset = qsfp0_phy_areset;
 `elsif QSFP1
   assign au_tx_clk_qsfp = qsfp1_tx_out_clk;
   assign au_mmcm_reset_qsfp = !qsfp1_gt_pll_lock;
-  assign channel_qsfp_phy_areset = qsfp1_phy_areset;
 `elsif QSFP2
   assign au_tx_clk_qsfp = qsfp2_tx_out_clk;
   assign au_mmcm_reset_qsfp = !qsfp2_gt_pll_lock;
-  assign channel_qsfp_phy_areset = qsfp2_phy_areset;
 `elsif QSFP3
   assign au_tx_clk_qsfp = qsfp3_tx_out_clk;
   assign au_mmcm_reset_qsfp = !qsfp3_gt_pll_lock;
-  assign channel_qsfp_phy_areset = qsfp3_phy_areset;
 `endif
   aurora_phy_mmcm aurora_phy_mmcm_qsfp (
-    .aurora_tx_clk(au_tx_clk_qsfp),
+    .aurora_tx_clk_unbuf(au_tx_clk_qsfp),
     .mmcm_reset(au_mmcm_reset_qsfp),
     .user_clk(au_user_clk_qsfp),
     .sync_clk(au_sync_clk_qsfp),
@@ -1164,16 +1142,16 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h0),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd2),
          .MDIO_EN(0))
  inst_n310_npio0 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk),
     .sync_clk(au_sync_clk),
-    .au_tx_out_clk(au_tx_out_clk),
+    .gt_tx_out_clk_unbuf(au_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1213,8 +1191,7 @@ module n310
     .m_axis_tready(npio0_axis_tready),
 
     .mmcm_locked(au_mmcm_locked),
-    .gt_pll_lock(npio0_gt_pll_lock),
-    .phy_areset_out(npio0_phy_areset)
+    .gt_pll_lock(npio0_gt_pll_lock)
   );
 `endif
 `ifdef NPIO1 
@@ -1229,16 +1206,16 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h20),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd3),
          .MDIO_EN(0))
   inst_n310_npio1 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk),
     .sync_clk(au_sync_clk),
-    .au_tx_out_clk(au_tx_out_clk),
+    .gt_tx_out_clk_unbuf(au_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1278,8 +1255,7 @@ module n310
     .m_axis_tready(npio1_axis_tready),
 
     .mmcm_locked(au_mmcm_locked),
-    .gt_pll_lock(npio1_gt_pll_lock),
-    .phy_areset_out(npio1_phy_areset)
+    .gt_pll_lock(npio1_gt_pll_lock)
   );
 `endif
 `ifdef QSFP0 
@@ -1294,16 +1270,17 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h40),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd4),
          .MDIO_EN(0))
   inst_n310_qsfp0 (
      //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_qsfp_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk_qsfp),
     .sync_clk(au_sync_clk_qsfp),
-    .au_tx_out_clk(qsfp0_tx_out_clk),
+    .gt_tx_out_clk_unbuf(qsfp0_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1343,8 +1320,7 @@ module n310
     .m_axis_tready(qsfp0_axis_tready),
 
     .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp0_gt_pll_lock),
-    .phy_areset_out(qsfp0_phy_areset)
+    .gt_pll_lock(qsfp0_gt_pll_lock)
   );
 `endif
 `ifdef QSFP1 
@@ -1359,16 +1335,17 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h60),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd5),
          .MDIO_EN(0))
   inst_n310_qsfp1 (
      //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_qsfp_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk_qsfp),
     .sync_clk(au_sync_clk_qsfp),
-    .au_tx_out_clk(qsfp1_tx_out_clk),
+    .gt_tx_out_clk_unbuf(qsfp1_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1408,8 +1385,7 @@ module n310
     .m_axis_tready(qsfp1_axis_tready),
 
     .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp1_gt_pll_lock),
-    .phy_areset_out(qsfp1_phy_areset)
+    .gt_pll_lock(qsfp1_gt_pll_lock)
   );
 `endif
 `ifdef QSFP2 
@@ -1424,16 +1400,17 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h80),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd6),
          .MDIO_EN(0))
   inst_n310_qsfp2 (
      //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_qsfp_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk_qsfp),
     .sync_clk(au_sync_clk_qsfp),
-    .au_tx_out_clk(qsfp2_tx_out_clk),
+    .gt_tx_out_clk_unbuf(qsfp2_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1473,8 +1450,7 @@ module n310
     .m_axis_tready(qsfp2_axis_tready),
 
     .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp2_gt_pll_lock),
-    .phy_areset_out(qsfp2_phy_areset)
+    .gt_pll_lock(qsfp2_gt_pll_lock)
   );
 `endif
 `ifdef QSFP3 
@@ -1489,16 +1465,17 @@ module n310
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'hA0),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
          .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
+         .PORTNUM(8'd7),
          .MDIO_EN(0))
   inst_n310_qsfp3 (
      //must reset all channels on quad when resetting mmcm
-    .areset(global_rst | channel_qsfp_phy_areset),
+    .areset(global_rst),
     .gt_refclk(aurora_refclk),
     .gb_refclk(aurora_clk156),
     .misc_clk(aurora_init_clk),
     .user_clk(au_user_clk_qsfp),
     .sync_clk(au_sync_clk_qsfp),
-    .au_tx_out_clk(qsfp3_tx_out_clk),
+    .gt_tx_out_clk_unbuf(qsfp3_tx_out_clk),
 
     .bus_clk(bus_clk),//clk for status reg reads to mdio interface
     .bus_rst(bus_rst),  
@@ -1538,8 +1515,7 @@ module n310
     .m_axis_tready(qsfp3_axis_tready),
 
     .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp3_gt_pll_lock),
-    .phy_areset_out(qsfp3_phy_areset)
+    .gt_pll_lock(qsfp3_gt_pll_lock)
   );
 `endif
 
@@ -1656,8 +1632,6 @@ module n310
        .MDIO_EN(1'b1),
 `elsif SFP0_AURORA
        .PROTOCOL("Aurora"),
-       //aurora regs start at 0x2030 to not interfere with eth_dispatch
-       .REG_BASE(14'h2030), 
        .MDIO_EN(1'b0),
 `elsif SFP0_1GBE
        .PROTOCOL("1GbE"),
@@ -1667,19 +1641,13 @@ module n310
        .AWIDTH(REG_AWIDTH),     // Width of the address bus
        .PORTNUM(8'd0)
    ) sfp_wrapper_0 (
-`ifdef SFP0_AURORA
-      //must reset all channels on quad when aurora mmcm is reset. 
-      //sfp1 is the master of the mmcm, so reset sfp0 as well. 
-      .areset(global_rst | channel_phy_areset),
-`else
-      .areset(global_rst),     // TODO: Add Reset through PS
-`endif
+      .areset(global_rst),
       .gt_refclk(sfp0_gt_refclk),
       .gb_refclk(sfp0_gb_refclk),
       .misc_clk(sfp0_misc_clk),
       .user_clk(au_user_clk),
       .sync_clk(au_sync_clk),
-      .au_tx_out_clk(sfp0_tx_out_clk),
+      .gt_tx_out_clk_unbuf(sfp0_tx_out_clk),
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
@@ -1690,9 +1658,8 @@ module n310
       .qplloutrefclk(qplloutrefclk),
       .qpllrefclklost(qpllrefclklost),
 
-      .au_mmcm_locked(au_mmcm_locked),
+      .mmcm_locked(au_mmcm_locked),
       .gt_pll_lock(sfp0_gt_pll_lock),
-      .phy_areset_out(sfp0_phy_areset),
 
       .txp(SFP_0_TX_P),
       .txn(SFP_0_TX_N),
@@ -1702,9 +1669,6 @@ module n310
       .sfpp_rxlos(SFP_0_LOS),
       .sfpp_tx_fault(SFP_0_TXFAULT),
       .sfpp_tx_disable(SFP_0_TXDISABLE),
-
-      .sfp_phy_status(sfp0_phy_status),
-      .sfp_mac_status(sfp0_mac_status),
 
       // Clock and reset
       .s_axi_aclk(clk40),
@@ -1771,7 +1735,8 @@ module n310
       .c2e_tready(arm_eth0_tx_tready_b),
       
       // LED
-      .activity_led(SFP_0_LED_A)
+      .link_up(SFP_0_LED_B),
+      .activity(SFP_0_LED_A)
    );
 
 
@@ -1787,21 +1752,20 @@ module n310
       .MDIO_EN(1'b1),
 `elsif SFP1_AURORA
       .PROTOCOL("Aurora"),
-      .REG_BASE(14'h2030),
       .MDIO_EN(1'b0),
 `endif
       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
       .AWIDTH(REG_AWIDTH),     // Width of the address bus
       .PORTNUM(8'd1)
    ) sfp_wrapper_1 (
-      .areset(global_rst | channel_phy_areset),     // TODO: Add Reset through PS
+      .areset(global_rst),
       
       .gt_refclk(sfp1_gt_refclk),
       .gb_refclk(sfp1_gb_refclk),
       .misc_clk(sfp1_misc_clk),
       .user_clk(au_user_clk),
       .sync_clk(au_sync_clk),
-      .au_tx_out_clk(sfp1_tx_out_clk),
+      .gt_tx_out_clk_unbuf(sfp1_tx_out_clk),
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
@@ -1812,9 +1776,8 @@ module n310
       .qplloutrefclk(qplloutrefclk),
       .qpllrefclklost(qpllrefclklost),
 
-      .au_mmcm_locked(au_mmcm_locked),
+      .mmcm_locked(au_mmcm_locked),
       .gt_pll_lock(sfp1_gt_pll_lock),
-      .phy_areset_out(sfp1_phy_areset),
 
       .txp(SFP_1_TX_P),
       .txn(SFP_1_TX_N),
@@ -1825,75 +1788,73 @@ module n310
       .sfpp_tx_fault(SFP_1_TXFAULT),
       .sfpp_tx_disable(SFP_1_TXDISABLE),
 
-      .sfp_phy_status(sfp1_phy_status),
-      .sfp_mac_status(sfp1_mac_status),
+      // Clock and reset
+      .s_axi_aclk(clk40),
+      .s_axi_aresetn(clk40_rstn),
+      // AXI4-Lite: Write address port (domain: s_axi_aclk)
+      .s_axi_awaddr(M_AXI_NET1_AWADDR),
+      .s_axi_awvalid(M_AXI_NET1_AWVALID),
+      .s_axi_awready(M_AXI_NET1_AWREADY),
+      // AXI4-Lite: Write data port (domain: s_axi_aclk)
+      .s_axi_wdata(M_AXI_NET1_WDATA),
+      .s_axi_wstrb(M_AXI_NET1_WSTRB),
+      .s_axi_wvalid(M_AXI_NET1_WVALID),
+      .s_axi_wready(M_AXI_NET1_WREADY),
+      // AXI4-Lite: Write response port (domain: s_axi_aclk)
+      .s_axi_bresp(M_AXI_NET1_BRESP),
+      .s_axi_bvalid(M_AXI_NET1_BVALID),
+      .s_axi_bready(M_AXI_NET1_BREADY),
+      // AXI4-Lite: Read address port (domain: s_axi_aclk)
+      .s_axi_araddr(M_AXI_NET1_ARADDR),
+      .s_axi_arvalid(M_AXI_NET1_ARVALID),
+      .s_axi_arready(M_AXI_NET1_ARREADY),
+      // AXI4-Lite: Read data port (domain: s_axi_aclk)
+      .s_axi_rdata(M_AXI_NET1_RDATA),
+      .s_axi_rresp(M_AXI_NET1_RRESP),
+      .s_axi_rvalid(M_AXI_NET1_RVALID),
+      .s_axi_rready(M_AXI_NET1_RREADY),
 
-       // Clock and reset
-       .s_axi_aclk(clk40),
-       .s_axi_aresetn(clk40_rstn),
-       // AXI4-Lite: Write address port (domain: s_axi_aclk)
-       .s_axi_awaddr(M_AXI_NET1_AWADDR),
-       .s_axi_awvalid(M_AXI_NET1_AWVALID),
-       .s_axi_awready(M_AXI_NET1_AWREADY),
-       // AXI4-Lite: Write data port (domain: s_axi_aclk)
-       .s_axi_wdata(M_AXI_NET1_WDATA),
-       .s_axi_wstrb(M_AXI_NET1_WSTRB),
-       .s_axi_wvalid(M_AXI_NET1_WVALID),
-       .s_axi_wready(M_AXI_NET1_WREADY),
-       // AXI4-Lite: Write response port (domain: s_axi_aclk)
-       .s_axi_bresp(M_AXI_NET1_BRESP),
-       .s_axi_bvalid(M_AXI_NET1_BVALID),
-       .s_axi_bready(M_AXI_NET1_BREADY),
-       // AXI4-Lite: Read address port (domain: s_axi_aclk)
-       .s_axi_araddr(M_AXI_NET1_ARADDR),
-       .s_axi_arvalid(M_AXI_NET1_ARVALID),
-       .s_axi_arready(M_AXI_NET1_ARREADY),
-       // AXI4-Lite: Read data port (domain: s_axi_aclk)
-       .s_axi_rdata(M_AXI_NET1_RDATA),
-       .s_axi_rresp(M_AXI_NET1_RRESP),
-       .s_axi_rvalid(M_AXI_NET1_RVALID),
-       .s_axi_rready(M_AXI_NET1_RREADY),
+      // Ethernet to Vita
+      .e2v_tdata(e2v1_tdata),
+      .e2v_tlast(e2v1_tlast),
+      .e2v_tvalid(e2v1_tvalid),
+      .e2v_tready(e2v1_tready),
 
-       // Ethernet to Vita
-       .e2v_tdata(e2v1_tdata),
-       .e2v_tlast(e2v1_tlast),
-       .e2v_tvalid(e2v1_tvalid),
-       .e2v_tready(e2v1_tready),
+      // Vita to Ethernet
+      .v2e_tdata(v2e1_tdata),
+      .v2e_tlast(v2e1_tlast),
+      .v2e_tvalid(v2e1_tvalid),
+      .v2e_tready(v2e1_tready),
 
-       // Vita to Ethernet
-       .v2e_tdata(v2e1_tdata),
-       .v2e_tlast(v2e1_tlast),
-       .v2e_tvalid(v2e1_tvalid),
-       .v2e_tready(v2e1_tready),
+      // Crossover
+      .xo_tdata(e10_tdata),
+      .xo_tuser(e10_tuser),
+      .xo_tlast(e10_tlast),
+      .xo_tvalid(e10_tvalid),
+      .xo_tready(e10_tready),
+      .xi_tdata(e01_tdata),
+      .xi_tuser(e01_tuser),
+      .xi_tlast(e01_tlast),
+      .xi_tvalid(e01_tvalid),
+      .xi_tready(e01_tready),
 
-       // Crossover
-       .xo_tdata(e10_tdata),
-       .xo_tuser(e10_tuser),
-       .xo_tlast(e10_tlast),
-       .xo_tvalid(e10_tvalid),
-       .xo_tready(e10_tready),
-       .xi_tdata(e01_tdata),
-       .xi_tuser(e01_tuser),
-       .xi_tlast(e01_tlast),
-       .xi_tvalid(e01_tvalid),
-       .xi_tready(e01_tready),
+      // Ethernet to CPU
+      .e2c_tdata(arm_eth1_rx_tdata_b),
+      .e2c_tkeep(arm_eth1_rx_tkeep_b),
+      .e2c_tlast(arm_eth1_rx_tlast_b),
+      .e2c_tvalid(arm_eth1_rx_tvalid_b),
+      .e2c_tready(arm_eth1_rx_tready_b),
 
-       // Ethernet to CPU
-       .e2c_tdata(arm_eth1_rx_tdata_b),
-       .e2c_tkeep(arm_eth1_rx_tkeep_b),
-       .e2c_tlast(arm_eth1_rx_tlast_b),
-       .e2c_tvalid(arm_eth1_rx_tvalid_b),
-       .e2c_tready(arm_eth1_rx_tready_b),
+      // CPU to Ethernet
+      .c2e_tdata(arm_eth1_tx_tdata_b),
+      .c2e_tkeep(arm_eth1_tx_tkeep_b),
+      .c2e_tlast(arm_eth1_tx_tlast_b),
+      .c2e_tvalid(arm_eth1_tx_tvalid_b),
+      .c2e_tready(arm_eth1_tx_tready_b),
 
-       // CPU to Ethernet
-       .c2e_tdata(arm_eth1_tx_tdata_b),
-       .c2e_tkeep(arm_eth1_tx_tkeep_b),
-       .c2e_tlast(arm_eth1_tx_tlast_b),
-       .c2e_tvalid(arm_eth1_tx_tvalid_b),
-       .c2e_tready(arm_eth1_tx_tready_b),
-
-       // LED
-       .activity_led(SFP_1_LED_A)
+      // LED
+      .link_up(SFP_1_LED_B),
+      .activity(SFP_1_LED_A)
    );
 
    /////////////////////////////////////////////////////////////////////
@@ -3596,10 +3557,6 @@ module n310
      else
        counter3 <= counter3 + 32'd1;
    end
-
-   assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
-   //FIXME don't for get to change this back after 
-   //assign {SFP_0_LED_B, SFP_1_LED_B} = {sfp0_phy_status[0],sfp1_phy_status[0]};
 
    assign PANEL_LED_LINK = counter1[26];
    assign PANEL_LED_REF = counter2[26];

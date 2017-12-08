@@ -51,7 +51,7 @@ module aurora_phy_x1 #(
    input             qplllock,
    input             qpllrefclklost,
    output            qpllreset,
-   output            tx_out_clk_bufg,
+   output            tx_out_clk,
    input             mmcm_locked,
    output            gt_pll_lock
 );
@@ -163,17 +163,6 @@ module aurora_phy_x1 #(
 
    assign reset_pb = (rst_state != RST_ST_IDLE);
    assign pma_init = (rst_state == RST_ST_PMA_INIT || rst_state == RST_ST_PWRON_PMA_INIT);
-
-   //--------------------------------------------------------------
-   // Clocking
-   //--------------------------------------------------------------
-
-   wire tx_out_clk, tx_out_clk_bufg;
-
-   BUFG txout_clock_net_i (
-      .I(tx_out_clk),
-      .O(tx_out_clk_bufg)
-   );
 
    //--------------------------------------------------------------
    // GT Common

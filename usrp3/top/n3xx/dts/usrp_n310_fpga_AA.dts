@@ -27,15 +27,15 @@ fragment@1 {
 	__overlay__ {
 		uio@40006000 {
 			compatible = "usrp-uio";
-			reg = <0x40006000 0x2000>;
+			reg = <0x40004000 0x1000>;
 			reg-names = "misc-auro-regs0";
 			status = "okay";
 		};
 
 
-		uio@4000e000 {
+		uio@4000c000 {
 			compatible = "usrp-uio";
-			reg = <0x4000e000 0x2000>;
+			reg = <0x4000c000 0x1000>;
 			reg-names = "misc-auro-regs1";
 			status = "okay";
 		};
