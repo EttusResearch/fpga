@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0
 //
-// Module: n310_sfp_wrapper
+// Module: n3xx_sfp_wrapper
 // Description:
 //   Reduces clutter at top level.
 //   - Aurora: wraps up sfpp_io, axil_regport and axi_dummy
@@ -12,7 +12,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-module n310_sfp_wrapper #(
+module n3xx_sfp_wrapper #(
   parameter PROTOCOL  = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
   parameter DWIDTH    = 32,
   parameter AWIDTH    = 14,
@@ -195,7 +195,7 @@ module n310_sfp_wrapper #(
   wire [3:0]  sfpo_tuser, sfpi_tuser;
   wire        sfpo_tlast, sfpi_tlast, sfpo_tvalid, sfpi_tvalid, sfpo_tready, sfpi_tready;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
     .PROTOCOL       (PROTOCOL),
     .REG_BASE       (REG_BASE_SFP_IO),
     .REG_DWIDTH     (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)

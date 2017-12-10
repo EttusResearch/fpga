@@ -1137,7 +1137,7 @@ module n310
   wire npio0_axis_tready;
   wire npio0_axis_tlast;
   
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h0),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1201,7 +1201,7 @@ module n310
   wire npio1_axis_tready;
   wire npio1_axis_tlast;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h20),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1265,7 +1265,7 @@ module n310
   wire qsfp0_axis_tready;
   wire qsfp0_axis_tlast;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h40),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1330,7 +1330,7 @@ module n310
   wire qsfp1_axis_tready;
   wire qsfp1_axis_tlast;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h60),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1395,7 +1395,7 @@ module n310
   wire qsfp2_axis_tready;
   wire qsfp2_axis_tlast;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h80),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1460,7 +1460,7 @@ module n310
   wire qsfp3_axis_tready;
   wire qsfp3_axis_tlast;
 
-  n310_sfpp_io_core #(
+  n3xx_mgt_io_core #(
          .PROTOCOL("Aurora"),
          .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'hA0),
          .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -1626,7 +1626,7 @@ module n310
    //
    //////////////////////////////////////////////////////////////////////
 
-   n310_sfp_wrapper #(
+   n3xx_sfp_wrapper #(
 `ifdef SFP0_10GBE
        .PROTOCOL("10GbE"),
        .MDIO_EN(1'b1),
@@ -1746,7 +1746,7 @@ module n310
    //
    //////////////////////////////////////////////////////////////////////
 
-   n310_sfp_wrapper #(
+   n3xx_sfp_wrapper #(
 `ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
       .MDIO_EN(1'b1),

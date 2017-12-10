@@ -1,16 +1,17 @@
-/////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 //
-// Copyright 2016-2017 Ettus Research
+// Copyright 2017 Ettus Research, A National Instruments Company
 //
-// sfpp_io_core
-// - mdio_master
-// - One Gige phy + MAC
-// - Ten Gige phy + MAC
-// - Aurora phy + MAC
+// SPDX-License-Identifier: LGPL-3.0
+//
+// Module: n3xx_mgt_io_core
+// Description:
+//   Encapsulates the PSC/PMA, the MAC layer and the control interface
+//   for 1GbE, 10GbE and Aurora
 //
 //////////////////////////////////////////////////////////////////////
 
-module n310_sfpp_io_core #(
+module n3xx_mgt_io_core #(
   parameter        PROTOCOL   = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
   parameter [13:0] REG_BASE   = 14'h0,
   parameter        REG_DWIDTH = 32,
