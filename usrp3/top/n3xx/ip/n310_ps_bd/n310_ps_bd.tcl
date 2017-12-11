@@ -353,16 +353,6 @@ CONFIG.ASSOCIATED_RESET {clk40_rstn} \
 CONFIG.FREQ_HZ {40000000} \
  ] $clk40
   set clk40_rstn [ create_bd_port -dir I -type rst clk40_rstn ]
-  set interconnect_clk [ create_bd_port -dir I -type clk interconnect_clk ]
-  set_property -dict [ list \
-CONFIG.ASSOCIATED_RESET {interconnect_rstn} \
-CONFIG.FREQ_HZ {100000000} \
- ] $interconnect_clk
-  set interconnect_rstn [ create_bd_port -dir I -type rst interconnect_rstn ]
-  set_property -dict [ list \
-CONFIG.POLARITY {ACTIVE_LOW} \
- ] $interconnect_rstn
-
   # Create instance: axi_interconnect_hp0, and set properties
   set axi_interconnect_hp0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_hp0 ]
   set_property -dict [ list \
@@ -515,8 +505,8 @@ CONFIG.DOUT_WIDTH {8} \
   connect_bd_net -net ddr_vrn [get_bd_ports DDR_VRN] [get_bd_pins processing_system7_0/DDR_VRN]
   connect_bd_net -net ddr_vrp [get_bd_ports DDR_VRP] [get_bd_pins processing_system7_0/DDR_VRP]
   connect_bd_net -net dma_tx_irq [get_bd_pins dma/tx_irq] [get_bd_pins xlconcat_0/In2]
-  connect_bd_net -net interconnect_clk [get_bd_ports interconnect_clk] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK]
-  connect_bd_net -net interconnect_rstn [get_bd_ports interconnect_rstn] [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN]
+  connect_bd_net -net clk40 [get_bd_ports clk40] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK]
+  connect_bd_net -net clk40_rstn [get_bd_ports clk40_rstn] [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN]
   connect_bd_net -net mio [get_bd_ports MIO] [get_bd_pins processing_system7_0/MIO]
   connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7_0/FCLK_CLK0]
   connect_bd_net -net processing_system7_0_FCLK_CLK1 [get_bd_ports FCLK_CLK1] [get_bd_pins processing_system7_0/FCLK_CLK1]

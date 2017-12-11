@@ -1838,8 +1838,6 @@ module n310
 
     .bus_clk(bus_clk),
     .bus_rstn(bus_rstn),
-    .interconnect_clk(FCLK_CLK0),
-    .interconnect_rstn(FCLK_RESET0_N),
     .clk40(clk40),
     .clk40_rstn(clk40_rstn),
 
