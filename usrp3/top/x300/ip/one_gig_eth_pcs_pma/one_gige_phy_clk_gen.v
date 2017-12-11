@@ -4,7 +4,6 @@
 
 module one_gige_phy_clk_gen 
 (
-   input  areset,
    input  refclk_p,
    input  refclk_n,
    output refclk,

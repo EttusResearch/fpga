@@ -55,10 +55,14 @@ module axis_fifo_2clk #(
         .s_axis_tdata(i_flat_tdata[((i+1)*BASE_WIDTH)-1:i*BASE_WIDTH]),
         .s_axis_tvalid(i_flat_tvalid),
         .s_axis_tready(i_flat_tready[i]),
+        .s_axis_tlast(1'b0),
+        .s_axis_tuser(4'b0),
         .m_aclk(m_axis_aclk),
         .m_axis_tdata(o_flat_tdata[((i+1)*BASE_WIDTH)-1:i*BASE_WIDTH]),
         .m_axis_tvalid(o_flat_tvalid[i]),
-        .m_axis_tready(o_flat_tready)
+        .m_axis_tready(o_flat_tready),
+        .m_axis_tlast(),
+        .m_axis_tuser()
       );
     end
   endgenerate
