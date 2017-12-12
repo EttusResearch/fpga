@@ -54,7 +54,8 @@ eth_switch.v \
 network_interface.v
 
 MB_XDC = \
-mb_timing.xdc
+mb_timing.xdc \
+mb_pins.xdc
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)

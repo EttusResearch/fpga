@@ -79,7 +79,7 @@ module n310
    //output ENET0_PTP_DIR,
    //inout ATSHA204_SDA,
    input FPGA_PL_RESETN, // TODO:  Add to reset logic
-   output reg [1:0] FPGA_TEST,
+   // output reg [1:0] FPGA_TEST,
    //input PWR_CLK_FPGA, // TODO: check direction
 
    //White Rabbit

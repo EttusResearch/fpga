@@ -23,5 +23,5 @@ n310.v \
 
 MAGNESIUM_DB_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
 db_timing.xdc \
-pins.xdc \
+db_pins.xdc \
 ))
