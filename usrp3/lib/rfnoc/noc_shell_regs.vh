@@ -22,3 +22,4 @@
   localparam [7:0] RB_MTU                         = 3;
   localparam [7:0] RB_BLOCK_PORT_SIDS             = 4;
   localparam [7:0] RB_USER_RB_DATA                = 5;
+  localparam [7:0] RB_NOC_SHELL_COMPAT_NUM        = 6;

@@ -34,7 +34,7 @@ module noc_shell
 
     // Computation Engine interfaces, all on local clock
     input clk, input reset,
-    
+
     // Control Sink
     output [BLOCK_PORTS*32-1:0] set_data, output [BLOCK_PORTS*8-1:0] set_addr, output [BLOCK_PORTS-1:0] set_stb,
     output [BLOCK_PORTS*64-1:0] set_time, output [BLOCK_PORTS-1:0] set_has_time,
@@ -43,11 +43,11 @@ module noc_shell
     // Control Source
     input [63:0] cmdout_tdata, input cmdout_tlast, input cmdout_tvalid, output cmdout_tready,
     output [63:0] ackin_tdata, output ackin_tlast, output ackin_tvalid, input ackin_tready,
-    
+
     // Stream Sink
     output [INPUT_PORTS*64-1:0] str_sink_tdata, output [INPUT_PORTS-1:0] str_sink_tlast,
     output [INPUT_PORTS-1:0] str_sink_tvalid, input [INPUT_PORTS-1:0] str_sink_tready,
-    
+
     // Stream Source
     input [OUTPUT_PORTS*64-1:0] str_src_tdata, input [OUTPUT_PORTS-1:0] str_src_tlast,
     input [OUTPUT_PORTS-1:0] str_src_tvalid, output [OUTPUT_PORTS-1:0] str_src_tready,
@@ -64,7 +64,10 @@ module noc_shell
     );
 
    `include "noc_shell_regs.vh"
-   
+   localparam RB_AWIDTH = 3;
+   localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'b1;
+   localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'b0;
+
    wire [63:0] 	  dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata,
 		  cmdin_tdata,  ackout_tdata;
    wire 	  dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast,
@@ -75,7 +78,7 @@ module noc_shell
 		  cmdin_tready,  ackout_tready;
 
    wire [31:0] 	  debug_sfc;
-   
+
    ///////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos to get the computation engine on its own clock
    ///////////////////////////////////////////////////////////////////////////////////////
@@ -122,8 +125,6 @@ module noc_shell
    wire [64*BLOCK_PORTS-1:0] ackout_ports_tdata;
    wire [BLOCK_PORTS-1:0]    ackout_ports_tvalid, ackout_ports_tready, ackout_ports_tlast;
    wire [63:0] cmd_header;
-
-   localparam RB_AWIDTH = 3;
 
    genvar k;
    generate
@@ -172,16 +173,17 @@ module noc_shell
            rb_data_int <= 64'd0;
          end else begin
            case(rb_addr_noc_shell)
-             RB_NOC_ID          : {rb_stb_int, rb_data_int} <= {     1'b1, NOC_ID};
-             RB_GLOBAL_PARAMS   : {rb_stb_int, rb_data_int} <= {     1'b1, {48'd0, 3'd0, INPUT_PORTS[4:0], 3'd0, OUTPUT_PORTS[4:0]}};
-             RB_FIFOSIZE        : {rb_stb_int, rb_data_int} <= {     1'b1, {k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0}};
-             RB_MTU             : {rb_stb_int, rb_data_int} <= {     1'b1, {k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0}};
-             RB_BLOCK_PORT_SIDS : {rb_stb_int, rb_data_int} <= {     1'b1, {src_sid[16*k+15:16*k],
-                                                                            k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
-                                                                            k < INPUT_PORTS  ? resp_in_dst_sid[16*k+15:16*k]  : 16'd0,
-                                                                            k < OUTPUT_PORTS ? resp_out_dst_sid[16*k+15:16*k] : 16'd0}};
-             RB_USER_RB_DATA    : {rb_stb_int, rb_data_int} <= {rb_stb[k], rb_data[64*k+63:64*k]};
-             default            : {rb_stb_int, rb_data_int} <= {     1'b1, 64'h0BADC0DE0BADC0DE};
+             RB_NOC_ID               : {rb_stb_int, rb_data_int} <= {     1'b1, NOC_ID};
+             RB_GLOBAL_PARAMS        : {rb_stb_int, rb_data_int} <= {     1'b1, {48'd0, 3'd0, INPUT_PORTS[4:0], 3'd0, OUTPUT_PORTS[4:0]}};
+             RB_FIFOSIZE             : {rb_stb_int, rb_data_int} <= {     1'b1, {k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0}};
+             RB_MTU                  : {rb_stb_int, rb_data_int} <= {     1'b1, {k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0}};
+             RB_BLOCK_PORT_SIDS      : {rb_stb_int, rb_data_int} <= {     1'b1, {src_sid[16*k+15:16*k],
+                                                                                k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
+                                                                                k < INPUT_PORTS  ? resp_in_dst_sid[16*k+15:16*k]  : 16'd0,
+                                                                                k < OUTPUT_PORTS ? resp_out_dst_sid[16*k+15:16*k] : 16'd0}};
+             RB_USER_RB_DATA         : {rb_stb_int, rb_data_int} <= {rb_stb[k], rb_data[64*k+63:64*k]};
+             RB_NOC_SHELL_COMPAT_NUM : {rb_stb_int, rb_data_int} <= {     1'b1, {NOC_SHELL_MAJOR_COMPAT_NUM, NOC_SHELL_MINOR_COMPAT_NUM}};
+             default                 : {rb_stb_int, rb_data_int} <= {     1'b1, 64'h0BADC0DE0BADC0DE};
            endcase
            // Always clear strobe after settings bus transaction to avoid using stale readback data.
            // Note: This is necessary because we are registering the readback mux output.
@@ -351,5 +353,5 @@ module noc_shell
 			  };
 
    assign debug[63:32] = debug_sfc;
-   
+
 endmodule // noc_shell
