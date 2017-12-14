@@ -42,6 +42,8 @@ module xge_mac_wb (
   pkt_rx_val, pkt_rx_sop, pkt_rx_mod, pkt_rx_err, pkt_rx_eop,
   pkt_rx_data, pkt_rx_avail,
   wb_int_o, wb_dat_o, wb_ack_o,
+  mdc, mdio_out, mdio_tri, xge_gpo,
+
   // Inputs
   xgmii_rxd, xgmii_rxc,
   wb_we_i, wb_stb_i, wb_rst_i, wb_dat_i,
@@ -49,7 +51,8 @@ module xge_mac_wb (
   reset_xgmii_tx_n, reset_xgmii_rx_n, reset_156m25_n,
   pkt_tx_val, pkt_tx_sop, pkt_tx_mod, pkt_tx_eop,
   pkt_tx_data, pkt_rx_ren,
-  clk_xgmii_tx, clk_xgmii_rx, clk_156m25
+  clk_xgmii_tx, clk_xgmii_rx, clk_156m25,
+  mdio_in, xge_gpi
 );
 
   input                   clk_156m25;             // To rx_dq0 of rx_dequeue.v, ...
@@ -73,6 +76,8 @@ module xge_mac_wb (
   input                   wb_we_i;                // To wishbone_if0 of wishbone_if.v
   input [7:0]             xgmii_rxc;              // To rx_eq0 of rx_enqueue.v
   input [63:0]            xgmii_rxd;              // To rx_eq0 of rx_enqueue.v
+  input 		          mdio_in;
+  input [7:0]		      xge_gpi;
 
   output                  pkt_rx_avail;           // From rx_dq0 of rx_dequeue.v
   output [63:0]           pkt_rx_data;            // From rx_dq0 of rx_dequeue.v
@@ -87,6 +92,10 @@ module xge_mac_wb (
   output                  wb_int_o;               // From wishbone_if0 of wishbone_if.v
   output [7:0]            xgmii_txc;              // From tx_dq0 of tx_dequeue.v
   output [63:0]           xgmii_txd;              // From tx_dq0 of tx_dequeue.v
+  output                  mdc;
+  output                  mdio_out;
+  output                  mdio_tri;               // Assert to tristate driver.
+  output [7:0] 	          xge_gpo;
 
   wire                    ctrl_tx_enable;         // From wishbone_if0 of wishbone_if.v
   wire                    ctrl_tx_enable_ctx;     // From sync_clk_xgmii_tx0 of sync_clk_xgmii_tx.v
@@ -207,7 +216,14 @@ module xge_mac_wb (
     .status_rxdfifo_udflow (status_rxdfifo_udflow),
     .status_pause_frame_rx (status_pause_frame_rx),
     .status_local_fault    (status_local_fault),
-    .status_remote_fault   (status_remote_fault)
+    .status_remote_fault   (status_remote_fault),
+    // MDIO
+    .mdc(mdc),
+    .mdio_in(mdio_in),
+    .mdio_out(mdio_out),
+    .mdio_tri(mdio_tri),
+    .xge_gpo(xge_gpo),
+    .xge_gpi(xge_gpi)
   );
 
 endmodule

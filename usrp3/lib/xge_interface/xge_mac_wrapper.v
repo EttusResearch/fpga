@@ -53,6 +53,10 @@ module xge_mac_wrapper #(
   output        status_pause_frame_rx,
   output        status_local_fault,
   output        status_remote_fault,
+  // MDIO
+  output        mdc,
+  output        mdio_in,
+  input         mdio_out,
   // Wishbone interface
   input [7:0]   wb_adr_i,               // To wishbone_if0 of wishbone_if.v
   input         wb_clk_i,               // To sync_clk_wb0 of sync_clk_wb.v, ...
@@ -126,6 +130,13 @@ module xge_mac_wrapper #(
       .xgmii_txd              (xgmii_txd[63:0]),
       .xgmii_rxc              (xgmii_rxc[7:0]),
       .xgmii_rxd              (xgmii_rxd[63:0]),
+      // MDIO
+      .mdc                    (mdc),
+      .mdio_out               (mdio_in),// Switch sense of in and out here for master and slave.
+      .mdio_tri               (mdio_tri),
+      .xge_gpo                (),
+      .mdio_in                (mdio_out), // Switch sense of in and out here for master and slave.
+      .xge_gpi                (/*{2'b00,align_status,mgt_tx_ready,sync_status[3:0]}*/0),
       // Packet interface
       .pkt_rx_avail           (eth_rx_avail),
       .pkt_rx_data            (eth_rx_data),
@@ -210,6 +221,8 @@ module xge_mac_wrapper #(
     assign wb_ack_o = 1'b0;
     assign wb_dat_o = 1'b0;
     assign wb_int_o = 1'b0;
+    assign mdio_in = 1'b0;
+    assign mdc = 1'b0;
   end
   endgenerate
 

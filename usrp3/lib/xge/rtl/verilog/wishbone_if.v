@@ -40,18 +40,14 @@
 module wishbone_if(/*AUTOARG*/
   // Outputs
   wb_dat_o, wb_ack_o, wb_int_o, ctrl_tx_enable,
-  `ifdef MDIO
-   mdc, mdio_out, mdio_tri, xge_gpo,
-   `endif
+  mdc, mdio_out, mdio_tri, xge_gpo,
 
   // Inputs
   wb_clk_i, wb_rst_i, wb_adr_i, wb_dat_i, wb_we_i, wb_stb_i, wb_cyc_i,
   status_crc_error, status_fragment_error, status_txdfifo_ovflow,
   status_txdfifo_udflow, status_rxdfifo_ovflow, status_rxdfifo_udflow,
-  status_pause_frame_rx, status_local_fault, status_remote_fault
-  `ifdef MDIO
-  ,mdio_in, xge_gpi
-  `endif
+  status_pause_frame_rx, status_local_fault, status_remote_fault,
+  mdio_in, xge_gpi
   );
 
 
@@ -86,13 +82,12 @@ input         status_remote_fault;
 
 output        ctrl_tx_enable;
 
-  `ifdef MDIO
-   output reg    mdc;
-   output reg    mdio_out;
-   output reg    mdio_tri;   // Assert to tristate driver.
-   input      mdio_in;
-   input [7:0] xge_gpi;
-   output reg [7:0] xge_gpo;
+output reg    mdc;
+output reg    mdio_out;
+output reg    mdio_tri;   // Assert to tristate driver.
+input      mdio_in;
+input [7:0] xge_gpi;
+output reg [7:0] xge_gpo;
 
    //
    // State Declarations
@@ -199,7 +194,6 @@ output        ctrl_tx_enable;
 		PREIDLE = 99;
 
 
-`endif
 
 
 /*AUTOREG*/
@@ -217,21 +211,19 @@ reg                     cpuack;
 reg                     status_remote_fault_d1;
 reg                     status_local_fault_d1;
 
-`ifdef MDIO
-   reg [15:0]			mdio_read_data;
-   reg [15:0] 			mdio_write_data;
-   reg [15:0] 			mdio_address;
-   reg [12:0] 			mdio_operation;
-   reg 				mdio_control;
-   reg [7:0] 			mdc_clk_count;
-   reg 				mdc_falling_edge;
-   reg 				mdio_running;
-   reg 				mdio_done;
-   reg [7:0] 			state;
-   reg [7:0] 			xge_gpi_reg;
-   reg [7:0] 			xge_gpo_reg;
+reg [15:0]			mdio_read_data;
+reg [15:0] 			mdio_write_data;
+reg [15:0] 			mdio_address;
+reg [12:0] 			mdio_operation;
+reg 				mdio_control;
+reg [7:0] 			mdc_clk_count;
+reg 				mdc_falling_edge;
+reg 				mdio_running;
+reg 				mdio_done;
+reg [7:0] 			state;
+reg [7:0] 			xge_gpi_reg;
+reg [7:0] 			xge_gpo_reg;
 
-`endif
 
 
 /*AUTOWIRE*/
@@ -285,7 +277,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 
         cpuack <= 1'b0;
 
-`ifdef MDIO
        mdio_address <= 0;
        mdio_operation <= 0;
        mdio_write_data <= 0;
@@ -296,7 +287,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
        xge_gpo_reg <= 0;
 
 
-`endif
 
 
  //       status_remote_fault_d1 <= status_remote_fault;
@@ -317,7 +307,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
         status_remote_fault_d1 <= status_remote_fault;
         status_local_fault_d1 <= status_local_fault;
 
-`ifdef MDIO
        // Handshake to MDIO state machine to reset running flag in status.
        // Wait for falling MDC edge to prevent S/W race condition occuring
        // where done flag still asserted but running flag now cleared (repeatedly).
@@ -329,7 +318,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
        xge_gpo <= xge_gpo_reg;
 
 
-`endif
         //---
         // Read access
 
@@ -355,7 +343,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
                   wb_dat_o <= {23'b0, cpureg_int_mask};
               end
 
- `ifdef MDIO
 	      `CPUREG_MDIO_DATA: begin
 		 wb_dat_o <= {16'b0, mdio_read_data};
 	      end
@@ -368,7 +355,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 		 wb_dat_o <= {24'b0, xge_gpi_reg};
 	      end
 
- `endif
 
               default: begin
               end
@@ -397,7 +383,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
                   cpureg_int_mask <= wb_dat_i[8:0];
               end
 
-`ifdef MDIO
 	      `CPUREG_MDIO_DATA: begin
 		 mdio_write_data <= wb_dat_i[15:0];
 	      end
@@ -420,7 +405,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 		 xge_gpo_reg <= wb_dat_i[7:0];
 	       end
 
-`endif //  `ifdef MDIO
 
               default: begin
               end
@@ -433,7 +417,6 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 
 end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 
-`ifdef MDIO
    //
    // Produce mdc clock as a signal synchronously from Wishbone clock.
    //
@@ -1043,7 +1026,6 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 
 
 
-`endif //  ifdef MDIO
 
 endmodule
 
