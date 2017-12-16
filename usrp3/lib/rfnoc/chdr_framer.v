@@ -65,8 +65,7 @@ module chdr_framer
      else if(i_tvalid & i_tready)
        length <= (WIDTH == 32) ? length + 4 : length + 8;
 
-   // FIXME don't really need a FIFO, could just use a register or maybe even wires
-   axi_fifo_short #(.WIDTH(128)) header_fifo
+   axi_fifo_flop2 #(.WIDTH(128)) header_fifo_flop2
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata({i_tuser[127:112],length,i_tuser[95:0]}), .i_tvalid(header_i_tvalid), .i_tready(header_i_tready),
       .o_tdata(header_o_tdata), .o_tvalid(header_o_tvalid), .o_tready(header_o_tready),

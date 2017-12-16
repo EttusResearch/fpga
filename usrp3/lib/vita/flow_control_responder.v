@@ -103,7 +103,7 @@ module flow_control_responder #(
   assign flow_ctrl_tlast = 1'b1;
 
   // Create flow control packets
-  chdr_framer #(.SIZE(5), .WIDTH(64)) chdr_framer (
+  chdr_framer #(.SIZE(1), .WIDTH(64)) chdr_framer (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(flow_ctrl_tdata), .i_tuser(flow_ctrl_tuser), .i_tlast(flow_ctrl_tlast), .i_tvalid(flow_ctrl_tvalid), .i_tready(flow_ctrl_tready),
     .o_tdata(fc_tdata), .o_tlast(fc_tlast), .o_tvalid(fc_tvalid), .o_tready(fc_tready));

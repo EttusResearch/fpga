@@ -243,6 +243,7 @@ module duc #(
 
   assign o_cic = {i_cic, q_cic};
 
+  //FIFO_SIZE = 8 infers a bram fifo
   strobed_to_axi #(.WIDTH(2*CWIDTH), .FIFO_SIZE(8)) strobed_to_axi (
     .clk(clk), .reset(reset | reset_on_change), .clear(clear),
     .in_stb(from_cic_stb), .in_data(o_cic), .in_last(1'b0),

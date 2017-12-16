@@ -541,6 +541,7 @@ module ddc #(
   round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16), .DISABLE_SD(1)) round_q (
     .clk(clk), .reset(reset | clear), .in(q_clip), .strobe_in(strobe_clip), .out(sample_out[15:0]), .strobe_out());
 
+  //FIFO_SIZE = 8 infers a bram fifo
   strobed_to_axi #(
     .WIDTH(32),
     .FIFO_SIZE(8))

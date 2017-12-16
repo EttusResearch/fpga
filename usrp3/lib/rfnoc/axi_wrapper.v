@@ -25,7 +25,7 @@ module axi_wrapper
   #(parameter MTU=10,
     parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
-    parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
+    parameter CONFIG_BUS_FIFO_DEPTH=1,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
     parameter USE_SEQ_NUM=0,            // 0 = Frame will automatically handle sequence number, 1 = Use sequence number provided in s_axis_data_tuser
     parameter RESIZE_INPUT_PACKET=0,    // 0 = Do not resize, packet length determined by i_tlast, 1 = Generate m_axis_data_tlast based on user input m_axis_pkt_len_tdata
@@ -86,7 +86,7 @@ module axi_wrapper
       if(SIMPLE_MODE)
          begin
             // FIFO 
-            axi_fifo_short #(.WIDTH(128)) header_fifo
+            axi_fifo #(.WIDTH(128), .SIZE(5)) header_fifo
             (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
              .i_tdata(header_fifo_i_tdata),
              .i_tvalid(header_fifo_i_tvalid), .i_tready(),

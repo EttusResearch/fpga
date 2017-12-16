@@ -109,7 +109,7 @@ module packet_error_responder #(
   assign error_tlast = 1'b1;
 
   // Create error packets
-  chdr_framer #(.SIZE(5), .WIDTH(64)) chdr_framer_resp_pkt (
+  chdr_framer #(.SIZE(1), .WIDTH(64)) chdr_framer_resp_pkt (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(error_tdata), .i_tuser(error_tuser), .i_tlast(error_tlast), .i_tvalid(error_tvalid), .i_tready(error_tready),
     .o_tdata(resp_tdata), .o_tlast(resp_tlast), .o_tvalid(resp_tvalid), .o_tready(resp_tready));

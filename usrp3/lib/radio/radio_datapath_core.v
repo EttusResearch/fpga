@@ -107,7 +107,7 @@ module radio_datapath_core #(
     .strobe(sample_rx_stb), .sample(sample_rx), .run(rx_running));
 
   // Generate error response packets from TX & RX control
-  axi_packet_mux #(.NUM_INPUTS(2), .FIFO_SIZE(5)) axi_packet_mux (
+  axi_packet_mux #(.NUM_INPUTS(2), .FIFO_SIZE(1)) axi_packet_mux (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata({txresp_tdata, rxresp_tdata}), .i_tlast({txresp_tlast, rxresp_tlast}),
     .i_tvalid({txresp_tvalid, rxresp_tvalid}), .i_tready({txresp_tready, rxresp_tready}), .i_tuser({txresp_tuser, rxresp_tuser}),
