@@ -180,29 +180,24 @@ module n310_core #(
   input         e2v1_tlast,
   input         e2v1_tvalid,
   output        e2v1_tready,
-  
+
   //regport interface to npio
   output                     reg_wr_req_npio,
   output [REG_AWIDTH-1:0]    reg_wr_addr_npio,
   output [REG_DWIDTH-1:0]    reg_wr_data_npio,
-  output [REG_DWIDTH/8-1:0]  reg_wr_keep_npio,
   output                     reg_rd_req_npio,
-  output  [REG_AWIDTH-1:0]   reg_rd_addr_npio,
-  input                      reg_rd_resp_npio0,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_npio0,
-  input                      reg_rd_resp_npio1,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_npio1,
-  input                      reg_rd_resp_qsfp0,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_qsfp0,
-  input                      reg_rd_resp_qsfp1,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_qsfp1,
-  input                      reg_rd_resp_qsfp2,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_qsfp2,
-  input                      reg_rd_resp_qsfp3,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_qsfp3
- 
+  output [REG_AWIDTH-1:0]    reg_rd_addr_npio,
+  input                      reg_rd_resp_npio,
+  input  [REG_DWIDTH-1:0]    reg_rd_data_npio
 
 );
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // Compatibility Number
+  //
+  localparam [15:0] COMPAT_MAJOR = 16'd1;
+  localparam [15:0] COMPAT_MINOR = 16'd0;
+  /////////////////////////////////////////////////////////////////////////////////
 
   // Number of Channels per radio
   localparam NUM_CHANNELS = 1;
@@ -210,8 +205,6 @@ module n310_core #(
   localparam NUM_RADIO_CORES = 4;
   // Computation engines that need access to IO
   localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
-  localparam COMPAT_MAJOR = 16'b1;
-  localparam COMPAT_MINOR = 16'b0;
 
   /////////////////////////////////////////////////////////////////////////////////
   // Motherboard Registers
@@ -256,18 +249,12 @@ module n310_core #(
   wire  [REG_DWIDTH-1:0]   reg_rd_data_xbar;
   wire                     reg_rd_resp_xbar;
 
-  regport_resp_mux #(.WIDTH(REG_DWIDTH), .NUM_SLAVES(8)) inst_regport_resp_mux
+  regport_resp_mux #(.WIDTH(REG_DWIDTH), .NUM_SLAVES(3)) inst_regport_resp_mux
   (
     .clk(bus_clk),
     .reset(bus_rst),
-    .sla_rd_resp({reg_rd_resp_npio0, reg_rd_resp_npio1, 
-      reg_rd_resp_qsfp0, reg_rd_resp_qsfp1,
-      reg_rd_resp_qsfp2, reg_rd_resp_qsfp3,
-      reg_rd_resp_glob, reg_rd_resp_xbar}),
-    .sla_rd_data({reg_rd_data_npio0, reg_rd_data_npio1,
-      reg_rd_data_qsfp0, reg_rd_data_qsfp1,
-      reg_rd_data_qsfp2, reg_rd_data_qsfp3,
-      reg_rd_data_glob, reg_rd_data_xbar}),
+    .sla_rd_resp({reg_rd_resp_npio, reg_rd_resp_glob, reg_rd_resp_xbar}),
+    .sla_rd_data({reg_rd_data_npio, reg_rd_data_glob, reg_rd_data_xbar}),
     .mst_rd_resp(reg_rd_resp),
     .mst_rd_data(reg_rd_data)
   );
@@ -320,7 +307,7 @@ module n310_core #(
   assign reg_wr_req_npio = reg_wr_req;
   assign reg_wr_addr_npio = reg_wr_addr;
   assign reg_wr_data_npio = reg_wr_data;
-  assign reg_rd_req_npio = reg_rd_req; 
+  assign reg_rd_req_npio = reg_rd_req;
   assign reg_rd_addr_npio = reg_rd_addr;
 
   reg b_ref_clk_locked_ms;

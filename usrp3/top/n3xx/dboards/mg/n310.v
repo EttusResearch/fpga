@@ -12,7 +12,6 @@
 
 module n310
 (
-
    inout [11:0] FPGA_GPIO,
 
    input FPGA_REFCLK_P,
@@ -31,49 +30,31 @@ module n310
    inout UNUSED_PIN_TDCB_0,
    inout UNUSED_PIN_TDCB_1,
 
-`ifdef NPIO0
-  `define BUILD_AURORA
-   input NPIO_RX0_P,
-   input NPIO_RX0_N,
+`ifdef NPIO_LANES
+   input  NPIO_RX0_P,
+   input  NPIO_RX0_N,
    output NPIO_TX0_P,
    output NPIO_TX0_N,
-`endif 
-`ifdef NPIO1
-  `define BUILD_AURORA
-   input NPIO_RX1_P,
-   input NPIO_RX1_N,
+   input  NPIO_RX1_P,
+   input  NPIO_RX1_N,
    output NPIO_TX1_P,
    output NPIO_TX1_N,
- `endif 
-`ifdef QSFP0
-  `define BUILD_AURORA
-  `define BUILD_NPIO_AURORA
-   input QSFP_RX0_P,
-   input QSFP_RX0_N,
+`endif 
+`ifdef QSFP_LANES
+   input  QSFP_RX0_P,
+   input  QSFP_RX0_N,
    output QSFP_TX0_P,
    output QSFP_TX0_N,
-`endif 
-`ifdef QSFP1
-  `define BUILD_AURORA
-  `define BUILD_NPIO_AURORA
-   input QSFP_RX1_P,
-   input QSFP_RX1_N,
+   input  QSFP_RX1_P,
+   input  QSFP_RX1_N,
    output QSFP_TX1_P,
    output QSFP_TX1_N,
- `endif 
-`ifdef QSFP2
-  `define BUILD_AURORA
-  `define BUILD_NPIO_AURORA
-   input QSFP_RX2_P,
-   input QSFP_RX2_N,
+   input  QSFP_RX2_P,
+   input  QSFP_RX2_N,
    output QSFP_TX2_P,
    output QSFP_TX2_N,
-`endif 
-`ifdef QSFP3
-  `define BUILD_AURORA
-  `define BUILD_NPIO_AURORA
-   input QSFP_RX3_P,
-   input QSFP_RX3_N,
+   input  QSFP_RX3_P,
+   input  QSFP_RX3_N,
    output QSFP_TX3_P,
    output QSFP_TX3_N,
  `endif 
@@ -669,9 +650,6 @@ module n310
   wire        xgige_refclk;
   wire        xgige_clk156;
   wire        xgige_dclk;
-  wire        aurora_refclk;
-  wire        aurora_clk156;
-  wire        aurora_init_clk;
 
   // TODO: Add sw_rst
   wire        bus_rst;
@@ -735,6 +713,9 @@ module n310
   assign clk40        = FCLK_CLK1;
   assign meas_clk_ref = FCLK_CLK2;
   assign bus_clk      = FCLK_CLK3;
+
+  //If bus_clk freq ever changes, update this paramter accordingly.
+  localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate.
 
   n3xx_clocking n3xx_clocking_i (
      .FPGA_REFCLK_P(FPGA_REFCLK_P),
@@ -800,152 +781,129 @@ module n310
      .reset_out(bus_rst)
   );
 
-`ifdef BUILD_1G
+  /////////////////////////////////////////////////////////////////////
+  //
+  // SFP, QSFP and NPIO MGT Connections
+  //
+  //////////////////////////////////////////////////////////////////////
+  wire                    reg_wr_req_npio;
+  wire [REG_AWIDTH-1:0]   reg_wr_addr_npio;
+  wire [REG_DWIDTH-1:0]   reg_wr_data_npio;
+  wire                    reg_rd_req_npio;
+  wire [REG_AWIDTH-1:0]   reg_rd_addr_npio;
+  wire                    reg_rd_resp_npio, reg_rd_resp_npio0, reg_rd_resp_npio1, reg_rd_resp_qsfp;
+  wire [REG_DWIDTH-1:0]   reg_rd_data_npio, reg_rd_data_npio0, reg_rd_data_npio1, reg_rd_data_qsfp;
 
+  localparam NPIO_REG_BASE = 14'h0200;
+  localparam QSFP_REG_BASE = 14'h0280;
+
+  regport_resp_mux #(
+    .WIDTH      (REG_DWIDTH),
+    .NUM_SLAVES (3)
+  ) npio_resp_mux_i(
+    .clk(bus_clk), .reset(bus_rst),
+    .sla_rd_resp({reg_rd_resp_npio0, reg_rd_resp_npio1, reg_rd_resp_qsfp}),
+    .sla_rd_data({reg_rd_data_npio0, reg_rd_data_npio1, reg_rd_data_qsfp}),
+    .mst_rd_resp(reg_rd_resp_npio), .mst_rd_data(reg_rd_data_npio)
+  );
+
+  //--------------------------------------------------------------
+  // SFP/MGT Reference Clocks
+  //--------------------------------------------------------------
+
+  // We support the HG, XG, XA, AA targets, all of which require
+  // the 156.25MHz reference clock. Instantiate it here.
+  ten_gige_phy_clk_gen xgige_clk_gen_i (
+    .refclk_ibuf(xgige_refclk),
+    .clk156(xgige_clk156),
+    .dclk(xgige_dclk)
+  );
+
+  wire qpllreset;
+  wire qpllreset_sfp0, qpllreset_sfp1, qpllreset_npio0, qpllreset_npio1;
+  wire qplllock;
+  wire qplloutclk;
+  wire qplloutrefclk;
+
+  // We reuse this GT_COMMON wrapper for both ethernet and Aurora because
+  // the behavior is identical
+  ten_gig_eth_pcs_pma_gt_common # (
+    .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
+  ten_gig_eth_pcs_pma_gt_common_block
+  (
+    .refclk(xgige_refclk),
+    .qpllreset(qpllreset), //from 2nd sfp
+    .qplllock(qplllock),
+    .qplloutclk(qplloutclk),
+    .qplloutrefclk(qplloutrefclk),
+    .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
+  );
+
+  // The quad's QPLL should reset if any of the channels request it
+  // This should never really happen because we are not changing the reference clock
+  // source for the QPLL.
+  assign qpllreset = qpllreset_sfp0 | qpllreset_sfp1 | qpllreset_npio0 | qpllreset_npio1;
+
+  // Use the 156.25MHz reference clock for Aurora
+  wire aurora_refclk = xgige_refclk;
+  wire aurora_clk156 = xgige_clk156;
+  wire aurora_init_clk = xgige_dclk;
+
+`ifdef SFP0_1GBE
+  // If we are building the HG target then we need the 125MHz clock
   BUFG bufg_gige_refclk_i (
     .I(gige_refclk),
     .O(gige_refclk_bufg)
   );
-
-`endif
-
-`ifdef BUILD_10G
-
-   ten_gige_phy_clk_gen xgige_clk_gen_i (
-      .refclk_ibuf(xgige_refclk),
-      .clk156(xgige_clk156),
-      .dclk(xgige_dclk)
-   );
-   // FIXME
-   assign SFP_0_RS0  = 1'b1;
-   assign SFP_0_RS1  = 1'b1;
-   assign SFP_1_RS0  = 1'b1;
-   assign SFP_1_RS1  = 1'b1;
-   `ifdef BUILD_AURORA
-      assign  aurora_refclk = xgige_refclk;
-      assign  aurora_clk156 = xgige_clk156;
-      assign  aurora_init_clk = xgige_dclk;
-   `endif
+  assign SFP_0_RS0  = 1'b0;
+  assign SFP_0_RS1  = 1'b0;
 `else
-   `ifdef BUILD_AURORA
-      assign  aurora_refclk = xgige_refclk;
-      aurora_phy_clk_gen aurora_clk_gen_i (
-         .refclk_ibuf(xgige_refclk),
-         .clk156(aurora_clk156),
-         .init_clk(aurora_init_clk)
-      );
-
-   assign SFP_0_RS0  = 1'b1;
-   assign SFP_0_RS1  = 1'b1;
-   assign SFP_1_RS0  = 1'b1;
-   assign SFP_1_RS1  = 1'b1;
-   `endif
+  assign SFP_0_RS0  = 1'b1;
+  assign SFP_0_RS1  = 1'b1;
 `endif
 
-  //If bus_clk freq ever changes, update this paramter accordingly.
-  localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate.
+  assign SFP_1_RS0  = 1'b1;
+  assign SFP_1_RS1  = 1'b1;
 
-   wire  sfp0_gt_refclk, sfp1_gt_refclk;
-   wire  sfp0_gb_refclk, sfp1_gb_refclk;
-   wire  sfp0_misc_clk, sfp1_misc_clk;
+
+  // SFP port specific reference clocks
+  wire  sfp0_gt_refclk, sfp1_gt_refclk;
+  wire  sfp0_gb_refclk, sfp1_gb_refclk;
+  wire  sfp0_misc_clk, sfp1_misc_clk;
 
 `ifdef SFP0_10GBE
-   assign sfp0_gt_refclk = xgige_refclk;
-   assign sfp0_gb_refclk = xgige_clk156;
-   assign sfp0_misc_clk  = xgige_dclk;
+  assign sfp0_gt_refclk = xgige_refclk;
+  assign sfp0_gb_refclk = xgige_clk156;
+  assign sfp0_misc_clk  = xgige_dclk;
 `endif
 `ifdef SFP0_1GBE
-   assign sfp0_gt_refclk = gige_refclk;
-   assign sfp0_gb_refclk = gige_refclk_bufg;
-   assign sfp0_misc_clk  = gige_refclk_bufg;
+  assign sfp0_gt_refclk = gige_refclk;
+  assign sfp0_gb_refclk = gige_refclk_bufg;
+  assign sfp0_misc_clk  = gige_refclk_bufg;
 `endif
 `ifdef SFP0_AURORA
-   assign sfp0_gt_refclk = aurora_refclk;
-   assign sfp0_gb_refclk = aurora_clk156;
-   assign sfp0_misc_clk  = aurora_init_clk;
+  assign sfp0_gt_refclk = aurora_refclk;
+  assign sfp0_gb_refclk = aurora_clk156;
+  assign sfp0_misc_clk  = aurora_init_clk;
 `endif
 `ifdef SFP1_10GBE
-   assign sfp1_gt_refclk = xgige_refclk;
-   assign sfp1_gb_refclk = xgige_clk156;
-   assign sfp1_misc_clk  = xgige_dclk;
+  assign sfp1_gt_refclk = xgige_refclk;
+  assign sfp1_gb_refclk = xgige_clk156;
+  assign sfp1_misc_clk  = xgige_dclk;
 `endif
 `ifdef SFP1_1GBE
-   assign sfp1_gt_refclk = gige_refclk;
-   assign sfp1_gb_refclk = gige_refclk_bufg;
-   assign sfp1_misc_clk  = gige_refclk_bufg;
+  assign sfp1_gt_refclk = gige_refclk;
+  assign sfp1_gb_refclk = gige_refclk_bufg;
+  assign sfp1_misc_clk  = gige_refclk_bufg;
 `endif
 `ifdef SFP1_AURORA
-   assign sfp1_gt_refclk = aurora_refclk;
-   assign sfp1_gb_refclk = aurora_clk156;
-   assign sfp1_misc_clk  = aurora_init_clk;
+  assign sfp1_gt_refclk = aurora_refclk;
+  assign sfp1_gb_refclk = aurora_clk156;
+  assign sfp1_misc_clk  = aurora_init_clk;
 `endif
 
-  wire          gt0_qplloutclk,gt0_qplloutrefclk;
-  wire          pma_reset;
-  wire          qpllreset;
-  wire          qpllreset_sfp1, qpllreset_npio0, qpllreset_npio1;
-  wire          qplllock;
-  wire          qplloutclk;
-  wire          qplloutrefclk;
-  wire  [63:0]  e01_tdata, e10_tdata;
-  wire  [3:0]   e01_tuser, e10_tuser;
-  wire          e01_tlast, e01_tvalid, e01_tready;
-  wire          e10_tlast, e10_tvalid, e10_tready;
-
-`ifdef SFP1_AURORA
-  assign qpllreset = qpllreset_sfp1;
-`elsif NPIO0
-  assign qpllreset = qpllreset_npio0;
-`elsif NPIO1
-  assign qpllreset = qpllreset_npio1;
-`endif
-
-`ifdef SFP1_10GBE
-  wire qpllrefclklost = 1'b0;
-
-  // Instantiate the 10GBASER/KR GT Common block
-  ten_gig_eth_pcs_pma_gt_common # (
-      .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
-  ten_gig_eth_pcs_pma_gt_common_block
-  (
-   .refclk(xgige_refclk),
-   .qpllreset(qpllreset), //from 2nd sfp
-   .qplllock(qplllock),
-   .qplloutclk(qplloutclk),
-   .qplloutrefclk(qplloutrefclk),
-   .qpllrefclksel(3'b101 /*GTSOUTHREFCLK0*/)
-  );
-`elsif SFP1_AURORA
-  wire qpllrefclklost;
-
-  wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
-  wire    [15:0]     qpll_drpdi_in_i = 16'h0;
-  wire               qpll_drpen_in_i =  1'b0;
-  wire               qpll_drpwe_in_i =  1'b0;
-  wire    [15:0]     qpll_drpdo_out_i;
-  wire               qpll_drprdy_out_i;
-
-  aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support_i (
-    .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
-    .gt_qpllrefclk_quad1_out   (qplloutrefclk), // to sfp
-    .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk),
-    //----------------------- Common Block - QPLL Ports ------------------------
-    .GT0_QPLLLOCK_OUT          (qplllock), //to sfp1
-    .GT0_QPLLRESET_IN          (qpllreset), //from sfp1
-    .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
-    .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost), //to sfp1
-    //---------------------- Common DRP Ports ---------------------- //not really used???
-    .qpll_drpaddr_in           (qpll_drpaddr_in_i),
-    .qpll_drpdi_in             (qpll_drpdi_in_i),
-    .qpll_drpclk_in            (aurora_init_clk),
-    .qpll_drpdo_out            (qpll_drpdo_out_i),
-    .qpll_drprdy_out           (qpll_drprdy_out_i),
-    .qpll_drpen_in             (qpll_drpen_in_i),
-    .qpll_drpwe_in             (qpll_drpwe_in_i)
-  );
-`endif
-
-`ifdef BUILD_AURORA
+  // Instantiate Aurora MMCM if either of the SFPs
+  // of NPIOs are Aurora
   wire au_tx_clk;
   wire au_mmcm_reset;
   wire au_user_clk;
@@ -955,574 +913,233 @@ module n310
   wire sfp0_gt_pll_lock, sfp1_gt_pll_lock;
   wire npio0_tx_out_clk, npio1_tx_out_clk;
   wire npio0_gt_pll_lock, npio1_gt_pll_lock;
+
 `ifdef SFP1_AURORA 
-  assign au_tx_clk = sfp1_tx_out_clk;
-  assign au_mmcm_reset = !sfp1_gt_pll_lock;
+  `define SFP_AU_MMCM
+  assign au_tx_clk     = sfp1_tx_out_clk;
+  assign au_mmcm_reset = ~sfp1_gt_pll_lock;
 `elsif NPIO0
-  assign au_tx_clk = npio0_tx_out_clk;
-  assign au_mmcm_reset = !npio0_gt_pll_lock;
+  `define SFP_AU_MMCM
+  assign au_tx_clk     = npio0_tx_out_clk;
+  assign au_mmcm_reset = ~npio0_gt_pll_lock;
 `elsif NPIO1
-  assign au_tx_clk = npio1_tx_out_clk;
-  assign au_mmcm_reset = !npio1_gt_pll_lock;
+  `define SFP_AU_MMCM
+  assign au_tx_clk     = npio1_tx_out_clk;
+  assign au_mmcm_reset = ~npio1_gt_pll_lock;
 `endif
-  //must reset all channels on quad when resetting mmcm
-  //The source of this channel reset depends on which channel is the source of
-  //the tx_out_clk.
-  aurora_phy_mmcm aurora_phy_mmcm_0 (
+
+
+`ifdef SFP_AU_MMCM
+  aurora_phy_mmcm au_phy_mmcm_i (
     .aurora_tx_clk_unbuf(au_tx_clk),
     .mmcm_reset(au_mmcm_reset),
     .user_clk(au_user_clk),
     .sync_clk(au_sync_clk),
     .mmcm_locked(au_mmcm_locked)
-);
+  );
+`else
+  assign au_user_clk = 1'b0;
+  assign au_sync_clk = 1'b0;
+  assign au_mmcm_locked = 1'b0;
 `endif
-  //NPIO lanes 0 & 1 are on a different GTX transceiver quad than sfp so use
-  //a different common, Xilinx IP, and MMCM for user clk
-`ifdef BUILD_NPIO_AURORA
+
 
   //--------------------------------------------------------------
-  // GT Common
+  // NPIO-QSFP MGT Lanes (Example loopback config)
   //--------------------------------------------------------------
-  wire qpllreset_qsfp;
-  wire qplllock_qsfp;
-  wire qplloutclk_qsfp;
-  wire qplloutrefclk_qsfp;
-  wire qpllrefclklost_qsfp;
-  wire qpllreset_qsfp0, qpllreset_qsfp1, qpllreset_qsfp2, qpllreset_qsfp3;
-`ifdef QSFP0
-  assign qpllreset_qsfp = qpllreset_qsfp0;
-`elsif QSFP1
-  assign qpllreset_qsfp = qpllreset_qsfp1;
-`elsif QSFP2
-  assign qpllreset_qsfp = qpllreset_qsfp2;
-`elsif QSFP3
-  assign qpllreset_qsfp = qpllreset_qsfp3;
-`endif
-  wire    [7:0]      qpll_drpaddr_in_qsfp = 8'h0;
-  wire    [15:0]     qpll_drpdi_in_qsfp = 16'h0;
-  wire               qpll_drpen_in_qsfp =  1'b0;
-  wire               qpll_drpwe_in_qsfp =  1'b0;
-  wire    [15:0]     qpll_drpdo_out_qsfp;
-  wire               qpll_drprdy_out_qsfp;
 
-  aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support_qsfp (
-     .gt_qpllclk_quad1_out      (qplloutclk_qsfp),
-     .gt_qpllrefclk_quad1_out   (qplloutrefclk_qsfp),
-     .GT0_GTREFCLK0_COMMON_IN   (aurora_refclk), 
-     //----------------------- Common Block - QPLL Ports ------------------------
-     .GT0_QPLLLOCK_OUT          (qplllock_qsfp),
-     .GT0_QPLLRESET_IN          (qpllreset_qsfp),
-     .GT0_QPLLLOCKDETCLK_IN     (aurora_init_clk),
-     .GT0_QPLLREFCLKLOST_OUT    (qpllrefclklost_qsfp),
-     //---------------------- Common DRP Ports ----------------------
-     .qpll_drpaddr_in           (qpll_drpaddr_in_qsfp),
-     .qpll_drpdi_in             (qpll_drpdi_in_qsfp),
-     .qpll_drpclk_in            (aurora_init_clk),
-     .qpll_drpdo_out            (qpll_drpdo_out_qsfp), 
-     .qpll_drprdy_out           (qpll_drprdy_out_qsfp), 
-     .qpll_drpen_in             (qpll_drpen_in_qsfp), 
-     .qpll_drpwe_in             (qpll_drpwe_in_qsfp)
+`ifdef QSFP_LANES 
+
+  localparam NUM_QSFP_LANES = `QSFP_LANES;
+
+  wire [(NUM_QSFP_LANES*64)-1:0] qsfp_loopback_tdata;
+  wire [NUM_QSFP_LANES-1:0]      qsfp_loopback_tlast;
+  wire [NUM_QSFP_LANES-1:0]      qsfp_loopback_tvalid;
+  wire [NUM_QSFP_LANES-1:0]      qsfp_loopback_tready;
+
+  n3xx_npio_qsfp_wrapper #(
+    .LANES          (NUM_QSFP_LANES),
+    .REG_BASE       (QSFP_REG_BASE),
+    .PORTNUM_BASE   (4),
+    .REG_DWIDTH     (REG_DWIDTH),
+    .REG_AWIDTH     (REG_AWIDTH)
+  ) qsfp_wrapper_i (
+    .areset         (global_rst),
+    .bus_clk        (bus_clk),
+    .bus_rst        (bus_rst),
+    .gt_refclk      (aurora_refclk),
+    .gt_clk156      (aurora_clk156),
+    .misc_clk       (aurora_init_clk),
+    .txp            ({QSFP_TX3_P, QSFP_TX2_P, QSFP_TX1_P, QSFP_TX0_P}),
+    .txn            ({QSFP_TX3_N, QSFP_TX2_N, QSFP_TX1_N, QSFP_TX0_N}),
+    .rxp            ({QSFP_RX3_P, QSFP_RX2_P, QSFP_RX1_P, QSFP_RX0_P}),
+    .rxn            ({QSFP_RX3_N, QSFP_RX2_N, QSFP_RX1_N, QSFP_RX0_N}),
+    .s_axis_tdata   (qsfp_loopback_tdata),
+    .s_axis_tlast   (qsfp_loopback_tlast),
+    .s_axis_tvalid  (qsfp_loopback_tvalid),
+    .s_axis_tready  (qsfp_loopback_tready),
+    .m_axis_tdata   (qsfp_loopback_tdata),
+    .m_axis_tlast   (qsfp_loopback_tlast),
+    .m_axis_tvalid  (qsfp_loopback_tvalid),
+    .m_axis_tready  (qsfp_loopback_tready),
+    .reg_wr_req     (reg_wr_req_npio),
+    .reg_wr_addr    (reg_wr_addr_npio),
+    .reg_wr_data    (reg_wr_data_npio),
+    .reg_rd_req     (reg_rd_req_npio),
+    .reg_rd_addr    (reg_rd_addr_npio),
+    .reg_rd_resp    (reg_rd_resp_qsfp),
+    .reg_rd_data    (reg_rd_data_qsfp),
+    .link_up        (),
+    .activity       ()
   );
-  
-  wire au_tx_clk_qsfp;
-  wire au_mmcm_reset_qsfp;
-  wire au_user_clk_qsfp;
-  wire au_sync_clk_qsfp;
-  wire au_mmcm_locked_qsfp;
-  wire qsfp0_tx_out_clk, qsfp1_tx_out_clk, qsfp2_tx_out_clk, qsfp3_tx_out_clk;
-  wire qsfp0_gt_pll_lock, qsfp1_gt_pll_lock, qsfp2_gt_pll_lock, qsfp3_gt_pll_lock;
-//only use out clk from 1 GT channel on the quad.
-`ifdef QSFP0
-  assign au_tx_clk_qsfp = qsfp0_tx_out_clk;
-  assign au_mmcm_reset_qsfp = !qsfp0_gt_pll_lock;
-`elsif QSFP1
-  assign au_tx_clk_qsfp = qsfp1_tx_out_clk;
-  assign au_mmcm_reset_qsfp = !qsfp1_gt_pll_lock;
-`elsif QSFP2
-  assign au_tx_clk_qsfp = qsfp2_tx_out_clk;
-  assign au_mmcm_reset_qsfp = !qsfp2_gt_pll_lock;
-`elsif QSFP3
-  assign au_tx_clk_qsfp = qsfp3_tx_out_clk;
-  assign au_mmcm_reset_qsfp = !qsfp3_gt_pll_lock;
-`endif
-  aurora_phy_mmcm aurora_phy_mmcm_qsfp (
-    .aurora_tx_clk_unbuf(au_tx_clk_qsfp),
-    .mmcm_reset(au_mmcm_reset_qsfp),
-    .user_clk(au_user_clk_qsfp),
-    .sync_clk(au_sync_clk_qsfp),
-    .mmcm_locked(au_mmcm_locked_qsfp)
-);
+
+`else
+
+  assign reg_rd_resp_qsfp = 1'b0;
+  assign reg_rd_data_qsfp = 'h0;
+
 `endif
 
-  ///////////////////////////////////////////////////////
-  //
-  //  N310 NPIO module(s) 
-  //  NPIO cores are by default not inst in the design. To enable them in any
-  //  build add NPIO[X]=1 or QSFP[Y]=1 to the build args.
-  //  X = NPIO connector, values [0-1]
-  //  Y = QSFP connector, values [0-3]
-  //  QSFP lanes are on Quad 110, GTX1
-  //  NPIO lanes are on Quad 109, GTX0 shared with the SFP connectors
-  ///////////////////////////////////////////////////////
-  // when running BIST on NPIO or QSFP base_addr starts at
-  // NPIO_REG_BASE + NPIO_OFFSET and then increments by h'20 for each interface
-  // NPIO_OFFSET is 'h30 to match the addr offset used in SFP Aurora BIST regs
-  // and is implied in the BIST mpm code.
-  // uio-dev is mboard-regs for all npio/qsfp interfaces
-  // NPIO0 base_addr = 'h200 = 512 
-  // NPIO1 base_addr = 'h220 = 544
-  // QSFP0 base_addr = 'h240 = 576
-  // QSFP1 base_addr = 'h260 = 608
-  // QSFP2 base_addr = 'h280 = 640
-  // QSFP3 base_addr = 'h2A0 = 672
-  ///////////////////////////////////////////////////////
+  //--------------------------------------------------------------
+  // NPIO MGT Lanes (Example loopback config)
+  //--------------------------------------------------------------
 
-  localparam NPIO_REG_BASE = 14'h0200;
-  localparam NPIO_OFFSET =  14'h30;
-  //status signals to aurora sfp core(s)
-  wire                     reg_wr_req_npio;
-  wire [REG_AWIDTH-1:0]    reg_wr_addr_npio;
-  wire [REG_DWIDTH-1:0]    reg_wr_data_npio;
-  wire [REG_DWIDTH/8-1:0]  reg_wr_keep_npio;
-  wire                     reg_rd_req_npio;
-  wire  [REG_AWIDTH-1:0]   reg_rd_addr_npio;
+`ifdef NPIO_LANES 
 
-`ifdef NPIO0
-  wire                     reg_rd_resp_npio0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_npio0;
-`else
-  wire                     reg_rd_resp_npio0 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_npio0 = 'b0;
-`endif
-`ifdef NPIO1
-  wire                     reg_rd_resp_npio1;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_npio1;
-`else
-  wire                     reg_rd_resp_npio1 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_npio1 = 'b0;
-`endif
-`ifdef QSFP0
-  wire                     reg_rd_resp_qsfp0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp0;
-`else
-  wire                     reg_rd_resp_qsfp0 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp0 = 'b0;
-`endif
-`ifdef QSFP1
-  wire                     reg_rd_resp_qsfp1;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp1;
-`else
-  wire                     reg_rd_resp_qsfp1 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp1 = 'b0;
-`endif
-`ifdef QSFP2
-  wire                     reg_rd_resp_qsfp2;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp2;
-`else
-  wire                     reg_rd_resp_qsfp2 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp2 = 'b0;
-`endif
-`ifdef QSFP3
-  wire                     reg_rd_resp_qsfp3;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp3;
-`else
-  wire                     reg_rd_resp_qsfp3 = 1'b0;
-  wire [REG_DWIDTH-1:0]    reg_rd_data_qsfp3 = 'b0;
-`endif
-  
-`ifdef NPIO0 
-  //npio is inst in loopback mode.
-  wire [63:0] npio0_axis_tdata;
-  wire npio0_axis_tvalid;
-  wire npio0_axis_tready;
-  wire npio0_axis_tlast;
+  wire [127:0]  npio_loopback_tdata;
+  wire [1:0]    npio_loopback_tvalid;
+  wire [1:0]    npio_loopback_tready;
+  wire [1:0]    npio_loopback_tlast;
   
   n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h0),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd2),
-         .MDIO_EN(0))
- inst_n310_npio0 (
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk),
-    .sync_clk(au_sync_clk),
-    .gt_tx_out_clk_unbuf(au_tx_out_clk),
+    .PROTOCOL       ("Aurora"),
+    .REG_BASE       (NPIO_REG_BASE + 14'h00),
+    .REG_DWIDTH     (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH     (REG_AWIDTH),         // Width of the address bus
+    .PORTNUM        (8'd2),
+    .MDIO_EN        (0)
+  ) npio_ln_0_i (
+    .areset         (global_rst),
+    .gt_refclk      (aurora_refclk),
+    .gb_refclk      (aurora_clk156),
+    .misc_clk       (aurora_init_clk),
+    .user_clk       (au_user_clk),
+    .sync_clk       (au_sync_clk),
+    .gt_tx_out_clk_unbuf(),
 
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_npio0),
-    .qplloutclk(qplloutclk),
-    .qplloutrefclk(qplloutrefclk),
-    .qplllock(qplllock),
-    .qpllrefclklost(qpllrefclklost),
+    .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
+    .bus_rst        (bus_rst),  
+    .qpllreset      (qpllreset_npio0),
+    .qplloutclk     (qplloutclk),
+    .qplloutrefclk  (qplloutrefclk),
+    .qplllock       (qplllock),
+    .qpllrefclklost (),
     
-    .rxp(NPIO_RX0_P),
-    .rxn(NPIO_RX0_N),
-    .txp(NPIO_TX0_P),
-    .txn(NPIO_TX0_N), 
+    .rxp            (NPIO_RX0_P),
+    .rxn            (NPIO_RX0_N),
+    .txp            (NPIO_TX0_P),
+    .txn            (NPIO_TX0_N), 
    
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
+    .sfpp_rxlos     (1'b0),
+    .sfpp_tx_fault  (1'b0),
 
     //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_npio0),
-    .reg_rd_data(reg_rd_data_npio0),
+    .reg_wr_req     (reg_wr_req_npio),
+    .reg_wr_addr    (reg_wr_addr_npio),
+    .reg_wr_data    (reg_wr_data_npio),
+    .reg_rd_req     (reg_rd_req_npio),
+    .reg_rd_addr    (reg_rd_addr_npio),
+    .reg_rd_resp    (reg_rd_resp_npio0),
+    .reg_rd_data    (reg_rd_data_npio0),
 
     //DATA (loopback mode)
-    .s_axis_tdata(npio0_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(npio0_axis_tvalid),
-    .s_axis_tlast(npio0_axis_tlast),
-    .s_axis_tready(npio0_axis_tready),
-    .m_axis_tdata(npio0_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(npio0_axis_tvalid),
-    .m_axis_tlast(npio0_axis_tlast),
-    .m_axis_tready(npio0_axis_tready),
+    .s_axis_tdata   (npio_loopback_tdata[63:0]), //Data to aurora core
+    .s_axis_tuser   (4'b0),
+    .s_axis_tvalid  (npio_loopback_tvalid[0]),
+    .s_axis_tlast   (npio_loopback_tlast[0]),
+    .s_axis_tready  (npio_loopback_tready[0]),
+    .m_axis_tdata   (npio_loopback_tdata[63:0]), //Data from aurora core
+    .m_axis_tuser   (),
+    .m_axis_tvalid  (npio_loopback_tvalid[0]),
+    .m_axis_tlast   (npio_loopback_tlast[0]),
+    .m_axis_tready  (npio_loopback_tready[0]),
 
-    .mmcm_locked(au_mmcm_locked),
-    .gt_pll_lock(npio0_gt_pll_lock)
+    .mmcm_locked    (au_mmcm_locked),
+    .gt_pll_lock    (npio0_gt_pll_lock)
   );
-`endif
-`ifdef NPIO1 
-  //npio is inst in loopback mode.
-  wire [63:0] npio1_axis_tdata;
-  wire npio1_axis_tvalid;
-  wire npio1_axis_tready;
-  wire npio1_axis_tlast;
 
   n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h20),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd3),
-         .MDIO_EN(0))
-  inst_n310_npio1 (
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk),
-    .sync_clk(au_sync_clk),
-    .gt_tx_out_clk_unbuf(au_tx_out_clk),
+    .PROTOCOL       ("Aurora"),
+    .REG_BASE       (NPIO_REG_BASE + 14'h40),
+    .REG_DWIDTH     (REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .REG_AWIDTH     (REG_AWIDTH),         // Width of the address bus
+    .PORTNUM        (8'd3),
+    .MDIO_EN        (0)
+  ) npio_ln_1_i (
+    .areset         (global_rst),
+    .gt_refclk      (aurora_refclk),
+    .gb_refclk      (aurora_clk156),
+    .misc_clk       (aurora_init_clk),
+    .user_clk       (au_user_clk),
+    .sync_clk       (au_sync_clk),
+    .gt_tx_out_clk_unbuf(),
 
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_npio1),
-    .qplloutclk(qplloutclk),
-    .qplloutrefclk(qplloutrefclk),
-    .qplllock(qplllock),
-    .qpllrefclklost(qpllrefclklost),
+    .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
+    .bus_rst        (bus_rst),  
+    .qpllreset      (qpllreset_npio1),
+    .qplloutclk     (qplloutclk),
+    .qplloutrefclk  (qplloutrefclk),
+    .qplllock       (qplllock),
+    .qpllrefclklost (),
     
-    .rxp(NPIO_RX1_P),
-    .rxn(NPIO_RX1_N),
-    .txp(NPIO_TX1_P),
-    .txn(NPIO_TX1_N), 
+    .rxp            (NPIO_RX1_P),
+    .rxn            (NPIO_RX1_N),
+    .txp            (NPIO_TX1_P),
+    .txn            (NPIO_TX1_N), 
    
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
+    .sfpp_rxlos     (1'b0),
+    .sfpp_tx_fault  (1'b0),
 
     //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_npio1),
-    .reg_rd_data(reg_rd_data_npio1),
+    .reg_wr_req     (reg_wr_req_npio),
+    .reg_wr_addr    (reg_wr_addr_npio),
+    .reg_wr_data    (reg_wr_data_npio),
+    .reg_rd_req     (reg_rd_req_npio),
+    .reg_rd_addr    (reg_rd_addr_npio),
+    .reg_rd_resp    (reg_rd_resp_npio1),
+    .reg_rd_data    (reg_rd_data_npio1),
 
     //DATA (loopback mode)
-    .s_axis_tdata(npio1_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(npio1_axis_tvalid),
-    .s_axis_tlast(npio1_axis_tlast),
-    .s_axis_tready(npio1_axis_tready),
-    .m_axis_tdata(npio1_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(npio1_axis_tvalid),
-    .m_axis_tlast(npio1_axis_tlast),
-    .m_axis_tready(npio1_axis_tready),
+    .s_axis_tdata   (npio_loopback_tdata[127:64]), //Data to aurora core
+    .s_axis_tuser   (4'b0),
+    .s_axis_tvalid  (npio_loopback_tvalid[1]),
+    .s_axis_tlast   (npio_loopback_tlast[1]),
+    .s_axis_tready  (npio_loopback_tready[1]),
+    .m_axis_tdata   (npio_loopback_tdata[127:64]), //Data from aurora core
+    .m_axis_tuser   (),
+    .m_axis_tvalid  (npio_loopback_tvalid[1]),
+    .m_axis_tlast   (npio_loopback_tlast[1]),
+    .m_axis_tready  (npio_loopback_tready[1]),
 
-    .mmcm_locked(au_mmcm_locked),
-    .gt_pll_lock(npio1_gt_pll_lock)
+    .mmcm_locked    (au_mmcm_locked),
+    .gt_pll_lock    (npio1_gt_pll_lock)
   );
-`endif
-`ifdef QSFP0 
-  //npio is inst in loopback mode.
-  wire [63:0] qsfp0_axis_tdata;
-  wire qsfp0_axis_tvalid;
-  wire qsfp0_axis_tready;
-  wire qsfp0_axis_tlast;
 
-  n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h40),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd4),
-         .MDIO_EN(0))
-  inst_n310_qsfp0 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk_qsfp),
-    .sync_clk(au_sync_clk_qsfp),
-    .gt_tx_out_clk_unbuf(qsfp0_tx_out_clk),
+`else
 
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_qsfp0),
-    .qplloutclk(qplloutclk_qsfp),
-    .qplloutrefclk(qplloutrefclk_qsfp),
-    .qplllock(qplllock_qsfp),
-    .qpllrefclklost(qpllrefclklost_qsfp),
-    
-    .rxp(QSFP_RX0_P),
-    .rxn(QSFP_RX0_N),
-    .txp(QSFP_TX0_P),
-    .txn(QSFP_TX0_N), 
-   
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
+  assign reg_rd_resp_npio0 = 1'b0;
+  assign reg_rd_data_npio0 = 'h0;
+  assign reg_rd_resp_npio1 = 1'b0;
+  assign reg_rd_data_npio1 = 'h0;
+  assign npio0_gt_pll_lock = 1'b1;
+  assign npio1_gt_pll_lock = 1'b1;
+  assign qpllreset_npio0   = 1'b0;
+  assign qpllreset_npio1   = 1'b0;
 
-    //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_qsfp0),
-    .reg_rd_data(reg_rd_data_qsfp0),
-
-    //DATA (loopback mode)
-    .s_axis_tdata(qsfp0_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(qsfp0_axis_tvalid),
-    .s_axis_tlast(qsfp0_axis_tlast),
-    .s_axis_tready(qsfp0_axis_tready),
-    .m_axis_tdata(qsfp0_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(qsfp0_axis_tvalid),
-    .m_axis_tlast(qsfp0_axis_tlast),
-    .m_axis_tready(qsfp0_axis_tready),
-
-    .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp0_gt_pll_lock)
-  );
-`endif
-`ifdef QSFP1 
-  //qsfp is inst in loopback mode.
-  wire [63:0] qsfp1_axis_tdata;
-  wire qsfp1_axis_tvalid;
-  wire qsfp1_axis_tready;
-  wire qsfp1_axis_tlast;
-
-  n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h60),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd5),
-         .MDIO_EN(0))
-  inst_n310_qsfp1 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk_qsfp),
-    .sync_clk(au_sync_clk_qsfp),
-    .gt_tx_out_clk_unbuf(qsfp1_tx_out_clk),
-
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_qsfp1),
-    .qplloutclk(qplloutclk_qsfp),
-    .qplloutrefclk(qplloutrefclk_qsfp),
-    .qplllock(qplllock_qsfp),
-    .qpllrefclklost(qpllrefclklost_qsfp),
-    
-    .rxp(QSFP_RX1_P),
-    .rxn(QSFP_RX1_N),
-    .txp(QSFP_TX1_P),
-    .txn(QSFP_TX1_N), 
-   
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
-
-    //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_qsfp1),
-    .reg_rd_data(reg_rd_data_qsfp1),
-
-    //DATA (loopback mode)
-    .s_axis_tdata(qsfp1_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(qsfp1_axis_tvalid),
-    .s_axis_tlast(qsfp1_axis_tlast),
-    .s_axis_tready(qsfp1_axis_tready),
-    .m_axis_tdata(qsfp1_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(qsfp1_axis_tvalid),
-    .m_axis_tlast(qsfp1_axis_tlast),
-    .m_axis_tready(qsfp1_axis_tready),
-
-    .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp1_gt_pll_lock)
-  );
-`endif
-`ifdef QSFP2 
-  //npio qsfp is inst in loopback mode.
-  wire [63:0] qsfp2_axis_tdata;
-  wire qsfp2_axis_tvalid;
-  wire qsfp2_axis_tready;
-  wire qsfp2_axis_tlast;
-
-  n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'h80),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd6),
-         .MDIO_EN(0))
-  inst_n310_qsfp2 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk_qsfp),
-    .sync_clk(au_sync_clk_qsfp),
-    .gt_tx_out_clk_unbuf(qsfp2_tx_out_clk),
-
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_qsfp2),
-    .qplloutclk(qplloutclk_qsfp),
-    .qplloutrefclk(qplloutrefclk_qsfp),
-    .qplllock(qplllock_qsfp),
-    .qpllrefclklost(qpllrefclklost_qsfp),
-    
-    .rxp(QSFP_RX2_P),
-    .rxn(QSFP_RX2_N),
-    .txp(QSFP_TX2_P),
-    .txn(QSFP_TX2_N), 
-   
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
-
-    //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_qsfp2),
-    .reg_rd_data(reg_rd_data_qsfp2),
-
-    //DATA (loopback mode)
-    .s_axis_tdata(qsfp2_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(qsfp2_axis_tvalid),
-    .s_axis_tlast(qsfp2_axis_tlast),
-    .s_axis_tready(qsfp2_axis_tready),
-    .m_axis_tdata(qsfp2_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(qsfp2_axis_tvalid),
-    .m_axis_tlast(qsfp2_axis_tlast),
-    .m_axis_tready(qsfp2_axis_tready),
-
-    .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp2_gt_pll_lock)
-  );
-`endif
-`ifdef QSFP3 
-  //npio is inst in loopback mode.
-  wire [63:0] qsfp3_axis_tdata;
-  wire qsfp3_axis_tvalid;
-  wire qsfp3_axis_tready;
-  wire qsfp3_axis_tlast;
-
-  n3xx_mgt_io_core #(
-         .PROTOCOL("Aurora"),
-         .REG_BASE(NPIO_REG_BASE+NPIO_OFFSET+14'hA0),
-         .REG_DWIDTH(REG_DWIDTH),         // Width of the AXI4-Lite data bus (must be 32 or 64)
-         .REG_AWIDTH(REG_AWIDTH),         // Width of the address bus
-         .PORTNUM(8'd7),
-         .MDIO_EN(0))
-  inst_n310_qsfp3 (
-     //must reset all channels on quad when resetting mmcm
-    .areset(global_rst),
-    .gt_refclk(aurora_refclk),
-    .gb_refclk(aurora_clk156),
-    .misc_clk(aurora_init_clk),
-    .user_clk(au_user_clk_qsfp),
-    .sync_clk(au_sync_clk_qsfp),
-    .gt_tx_out_clk_unbuf(qsfp3_tx_out_clk),
-
-    .bus_clk(bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst(bus_rst),  
-    .qpllreset(qpllreset_qsfp3),
-    .qplloutclk(qplloutclk_qsfp),
-    .qplloutrefclk(qplloutrefclk_qsfp),
-    .qplllock(qplllock_qsfp),
-    .qpllrefclklost(qpllrefclklost_qsfp),
-    
-    .rxp(QSFP_RX3_P),
-    .rxn(QSFP_RX3_N),
-    .txp(QSFP_TX3_P),
-    .txn(QSFP_TX3_N), 
-   
-    .sfpp_rxlos(1'b0),
-    .sfpp_tx_fault(1'b0),
-
-    //RegPort
-    .reg_wr_req(reg_wr_req_npio),
-    .reg_wr_addr(reg_wr_addr_npio),
-    .reg_wr_data(reg_wr_data_npio),
-    .reg_rd_req(reg_rd_req_npio),
-    .reg_rd_addr(reg_rd_addr_npio),
-    .reg_rd_resp(reg_rd_resp_qsfp3),
-    .reg_rd_data(reg_rd_data_qsfp3),
-
-    //DATA (loopback mode)
-    .s_axis_tdata(qsfp3_axis_tdata), //Data to aurora core
-    .s_axis_tuser(4'b0),
-    .s_axis_tvalid(qsfp3_axis_tvalid),
-    .s_axis_tlast(qsfp3_axis_tlast),
-    .s_axis_tready(qsfp3_axis_tready),
-    .m_axis_tdata(qsfp3_axis_tdata), //Data from aurora core
-    .m_axis_tuser(),
-    .m_axis_tvalid(qsfp3_axis_tvalid),
-    .m_axis_tlast(qsfp3_axis_tlast),
-    .m_axis_tready(qsfp3_axis_tready),
-
-    .mmcm_locked(au_mmcm_locked_qsfp),
-    .gt_pll_lock(qsfp3_gt_pll_lock)
-  );
 `endif
 
- 
 
-
-// ARM ethernet 0 bridge signals
+  // ARM ethernet 0 bridge signals
   wire [63:0] arm_eth0_tx_tdata;
   wire        arm_eth0_tx_tvalid;
   wire        arm_eth0_tx_tlast;
@@ -1608,6 +1225,12 @@ module n310
   wire          e2v1_tvalid;
   wire          e2v1_tready;
 
+  // Ethernet crossover
+  wire  [63:0]  e01_tdata, e10_tdata;
+  wire  [3:0]   e01_tuser, e10_tuser;
+  wire          e01_tlast, e01_tvalid, e01_tready;
+  wire          e10_tlast, e10_tvalid, e10_tready;
+
   // ARM DMA
   wire [63:0] o_cvita_dma_tdata;
   wire        o_cvita_dma_tlast;
@@ -1652,11 +1275,11 @@ module n310
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
       
-      .qpllreset(),
+      .qpllreset(qpllreset_sfp0),
       .qplllock(qplllock),
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
-      .qpllrefclklost(qpllrefclklost),
+      .qpllrefclklost(),
 
       .mmcm_locked(au_mmcm_locked),
       .gt_pll_lock(sfp0_gt_pll_lock),
@@ -1774,7 +1397,7 @@ module n310
       .qplllock(qplllock),
       .qplloutclk(qplloutclk),
       .qplloutrefclk(qplloutrefclk),
-      .qpllrefclklost(qpllrefclklost),
+      .qpllrefclklost(),
 
       .mmcm_locked(au_mmcm_locked),
       .gt_pll_lock(sfp1_gt_pll_lock),
@@ -3274,22 +2897,10 @@ module n310
     .reg_wr_req_npio(reg_wr_req_npio),
     .reg_wr_addr_npio(reg_wr_addr_npio),
     .reg_wr_data_npio(reg_wr_data_npio),
-    .reg_wr_keep_npio(reg_wr_keep_npio),
     .reg_rd_req_npio(reg_rd_req_npio),
     .reg_rd_addr_npio(reg_rd_addr_npio),
- 
-    .reg_rd_resp_npio0(reg_rd_resp_npio0),
-    .reg_rd_data_npio0(reg_rd_data_npio0),
-    .reg_rd_resp_npio1(reg_rd_resp_npio1),
-    .reg_rd_data_npio1(reg_rd_data_npio1),
-    .reg_rd_resp_qsfp0(reg_rd_resp_qsfp0),
-    .reg_rd_data_qsfp0(reg_rd_data_qsfp0),
-    .reg_rd_resp_qsfp1(reg_rd_resp_qsfp1),
-    .reg_rd_data_qsfp1(reg_rd_data_qsfp1),
-    .reg_rd_resp_qsfp2(reg_rd_resp_qsfp2),
-    .reg_rd_data_qsfp2(reg_rd_data_qsfp2),
-    .reg_rd_resp_qsfp3(reg_rd_resp_qsfp3),
-    .reg_rd_data_qsfp3(reg_rd_data_qsfp3)
+    .reg_rd_resp_npio(reg_rd_resp_npio),
+    .reg_rd_data_npio(reg_rd_data_npio)
  
   );
 

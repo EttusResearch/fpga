@@ -50,6 +50,7 @@ n3xx_sfp_wrapper.v \
 n3xx_mgt_io_core.v \
 n3xx_clocking.v \
 n3xx_db_fe_core.v \
+n3xx_npio_qsfp_wrapper.v \
 eth_switch.v
 
 MB_XDC = \
@@ -57,23 +58,23 @@ mb_timing.xdc \
 mb_pins.xdc
 
 ifdef BUILD_10G
-SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath n310_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)
+MB_XDC += $(abspath n310_10ge.xdc) 
 endif
 
 ifdef BUILD_1G
-SFP_SERDES_SRCS += $(abspath n310_1ge.xdc) $(ONE_GIGE_PHY_SRCS) $(IP_ONE_GIGE_PHY_XCI_SRCS) $(abspath ../../lib/xge_interface/axi64_to_xge64.v)
+MB_XDC += $(abspath n310_1ge.xdc)
 endif
 
 ifdef BUILD_AURORA
-SFP_SERDES_SRCS += $(AURORA_PHY_SRCS) $(AURORA_PHY_1_SRCS) $(IP_AURORA_XCI_SRCS) $(abspath n310_aurora.xdc) $(abspath ../../lib/xge_interface/axi64_to_xge64.v) $(TEN_GIGE_PHY_SRCS)
+MB_XDC += $(abspath n310_aurora.xdc)
 endif
 
 ifdef SFP0_10GBE
-SFP_SERDES_SRCS += $(abspath n310_10ge_port0.xdc)
+MB_XDC += $(abspath n310_10ge_port0.xdc)
 endif
 
 ifdef SFP1_10GBE
-SFP_SERDES_SRCS += $(abspath n310_10ge_port1.xdc)
+MB_XDC += $(abspath n310_10ge_port1.xdc)
 endif
 
 ifndef NO_DRAM_FIFOS
@@ -94,11 +95,11 @@ DESIGN_SRCS = $(abspath $(MB_XDC)) $(MAGNESIUM_DB_XDC) $(MAGNESIUM_TOP_SRCS) \
 $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
-$(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
-$(WISHBONE_SRCS) \
-$(SFP_SERDES_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
+$(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) $(WISHBONE_SRCS) \
+$(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(AURORA_PHY_SRCS) \
+$(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
-$(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
+$(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS) \
 $(MAGNESIUM_DB_SRCS) $(DB_COMMON_SRCS)
 
