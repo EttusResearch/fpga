@@ -27,7 +27,7 @@ fragment@1 {
 			phy-handle = <&ethernet_phy1>;
 
 			ethernet_phy1: ethernet-phy@4 {
-				compatible = "ethernet-phy-ieee802.3-c45";
+				compatible = "ethernet-phy-ieee802.3-c22";
 				reg = <4>;
 			};
 		};
@@ -58,7 +58,7 @@ fragment@1 {
 			phy-handle = <&ethernet_phy2>;
 
 			ethernet_phy2: ethernet-phy@4 {
-				compatible = "ethernet-phy-ieee802.3-c22";
+				compatible = "ethernet-phy-ieee802.3-c45";
 				reg = <4>;
 			};
 		};
