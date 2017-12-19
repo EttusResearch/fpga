@@ -25,7 +25,7 @@ fragment@1 {
 	target = <&amba>;
 	reg = <0x0001>;
 	__overlay__ {
-		uio@40006000 {
+		uio@40004000 {
 			compatible = "usrp-uio";
 			reg = <0x40004000 0x1000>;
 			reg-names = "misc-auro-regs0";
