@@ -1505,26 +1505,28 @@ module n310
     .axi_dma_tstvec()
   );
 
-  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_0_fifo_2clk_i (
-    .s_axis_areset(clk40_rst), .s_axis_aclk(clk40),
-    .s_axis_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
-    .s_axis_tvalid(arm_eth0_tx_tvalid),
-    .s_axis_tready(arm_eth0_tx_tready),
-    .m_axis_aclk(bus_clk),
-    .m_axis_tdata({arm_eth0_tx_tlast_b, arm_eth0_tx_tkeep_b, arm_eth0_tx_tdata_b}),
-    .m_axis_tvalid(arm_eth0_tx_tvalid_b),
-    .m_axis_tready(arm_eth0_tx_tready_b)
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_tx_0_fifo_2clk_i (
+    .reset(clk40_rst),
+    .i_aclk(clk40),
+    .i_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
+    .i_tvalid(arm_eth0_tx_tvalid),
+    .i_tready(arm_eth0_tx_tready),
+    .o_aclk(bus_clk),
+    .o_tdata({arm_eth0_tx_tlast_b, arm_eth0_tx_tkeep_b, arm_eth0_tx_tdata_b}),
+    .o_tvalid(arm_eth0_tx_tvalid_b),
+    .o_tready(arm_eth0_tx_tready_b)
   );
 
-  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_rx_0_fifo_2clk_i (
-    .s_axis_areset(bus_rst), .s_axis_aclk(bus_clk),
-    .s_axis_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
-    .s_axis_tvalid(arm_eth0_rx_tvalid_b),
-    .s_axis_tready(arm_eth0_rx_tready_b),
-    .m_axis_aclk(clk40),
-    .m_axis_tdata({arm_eth0_rx_tlast, arm_eth0_rx_tkeep, arm_eth0_rx_tdata}),
-    .m_axis_tvalid(arm_eth0_rx_tvalid),
-    .m_axis_tready(arm_eth0_rx_tready)
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_rx_0_fifo_2clk_i (
+    .reset(bus_rst),
+    .i_aclk(bus_clk),
+    .i_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
+    .i_tvalid(arm_eth0_rx_tvalid_b),
+    .i_tready(arm_eth0_rx_tready_b),
+    .o_aclk(clk40),
+    .o_tdata({arm_eth0_rx_tlast, arm_eth0_rx_tkeep, arm_eth0_rx_tdata}),
+    .o_tvalid(arm_eth0_rx_tvalid),
+    .o_tready(arm_eth0_rx_tready)
   );
 
 `endif
@@ -1741,26 +1743,28 @@ module n310
     .axi_dma_tstvec()
   );
 
-  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_tx_1_fifo_2clk_i (
-    .s_axis_areset(clk40_rst), .s_axis_aclk(clk40),
-    .s_axis_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
-    .s_axis_tvalid(arm_eth1_tx_tvalid),
-    .s_axis_tready(arm_eth1_tx_tready),
-    .m_axis_aclk(bus_clk),
-    .m_axis_tdata({arm_eth1_tx_tlast_b, arm_eth1_tx_tkeep_b, arm_eth1_tx_tdata_b}),
-    .m_axis_tvalid(arm_eth1_tx_tvalid_b),
-    .m_axis_tready(arm_eth1_tx_tready_b)
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_tx_1_fifo_2clk_i (
+    .reset(clk40_rst),
+    .i_aclk(clk40),
+    .i_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
+    .i_tvalid(arm_eth1_tx_tvalid),
+    .i_tready(arm_eth1_tx_tready),
+    .o_aclk(bus_clk),
+    .o_tdata({arm_eth1_tx_tlast_b, arm_eth1_tx_tkeep_b, arm_eth1_tx_tdata_b}),
+    .o_tvalid(arm_eth1_tx_tvalid_b),
+    .o_tready(arm_eth1_tx_tready_b)
   );
 
-  axis_fifo_2clk #( .WIDTH(1+8+64)) eth_rx_1_fifo_2clk_i (
-    .s_axis_areset(bus_rst), .s_axis_aclk(bus_clk),
-    .s_axis_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
-    .s_axis_tvalid(arm_eth1_rx_tvalid_b),
-    .s_axis_tready(arm_eth1_rx_tready_b),
-    .m_axis_aclk(clk40),
-    .m_axis_tdata({arm_eth1_rx_tlast, arm_eth1_rx_tkeep, arm_eth1_rx_tdata}),
-    .m_axis_tvalid(arm_eth1_rx_tvalid),
-    .m_axis_tready(arm_eth1_rx_tready)
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_rx_1_fifo_2clk_i (
+    .reset(bus_rst),
+    .i_aclk(bus_clk),
+    .i_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
+    .i_tvalid(arm_eth1_rx_tvalid_b),
+    .i_tready(arm_eth1_rx_tready_b),
+    .o_aclk(clk40),
+    .o_tdata({arm_eth1_rx_tlast, arm_eth1_rx_tkeep, arm_eth1_rx_tdata}),
+    .o_tvalid(arm_eth1_rx_tvalid),
+    .o_tready(arm_eth1_rx_tready)
   );
 `endif
 

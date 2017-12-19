@@ -9,9 +9,7 @@ FIFO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/fifo/, \
 axi_demux4.v \
 axi_demux8.v \
 axi_demux.v \
-axi_fifo_2clk_cascade.v \
 axi_fifo_2clk.v \
-axis_fifo_2clk.v \
 axi_fifo32_to_fifo64.v \
 axi_fifo64_to_fifo32.v \
 axi_fifo_bram.v \
