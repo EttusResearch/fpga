@@ -78,7 +78,9 @@ create_generated_clock -name pl_spi_clk_b \
   -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_B]/C] \
   -divide_by $PL_SPI_DIVIDE_VAL $PL_SPI_CLK_B
 
-# Define one of the outputs of each bus as a clock (even though it isn't a clock).
+# Define one of the outputs of each bus as a clock (even though it isn't a clock). This
+# allows us to constrain the overall bus skew with respect to one of the bus outputs.
+# See the remainder of this constraint below for more details.
 set DSA_CLK [get_ports {DBA_CH1_RX_DSA_DATA[0]}]
 create_generated_clock -name dsa_bus_clk \
   -source [get_pins [all_fanin -flat -only_cells -startpoints_only $DSA_CLK]/C] \
@@ -90,9 +92,10 @@ create_generated_clock -name atr_bus_clk \
   -divide_by 2 $ATR_CLK
 
 # Interface Unused
+# set MGPIO_CLK [get_ports DBA_MYK_GPIO_0]
 # create_generated_clock -name myk_gpio_bus_clk \
-  # -source [get_pins [all_fanin -flat -only_cells -startpoints_only [get_ports DBA_MYK_GPIO_0]]/C] \
-  # -divide_by 2 [get_ports DBA_MYK_GPIO_0]
+  # -source [get_pins [all_fanin -flat -only_cells -startpoints_only [get_ports $MGPIO_CLK]]/C] \
+  # -divide_by 2 [get_ports $MGPIO_CLK]
 
 
 
@@ -133,8 +136,8 @@ set_min_delay $MIN_OUT_DELAY -to $CPLD_SPI_OUTS
 set_max_delay $MAX_OUT_DELAY -to $MYK_SPI_OUTS
 set_min_delay $MIN_OUT_DELAY -to $MYK_SPI_OUTS
 
-# report_timing -to $CPLD_SPI_OUTS -max 20 -delay_type min_max -name CpldSpiOutTiming
-# report_timing -to $MYK_SPI_OUTS  -max 20 -delay_type min_max -name MykSpiOutTiming
+# report_timing -to $CPLD_SPI_OUTS -max_paths 20 -delay_type min_max -name CpldSpiOutTiming
+# report_timing -to $MYK_SPI_OUTS  -max_paths 20 -delay_type min_max -name MykSpiOutTiming
 
 set MIN_IN_DELAY   3.0
 set MAX_IN_DELAY  10.0
@@ -147,8 +150,8 @@ set_min_delay $MIN_IN_DELAY -to $PS_SPI_INPUTS_0
 set_max_delay $MAX_IN_DELAY -to $PS_SPI_INPUTS_1
 set_min_delay $MIN_IN_DELAY -to $PS_SPI_INPUTS_1
 
-# report_timing -to $PS_SPI_INPUTS_0 -max 30 -delay_type min_max -nworst 30 -name Spi0InTiming
-# report_timing -to $PS_SPI_INPUTS_1 -max 30 -delay_type min_max -nworst 30 -name Spi1InTiming
+# report_timing -to $PS_SPI_INPUTS_0 -max_paths 30 -delay_type min_max -nworst 30 -name Spi0InTiming
+# report_timing -to $PS_SPI_INPUTS_1 -max_paths 30 -delay_type min_max -nworst 30 -name Spi1InTiming
 
 
 
@@ -187,7 +190,7 @@ set_multicycle_path -setup -from [get_clocks radio_clk] -to [get_clocks pl_spi_c
 set_multicycle_path -hold  -from [get_clocks radio_clk] -to [get_clocks pl_spi_clk_b] -1
 
 # For SDO input timing (MISO), we need to look at the CPLD's constraints on turnaround
-# time. It also has a loose constraint of 30 ns of skew total, plus a bit of board delay.
+# time plus any board propagation delay.
 set MISO_INPUT_A [get_ports DBA_CPLD_PL_SPI_SDO]
 set MISO_INPUT_B [get_ports DBB_CPLD_PL_SPI_SDO]
 set_input_delay -clock [get_clocks pl_spi_clk_a] -clock_fall -max  68.041 $MISO_INPUT_A
@@ -281,16 +284,23 @@ set_min_delay -to $ATR_CLK 0.000
 # Mykonos GPIO is driven from the DB-A radio clock. Although they are received async in
 # Mykonos, they should be tightly constrained in the FPGA to avoid any race conditions.
 # The best way to do this is a skew constraint across all the bits.
-# set MAX_SKEW 3.00
-# set MAX_DELAY [expr {$MAX_SKEW / 2}]
+# set MAX_SKEW 2.5
+# set SETUP_SKEW [expr {($MAX_SKEW / 2)+0.5}]
+# set HOLD_SKEW  [expr {($MAX_SKEW / 2)-0.5}]
+# set PORT_LIST [get_ports DB*_ATR_*X_*]
 # # Then add the output delay on each of the ports.
-# set_output_delay                        -clock [get_clocks myk_gpio_bus_clk] -max -$MAX_DELAY [get_ports DB*_MYK_GPIO_*]
-# set_output_delay -add_delay -clock_fall -clock [get_clocks myk_gpio_bus_clk] -max -$MAX_DELAY [get_ports DB*_MYK_GPIO_*]
-# set_output_delay                        -clock [get_clocks myk_gpio_bus_clk] -min  $MAX_DELAY [get_ports DB*_MYK_GPIO_*]
-# set_output_delay -add_delay -clock_fall -clock [get_clocks myk_gpio_bus_clk] -min  $MAX_DELAY [get_ports DB*_MYK_GPIO_*]
+# set_output_delay                        -clock [get_clocks myk_gpio_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+# set_output_delay -add_delay -clock_fall -clock [get_clocks myk_gpio_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+# set_output_delay                        -clock [get_clocks myk_gpio_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
+# set_output_delay -add_delay -clock_fall -clock [get_clocks myk_gpio_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
 # # Finally, make both the setup and hold checks use the same launching and latching edges.
 # set_multicycle_path -setup -to [get_clocks myk_gpio_bus_clk] -start 0
 # set_multicycle_path -hold  -to [get_clocks myk_gpio_bus_clk] -1
+# # Remove analysis from the output "clock" pin. There are ways to do this using TCL, but
+# # they aren't supported in XDC files... so we do it the old fashioned way.
+# set_output_delay -clock [get_clocks async_out_clk] 0.000 $MGPIO_CLK
+# set_max_delay -to $MGPIO_CLK 50.000
+# set_min_delay -to $MGPIO_CLK 0.000
 
 # Mykonos Interrupt is received asynchronously, and driven directly to the PS.
 set_input_delay -clock [get_clocks async_in_clk] 0.000 [get_ports DB*_MYK_INTRQ]
