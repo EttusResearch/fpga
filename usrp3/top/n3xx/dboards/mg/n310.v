@@ -209,10 +209,10 @@ module n310
    output        DBA_ATR_TX_1,
    output        DBA_ATR_TX_2,
 
-   inout [5:0]  DBA_CH1_TX_DSA_DATA,
-   inout [5:0]  DBA_CH1_RX_DSA_DATA,
-   inout [5:0]  DBA_CH2_TX_DSA_DATA,
-   inout [5:0]  DBA_CH2_RX_DSA_DATA,
+   output [5:0]  DBA_CH1_TX_DSA_DATA,
+   output [5:0]  DBA_CH1_RX_DSA_DATA,
+   output [5:0]  DBA_CH2_TX_DSA_DATA,
+   output [5:0]  DBA_CH2_RX_DSA_DATA,
 
    output        DBA_CPLD_PL_SPI_SCLK,
    output        DBA_CPLD_PL_SPI_LE,
@@ -269,10 +269,10 @@ module n310
    output        DBB_ATR_TX_1,
    output        DBB_ATR_TX_2,
 
-   inout [5:0]  DBB_CH1_TX_DSA_DATA,
-   inout [5:0]  DBB_CH1_RX_DSA_DATA,
-   inout [5:0]  DBB_CH2_TX_DSA_DATA,
-   inout [5:0]  DBB_CH2_RX_DSA_DATA,
+   output [5:0]  DBB_CH1_TX_DSA_DATA,
+   output [5:0]  DBB_CH1_RX_DSA_DATA,
+   output [5:0]  DBB_CH2_TX_DSA_DATA,
+   output [5:0]  DBB_CH2_RX_DSA_DATA,
 
    output        DBB_CPLD_PL_SPI_SCLK,
    output        DBB_CPLD_PL_SPI_LE,
@@ -2620,15 +2620,20 @@ module n310
   assign DBA_MYK_SPI_CS_n         = myk_a_cs_n;
 
 
-  // Direction is always an output, so set the ddr bits to 1'b1
-  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA0_inst (
-    .clk(radio_clk), .gpio_pins({DBA_CH1_TX_DSA_DATA,DBA_CH1_RX_DSA_DATA}),
-    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[0]), .gpio_in(db_gpio_in[0])
-  );
-  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbA1_inst (
-    .clk(radio_clk), .gpio_pins({DBA_CH2_TX_DSA_DATA,DBA_CH2_RX_DSA_DATA}),
-    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[1]), .gpio_in(db_gpio_in[1])
-  );
+  // Instantiate DSA registers in the IOB
+  (* IOB = "true" *) reg [5:0] dsa_tx1_a_out_iob, dsa_rx1_a_out_iob;
+  (* IOB = "true" *) reg [5:0] dsa_tx2_a_out_iob, dsa_rx2_a_out_iob;
+  always @(posedge radio_clk) begin
+    dsa_tx1_a_out_iob  <= db_gpio_out[0][11:6];
+    dsa_rx1_a_out_iob  <= db_gpio_out[0][05:0];
+    dsa_tx2_a_out_iob  <= db_gpio_out[1][11:6];
+    dsa_rx2_a_out_iob  <= db_gpio_out[1][05:0];
+  end
+
+  assign DBA_CH1_TX_DSA_DATA = dsa_tx1_a_out_iob;
+  assign DBA_CH1_RX_DSA_DATA = dsa_rx1_a_out_iob;
+  assign DBA_CH2_TX_DSA_DATA = dsa_tx2_a_out_iob;
+  assign DBA_CH2_RX_DSA_DATA = dsa_rx2_a_out_iob;
 
   assign DBA_ATR_RX_1 = rx_atr_reg[0];
   assign DBA_ATR_RX_2 = rx_atr_reg[1];
@@ -2681,15 +2686,20 @@ module n310
   assign DBB_MYK_SPI_CS_n         = myk_b_cs_n;
 
 
-  // Direction is always an output, so set the ddr bits to 1'b1
-  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB0_inst (
-    .clk(radio_clk), .gpio_pins({DBB_CH1_TX_DSA_DATA,DBB_CH1_RX_DSA_DATA}),
-    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[2]), .gpio_in(db_gpio_in[2])
-  );
-  gpio_atr_io #(.WIDTH(16)) gpio_DSA_dbB1_inst (
-    .clk(radio_clk), .gpio_pins({DBB_CH2_TX_DSA_DATA,DBB_CH2_RX_DSA_DATA}),
-    .gpio_ddr(16'hFFFF), .gpio_out(db_gpio_out[3]), .gpio_in(db_gpio_in[3])
-  );
+  // Instantiate DSA registers in the IOB
+  (* IOB = "true" *) reg [5:0] dsa_tx1_b_out_iob, dsa_rx1_b_out_iob;
+  (* IOB = "true" *) reg [5:0] dsa_tx2_b_out_iob, dsa_rx2_b_out_iob;
+  always @(posedge radio_clk) begin
+    dsa_tx1_b_out_iob  <= db_gpio_out[2][11:6];
+    dsa_rx1_b_out_iob  <= db_gpio_out[2][05:0];
+    dsa_tx2_b_out_iob  <= db_gpio_out[3][11:6];
+    dsa_rx2_b_out_iob  <= db_gpio_out[3][05:0];
+  end
+
+  assign DBB_CH1_TX_DSA_DATA = dsa_tx1_b_out_iob;
+  assign DBB_CH1_RX_DSA_DATA = dsa_rx1_b_out_iob;
+  assign DBB_CH2_TX_DSA_DATA = dsa_tx2_b_out_iob;
+  assign DBB_CH2_RX_DSA_DATA = dsa_rx2_b_out_iob;
 
   assign DBB_ATR_RX_1 = rx_atr_reg[2];
   assign DBB_ATR_RX_2 = rx_atr_reg[3];

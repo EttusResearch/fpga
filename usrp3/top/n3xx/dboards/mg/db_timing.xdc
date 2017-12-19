@@ -246,11 +246,6 @@ set_multicycle_path -hold  -from [get_clocks radio_clk] -to [get_clocks dsa_bus_
 set_output_delay -clock [get_clocks async_out_clk] 0.000 $DSA_CLK
 set_max_delay -to $DSA_CLK 50.000
 set_min_delay -to $DSA_CLK 0.000
-# The DSA bus is bidirectional (as declared to the FPGA) to accommodate coding structures.
-# Set a false path on the input, since it is unused.
-set_input_delay -clock [get_clocks async_out_clk] 0.000 [get_ports {DB*_CH*_*X_DSA_DATA[*]}]
-set_max_delay -from [get_ports {DB*_CH*_*X_DSA_DATA[*]}] 50.000
-set_min_delay -from [get_ports {DB*_CH*_*X_DSA_DATA[*]}] 0.000
 
 
 
