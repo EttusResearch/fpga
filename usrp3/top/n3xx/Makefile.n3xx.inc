@@ -51,7 +51,10 @@ n3xx_mgt_io_core.v \
 n3xx_clocking.v \
 n3xx_db_fe_core.v \
 n3xx_npio_qsfp_wrapper.v \
-eth_switch.v
+n3xx_chdr_eth_framer.v \
+n3xx_eth_dispatch.v \
+n3xx_eth_switch.v \
+
 
 MB_XDC = \
 mb_timing.xdc \

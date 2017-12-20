@@ -14,7 +14,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-module eth_switch #(
+module n3xx_eth_switch #(
   parameter BASE                     = 0,
   parameter XO_FIFOSIZE              = 10,
   parameter CPU_FIFOSIZE             = 10,
@@ -317,7 +317,7 @@ module eth_switch #(
     .set_data(dispatch_set_data)
   );
 
-  eth_dispatch #(
+  n3xx_eth_dispatch #(
     .BASE(0),
     .AWIDTH(SR_AWIDTH),
     .DROP_UNKNOWN_MAC(0)
@@ -486,7 +486,7 @@ module eth_switch #(
     .set_data(framer_set_data)
   );
 
-  chdr_eth_framer #(
+  n3xx_chdr_eth_framer #(
     .BASE   (0),
     .AWIDTH (SR_AWIDTH)
   ) my_eth_framer (

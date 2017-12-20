@@ -818,7 +818,6 @@ module x300
    wire  gige_refclk, gige_refclk_bufg;
 
    one_gige_phy_clk_gen gige_clk_gen_i (
-      .areset(global_rst | sw_rst[0]),
       .refclk_p(ETH_CLK_p),
       .refclk_n(ETH_CLK_n),
       .refclk(gige_refclk),

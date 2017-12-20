@@ -309,7 +309,7 @@ module n3xx_sfp_wrapper #(
                        : (c2e_tkeep == 8'b1000_0000) ? 4'd1
                        : 4'd0;
 
-      eth_switch #(
+      n3xx_eth_switch #(
         .BASE           (REG_BASE_ETH_SWITCH), // Base Address
         .REG_DWIDTH     (DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH     (AWIDTH)         // Width of the address bus
