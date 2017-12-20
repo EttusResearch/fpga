@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LGPL-3.0
 #
 
-# All the magic numbers come from "Mg Digital Interface Timing" timing
+# All the magic numbers come from the "/n3xx/dboards/mg/doc/mg_timing.xlsx" timing
 # analysis spreadsheet. Analysis should be re-performed every time a board rev occurs
 # that affects the CPLD interfaces.
 

@@ -2,7 +2,8 @@
 # Copyright 2017 Ettus Research, A National Instruments Company
 # SPDX-License-Identifier: LGPL-3.0
 #
-
+# Timing analysis is performed in "/n3xx/doc/mb_timing.xlsx". See
+# the spreadsheet for more details and explanations.
 
 #*******************************************************************************
 ## Motherboard Clocks
@@ -79,9 +80,6 @@ set_clock_groups -asynchronous -group [get_clocks meas_clk_ref -include_generate
 
 #*******************************************************************************
 ## PPS Input Timing
-
-# Timing analysis is performed in the "Brimstone Digital Interface Timing" gdoc. All the
-# following min/max delays are derived therein.
 
 # The external PPS is synchronous to the external reference clock, which is expected to
 # be at 10 MHz. Given [setup, hold] of [5ns, 5ns] at the rear panel inputs of the N310,

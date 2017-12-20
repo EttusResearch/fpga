@@ -2,7 +2,8 @@
 # Copyright 2017 Ettus Research, A National Instruments Company
 # SPDX-License-Identifier: LGPL-3.0
 #
-
+# Timing analysis is performed in "/n3xx/dboards/mg/doc/mg_timing.xlsx". See
+# the spreadsheet for more details and explanations.
 
 #*******************************************************************************
 ## Daughterboard Clocks
