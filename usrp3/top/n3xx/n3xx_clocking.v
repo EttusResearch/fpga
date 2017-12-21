@@ -116,7 +116,7 @@ module n3xx_clocking (
   // This must be an MMCM to hit the weird rates we need for meas_clk. It takes the
   // 166.6667 MHz clock from the PS and provides the correct meas_clk rate for the TDC.
   // BUFG is embedded in the MMCM files.
-  MeasClkMmcm MeasClkMmcmx (
+  misc_clock_gen misc_clock_gen_i (
     .clk_in1 (meas_clk_ref),
     .clk_out1(meas_clk),
     .reset   (meas_clk_reset),

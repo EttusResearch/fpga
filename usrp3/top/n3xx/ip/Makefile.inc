@@ -11,7 +11,7 @@ include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 #include $(IP_DIR)/input_sample_fifo/Makefile.inc
 include $(IP_DIR)/one_gig_eth_pcs_pma/Makefile.inc
-include $(IP_DIR)/MeasClkMmcm/Makefile.inc
+include $(IP_DIR)/misc_clock_gen/Makefile.inc
 include $(IP_DIR)/ten_gig_eth_pcs_pma/Makefile.inc
 include $(IP_DIR)/aurora_64b66b_pcs_pma/Makefile.inc
 include $(IP_DIR)/axi3_to_axi4lite_protocol_converter/Makefile.inc
@@ -33,7 +33,7 @@ $(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_32_SRCS) \
 $(IP_AXI4_TO_AXI3_PROTOCOL_CONVERTER_64_SRCS) \
 $(IP_AXIS_FIFO_TO_AXI4LITE_SRCS) \
-$(IP_MEASCLK_MMCM_SRCS) \
+$(IP_MISC_CLOCK_GEN_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(IP_AXI_ETH_DMA_SRCS) \

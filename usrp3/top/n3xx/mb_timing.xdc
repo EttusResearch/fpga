@@ -61,8 +61,8 @@ set_input_jitter [get_clocks bus_clk]      $bus_clk_jitter
 
 
 # TDC Measurement Clock
-create_generated_clock -name meas_clk_fb [get_pins {n3xx_clocking_i/MeasClkMmcmx/inst/mmcm_adv_inst/CLKFBOUT}]
-create_generated_clock -name meas_clk    [get_pins {n3xx_clocking_i/MeasClkMmcmx/inst/mmcm_adv_inst/CLKOUT0}]
+create_generated_clock -name meas_clk_fb [get_pins {n3xx_clocking_i/misc_clock_gen_i/inst/mmcm_adv_inst/CLKFBOUT}]
+create_generated_clock -name meas_clk    [get_pins {n3xx_clocking_i/misc_clock_gen_i/inst/mmcm_adv_inst/CLKOUT0}]
 
 
 
