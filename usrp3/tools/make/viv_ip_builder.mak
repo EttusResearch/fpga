@@ -65,7 +65,7 @@ BUILD_VIVADO_BD = \
 	cd $(5)/$(1); \
 	echo "BUILDER: Building BD..."; \
 	export VIV_ERR=0; \
-	$(TOOLS_DIR)/scripts/launch_vivado.sh -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_bd.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
+	$(TOOLS_DIR)/scripts/launch_vivado.py -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_bd.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
         $(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) release; \
 	exit $$VIV_ERR
 
@@ -96,6 +96,6 @@ BUILD_VIVADO_BDTCL = \
 	cd $(5)/$(1); \
 	echo "BUILDER: Generating BD..."; \
 	export VIV_ERR=0; \
-	$(TOOLS_DIR)/scripts/launch_vivado.sh -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_bd.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
+	$(TOOLS_DIR)/scripts/launch_vivado.py -mode batch -source $(call RESOLVE_PATH,$(TOOLS_DIR)/scripts/viv_generate_bd.tcl) -log $(1).log -nojournal || export VIV_ERR=$$?; \
         $(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) release; \
 	exit $$VIV_ERR
