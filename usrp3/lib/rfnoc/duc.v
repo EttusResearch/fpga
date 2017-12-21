@@ -144,6 +144,7 @@ module duc #(
   end else begin
   assign o_tdata_hb1 = 'h0;
   assign o_tvalid_hb1 = 1'h0;
+  assign i_tready_hb1 = 1'b0;
   end
   if( NUM_HB > 1 ) begin
   axi_hb47 halfband2 (
@@ -159,6 +160,7 @@ module duc #(
   end else begin
   assign o_tdata_hb2 = 'h0;
   assign o_tvalid_hb2 = 1'h0;
+  assign i_tready_hb2 = 1'b0;
   end
   if( NUM_HB > 2 ) begin
   axi_hb47 halfband3 (
@@ -174,6 +176,7 @@ module duc #(
   end else begin
   assign o_tdata_hb3 = 'h0;
   assign o_tvalid_hb3 = 1'h0;
+  assign i_tready_hb3 = 1'b0;
   end
   endgenerate
  /**************************************************************************
