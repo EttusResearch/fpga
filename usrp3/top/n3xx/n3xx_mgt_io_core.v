@@ -194,7 +194,7 @@ module n3xx_mgt_io_core #(
   // Ethernet Specific: MDIO
   //-----------------------------------------------------------------
 
-  wire mdc, mdio_m2s, mdio_s2m;
+  wire mdc, mdio_m2s, mdio_s2m, mdio_s2m_sync;
   generate
     if ((PROTOCOL == "10GbE" || PROTOCOL == "1GbE") && (MDIO_EN == 1)) begin
       mdio_master #(
@@ -205,7 +205,7 @@ module n3xx_mgt_io_core #(
         .clk          (bus_clk),
         .rst          (bus_rst),
         .mdc          (mdc),
-        .mdio_in      (mdio_s2m),
+        .mdio_in      (mdio_s2m_sync),
         .mdio_out     (mdio_m2s),
         .mdio_tri     (),
         .reg_wr_req   (reg_wr_req),
@@ -215,6 +215,12 @@ module n3xx_mgt_io_core #(
         .reg_rd_addr  (reg_rd_addr),
         .reg_rd_data  (reg_rd_data_mdio),
         .reg_rd_resp  (reg_rd_resp_mdio)
+      );
+
+      // We can cross mdio_s2m into the bus_clk domain. A synchronizer is safe
+      // here because the bit is inherently async
+      synchronizer #(.INITIAL_VAL(1'b0)) mdio_s2m_sync_i (
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mdio_s2m), .out(mdio_s2m_sync)
       );
     end else begin
       assign mdc              = 1'b0;
