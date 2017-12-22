@@ -14,18 +14,15 @@
 `include "sim_axi4_lib.svh"
 `include "sim_set_rb_lib.svh"
 
-//`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
-`define USE_SRAM_MIG 0      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
-`define USE_BD_INTERCON 1     //Use the Block Design Axi Interconnect
-
 module dram_fifo_tb();
   `TEST_BENCH_INIT("dram_fifo_tb",`NUM_TEST_CASES,`NS_PER_TICK)
 
   // Define all clocks and resets
-  `DEFINE_DIFF_CLK(sys_clk_p, sys_clk_n, 10, 50)            //100MHz differential sys_clk to generate DDR3 clocking
-  `DEFINE_CLK(bus_clk, 1000/200, 50) //200MHz bus_clk
-  `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
-  `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
+  `DEFINE_DIFF_CLK(sys_clk_p, sys_clk_n, 10, 50)  //100MHz differential sys_clk to generate DDR3 clocking
+  `DEFINE_CLK(bus_clk, 1000/200, 50)              //200MHz bus_clk
+  `DEFINE_CLK(dma_engine_clk, 1000/300, 50)       //300MHz dma_engine_clk
+  `DEFINE_RESET(bus_rst, 0, 100)                  //100ns for GSR to deassert
+  `DEFINE_RESET_N(sys_rst_n, 0, 100)              //100ns for GSR to deassert
 
   settings_bus_master #(.SR_AWIDTH(8),.SR_DWIDTH(32)) tst_set (.clk(bus_clk));
   cvita_master chdr_i (.clk(bus_clk));
@@ -33,38 +30,14 @@ module dram_fifo_tb();
 
   // Initialize DUT
   wire calib_complete;
-`ifdef USE_SRAM_FIFO
 
-  axi_fifo #(.WIDTH(65), .SIZE(18)) dut_single (
-    .clk(bus_clk),
-    .reset(bus_rst),
-    .clear(1'b0),
-    
-    .i_tdata({chdr_i.axis.tlast, chdr_i.axis.tdata}),
-    .i_tvalid(chdr_i.axis.tvalid),
-    .i_tready(chdr_i.axis.tready),
-  
-    .o_tdata({chdr_o.axis.tlast, chdr_o.axis.tdata}),
-    .o_tvalid(chdr_o.axis.tvalid),
-    .o_tready(chdr_o.axis.tready),
-    
-    .space(),
-    .occupied()
-  );
-  assign calib_complete = 1;
-
-`else
-
-  axis_dram_fifo_single #(
-  .USE_SRAM_MEMORY(`USE_SRAM_MIG),
-  .USE_BD_INTERCON(`USE_BD_INTERCON)
-  ) dut_single
-  (
+  axis_dram_fifo_single dut_single (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk_p(sys_clk_p),//use differential clock on N310
     .sys_clk_n(sys_clk_n),
     .sys_rst_n(sys_rst_n),
+    .dma_engine_clk(dma_engine_clk),
     
     .i_tdata(chdr_i.axis.tdata),
     .i_tlast(chdr_i.axis.tlast),
@@ -85,8 +58,6 @@ module dram_fifo_tb();
     .init_calib_complete(calib_complete)
   );
   
-`endif
-
   //Testbench variables
   cvita_hdr_t   header, header_out;
   cvita_stats_t stats;

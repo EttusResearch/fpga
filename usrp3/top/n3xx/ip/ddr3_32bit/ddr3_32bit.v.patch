@@ -1,6 +1,0 @@
-94a95,96
->   output            ui_clk_x2,
->   output            ui_clk_div2,
-176a179,180
->     .ui_clk_x2                      (ui_clk_x2),
->     .ui_clk_div2                    (ui_clk_div2),

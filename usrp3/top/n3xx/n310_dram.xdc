@@ -31,7 +31,3 @@ create_generated_clock -name ddr3_ps_clk \
 
 # No need for any asynchronous clock groups between bus_clk and the MIG UI clocks,
 # because bus_clk already has a blanket asynchronous constraint from the top level XDC.
-
-# Block crossings between the 2x and 1x versions of the UI clock. This constraint will
-# hopefully be removed due to design optimization.
-set_clock_groups -asynchronous -group [get_clocks ddr3_ui_clk_2x] -group [get_clocks ddr3_ui_clk]

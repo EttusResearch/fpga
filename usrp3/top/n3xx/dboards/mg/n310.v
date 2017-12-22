@@ -39,7 +39,7 @@ module n310
    input  NPIO_RX1_N,
    output NPIO_TX1_P,
    output NPIO_TX1_N,
-`endif 
+`endif
 `ifdef QSFP_LANES
    input  QSFP_RX0_P,
    input  QSFP_RX0_N,
@@ -57,7 +57,7 @@ module n310
    input  QSFP_RX3_N,
    output QSFP_TX3_P,
    output QSFP_TX3_N,
- `endif 
+ `endif
    //TODO: Uncomment when connected here
    //input NPIO_0_RXSYNC_0_P, NPIO_0_RXSYNC_1_P,
    //input NPIO_0_RXSYNC_0_N, NPIO_0_RXSYNC_1_N,
@@ -675,6 +675,7 @@ module n310
   wire        wr_refclk_buf;
   wire        netclk_buf;
   wire        meas_clk;
+  wire        ddr3_dma_clk;
   wire        meas_clk_reset;
   wire        meas_clk_locked;
   reg         pps_out_refclk;
@@ -733,10 +734,11 @@ module n310
      .MGT156MHZ_CLK1_P(MGT156MHZ_CLK1_P),
      .MGT156MHZ_CLK1_N(MGT156MHZ_CLK1_N),
      .xgige_refclk_buf(xgige_refclk),
-     .meas_clk_ref(meas_clk_ref),
+     .misc_clks_ref(meas_clk_ref),
      .meas_clk(meas_clk),
-     .meas_clk_reset(meas_clk_reset),
-     .meas_clk_locked(meas_clk_locked),
+     .ddr3_dma_clk(ddr3_dma_clk),
+     .misc_clks_reset(meas_clk_reset),
+     .misc_clks_locked(meas_clk_locked),
      .ext_pps_from_pin(REF_1PPS_IN),
      .gps_pps_from_pin(GPS_1PPS),
      .pps_select(pps_select),
@@ -914,7 +916,7 @@ module n310
   wire npio0_tx_out_clk, npio1_tx_out_clk;
   wire npio0_gt_pll_lock, npio1_gt_pll_lock;
 
-`ifdef SFP1_AURORA 
+`ifdef SFP1_AURORA
   `define SFP_AU_MMCM
   assign au_tx_clk     = sfp1_tx_out_clk;
   assign au_mmcm_reset = ~sfp1_gt_pll_lock;
@@ -948,7 +950,7 @@ module n310
   // NPIO-QSFP MGT Lanes (Example loopback config)
   //--------------------------------------------------------------
 
-`ifdef QSFP_LANES 
+`ifdef QSFP_LANES
 
   localparam NUM_QSFP_LANES = `QSFP_LANES;
 
@@ -1004,13 +1006,13 @@ module n310
   // NPIO MGT Lanes (Example loopback config)
   //--------------------------------------------------------------
 
-`ifdef NPIO_LANES 
+`ifdef NPIO_LANES
 
   wire [127:0]  npio_loopback_tdata;
   wire [1:0]    npio_loopback_tvalid;
   wire [1:0]    npio_loopback_tready;
   wire [1:0]    npio_loopback_tlast;
-  
+
   n3xx_mgt_io_core #(
     .PROTOCOL       ("Aurora"),
     .REG_BASE       (NPIO_REG_BASE + 14'h00),
@@ -1028,18 +1030,18 @@ module n310
     .gt_tx_out_clk_unbuf(),
 
     .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst        (bus_rst),  
+    .bus_rst        (bus_rst),
     .qpllreset      (qpllreset_npio0),
     .qplloutclk     (qplloutclk),
     .qplloutrefclk  (qplloutrefclk),
     .qplllock       (qplllock),
     .qpllrefclklost (),
-    
+
     .rxp            (NPIO_RX0_P),
     .rxn            (NPIO_RX0_N),
     .txp            (NPIO_TX0_P),
-    .txn            (NPIO_TX0_N), 
-   
+    .txn            (NPIO_TX0_N),
+
     .sfpp_rxlos     (1'b0),
     .sfpp_tx_fault  (1'b0),
 
@@ -1085,18 +1087,18 @@ module n310
     .gt_tx_out_clk_unbuf(),
 
     .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
-    .bus_rst        (bus_rst),  
+    .bus_rst        (bus_rst),
     .qpllreset      (qpllreset_npio1),
     .qplloutclk     (qplloutclk),
     .qplloutrefclk  (qplloutrefclk),
     .qplllock       (qplllock),
     .qpllrefclklost (),
-    
+
     .rxp            (NPIO_RX1_P),
     .rxn            (NPIO_RX1_N),
     .txp            (NPIO_TX1_P),
-    .txn            (NPIO_TX1_N), 
-   
+    .txn            (NPIO_TX1_N),
+
     .sfpp_rxlos     (1'b0),
     .sfpp_tx_fault  (1'b0),
 
@@ -1274,7 +1276,7 @@ module n310
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
-      
+
       .qpllreset(qpllreset_sfp0),
       .qplllock(qplllock),
       .qplloutclk(qplloutclk),
@@ -1356,7 +1358,7 @@ module n310
       .c2e_tlast(arm_eth0_tx_tlast_b),
       .c2e_tvalid(arm_eth0_tx_tvalid_b),
       .c2e_tready(arm_eth0_tx_tready_b),
-      
+
       // LED
       .link_up(SFP_0_LED_B),
       .activity(SFP_0_LED_A)
@@ -1382,7 +1384,7 @@ module n310
       .PORTNUM(8'd1)
    ) sfp_wrapper_1 (
       .areset(global_rst),
-      
+
       .gt_refclk(sfp1_gt_refclk),
       .gb_refclk(sfp1_gb_refclk),
       .misc_clk(sfp1_misc_clk),
@@ -1392,7 +1394,7 @@ module n310
 
       .bus_rst(bus_rst),
       .bus_clk(bus_clk),
-      
+
       .qpllreset(qpllreset_sfp1),
       .qplllock(qplllock),
       .qplloutclk(qplloutclk),
@@ -2426,8 +2428,7 @@ module n310
    ///////////////////////////////////////////////////////////////////////////////////
 
 
-   wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (250MHz)
-   wire        ddr3_axi_clk_x2;        // 1/4 DDR external clock rate (250MHz)
+   wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
    wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
    wire        ddr3_running;           // DRAM calibration complete.
 
@@ -2511,7 +2512,6 @@ module n310
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
       .ui_clk                         (ddr3_axi_clk),  // 200Hz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2), //300 MHz, not actually x2 for n310 design because of timing.
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -2748,6 +2748,7 @@ module n310
 `endif
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
+    .ddr3_dma_clk(ddr3_dma_clk),
 
     // Clocking and PPS Controls/Indicators
     .pps(pps_radioclk1x),
@@ -2824,7 +2825,6 @@ module n310
     .miso1(DBB_CPLD_PL_SPI_SDO),
     // DRAM signals.
     .ddr3_axi_clk              (ddr3_axi_clk),
-    .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
     .ddr3_axi_rst              (ddr3_axi_rst),
     .ddr3_running              (ddr3_running),
     // Slave Interface Write Address Ports
@@ -2902,7 +2902,7 @@ module n310
     .e2v1_tlast(e2v1_tlast),
     .e2v1_tvalid(e2v1_tvalid),
     .e2v1_tready(e2v1_tready),
-  
+
     //regport interface to npio
     .reg_wr_req_npio(reg_wr_req_npio),
     .reg_wr_addr_npio(reg_wr_addr_npio),
@@ -2911,7 +2911,7 @@ module n310
     .reg_rd_addr_npio(reg_rd_addr_npio),
     .reg_rd_resp_npio(reg_rd_resp_npio),
     .reg_rd_data_npio(reg_rd_data_npio)
- 
+
   );
 
   // Register the ATR bits once between sending them out to the CPLD to avoid

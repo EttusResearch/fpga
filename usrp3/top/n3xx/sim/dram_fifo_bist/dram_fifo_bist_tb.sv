@@ -14,17 +14,13 @@
 `include "sim_axi4_lib.svh"
 `include "sim_set_rb_lib.svh"
 
-//`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
-`define USE_SRAM_MIG 0      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
-`define USE_BD_INTERCON 1     //Use the Block Design Axi Interconnect
-
-
 module dram_fifo_bist_tb();
   `TEST_BENCH_INIT("dram_fifo_bist_tb",`NUM_TEST_CASES,`NS_PER_TICK)
 
   // Define all clocks and resets
   `DEFINE_DIFF_CLK(sys_clk_p, sys_clk_n, 10, 50)            //100MHz differential sys_clk to generate DDR3 clocking
   `DEFINE_CLK(bus_clk, 1000/200, 50) //200MHz bus_clk
+  `DEFINE_CLK(dma_engine_clk, 1000/300, 50)       //300MHz dma_engine_clk
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
   `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
 
@@ -52,17 +48,14 @@ module dram_fifo_bist_tb();
   localparam SR_FIFO_BASE = 0;
   localparam SR_BIST_BASE = SR_FIFO_BASE + 4;
 
-  axis_dram_fifo_single #(
-  .USE_SRAM_MEMORY(`USE_SRAM_MIG),
-  .USE_BD_INTERCON(`USE_BD_INTERCON), 
-  .SR_BASE(SR_FIFO_BASE)
-  ) dut_single (
+  axis_dram_fifo_single dut_single (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk_p(sys_clk_p),//use differential clock on N310
     .sys_clk_n(sys_clk_n),
     .sys_rst_n(sys_rst_n),
-    
+    .dma_engine_clk(dma_engine_clk),
+
     .i_tdata(cvita_fifo_in.axis.tdata),
     .i_tlast(cvita_fifo_in.axis.tlast),
     .i_tvalid(cvita_fifo_in.axis.tvalid),

@@ -22,6 +22,7 @@ module n310_core #(
   input         radio_rst,
   input         bus_clk,
   input         bus_rst,
+  input         ddr3_dma_clk,
 
   // Clocking and PPS Controls/Indicators
   input            pps,
@@ -114,7 +115,6 @@ module n310_core #(
 
   // AXI4 (256b@200MHz) interface to DDR3 controller
   input           ddr3_axi_clk,
-  input           ddr3_axi_clk_x2,
   input           ddr3_axi_rst,
   input           ddr3_running,
   // Write Address Ports
@@ -237,7 +237,6 @@ module n310_core #(
   wire                     reg_wr_req;
   wire [REG_AWIDTH-1:0]    reg_wr_addr;
   wire [REG_DWIDTH-1:0]    reg_wr_data;
-  wire [REG_DWIDTH/8-1:0]  reg_wr_keep;
   wire                     reg_rd_req;
   wire  [REG_AWIDTH-1:0]   reg_rd_addr;
   wire                     reg_rd_resp;
@@ -421,6 +420,11 @@ module n310_core #(
   //
   /////////////////////////////////////////////////////////////////////////////////////////////
 
+  wire ddr3_dma_rst;
+  synchronizer #( .INITIAL_VAL(1'b1) ) ddr3_dma_rst_sync_i (
+    .clk(ddr3_dma_clk), .rst(1'b0), .in(ddr3_axi_rst), .out(ddr3_dma_rst)
+  );
+
   // AXI4 MM buses
   wire        s00_axi_awready, s01_axi_awready;
   wire [0:0]  s00_axi_awid, s01_axi_awid;
@@ -468,11 +472,8 @@ module n310_core #(
   wire [0:0]  s00_axi_ruser, s01_axi_ruser;
 
   axi_intercon_2x64_256_bd_wrapper axi_intercon_2x64_256_bd_i (
-    .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
-    .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
-    //
-    .S00_AXI_ACLK(ddr3_axi_clk_x2), // input S00_AXI_ACLK
-    .S00_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
+    .S00_AXI_ACLK(ddr3_dma_clk), // input S00_AXI_ACLK
+    .S00_AXI_ARESETN(~ddr3_dma_rst), // input S00_AXI_ARESETN
     .S00_AXI_AWID(s00_axi_awid), // input [0 : 0] S00_AXI_AWID
     .S00_AXI_AWADDR(s00_axi_awaddr), // input [31 : 0] S00_AXI_AWADDR
     .S00_AXI_AWLEN(s00_axi_awlen), // input [7 : 0] S00_AXI_AWLEN
@@ -511,8 +512,8 @@ module n310_core #(
     .S00_AXI_RVALID(s00_axi_rvalid), // output S00_AXI_RVALID
     .S00_AXI_RREADY(s00_axi_rready), // input S00_AXI_RREADY
     //
-    .S01_AXI_ACLK(ddr3_axi_clk_x2), // input S01_AXI_ACLK
-    .S01_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
+    .S01_AXI_ACLK(ddr3_dma_clk), // input S01_AXI_ACLK
+    .S01_AXI_ARESETN(~ddr3_dma_rst), // input S00_AXI_ARESETN
     .S01_AXI_AWID(s01_axi_awid), // input [0 : 0] S01_AXI_AWID
     .S01_AXI_AWADDR(s01_axi_awaddr), // input [31 : 0] S01_AXI_AWADDR
     .S01_AXI_AWLEN(s01_axi_awlen), // input [7 : 0] S01_AXI_AWLEN
@@ -602,7 +603,7 @@ module n310_core #(
       .EXTENDED_DRAM_BIST(1)
    ) inst_noc_block_dram_fifo (
       .bus_clk(bus_clk), .bus_rst(bus_rst),
-      .ce_clk(ddr3_axi_clk_x2), .ce_rst(ddr3_axi_rst),
+      .ce_clk(ddr3_dma_clk), .ce_rst(ddr3_dma_rst),
       //AXIS
       .i_tdata(ioce_o_tdata[0]), .i_tlast(ioce_o_tlast[0]), .i_tvalid(ioce_o_tvalid[0]), .i_tready(ioce_o_tready[0]),
       .o_tdata(ioce_i_tdata[0]), .o_tlast(ioce_i_tlast[0]), .o_tvalid(ioce_i_tvalid[0]), .o_tready(ioce_i_tready[0]),

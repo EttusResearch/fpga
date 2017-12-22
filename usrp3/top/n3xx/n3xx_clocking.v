@@ -39,10 +39,11 @@ module n3xx_clocking (
   output xgige_refclk_buf,
 
   // Measurement Clock Generation
-  input  meas_clk_ref,
+  input  misc_clks_ref,
   output meas_clk,
-  input  meas_clk_reset,
-  output meas_clk_locked,
+  output ddr3_dma_clk,
+  input  misc_clks_reset,
+  output misc_clks_locked,
 
   // PPS Capture & Selection
   input       ext_pps_from_pin,
@@ -116,11 +117,24 @@ module n3xx_clocking (
   // This must be an MMCM to hit the weird rates we need for meas_clk. It takes the
   // 166.6667 MHz clock from the PS and provides the correct meas_clk rate for the TDC.
   // BUFG is embedded in the MMCM files.
+  //----------------------------------------------------------------------------
+  //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
+  //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
+  //----------------------------------------------------------------------------
+  // CLK_OUT1___170.543______0.000______50.0______105.052_____94.905 (meas_clk)
+  // CLK_OUT2___305.556______0.000______50.0_______93.867_____94.905 (ddr3_dma_clk)
+  //
+  //----------------------------------------------------------------------------
+  // Input Clock   Freq (MHz)    Input Jitter (UI)
+  //----------------------------------------------------------------------------
+  // __primary________166.666667____________0.010
+
   misc_clock_gen misc_clock_gen_i (
-    .clk_in1 (meas_clk_ref),
-    .clk_out1(meas_clk),
-    .reset   (meas_clk_reset),
-    .locked  (meas_clk_locked)
+    .clk_in       (misc_clks_ref),
+    .meas_clk     (meas_clk),
+    .ddr3_dma_clk (ddr3_dma_clk),
+    .reset        (misc_clks_reset),
+    .locked       (misc_clks_locked)
   );
 
 
