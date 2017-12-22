@@ -190,6 +190,9 @@ module axi_dma_fifo
       endcase
    end
 
+   wire       i_tvalid_int, i_tready_int;
+   wire       o_tvalid_int, o_tready_int;
+
    //
    // State machine to synchronize flushing the pipeline
    //
@@ -386,15 +389,11 @@ module axi_dma_fifo
    ///////////////////////////////////////////////////////////////////////////////
    // Inline BIST for production testing
    //
-   wire       i_tvalid_int, i_tready_int;
-
    wire [DWIDTH-1:0] i_tdata_fifo;
    wire       i_tvalid_fifo, i_tready_fifo, i_tlast_fifo;
 
    wire [DWIDTH-1:0] i_tdata_bist;
    wire       i_tvalid_bist, i_tready_bist, i_tlast_bist;
-
-   wire       o_tvalid_int, o_tready_int;
 
    wire [DWIDTH-1:0] o_tdata_fifo;
    wire       o_tvalid_fifo, o_tready_fifo, o_tlast_fifo;
