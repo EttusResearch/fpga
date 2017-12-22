@@ -1,5 +1,5 @@
 #
-# Copyright 2016 Ettus Research LLC
+# Copyright 2016-2017 Ettus Research LLC
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
@@ -11,7 +11,6 @@
 ##
 ##Output:
 ## build/usrp_<product>_fpga_<image_type>.bit:    Configuration bitstream with header
-## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga_<image_type>.dts:    Device tree source file
 ## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
@@ -35,8 +34,7 @@ vivado_build = make -f Makefile.n3xx.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=
 # vivado_build($1=Device, $2=Option)
 post_build = @\
 	mkdir -p build; \
-	echo "Exporting bitstream files..."; \
-	cp build-$(1)_$(2)/n310.bin build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bin; \
+	echo "Exporting bitstream file..."; \
 	cp build-$(1)_$(2)/n310.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
 	echo "Exporting build report..."; \
 	cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
