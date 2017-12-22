@@ -20,6 +20,7 @@ vivado_strategies::implement_design [vivado_strategies::get_impl_preset "Perform
 vivado_utils::generate_post_route_reports
 
 # STEP#5: Generate a bitstream, netlist and debug probes
+set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [get_designs *]
 set byte_swap_bin 1
 vivado_utils::write_implementation_outputs $byte_swap_bin
 

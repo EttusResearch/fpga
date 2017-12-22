@@ -2735,6 +2735,11 @@ module n310
   wire  [3:0]      rx_stb;
   wire  [3:0]      tx_stb;
   wire pps_radioclk1x;
+  wire [31:0] build_datestamp;
+
+  USR_ACCESSE2 usr_access_i (
+    .DATA(build_datestamp), .CFGCLK(), .DATAVALID()
+  );
 
   n310_core #(.REG_AWIDTH(14), .BUS_CLK_RATE(BUS_CLK_RATE)) n310_core
   (
@@ -2910,8 +2915,10 @@ module n310
     .reg_rd_req_npio(reg_rd_req_npio),
     .reg_rd_addr_npio(reg_rd_addr_npio),
     .reg_rd_resp_npio(reg_rd_resp_npio),
-    .reg_rd_data_npio(reg_rd_data_npio)
+    .reg_rd_data_npio(reg_rd_data_npio),
 
+    .build_datestamp(build_datestamp),
+    .xadc_readback(32'h0 /* TODO: Implement me */)
   );
 
   // Register the ATR bits once between sending them out to the CPLD to avoid

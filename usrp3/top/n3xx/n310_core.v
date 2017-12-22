@@ -15,7 +15,7 @@
 module n310_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 32,  // Width of the address bus
-  parameter BUS_CLK_RATE = 200000000 // BUS_CLK rate for dram_fifo BIST calculation
+  parameter BUS_CLK_RATE = 200000000 // BUS_CLK rate
 )(
   // Clocks and resets
   input         radio_clk,
@@ -188,8 +188,11 @@ module n310_core #(
   output                     reg_rd_req_npio,
   output [REG_AWIDTH-1:0]    reg_rd_addr_npio,
   input                      reg_rd_resp_npio,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_npio
+  input  [REG_DWIDTH-1:0]    reg_rd_data_npio,
 
+  //misc
+  input  [31:0]   build_datestamp,
+  input  [31:0]   xadc_readback
 );
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -215,16 +218,18 @@ module n310_core #(
   localparam REG_BASE_XBAR  = 14'h1000;
 
   // Misc Registers
-  localparam REG_DESIGN_REV  = REG_BASE_MISC + 14'h0;
-  localparam REG_DATESTAMP   = REG_BASE_MISC + 14'h4;
-  localparam REG_GIT_HASH    = REG_BASE_MISC + 14'h8;
-  localparam REG_BUS_COUNTER = REG_BASE_MISC + 14'hC;
-  localparam REG_NUM_CE      = REG_BASE_MISC + 14'h10;
-  localparam REG_SCRATCH     = REG_BASE_MISC + 14'h14;
-  localparam REG_CLOCK_CTRL  = REG_BASE_MISC + 14'h18;
+  localparam REG_COMPAT_NUM     = REG_BASE_MISC + 14'h00;
+  localparam REG_DATESTAMP      = REG_BASE_MISC + 14'h04;
+  localparam REG_GIT_HASH       = REG_BASE_MISC + 14'h08;
+  localparam REG_SCRATCH        = REG_BASE_MISC + 14'h0C;
+  localparam REG_NUM_CE         = REG_BASE_MISC + 14'h10;
+  localparam REG_NUM_IO_CE      = REG_BASE_MISC + 14'h14;
+  localparam REG_CLOCK_CTRL     = REG_BASE_MISC + 14'h18;
+  localparam REG_XADC_READBACK  = REG_BASE_MISC + 14'h1C;
+  localparam REG_BUS_CLK_RATE   = REG_BASE_MISC + 14'h20;
+  localparam REG_BUS_CLK_COUNT  = REG_BASE_MISC + 14'h24;
 
   reg [31:0] scratch_reg = 32'b0;
-  reg [31:0] datestamp = 32'b0;
   reg [31:0] bus_counter = 32'h0;
 
   always @(posedge bus_clk) begin
@@ -358,24 +363,23 @@ module n310_core #(
         reg_rd_resp_glob <= 1'b1;
 
         case (reg_rd_addr)
-        REG_DESIGN_REV:
+        REG_COMPAT_NUM:
           reg_rd_data_glob <= {COMPAT_MAJOR, COMPAT_MINOR};
 
-        // Placeholder for datestamp
         REG_DATESTAMP:
-          reg_rd_data_glob <= datestamp;
+          reg_rd_data_glob <= build_datestamp;
 
         REG_GIT_HASH:
           reg_rd_data_glob <= 32'h`GIT_HASH;
 
-        REG_BUS_COUNTER:
-          reg_rd_data_glob <= bus_counter;
+        REG_SCRATCH:
+          reg_rd_data_glob <= scratch_reg;
 
         REG_NUM_CE:
           reg_rd_data_glob <= NUM_CE;
 
-        REG_SCRATCH:
-          reg_rd_data_glob <= scratch_reg;
+        REG_NUM_IO_CE:
+          reg_rd_data_glob <= NUM_IO_CE;
 
         REG_CLOCK_CTRL: begin
           reg_rd_data_glob <= 32'b0;
@@ -386,6 +390,16 @@ module n310_core #(
           reg_rd_data_glob[12]  <= meas_clk_reset;
           reg_rd_data_glob[13]  <= b_meas_clk_locked;
         end
+
+        REG_XADC_READBACK:
+          reg_rd_data_glob <= xadc_readback;
+
+        REG_BUS_CLK_RATE:
+          reg_rd_data_glob <= BUS_CLK_RATE;
+
+        REG_BUS_CLK_COUNT:
+          reg_rd_data_glob <= bus_counter;
+
         default:
           reg_rd_resp_glob <= 1'b0;
         endcase
