@@ -1153,7 +1153,7 @@
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.RLDX_DM_WIDTH">1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.RLDX_nCK_PER_CLK">1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.SYSCLK_TYPE">DIFF</spirit:configurableElementValue>
-        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.TEMP_MON_CONTROL">INTERNAL</spirit:configurableElementValue>
+        <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.TEMP_MON_CONTROL">EXTERNAL</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.UI_EXTRA_CLOCKS">FALSE</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="MODELPARAM_VALUE.USE_AXI">1</spirit:configurableElementValue>
         <spirit:configurableElementValue spirit:referenceId="PARAM_VALUE.BOARD_MIG_PARAM">Custom</spirit:configurableElementValue>

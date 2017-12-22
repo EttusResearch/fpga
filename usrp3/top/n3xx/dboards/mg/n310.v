@@ -2431,6 +2431,7 @@ module n310
    wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
    wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
    wire        ddr3_running;           // DRAM calibration complete.
+   wire [11:0] device_temp;
 
    // Slave Interface Write Address Ports
    wire        s_axi_awid;
@@ -2506,6 +2507,7 @@ module n310
       .ddr3_dqs_n                     (ddr3_dqs_n),
       .ddr3_dqs_p                     (ddr3_dqs_p),
       .init_calib_complete            (ddr3_running),
+      .device_temp_i                  (device_temp),
 
       .ddr3_cs_n                      (ddr3_cs_n),
       .ddr3_dm                        (ddr3_dm),
@@ -2563,11 +2565,19 @@ module n310
       .s_axi_rvalid                   (s_axi_rvalid),
       .s_axi_rready                   (s_axi_rready),
       // System Clock Ports
-      .sys_clk_p                       (sys_clk_p),
-      .sys_clk_n                       (sys_clk_n),
-      .clk_ref_i                       (bus_clk),
+      .sys_clk_p                      (sys_clk_p),
+      .sys_clk_n                      (sys_clk_n),
+      .clk_ref_i                      (bus_clk),
 
       .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+   );
+
+   // Temperature monitor module
+   mig_7series_v2_4_tempmon #(
+      .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(5000 /* 200MHz clock period in ps */)
+   ) tempmon_i (
+      .clk(bus_clk), .xadc_clk(bus_clk), .rst(bus_rst),
+      .device_temp_i(12'd0 /* ignored */), .device_temp(device_temp)
    );
 
 
@@ -2918,7 +2928,7 @@ module n310
     .reg_rd_data_npio(reg_rd_data_npio),
 
     .build_datestamp(build_datestamp),
-    .xadc_readback(32'h0 /* TODO: Implement me */)
+    .xadc_readback({20'h0, device_temp})
   );
 
   // Register the ATR bits once between sending them out to the CPLD to avoid
