@@ -155,8 +155,8 @@ class VivadoRunner(object):
     def __init__(self, args, viv_args):
         self.status = ''
         self.args = args
-        self.current_task = "Synthesis"
-        self.current_phase = "Synthesis"
+        self.current_task = "Initialization"
+        self.current_phase = "Starting"
         self.command = args.vivado_command + " " + viv_args
         self.notif_queue = Queue()
         self.msg_counters = {}
@@ -165,6 +165,8 @@ class VivadoRunner(object):
             'task': {
                 'regexes': [
                     '^Starting .* Task',
+                    '^Starting synth_design',   #synth_design start prints look different
+                    '^Running DRC .* write_bitstream', #write_bitstream prints look different
                     '^\[TEST CASE .*',
                 ],
                 'action': self.update_task,
@@ -175,6 +177,7 @@ class VivadoRunner(object):
                     '^Phase (?P<id>[a-zA-Z0-9/. ]*)$',
                     '^Start (?P<id>[a-zA-Z0-9/. ]*)$',
                     '^(?P<id>TESTBENCH STARTED: [\w_]*)$',
+                    '^Creating bitstream.*',
                 ],
                 'action': self.update_phase,
                 'id': "Phase",
@@ -198,8 +201,6 @@ class VivadoRunner(object):
                 'action': lambda x: self.act_on_build_msg('critical warning', x),
                 'id': "Critical Warning",
                 'fatal': [
-                    'did not meet timing requirements',
-                    'failed to meet the timing requirements',
                 ]
             },
             'error': {
@@ -392,7 +393,14 @@ class VivadoRunner(object):
     def update_task(self, task):
         " Update current task "
         self.current_task = task
-        self.current_task.replace("Starting", "").replace("Task", "")
+        if "write_bitstream" in self.current_task:
+            self.current_task = "Write Bitstream"   #write_bitstream is special
+            self.current_phase = "DRC"
+        else:
+            self.current_task = self.current_task.replace("Starting", "").replace("Task", "")
+            #synth_design start prints look different
+            self.current_task = self.current_task.replace("synth_design", "Synthesis")
+            self.current_phase = "Starting"
         self.add_notification(task, add_time=True, color=self.colors.get("task"))
         sys.stdout.write("\n")
         self.print_status_line()
@@ -400,7 +408,10 @@ class VivadoRunner(object):
     def update_phase(self, phase):
         " Update current phase "
         self.current_phase = phase.strip()
-        self.current_task.replace("Phase", "")
+        if "bitstream" in self.current_phase:
+            self.current_phase = "Write Bitstream file(s)"   #write_bitstream is special
+        else:
+            self.current_task = self.current_task.replace("Phase", "")
         sys.stdout.write("\n")
         self.print_status_line()
 

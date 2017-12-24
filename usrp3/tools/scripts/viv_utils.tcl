@@ -202,7 +202,10 @@ proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
     write_debug_probes -force $g_output_dir/${g_top_module}.ltx
     puts "BUILDER: Writing export report"
     report_utilization -omit_locs -file $g_output_dir/build.rpt
-    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
+    report_timing_summary -no_detailed_paths -file $g_output_dir/build.rpt -append
+    if {! [string match -nocase {*timing constraints are met*} [read [open $g_output_dir/build.rpt]]]} {
+        send_msg_id {Builder 0-0} error "The design did not satisfy timing constraints. (Implementation outputs were still generated)"
+    }
 }
 
 proc ::vivado_utils::write_netlist_outputs { {suffix ""} } {
@@ -218,7 +221,10 @@ proc ::vivado_utils::write_netlist_outputs { {suffix ""} } {
     write_xdc -no_fixed_only -force ${filename}.xdc
     puts "BUILDER: Writing export report"
     report_utilization -omit_locs -file $g_output_dir/build.rpt
-    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
+    report_timing_summary -no_detailed_paths -file $g_output_dir/build.rpt -append
+    if {! [string match -nocase {*timing constraints are met*} [read [open $g_output_dir/build.rpt]]]} {
+        send_msg_id {Builder 0-0} error "The design did not meet all timing constraints. (Implementation outputs were still generated)"
+    }
 }
 
 # ---------------------------------------------------
