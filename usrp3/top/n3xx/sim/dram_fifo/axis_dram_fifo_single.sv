@@ -37,10 +37,10 @@ module axis_dram_fifo_single
 );
 
   // Misc declarations
-  axi4_rd_t #(.DWIDTH(64), .AWIDTH(31), .IDWIDTH(1)) dma_axi_rd(.clk(sys_clk_p));
-  axi4_wr_t #(.DWIDTH(64), .AWIDTH(31), .IDWIDTH(1)) dma_axi_wr(.clk(sys_clk_p));
-  axi4_rd_t #(.DWIDTH(256), .AWIDTH(31), .IDWIDTH(1)) mig_axi_rd(.clk(sys_clk_p));
-  axi4_wr_t #(.DWIDTH(256), .AWIDTH(31), .IDWIDTH(1)) mig_axi_wr(.clk(sys_clk_p));
+  axi4_rd_t #(.DWIDTH(64), .AWIDTH(32), .IDWIDTH(1)) dma_axi_rd(.clk(sys_clk_p));
+  axi4_wr_t #(.DWIDTH(64), .AWIDTH(32), .IDWIDTH(1)) dma_axi_wr(.clk(sys_clk_p));
+  axi4_rd_t #(.DWIDTH(256), .AWIDTH(32), .IDWIDTH(1)) mig_axi_rd(.clk(sys_clk_p));
+  axi4_wr_t #(.DWIDTH(256), .AWIDTH(32), .IDWIDTH(1)) mig_axi_wr(.clk(sys_clk_p));
 
   wire [31:0]   ddr3_dq;      // Data pins. Input for Reads; Output for Writes.
   wire [3:0]    ddr3_dqs_n;   // Data Strobes. Input for Reads; Output for Writes.
@@ -66,11 +66,12 @@ module axis_dram_fifo_single
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
   axi_dma_fifo #(
-    .DEFAULT_BASE(30'h00040000),
-    .DEFAULT_MASK(30'hFFFC0000),
+    .DEFAULT_BASE(30'h00010000),
+    .DEFAULT_MASK(30'hFFFF0000),
     .DEFAULT_TIMEOUT(280),
     .SR_BASE(SR_BASE),
-    .EXT_BIST(1)
+    .EXT_BIST(1),
+    .SIMULATION(1)
   ) axi_dma_fifo_i0 (
     //
     // Clocks and reset

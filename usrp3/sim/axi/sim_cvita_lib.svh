@@ -181,7 +181,7 @@ interface cvita_master #(parameter DWIDTH = 64, parameter NUM_STREAMS = 1)(input
     input int stream = 0);
     begin
       cvita_hdr_t tmp_hdr = hdr;
-      tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
+      tmp_hdr.length = (num_samps * 8) + (hdr.has_time ? 16 : 8);
       @(negedge clk);
       push_hdr(tmp_hdr);
       if (hdr.has_time) push_word(hdr.timestamp, 0, stream);
@@ -208,7 +208,7 @@ interface cvita_master #(parameter DWIDTH = 64, parameter NUM_STREAMS = 1)(input
     begin
       automatic integer counter = 0;
       cvita_hdr_t tmp_hdr = hdr;
-      tmp_hdr.length = num_samps + (hdr.has_time ? 16 : 8);
+      tmp_hdr.length = (num_samps * 8) + (hdr.has_time ? 16 : 8);
       @(negedge clk);
       push_hdr(tmp_hdr);
       if (hdr.has_time) push_word(hdr.timestamp, 0, stream);
@@ -250,58 +250,6 @@ interface cvita_master #(parameter DWIDTH = 64, parameter NUM_STREAMS = 1)(input
       end
     end
   endtask
-
-  // Vivado XSIM workaround, cannot be made into a task (with ref inputs) due to segfault
-  `define WAIT_FOR_PKT_GET_INFO__UPDATE \
-    stats.count = stats.count + 1; \
-    stats.sum   = stats.sum + axis.tdata[DWIDTH*stream +: DWIDTH]; \
-    stats.crc   = stats.crc ^ axis.tdata[DWIDTH*stream +: DWIDTH]; \
-    if (axis.tdata < stats.min) stats.min = axis.tdata[DWIDTH*stream +: DWIDTH]; \
-    if (axis.tdata > stats.max) stats.max = axis.tdata[DWIDTH*stream +: DWIDTH];
-
-  // Wait for a packet to finish on the bus
-  task automatic wait_for_pkt_get_info (
-    output cvita_hdr_t hdr,
-    output cvita_stats_t stats,
-    input int stream = 0);
-    begin
-      automatic logic is_hdr  = 1;
-      automatic logic is_time = 0;
-      stats.count = 32'h0;
-      stats.sum   = 64'h0;
-      stats.min   = 64'h7FFFFFFFFFFFFFFF;
-      stats.max   = 64'h0;
-      stats.crc   = 64'h0;
-      check_stream(stream);
-      @(posedge clk);
-      //Corner case. We are already looking at the end
-      //of a packet i.e. its just a header
-      if (axis.tready[stream]&axis.tvalid[stream]&axis.tlast[stream]) begin
-        unflatten_chdr_no_ts(axis.tdata[DWIDTH*stream +: DWIDTH], hdr);
-        @(negedge clk);
-      end else begin
-        while(~(axis.tready[stream]&axis.tvalid[stream]&axis.tlast[stream])) begin
-          if (axis.tready[stream]&axis.tvalid[stream]) begin
-            if (is_hdr) begin
-              unflatten_chdr_no_ts(axis.tdata[DWIDTH*stream +: DWIDTH], hdr);
-              is_time = hdr.has_time;
-              is_hdr = 0;
-            end else if (is_time) begin
-              hdr.timestamp = axis.tdata[DWIDTH*stream +: DWIDTH];
-              is_time = 0;
-            end else begin
-              `WAIT_FOR_PKT_GET_INFO__UPDATE
-            end
-          end
-          @(posedge clk);
-        end
-        `WAIT_FOR_PKT_GET_INFO__UPDATE
-        @(negedge clk);
-      end
-    end
-  endtask
-
-  `undef WAIT_FOR_PKT_GET_INFO__UPDATE
 
 endinterface
 
