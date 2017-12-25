@@ -29,6 +29,7 @@ BUILD_VIVADO_IP = \
 	export GEN_EXAMPLE=$(6); \
 	export SYNTH_IP=$(SYNTH_IP); \
 	echo "BUILDER: Staging IP in build directory..."; \
+	rm -rf $(5)/$(1)/*; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) reserve; \
 	cp -rf $(4)/$(1)/* $(5)/$(1); \
 	echo "BUILDER: Retargeting IP to part $(2)/$(3)..."; \
