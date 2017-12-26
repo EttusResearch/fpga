@@ -670,7 +670,7 @@ module n310_core #(
       .debug()
    );
 
-  /////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////
   //
   // Radios
   //
@@ -679,7 +679,18 @@ module n310_core #(
 
   localparam FIRST_RADIO_CORE_INST = 1;
   localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
-  localparam RADIO_STR_FIFO_SIZE = 8'd11;
+
+  // We need enough input buffering for 2 MTU sized packets.
+  // Regardless of the sample rate the radio consumes data at a max
+  // rate of 153.6MS/s so we need a decent amount of buffering at the input.
+  // With 2k samples we have 13us.
+  localparam RADIO_INPUT_BUFF_SIZE   = 8'd11;
+  // The radio needs a larger output buffer compared to other blocks because it is a finite
+  // rate producer i.e. the input is not backpressured.
+  // Here, we allocate enough room from 2 MTU sized packets. This buffer serves as a
+  // packet gate so we need room for an additional packet if the first one is held due to
+  // contention on the crossbar. Any additional buffering will be largely a waste.
+  localparam RADIO_OUTPUT_BUFF_SIZE  = 8'd11;
 
   //------------------------------------
   // Radios
@@ -712,8 +723,8 @@ module n310_core #(
       noc_block_radio_core #(
         .NOC_ID(64'h12AD_1000_0000_0310),
         .NUM_CHANNELS(NUM_CHANNELS),
-        .STR_SINK_FIFOSIZE({NUM_CHANNELS{RADIO_STR_FIFO_SIZE}}),
-        .MTU(13)
+        .STR_SINK_FIFOSIZE({NUM_CHANNELS{RADIO_INPUT_BUFF_SIZE}}),
+        .MTU(RADIO_OUTPUT_BUFF_SIZE)
       ) noc_block_radio_core_i (
         // Clocks and reset
         .bus_clk(bus_clk),

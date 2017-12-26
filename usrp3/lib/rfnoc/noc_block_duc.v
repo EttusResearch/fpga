@@ -4,7 +4,8 @@
 
 module noc_block_duc #(
   parameter NOC_ID            = 64'hD0C0_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 12,
+  parameter STR_SINK_FIFOSIZE = 11,     //Log2 of input buffer size in 8-byte words (must hold at least 2 MTU packets)
+  parameter MTU               = 10,     //Log2 of output buffer size in 8-byte words (must hold at least 1 MTU packet)
   parameter NUM_CHAINS        = 1,
   parameter COMPAT_NUM_MAJOR  = 32'h1,
   parameter COMPAT_NUM_MINOR  = 32'h0,
@@ -132,7 +133,7 @@ module noc_block_duc #(
 
       axi_wrapper #(
         .SIMPLE_MODE(0),
-        .MTU(12)) // Increased MTU until cordic_timed bubble is fixed
+        .MTU(MTU + 1)) // TODO: Increased MTU until cordic_timed bubble is fixed
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),

@@ -5,7 +5,7 @@
 module noc_block_axi_dma_fifo #(
   parameter NOC_ID = 64'hF1F0_D000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,             //Input buffering to tolerate DMA (usually DRAM) latency variation
-  parameter MTU = 12,                           //Log2 of maximum packet length
+  parameter MTU = 10,                           //Log2 of maximum packet size (in 8-byte words)
   parameter NUM_FIFOS = 1,                      //Number of FIFOs that share the AXI4 memory space (max 4)
   parameter BUS_CLK_RATE = 32'd166666666,       //Used to calc BIST. Default BUS_CLK_RATE matches x300 design (166.67e6)
   parameter [NUM_FIFOS*30-1:0] DEFAULT_FIFO_BASE = {NUM_FIFOS{30'h00000000}}, //Default base addr for each FIFO (configurable via setting reg)

@@ -544,7 +544,17 @@ module x300_core (
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
-   localparam RADIO_STR_FIFO_SIZE = 8'd12;
+
+   // We need enough input buffering for 4 MTU sized packets.
+   // Regardless of the sample rate the radio consumes data at 200MS/s so we need a 
+   // decent amount of buffering at the input. With 4k samples we have 20us.
+   localparam RADIO_INPUT_BUFF_SIZE  = 8'd12;
+   // The radio needs a larger output buffer compared to other blocks because it is a finite
+   // rate producer i.e. the input is not backpressured. 
+   // Here, we allocate enough room from 2 MTU sized packets. This buffer serves as a 
+   // packet gate so we need room for an additional packet if the first one is held due to
+   // contention on the crossbar. Any additional buffering will be largely a waste.
+   localparam RADIO_OUTPUT_BUFF_SIZE = 8'd11;
 
    // Daughter board I/O
    wire [31:0] leds[0:3];
@@ -574,8 +584,8 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
-      .MTU(13)
+      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .MTU(RADIO_OUTPUT_BUFF_SIZE)
    ) noc_block_radio_core_i0 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -606,8 +616,8 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
-      .MTU(13)
+      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .MTU(RADIO_OUTPUT_BUFF_SIZE)
    ) noc_block_radio_core_i1 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),

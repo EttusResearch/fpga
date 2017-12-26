@@ -4,7 +4,8 @@
 
 module noc_block_ddc #(
   parameter NOC_ID            = 64'hDDC0_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 12,
+  parameter STR_SINK_FIFOSIZE = 11,     //Log2 of input buffer size in 8-byte words (must hold at least 2 MTU packets)
+  parameter MTU               = 10,     //Log2 of output buffer size in 8-byte words (must hold at least 1 MTU packet)
   parameter NUM_CHAINS        = 2,
   parameter COMPAT_NUM_MAJOR  = 32'h1,
   parameter COMPAT_NUM_MINOR  = 32'h0,
@@ -133,7 +134,7 @@ module noc_block_ddc #(
       wire        set_has_time_int = set_has_time[i];
 
       axi_wrapper #(
-        .SIMPLE_MODE(0))
+        .SIMPLE_MODE(0), .MTU(MTU))
       axi_wrapper (
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),

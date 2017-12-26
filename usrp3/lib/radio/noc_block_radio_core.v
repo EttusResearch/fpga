@@ -5,9 +5,9 @@
 
 module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
-  parameter MTU = 11,
   parameter NUM_CHANNELS = 1,
-  parameter STR_SINK_FIFOSIZE = {NUM_CHANNELS{8'd11}}
+  parameter STR_SINK_FIFOSIZE = {NUM_CHANNELS{8'd11}},
+  parameter MTU = 10                            //Log2 of maximum packet size (in 8-byte words)
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
