@@ -356,9 +356,6 @@ module x300_core (
    wire [0:0]  s00_axi_ruser, s01_axi_ruser;
 
    axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_bd_i (
-      .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
-      .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
-      //
       .S00_AXI_ACLK(ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S00_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
       .S00_AXI_AWID(s00_axi_awid), // input [0 : 0] S00_AXI_AWID
