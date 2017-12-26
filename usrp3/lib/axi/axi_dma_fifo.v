@@ -111,7 +111,7 @@ module axi_dma_fifo
    // We are only solving for width 64bits here, since it's our standard CHDR quanta
    //
    localparam DWIDTH = 64;
-   localparam AWIDTH = 30;
+   localparam AWIDTH = 30;  //Can address 1GiB of memory
 
    //
    // Settings and Readback
@@ -147,7 +147,7 @@ module axi_dma_fifo
    setting_reg #(.my_addr(SR_BASE + 0), .awidth(8), .width(3), .at_reset(3'b000)) sr_readback
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(rb_addr));
+      .out(rb_addr), .changed());
 
    // SETTING: FIFO Control Register
    // Fields:
@@ -159,7 +159,7 @@ module axi_dma_fifo
    setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(32), .at_reset({16'h0, DEFAULT_TIMEOUT[11:0], 2'b00, 1'b0, 1'b1})) sr_fifo_ctrl
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_bclk}));
+      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_bclk}), .changed());
 
    // SETTING: Base Address for FIFO in memory space
    // Fields:
@@ -167,7 +167,7 @@ module axi_dma_fifo
    setting_reg #(.my_addr(SR_BASE + 2), .awidth(8), .width(AWIDTH), .at_reset(DEFAULT_BASE)) sr_fifo_base_addr
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(fifo_base_addr_bclk));
+      .out(fifo_base_addr_bclk), .changed());
 
    // SETTING: Address Mask for FIFO in memory space. The mask is ANDed with the base address to define
    //          a unique address for this FIFO. A zero in the mask signifies that the DRAM FIFO can
@@ -177,7 +177,7 @@ module axi_dma_fifo
    setting_reg #(.my_addr(SR_BASE + 3), .awidth(8), .width(AWIDTH), .at_reset(DEFAULT_MASK)) sr_fifo_addr_mask
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out(fifo_addr_mask_bclk));
+      .out(fifo_addr_mask_bclk), .changed());
 
    always @(*) begin
       case(rb_addr)
@@ -221,13 +221,13 @@ module axi_dma_fifo
    //
    // Input side declarations
    //
-   localparam INPUT_IDLE = 0;
-   localparam INPUT1 = 1;
-   localparam INPUT2 = 2;
-   localparam INPUT3 = 3;   
-   localparam INPUT4 = 4;
-   localparam INPUT5 = 5;
-   localparam INPUT6 = 6;
+   localparam [2:0] INPUT_IDLE = 0;
+   localparam [2:0] INPUT1 = 1;
+   localparam [2:0] INPUT2 = 2;
+   localparam [2:0] INPUT3 = 3;   
+   localparam [2:0] INPUT4 = 4;
+   localparam [2:0] INPUT5 = 5;
+   localparam [2:0] INPUT6 = 6;
 
    reg [2:0]   input_state;
    reg         input_timeout_triggered;
@@ -236,22 +236,20 @@ module axi_dma_fifo
    reg [AWIDTH-1:0]  write_addr;
    reg         write_ctrl_valid;
    wire        write_ctrl_ready;
-   reg [7:0]   write_count;
+   reg [7:0]   write_count = 8'd0;
+   reg [8:0]   write_count_plus_one = 9'd1;  // Maintain a +1 version to break critical timing paths
    reg         update_write;
-   wire [63:0] write_data;
-   wire        write_data_valid;
-   wire        write_data_ready;
-   
+
    //
    // Output side declarations
    //
-   localparam OUTPUT_IDLE = 0;
-   localparam OUTPUT1 = 1;
-   localparam OUTPUT2 = 2;
-   localparam OUTPUT3 = 3;   
-   localparam OUTPUT4 = 4;
-   localparam OUTPUT5 = 5;
-   localparam OUTPUT6 = 6;
+   localparam [2:0] OUTPUT_IDLE = 0;
+   localparam [2:0] OUTPUT1 = 1;
+   localparam [2:0] OUTPUT2 = 2;
+   localparam [2:0] OUTPUT3 = 3;   
+   localparam [2:0] OUTPUT4 = 4;
+   localparam [2:0] OUTPUT5 = 5;
+   localparam [2:0] OUTPUT6 = 6;
 
    reg [2:0]   output_state;
    reg         output_timeout_triggered;
@@ -260,15 +258,13 @@ module axi_dma_fifo
    reg [AWIDTH-1:0]  read_addr;
    reg         read_ctrl_valid;
    wire        read_ctrl_ready;
-   reg [7:0]   read_count; 
+   reg [7:0]   read_count = 8'd0; 
+   reg [8:0]   read_count_plus_one = 9'd1;  // Maintain a +1 version to break critical timing paths
    reg         update_read;
-   wire [63:0] read_data;
-   wire        read_data_valid;
-   wire        read_data_ready;
    
    // Track main FIFO active size.
-   reg [AWIDTH-3:0] space, occupied;
-   wire [11:0]    input_page_boundry, output_page_boundry;
+   reg [AWIDTH-3:0] space, occupied, occupied_minus_one;  // Maintain a -1 version to break critical timing paths
+   reg [AWIDTH-3:0] input_page_boundry, output_page_boundry;  // Cache in a register to break critical timing paths
 
    // Assign FIFO status bits
    wire [71:0] status_out_bclk;
@@ -279,9 +275,9 @@ module axi_dma_fifo
       .rd_clk(bus_clk), .dout(status_out_bclk),
       .rd_en(1'b1), .empty(), .rd_data_count()
    );
-   assign rb_fifo_status[31]         = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
-   assign rb_fifo_status[30:27]      = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
-   assign rb_fifo_status[AWIDTH-4:0] = status_out_bclk[AWIDTH-4:0];   //FIFO fullness count in 64bit words (max 27 bits = 1GiB)
+   assign rb_fifo_status[31]    = 1'b1;   //DRAM FIFO signature (validates existence of DRAM FIFO)
+   assign rb_fifo_status[30:27] = {o_tvalid, o_tready, i_tvalid, i_tready};   //Ready valid flags
+   assign rb_fifo_status[26:0]  = status_out_bclk[26:0];   //FIFO fullness count in 64bit words (max 27 bits = 1GiB)
 
    ///////////////////////////////////////////////////////////////////////////////
    // Inline BIST for production testing
@@ -628,15 +624,15 @@ module axi_dma_fifo
    //
    always @(posedge dram_clk)
       if (dram_reset | clear) begin
-         input_timeout_count <= 0;
+         input_timeout_count <= 9'd0;
          input_timeout_triggered <= 1'b0;
       end else if (input_timeout_reset) begin
-         input_timeout_count <= 0;
+         input_timeout_count <= 9'd0;
          input_timeout_triggered <= 1'b0;
-     end else if (input_timeout_count == set_timeout) begin
+     end else if (input_timeout_count == set_timeout[8:0]) begin
          input_timeout_triggered <= 1'b1;
      end else if (input_state == INPUT_IDLE) begin
-         input_timeout_count <= input_timeout_count + (occupied_input != 0);
+         input_timeout_count <= input_timeout_count + ((occupied_input != 16'd0) ? 9'd1 : 9'd0);
      end
 
    //
@@ -651,7 +647,8 @@ module axi_dma_fifo
          write_addr <= set_fifo_base_addr & set_fifo_addr_mask;
          input_timeout_reset <= 1'b0;
          write_ctrl_valid <= 1'b0;
-         write_count <= 8'd0; 
+         write_count <= 8'd0;
+         write_count_plus_one <= 9'd1;
          update_write <= 1'b0;
       end else
          case (input_state)
@@ -667,13 +664,19 @@ module axi_dma_fifo
          INPUT_IDLE: begin
             write_ctrl_valid <= 1'b0;
             update_write <= 1'b0;
-            if (space > 255) begin // Space in the DRAM FIFO
-               if (occupied_input > 255) begin  // 256 or more entrys in input FIFO
+            if (space[AWIDTH-3:8] != 'd0) begin // (space > 255): Space in the DRAM FIFO
+               if (occupied_input[15:8] != 'd0) begin  // (occupied_input > 255): 256 or more entries in input FIFO
                   input_state <= INPUT1;
                   input_timeout_reset <= 1'b1;
+                  // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
+                  // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
+                  input_page_boundry <= {write_addr[AWIDTH-1:12],9'h1ff} - write_addr[AWIDTH-1:3];   
                end else if (input_timeout_triggered) begin // input FIFO timeout waiting for new data.
                   input_state <= INPUT2;
                   input_timeout_reset <= 1'b1;
+                  // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
+                  // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
+                  input_page_boundry <= {write_addr[AWIDTH-1:12],9'h1ff} - write_addr[AWIDTH-1:3];   
                end else begin
                   input_timeout_reset <= 1'b0;
                   input_state <= INPUT_IDLE;
@@ -691,7 +694,9 @@ module axi_dma_fifo
          // 2) 256.
          //
          INPUT1: begin
-            write_count <= (input_page_boundry < 255) ? input_page_boundry[7:0] : 8'd255;
+            // Replicated write logic to break a read timing critical path for write_count
+            write_count <= (input_page_boundry[11:8] == 4'd0) ? input_page_boundry[7:0] : 8'd255;
+            write_count_plus_one <= (input_page_boundry[11:8] == 4'd0) ? ({1'b0,input_page_boundry[7:0]} + 9'd1) : 9'd256;
             write_ctrl_valid <= 1'b1;
             if (write_ctrl_ready)
                input_state <= INPUT4; // Pre-emptive ACK
@@ -706,7 +711,9 @@ module axi_dma_fifo
          // 2) Entries in input FIFO
          //
          INPUT2: begin
-            write_count <= (input_page_boundry < ({3'h0,occupied_input[8:0]} - 12'd1)) ? input_page_boundry[7:0] : (occupied_input[8:0] - 7'd1);
+            // Replicated write logic to break a read timing critical path for write_count
+            write_count <= (input_page_boundry < ({3'h0,occupied_input[8:0]} - 12'd1)) ? input_page_boundry[7:0] : (occupied_input[8:0] - 9'd1);
+            write_count_plus_one <= (input_page_boundry < ({3'h0,occupied_input[8:0]} - 12'd1)) ? ({1'b0,input_page_boundry[7:0]} + 9'd1) : occupied_input[8:0];
             write_ctrl_valid <= 1'b1;
             if (write_ctrl_ready)
                input_state <= INPUT4; // Pre-emptive ACK
@@ -747,7 +754,7 @@ module axi_dma_fifo
          INPUT5: begin
             write_ctrl_valid <= 1'b0;
             if (write_ctrl_ready) begin
-               write_addr <= ((write_addr + ((write_count + 1) << 3)) & set_fifo_addr_mask_bar) | (write_addr & set_fifo_addr_mask);
+               write_addr <= ((write_addr + (write_count_plus_one << 3)) & set_fifo_addr_mask_bar) | (write_addr & set_fifo_addr_mask);
                input_state <= INPUT6;
                update_write <= 1'b1;
             end else begin
@@ -773,15 +780,15 @@ module axi_dma_fifo
    //
    always @(posedge dram_clk)
       if (dram_reset | clear) begin
-         output_timeout_count <= 0;
+         output_timeout_count <= 9'd0;
          output_timeout_triggered <= 1'b0;
       end else if (output_timeout_reset) begin
-         output_timeout_count <= 0;
+         output_timeout_count <= 9'd0;
          output_timeout_triggered <= 1'b0;
-      end else if (output_timeout_count == set_timeout) begin
+      end else if (output_timeout_count == set_timeout[8:0]) begin
          output_timeout_triggered <= 1'b1;
       end else if (output_state == OUTPUT_IDLE) begin
-         output_timeout_count <= output_timeout_count + (occupied != 0);
+         output_timeout_count <= output_timeout_count + ((occupied != 'd0) ? 9'd1 : 9'd0);
      end
 
 
@@ -798,6 +805,7 @@ module axi_dma_fifo
          output_timeout_reset <= 1'b0;
          read_ctrl_valid <= 1'b0;
          read_count <= 8'd0;
+         read_count_plus_one <= 9'd1;
          update_read <= 1'b0;
       end else
          case (output_state)
@@ -813,13 +821,19 @@ module axi_dma_fifo
          OUTPUT_IDLE: begin
             read_ctrl_valid <= 1'b0;
             update_read <= 1'b0;
-            if (space_output > 255) begin // Space in the output FIFO.
-               if (occupied > 255) begin // 64 or more entrys in main FIFO
+            if (space_output[15:8] != 'd0) begin // (space_output > 255): Space in the output FIFO.
+               if (occupied[AWIDTH-3:8] != 'd0) begin // (occupied > 255): 64 or more entrys in main FIFO
                   output_state <= OUTPUT1;
                   output_timeout_reset <= 1'b1;
+                  // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
+                  // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
+                  output_page_boundry <= {read_addr[AWIDTH-1:12],9'h1ff} - read_addr[AWIDTH-1:3];
                end else if (output_timeout_triggered) begin // output FIFO timeout waiting for new data.
                   output_state <= OUTPUT2;
                   output_timeout_reset <= 1'b1;
+                  // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
+                  // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
+                  output_page_boundry <= {read_addr[AWIDTH-1:12],9'h1ff} - read_addr[AWIDTH-1:3];
                end else begin
                   output_timeout_reset <= 1'b0;
                   output_state <= OUTPUT_IDLE;
@@ -837,7 +851,9 @@ module axi_dma_fifo
          // 2) 256.
          //
          OUTPUT1: begin
-            read_count <= (output_page_boundry < 255) ? output_page_boundry : 8'd255;
+            // Replicated write logic to break a read timing critical path for read_count
+            read_count <= (output_page_boundry[11:8] == 4'd0) ? output_page_boundry[7:0] : 8'd255;
+            read_count_plus_one <= (output_page_boundry[11:8] == 4'd0) ? ({1'b0,output_page_boundry[7:0]} + 9'd1) : 9'd256;
             read_ctrl_valid <= 1'b1;
             if (read_ctrl_ready)
                output_state <= OUTPUT4; // Pre-emptive ACK
@@ -852,7 +868,9 @@ module axi_dma_fifo
          // 2) Entries in main FIFO
          //
          OUTPUT2: begin
-            read_count <= (output_page_boundry < (occupied - 1)) ? output_page_boundry : (occupied - 1);
+            // Replicated write logic to break a read timing critical path for read_count
+            read_count <= (output_page_boundry < occupied_minus_one) ? output_page_boundry[7:0] : occupied_minus_one[7:0];
+            read_count_plus_one <= (output_page_boundry < occupied_minus_one) ? ({1'b0,output_page_boundry[7:0]} + 9'd1) : {1'b0, occupied[7:0]};
             read_ctrl_valid <= 1'b1;
             if (read_ctrl_ready)
                output_state <= OUTPUT4; // Pre-emptive ACK
@@ -893,7 +911,7 @@ module axi_dma_fifo
          OUTPUT5: begin
             read_ctrl_valid <= 1'b0;
             if (read_ctrl_ready) begin
-               read_addr <= ((read_addr + ((read_count + 1) << 3)) & set_fifo_addr_mask_bar) | (read_addr & set_fifo_addr_mask);
+               read_addr <= ((read_addr + (read_count_plus_one << 3)) & set_fifo_addr_mask_bar) | (read_addr & set_fifo_addr_mask);
                output_state <= OUTPUT6;
                update_read <= 1'b1;
             end else begin
@@ -914,27 +932,23 @@ module axi_dma_fifo
        endcase // case(output_state)
 
    //
-   // Calculate number of entries remaining until next 4KB page boundry is crossed minus 1.
-   // Note, units of calculation are 64bit wide words. Address is always 64bit alligned.
-   //
-   assign input_page_boundry = {write_addr[AWIDTH-1:12],9'h1ff} - write_addr[AWIDTH-1:3];   
-   assign output_page_boundry = {read_addr[AWIDTH-1:12],9'h1ff} - read_addr[AWIDTH-1:3];
-   
-   //
    // Count number of used entries in main DRAM FIFO.
    // Note that this is expressed in units of 64bit wide words.
    //
    always @(posedge dram_clk)
-      if (dram_reset | clear)
-         occupied <= 0;
-      else
-         occupied <= occupied + (update_write ? write_count + 1 : 0) - (update_read ? read_count + 1 : 0);
-   
+      if (dram_reset | clear) begin
+         occupied <= 'd0;
+         occupied_minus_one <= {(AWIDTH-2){1'b1}};
+      end else begin
+         occupied <= occupied + (update_write ? write_count_plus_one : 9'd0) - (update_read ? read_count_plus_one : 9'd0);
+         occupied_minus_one <= occupied_minus_one + (update_write ? write_count_plus_one : 9'd0) - (update_read ? read_count_plus_one : 9'd0);
+      end
+
    always @(posedge dram_clk)
       if (dram_reset | clear)
          space <= set_fifo_addr_mask_bar[AWIDTH-1:3] & ~('d63); // Subtract 64 from space to make allowance for read/write reordering in DRAM controller
       else
-         space <= space - (update_write ? write_count + 1 : 0) + (update_read ? read_count + 1 : 0);
+         space <= space - (update_write ? write_count_plus_one : 9'd0) + (update_read ? read_count_plus_one : 9'd0);
 
    //
    // Instamce of axi_dma_master
@@ -963,13 +977,13 @@ module axi_dma_fifo
       .m_axi_wlast(m_axi_wlast), // input m_axi_wlast
       .m_axi_wvalid(m_axi_wvalid), // input m_axi_wvalid
       .m_axi_wready(m_axi_wready), // output m_axi_wready
-      .m_axi_wuser(),
+      .m_axi_wuser(m_axi_wuser),
       // Write Response
       .m_axi_bid(m_axi_bid), // output [0 : 0] m_axi_bid
       .m_axi_bresp(m_axi_bresp), // output [1 : 0] m_axi_bresp
       .m_axi_bvalid(m_axi_bvalid), // output m_axi_bvalid
       .m_axi_bready(m_axi_bready), // input m_axi_bready
-      .m_axi_buser(),
+      .m_axi_buser(m_axi_buser),
       // Read Control
       .m_axi_arid(m_axi_arid), // input [0 : 0] m_axi_arid
       .m_axi_araddr(m_axi_araddr), // input [31 : 0] m_axi_araddr
@@ -991,7 +1005,7 @@ module axi_dma_fifo
       .m_axi_rlast(m_axi_rlast), // output m_axi_rlast
       .m_axi_rvalid(m_axi_rvalid), // output m_axi_rvalid
       .m_axi_rready(m_axi_rready), // input m_axi_rready
-      .m_axi_ruser(),
+      .m_axi_ruser(m_axi_ruser),
       //
       // DMA interface for Write transaction
       //

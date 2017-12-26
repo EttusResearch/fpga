@@ -153,6 +153,8 @@ module dram_fifo_tb();
       `ASSERT_ERROR(pkt_out.payload.size()==20, s);
       i = 0;
       repeat (20) begin
+        $sformat(s, "Bad packet: Wrong payload. Index: %d, Expected: %08x, Actual: %08x",
+          i,(i * 64'h100),pkt_out.payload[i]);
         `ASSERT_ERROR(pkt_out.payload[i]==(i * 64'h100), s);
       end
     `TEST_CASE_DONE(1);
