@@ -139,7 +139,7 @@ module axil_regport_master #(
      end
   end
 
-   axi_fifo_2clk #( .WIDTH(DWIDTH/8 + AWIDTH + DWIDTH)) wr_fifo_2clk_i (
+   axi_fifo_2clk #( .WIDTH(DWIDTH/8 + AWIDTH + DWIDTH), .SIZE(0) ) wr_fifo_2clk_i (
       .reset(~s_axi_aresetn), .i_aclk(s_axi_aclk),
       .i_tdata({s_axi_wstrb, wr_addr_cache, s_axi_wdata}),
       .i_tvalid(wr_fifo_valid), .i_tready(wr_fifo_ready),
@@ -204,7 +204,7 @@ module axil_regport_master #(
       end
    end
 
-   axi_fifo_2clk #( .WIDTH(AWIDTH)) readreq_fifo_2clk_i (
+   axi_fifo_2clk #( .WIDTH(AWIDTH), .SIZE(0) ) readreq_fifo_2clk_i (
       .reset(~s_axi_aresetn), .i_aclk(s_axi_aclk),
       .i_tdata({rd_addr_rel[AWIDTH-1:ADDR_LSB], {ADDR_LSB{1'b0}}}),
       .i_tvalid(s_axi_arready && s_axi_arvalid), .i_tready(rdreq_fifo_ready),
@@ -213,7 +213,7 @@ module axil_regport_master #(
       .o_tvalid(reg_rd_req), .o_tready(1'b1)
    );
 
-   axi_fifo_2clk #( .WIDTH(DWIDTH)) rdresp_fifo_2clk_i (
+   axi_fifo_2clk #( .WIDTH(DWIDTH), .SIZE(0) ) rdresp_fifo_2clk_i (
       .reset(~s_axi_aresetn), .i_aclk(reg_clk),
       .i_tdata(reg_rd_data),
       .i_tvalid(reg_rd_resp), .i_tready(/* lossy */),
