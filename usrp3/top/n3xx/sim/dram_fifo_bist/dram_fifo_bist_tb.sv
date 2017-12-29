@@ -80,6 +80,7 @@ module dram_fifo_bist_tb();
   //Testbench variables
   cvita_hdr_t   header;
   cvita_pkt_t   pkt_out;
+  integer i;
   integer single_run_time;
   integer xfer_cnt, cyc_cnt;
 
@@ -123,6 +124,12 @@ module dram_fifo_bist_tb();
     $sformat(s, "Bad packet: Wrong SID. Expected: %08x, Actual: %08x",
       {header.src_sid,header.dst_sid},{pkt_out.hdr.src_sid,pkt_out.hdr.dst_sid});
     `ASSERT_ERROR({header.src_sid,header.dst_sid}=={pkt_out.hdr.src_sid,pkt_out.hdr.dst_sid}, s);
+    i = 0;
+    repeat (100) begin
+      $sformat(s, "Bad packet: Wrong payload. Index: %d, Expected: %08x, Actual: %08x",
+        i,(i * 64'h100),pkt_out.payload[i]);
+      `ASSERT_ERROR(pkt_out.payload[i]==(i * 64'h100), s);
+    end
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Setup BIST: 10 x 40byte packets");

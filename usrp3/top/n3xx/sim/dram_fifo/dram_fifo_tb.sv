@@ -20,7 +20,7 @@ module dram_fifo_tb();
   // Define all clocks and resets
   `DEFINE_DIFF_CLK(sys_clk_p, sys_clk_n, 10, 50)  //100MHz differential sys_clk to generate DDR3 clocking
   `DEFINE_CLK(bus_clk, 1000/200, 50)              //200MHz bus_clk
-  `DEFINE_CLK(dma_engine_clk, 1000/300, 50)       //300MHz dma_engine_clk
+  `DEFINE_CLK(dma_engine_clk, 1000.0/305.0, 50)   //305MHz dma_engine_clk
   `DEFINE_RESET(bus_rst, 0, 100)                  //100ns for GSR to deassert
   `DEFINE_RESET_N(sys_rst_n, 0, 100)              //100ns for GSR to deassert
 
@@ -126,6 +126,8 @@ module dram_fifo_tb();
       `ASSERT_ERROR(pkt_out.payload.size()==20, s);
       i = 0;
       repeat (20) begin
+        $sformat(s, "Bad packet: Wrong payload. Index: %d, Expected: %08x, Actual: %08x",
+          i,(i * 64'h100),pkt_out.payload[i]);
         `ASSERT_ERROR(pkt_out.payload[i]==(i * 64'h100), s);
       end
     `TEST_CASE_DONE(1);
@@ -143,6 +145,12 @@ module dram_fifo_tb();
             chdr_o.pull_pkt(pkt_out);
             $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",20,pkt_out.payload.size());
             `ASSERT_ERROR(pkt_out.payload.size()==20, s);
+            i = 0;
+            repeat (20) begin
+              $sformat(s, "Bad packet: Wrong payload. Index: %d, Expected: %08x, Actual: %08x",
+                i,(i * 64'h100),pkt_out.payload[i]);
+              `ASSERT_ERROR(pkt_out.payload[i]==(i * 64'h100), s);
+            end
           end
         end
       join
