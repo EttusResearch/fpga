@@ -136,11 +136,12 @@ def parse_args():
 class VivadoRunner(object):
     " Vivado Runner "
     colors = {
-        'warning': '\033[0;34m',
-        'critical warning': '\033[35m',
+        'warning': '\033[0;35m',
+        'critical warning': '\033[33m',
         'error': '\033[1;31m',
         'fatal': '\033[1;31m',
         'task': '\033[32m',
+        'cmd': '\033[34m',
         'normal': '\033[0m',
     }
     # Black       0;30     Dark Gray     1;30
@@ -162,6 +163,13 @@ class VivadoRunner(object):
         self.msg_counters = {}
         self.fatal_error_found = False
         self.line_types = {
+            'cmd': {
+                'regexes': [
+                    '^Command: .+',
+                ],
+                'action': self.show_cmd,
+                'id': "Command",
+            },
             'task': {
                 'regexes': [
                     '^Starting .* Task',
@@ -389,6 +397,14 @@ class VivadoRunner(object):
         elif not list_search(self.line_types[msg_type].get('ignore', []), msg):
             self.add_notification(msg, color=self.colors.get(msg_type))
         self.msg_counters[msg_type] = self.msg_counters.get(msg_type, 0) + 1
+
+    def show_cmd(self, cmd):
+        " Show the current command "
+        cmd = cmd.replace("Command:", "").strip()
+        sys.stdout.write("\n")
+        self.add_notification("Running Vivado command: " + cmd,
+                              add_time=True, color=self.colors.get("cmd"))
+        self.flush_notification_queue(len(self.status))
 
     def update_task(self, task):
         " Update current task "
