@@ -1696,7 +1696,7 @@ module n310
     .axi_dma_tstvec()
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_tx_0_fifo_2clk_i (
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_tx_0_fifo_2clk_i (
     .reset(clk40_rst),
     .i_aclk(clk40),
     .i_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
@@ -1708,7 +1708,7 @@ module n310
     .o_tready(arm_eth0_tx_tready_b)
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_rx_0_fifo_2clk_i (
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_rx_0_fifo_2clk_i (
     .reset(bus_rst),
     .i_aclk(bus_clk),
     .i_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
@@ -1934,7 +1934,7 @@ module n310
     .axi_dma_tstvec()
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_tx_1_fifo_2clk_i (
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_tx_1_fifo_2clk_i (
     .reset(clk40_rst),
     .i_aclk(clk40),
     .i_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
@@ -1946,7 +1946,7 @@ module n310
     .o_tready(arm_eth1_tx_tready_b)
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(9)) eth_rx_1_fifo_2clk_i (
+  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_rx_1_fifo_2clk_i (
     .reset(bus_rst),
     .i_aclk(bus_clk),
     .i_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
