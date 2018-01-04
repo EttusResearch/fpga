@@ -41,11 +41,11 @@
 --
 --
 -- BUMPING THE REVISION:
--- In PkgSetup the kRevisionCode and kOldestCompatCode are defined. Whenever a change
--- is made to the CPLD, no matter how small, bump the kRevisionCode value. If this change
--- breaks compatibility with current HW or SW drivers, make the kOldestCompatCode match
--- the current kRevisionCode. Similarly, there is a constant to define the build code,
--- kBuildCode. Currently this is simply the year, month, day, and hour the CPLD is
+-- In PkgSetup the kMinorRev and kMajorRev are defined. Whenever a change
+-- is made to the CPLD, no matter how small, bump the kMinorRev value. If this change
+-- breaks compatibility with current HW or SW drivers, increment the kMajorRev value
+-- and reset the kMinorRev to zero. Similarly, there is a constant to define the build
+-- code, kBuildCode. Currently this is simply the year, month, day, and hour the CPLD is
 -- built, but could be user-definable.
 --
 --
@@ -412,8 +412,8 @@ begin
     sPsMisoBuffer <= (others => '0');
     case to_integer(sPsRegAddr) is
       when kSignatureReg       => sPsMisoBuffer(kDataWidth-1 downto 0) <= kSignature;
-      when kRevisionReg        => sPsMisoBuffer(kDataWidth-1 downto 0) <= kRevisionCode;
-      when kOldestCompatRev    => sPsMisoBuffer(kDataWidth-1 downto 0) <= kOldestCompatCode;
+      when kMinorRevReg        => sPsMisoBuffer(kDataWidth-1 downto 0) <= kMinorRev;
+      when kMajorRevReg        => sPsMisoBuffer(kDataWidth-1 downto 0) <= kMajorRev;
       when kBuildCodeLSB       => sPsMisoBuffer(kDataWidth-1 downto 0) <= kBuildCode(15 downto 0);
       when kBuildCodeMSB       => sPsMisoBuffer(kDataWidth-1 downto 0) <= kBuildCode(31 downto 16);
       when kScratch            => sPsMisoBuffer(kDataWidth-1 downto 0) <= sScratchVal;
@@ -762,31 +762,31 @@ end RTL;
 --      </bitfield>
 --    </register>
 --
---    <register name="RevisionReg" size="16" offset="0x01" attributes="Readable">
+--    <register name="MinorRevReg" size="16" offset="0x01" attributes="Readable">
 --      <info>
 --        This register contains the device revision numeric code.
 --      </info>
---      <bitfield name="CpldRevision" range="15..0">
+--      <bitfield name="CpldMinorRevision" range="15..0">
 --        <info>
---          Contains revision code (0,1,2,...).
+--          Contains minor revision code (0,1,2,...).
 --        </info>
 --      </bitfield>
 --    </register>
 --
---    <register name="OldestCompatRev" size="16" offset="0x02" attributes="Readable">
+--    <register name="MajorRevReg" size="16" offset="0x02" attributes="Readable">
 --      <info>
---        This register contains the oldest compatible revision value.
+--        This register contains the major revision value.
 --      </info>
---      <bitfield name="OldestCompat" range="15..0">
+--      <bitfield name="CpldMajorRevision" range="15..0">
 --        <info>
---          Contains oldest compatible code.
+--          Contains major revision code.
 --        </info>
 --      </bitfield>
 --    </register>
 --
 --    <register name="BuildCodeLSB" size="16" offset="0x03" attributes="Readable">
 --      <info>
---        Build code... right now it's the date it was built. LSB
+--        Build code... right now it's the date it was built. LSB in this register.
 --      </info>
 --      <bitfield name="BuildCodeHH" range="7..0">
 --        <info>
@@ -802,7 +802,7 @@ end RTL;
 --
 --    <register name="BuildCodeMSB" size="16" offset="0x04" attributes="Readable">
 --      <info>
---        Build code... right now it's the date it was built. MSB
+--        Build code... right now it's the date it was built. MSB in this register.
 --      </info>
 --      <bitfield name="BuildCodeMM" range="7..0">
 --        <info>

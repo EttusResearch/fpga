@@ -40,10 +40,10 @@ package PkgSetup is
 
   -- UPDATE THESE REVISIONS when making changes to the CPLD -----------------------------
   -- ------------------------------------------------------------------------------------
-  constant kRevisionCode     : InterfaceData_t := std_logic_vector(to_unsigned(5,kDataWidth));
-  constant kOldestCompatCode : InterfaceData_t := std_logic_vector(to_unsigned(4,kDataWidth));
+  constant kMinorRev  : InterfaceData_t := std_logic_vector(to_unsigned(0,kDataWidth));
+  constant kMajorRev  : InterfaceData_t := std_logic_vector(to_unsigned(5,kDataWidth));
   -- Currently just the timestamp of the build time/date:  yymmddhh
-  constant kBuildCode : std_logic_vector(31 downto 0) := X"17121115";
+  constant kBuildCode : std_logic_vector(31 downto 0) := X"18010408";
 
 
   function kTxChDefault     return InterfaceData_t;

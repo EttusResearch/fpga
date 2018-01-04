@@ -467,7 +467,7 @@
       <h1 class="regmap">MgCpld</h1>    
     <p>The top is defined in HDL source file TopCpld.vhd.</p>      
       <div class="group"><a name="P5 Content"></a><h2 class="group">P5 Content</h2>        <div class="register"><h3 class="register">Register map supplied for open-source projects</h3>
-                    <i><BR/><BR/>"All content provided is Copyright 2017 National Instruments Corporation.
+                    <i><BR/><BR/>"All content provided is Copyright 2018 National Instruments Corporation.
         For information on NI trademark guidelines, please see <a href="http://www.ni.com/legal/trademarks/">http://www.ni.com/legal/trademarks/</a>. For the NI Patent Notice, please see <a href="http://www.ni.com/legal/patents/">http://www.ni.com/legal/patents/</a>."
                     </i></div><BR/>      
       </div>    
@@ -520,16 +520,16 @@
           </table>        
         </div>        
         <div class="register">
-          <a name="MgCpld|RevisionReg"></a>          
-          <h3 class="register">Offset 0x0001: RevisionReg Register (R)</h3>
+          <a name="MgCpld|MinorRevReg"></a>          
+          <h3 class="register">Offset 0x0001: MinorRevReg Register (R)</h3>
           </h3>          
-          <a class="sh_addrs" href="javascript:sa('MgCpld|RevisionReg_in')">(<span id="show_MgCpld|RevisionReg_in">show</span> extended info)</a>
-          <div class="sh_addrs" id="div_MgCpld|RevisionReg_in">            
+          <a class="sh_addrs" href="javascript:sa('MgCpld|MinorRevReg_in')">(<span id="show_MgCpld|MinorRevReg_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|MinorRevReg_in">            
             <table class="extended_info">              
               <tr>                
                 <td class="outercell" rowspan="1">                  
                   <table border="0" cellspacing="0" cellpadding="0">
-                    <tr><td class="offset_info" align="right">RevisionReg</td></tr>
+                    <tr><td class="offset_info" align="right">MinorRevReg</td></tr>
                     <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0001</td></tr>
                   </table>                
                 </td>              
@@ -547,23 +547,23 @@
             <tr  valign="top">
               <td class="bits">15..0</td>
               <td>
-                <p><span class="name"><a name="MgCpld|RevisionReg|CpldRevision"></a>CpldRevision</span><span class="attr"> </span></p>
-                <p>Contains revision code (0,1,2,...).</p>            
+                <p><span class="name"><a name="MgCpld|MinorRevReg|CpldMinorRevision"></a>CpldMinorRevision</span><span class="attr"> </span></p>
+                <p>Contains minor revision code (0,1,2,...).</p>            
               </td>
             </tr>          
           </table>        
         </div>        
         <div class="register">
-          <a name="MgCpld|OldestCompatRev"></a>          
-          <h3 class="register">Offset 0x0002: OldestCompatRev Register (R)</h3>
+          <a name="MgCpld|MajorRevReg"></a>          
+          <h3 class="register">Offset 0x0002: MajorRevReg Register (R)</h3>
           </h3>          
-          <a class="sh_addrs" href="javascript:sa('MgCpld|OldestCompatRev_in')">(<span id="show_MgCpld|OldestCompatRev_in">show</span> extended info)</a>
-          <div class="sh_addrs" id="div_MgCpld|OldestCompatRev_in">            
+          <a class="sh_addrs" href="javascript:sa('MgCpld|MajorRevReg_in')">(<span id="show_MgCpld|MajorRevReg_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|MajorRevReg_in">            
             <table class="extended_info">              
               <tr>                
                 <td class="outercell" rowspan="1">                  
                   <table border="0" cellspacing="0" cellpadding="0">
-                    <tr><td class="offset_info" align="right">OldestCompatRev</td></tr>
+                    <tr><td class="offset_info" align="right">MajorRevReg</td></tr>
                     <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0002</td></tr>
                   </table>                
                 </td>              
@@ -574,15 +574,15 @@
           <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
           </div>          
           <div class="info">            
-            This register contains the oldest compatible revision value.          
+            This register contains the major revision value.          
           </div>          
           <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
             <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
             <tr  valign="top">
               <td class="bits">15..0</td>
               <td>
-                <p><span class="name"><a name="MgCpld|OldestCompatRev|OldestCompat"></a>OldestCompat</span><span class="attr"> </span></p>
-                <p>Contains oldest compatible code.</p>            
+                <p><span class="name"><a name="MgCpld|MajorRevReg|CpldMajorRevision"></a>CpldMajorRevision</span><span class="attr"> </span></p>
+                <p>Contains major revision code.</p>            
               </td>
             </tr>          
           </table>        
@@ -608,7 +608,7 @@
           <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
           </div>          
           <div class="info">            
-            Build code... right now it's the date it was built. LSB          
+            Build code... right now it's the date it was built. LSB in this register.          
           </div>          
           <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
             <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
@@ -649,7 +649,7 @@
           <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
           </div>          
           <div class="info">            
-            Build code... right now it's the date it was built. MSB          
+            Build code... right now it's the date it was built. MSB in this register.          
           </div>          
           <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
             <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            

@@ -306,9 +306,9 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to aCh2RxSw2[1]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to aCh2TxSw2[0]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to aCh2TxSw2[3]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 8MA -to aCh2TxSw2[2]
+set_global_assignment -name SEED 11
 set_global_assignment -name VHDL_FILE "P:/ASIC/nicores/CoreComponents3/CommonCores/export/1.0/1.0.0a12/CommonFiles/Packages/PkgXReg.vhd"
 set_global_assignment -name VHDL_FILE ./../PkgMgCpld.vhd
 set_global_assignment -name VHDL_FILE ./../PkgSetup.vhd
 set_global_assignment -name VHDL_FILE ./../TopCpld.vhd
 set_global_assignment -name TOP_LEVEL_ENTITY TopCpld
-set_global_assignment -name SEED 11

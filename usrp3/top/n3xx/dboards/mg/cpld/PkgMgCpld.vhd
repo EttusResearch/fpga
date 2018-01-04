@@ -26,30 +26,30 @@ package PkgMgCpld is
 -- A numerically ordered list of registers and their VHDL source files
 --===============================================================================
 
-  -- SignatureReg    : 0x0 (TopCpld.vhd)
-  -- RevisionReg     : 0x1 (TopCpld.vhd)
-  -- OldestCompatRev : 0x2 (TopCpld.vhd)
-  -- BuildCodeLSB    : 0x3 (TopCpld.vhd)
-  -- BuildCodeMSB    : 0x4 (TopCpld.vhd)
-  -- Scratch         : 0x5 (TopCpld.vhd)
-  -- CpldControl     : 0x10 (TopCpld.vhd)
-  -- LmkControl      : 0x11 (TopCpld.vhd)
-  -- LoStatus        : 0x12 (TopCpld.vhd)
-  -- MykonosControl  : 0x13 (TopCpld.vhd)
-  -- PlScratch       : 0x40 (TopCpld.vhd)
-  -- PlCpldControl   : 0x41 (TopCpld.vhd)
-  -- TxCh1_Idle      : 0x50 (TopCpld.vhd)
-  -- RxCh1_0_Idle    : 0x51 (TopCpld.vhd)
-  -- RxCh1_1_Idle    : 0x52 (TopCpld.vhd)
-  -- TxCh1_TxOn      : 0x53 (TopCpld.vhd)
-  -- RxCh1_0_RxOn    : 0x54 (TopCpld.vhd)
-  -- RxCh1_1_RxOn    : 0x55 (TopCpld.vhd)
-  -- TxCh2_Idle      : 0x60 (TopCpld.vhd)
-  -- RxCh2_0_Idle    : 0x61 (TopCpld.vhd)
-  -- RxCh2_1_Idle    : 0x62 (TopCpld.vhd)
-  -- TxCh2_TxOn      : 0x63 (TopCpld.vhd)
-  -- RxCh2_0_RxOn    : 0x64 (TopCpld.vhd)
-  -- RxCh2_1_RxOn    : 0x65 (TopCpld.vhd)
+  -- SignatureReg   : 0x0 (TopCpld.vhd)
+  -- MinorRevReg    : 0x1 (TopCpld.vhd)
+  -- MajorRevReg    : 0x2 (TopCpld.vhd)
+  -- BuildCodeLSB   : 0x3 (TopCpld.vhd)
+  -- BuildCodeMSB   : 0x4 (TopCpld.vhd)
+  -- Scratch        : 0x5 (TopCpld.vhd)
+  -- CpldControl    : 0x10 (TopCpld.vhd)
+  -- LmkControl     : 0x11 (TopCpld.vhd)
+  -- LoStatus       : 0x12 (TopCpld.vhd)
+  -- MykonosControl : 0x13 (TopCpld.vhd)
+  -- PlScratch      : 0x40 (TopCpld.vhd)
+  -- PlCpldControl  : 0x41 (TopCpld.vhd)
+  -- TxCh1_Idle     : 0x50 (TopCpld.vhd)
+  -- RxCh1_0_Idle   : 0x51 (TopCpld.vhd)
+  -- RxCh1_1_Idle   : 0x52 (TopCpld.vhd)
+  -- TxCh1_TxOn     : 0x53 (TopCpld.vhd)
+  -- RxCh1_0_RxOn   : 0x54 (TopCpld.vhd)
+  -- RxCh1_1_RxOn   : 0x55 (TopCpld.vhd)
+  -- TxCh2_Idle     : 0x60 (TopCpld.vhd)
+  -- RxCh2_0_Idle   : 0x61 (TopCpld.vhd)
+  -- RxCh2_1_Idle   : 0x62 (TopCpld.vhd)
+  -- TxCh2_TxOn     : 0x63 (TopCpld.vhd)
+  -- RxCh2_0_RxOn   : 0x64 (TopCpld.vhd)
+  -- RxCh2_1_RxOn   : 0x65 (TopCpld.vhd)
 
 --===============================================================================
 -- RegTypes
@@ -67,21 +67,21 @@ package PkgMgCpld is
   constant kProductSignatureMsb        : integer := 15;  --SignatureReg:ProductSignature
   constant kProductSignature           : integer :=  0;  --SignatureReg:ProductSignature
 
-  -- RevisionReg Register (from TopCpld.vhd)
-  constant kRevisionReg : integer := 16#1#; -- Register Offset
-  constant kRevisionRegSize: integer := 16;  -- register width in bits
-  constant kRevisionRegMask : std_logic_vector(15 downto 0) := X"ffff";
-  constant kCpldRevisionSize       : integer := 16;  --RevisionReg:CpldRevision
-  constant kCpldRevisionMsb        : integer := 15;  --RevisionReg:CpldRevision
-  constant kCpldRevision           : integer :=  0;  --RevisionReg:CpldRevision
+  -- MinorRevReg Register (from TopCpld.vhd)
+  constant kMinorRevReg : integer := 16#1#; -- Register Offset
+  constant kMinorRevRegSize: integer := 16;  -- register width in bits
+  constant kMinorRevRegMask : std_logic_vector(15 downto 0) := X"ffff";
+  constant kCpldMinorRevisionSize       : integer := 16;  --MinorRevReg:CpldMinorRevision
+  constant kCpldMinorRevisionMsb        : integer := 15;  --MinorRevReg:CpldMinorRevision
+  constant kCpldMinorRevision           : integer :=  0;  --MinorRevReg:CpldMinorRevision
 
-  -- OldestCompatRev Register (from TopCpld.vhd)
-  constant kOldestCompatRev : integer := 16#2#; -- Register Offset
-  constant kOldestCompatRevSize: integer := 16;  -- register width in bits
-  constant kOldestCompatRevMask : std_logic_vector(15 downto 0) := X"ffff";
-  constant kOldestCompatSize       : integer := 16;  --OldestCompatRev:OldestCompat
-  constant kOldestCompatMsb        : integer := 15;  --OldestCompatRev:OldestCompat
-  constant kOldestCompat           : integer :=  0;  --OldestCompatRev:OldestCompat
+  -- MajorRevReg Register (from TopCpld.vhd)
+  constant kMajorRevReg : integer := 16#2#; -- Register Offset
+  constant kMajorRevRegSize: integer := 16;  -- register width in bits
+  constant kMajorRevRegMask : std_logic_vector(15 downto 0) := X"ffff";
+  constant kCpldMajorRevisionSize       : integer := 16;  --MajorRevReg:CpldMajorRevision
+  constant kCpldMajorRevisionMsb        : integer := 15;  --MajorRevReg:CpldMajorRevision
+  constant kCpldMajorRevision           : integer :=  0;  --MajorRevReg:CpldMajorRevision
 
   -- BuildCodeLSB Register (from TopCpld.vhd)
   constant kBuildCodeLSB : integer := 16#3#; -- Register Offset
@@ -375,9 +375,9 @@ package body PkgMgCpld is
 
   -- function kSignatureRegRec not implemented because PkgXReg in this project does not support XReg2_t.
 
-  -- function kRevisionRegRec not implemented because PkgXReg in this project does not support XReg2_t.
+  -- function kMinorRevRegRec not implemented because PkgXReg in this project does not support XReg2_t.
 
-  -- function kOldestCompatRevRec not implemented because PkgXReg in this project does not support XReg2_t.
+  -- function kMajorRevRegRec not implemented because PkgXReg in this project does not support XReg2_t.
 
   -- function kBuildCodeLSBRec not implemented because PkgXReg in this project does not support XReg2_t.
 

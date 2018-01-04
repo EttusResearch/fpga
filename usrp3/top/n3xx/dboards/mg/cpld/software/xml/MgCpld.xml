@@ -26,25 +26,25 @@ Represents the product family name/number. This field reads back as
         </bitfield>
         <source name="TopCpld.vhd"/>
       </register>
-      <register name="RevisionReg" offset="0x01" readable="true" size="16" writable="false">
+      <register name="MinorRevReg" offset="0x01" readable="true" size="16" writable="false">
         <info>
 This register contains the device revision numeric code.
 </info>
-        <bitfield name="CpldRevision" range="15-0">
+        <bitfield name="CpldMinorRevision" range="15-0">
           <info>
-Contains revision code (0,1,2,...).
+Contains minor revision code (0,1,2,...).
 </info>
           <source name="TopCpld.vhd"/>
         </bitfield>
         <source name="TopCpld.vhd"/>
       </register>
-      <register name="OldestCompatRev" offset="0x02" readable="true" size="16" writable="false">
+      <register name="MajorRevReg" offset="0x02" readable="true" size="16" writable="false">
         <info>
-This register contains the oldest compatible revision value.
+This register contains the major revision value.
 </info>
-        <bitfield name="OldestCompat" range="15-0">
+        <bitfield name="CpldMajorRevision" range="15-0">
           <info>
-Contains oldest compatible code.
+Contains major revision code.
 </info>
           <source name="TopCpld.vhd"/>
         </bitfield>
@@ -52,7 +52,7 @@ Contains oldest compatible code.
       </register>
       <register name="BuildCodeLSB" offset="0x03" readable="true" size="16" writable="false">
         <info>
-Build code... right now it's the date it was built. LSB
+Build code... right now it's the date it was built. LSB in this register.
 </info>
         <bitfield name="BuildCodeHH" range="7-0">
           <info>
@@ -70,7 +70,7 @@ Contains build code day code.
       </register>
       <register name="BuildCodeMSB" offset="0x04" readable="true" size="16" writable="false">
         <info>
-Build code... right now it's the date it was built. MSB
+Build code... right now it's the date it was built. MSB in this register.
 </info>
         <bitfield name="BuildCodeMM" range="7-0">
           <info>
