@@ -38,14 +38,14 @@ IP_DIR = ../../ip
 # Include makefiles and sources for all IP components
 # *after* defining the IP_DIR
 include $(IP_DIR)/ddr3_32bit/Makefile.inc
-include $(IP_DIR)/axi_intercon_2x64_256_bd/Makefile.inc
+include $(IP_DIR)/axi_intercon_4x64_256_bd/Makefile.inc
 include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(IP_DDR3_32BIT_SRCS) \
-$(IP_AXI_INTERCON_2X64_256_SRCS) \
-$(IP_AXI_INTERCON_2X64_256_BD_SRCS) \
+$(IP_AXI_INTERCON_4X64_256_SRCS) \
+$(IP_AXI_INTERCON_4X64_256_BD_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 )

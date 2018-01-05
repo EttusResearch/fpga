@@ -2428,53 +2428,53 @@ module n310
    ///////////////////////////////////////////////////////////////////////////////////
 
 
-   wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
-   wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
-   wire        ddr3_running;           // DRAM calibration complete.
-   wire [11:0] device_temp;
+   wire         ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
+   wire         ddr3_axi_rst;           // Synchronized to ddr_sys_clk
+   wire         ddr3_running;           // DRAM calibration complete.
+   wire [11:0]  device_temp;
 
    // Slave Interface Write Address Ports
-   wire        s_axi_awid;
-   wire [31:0] s_axi_awaddr;
-   wire [7:0]  s_axi_awlen;
-   wire [2:0]  s_axi_awsize;
-   wire [1:0]  s_axi_awburst;
-   wire [0:0]  s_axi_awlock;
-   wire [3:0]  s_axi_awcache;
-   wire [2:0]  s_axi_awprot;
-   wire [3:0]  s_axi_awqos;
-   wire        s_axi_awvalid;
-   wire        s_axi_awready;
+   wire [3:0]   ddr3_axi_awid;
+   wire [31:0]  ddr3_axi_awaddr;
+   wire [7:0]   ddr3_axi_awlen;
+   wire [2:0]   ddr3_axi_awsize;
+   wire [1:0]   ddr3_axi_awburst;
+   wire [0:0]   ddr3_axi_awlock;
+   wire [3:0]   ddr3_axi_awcache;
+   wire [2:0]   ddr3_axi_awprot;
+   wire [3:0]   ddr3_axi_awqos;
+   wire         ddr3_axi_awvalid;
+   wire         ddr3_axi_awready;
    // Slave Interface Write Data Ports
-   wire [255:0] s_axi_wdata;
-   wire [31:0]  s_axi_wstrb;
-   wire     s_axi_wlast;
-   wire     s_axi_wvalid;
-   wire     s_axi_wready;
+   wire [255:0] ddr3_axi_wdata;
+   wire [31:0]  ddr3_axi_wstrb;
+   wire         ddr3_axi_wlast;
+   wire         ddr3_axi_wvalid;
+   wire         ddr3_axi_wready;
    // Slave Interface Write Response Ports
-   wire     s_axi_bready;
-   wire     s_axi_bid;
-   wire [1:0]   s_axi_bresp;
-   wire     s_axi_bvalid;
+   wire         ddr3_axi_bready;
+   wire [3:0]   ddr3_axi_bid;
+   wire [1:0]   ddr3_axi_bresp;
+   wire         ddr3_axi_bvalid;
    // Slave Interface Read Address Ports
-   wire     s_axi_arid;
-   wire [31:0]  s_axi_araddr;
-   wire [7:0]   s_axi_arlen;
-   wire [2:0]   s_axi_arsize;
-   wire [1:0]   s_axi_arburst;
-   wire [0:0]   s_axi_arlock;
-   wire [3:0]   s_axi_arcache;
-   wire [2:0]   s_axi_arprot;
-   wire [3:0]   s_axi_arqos;
-   wire     s_axi_arvalid;
-   wire     s_axi_arready;
+   wire [3:0]   ddr3_axi_arid;
+   wire [31:0]  ddr3_axi_araddr;
+   wire [7:0]   ddr3_axi_arlen;
+   wire [2:0]   ddr3_axi_arsize;
+   wire [1:0]   ddr3_axi_arburst;
+   wire [0:0]   ddr3_axi_arlock;
+   wire [3:0]   ddr3_axi_arcache;
+   wire [2:0]   ddr3_axi_arprot;
+   wire [3:0]   ddr3_axi_arqos;
+   wire         ddr3_axi_arvalid;
+   wire         ddr3_axi_arready;
    // Slave Interface Read Data Ports
-   wire     s_axi_rready;
-   wire     s_axi_rid;
-   wire [255:0] s_axi_rdata;
-   wire [1:0]   s_axi_rresp;
-   wire     s_axi_rlast;
-   wire     s_axi_rvalid;
+   wire         ddr3_axi_rready;
+   wire [3:0]   ddr3_axi_rid;
+   wire [255:0] ddr3_axi_rdata;
+   wire [1:0]   ddr3_axi_rresp;
+   wire         ddr3_axi_rlast;
+   wire         ddr3_axi_rvalid;
 
    reg      ddr3_axi_rst_reg_n;
 
@@ -2523,47 +2523,47 @@ module n310
       .app_zq_req                     (1'b0),
       .app_zq_ack                     (app_zq_ack),
       // Slave Interface Write Address Ports
-      .s_axi_awid                     (s_axi_awid),
-      .s_axi_awaddr                   (s_axi_awaddr),
-      .s_axi_awlen                    (s_axi_awlen),
-      .s_axi_awsize                   (s_axi_awsize),
-      .s_axi_awburst                  (s_axi_awburst),
-      .s_axi_awlock                   (s_axi_awlock),
-      .s_axi_awcache                  (s_axi_awcache),
-      .s_axi_awprot                   (s_axi_awprot),
-      .s_axi_awqos                    (s_axi_awqos),
-      .s_axi_awvalid                  (s_axi_awvalid),
-      .s_axi_awready                  (s_axi_awready),
+      .s_axi_awid                     (ddr3_axi_awid),
+      .s_axi_awaddr                   (ddr3_axi_awaddr),
+      .s_axi_awlen                    (ddr3_axi_awlen),
+      .s_axi_awsize                   (ddr3_axi_awsize),
+      .s_axi_awburst                  (ddr3_axi_awburst),
+      .s_axi_awlock                   (ddr3_axi_awlock),
+      .s_axi_awcache                  (ddr3_axi_awcache),
+      .s_axi_awprot                   (ddr3_axi_awprot),
+      .s_axi_awqos                    (ddr3_axi_awqos),
+      .s_axi_awvalid                  (ddr3_axi_awvalid),
+      .s_axi_awready                  (ddr3_axi_awready),
       // Slave Interface Write Data Ports
-      .s_axi_wdata                    (s_axi_wdata),
-      .s_axi_wstrb                    (s_axi_wstrb),
-      .s_axi_wlast                    (s_axi_wlast),
-      .s_axi_wvalid                   (s_axi_wvalid),
-      .s_axi_wready                   (s_axi_wready),
+      .s_axi_wdata                    (ddr3_axi_wdata),
+      .s_axi_wstrb                    (ddr3_axi_wstrb),
+      .s_axi_wlast                    (ddr3_axi_wlast),
+      .s_axi_wvalid                   (ddr3_axi_wvalid),
+      .s_axi_wready                   (ddr3_axi_wready),
       // Slave Interface Write Response Ports
-      .s_axi_bid                      (s_axi_bid),
-      .s_axi_bresp                    (s_axi_bresp),
-      .s_axi_bvalid                   (s_axi_bvalid),
-      .s_axi_bready                   (s_axi_bready),
+      .s_axi_bid                      (ddr3_axi_bid),
+      .s_axi_bresp                    (ddr3_axi_bresp),
+      .s_axi_bvalid                   (ddr3_axi_bvalid),
+      .s_axi_bready                   (ddr3_axi_bready),
       // Slave Interface Read Address Ports
-      .s_axi_arid                     (s_axi_arid),
-      .s_axi_araddr                   (s_axi_araddr),
-      .s_axi_arlen                    (s_axi_arlen),
-      .s_axi_arsize                   (s_axi_arsize),
-      .s_axi_arburst                  (s_axi_arburst),
-      .s_axi_arlock                   (s_axi_arlock),
-      .s_axi_arcache                  (s_axi_arcache),
-      .s_axi_arprot                   (s_axi_arprot),
-      .s_axi_arqos                    (s_axi_arqos),
-      .s_axi_arvalid                  (s_axi_arvalid),
-      .s_axi_arready                  (s_axi_arready),
+      .s_axi_arid                     (ddr3_axi_arid),
+      .s_axi_araddr                   (ddr3_axi_araddr),
+      .s_axi_arlen                    (ddr3_axi_arlen),
+      .s_axi_arsize                   (ddr3_axi_arsize),
+      .s_axi_arburst                  (ddr3_axi_arburst),
+      .s_axi_arlock                   (ddr3_axi_arlock),
+      .s_axi_arcache                  (ddr3_axi_arcache),
+      .s_axi_arprot                   (ddr3_axi_arprot),
+      .s_axi_arqos                    (ddr3_axi_arqos),
+      .s_axi_arvalid                  (ddr3_axi_arvalid),
+      .s_axi_arready                  (ddr3_axi_arready),
       // Slave Interface Read Data Ports
-      .s_axi_rid                      (s_axi_rid),
-      .s_axi_rdata                    (s_axi_rdata),
-      .s_axi_rresp                    (s_axi_rresp),
-      .s_axi_rlast                    (s_axi_rlast),
-      .s_axi_rvalid                   (s_axi_rvalid),
-      .s_axi_rready                   (s_axi_rready),
+      .s_axi_rid                      (ddr3_axi_rid),
+      .s_axi_rdata                    (ddr3_axi_rdata),
+      .s_axi_rresp                    (ddr3_axi_rresp),
+      .s_axi_rlast                    (ddr3_axi_rlast),
+      .s_axi_rvalid                   (ddr3_axi_rvalid),
+      .s_axi_rready                   (ddr3_axi_rready),
       // System Clock Ports
       .sys_clk_p                      (sys_clk_p),
       .sys_clk_n                      (sys_clk_n),
@@ -2843,47 +2843,47 @@ module n310
     .ddr3_axi_rst              (ddr3_axi_rst),
     .ddr3_running              (ddr3_running),
     // Slave Interface Write Address Ports
-    .ddr3_axi_awid             (s_axi_awid),
-    .ddr3_axi_awaddr           (s_axi_awaddr),
-    .ddr3_axi_awlen            (s_axi_awlen),
-    .ddr3_axi_awsize           (s_axi_awsize),
-    .ddr3_axi_awburst          (s_axi_awburst),
-    .ddr3_axi_awlock           (s_axi_awlock),
-    .ddr3_axi_awcache          (s_axi_awcache),
-    .ddr3_axi_awprot           (s_axi_awprot),
-    .ddr3_axi_awqos            (s_axi_awqos),
-    .ddr3_axi_awvalid          (s_axi_awvalid),
-    .ddr3_axi_awready          (s_axi_awready),
+    .ddr3_axi_awid             (ddr3_axi_awid),
+    .ddr3_axi_awaddr           (ddr3_axi_awaddr),
+    .ddr3_axi_awlen            (ddr3_axi_awlen),
+    .ddr3_axi_awsize           (ddr3_axi_awsize),
+    .ddr3_axi_awburst          (ddr3_axi_awburst),
+    .ddr3_axi_awlock           (ddr3_axi_awlock),
+    .ddr3_axi_awcache          (ddr3_axi_awcache),
+    .ddr3_axi_awprot           (ddr3_axi_awprot),
+    .ddr3_axi_awqos            (ddr3_axi_awqos),
+    .ddr3_axi_awvalid          (ddr3_axi_awvalid),
+    .ddr3_axi_awready          (ddr3_axi_awready),
     // Slave Interface Write Data Ports
-    .ddr3_axi_wdata            (s_axi_wdata),
-    .ddr3_axi_wstrb            (s_axi_wstrb),
-    .ddr3_axi_wlast            (s_axi_wlast),
-    .ddr3_axi_wvalid           (s_axi_wvalid),
-    .ddr3_axi_wready           (s_axi_wready),
+    .ddr3_axi_wdata            (ddr3_axi_wdata),
+    .ddr3_axi_wstrb            (ddr3_axi_wstrb),
+    .ddr3_axi_wlast            (ddr3_axi_wlast),
+    .ddr3_axi_wvalid           (ddr3_axi_wvalid),
+    .ddr3_axi_wready           (ddr3_axi_wready),
     // Slave Interface Write Response Ports
-    .ddr3_axi_bid              (s_axi_bid),
-    .ddr3_axi_bresp            (s_axi_bresp),
-    .ddr3_axi_bvalid           (s_axi_bvalid),
-    .ddr3_axi_bready           (s_axi_bready),
+    .ddr3_axi_bid              (ddr3_axi_bid),
+    .ddr3_axi_bresp            (ddr3_axi_bresp),
+    .ddr3_axi_bvalid           (ddr3_axi_bvalid),
+    .ddr3_axi_bready           (ddr3_axi_bready),
     // Slave Interface Read Address Ports
-    .ddr3_axi_arid             (s_axi_arid),
-    .ddr3_axi_araddr           (s_axi_araddr),
-    .ddr3_axi_arlen            (s_axi_arlen),
-    .ddr3_axi_arsize           (s_axi_arsize),
-    .ddr3_axi_arburst          (s_axi_arburst),
-    .ddr3_axi_arlock           (s_axi_arlock),
-    .ddr3_axi_arcache          (s_axi_arcache),
-    .ddr3_axi_arprot           (s_axi_arprot),
-    .ddr3_axi_arqos            (s_axi_arqos),
-    .ddr3_axi_arvalid          (s_axi_arvalid),
-    .ddr3_axi_arready          (s_axi_arready),
+    .ddr3_axi_arid             (ddr3_axi_arid),
+    .ddr3_axi_araddr           (ddr3_axi_araddr),
+    .ddr3_axi_arlen            (ddr3_axi_arlen),
+    .ddr3_axi_arsize           (ddr3_axi_arsize),
+    .ddr3_axi_arburst          (ddr3_axi_arburst),
+    .ddr3_axi_arlock           (ddr3_axi_arlock),
+    .ddr3_axi_arcache          (ddr3_axi_arcache),
+    .ddr3_axi_arprot           (ddr3_axi_arprot),
+    .ddr3_axi_arqos            (ddr3_axi_arqos),
+    .ddr3_axi_arvalid          (ddr3_axi_arvalid),
+    .ddr3_axi_arready          (ddr3_axi_arready),
     // Slave Interface Read Data Ports
-    .ddr3_axi_rid              (s_axi_rid),
-    .ddr3_axi_rdata            (s_axi_rdata),
-    .ddr3_axi_rresp            (s_axi_rresp),
-    .ddr3_axi_rlast            (s_axi_rlast),
-    .ddr3_axi_rvalid           (s_axi_rvalid),
-    .ddr3_axi_rready           (s_axi_rready),
+    .ddr3_axi_rid              (ddr3_axi_rid),
+    .ddr3_axi_rdata            (ddr3_axi_rdata),
+    .ddr3_axi_rresp            (ddr3_axi_rresp),
+    .ddr3_axi_rlast            (ddr3_axi_rlast),
+    .ddr3_axi_rvalid           (ddr3_axi_rvalid),
+    .ddr3_axi_rready           (ddr3_axi_rready),
 
     //DMA
     .dmao_tdata(i_cvita_dma_tdata),

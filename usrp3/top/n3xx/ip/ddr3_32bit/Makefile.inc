@@ -26,4 +26,3 @@ $(IP_DDR3_32BIT_SRCS) $(IP_DDR3_32BIT_OUTS) : $(IP_DIR)/ddr3_32bit/ddr3_32bit.xc
 	rm -f $(IP_DIR)/ddr3_32bit/mig_a.prj
 	cp $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/example_design/sim/ddr3_model_parameters.vh $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/example_design/sim/ddr3_model_parameters.vh.orig
 	patch $(IP_BUILD_DIR)/ddr3_32bit/ddr3_32bit/example_design/sim/ddr3_model_parameters.vh $(IP_DIR)/ddr3_32bit/ddr3_model_parameters.vh.patch
-
