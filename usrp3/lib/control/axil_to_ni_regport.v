@@ -63,6 +63,7 @@ module axil_to_ni_regport #(
       state   <= IDLE;
       addr    <= 'd0;
       rb_data <= 'd0;
+      wr_data <= 'd0;
 
       count    <= 10'd0;
       rresp    <= 2'd0;
