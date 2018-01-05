@@ -18,21 +18,23 @@ module rx_control_gen3 #(
   parameter SR_RX_CTRL_HALT = 3,        // Halt command -> return to idle state
   parameter SR_RX_CTRL_MAXLEN = 4,      // Packet length
   parameter SR_RX_CTRL_CLEAR_CMDS = 5,   // Clear command FIFO
-  parameter SR_RX_CTRL_OUTPUT_FORMAT = 6   // Output format (use timestamps)
+  parameter SR_RX_CTRL_OUTPUT_FORMAT = 6,  // Output format (use timestamps)
+  parameter WIDTH = 32            // Can be 32 or 64
 )(
   input clk, input reset,
   input clear, // Resets state machine and clear output FIFO.
   input [63:0] vita_time, input [31:0] sid, input [31:0] resp_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
-  output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
+  output [WIDTH-1:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
   // Error packets, Note: Currently unused as error packets must come inline with data.
   output reg [63:0] resp_tdata, output reg [127:0] resp_tuser, output reg resp_tlast, output reg resp_tvalid, input resp_tready,
   // From radio frontend
-  output run, input [31:0] sample, input strobe
+  output run, input [WIDTH-1:0] sample, input strobe
 );
 
-  reg [31:0] rx_reg_tdata, error;
+  reg [31:0] error;
+  reg [WIDTH-1:0] rx_reg_tdata;
   reg rx_reg_tlast, rx_reg_tvalid;
   wire rx_reg_tready;
   reg [127:0] rx_reg_tuser, error_tuser;
@@ -78,6 +80,7 @@ module rx_control_gen3 #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(),.changed(set_halt));
 
+  // use (maxlen >> 1) for 2 samples per cycle
   setting_reg #(.my_addr(SR_RX_CTRL_MAXLEN), .width(16)) sr_maxlen (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(maxlen),.changed());
@@ -179,7 +182,7 @@ module rx_control_gen3 #(
               repeat_lines   <= numlines;
               chain_sav      <= chain;
               reload_sav     <= reload;
-              lines_left_pkt <= maxlen;
+              lines_left_pkt <= WIDTH == 64 ? (maxlen >> 1) : maxlen;
               ibs_state      <= IBS_RUNNING;
             end
           end
@@ -193,11 +196,11 @@ module rx_control_gen3 #(
             rx_reg_tuser  <= rx_header;
             rx_reg_tdata  <= sample;
             if (lines_left_pkt == 1) begin
-              lines_left_pkt <= maxlen;
+              lines_left_pkt <= WIDTH == 64 ? (maxlen >> 1) : maxlen;
             end else begin
               lines_left_pkt <= lines_left_pkt - 1;
             end
-            if (lines_left_pkt == maxlen) begin
+            if (lines_left_pkt == (WIDTH == 64 ? (maxlen >> 1) : maxlen)) begin
               start_time <= vita_time;
             end
             if (lines_left == 1) begin
@@ -246,7 +249,7 @@ module rx_control_gen3 #(
           if (rx_reg_tready) begin
             rx_reg_tvalid <= 1'b1;
             rx_reg_tlast  <= 1'b0;
-            rx_reg_tdata  <= error;
+            rx_reg_tdata  <= {WIDTH/32{error}};
             rx_reg_tuser  <= error_header;
             ibs_state     <= IBS_ERR_SEND_PKT;
           end
@@ -276,7 +279,7 @@ module rx_control_gen3 #(
   assign eob = ((lines_left == 1) & ( !chain_sav | (command_valid & stop) | (!command_valid & !reload_sav) | halt)) | overflow;
 
   // Register output
-  axi_fifo_flop2 #(.WIDTH(161))
+  axi_fifo_flop2 #(.WIDTH(129+WIDTH))
   axi_fifo_flop2 (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({rx_reg_tlast, rx_reg_tdata, rx_reg_tuser}), .i_tvalid(rx_reg_tvalid), .i_tready(rx_reg_tready),

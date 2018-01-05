@@ -9,7 +9,8 @@
 module timekeeper
   #(parameter SR_TIME_HI = 0,
     parameter SR_TIME_LO = 1,
-    parameter SR_TIME_CTRL = 2)
+    parameter SR_TIME_CTRL = 2,
+    parameter INCREMENT = 64'h1)
    (input clk, input reset, input pps, input sync_in, input strobe,
     input set_stb, input [7:0] set_addr, input [31:0] set_data,
     output reg [63:0] vita_time, output reg [63:0] vita_time_lastpps,
@@ -66,7 +67,7 @@ module timekeeper
            sync_out <= 1'b1;
            vita_time <= time_at_next_event;
          end else if (strobe) begin
-	   vita_time <= vita_time + 64'h1;
+	   vita_time <= vita_time + INCREMENT;
          end
      end
    end
@@ -81,6 +82,6 @@ module timekeeper
        if(time_event)
          vita_time_lastpps <= time_at_next_event;
        else
-         vita_time_lastpps <= vita_time + 64'h1;
+         vita_time_lastpps <= vita_time + INCREMENT;
 
 endmodule // timekeeper
