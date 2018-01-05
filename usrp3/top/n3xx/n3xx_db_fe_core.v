@@ -9,7 +9,9 @@ module n3xx_db_fe_core #(
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
   parameter USE_SPI_CLK = 0,
   parameter [7:0] SR_DB_FE_BASE = 160,
-  parameter [7:0] RB_DB_FE_BASE = 16
+  parameter [7:0] RB_DB_FE_BASE = 16,
+  parameter WIDTH = 32,
+  parameter NUM_SPI_SEN = 8
 )(
   input clk, input reset,
   // Commands from Radio Core
@@ -17,19 +19,20 @@ module n3xx_db_fe_core #(
   output rb_stb,  input [7:0] rb_addr,  output [63:0] rb_data,
   input  time_sync,
   // Radio datapath
-  input  tx_stb, input [31:0] tx_data_in, output [31:0] tx_data_out, input tx_running,
-  input  rx_stb, input [31:0] rx_data_in, output [31:0] rx_data_out, input rx_running,
+  input  tx_stb, input [WIDTH-1:0] tx_data_in, output [WIDTH-1:0] tx_data_out, input tx_running,
+  input  rx_stb, input [WIDTH-1:0] rx_data_in, output [WIDTH-1:0] rx_data_out, input rx_running,
   // Frontend / Daughterboard I/O
   input [31:0] misc_ins, output [31:0] misc_outs,
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr, input [31:0] fp_gpio_fab,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr, input [31:0] db_gpio_fab,
   output [31:0] leds,
-  input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso
+  input spi_clk, input spi_rst, output [NUM_SPI_SEN-1:0] sen, output sclk, output mosi, input miso
 );
 
 
   db_control #(
-    .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE)
+    .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE),
+    .NUM_SPI_SEN(NUM_SPI_SEN)
   ) db_control_i (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
