@@ -139,7 +139,7 @@ package PkgJesdConfig is
   -- ADC & DAC Data Types
   --
 
-  -- ADC Words from JESD204B RX Core. The array is 4 elements wide to accomodate the
+  -- ADC Words from JESD204B RX Core. The array is 4 elements wide to accommodate the
   -- I & Q elements from both RX channels.
   subtype AdcWord_t is std_logic_vector(kAdcDataWidth - 1 downto 0);
   type AdcWordArray_t is array(4 - 1 downto 0) of AdcWord_t;
@@ -156,7 +156,7 @@ package PkgJesdConfig is
   end record;
 
 
-  -- Flattened data types for passing into and out of presynthesized components.
+  -- Flattened data types for passing into and out of pre-synthesized components.
   subtype AdcDataFlat_t is std_logic_vector(2*kAdcDataWidth - 1 downto 0);
   subtype DacDataFlat_t is std_logic_vector(2*kDacDataWidth - 1 downto 0);
 
@@ -166,21 +166,6 @@ package PkgJesdConfig is
 
   function Flatten  (DacData : DacData_t)         return DacDataFlat_t;
   function Unflatten(DacData : DacDataFlat_t)     return DacData_t;
-
-
-  -- Data manipulation settings.
-  type DataSettings_t is record
-    InvertA  : std_logic;
-    InvertB  : std_logic;
-    ZeroA    : std_logic;
-    ZeroB    : std_logic;
-    AisI     : std_logic;
-    BisQ     : std_logic;
-  end record;
-
-  function   Flatten(TypeIn : DataSettings_t)               return std_logic_vector;
-  function Unflatten(SlvIn  : std_logic_vector(5 downto 0)) return DataSettings_t;
-
 
 
 end package;
@@ -243,35 +228,6 @@ package body PkgJesdConfig is
   end function Unflatten;
 
 
-
-
-
-  -- Data manipulation settings.
-  function   Flatten(TypeIn     : DataSettings_t)   return std_logic_vector
-  is
-    variable ReturnVar : std_logic_vector(5 downto 0);
-  begin
-    ReturnVar := (TypeIn.InvertA) &
-                 (TypeIn.InvertB) &
-                 (TypeIn.ZeroA)   &
-                 (TypeIn.ZeroB)   &
-                 (TypeIn.AisI)    &
-                 (TypeIn.BisQ);
-   return ReturnVar;
-  end function Flatten;
-
-  function Unflatten(SlvIn : std_logic_vector(5 downto 0)) return DataSettings_t
-  is
-    variable ReturnVar : DataSettings_t;
-  begin
-    ReturnVar.InvertA := (SlvIn(5));
-    ReturnVar.InvertB := (SlvIn(4));
-    ReturnVar.ZeroA   := (SlvIn(3));
-    ReturnVar.ZeroB   := (SlvIn(2));
-    ReturnVar.AisI    := (SlvIn(1));
-    ReturnVar.BisQ    := (SlvIn(0));
-    return ReturnVar;
-  end function Unflatten;
 
 
 

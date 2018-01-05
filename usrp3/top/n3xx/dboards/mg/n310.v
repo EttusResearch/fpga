@@ -2944,22 +2944,12 @@ module n310
   //
   // //////////////////////////////////////////////////////////////////////
 
-  wire aAdcSyncUnusedA;
-  wire aAdcSyncUnusedB;
-  wire aDacSyncUnusedA;
-  wire aDacSyncUnusedB;
-  wire aLmkSyncUnusedB;
   wire [49:0] bRegPortInFlatA;
   wire [49:0] bRegPortInFlatB;
   wire [33:0] bRegPortOutFlatA;
   wire [33:0] bRegPortOutFlatB;
-  wire rRSP_a_unused;
-  wire rRSP_b_unused;
   wire rx_a_valid;
   wire rx_b_valid;
-  wire sPpsUnusedB;
-  wire sRTC_a_unused;
-  wire sRTC_b_unused;
   wire tx_a_rfi;
   wire tx_b_rfi;
 
@@ -2976,8 +2966,7 @@ module n310
 
   DbCore
     dba_core (
-      .aReset(clk40_rst),                      //in  std_logic
-      .bReset(1'b0),                           //in  std_logic
+      .bBusReset(clk40_rst),                   //in  std_logic
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
       .MeasClk(meas_clk),                      //in  std_logic
@@ -3001,8 +2990,6 @@ module n310
       .aDacTx_p(USRPIO_A_TX_P),                //out std_logic_vector(3:0)
       .aDacTx_n(USRPIO_A_TX_N),                //out std_logic_vector(3:0)
       .aSyncDacIn_n(DBA_MYK_SYNC_OUT_n),       //in  std_logic
-      .aAdcSync(aAdcSyncUnusedA),              //out std_logic
-      .aDacSync(aDacSyncUnusedA),              //out std_logic
       .sAdcDataValid(rx_a_valid),              //out std_logic
       .sAdcDataSamples0I(rx0[31:16]),          //out std_logic_vector(15:0)
       .sAdcDataSamples0Q(rx0[15:0]),           //out std_logic_vector(15:0)
@@ -3017,9 +3004,13 @@ module n310
       .rPpsPulse(pps_refclk),                  //in  std_logic
       .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
       .sGatedPulseToPin(UNUSED_PIN_TDCA_1),    //inout std_logic
-      .rRSP(rRSP_a_unused),                    //out std_logic
-      .sRTC(sRTC_a_unused),                    //out std_logic
-      .sPps(pps_radioclk1x));                  //out std_logic
+      .sPps(pps_radioclk1x),                   //out std_logic
+      .sAdcSync(),                             //out std_logic
+      .sDacSync(),                             //out std_logic
+      .sSysRef(),                              //out std_logic
+      .rRSP(),                                 //out std_logic
+      .sRTC());                                //out std_logic
+
 
   assign rx_stb[0] = rx_a_valid;
   assign rx_stb[1] = rx_a_valid;
@@ -3078,8 +3069,7 @@ module n310
 
   DbCore
     dbb_core (
-      .aReset(clk40_rst),                      //in  std_logic
-      .bReset(1'b0),                           //in  std_logic
+      .bBusReset(clk40_rst),                   //in  std_logic
       .BusClk(clk40),                          //in  std_logic
       .Clk40(clk40),                           //in  std_logic
       .MeasClk(meas_clk),                      //in  std_logic
@@ -3103,8 +3093,6 @@ module n310
       .aDacTx_p(USRPIO_B_TX_P),                //out std_logic_vector(3:0)
       .aDacTx_n(USRPIO_B_TX_N),                //out std_logic_vector(3:0)
       .aSyncDacIn_n(DBB_MYK_SYNC_OUT_n),       //in  std_logic
-      .aAdcSync(aAdcSyncUnusedB),              //out std_logic
-      .aDacSync(aDacSyncUnusedB),              //out std_logic
       .sAdcDataValid(rx_b_valid),              //out std_logic
       .sAdcDataSamples0I(rx2[31:16]),          //out std_logic_vector(15:0)
       .sAdcDataSamples0Q(rx2[15:0]),           //out std_logic_vector(15:0)
@@ -3119,9 +3107,12 @@ module n310
       .rPpsPulse(pps_refclk),                  //in  std_logic
       .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
       .sGatedPulseToPin(UNUSED_PIN_TDCB_1),    //inout std_logic
-      .rRSP(rRSP_b_unused),                    //out std_logic
-      .sRTC(sRTC_b_unused),                    //out std_logic
-      .sPps(sPpsUnusedB));                     //out std_logic
+      .sPps(),                                 //out std_logic
+      .sAdcSync(),                             //out std_logic
+      .sDacSync(),                             //out std_logic
+      .sSysRef(),                              //out std_logic
+      .rRSP(),                                 //out std_logic
+      .sRTC());                                //out std_logic
 
   assign rx_stb[2] = rx_b_valid;
   assign rx_stb[3] = rx_b_valid;

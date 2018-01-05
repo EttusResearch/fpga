@@ -6,7 +6,7 @@
 -- Date: 12 April 2017
 --
 -------------------------------------------------------------------------------
--- Copyright 2017 Ettus Research, A National Instruments Company
+-- Copyright 2017-2018 Ettus Research, A National Instruments Company
 -- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
@@ -18,13 +18,17 @@
 -- There is no version register for the plain-text files here.
 -- Version control for the Sync and JESD204B cores is internal to the netlists.
 --
+-- The resets for this core are almost entirely local and/or synchronous.
+-- bBusReset is a Synchronous reset on the BusClk domain that resets all of the
+-- registers connected to the RegPort, as well as any other stray registers
+-- connected to the BusClk. All other resets are local to the modules they touch.
+-- No other reset drives all modules universally.
 --
 -------------------------------------------------------------------------------
 
 library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
-
 
 library work;
   use work.PkgMgPersonality.all;
@@ -36,10 +40,8 @@ entity DbCore is
   port(
 
     -- Resets --
-    -- Asynchronous System-wide Bus Reset. Can be tied to '0' if the sync version is used.
-    aReset                 : in  std_logic;
-    -- Synchronous Reset (if unused, tie to '0')
-    bReset                 : in  std_logic;
+    -- Synchronous Reset for the BusClk domain (mainly for the RegPort)
+    bBusReset              : in  std_logic;
 
     -- Clocks --
     -- Register Bus Clock (any frequency)
@@ -52,9 +54,11 @@ entity DbCore is
     FpgaClk_p              : in  std_logic;
     FpgaClk_n              : in  std_logic;
 
-    -- Sample Clock Sharing. The clocks generated in this module are automatically
-    -- exported, so they must be driven back into the inputs at a higher level in
-    -- order for this module to work!
+    -- Sample Clock Sharing. The clocks generated in this module are exported out to the
+    -- top level so they can be shared amongst daughterboards. Therefore they must be
+    -- driven back into the SampleClk*x inputs at a higher level in order for this module
+    -- to work correctly. There are a few isolated cases where SampleClk*xOut is used
+    -- directly in this module, and those are documented below.
     SampleClk1xOut         : out std_logic;
     SampleClk1x            : in  std_logic;
     SampleClk2xOut         : out std_logic;
@@ -63,20 +67,20 @@ entity DbCore is
 
     -- Register Ports --
     --
+    -- Only synchronous resets can be used for these ports!
     bRegPortInFlat         : in  std_logic_vector(49 downto 0);
     bRegPortOutFlat        : out std_logic_vector(33 downto 0);
 
-    -- Slot and DB ID values. These should be tied to constants!
+    -- Slot ID value. This should be tied to a constant!
     kSlotId                : in  std_logic;
 
 
     -- SYSREF --
     --
-    -- SYSREF from the LMK
+    -- SYSREF direct from the LMK
     sSysRefFpgaLvds_p,
     sSysRefFpgaLvds_n      : in  std_logic;
-
-    sSysRef                : out std_logic;
+    -- SYNC directly to the LMK
     aLmkSync               : out std_logic;
 
 
@@ -97,16 +101,24 @@ entity DbCore is
     aSyncDacIn_n           : in  std_logic;
 
 
-    -- Debug Outputs for JESD.
-    aAdcSync               : out std_logic;
-    aDacSync               : out std_logic;
-
-
     -- Data Pipes to/from the DACs/ADCs --
     --
-    -- Data is presented as one sample per cycle.
-    -- sAdcDataValid asserts when ADC datas are valid. sDacReadyForInput asserts when
-    -- DAC data is ready to be received.
+    --  - Data is presented as one sample per cycle.
+    --  - sAdcDataValid asserts when ADC data is valid.
+    --  - sDacReadyForInput asserts when DAC data is ready to be received.
+    --
+    -- Reset Crossings:
+    -- The ADC data and valid outputs are synchronously cleared before the asynchronous
+    -- reset is asserted--preventing any reset crossing issues here between the RX
+    -- (internal to the core) reset and the no-reset domain of RFNoC.
+    --
+    -- The DAC samples should be zeros on reset de-assertion due to RFI being de-asserted
+    -- in reset. If they are not zeros, then it is still OK because data is ignored until
+    -- RFI is asserted. DAC RFI is double-synchronized to protect against the reset
+    -- crossing. This is safe to do because it simply delays the output of RFI by two
+    -- cycles on the assertion edge, and as long as reset is held for more than two
+    -- cycles, the de-assertion edge of RFI should come long before the TX module is
+    -- taken out of reset.
     sAdcDataValid          : out std_logic;
     sAdcDataSamples0I      : out std_logic_vector(15 downto 0);
     sAdcDataSamples0Q      : out std_logic_vector(15 downto 0);
@@ -124,16 +136,17 @@ entity DbCore is
     rPpsPulse              : in  std_logic;
     rGatedPulseToPin       : inout std_logic; -- straight to pin
     sGatedPulseToPin       : inout std_logic; -- straight to pin
+    sPps                   : out std_logic;
 
-    -- Debug Outputs
+
+    -- Debug for JESD
+    sAdcSync               : out std_logic;
+    sDacSync               : out std_logic;
+    sSysRef                : out std_logic;
+
+    -- Debug for Timing & Sync
     rRSP                   : out std_logic;
-    sRTC                   : out std_logic;
-    sPps                   : out std_logic
-
-
-    -- DB Control Signals
-    -- aAdcSpiEn              : out   std_logic
-
+    sRTC                   : out std_logic
   );
 
 end DbCore;
@@ -143,68 +156,65 @@ architecture RTL of DbCore is
 
   component SyncRegsIfc
     port (
-      aReset               : in  STD_LOGIC;
-      BusClk               : in  STD_LOGIC;
-      bRegPortInFlat       : in  STD_LOGIC_VECTOR(49 downto 0);
-      bRegPortOutFlat      : out STD_LOGIC_VECTOR(33 downto 0);
-      RefClk               : in  STD_LOGIC;
-      rResetTdc            : out STD_LOGIC;
-      rResetTdcDone        : in  STD_LOGIC;
-      rEnableTdc           : out STD_LOGIC;
-      rReRunEnable         : out STD_LOGIC;
-      rEnablePpsCrossing   : out STD_LOGIC;
-      rPpsPulseCaptured    : in  STD_LOGIC;
-      SampleClk            : in  STD_LOGIC;
-      sPpsClkCrossDelayVal : out STD_LOGIC_VECTOR(3 downto 0);
-      MeasClk              : in  STD_LOGIC;
-      mRspOffset           : in  STD_LOGIC_VECTOR(39 downto 0);
-      mRtcOffset           : in  STD_LOGIC_VECTOR(39 downto 0);
-      mOffsetsDone         : in  STD_LOGIC;
-      mOffsetsValid        : in  STD_LOGIC;
-      rLoadRspCounts       : out STD_LOGIC;
-      rRspPeriodInRClks    : out STD_LOGIC_VECTOR(11 downto 0);
-      rRspHighTimeInRClks  : out STD_LOGIC_VECTOR(11 downto 0);
-      sLoadRtcCounts       : out STD_LOGIC;
-      sRtcPeriodInSClks    : out STD_LOGIC_VECTOR(11 downto 0);
-      sRtcHighTimeInSClks  : out STD_LOGIC_VECTOR(11 downto 0));
+      aBusReset            : in  std_logic;
+      bBusReset            : in  std_logic;
+      BusClk               : in  std_logic;
+      aTdcReset            : out std_logic;
+      bRegPortInFlat       : in  std_logic_vector(49 downto 0);
+      bRegPortOutFlat      : out std_logic_vector(33 downto 0);
+      RefClk               : in  std_logic;
+      rResetTdc            : out std_logic;
+      rResetTdcDone        : in  std_logic;
+      rEnableTdc           : out std_logic;
+      rReRunEnable         : out std_logic;
+      rEnablePpsCrossing   : out std_logic;
+      rPpsPulseCaptured    : in  std_logic;
+      SampleClk            : in  std_logic;
+      sPpsClkCrossDelayVal : out std_logic_vector(3 downto 0);
+      MeasClk              : in  std_logic;
+      mRspOffset           : in  std_logic_vector(39 downto 0);
+      mRtcOffset           : in  std_logic_vector(39 downto 0);
+      mOffsetsDone         : in  std_logic;
+      mOffsetsValid        : in  std_logic;
+      rLoadRspCounts       : out std_logic;
+      rRspPeriodInRClks    : out std_logic_vector(11 downto 0);
+      rRspHighTimeInRClks  : out std_logic_vector(11 downto 0);
+      sLoadRtcCounts       : out std_logic;
+      sRtcPeriodInSClks    : out std_logic_vector(11 downto 0);
+      sRtcHighTimeInSClks  : out std_logic_vector(11 downto 0));
   end component;
   component Jesd204bXcvrCore
     port (
-      aReset                : in  STD_LOGIC;
-      bReset                : in  STD_LOGIC;
-      BusClk                : in  STD_LOGIC;
-      ReliableClk40         : in  STD_LOGIC;
-      FpgaClk1x             : in  STD_LOGIC;
-      FpgaClk2x             : in  STD_LOGIC;
-      bFpgaClksStable       : in  STD_LOGIC;
-      bRegPortInFlat        : in  STD_LOGIC_VECTOR(49 downto 0);
-      bRegPortOutFlat       : out STD_LOGIC_VECTOR(33 downto 0);
-      aLmkSync              : out STD_LOGIC;
-      cSysRefFpgaLvds_p     : in  STD_LOGIC;
-      cSysRefFpgaLvds_n     : in  STD_LOGIC;
-      fSysRef               : out STD_LOGIC;
-      CaptureSysRefClk      : in  STD_LOGIC;
-      JesdRefClk_p          : in  STD_LOGIC;
-      JesdRefClk_n          : in  STD_LOGIC;
-      bJesdRefClkPresent    : out STD_LOGIC;
-      aAdcRx_p              : in  STD_LOGIC_VECTOR(3 downto 0);
-      aAdcRx_n              : in  STD_LOGIC_VECTOR(3 downto 0);
-      aSyncAdcOut_n         : out STD_LOGIC;
-      aDacTx_p              : out STD_LOGIC_VECTOR(3 downto 0);
-      aDacTx_n              : out STD_LOGIC_VECTOR(3 downto 0);
-      aSyncDacIn_n          : in  STD_LOGIC;
-      fAdc0DataFlat         : out STD_LOGIC_VECTOR(31 downto 0);
-      fAdc1DataFlat         : out STD_LOGIC_VECTOR(31 downto 0);
-      fDac0DataFlat         : in  STD_LOGIC_VECTOR(31 downto 0);
-      fDac1DataFlat         : in  STD_LOGIC_VECTOR(31 downto 0);
-      fAdcDataValid         : out STD_LOGIC;
-      fDacReadyForInput     : out STD_LOGIC;
-      bDac0DataSettingsFlat : in  STD_LOGIC_VECTOR(5 downto 0);
-      bDac1DataSettingsFlat : in  STD_LOGIC_VECTOR(5 downto 0);
-      bAdc0DataSettingsFlat : in  STD_LOGIC_VECTOR(5 downto 0);
-      bAdc1DataSettingsFlat : in  STD_LOGIC_VECTOR(5 downto 0);
-      aDacSync              : out STD_LOGIC;
-      aAdcSync              : out STD_LOGIC);
+      bBusReset          : in  STD_LOGIC;
+      BusClk             : in  STD_LOGIC;
+      ReliableClk40      : in  STD_LOGIC;
+      FpgaClk1x          : in  STD_LOGIC;
+      FpgaClk2x          : in  STD_LOGIC;
+      bFpgaClksStable    : in  STD_LOGIC;
+      bRegPortInFlat     : in  STD_LOGIC_VECTOR(49 downto 0);
+      bRegPortOutFlat    : out STD_LOGIC_VECTOR(33 downto 0);
+      aLmkSync           : out STD_LOGIC;
+      cSysRefFpgaLvds_p  : in  STD_LOGIC;
+      cSysRefFpgaLvds_n  : in  STD_LOGIC;
+      fSysRef            : out STD_LOGIC;
+      CaptureSysRefClk   : in  STD_LOGIC;
+      JesdRefClk_p       : in  STD_LOGIC;
+      JesdRefClk_n       : in  STD_LOGIC;
+      bJesdRefClkPresent : out STD_LOGIC;
+      aAdcRx_p           : in  STD_LOGIC_VECTOR(3 downto 0);
+      aAdcRx_n           : in  STD_LOGIC_VECTOR(3 downto 0);
+      aSyncAdcOut_n      : out STD_LOGIC;
+      aDacTx_p           : out STD_LOGIC_VECTOR(3 downto 0);
+      aDacTx_n           : out STD_LOGIC_VECTOR(3 downto 0);
+      aSyncDacIn_n       : in  STD_LOGIC;
+      fAdc0DataFlat      : out STD_LOGIC_VECTOR(31 downto 0);
+      fAdc1DataFlat      : out STD_LOGIC_VECTOR(31 downto 0);
+      fDac0DataFlat      : in  STD_LOGIC_VECTOR(31 downto 0);
+      fDac1DataFlat      : in  STD_LOGIC_VECTOR(31 downto 0);
+      fAdcDataValid      : out STD_LOGIC;
+      fDacReadyForInput  : out STD_LOGIC;
+      aDacSync           : out STD_LOGIC;
+      aAdcSync           : out STD_LOGIC);
   end component;
 
   function to_Boolean (s : std_ulogic) return boolean is
@@ -222,11 +232,10 @@ architecture RTL of DbCore is
   end to_StdLogic;
 
   --vhook_sigstart
-  signal bAdc0DataSettingsFlat: STD_LOGIC_VECTOR(5 downto 0);
-  signal bAdc1DataSettingsFlat: STD_LOGIC_VECTOR(5 downto 0);
+  signal aAdcSync: STD_LOGIC;
+  signal aDacSync: STD_LOGIC;
+  signal aTdcReset: std_logic;
   signal bClockingRegPortOut: RegPortOut_t;
-  signal bDac0DataSettingsFlat: STD_LOGIC_VECTOR(5 downto 0);
-  signal bDac1DataSettingsFlat: STD_LOGIC_VECTOR(5 downto 0);
   signal bDbRegPortOut: RegPortOut_t;
   signal bFpgaClksStable: STD_LOGIC;
   signal bJesdCoreRegPortInFlat: STD_LOGIC_VECTOR(49 downto 0);
@@ -237,46 +246,65 @@ architecture RTL of DbCore is
   signal bRadioClk3xEnabled: std_logic;
   signal bRadioClkMmcmReset: std_logic;
   signal bRadioClksValid: std_logic;
-  signal bSyncRegPortInFlat: STD_LOGIC_VECTOR(49 downto 0);
-  signal bSyncRegPortOutFlat: STD_LOGIC_VECTOR(33 downto 0);
-  signal mOffsetsDone: STD_LOGIC;
-  signal mOffsetsValid: STD_LOGIC;
-  signal mRspOffset: STD_LOGIC_VECTOR(39 downto 0);
-  signal mRtcOffset: STD_LOGIC_VECTOR(39 downto 0);
+  signal bSyncRegPortInFlat: std_logic_vector(49 downto 0);
+  signal bSyncRegPortOutFlat: std_logic_vector(33 downto 0);
+  signal mOffsetsDone: std_logic;
+  signal mOffsetsValid: std_logic;
+  signal mRspOffset: std_logic_vector(39 downto 0);
+  signal mRtcOffset: std_logic_vector(39 downto 0);
   signal pPsDone: std_logic;
   signal pPsEn: std_logic;
   signal pPsInc: std_logic;
   signal PsClk: std_logic;
-  signal rEnablePpsCrossing: STD_LOGIC;
-  signal rEnableTdc: STD_LOGIC;
-  signal rLoadRspCounts: STD_LOGIC;
-  signal rPpsPulseCaptured: STD_LOGIC;
-  signal rReRunEnable: STD_LOGIC;
-  signal rResetTdc: STD_LOGIC;
-  signal rResetTdcDone: STD_LOGIC;
-  signal rRspHighTimeInRClks: STD_LOGIC_VECTOR(11 downto 0);
-  signal rRspPeriodInRClks: STD_LOGIC_VECTOR(11 downto 0);
+  signal rEnablePpsCrossing: std_logic;
+  signal rEnableTdc: std_logic;
+  signal rLoadRspCounts: std_logic;
+  signal rPpsPulseCaptured: std_logic;
+  signal rReRunEnable: std_logic;
+  signal rResetTdc: std_logic;
+  signal rResetTdcDone: std_logic;
+  signal rRspHighTimeInRClks: std_logic_vector(11 downto 0);
+  signal rRspPeriodInRClks: std_logic_vector(11 downto 0);
   signal sAdc0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sAdc1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
-  signal SampleClk1xOutLcl: STD_LOGIC;
+  signal SampleClk1xOutLcl: std_logic;
   signal sDac0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sDac1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
-  signal sLoadRtcCounts: STD_LOGIC;
-  signal sPpsClkCrossDelayVal: STD_LOGIC_VECTOR(3 downto 0);
-  signal sRtcHighTimeInSClks: STD_LOGIC_VECTOR(11 downto 0);
-  signal sRtcPeriodInSClks: STD_LOGIC_VECTOR(11 downto 0);
+  signal sDacReadyForInputAsyncReset: STD_LOGIC;
+  signal sLoadRtcCounts: std_logic;
+  signal sPpsClkCrossDelayVal: std_logic_vector(3 downto 0);
+  signal sPpsPulseAsyncReset: std_logic;
+  signal sRtcHighTimeInSClks: std_logic_vector(11 downto 0);
+  signal sRtcPeriodInSClks: std_logic_vector(11 downto 0);
+  signal sSysRefAsyncReset: STD_LOGIC;
   --vhook_sigend
 
   signal bJesdRegPortInGrp, bSyncRegPortInGrp, bRegPortIn : RegPortIn_t;
   signal bJesdRegPortOut, bSyncRegPortOut, bRegPortOut : RegPortOut_t;
 
+  signal rPpsPulseAsyncReset_ms, rPpsPulseAsyncReset,
+         sPpsPulse_ms,           sPpsPulse,
+         sDacReadyForInput_ms,   sDacReadyForInputLcl,
+         sDacSync_ms,            sDacSyncLcl,
+         sAdcSync_ms,            sAdcSyncLcl,
+         sSysRef_ms,             sSysRefLcl    : std_logic := '0';
+
   signal sAdc0Data, sAdc1Data : AdcData_t;
   signal sDac0Data, sDac1Data : DacData_t;
 
-  constant kDataControlDefault : DataSettings_t :=
-    (AisI => '1',
-     BisQ => '1',
-     others => '0');
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of rPpsPulseAsyncReset_ms : signal is "true";
+  attribute ASYNC_REG of rPpsPulseAsyncReset    : signal is "true";
+  attribute ASYNC_REG of sPpsPulse_ms : signal is "true";
+  attribute ASYNC_REG of sPpsPulse    : signal is "true";
+  attribute ASYNC_REG of sDacReadyForInput_ms : signal is "true";
+  attribute ASYNC_REG of sDacReadyForInputLcl : signal is "true";
+  attribute ASYNC_REG of sDacSync_ms : signal is "true";
+  attribute ASYNC_REG of sDacSyncLcl : signal is "true";
+  attribute ASYNC_REG of sAdcSync_ms : signal is "true";
+  attribute ASYNC_REG of sAdcSyncLcl : signal is "true";
+  attribute ASYNC_REG of sSysRef_ms  : signal is "true";
+  attribute ASYNC_REG of sSysRefLcl  : signal is "true";
 
 begin
 
@@ -297,55 +325,57 @@ begin
   -- ------------------------------------------------------------------------------------
 
   --vhook_e RadioClocking
-  --vhook_a aReset to_boolean(aReset)
-  --vhook_a bReset to_boolean(bReset)
+  --vhook_a aReset false
+  --vhook_a bReset to_boolean(bBusReset)
   --vhook_a RadioClk1x    SampleClk1xOutLcl
   --vhook_a RadioClk2x    SampleClk2xOut
   --vhook_a RadioClk3x    open
   RadioClockingx: entity work.RadioClocking (rtl)
     port map (
-      aReset             => to_boolean(aReset),  --in  boolean
-      bReset             => to_boolean(bReset),  --in  boolean
-      BusClk             => BusClk,              --in  std_logic
-      bRadioClkMmcmReset => bRadioClkMmcmReset,  --in  std_logic
-      bRadioClksValid    => bRadioClksValid,     --out std_logic
-      bRadioClk1xEnabled => bRadioClk1xEnabled,  --in  std_logic
-      bRadioClk2xEnabled => bRadioClk2xEnabled,  --in  std_logic
-      bRadioClk3xEnabled => bRadioClk3xEnabled,  --in  std_logic
-      pPsInc             => pPsInc,              --in  std_logic
-      pPsEn              => pPsEn,               --in  std_logic
-      PsClk              => PsClk,               --in  std_logic
-      pPsDone            => pPsDone,             --out std_logic
-      FpgaClk_n          => FpgaClk_n,           --in  std_logic
-      FpgaClk_p          => FpgaClk_p,           --in  std_logic
-      RadioClk1x         => SampleClk1xOutLcl,   --out std_logic
-      RadioClk2x         => SampleClk2xOut,      --out std_logic
-      RadioClk3x         => open);               --out std_logic
+      aReset             => false,                  --in  boolean
+      bReset             => to_boolean(bBusReset),  --in  boolean
+      BusClk             => BusClk,                 --in  std_logic
+      bRadioClkMmcmReset => bRadioClkMmcmReset,     --in  std_logic
+      bRadioClksValid    => bRadioClksValid,        --out std_logic
+      bRadioClk1xEnabled => bRadioClk1xEnabled,     --in  std_logic
+      bRadioClk2xEnabled => bRadioClk2xEnabled,     --in  std_logic
+      bRadioClk3xEnabled => bRadioClk3xEnabled,     --in  std_logic
+      pPsInc             => pPsInc,                 --in  std_logic
+      pPsEn              => pPsEn,                  --in  std_logic
+      PsClk              => PsClk,                  --in  std_logic
+      pPsDone            => pPsDone,                --out std_logic
+      FpgaClk_n          => FpgaClk_n,              --in  std_logic
+      FpgaClk_p          => FpgaClk_p,              --in  std_logic
+      RadioClk1x         => SampleClk1xOutLcl,      --out std_logic
+      RadioClk2x         => SampleClk2xOut,         --out std_logic
+      RadioClk3x         => open);                  --out std_logic
 
   -- We need an internal copy of SampleClk1x for the TDC, since we don't want to try
   -- and align the other DB's clock accidentally.
   SampleClk1xOut <= SampleClk1xOutLcl;
 
   --vhook_e ClockingRegs
-  --vhook_a aReset to_boolean(aReset)
+  --vhook_a aReset false
+  --vhook_a bReset to_boolean(bBusReset)
   --vhook_a bRegPortOut       bClockingRegPortOut
   --vhook_a aRadioClksValid   bRadioClksValid
   ClockingRegsx: entity work.ClockingRegs (RTL)
     port map (
-      aReset             => to_boolean(aReset),   --in  boolean
-      BusClk             => BusClk,               --in  std_logic
-      bRegPortOut        => bClockingRegPortOut,  --out RegPortOut_t
-      bRegPortIn         => bRegPortIn,           --in  RegPortIn_t
-      pPsInc             => pPsInc,               --out std_logic
-      pPsEn              => pPsEn,                --out std_logic
-      pPsDone            => pPsDone,              --in  std_logic
-      PsClk              => PsClk,                --out std_logic
-      bRadioClkMmcmReset => bRadioClkMmcmReset,   --out std_logic
-      aRadioClksValid    => bRadioClksValid,      --in  std_logic
-      bRadioClk1xEnabled => bRadioClk1xEnabled,   --out std_logic
-      bRadioClk2xEnabled => bRadioClk2xEnabled,   --out std_logic
-      bRadioClk3xEnabled => bRadioClk3xEnabled,   --out std_logic
-      bJesdRefClkPresent => bJesdRefClkPresent);  --in  std_logic
+      aReset             => false,                  --in  boolean
+      bReset             => to_boolean(bBusReset),  --in  boolean
+      BusClk             => BusClk,                 --in  std_logic
+      bRegPortOut        => bClockingRegPortOut,    --out RegPortOut_t
+      bRegPortIn         => bRegPortIn,             --in  RegPortIn_t
+      pPsInc             => pPsInc,                 --out std_logic
+      pPsEn              => pPsEn,                  --out std_logic
+      pPsDone            => pPsDone,                --in  std_logic
+      PsClk              => PsClk,                  --out std_logic
+      bRadioClkMmcmReset => bRadioClkMmcmReset,     --out std_logic
+      aRadioClksValid    => bRadioClksValid,        --in  std_logic
+      bRadioClk1xEnabled => bRadioClk1xEnabled,     --out std_logic
+      bRadioClk2xEnabled => bRadioClk2xEnabled,     --out std_logic
+      bRadioClk3xEnabled => bRadioClk3xEnabled,     --out std_logic
+      bJesdRefClkPresent => bJesdRefClkPresent);    --in  std_logic
 
 
 
@@ -368,46 +398,66 @@ begin
   --vhook_a CaptureSysRefClk   SampleClk1xOutLcl
   --vhook_a cSysRefFpgaLvds_p  sSysRefFpgaLvds_p
   --vhook_a cSysRefFpgaLvds_n  sSysRefFpgaLvds_n
+  --vhook_a fSysRef            sSysRefAsyncReset
+  --vhook_a fDacReadyForInput  sDacReadyForInputAsyncReset
   --vhook_a {^f(.*)}         s$1
   Jesd204bXcvrCorex: Jesd204bXcvrCore
     port map (
-      aReset                => aReset,                   --in  STD_LOGIC
-      bReset                => bReset,                   --in  STD_LOGIC
-      BusClk                => BusClk,                   --in  STD_LOGIC
-      ReliableClk40         => Clk40,                    --in  STD_LOGIC
-      FpgaClk1x             => SampleClk1x,              --in  STD_LOGIC
-      FpgaClk2x             => SampleClk2x,              --in  STD_LOGIC
-      bFpgaClksStable       => bFpgaClksStable,          --in  STD_LOGIC
-      bRegPortInFlat        => bJesdCoreRegPortInFlat,   --in  STD_LOGIC_VECTOR(49:0)
-      bRegPortOutFlat       => bJesdCoreRegPortOutFlat,  --out STD_LOGIC_VECTOR(33:0)
-      aLmkSync              => aLmkSync,                 --out STD_LOGIC
-      cSysRefFpgaLvds_p     => sSysRefFpgaLvds_p,        --in  STD_LOGIC
-      cSysRefFpgaLvds_n     => sSysRefFpgaLvds_n,        --in  STD_LOGIC
-      fSysRef               => sSysRef,                  --out STD_LOGIC
-      CaptureSysRefClk      => SampleClk1xOutLcl,        --in  STD_LOGIC
-      JesdRefClk_p          => JesdRefClk_p,             --in  STD_LOGIC
-      JesdRefClk_n          => JesdRefClk_n,             --in  STD_LOGIC
-      bJesdRefClkPresent    => bJesdRefClkPresent,       --out STD_LOGIC
-      aAdcRx_p              => aAdcRx_p,                 --in  STD_LOGIC_VECTOR(3:0)
-      aAdcRx_n              => aAdcRx_n,                 --in  STD_LOGIC_VECTOR(3:0)
-      aSyncAdcOut_n         => aSyncAdcOut_n,            --out STD_LOGIC
-      aDacTx_p              => aDacTx_p,                 --out STD_LOGIC_VECTOR(3:0)
-      aDacTx_n              => aDacTx_n,                 --out STD_LOGIC_VECTOR(3:0)
-      aSyncDacIn_n          => aSyncDacIn_n,             --in  STD_LOGIC
-      fAdc0DataFlat         => sAdc0DataFlat,            --out STD_LOGIC_VECTOR(31:0)
-      fAdc1DataFlat         => sAdc1DataFlat,            --out STD_LOGIC_VECTOR(31:0)
-      fDac0DataFlat         => sDac0DataFlat,            --in  STD_LOGIC_VECTOR(31:0)
-      fDac1DataFlat         => sDac1DataFlat,            --in  STD_LOGIC_VECTOR(31:0)
-      fAdcDataValid         => sAdcDataValid,            --out STD_LOGIC
-      fDacReadyForInput     => sDacReadyForInput,        --out STD_LOGIC
-      bDac0DataSettingsFlat => bDac0DataSettingsFlat,    --in  STD_LOGIC_VECTOR(5:0)
-      bDac1DataSettingsFlat => bDac1DataSettingsFlat,    --in  STD_LOGIC_VECTOR(5:0)
-      bAdc0DataSettingsFlat => bAdc0DataSettingsFlat,    --in  STD_LOGIC_VECTOR(5:0)
-      bAdc1DataSettingsFlat => bAdc1DataSettingsFlat,    --in  STD_LOGIC_VECTOR(5:0)
-      aDacSync              => aDacSync,                 --out STD_LOGIC
-      aAdcSync              => aAdcSync);                --out STD_LOGIC
+      bBusReset          => bBusReset,                    --in  STD_LOGIC
+      BusClk             => BusClk,                       --in  STD_LOGIC
+      ReliableClk40      => Clk40,                        --in  STD_LOGIC
+      FpgaClk1x          => SampleClk1x,                  --in  STD_LOGIC
+      FpgaClk2x          => SampleClk2x,                  --in  STD_LOGIC
+      bFpgaClksStable    => bFpgaClksStable,              --in  STD_LOGIC
+      bRegPortInFlat     => bJesdCoreRegPortInFlat,       --in  STD_LOGIC_VECTOR(49:0)
+      bRegPortOutFlat    => bJesdCoreRegPortOutFlat,      --out STD_LOGIC_VECTOR(33:0)
+      aLmkSync           => aLmkSync,                     --out STD_LOGIC
+      cSysRefFpgaLvds_p  => sSysRefFpgaLvds_p,            --in  STD_LOGIC
+      cSysRefFpgaLvds_n  => sSysRefFpgaLvds_n,            --in  STD_LOGIC
+      fSysRef            => sSysRefAsyncReset,            --out STD_LOGIC
+      CaptureSysRefClk   => SampleClk1xOutLcl,            --in  STD_LOGIC
+      JesdRefClk_p       => JesdRefClk_p,                 --in  STD_LOGIC
+      JesdRefClk_n       => JesdRefClk_n,                 --in  STD_LOGIC
+      bJesdRefClkPresent => bJesdRefClkPresent,           --out STD_LOGIC
+      aAdcRx_p           => aAdcRx_p,                     --in  STD_LOGIC_VECTOR(3:0)
+      aAdcRx_n           => aAdcRx_n,                     --in  STD_LOGIC_VECTOR(3:0)
+      aSyncAdcOut_n      => aSyncAdcOut_n,                --out STD_LOGIC
+      aDacTx_p           => aDacTx_p,                     --out STD_LOGIC_VECTOR(3:0)
+      aDacTx_n           => aDacTx_n,                     --out STD_LOGIC_VECTOR(3:0)
+      aSyncDacIn_n       => aSyncDacIn_n,                 --in  STD_LOGIC
+      fAdc0DataFlat      => sAdc0DataFlat,                --out STD_LOGIC_VECTOR(31:0)
+      fAdc1DataFlat      => sAdc1DataFlat,                --out STD_LOGIC_VECTOR(31:0)
+      fDac0DataFlat      => sDac0DataFlat,                --in  STD_LOGIC_VECTOR(31:0)
+      fDac1DataFlat      => sDac1DataFlat,                --in  STD_LOGIC_VECTOR(31:0)
+      fAdcDataValid      => sAdcDataValid,                --out STD_LOGIC
+      fDacReadyForInput  => sDacReadyForInputAsyncReset,  --out STD_LOGIC
+      aDacSync           => aDacSync,                     --out STD_LOGIC
+      aAdcSync           => aAdcSync);                    --out STD_LOGIC
+
+  JesdDoubleSyncToNoResetSampleClk : process (SampleClk1x)
+  begin
+    if rising_edge(SampleClk1x) then
+      sDacReadyForInput_ms <= sDacReadyForInputAsyncReset;
+      sDacReadyForInputLcl <= sDacReadyForInput_ms;
+      -- No clock crossing here -- just reset, although the prefix declares otherwise...
+      sDacSync_ms <= aDacSync;
+      sDacSyncLcl <= sDacSync_ms;
+      sAdcSync_ms <= aAdcSync;
+      sAdcSyncLcl <= sAdcSync_ms;
+      sSysRef_ms  <= sSysRefAsyncReset;
+      sSysRefLcl  <= sSysRef_ms;
+    end if;
+  end process;
+
+  -- Locals to outputs.
+  sDacReadyForInput <= sDacReadyForInputLcl;
+  sDacSync <= sDacSyncLcl;
+  sAdcSync <= sAdcSyncLcl;
+  sSysRef  <= sSysRefLcl;
 
   -- Just combine the first two enables, since they're the ones that are used for JESD.
+  -- No reset crossing here, since bFpgaClksStable is only received by a no-reset domain
+  -- and the MGTs directly.
   bFpgaClksStable <= bRadioClksValid and bRadioClk1xEnabled and bRadioClk2xEnabled;
 
   -- Compress/expand the flat data types from the netlist and route to top level.
@@ -426,25 +476,54 @@ begin
   sDac1Data.I <= sDacDataSamples1I;
   sDac1Data.Q <= sDacDataSamples1Q;
 
-  -- Compress the flat data control types from the netlist and route from top level.
-  --vhook_warn Data Settings vector tied to default.
-  bAdc0DataSettingsFlat <= Flatten(kDataControlDefault);
-  bAdc1DataSettingsFlat <= Flatten(kDataControlDefault);
-  bDac0DataSettingsFlat <= Flatten(kDataControlDefault);
-  bDac1DataSettingsFlat <= Flatten(kDataControlDefault);
-
 
   -- Timing and Sync : ------------------------------------------------------------------
   -- ------------------------------------------------------------------------------------
 
+  -- Cross the PPS from the no-reset domain into the aTdcReset domain since there is a
+  -- reset crossing going into the TdcWrapper (reset by aTdcReset)! No clock domain
+  -- crossing here, so crossing a single-cycle pulse is safe.
+  DoubleSyncToAsyncReset : process (aTdcReset, RefClk)
+  begin
+    if to_boolean(aTdcReset) then
+      rPpsPulseAsyncReset_ms <= '0';
+      rPpsPulseAsyncReset    <= '0';
+    elsif rising_edge(RefClk) then
+      rPpsPulseAsyncReset_ms <= rPpsPulse;
+      rPpsPulseAsyncReset    <= rPpsPulseAsyncReset_ms;
+    end if;
+  end process;
+
+  -- In a similar fashion, cross the output PPS trigger from the async aTdcReset domain
+  -- to the no-reset of the rest of the design. The odds of this signal triggering a
+  -- failure are astronomically low (since it only pulses one clock cycle per second),
+  -- but two flops is worth the assurance it won't mess something else up downstream.
+  -- Note this double-sync mainly protects against the reset assertion case, since in the
+  -- de-assertion case sPpsPulseAsyncReset should be zero and not transition for a long
+  -- time afterwards. Again no clock crossing here, so crossing a single-cycle pulse
+  -- is safe.
+  DoubleSyncToNoReset : process (SampleClk1xOutLcl)
+  begin
+    if rising_edge(SampleClk1xOutLcl) then
+      sPpsPulse_ms <= sPpsPulseAsyncReset;
+      sPpsPulse    <= sPpsPulse_ms;
+    end if;
+  end process;
+  -- Local to output.
+  sPps <= sPpsPulse;
+
   --vhook_e TdcWrapper
+  --vhook_a aReset    aTdcReset
+  --vhook_# Use the local copy of the SampleClock, since we want the TDC to measure the
+  --vhook_# clock offset for this daughterboard, not the global SampleClock.
   --vhook_a SampleClk SampleClk1xOutLcl
-  --vhook_a sPpsPulse sPps
+  --vhook_a rPpsPulse rPpsPulseAsyncReset
+  --vhook_a sPpsPulse sPpsPulseAsyncReset
   --vhook_a sGatedPulseToPin sGatedPulseToPin
   --vhook_a {^s(.*)}  s$1
   TdcWrapperx: entity work.TdcWrapper (struct)
     port map (
-      aReset               => aReset,                --in  std_logic
+      aReset               => aTdcReset,             --in  std_logic
       RefClk               => RefClk,                --in  std_logic
       SampleClk            => SampleClk1xOutLcl,     --in  std_logic
       MeasClk              => MeasClk,               --in  std_logic
@@ -452,11 +531,11 @@ begin
       rResetTdcDone        => rResetTdcDone,         --out std_logic
       rEnableTdc           => rEnableTdc,            --in  std_logic
       rReRunEnable         => rReRunEnable,          --in  std_logic
-      rPpsPulse            => rPpsPulse,             --in  std_logic
+      rPpsPulse            => rPpsPulseAsyncReset,   --in  std_logic
       rPpsPulseCaptured    => rPpsPulseCaptured,     --out std_logic
       rEnablePpsCrossing   => rEnablePpsCrossing,    --in  std_logic
       sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,  --in  std_logic_vector(3:0)
-      sPpsPulse            => sPps,                  --out std_logic
+      sPpsPulse            => sPpsPulseAsyncReset,   --out std_logic
       mRspOffset           => mRspOffset,            --out std_logic_vector(39:0)
       mRtcOffset           => mRtcOffset,            --out std_logic_vector(39:0)
       mOffsetsDone         => mOffsetsDone,          --out std_logic
@@ -481,36 +560,40 @@ begin
   bSyncRegPortInFlat <= Flatten(bSyncRegPortInGrp);
 
   --vhook   SyncRegsIfc
+  --vhook_# Tying this low is safe because the sync reset is used inside SyncRegsIfc.
+  --vhook_a aBusReset '0'
   --vhook_a bRegPortInFlat  bSyncRegPortInFlat
   --vhook_a bRegPortOutFlat bSyncRegPortOutFlat
   --vhook_a SampleClk SampleClk1xOutLcl
   --vhook_a {^s(.*)}  s$1
   SyncRegsIfcx: SyncRegsIfc
     port map (
-      aReset               => aReset,                --in  STD_LOGIC
-      BusClk               => BusClk,                --in  STD_LOGIC
-      bRegPortInFlat       => bSyncRegPortInFlat,    --in  STD_LOGIC_VECTOR(49:0)
-      bRegPortOutFlat      => bSyncRegPortOutFlat,   --out STD_LOGIC_VECTOR(33:0)
-      RefClk               => RefClk,                --in  STD_LOGIC
-      rResetTdc            => rResetTdc,             --out STD_LOGIC
-      rResetTdcDone        => rResetTdcDone,         --in  STD_LOGIC
-      rEnableTdc           => rEnableTdc,            --out STD_LOGIC
-      rReRunEnable         => rReRunEnable,          --out STD_LOGIC
-      rEnablePpsCrossing   => rEnablePpsCrossing,    --out STD_LOGIC
-      rPpsPulseCaptured    => rPpsPulseCaptured,     --in  STD_LOGIC
-      SampleClk            => SampleClk1xOutLcl,     --in  STD_LOGIC
-      sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,  --out STD_LOGIC_VECTOR(3:0)
-      MeasClk              => MeasClk,               --in  STD_LOGIC
-      mRspOffset           => mRspOffset,            --in  STD_LOGIC_VECTOR(39:0)
-      mRtcOffset           => mRtcOffset,            --in  STD_LOGIC_VECTOR(39:0)
-      mOffsetsDone         => mOffsetsDone,          --in  STD_LOGIC
-      mOffsetsValid        => mOffsetsValid,         --in  STD_LOGIC
-      rLoadRspCounts       => rLoadRspCounts,        --out STD_LOGIC
-      rRspPeriodInRClks    => rRspPeriodInRClks,     --out STD_LOGIC_VECTOR(11:0)
-      rRspHighTimeInRClks  => rRspHighTimeInRClks,   --out STD_LOGIC_VECTOR(11:0)
-      sLoadRtcCounts       => sLoadRtcCounts,        --out STD_LOGIC
-      sRtcPeriodInSClks    => sRtcPeriodInSClks,     --out STD_LOGIC_VECTOR(11:0)
-      sRtcHighTimeInSClks  => sRtcHighTimeInSClks);  --out STD_LOGIC_VECTOR(11:0)
+      aBusReset            => '0',                   --in  std_logic
+      bBusReset            => bBusReset,             --in  std_logic
+      BusClk               => BusClk,                --in  std_logic
+      aTdcReset            => aTdcReset,             --out std_logic
+      bRegPortInFlat       => bSyncRegPortInFlat,    --in  std_logic_vector(49:0)
+      bRegPortOutFlat      => bSyncRegPortOutFlat,   --out std_logic_vector(33:0)
+      RefClk               => RefClk,                --in  std_logic
+      rResetTdc            => rResetTdc,             --out std_logic
+      rResetTdcDone        => rResetTdcDone,         --in  std_logic
+      rEnableTdc           => rEnableTdc,            --out std_logic
+      rReRunEnable         => rReRunEnable,          --out std_logic
+      rEnablePpsCrossing   => rEnablePpsCrossing,    --out std_logic
+      rPpsPulseCaptured    => rPpsPulseCaptured,     --in  std_logic
+      SampleClk            => SampleClk1xOutLcl,     --in  std_logic
+      sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,  --out std_logic_vector(3:0)
+      MeasClk              => MeasClk,               --in  std_logic
+      mRspOffset           => mRspOffset,            --in  std_logic_vector(39:0)
+      mRtcOffset           => mRtcOffset,            --in  std_logic_vector(39:0)
+      mOffsetsDone         => mOffsetsDone,          --in  std_logic
+      mOffsetsValid        => mOffsetsValid,         --in  std_logic
+      rLoadRspCounts       => rLoadRspCounts,        --out std_logic
+      rRspPeriodInRClks    => rRspPeriodInRClks,     --out std_logic_vector(11:0)
+      rRspHighTimeInRClks  => rRspHighTimeInRClks,   --out std_logic_vector(11:0)
+      sLoadRtcCounts       => sLoadRtcCounts,        --out std_logic
+      sRtcPeriodInSClks    => sRtcPeriodInSClks,     --out std_logic_vector(11:0)
+      sRtcHighTimeInSClks  => sRtcHighTimeInSClks);  --out std_logic_vector(11:0)
 
 
 
@@ -518,12 +601,15 @@ begin
   -- ------------------------------------------------------------------------------------
 
   --vhook_e DaughterboardRegs
-  --vhook_a aReset to_boolean(aReset)
+  --vhook_# Tying this low is safe because the sync reset is used inside DaughterboardRegs.
+  --vhook_a aReset false
+  --vhook_a bReset to_boolean(bBusReset)
   --vhook_a bRegPortOut bDbRegPortOut
   --vhook_a kDbId       std_logic_vector(to_unsigned(16#150#,16))
   DaughterboardRegsx: entity work.DaughterboardRegs (RTL)
     port map (
-      aReset      => to_boolean(aReset),                         --in  boolean
+      aReset      => false,                                      --in  boolean
+      bReset      => to_boolean(bBusReset),                      --in  boolean
       BusClk      => BusClk,                                     --in  std_logic
       bRegPortOut => bDbRegPortOut,                              --out RegPortOut_t
       bRegPortIn  => bRegPortIn,                                 --in  RegPortIn_t

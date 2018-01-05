@@ -1,7 +1,7 @@
 -- Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2015.4.2 (win64) Build 1494164 Fri Feb 26 04:18:56 MST 2016
--- Date        : Tue Oct 10 16:34:49 2017
+-- Date        : Wed Jan 10 10:53:33 2018
 -- Host        : djepson-lt running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -mode synth_stub -force -file ./Jesd204bXcvrCore_stub.vhd
 -- Design      : Jesd204bXcvrCore
@@ -13,8 +13,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity Jesd204bXcvrCore is
   Port ( 
-    aReset : in STD_LOGIC;
-    bReset : in STD_LOGIC;
+    bBusReset : in STD_LOGIC;
     BusClk : in STD_LOGIC;
     ReliableClk40 : in STD_LOGIC;
     FpgaClk1x : in STD_LOGIC;
@@ -42,10 +41,6 @@ entity Jesd204bXcvrCore is
     fDac1DataFlat : in STD_LOGIC_VECTOR ( 31 downto 0 );
     fAdcDataValid : out STD_LOGIC;
     fDacReadyForInput : out STD_LOGIC;
-    bDac0DataSettingsFlat : in STD_LOGIC_VECTOR ( 5 downto 0 );
-    bDac1DataSettingsFlat : in STD_LOGIC_VECTOR ( 5 downto 0 );
-    bAdc0DataSettingsFlat : in STD_LOGIC_VECTOR ( 5 downto 0 );
-    bAdc1DataSettingsFlat : in STD_LOGIC_VECTOR ( 5 downto 0 );
     aDacSync : out STD_LOGIC;
     aAdcSync : out STD_LOGIC
   );
@@ -56,6 +51,6 @@ architecture stub of Jesd204bXcvrCore is
 attribute syn_black_box : boolean;
 attribute black_box_pad_pin : string;
 attribute syn_black_box of stub : architecture is true;
-attribute black_box_pad_pin of stub : architecture is "aReset,bReset,BusClk,ReliableClk40,FpgaClk1x,FpgaClk2x,bFpgaClksStable,bRegPortInFlat[49:0],bRegPortOutFlat[33:0],aLmkSync,cSysRefFpgaLvds_p,cSysRefFpgaLvds_n,fSysRef,CaptureSysRefClk,JesdRefClk_p,JesdRefClk_n,bJesdRefClkPresent,aAdcRx_p[3:0],aAdcRx_n[3:0],aSyncAdcOut_n,aDacTx_p[3:0],aDacTx_n[3:0],aSyncDacIn_n,fAdc0DataFlat[31:0],fAdc1DataFlat[31:0],fDac0DataFlat[31:0],fDac1DataFlat[31:0],fAdcDataValid,fDacReadyForInput,bDac0DataSettingsFlat[5:0],bDac1DataSettingsFlat[5:0],bAdc0DataSettingsFlat[5:0],bAdc1DataSettingsFlat[5:0],aDacSync,aAdcSync";
+attribute black_box_pad_pin of stub : architecture is "bBusReset,BusClk,ReliableClk40,FpgaClk1x,FpgaClk2x,bFpgaClksStable,bRegPortInFlat[49:0],bRegPortOutFlat[33:0],aLmkSync,cSysRefFpgaLvds_p,cSysRefFpgaLvds_n,fSysRef,CaptureSysRefClk,JesdRefClk_p,JesdRefClk_n,bJesdRefClkPresent,aAdcRx_p[3:0],aAdcRx_n[3:0],aSyncAdcOut_n,aDacTx_p[3:0],aDacTx_n[3:0],aSyncDacIn_n,fAdc0DataFlat[31:0],fAdc1DataFlat[31:0],fDac0DataFlat[31:0],fDac1DataFlat[31:0],fAdcDataValid,fDacReadyForInput,aDacSync,aAdcSync";
 begin
 end;

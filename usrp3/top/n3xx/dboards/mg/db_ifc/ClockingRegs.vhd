@@ -6,7 +6,7 @@
 -- Date: 17 March 2016
 --
 -------------------------------------------------------------------------------
--- Copyright 2016-2017 Ettus Research, A National Instruments Company
+-- Copyright 2016-2018 Ettus Research, A National Instruments Company
 -- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
@@ -29,7 +29,10 @@ library work;
 
 entity ClockingRegs is
   port(
+    -- Async reset. Can be tied low if desired.
     aReset                 : in  boolean;
+    -- Sync reset... used in the same places as the async one.
+    bReset                 : in  boolean;
     -- Register Bus Clock -- this module connects the BusClk to PsClk, so it's limited
     -- to 200 MHz!
     BusClk                 : in  std_logic;
@@ -71,7 +74,7 @@ architecture RTL of ClockingRegs is
   --vhook_sigstart
   --vhook_sigend
 
-  signal bRadioClkMmcmResetInt : std_logic;
+  signal bRadioClkMmcmResetInt : std_logic := '1';
 
   signal bRegPortOutLcl : RegPortOut_t := kRegPortOutZero;
 
@@ -79,14 +82,13 @@ architecture RTL of ClockingRegs is
          bPsEn,
          bPsInc,
          pPsDoneDs_ms,
-         pPsDoneDs : std_logic;
+         pPsDoneDs : std_logic := '0';
 
   signal bRadioClk1xEnabledInt,
          bRadioClk2xEnabledInt,
          bRadioClk3xEnabledInt,
          bRadioClksValid_ms,
-         bRadioClksValid : std_logic;
-
+         bRadioClksValid : std_logic := '0';
 
   attribute ASYNC_REG : string;
   attribute ASYNC_REG of bRadioClksValid_ms : signal is "true";
@@ -121,34 +123,43 @@ begin
       bRadioClk3xEnabledInt <= '0';
     elsif rising_edge(BusClk) then
 
-      -- Clear strobe
-      bPsEn  <= '0';
+      if bReset then
+        bRadioClkMmcmResetInt <= '1';
+        bPsInc <= '0';
+        bPsEn  <= '0';
+        bRadioClk1xEnabledInt <= '0';
+        bRadioClk2xEnabledInt <= '0';
+        bRadioClk3xEnabledInt <= '0';
+      else
+        -- Clear strobe
+        bPsEn  <= '0';
 
-      if RegWrite(kPhaseShiftControl, bRegPortIn)  then
-        if bRegPortIn.Data(kPsInc) = '1' then
-          bPsInc <= '1';
-          bPsEn  <= '1';
-        elsif bRegPortIn.Data(kPsDec) = '1' then
-          bPsInc <= '0';
-          bPsEn  <= '1';
+        if RegWrite(kPhaseShiftControl, bRegPortIn)  then
+          if bRegPortIn.Data(kPsInc) = '1' then
+            bPsInc <= '1';
+            bPsEn  <= '1';
+          elsif bRegPortIn.Data(kPsDec) = '1' then
+            bPsInc <= '0';
+            bPsEn  <= '1';
+          end if;
         end if;
-      end if;
 
-      if RegWrite(kRadioClkMmcm, bRegPortIn) then
-        -- Set/Clear pair
-        if bRegPortIn.Data(kRadioClkMmcmResetSet) = '1' then
-          bRadioClkMmcmResetInt <= '1';
-        elsif bRegPortIn.Data(kRadioClkMmcmResetClear) = '1' then
-          bRadioClkMmcmResetInt <= '0';
+        if RegWrite(kRadioClkMmcm, bRegPortIn) then
+          -- Set/Clear pair
+          if bRegPortIn.Data(kRadioClkMmcmResetSet) = '1' then
+            bRadioClkMmcmResetInt <= '1';
+          elsif bRegPortIn.Data(kRadioClkMmcmResetClear) = '1' then
+            bRadioClkMmcmResetInt <= '0';
+          end if;
         end if;
-      end if;
 
-      if RegWrite(kRadioClkEnables, bRegPortIn) then
-        bRadioClk1xEnabledInt <= bRegPortIn.Data(kRadioClk1xEnabled);
-        bRadioClk2xEnabledInt <= bRegPortIn.Data(kRadioClk2xEnabled);
-        bRadioClk3xEnabledInt <= bRegPortIn.Data(kRadioClk3xEnabled);
-      end if;
+        if RegWrite(kRadioClkEnables, bRegPortIn) then
+          bRadioClk1xEnabledInt <= bRegPortIn.Data(kRadioClk1xEnabled);
+          bRadioClk2xEnabledInt <= bRegPortIn.Data(kRadioClk2xEnabled);
+          bRadioClk3xEnabledInt <= bRegPortIn.Data(kRadioClk3xEnabled);
+        end if;
 
+      end if;
     end if;
   end process WriteRegisters;
 
@@ -161,6 +172,7 @@ begin
       pPsDoneDs_ms <= '0';
       pPsDoneDs    <= '0';
     elsif rising_edge(BusClk) then
+      -- No sync reset on double-syncs (however there are default assignments above)!
       bRadioClksValid_ms <= aRadioClksValid;
       bRadioClksValid    <= bRadioClksValid_ms;
       pPsDoneDs_ms <= pPsDone;
@@ -178,47 +190,52 @@ begin
       bPsDone          <= '0';
     elsif rising_edge(BusClk) then
 
-      -- Deassert strobes
-      bRegPortOutLcl.Data <= kRegPortDataZero;
+      if bReset then
+        bRegPortOutLcl   <= kRegPortOutZero;
+        bPsDone          <= '0';
+      else
+        -- Deassert strobes
+        bRegPortOutLcl.Data <= kRegPortDataZero;
 
-      -- All of these transactions only take one clock cycle, so we do not have to
-      -- de-assert the Ready signal (ever).
-      bRegPortOutLcl.Ready <= true;
+        -- All of these transactions only take one clock cycle, so we do not have to
+        -- de-assert the Ready signal (ever).
+        bRegPortOutLcl.Ready <= true;
 
-      -- Process the returned data from the phase shifter in the MMCM. Note that even
-      -- though the prefixes are different (p and b), we drive the PsClk from the BusClk
-      -- so this "crossing" is actually safe. Whenever the Done signal asserts (pPsDone -
-      -- pay attention to the prefix!) from the MMCM, we set a sticky bit to tell SW
-      -- that the shift operation is complete.
-      --
-      -- However, if pPsDone asserts at the same time that SW tries to read the register,
-      -- we should accurately report that the operation is indeed complete and then NOT
-      -- store the sticky (since it has already been read by SW). If a read does not come
-      -- through at the same time pPsDone is asserted, then we store the done state as a
-      -- sticky, bPsDone, which is only cleared by a read to this register.
-      if RegRead(kPhaseShiftControl, bRegPortIn) then
-        -- The phase shift is always enabled for the feedback clock in RadioClocking.vhd
-        bRegPortOutLcl.Data(kPsEnabledForFdbClk) <= '1';
-        bRegPortOutLcl.Data(kPsDone) <= bPsDone or pPsDoneDs;
-        bPsDone            <= '0';
-      elsif pPsDoneDs = '1' then
-        bPsDone <= '1';
+        -- Process the returned data from the phase shifter in the MMCM. Note that even
+        -- though the prefixes are different (p and b), we drive the PsClk from the BusClk
+        -- so this "crossing" is actually safe. Whenever the Done signal asserts (pPsDone -
+        -- pay attention to the prefix!) from the MMCM, we set a sticky bit to tell SW
+        -- that the shift operation is complete.
+        --
+        -- However, if pPsDone asserts at the same time that SW tries to read the register,
+        -- we should accurately report that the operation is indeed complete and then NOT
+        -- store the sticky (since it has already been read by SW). If a read does not come
+        -- through at the same time pPsDone is asserted, then we store the done state as a
+        -- sticky, bPsDone, which is only cleared by a read to this register.
+        if RegRead(kPhaseShiftControl, bRegPortIn) then
+          -- The phase shift is always enabled for the feedback clock in RadioClocking.vhd
+          bRegPortOutLcl.Data(kPsEnabledForFdbClk) <= '1';
+          bRegPortOutLcl.Data(kPsDone) <= bPsDone or pPsDoneDs;
+          bPsDone            <= '0';
+        elsif pPsDoneDs = '1' then
+          bPsDone <= '1';
+        end if;
+
+        if RegRead(kRadioClkMmcm, bRegPortIn) then
+          bRegPortOutLcl.Data(kRadioClkMmcmLocked) <= bRadioClksValid;
+        end if;
+
+        if RegRead(kRadioClkEnables, bRegPortIn) then
+          bRegPortOutLcl.Data(kRadioClk1xEnabled) <= bRadioClk1xEnabledInt;
+          bRegPortOutLcl.Data(kRadioClk2xEnabled) <= bRadioClk2xEnabledInt;
+          bRegPortOutLcl.Data(kRadioClk3xEnabled) <= bRadioClk3xEnabledInt;
+        end if;
+
+        if RegRead(kMgtRefClkStatus, bRegPortIn) then
+          bRegPortOutLcl.Data(kJesdRefClkPresent) <= bJesdRefClkPresent;
+        end if;
+
       end if;
-
-      if RegRead(kRadioClkMmcm, bRegPortIn) then
-        bRegPortOutLcl.Data(kRadioClkMmcmLocked) <= bRadioClksValid;
-      end if;
-
-      if RegRead(kRadioClkEnables, bRegPortIn) then
-        bRegPortOutLcl.Data(kRadioClk1xEnabled) <= bRadioClk1xEnabledInt;
-        bRegPortOutLcl.Data(kRadioClk2xEnabled) <= bRadioClk2xEnabledInt;
-        bRegPortOutLcl.Data(kRadioClk3xEnabled) <= bRadioClk3xEnabledInt;
-      end if;
-
-      if RegRead(kMgtRefClkStatus, bRegPortIn) then
-        bRegPortOutLcl.Data(kJesdRefClkPresent) <= bJesdRefClkPresent;
-      end if;
-
     end if;
   end process ReadRegisters;
 

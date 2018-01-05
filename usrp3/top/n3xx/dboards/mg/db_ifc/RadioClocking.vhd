@@ -6,7 +6,7 @@
 -- Date: 22 February 2016
 --
 -------------------------------------------------------------------------------
--- Copyright 2016-2017 Ettus Research, A National Instruments Company
+-- Copyright 2016-2018 Ettus Research, A National Instruments Company
 -- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
@@ -31,7 +31,7 @@ entity RadioClocking is
   port (
     -- Async reset. Can be tied low if desired.
     aReset                 : in  boolean;
-    -- Sync reset.
+    -- Sync reset... used in the same places as the async one.
     bReset                 : in  boolean;
 
     -- Should be a always-on clock
@@ -61,7 +61,6 @@ entity RadioClocking is
     RadioClk2x             : out std_logic;
     RadioClk3x             : out std_logic
 
-
   );
 end RadioClocking;
 
@@ -80,15 +79,16 @@ architecture rtl of RadioClocking is
   signal RadioClkMmcmFeedbackIn,
          RadioClkMmcmFeedbackOut,
          FpgaClkSE,
-         aRadioClkMmcmLocked,
-         bRadioClkMmcmLocked_ms,
+         aRadioClkMmcmLocked : std_logic;
+
+  signal bRadioClkMmcmLocked_ms,
          bRadioClkMmcmLocked,
          bEnableRadioClkBufgOutputs,
          bEnableRadioClk1xBufgOutput,
          bEnableRadioClk2xBufgOutput,
-         bEnableRadioClk3xBufgOutput : std_logic;
+         bEnableRadioClk3xBufgOutput : std_logic := '0';
 
-  signal aRadioClkMmcmResetInternal  : std_logic;
+  signal aRadioClkMmcmResetInternal  : std_logic := '1';
 
   attribute ASYNC_REG : string;
   attribute ASYNC_REG of bRadioClkMmcmLocked_ms : signal is "true";
@@ -112,10 +112,10 @@ begin
   ResetDelay : process(aReset, BusClk)
   begin
     if aReset then
-      aRadioClkMmcmResetInternal   <= '0';
+      aRadioClkMmcmResetInternal   <= '1';
     elsif rising_edge(BusClk) then
       if bReset then
-        aRadioClkMmcmResetInternal   <= '0';
+        aRadioClkMmcmResetInternal   <= '1';
       else
         -- Delay by 1 to allow the BUFGs to turn off before the MMCM is reset.
         aRadioClkMmcmResetInternal <= bRadioClkMmcmReset;

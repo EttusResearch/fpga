@@ -6,7 +6,7 @@
 -- Date: 27 April 2016
 --
 -------------------------------------------------------------------------------
--- Copyright 2016-2017 Ettus Research, A National Instruments Company
+-- Copyright 2016-2018 Ettus Research, A National Instruments Company
 -- SPDX-License-Identifier: GPL-3.0
 -------------------------------------------------------------------------------
 --
@@ -29,7 +29,10 @@ library work;
 
 entity DaughterboardRegs is
   port(
+    -- Async reset. Can be tied low if desired.
     aReset                 : in  boolean;
+    -- Sync reset... used in the same places as the async one.
+    bReset                 : in  boolean;
     BusClk                 : in  std_logic;
 
     bRegPortOut            : out RegPortOut_t;
@@ -58,21 +61,24 @@ begin
   ReadRegisters: process(aReset, BusClk)
   begin
     if aReset then
-      bRegPortOutLcl           <= kRegPortOutZero;
+      bRegPortOutLcl <= kRegPortOutZero;
     elsif rising_edge(BusClk) then
+      if bReset then
+        bRegPortOutLcl <= kRegPortOutZero;
+      else
+        -- De-assert strobes
+        bRegPortOutLcl.Data <= kRegPortDataZero;
 
-      -- Deassert strobes
-      bRegPortOutLcl.Data      <= kRegPortDataZero;
+        -- All of these transactions only take one clock cycle, so we do not have to
+        -- de-assert the Ready signal (ever).
+        bRegPortOutLcl.Ready <= true;
 
-      -- All of these transactions only take one clock cycle, so we do not have to
-      -- de-assert the Ready signal (ever).
-      bRegPortOutLcl.Ready <= true;
+        if RegRead(kDaughterboardId, bRegPortIn) then
+          bRegPortOutLcl.Data(kDbIdValMsb downto kDbIdVal) <= kDbId;
+          bRegPortOutLcl.Data(kSlotIdVal)                  <= kSlotId;
+        end if;
 
-      if RegRead(kDaughterboardId, bRegPortIn) then
-        bRegPortOutLcl.Data(kDbIdValMsb downto kDbIdVal) <= kDbId;
-        bRegPortOutLcl.Data(kSlotIdVal)                  <= kSlotId;
       end if;
-
     end if;
   end process ReadRegisters;
 
