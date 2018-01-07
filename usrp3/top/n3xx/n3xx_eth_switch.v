@@ -16,16 +16,16 @@
 
 module n3xx_eth_switch #(
   parameter BASE                     = 0,
-  parameter XO_FIFOSIZE              = 10,
+  parameter XO_FIFOSIZE              = 1,
   parameter CPU_FIFOSIZE             = 10,
-  parameter VITA_FIFOSIZE            = 10,
-  parameter ETHOUT_FIFOSIZE          = 10,
+  parameter VITA_FIFOSIZE            = 11,
+  parameter ETHOUT_FIFOSIZE          = 1,
   parameter REG_DWIDTH               = 32,    // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH               = 14,    // Width of the address bus
   parameter [47:0] DEFAULT_MAC_ADDR  = {8'h00, 8'h80, 8'h2f, 8'h16, 8'hc5, 8'h2f},
   parameter [31:0] DEFAULT_IP_ADDR   = {8'd192, 8'd168, 8'd10, 8'd2},
   parameter [31:0] DEFAULT_UDP_PORTS = {16'd49154, 16'd49153}
-  )(
+)(
 
   input           clk,
   input           reset,
@@ -363,9 +363,9 @@ module n3xx_eth_switch #(
     .debug()
   );
 
-  axi_fifo_short #(
-    .WIDTH(65)
-  ) e2v_pipeline_srl (
+  axi_fifo #(
+    .WIDTH(65), .SIZE(1)
+  ) e2v_reg_slice (
     .clk(clk),
     .reset(reset),
     .clear(clear),
