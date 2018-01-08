@@ -96,6 +96,7 @@ module noc_block_ddc #(
   localparam RB_NUM_HB        = 1;
   localparam RB_CIC_MAX_DECIM = 2;
   localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
+  localparam MAX_N = CIC_MAX_DECIM * 2<<(NUM_HB-1);
 
   genvar i;
   generate
@@ -222,7 +223,7 @@ module noc_block_ddc #(
       wire error_drop_pkt_lockup;
       axi_rate_change #(
         .WIDTH(33),
-        .MAX_N(2040),
+        .MAX_N(MAX_N),
         .MAX_M(1),
         .SR_N_ADDR(SR_N_ADDR),
         .SR_M_ADDR(SR_M_ADDR),

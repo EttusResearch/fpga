@@ -94,6 +94,8 @@ module noc_block_duc #(
   localparam RB_NUM_HB        = 1;
   localparam RB_CIC_MAX_INTERP = 2;
   localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
+  localparam MAX_M = CIC_MAX_INTERP * 2<<(NUM_HB-1);
+
 
   genvar i;
   generate
@@ -199,7 +201,7 @@ module noc_block_duc #(
       axi_rate_change #(
         .WIDTH(32),
         .MAX_N(1),
-        .MAX_M(512),
+        .MAX_M(MAX_M),
         .SR_N_ADDR(SR_N_ADDR),
         .SR_M_ADDR(SR_M_ADDR),
         .SR_CONFIG_ADDR(SR_CONFIG_ADDR))
