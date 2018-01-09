@@ -73,7 +73,7 @@ module new_tx_control
 
    reg clear_seqnum_latch;
 
-   wire burst_start = ~send_at | now;
+   wire burst_start = sample_tvalid & (~send_at | now);
    wire last_sample = sample_tvalid & sample_tready & eop;
    wire time_to_clear = clear_seqnum_latch && (
                         (last_sample && eob) ||
