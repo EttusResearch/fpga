@@ -3174,30 +3174,8 @@ module n310
   //
   // //////////////////////////////////////////////////////////////////////
 
-   reg [31:0] counter1;
-   always @(posedge bus_clk) begin
-     if (clk40_rst)
-       counter1 <= 32'd0;
-     else
-       counter1 <= counter1 + 32'd1;
-   end
-   reg [31:0] counter2;
-   always @(posedge radio_clk) begin
-     if (clk40_rst)
-       counter2 <= 32'd0;
-     else
-       counter2 <= counter2 + 32'd1;
-   end
-   reg [31:0] counter3;
-   always @(posedge sfp0_gb_refclk) begin
-     if (clk40_rst)
-       counter3 <= 32'd0;
-     else
-       counter3 <= counter3 + 32'd1;
-   end
-
-   assign PANEL_LED_LINK = counter1[26];
-   assign PANEL_LED_REF = counter2[26];
-   assign PANEL_LED_GPS = counter3[26];
+   assign PANEL_LED_LINK = ps_gpio_out[45];
+   assign PANEL_LED_REF  = ps_gpio_out[46];
+   assign PANEL_LED_GPS  = ps_gpio_out[47];
 
 endmodule
