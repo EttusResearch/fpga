@@ -27,9 +27,9 @@ set_property DRIVE         4                [get_ports {FPGA_GPIO[*]}]
 set_property SLEW          SLOW             [get_ports {FPGA_GPIO[*]}]
 
 # These pins should be commented out for release hardware.
-# set_property PACKAGE_PIN   Y30              [get_ports {FPGA_TEST[0]}]
-# set_property PACKAGE_PIN   AA30             [get_ports {FPGA_TEST[1]}]
-# set_property IOSTANDARD    LVCMOS33         [get_ports {FPGA_TEST[*]}]
+set_property PACKAGE_PIN   Y30              [get_ports {FPGA_TEST[0]}]
+set_property PACKAGE_PIN   AA30             [get_ports {FPGA_TEST[1]}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {FPGA_TEST[*]}]
 
 # set_property PACKAGE_PIN   AH27             [get_ports {MGMT-GPIO0}]
 # set_property PACKAGE_PIN   AH26             [get_ports {MGMT-GPIO1}]

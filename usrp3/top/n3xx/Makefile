@@ -1,5 +1,5 @@
 #
-# Copyright 2016-2017 Ettus Research LLC
+# Copyright 2016-2018 Ettus Research, a National Instruments Company
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
@@ -53,7 +53,7 @@ post_build = @\
 ##Supported Targets
 ##-----------------
 
-all:      N300_HG N300_XG N310_HG N310_XG ##(Default target)
+all:      N300_HG N300_XG N310_HG N310_XG N320_HG N320_XG ##(Default target)
 
 ##N310_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1.
 N310_WX:  build/usrp_n310_fpga_WX.dts
@@ -174,6 +174,46 @@ N300_RFNOC_XA:
 N300_RFNOC_AA:
 	$(call vivado_build,N300,$(AA_DEFS) RFNOC=1 N300=1)
 	$(call post_build,N300,RFNOC_AA)
+
+##N320_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1.
+N320_WX:  build/usrp_n320_fpga_WX.dts
+	$(call vivado_build,N320,$(WX_DEFS) N320=1)
+	$(call post_build,N320,WX)
+
+##N320_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+N320_HG: build/usrp_n320_fpga_HG.dts
+	$(call vivado_build,N320,$(HG_DEFS) N320=1)
+	$(call post_build,N320,HG)
+
+##N320_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+N320_XG: build/usrp_n320_fpga_XG.dts
+	$(call vivado_build,N320,$(XG_DEFS) N320=1)
+	$(call post_build,N320,XG)
+
+##N320_RFNOC_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
+N320_RFNOC_WX:  build/usrp_n320_fpga_WX.dts
+	$(call vivado_build,N320,$(WX_DEFS) RFNOC=1 N320=1)
+	$(call post_build,N320,RFNOC_WX)
+
+##N320_RFNOC_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
+N320_RFNOC_HG: build/usrp_n320_fpga_HG.dts
+	$(call vivado_build,N320,$(HG_DEFS) RFNOC=1 N320=1)
+	$(call post_build,N320,RFNOC_HG)
+
+##N320_RFNOC_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
+N320_RFNOC_XG: build/usrp_n320_fpga_XG.dts
+	$(call vivado_build,N320,$(XG_DEFS) RFNOC=1 N320=1)
+	$(call post_build,N320,RFNOC_XG)
+
+##N320_RFNOC_XQ:  WR on SFP+ Port0, 10Gig on QSFP+ Port0,1. RFNoC CEs enabled.
+N320_RFNOC_XQ: build/usrp_n320_fpga_XG.dts
+	$(call vivado_build,N320,$(XQ_DEFS) RFNOC=1 N320=1)
+	$(call post_build,N320,RFNOC_XQ)
+
+##N320_RFNOC_AQ:  10Gig on SFP+ Port0,1 Aurora on QSFP+ Port0,1,2,3. RFNoC CEs enabled.
+N320_RFNOC_AQ: build/usrp_n320_fpga_AQ.dts
+	$(call vivado_build,N320,$(AQ_DEFS) RFNOC=1 N320=1)
+	$(call post_build,N320,RFNOC_AQ)
 
 build/%.dts: dts/%.dts dts/*.dtsi
 	-mkdir -p build

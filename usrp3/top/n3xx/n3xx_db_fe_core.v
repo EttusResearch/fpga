@@ -11,7 +11,8 @@ module n3xx_db_fe_core #(
   parameter [7:0] SR_DB_FE_BASE = 160,
   parameter [7:0] RB_DB_FE_BASE = 16,
   parameter WIDTH = 32,
-  parameter NUM_SPI_SEN = 8
+  parameter NUM_SPI_SEN = 8,
+  parameter USE_CORRECTION = 0
 )(
   input clk, input reset,
   // Commands from Radio Core
@@ -29,6 +30,8 @@ module n3xx_db_fe_core #(
   input spi_clk, input spi_rst, output [NUM_SPI_SEN-1:0] sen, output sclk, output mosi, input miso
 );
 
+  localparam [7:0] SR_TX_FE_BASE = SR_DB_FE_BASE + 8'd64;
+  localparam [7:0] SR_RX_FE_BASE = SR_DB_FE_BASE + 8'd72;
 
   db_control #(
     .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE),
@@ -44,8 +47,37 @@ module n3xx_db_fe_core #(
     .leds(leds),
     .spi_clk(spi_clk), .spi_rst(spi_rst), .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso)
   );
-  //TODO: Flesh out this module
-  assign tx_data_out = tx_data_in;
-  assign rx_data_out = rx_data_in;
+
+  generate
+    if (USE_CORRECTION == 1) begin
+      tx_frontend_gen3 #(
+        .SR_OFFSET_I(SR_TX_FE_BASE + 0), .SR_OFFSET_Q(SR_TX_FE_BASE + 1),.SR_MAG_CORRECTION(SR_TX_FE_BASE + 2),
+        .SR_PHASE_CORRECTION(SR_TX_FE_BASE + 3), .SR_MUX(SR_TX_FE_BASE + 4),
+        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(1),
+        .DEVICE("7SERIES")
+      ) tx_fe_corr_i (
+        .clk(clk), .reset(reset),
+        .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+        .tx_stb(tx_stb), .tx_i(tx_data_in[31:16]), .tx_q(tx_data_in[15:0]),
+        .dac_stb(), .dac_i(tx_data_out[31:16]), .dac_q(tx_data_out[15:0])
+      );
+
+      rx_frontend_gen3 #(
+        .SR_MAG_CORRECTION(SR_RX_FE_BASE + 0), .SR_PHASE_CORRECTION(SR_RX_FE_BASE + 1), .SR_OFFSET_I(SR_RX_FE_BASE + 2),
+        .SR_OFFSET_Q(SR_RX_FE_BASE + 3), .SR_IQ_MAPPING(SR_RX_FE_BASE + 4), .SR_HET_PHASE_INCR(SR_RX_FE_BASE + 5),
+        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(1), .BYPASS_REALMODE_DSP(1),
+        .DEVICE("7SERIES")
+      ) rx_fe_corr_i (
+        .clk(clk), .reset(reset), .sync_in(time_sync),
+        .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+        .adc_stb(rx_stb), .adc_i(rx_data_in[31:16]), .adc_q(rx_data_in[15:0]),
+        .rx_stb(), .rx_i(rx_data_out[31:16]), .rx_q(rx_data_out[15:0])
+      );
+    end else begin
+      //TODO: Flesh out this module
+      assign tx_data_out = tx_data_in;
+      assign rx_data_out = rx_data_in;
+    end
+  endgenerate
 
 endmodule

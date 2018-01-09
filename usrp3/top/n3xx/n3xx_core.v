@@ -25,6 +25,7 @@ module n3xx_core #(
   parameter NUM_DBOARDS = 2,
   parameter NUM_SPI_PER_DBOARD = 8,
   parameter RADIO_NOC_ID = 64'h12AD_1000_0001_1310 + NUM_CHANNELS_PER_RADIO,
+  parameter USE_CORRECTION = 0,
   parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
@@ -1065,6 +1066,7 @@ module n3xx_core #(
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
       n3xx_db_fe_core #(
+        .USE_CORRECTION(USE_CORRECTION),
         .NUM_SPI_SEN(NUM_SPI_PER_DBOARD),
         .WIDTH(CHANNEL_WIDTH)
       ) db_fe_core_i (
@@ -1118,6 +1120,8 @@ module n3xx_core #(
     `include "rfnoc_ce_auto_inst_n310.v"
   `elsif N300
     `include "rfnoc_ce_auto_inst_n300.v"
+  `elsif N320
+    `include "rfnoc_ce_auto_inst_n320.v"
   `endif
 `else
   `ifdef N310
