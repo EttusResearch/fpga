@@ -6,8 +6,8 @@
 -- Date: 11 March 2016
 --
 -------------------------------------------------------------------------------
--- Copyright 2016-2017 Ettus Research, A National Instruments Company
--- SPDX-License-Identifier: GPL-3.0
+-- Copyright 2016-2018 Ettus Research, A National Instruments Company
+-- SPDX-License-Identifier: LGPL-3.0
 -------------------------------------------------------------------------------
 --
 -- Purpose: JESD204B setup constants and functions. These constants are shared
