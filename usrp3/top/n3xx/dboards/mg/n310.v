@@ -651,21 +651,12 @@ module n310
   wire        xgige_clk156;
   wire        xgige_dclk;
 
-  // TODO: Add sw_rst
-  wire        bus_rst;
-  wire        bus_rstn = ~bus_rst;
   wire        global_rst;
   wire        radio_rst;
+  wire        bus_rst;
   wire        FCLK_RESET0_N;
-  wire        FCLK_RESET1_N;
-  wire        FCLK_RESET2_N;
-  wire        FCLK_RESET3_N;
-  wire        FCLK_RESET0 = ~FCLK_RESET0_N;
-  wire        FCLK_RESET1 = ~FCLK_RESET1_N;
-  wire        FCLK_RESET2 = ~FCLK_RESET2_N;
-  wire        FCLK_RESET3 = ~FCLK_RESET3_N;
-  wire        clk40_rstn = FCLK_RESET1_N;
-  wire        clk40_rst = ~clk40_rstn;
+  wire        clk40_rst;
+  wire        clk40_rstn;
 
   wire [1:0]  USB0_PORT_INDCTL;
   wire        USB0_VBUS_PWRSELECT;
@@ -690,10 +681,40 @@ module n310
 
   /////////////////////////////////////////////////////////////////////
   //
-  // power-on-reset logic.
+  // Resets
   //
   //////////////////////////////////////////////////////////////////////
+
+  // Global synchronous reset, on the bus_clk domain. De-asserts after 85
+  // bus_clk cycles. Asserted by default.
   por_gen por_gen(.clk(bus_clk), .reset_out(global_rst));
+
+  // Synchronous reset for the radio_clk domain, based on the global_rst.
+  reset_sync radio_reset_gen (
+    .clk(radio_clk),
+    .reset_in(global_rst),
+    .reset_out(radio_rst)
+  );
+
+  // Synchronous reset for the bus_clk domain, based on the global_rst.
+  reset_sync bus_reset_gen (
+    .clk(bus_clk),
+    .reset_in(global_rst),
+    .reset_out(bus_rst)
+  );
+
+
+  // PS-based Resets //
+  //
+  // Synchronous reset for the clk40 domain. This is derived from the PS reset 0.
+  reset_sync clk40_reset_gen (
+    .clk(clk40),
+    .reset_in(~FCLK_RESET0_N),
+    .reset_out(clk40_rst)
+  );
+  // Invert for various modules.
+  assign clk40_rstn = ~clk40_rst;
+
 
 
   /////////////////////////////////////////////////////////////////////
@@ -768,20 +789,6 @@ module n310
   assign REF_1PPS_OUT  = pps_out_refclk;
 
 
-  //FIXME RESET SYNC may need more or'd inputs.
-  reset_sync radio_reset_sync (
-     .clk(radio_clk),
-     .reset_in(global_rst),
-     //FIXME EXAMPLE of various reset_in sources
-     //.reset_in(global_rst || !bus_clk_locked || sw_rst[1]),
-     .reset_out(radio_rst)
-  );
-
-  reset_sync int_reset_sync (
-     .clk(bus_clk),
-     .reset_in(global_rst),
-     .reset_out(bus_rst)
-  );
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -2032,7 +2039,7 @@ module n310
     .SPI1_SS_T(),
 
     .bus_clk(bus_clk),
-    .bus_rstn(bus_rstn),
+    .bus_rstn(~bus_rst),
     .clk40(clk40),
     .clk40_rstn(clk40_rstn),
 
@@ -2387,11 +2394,11 @@ module n310
     .FCLK_CLK0(FCLK_CLK0),
     .FCLK_RESET0_N(FCLK_RESET0_N),
     .FCLK_CLK1(FCLK_CLK1),
-    .FCLK_RESET1_N(FCLK_RESET1_N),
+    .FCLK_RESET1_N(),
     .FCLK_CLK2(FCLK_CLK2),
-    .FCLK_RESET2_N(FCLK_RESET2_N),
+    .FCLK_RESET2_N(),
     .FCLK_CLK3(FCLK_CLK3),
-    .FCLK_RESET3_N(FCLK_RESET3_N),
+    .FCLK_RESET3_N(),
 
     .USBIND_0_port_indctl(),
     .USBIND_0_vbus_pwrfault(),
