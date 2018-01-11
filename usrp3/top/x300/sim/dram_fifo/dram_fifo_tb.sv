@@ -25,7 +25,7 @@ module dram_fifo_tb();
   `DEFINE_CLK(sys_clk, 10, 50)            //100MHz sys_clk to generate DDR3 clocking
   `DEFINE_CLK(bus_clk, 1000/166.6667, 50) //166MHz bus_clk
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
-  `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
+  `DEFINE_RESET(sys_rst, 0, 100)          //100ns for GSR to deassert
 
   settings_bus_master #(.SR_AWIDTH(8),.SR_DWIDTH(32)) tst_set (.clk(bus_clk));
   cvita_master chdr_i (.clk(bus_clk));
@@ -63,7 +63,7 @@ module dram_fifo_tb();
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk(sys_clk),
-    .sys_rst_n(sys_rst_n),
+    .sys_rst(sys_rst),
     
     .i_tdata(chdr_i.axis.tdata),
     .i_tlast(chdr_i.axis.tlast),
@@ -98,8 +98,8 @@ module dram_fifo_tb();
 
     `TEST_CASE_START("Wait for reset");
       while (bus_rst) @(posedge bus_clk);
-      while (~sys_rst_n) @(posedge sys_clk);
-    `TEST_CASE_DONE((~bus_rst & sys_rst_n));
+      while (sys_rst) @(posedge sys_clk);
+    `TEST_CASE_DONE((~bus_rst & ~sys_rst));
 
     `TEST_CASE_START("Wait for initial calibration to complete");
       while (calib_complete !== 1'b1) @(posedge bus_clk);

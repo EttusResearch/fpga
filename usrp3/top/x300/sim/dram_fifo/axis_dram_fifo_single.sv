@@ -13,7 +13,7 @@ module axis_dram_fifo_single
   input         bus_clk,
   input         bus_rst,
   input         sys_clk,
-  input         sys_rst_n,
+  input         sys_rst,
 
   input [63:0]  i_tdata,
   input         i_tlast,
@@ -455,6 +455,8 @@ module axis_dram_fifo_single
     //---------------------------------------------------
     // MIG
     //---------------------------------------------------
+    wire ddr3_idelay_refclk;
+
     ddr3_32bit ddr_mig_i (
       // Memory interface ports
       .ddr3_addr                      (ddr3_addr),
@@ -475,9 +477,13 @@ module axis_dram_fifo_single
       .ddr3_dm                        (ddr3_dm),
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
-      .ui_clk                         (ddr3_axi_clk),  // 150MHz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2),  // 300MHz clock out
-      .ui_clk_div2                      (),  // 75MHz clock out
+      .ui_clk                         (ddr3_axi_clk),    // 150MHz clock out
+      .ui_addn_clk_0                  (ddr3_axi_clk_x2), // 300MHz clock out
+      .ui_addn_clk_1                  (ddr3_idelay_refclk),
+      .ui_addn_clk_2                  (),
+      .ui_addn_clk_3                  (),
+      .ui_addn_clk_4                  (),
+      .clk_ref_i                      (ddr3_idelay_refclk),
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 150MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -486,7 +492,7 @@ module axis_dram_fifo_single
       .app_ref_ack                    (),
       .app_zq_req                     (1'b0),
       .app_zq_ack                     (),
-
+      .device_temp_i                  (12'd0),
       // Slave Interface Write Address Ports
       .s_axi_awid                     (mig_axi_wr.addr.id),
       .s_axi_awaddr                   (mig_axi_wr.addr.addr),
@@ -531,7 +537,7 @@ module axis_dram_fifo_single
       .s_axi_rready                   (mig_axi_rd.data.ready),
       // System Clock Ports
       .sys_clk_i                      (sys_clk),  // From external 100MHz source.
-      .sys_rst                        (sys_rst_n) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+      .sys_rst                        (sys_rst)
     );
 
     //---------------------------------------------------

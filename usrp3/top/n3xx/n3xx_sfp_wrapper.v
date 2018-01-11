@@ -13,13 +13,13 @@
 //////////////////////////////////////////////////////////////////////
 
 module n3xx_sfp_wrapper #(
-  parameter PROTOCOL  = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
-  parameter DWIDTH    = 32,
-  parameter AWIDTH    = 14,
-  parameter PORTNUM   = 8'd0,
-  parameter MDIO_EN   = 0
+  parameter       PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
+  parameter       DWIDTH       = 32,
+  parameter       AWIDTH       = 14,
+  parameter [7:0] PORTNUM      = 8'd0,
+  parameter       MDIO_EN      = 0,
+  parameter [4:0] MDIO_PHYADDR = 5'd0
 )(
-
   // Resets
   input         areset,
   input         bus_rst,
@@ -201,6 +201,7 @@ module n3xx_sfp_wrapper #(
     .REG_DWIDTH     (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)
     .REG_AWIDTH     (AWIDTH),   // Width of the address bus
     .MDIO_EN        (MDIO_EN),
+    .MDIO_PHYADDR   (MDIO_PHYADDR),
     .PORTNUM        (PORTNUM)
   ) mgt_io_i (
     //must reset all channels on quad when sfp1 gtx core is reset

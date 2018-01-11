@@ -26,7 +26,7 @@ module dram_fifo_bist_tb();
   `DEFINE_CLK(sys_clk, 10, 50)            //100MHz sys_clk to generate DDR3 clocking
   `DEFINE_CLK(bus_clk, 1000/166.6667, 50) //166MHz bus_clk
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
-  `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
+  `DEFINE_RESET(sys_rst, 0, 100)          //100ns for GSR to deassert
 
   // Initialize DUT
   wire            calib_complete;
@@ -60,7 +60,7 @@ module dram_fifo_bist_tb();
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk(sys_clk),
-    .sys_rst_n(sys_rst_n),
+    .sys_rst(sys_rst),
     
     .i_tdata(cvita_fifo_in.axis.tdata),
     .i_tlast(cvita_fifo_in.axis.tlast),
@@ -98,8 +98,8 @@ module dram_fifo_bist_tb();
 
     `TEST_CASE_START("Wait for reset");
     while (bus_rst) @(posedge bus_clk);
-    while (~sys_rst_n) @(posedge sys_clk);
-    `TEST_CASE_DONE(~bus_rst & sys_rst_n);
+    while (sys_rst) @(posedge sys_clk);
+    `TEST_CASE_DONE(~bus_rst & ~sys_rst);
     
     forced_bit_err <= 64'h0;
     repeat (200) @(posedge sys_clk);

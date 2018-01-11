@@ -33,6 +33,7 @@ module one_gige_phy
    input            mdio_i,                // Management Data In
    output           mdio_o,                // Management Data Out
    output           mdio_t,                // Management Data Tristate
+   input [4:0]      phyaddr,               // MDIO PHY Address
    input [4:0]      configuration_vector,  // Alternative to MDIO interface.
    input            configuration_valid,   // Validation signal for Config vector
 
@@ -89,6 +90,7 @@ module one_gige_phy
       .mdio_i                (mdio_i),
       .mdio_o                (mdio_o),
       .mdio_t                (mdio_t),
+      .phyaddr               (phyaddr),
       .configuration_vector  (configuration_vector),
       .configuration_valid   (configuration_valid),
       .status_vector         (status_vector),

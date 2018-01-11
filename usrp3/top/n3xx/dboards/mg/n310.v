@@ -1258,18 +1258,20 @@ module n310
 
    n3xx_sfp_wrapper #(
 `ifdef SFP0_10GBE
-       .PROTOCOL("10GbE"),
-       .MDIO_EN(1'b1),
+      .PROTOCOL("10GbE"),
+      .MDIO_EN(1'b1),
+      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
 `elsif SFP0_AURORA
-       .PROTOCOL("Aurora"),
-       .MDIO_EN(1'b0),
+      .PROTOCOL("Aurora"),
+      .MDIO_EN(1'b0),
 `elsif SFP0_1GBE
-       .PROTOCOL("1GbE"),
-       .MDIO_EN(1'b1),
+      .PROTOCOL("1GbE"),
+      .MDIO_EN(1'b1),
+      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
 `endif
-       .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-       .AWIDTH(REG_AWIDTH),     // Width of the address bus
-       .PORTNUM(8'd0)
+      .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+      .AWIDTH(REG_AWIDTH),     // Width of the address bus
+      .PORTNUM(8'd0)
    ) sfp_wrapper_0 (
       .areset(global_rst),
       .gt_refclk(sfp0_gt_refclk),
@@ -1380,6 +1382,7 @@ module n310
 `ifdef SFP1_10GBE
       .PROTOCOL("10GbE"),
       .MDIO_EN(1'b1),
+      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
 `elsif SFP1_AURORA
       .PROTOCOL("Aurora"),
       .MDIO_EN(1'b0),
@@ -2581,7 +2584,7 @@ module n310
    );
 
    // Temperature monitor module
-   mig_7series_v2_4_tempmon #(
+   mig_7series_v4_0_tempmon #(
       .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(5000 /* 200MHz clock period in ps */)
    ) tempmon_i (
       .clk(bus_clk), .xadc_clk(bus_clk), .rst(bus_rst),

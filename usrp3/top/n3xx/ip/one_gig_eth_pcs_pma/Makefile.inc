@@ -10,13 +10,13 @@ $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_support.v \
 $(IP_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma_clocking.v \
 $(IP_ONE_GIG_ETH_PCS_PMA_EXAMPLE_SRCS)
 
-IP_ONE_GIG_ETH_PCS_PMA_EXAMPLE_SRCS = $(addprefix $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_example/one_gig_eth_pcs_pma_example.srcs/, \
-sources_1/imports/example_design/one_gig_eth_pcs_pma_example_design.v \
-sources_1/imports/example_design/one_gig_eth_pcs_pma_reset_sync_ex.v \
-sources_1/imports/example_design/one_gig_eth_pcs_pma_sync_block_ex.v \
-sources_1/imports/example_design/one_gig_eth_pcs_pma_tx_elastic_buffer.v \
-sources_1/imports/example_design/support/one_gig_eth_pcs_pma_gt_common.v \
-sources_1/imports/example_design/support/one_gig_eth_pcs_pma_resets.v \
+IP_ONE_GIG_ETH_PCS_PMA_EXAMPLE_SRCS = $(addprefix $(IP_BUILD_DIR)/one_gig_eth_pcs_pma_ex/imports/, \
+one_gig_eth_pcs_pma_example_design.v \
+one_gig_eth_pcs_pma_reset_sync_ex.v \
+one_gig_eth_pcs_pma_sync_block_ex.v \
+one_gig_eth_pcs_pma_tx_elastic_buffer.v \
+one_gig_eth_pcs_pma_gt_common.v \
+one_gig_eth_pcs_pma_resets.v \
 )
 
 IP_ONE_GIG_ETH_PCS_PMA_SRCS = $(IP_BUILD_DIR)/one_gig_eth_pcs_pma/one_gig_eth_pcs_pma.xci

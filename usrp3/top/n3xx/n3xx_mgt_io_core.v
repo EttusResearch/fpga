@@ -12,12 +12,13 @@
 //////////////////////////////////////////////////////////////////////
 
 module n3xx_mgt_io_core #(
-  parameter        PROTOCOL   = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
-  parameter [13:0] REG_BASE   = 14'h0,
-  parameter        REG_DWIDTH = 32,
-  parameter        REG_AWIDTH = 14,
-  parameter [7:0]  PORTNUM    = 8'd0,
-  parameter        MDIO_EN    = 0
+  parameter        PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
+  parameter [13:0] REG_BASE     = 14'h0,
+  parameter        REG_DWIDTH   = 32,
+  parameter        REG_AWIDTH   = 14,
+  parameter [7:0]  PORTNUM      = 8'd0,
+  parameter        MDIO_EN      = 0,
+  parameter [4:0]  MDIO_PHYADDR = 5'd0
 )(
   // Resets
   input                   areset,
@@ -264,7 +265,7 @@ module n3xx_mgt_io_core #(
         .mdio_in(mdio_m2s),              // Management Data In
         .mdio_out(mdio_s2m),             // Management Data Out
         .mdio_tri(),                     // Management Data Tristate
-        .prtad(5'd4),                    // MDIO address is 4
+        .prtad(MDIO_PHYADDR),            // MDIO address
         // General IO's
         .core_status(phy_status[7:0]),      // Core status
         .resetdone(xge_phy_resetdone),
@@ -351,12 +352,12 @@ module n3xx_mgt_io_core #(
         .gt0_qplloutclk_in(gt0_qplloutclk),
         .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
         // Tranceiver Interface
-        .gtrefclk(gt_refclk),            // Reference clock for MGT: 125MHz, very high quality.
-        .gtrefclk_bufg(gb_refclk),       // Reference clock routed through a BUFG
-        .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
-        .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
-        .rxp(rxp),                       // Differential +ve for serial reception from PMD to PMA.
-        .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
+        .gtrefclk(gt_refclk),           // Reference clock for MGT: 125MHz, very high quality.
+        .gtrefclk_bufg(gb_refclk),      // Reference clock routed through a BUFG
+        .txp(txp),                      // Differential +ve of serial transmission from PMA to PMD.
+        .txn(txn),                      // Differential -ve of serial transmission from PMA to PMD.
+        .rxp(rxp),                      // Differential +ve for serial reception from PMD to PMA.
+        .rxn(rxn),                      // Differential -ve for serial reception from PMD to PMA.
         // GMII Interface (client MAC <=> PCS)
         .gmii_clk(gmii_clk),            // Clock to client MAC.
         .gmii_txd(gmii_txd),            // Transmit data from client MAC.
@@ -369,9 +370,10 @@ module n3xx_mgt_io_core #(
         .mdc(mdc),                      // Management Data Clock
         .mdio_i(mdio_m2s),              // Management Data In
         .mdio_o(mdio_s2m),              // Management Data Out
-        .mdio_t(),                       // Management Data Tristate
-        .configuration_vector(5'd0),     // Alternative to MDIO interface.
-        .configuration_valid(1'b1),      // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
+        .mdio_t(),                      // Management Data Tristate
+        .phyaddr(MDIO_PHYADDR),         // MDIO address
+        .configuration_vector(5'd0),    // Alternative to MDIO interface.
+        .configuration_valid(1'b1),     // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
         // General IO's
         .status_vector(phy_status[15:0]),    // Core status.
         .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.

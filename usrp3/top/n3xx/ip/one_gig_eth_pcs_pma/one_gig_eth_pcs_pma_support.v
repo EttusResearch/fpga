@@ -98,6 +98,7 @@ module one_gig_eth_pcs_pma_support
       input        mdio_i,                // Management Data In
       output       mdio_o,                // Management Data Out
       output       mdio_t,                // Management Data Tristate
+      input [4:0]  phyaddr,               // MDIO address
       input [4:0]  configuration_vector,  // Alternative to MDIO interface.
       input        configuration_valid,   // Validation signal for Config vector
 
@@ -178,6 +179,7 @@ pcs_pma_i
       .mdio_i                        (mdio_i),
       .mdio_o                        (mdio_o),
       .mdio_t                        (mdio_t),
+      .phyaddr                       (phyaddr),
       .configuration_vector          (configuration_vector),
       .configuration_valid           (configuration_valid),
 

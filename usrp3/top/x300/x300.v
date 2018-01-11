@@ -372,7 +372,7 @@ module x300
 
    wire radio_clk_locked;
    radio_clk_gen radio_clk_gen (
-      .CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n),
+      .clk_in1_p(FPGA_CLK_p), .clk_in1_n(FPGA_CLK_n),
       .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
       .RESET(sw_rst[2]), .LOCKED(radio_clk_locked));
 
@@ -1123,7 +1123,8 @@ module x300
    wire [1:0]     s_axi_rresp;
    wire           s_axi_rlast;
    wire           s_axi_rvalid;
-                  
+
+   wire           ddr3_idelay_refclk;
    reg            ddr3_axi_rst_reg_n;
 
    // Copied this reset circuit from example design.
@@ -1131,14 +1132,6 @@ module x300
      ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
    // Instantiate the DDR3 MIG core
-   //
-   // The top-level IP block has no parameters defined for some reason.
-   // Most of configurable parameters are hard-coded in the mig so get
-   // some additional knobs we pull those out into verilog headers.
-   //
-   // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
-   // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
-
    ddr3_32bit u_ddr3_32bit (
       // Memory interface ports
       .ddr3_addr                      (ddr3_addr),
@@ -1160,7 +1153,12 @@ module x300
       .device_temp_i                  (device_temp),
       // Application interface ports
       .ui_clk                         (ddr3_axi_clk),    // 150MHz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2), // 300MHz clock out
+      .ui_addn_clk_0                  (ddr3_axi_clk_x2), // 300MHz clock out
+      .ui_addn_clk_1                  (ddr3_idelay_refclk),
+      .ui_addn_clk_2                  (),
+      .ui_addn_clk_3                  (),
+      .ui_addn_clk_4                  (),
+      .clk_ref_i                      (ddr3_idelay_refclk),
       .ui_clk_sync_rst                (ddr3_axi_rst),    // Active high Reset signal synchronised to 150MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -1214,11 +1212,11 @@ module x300
       .s_axi_rready                   (s_axi_rready),
       // System Clock Ports
       .sys_clk_i                      (sys_clk_i),  // From external 100MHz source.
-      .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+      .sys_rst                        (global_rst)
    );
 
    // Temperature monitor module
-   mig_7series_v2_4_tempmon #(
+   mig_7series_v4_0_tempmon #(
       .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(8000 /* 125MHz clock period in ps */)
    ) tempmon_i (
       .clk(bus_clk), .xadc_clk(ioport2_clk), .rst(bus_rst),

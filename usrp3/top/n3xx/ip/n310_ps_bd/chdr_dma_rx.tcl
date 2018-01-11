@@ -214,7 +214,7 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
   ] $axis_switch_0
 
   # Cross domains from incoming AXI-Stream to RX DMA engines domain
-  set fifo_generator_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:fifo_generator:13.0 fifo_generator_0 ]
+  set fifo_generator_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:fifo_generator:13.2 fifo_generator_0 ]
   set_property -dict [ list \
      CONFIG.Clock_Type_AXI {Independent_Clock} \
      CONFIG.Empty_Threshold_Assert_Value_axis {1021} \
