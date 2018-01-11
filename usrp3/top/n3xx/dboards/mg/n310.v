@@ -2003,6 +2003,9 @@ module n310
     assign ps_gpio_in[32+i] = FPGA_GPIO[i];
   end endgenerate
 
+  assign ps_gpio_in[10] = DBA_MYK_INTRQ;
+  assign ps_gpio_in[11] = DBB_MYK_INTRQ;
+
   // Processing System
   n310_ps_bd inst_n310_ps
   (
