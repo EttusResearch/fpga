@@ -361,7 +361,7 @@ module n310
   wire [2:0]  S_AXI_HP0_ARSIZE;
 
   // GP0 -- General Purpose port 0, FPGA is the master
-  wire [5:0]  S_AXI_GP0_AWID;
+  wire [4:0]  S_AXI_GP0_AWID;
   wire [31:0] S_AXI_GP0_AWADDR;
   wire [2:0]  S_AXI_GP0_AWPROT;
   wire        S_AXI_GP0_AWVALID;
@@ -373,7 +373,7 @@ module n310
   wire [1:0]  S_AXI_GP0_BRESP;
   wire        S_AXI_GP0_BVALID;
   wire        S_AXI_GP0_BREADY;
-  wire [5:0]  S_AXI_GP0_ARID;
+  wire [4:0]  S_AXI_GP0_ARID;
   wire [31:0] S_AXI_GP0_ARADDR;
   wire [2:0]  S_AXI_GP0_ARPROT;
   wire        S_AXI_GP0_ARVALID;
@@ -427,7 +427,7 @@ module n310
   wire [2:0]  S_AXI_HP1_ARSIZE;
 
   // GP1 -- General Purpose port 1, FPGA is the master
-  wire [5:0]  S_AXI_GP1_AWID;
+  wire [4:0]  S_AXI_GP1_AWID;
   wire [31:0] S_AXI_GP1_AWADDR;
   wire [2:0]  S_AXI_GP1_AWPROT;
   wire        S_AXI_GP1_AWVALID;
@@ -439,7 +439,7 @@ module n310
   wire [1:0]  S_AXI_GP1_BRESP;
   wire        S_AXI_GP1_BVALID;
   wire        S_AXI_GP1_BREADY;
-  wire [5:0]  S_AXI_GP1_ARID;
+  wire [4:0]  S_AXI_GP1_ARID;
   wire [31:0] S_AXI_GP1_ARADDR;
   wire [2:0]  S_AXI_GP1_ARPROT;
   wire        S_AXI_GP1_ARVALID;
@@ -675,9 +675,7 @@ module n310
   wire        pps_refclk;
   wire        export_pps_refclk;
   wire        radio_clk;
-  wire        radio_clkB;
   wire        radio_clk_2x;
-  wire        radio_clk_2xB;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -1499,7 +1497,7 @@ module n310
   assign  IRQ_F2P[1] = arm_eth0_tx_irq;
 
   assign {S_AXI_HP0_AWID, S_AXI_HP0_ARID} = 12'd0;
-  assign {S_AXI_GP0_AWID, S_AXI_GP0_ARID} = 12'd0;
+  assign {S_AXI_GP0_AWID, S_AXI_GP0_ARID} = 10'd0;
 
 `ifdef SFP0_AURORA
   //If inst Aurora, tie off each axi/axi-lite interface
@@ -1738,7 +1736,7 @@ module n310
   assign  IRQ_F2P[3] = arm_eth1_tx_irq;
 
   assign {S_AXI_HP1_AWID, S_AXI_HP1_ARID} = 12'd0;
-  assign {S_AXI_GP1_AWID, S_AXI_GP1_ARID} = 12'd0;
+  assign {S_AXI_GP1_AWID, S_AXI_GP1_ARID} = 10'd0;
   `ifdef SFP0_AURORA
     //If inst Aurora, tie off each axi/axi-lite interface
     axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp1_eth_dma
@@ -2268,7 +2266,7 @@ module n310
     .S_AXI_GP1_awaddr(S_AXI_GP1_AWADDR),
     .S_AXI_GP1_awburst(S_AXI_GP1_AWBURST),
     .S_AXI_GP1_awcache(S_AXI_GP1_AWCACHE),
-    .S_AXI_GP1_awid(),
+    .S_AXI_GP1_awid(S_AXI_GP1_AWID),
     .S_AXI_GP1_awlen(S_AXI_GP1_AWLEN),
     .S_AXI_GP1_awlock(1'b0),
     .S_AXI_GP1_awprot(S_AXI_GP1_AWPROT),
@@ -2524,11 +2522,11 @@ module n310
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
-      .app_sr_active                  (app_sr_active),
+      .app_sr_active                  (),
       .app_ref_req                    (1'b0),
-      .app_ref_ack                    (app_ref_ack),
+      .app_ref_ack                    (),
       .app_zq_req                     (1'b0),
-      .app_zq_ack                     (app_zq_ack),
+      .app_zq_ack                     (),
       // Slave Interface Write Address Ports
       .s_axi_awid                     (ddr3_axi_awid),
       .s_axi_awaddr                   (ddr3_axi_awaddr),
@@ -2605,7 +2603,6 @@ module n310
 
   // DB A SPI Connections
   wire cpld_a_cs_n;
-  wire cpld_pl_a_cs_n;
   wire lmk_a_cs_n;
   wire dac_a_cs_n;
   wire myk_a_cs_n;
@@ -2670,7 +2667,6 @@ module n310
 
   // DB B SPI Connections
   wire cpld_b_cs_n;
-  wire cpld_pl_b_cs_n;
   wire lmk_b_cs_n;
   wire dac_b_cs_n;
   wire myk_b_cs_n;
@@ -3082,9 +3078,9 @@ module n310
       .MeasClk(meas_clk),                      //in  std_logic
       .FpgaClk_p(DBB_FPGA_CLK_P),              //in  std_logic
       .FpgaClk_n(DBB_FPGA_CLK_N),              //in  std_logic
-      .SampleClk1xOut(radio_clkB),             //out std_logic
+      .SampleClk1xOut(),                       //out std_logic
       .SampleClk1x(radio_clk),                 //in  std_logic
-      .SampleClk2xOut(radio_clk_2xB),          //out std_logic
+      .SampleClk2xOut(),                       //out std_logic
       .SampleClk2x(radio_clk_2x),              //in  std_logic
       .bRegPortInFlat(bRegPortInFlatB),        //in  std_logic_vector(49:0)
       .bRegPortOutFlat(bRegPortOutFlatB),      //out std_logic_vector(33:0)
