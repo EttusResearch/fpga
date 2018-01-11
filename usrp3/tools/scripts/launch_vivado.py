@@ -270,6 +270,8 @@ class VivadoRunner(object):
             " Safe polling from queue "
             try:
                 return q.get(timeout=READ_TIMEOUT).decode('utf-8')
+            except UnicodeDecodeError:
+                pass
             except Empty:
                 pass
             return ""
