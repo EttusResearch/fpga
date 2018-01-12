@@ -19,8 +19,8 @@ interface axi4_addr_t #(parameter AWIDTH=32, parameter IDWIDTH=4)
   logic               valid;
   logic               ready;
 
-  modport master (output id,addr,len,size,burst,lock,cache,prot,qos,valid, input ready);
-  modport slave (input id,addr,len,size,burst,lock,cache,prot,qos,valid, output ready);
+//  modport master(output id,addr,len,size,burst,lock,cache,prot,qos,valid, input ready);
+//  modport slave(input id,addr,len,size,burst,lock,cache,prot,qos,valid, output ready);
 
 endinterface
 
@@ -34,8 +34,8 @@ interface axi4_wdata_t #(parameter DWIDTH=64)
   logic                   valid;
   logic                   ready;
 
-  modport master(output data,strb,last,valid, input ready);
-  modport slave(input data,strb,last,valid, output ready);
+//  modport master(output data,strb,last,valid, input ready);
+//  modport slave(input data,strb,last,valid, output ready);
 
 endinterface
 
@@ -48,8 +48,8 @@ interface axi4_resp_t #(parameter IDWIDTH=4)
   logic               user;
   logic               valid;
 
-  modport master(output ready, input id,resp,valid);
-  modport slave(input ready, output id,resp,valid);
+//  modport master(output ready, input id,resp,valid);
+//  modport slave(input ready, output id,resp,valid);
 
 endinterface
 
@@ -64,8 +64,8 @@ interface axi4_rdata_t #(parameter DWIDTH=64, parameter IDWIDTH=4)
   logic               last;
   logic               valid;
 
-  modport master(output ready, input id,data,resp,last,valid);
-  modport slave(input ready, output id,data,resp,last,valid);
+//  modport master(output ready, input id,data,resp,last,valid);
+//  modport slave(input ready, output id,data,resp,last,valid);
 
 endinterface
 
@@ -76,8 +76,8 @@ interface axi4_wr_t #(parameter DWIDTH=64, parameter AWIDTH=32, parameter IDWIDT
   axi4_wdata_t #(.DWIDTH(DWIDTH))                    data (.clk(clk));
   axi4_resp_t  #(.IDWIDTH(IDWIDTH))                  resp (.clk(clk));
 
-  modport master(output addr, output data, input resp);
-  modport slave(input addr, input data, output resp);
+//  modport master(output addr, output data, input resp);
+//  modport slave(input addr, input data, output resp);
 
 endinterface
 
@@ -87,7 +87,7 @@ interface axi4_rd_t #(parameter DWIDTH=64, parameter AWIDTH=32, parameter IDWIDT
   axi4_addr_t  #(.AWIDTH(AWIDTH), .IDWIDTH(IDWIDTH)) addr (.clk(clk));
   axi4_rdata_t #(.DWIDTH(DWIDTH), .IDWIDTH(IDWIDTH)) data (.clk(clk));
 
-  modport master(output addr, output data);
-  modport slave(input addr, input data);
+//  modport master(output addr, output data);
+//  modport slave(input addr, input data);
 
 endinterface
