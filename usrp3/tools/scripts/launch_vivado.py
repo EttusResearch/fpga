@@ -153,6 +153,18 @@ class VivadoRunner(object):
     # Brown       0;33     Yellow        1;33
     # Light Gray  0;37     White         1;37
 
+    viv_tcl_cmds = {
+        'synth_design' : 'Synthesis',
+        'opt_design': 'Logic Optimization',
+        'place_design': 'Placer',
+        'route_design': 'Routing',
+        'phys_opt_design': 'Physical Synthesis',
+        'report_timing' : 'Timing Reporting',
+        'report_power': 'Power Reporting',
+        'report_drc': 'DRC',
+        'write_bitstream': 'Write Bitstream',
+    }
+
     def __init__(self, args, viv_args):
         self.status = ''
         self.args = args
@@ -173,8 +185,7 @@ class VivadoRunner(object):
             'task': {
                 'regexes': [
                     '^Starting .* Task',
-                    '^Starting synth_design',   #synth_design start prints look different
-                    '^Running DRC .* write_bitstream', #write_bitstream prints look different
+                    '^.*Translating synthesized netlist.*',
                     '^\[TEST CASE .*',
                 ],
                 'action': self.update_task,
@@ -185,7 +196,6 @@ class VivadoRunner(object):
                     '^Phase (?P<id>[a-zA-Z0-9/. ]*)$',
                     '^Start (?P<id>[a-zA-Z0-9/. ]*)$',
                     '^(?P<id>TESTBENCH STARTED: [\w_]*)$',
-                    '^Creating bitstream.*',
                 ],
                 'action': self.update_phase,
                 'id': "Phase",
@@ -239,7 +249,7 @@ class VivadoRunner(object):
                 parse_config = json.load(open(args.parse_config))
                 self.add_notification(
                     "Using parser configuration from: {pc}".format(pc=args.parse_config),
-                    color=self.colors.get('task')
+                    color=self.colors.get('normal')
                 )
                 loadables = ('regexes', 'ignore', 'fatal')
                 for line_type in self.line_types:
@@ -250,7 +260,7 @@ class VivadoRunner(object):
             except (IOError, ValueError):
                 self.add_notification(
                     "Could not read parser configuration from: {pc}".format(pc=args.parse_config),
-                    color=self.colors.get('error')
+                    color=self.colors.get('warning')
                 )
         self.tty = sys.stdout.isatty()
         self.timer = datetime.now() # Make sure this is the last line in ctor
@@ -277,7 +287,7 @@ class VivadoRunner(object):
             return ""
         # Start process
         self.add_notification(
-            "Executing command: {cmd}".format(cmd=self.command), add_time=True, color=self.colors.get('task')
+            "Executing command: {cmd}".format(cmd=self.command), add_time=True, color=self.colors.get('cmd')
         )
         proc = subprocess.Popen(
             self.command,
@@ -326,6 +336,7 @@ class VivadoRunner(object):
     def cleanup_output(self, success):
         " Run final printery after all is said and done. "
         # Check message counts are within limits
+        self.update_phase("Finished")
         self.add_notification(
             "Process terminated. Status: {status}".format(status='Success' if success else 'Failure'),
             add_time=True,
@@ -400,25 +411,29 @@ class VivadoRunner(object):
             self.add_notification(msg, color=self.colors.get(msg_type))
         self.msg_counters[msg_type] = self.msg_counters.get(msg_type, 0) + 1
 
-    def show_cmd(self, cmd):
+    def show_cmd(self, tcl_cmd):
         " Show the current command "
-        cmd = cmd.replace("Command:", "").strip()
-        sys.stdout.write("\n")
-        self.add_notification("Running Vivado command: " + cmd,
+        self.update_phase("Finished")
+        tcl_cmd = tcl_cmd.replace("Command:", "").strip()
+        #sys.stdout.write("\n")
+        self.add_notification("Executing Tcl: " + tcl_cmd,
                               add_time=True, color=self.colors.get("cmd"))
-        self.flush_notification_queue(len(self.status))
+        cmd = tcl_cmd.strip().split()[0];
+        if cmd in self.viv_tcl_cmds:
+            cmd = self.viv_tcl_cmds[cmd]
+        self.update_task("Starting " + cmd + " Command", is_new=False)
+        #self.flush_notification_queue(len(self.status))
 
-    def update_task(self, task):
+    def update_task(self, task, is_new=True):
         " Update current task "
-        self.current_task = task
-        if "write_bitstream" in self.current_task:
-            self.current_task = "Write Bitstream"   #write_bitstream is special
-            self.current_phase = "DRC"
-        else:
-            self.current_task = self.current_task.replace("Starting", "").replace("Task", "")
-            #synth_design start prints look different
-            self.current_task = self.current_task.replace("synth_design", "Synthesis")
-            self.current_phase = "Starting"
+        # Special case: Treat "translation" as a phase as well
+        if "Translating synthesized netlist" in task:
+            task = "Translating Synthesized Netlist"
+        filtered_task = task.replace("Starting", "").replace("Task", "").replace("Command", "")
+        if is_new and (filtered_task != self.current_task):
+            self.update_phase("Finished")
+        self.current_task = filtered_task
+        self.current_phase = "Starting"
         self.add_notification(task, add_time=True, color=self.colors.get("task"))
         sys.stdout.write("\n")
         self.print_status_line()
@@ -426,10 +441,7 @@ class VivadoRunner(object):
     def update_phase(self, phase):
         " Update current phase "
         self.current_phase = phase.strip()
-        if "bitstream" in self.current_phase:
-            self.current_phase = "Write Bitstream file(s)"   #write_bitstream is special
-        else:
-            self.current_task = self.current_task.replace("Phase", "")
+        self.current_task = self.current_task.replace("Phase", "")
         sys.stdout.write("\n")
         self.print_status_line()
 
