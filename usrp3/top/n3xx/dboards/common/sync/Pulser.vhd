@@ -47,7 +47,7 @@ entity Pulser is
     -- The pulse counter is kClksPerPulseMaxBits wide.
     -- Why 16? Then both cPeriod and cHighTime fit nicely into one 32 bit register!
     -- Minimum of 3 to make our default values for cHighTime work out.
-    kClksPerPulseMaxBits : integer range 3 to 16 := 16
+    kClksPerPulseMaxBits : integer range 3 to 32 := 16
   );
   port (
     aReset          : in  boolean;
@@ -317,7 +317,7 @@ begin
 
   --vhook_e Pulser dutx
   dutx: entity work.Pulser (rtl)
-    generic map (kClksPerPulseMaxBits => kClksPerPulseMaxBits)  --integer range 3:16 :=16
+    generic map (kClksPerPulseMaxBits => kClksPerPulseMaxBits)  --integer range 3:32 :=16
     port map (
       aReset       => aReset,        --in  boolean
       Clk          => Clk,           --in  std_logic
@@ -335,7 +335,7 @@ begin
   --vhook_a cEnablePulse true
   --vhook_a cPulse cPulseDut2
   dut2: entity work.Pulser (rtl)
-    generic map (kClksPerPulseMaxBits => kClksPerPulseMaxBits)  --integer range 3:16 :=16
+    generic map (kClksPerPulseMaxBits => kClksPerPulseMaxBits)  --integer range 3:32 :=16
     port map (
       aReset       => aReset,                               --in  boolean
       Clk          => Clk,                                  --in  std_logic
