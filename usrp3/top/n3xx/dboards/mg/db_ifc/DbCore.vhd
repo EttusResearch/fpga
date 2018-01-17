@@ -145,8 +145,8 @@ entity DbCore is
     sSysRef                : out std_logic;
 
     -- Debug for Timing & Sync
-    rRSP                   : out std_logic;
-    sRTC                   : out std_logic
+    rRpTransfer            : out std_logic;
+    sSpTransfer            : out std_logic
   );
 
 end DbCore;
@@ -156,32 +156,41 @@ architecture RTL of DbCore is
 
   component SyncRegsIfc
     port (
-      aBusReset            : in  std_logic;
-      bBusReset            : in  std_logic;
-      BusClk               : in  std_logic;
-      aTdcReset            : out std_logic;
-      bRegPortInFlat       : in  std_logic_vector(49 downto 0);
-      bRegPortOutFlat      : out std_logic_vector(33 downto 0);
-      RefClk               : in  std_logic;
-      rResetTdc            : out std_logic;
-      rResetTdcDone        : in  std_logic;
-      rEnableTdc           : out std_logic;
-      rReRunEnable         : out std_logic;
-      rEnablePpsCrossing   : out std_logic;
-      rPpsPulseCaptured    : in  std_logic;
-      SampleClk            : in  std_logic;
-      sPpsClkCrossDelayVal : out std_logic_vector(3 downto 0);
-      MeasClk              : in  std_logic;
-      mRspOffset           : in  std_logic_vector(39 downto 0);
-      mRtcOffset           : in  std_logic_vector(39 downto 0);
-      mOffsetsDone         : in  std_logic;
-      mOffsetsValid        : in  std_logic;
-      rLoadRspCounts       : out std_logic;
-      rRspPeriodInRClks    : out std_logic_vector(11 downto 0);
-      rRspHighTimeInRClks  : out std_logic_vector(11 downto 0);
-      sLoadRtcCounts       : out std_logic;
-      sRtcPeriodInSClks    : out std_logic_vector(11 downto 0);
-      sRtcHighTimeInSClks  : out std_logic_vector(11 downto 0));
+      aBusReset               : in  std_logic;
+      bBusReset               : in  std_logic;
+      BusClk                  : in  std_logic;
+      aTdcReset               : out std_logic;
+      bRegPortInFlat          : in  std_logic_vector(49 downto 0);
+      bRegPortOutFlat         : out std_logic_vector(33 downto 0);
+      RefClk                  : in  std_logic;
+      rResetTdc               : out std_logic;
+      rResetTdcDone           : in  std_logic;
+      rEnableTdc              : out std_logic;
+      rReRunEnable            : out std_logic;
+      rEnablePpsCrossing      : out std_logic;
+      rPpsPulseCaptured       : in  std_logic;
+      SampleClk               : in  std_logic;
+      sPpsClkCrossDelayVal    : out std_logic_vector(3 downto 0);
+      MeasClk                 : in  std_logic;
+      mRpOffset               : in  std_logic_vector(39 downto 0);
+      mSpOffset               : in  std_logic_vector(39 downto 0);
+      mOffsetsDone            : in  std_logic;
+      mOffsetsValid           : in  std_logic;
+      rLoadRePulseCounts      : out std_logic;
+      rRePulsePeriodInRClks   : out std_logic_vector(23 downto 0);
+      rRePulseHighTimeInRClks : out std_logic_vector(23 downto 0);
+      rLoadRpCounts           : out std_logic;
+      rRpPeriodInRClks        : out std_logic_vector(15 downto 0);
+      rRpHighTimeInRClks      : out std_logic_vector(15 downto 0);
+      rLoadRptCounts          : out std_logic;
+      rRptPeriodInRClks       : out std_logic_vector(15 downto 0);
+      rRptHighTimeInRClks     : out std_logic_vector(15 downto 0);
+      sLoadSpCounts           : out std_logic;
+      sSpPeriodInSClks        : out std_logic_vector(15 downto 0);
+      sSpHighTimeInSClks      : out std_logic_vector(15 downto 0);
+      sLoadSptCounts          : out std_logic;
+      sSptPeriodInSClks       : out std_logic_vector(15 downto 0);
+      sSptHighTimeInSClks     : out std_logic_vector(15 downto 0));
   end component;
   component Jesd204bXcvrCore
     port (
@@ -250,32 +259,41 @@ architecture RTL of DbCore is
   signal bSyncRegPortOutFlat: std_logic_vector(33 downto 0);
   signal mOffsetsDone: std_logic;
   signal mOffsetsValid: std_logic;
-  signal mRspOffset: std_logic_vector(39 downto 0);
-  signal mRtcOffset: std_logic_vector(39 downto 0);
+  signal mRpOffset: std_logic_vector(39 downto 0);
+  signal mSpOffset: std_logic_vector(39 downto 0);
   signal pPsDone: std_logic;
   signal pPsEn: std_logic;
   signal pPsInc: std_logic;
   signal PsClk: std_logic;
   signal rEnablePpsCrossing: std_logic;
   signal rEnableTdc: std_logic;
-  signal rLoadRspCounts: std_logic;
+  signal rLoadRePulseCounts: std_logic;
+  signal rLoadRpCounts: std_logic;
+  signal rLoadRptCounts: std_logic;
   signal rPpsPulseCaptured: std_logic;
+  signal rRePulseHighTimeInRClks: std_logic_vector(23 downto 0);
+  signal rRePulsePeriodInRClks: std_logic_vector(23 downto 0);
   signal rReRunEnable: std_logic;
   signal rResetTdc: std_logic;
   signal rResetTdcDone: std_logic;
-  signal rRspHighTimeInRClks: std_logic_vector(11 downto 0);
-  signal rRspPeriodInRClks: std_logic_vector(11 downto 0);
+  signal rRpHighTimeInRClks: std_logic_vector(15 downto 0);
+  signal rRpPeriodInRClks: std_logic_vector(15 downto 0);
+  signal rRptHighTimeInRClks: std_logic_vector(15 downto 0);
+  signal rRptPeriodInRClks: std_logic_vector(15 downto 0);
   signal sAdc0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sAdc1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal SampleClk1xOutLcl: std_logic;
   signal sDac0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sDac1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sDacReadyForInputAsyncReset: STD_LOGIC;
-  signal sLoadRtcCounts: std_logic;
+  signal sLoadSpCounts: std_logic;
+  signal sLoadSptCounts: std_logic;
   signal sPpsClkCrossDelayVal: std_logic_vector(3 downto 0);
   signal sPpsPulseAsyncReset: std_logic;
-  signal sRtcHighTimeInSClks: std_logic_vector(11 downto 0);
-  signal sRtcPeriodInSClks: std_logic_vector(11 downto 0);
+  signal sSpHighTimeInSClks: std_logic_vector(15 downto 0);
+  signal sSpPeriodInSClks: std_logic_vector(15 downto 0);
+  signal sSptHighTimeInSClks: std_logic_vector(15 downto 0);
+  signal sSptPeriodInSClks: std_logic_vector(15 downto 0);
   signal sSysRefAsyncReset: STD_LOGIC;
   --vhook_sigend
 
@@ -523,33 +541,42 @@ begin
   --vhook_a {^s(.*)}  s$1
   TdcWrapperx: entity work.TdcWrapper (struct)
     port map (
-      aReset               => aTdcReset,             --in  std_logic
-      RefClk               => RefClk,                --in  std_logic
-      SampleClk            => SampleClk1xOutLcl,     --in  std_logic
-      MeasClk              => MeasClk,               --in  std_logic
-      rResetTdc            => rResetTdc,             --in  std_logic
-      rResetTdcDone        => rResetTdcDone,         --out std_logic
-      rEnableTdc           => rEnableTdc,            --in  std_logic
-      rReRunEnable         => rReRunEnable,          --in  std_logic
-      rPpsPulse            => rPpsPulseAsyncReset,   --in  std_logic
-      rPpsPulseCaptured    => rPpsPulseCaptured,     --out std_logic
-      rEnablePpsCrossing   => rEnablePpsCrossing,    --in  std_logic
-      sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,  --in  std_logic_vector(3:0)
-      sPpsPulse            => sPpsPulseAsyncReset,   --out std_logic
-      mRspOffset           => mRspOffset,            --out std_logic_vector(39:0)
-      mRtcOffset           => mRtcOffset,            --out std_logic_vector(39:0)
-      mOffsetsDone         => mOffsetsDone,          --out std_logic
-      mOffsetsValid        => mOffsetsValid,         --out std_logic
-      rLoadRspCounts       => rLoadRspCounts,        --in  std_logic
-      rRspPeriodInRClks    => rRspPeriodInRClks,     --in  std_logic_vector(11:0)
-      rRspHighTimeInRClks  => rRspHighTimeInRClks,   --in  std_logic_vector(11:0)
-      sLoadRtcCounts       => sLoadRtcCounts,        --in  std_logic
-      sRtcPeriodInSClks    => sRtcPeriodInSClks,     --in  std_logic_vector(11:0)
-      sRtcHighTimeInSClks  => sRtcHighTimeInSClks,   --in  std_logic_vector(11:0)
-      rRSP                 => rRSP,                  --out std_logic
-      sRTC                 => sRTC,                  --out std_logic
-      rGatedPulseToPin     => rGatedPulseToPin,      --inout std_logic
-      sGatedPulseToPin     => sGatedPulseToPin);     --inout std_logic
+      aReset                  => aTdcReset,                --in  std_logic
+      RefClk                  => RefClk,                   --in  std_logic
+      SampleClk               => SampleClk1xOutLcl,        --in  std_logic
+      MeasClk                 => MeasClk,                  --in  std_logic
+      rResetTdc               => rResetTdc,                --in  std_logic
+      rResetTdcDone           => rResetTdcDone,            --out std_logic
+      rEnableTdc              => rEnableTdc,               --in  std_logic
+      rReRunEnable            => rReRunEnable,             --in  std_logic
+      rPpsPulse               => rPpsPulseAsyncReset,      --in  std_logic
+      rPpsPulseCaptured       => rPpsPulseCaptured,        --out std_logic
+      rEnablePpsCrossing      => rEnablePpsCrossing,       --in  std_logic
+      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,     --in  std_logic_vector(3:0)
+      sPpsPulse               => sPpsPulseAsyncReset,      --out std_logic
+      mRpOffset               => mRpOffset,                --out std_logic_vector(39:0)
+      mSpOffset               => mSpOffset,                --out std_logic_vector(39:0)
+      mOffsetsDone            => mOffsetsDone,             --out std_logic
+      mOffsetsValid           => mOffsetsValid,            --out std_logic
+      rLoadRePulseCounts      => rLoadRePulseCounts,       --in  std_logic
+      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,    --in  std_logic_vector(23:0)
+      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,  --in  std_logic_vector(23:0)
+      rLoadRpCounts           => rLoadRpCounts,            --in  std_logic
+      rRpPeriodInRClks        => rRpPeriodInRClks,         --in  std_logic_vector(15:0)
+      rRpHighTimeInRClks      => rRpHighTimeInRClks,       --in  std_logic_vector(15:0)
+      rLoadRptCounts          => rLoadRptCounts,           --in  std_logic
+      rRptPeriodInRClks       => rRptPeriodInRClks,        --in  std_logic_vector(15:0)
+      rRptHighTimeInRClks     => rRptHighTimeInRClks,      --in  std_logic_vector(15:0)
+      sLoadSpCounts           => sLoadSpCounts,            --in  std_logic
+      sSpPeriodInSClks        => sSpPeriodInSClks,         --in  std_logic_vector(15:0)
+      sSpHighTimeInSClks      => sSpHighTimeInSClks,       --in  std_logic_vector(15:0)
+      sLoadSptCounts          => sLoadSptCounts,           --in  std_logic
+      sSptPeriodInSClks       => sSptPeriodInSClks,        --in  std_logic_vector(15:0)
+      sSptHighTimeInSClks     => sSptHighTimeInSClks,      --in  std_logic_vector(15:0)
+      rRpTransfer             => rRpTransfer,              --out std_logic
+      sSpTransfer             => sSpTransfer,              --out std_logic
+      rGatedPulseToPin        => rGatedPulseToPin,         --inout std_logic
+      sGatedPulseToPin        => sGatedPulseToPin);        --inout std_logic
 
 
   bSyncRegPortInGrp <= Mask(RegPortIn       => bRegPortIn,
@@ -568,32 +595,41 @@ begin
   --vhook_a {^s(.*)}  s$1
   SyncRegsIfcx: SyncRegsIfc
     port map (
-      aBusReset            => '0',                   --in  std_logic
-      bBusReset            => bBusReset,             --in  std_logic
-      BusClk               => BusClk,                --in  std_logic
-      aTdcReset            => aTdcReset,             --out std_logic
-      bRegPortInFlat       => bSyncRegPortInFlat,    --in  std_logic_vector(49:0)
-      bRegPortOutFlat      => bSyncRegPortOutFlat,   --out std_logic_vector(33:0)
-      RefClk               => RefClk,                --in  std_logic
-      rResetTdc            => rResetTdc,             --out std_logic
-      rResetTdcDone        => rResetTdcDone,         --in  std_logic
-      rEnableTdc           => rEnableTdc,            --out std_logic
-      rReRunEnable         => rReRunEnable,          --out std_logic
-      rEnablePpsCrossing   => rEnablePpsCrossing,    --out std_logic
-      rPpsPulseCaptured    => rPpsPulseCaptured,     --in  std_logic
-      SampleClk            => SampleClk1xOutLcl,     --in  std_logic
-      sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,  --out std_logic_vector(3:0)
-      MeasClk              => MeasClk,               --in  std_logic
-      mRspOffset           => mRspOffset,            --in  std_logic_vector(39:0)
-      mRtcOffset           => mRtcOffset,            --in  std_logic_vector(39:0)
-      mOffsetsDone         => mOffsetsDone,          --in  std_logic
-      mOffsetsValid        => mOffsetsValid,         --in  std_logic
-      rLoadRspCounts       => rLoadRspCounts,        --out std_logic
-      rRspPeriodInRClks    => rRspPeriodInRClks,     --out std_logic_vector(11:0)
-      rRspHighTimeInRClks  => rRspHighTimeInRClks,   --out std_logic_vector(11:0)
-      sLoadRtcCounts       => sLoadRtcCounts,        --out std_logic
-      sRtcPeriodInSClks    => sRtcPeriodInSClks,     --out std_logic_vector(11:0)
-      sRtcHighTimeInSClks  => sRtcHighTimeInSClks);  --out std_logic_vector(11:0)
+      aBusReset               => '0',                      --in  std_logic
+      bBusReset               => bBusReset,                --in  std_logic
+      BusClk                  => BusClk,                   --in  std_logic
+      aTdcReset               => aTdcReset,                --out std_logic
+      bRegPortInFlat          => bSyncRegPortInFlat,       --in  std_logic_vector(49:0)
+      bRegPortOutFlat         => bSyncRegPortOutFlat,      --out std_logic_vector(33:0)
+      RefClk                  => RefClk,                   --in  std_logic
+      rResetTdc               => rResetTdc,                --out std_logic
+      rResetTdcDone           => rResetTdcDone,            --in  std_logic
+      rEnableTdc              => rEnableTdc,               --out std_logic
+      rReRunEnable            => rReRunEnable,             --out std_logic
+      rEnablePpsCrossing      => rEnablePpsCrossing,       --out std_logic
+      rPpsPulseCaptured       => rPpsPulseCaptured,        --in  std_logic
+      SampleClk               => SampleClk1xOutLcl,        --in  std_logic
+      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,     --out std_logic_vector(3:0)
+      MeasClk                 => MeasClk,                  --in  std_logic
+      mRpOffset               => mRpOffset,                --in  std_logic_vector(39:0)
+      mSpOffset               => mSpOffset,                --in  std_logic_vector(39:0)
+      mOffsetsDone            => mOffsetsDone,             --in  std_logic
+      mOffsetsValid           => mOffsetsValid,            --in  std_logic
+      rLoadRePulseCounts      => rLoadRePulseCounts,       --out std_logic
+      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,    --out std_logic_vector(23:0)
+      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,  --out std_logic_vector(23:0)
+      rLoadRpCounts           => rLoadRpCounts,            --out std_logic
+      rRpPeriodInRClks        => rRpPeriodInRClks,         --out std_logic_vector(15:0)
+      rRpHighTimeInRClks      => rRpHighTimeInRClks,       --out std_logic_vector(15:0)
+      rLoadRptCounts          => rLoadRptCounts,           --out std_logic
+      rRptPeriodInRClks       => rRptPeriodInRClks,        --out std_logic_vector(15:0)
+      rRptHighTimeInRClks     => rRptHighTimeInRClks,      --out std_logic_vector(15:0)
+      sLoadSpCounts           => sLoadSpCounts,            --out std_logic
+      sSpPeriodInSClks        => sSpPeriodInSClks,         --out std_logic_vector(15:0)
+      sSpHighTimeInSClks      => sSpHighTimeInSClks,       --out std_logic_vector(15:0)
+      sLoadSptCounts          => sLoadSptCounts,           --out std_logic
+      sSptPeriodInSClks       => sSptPeriodInSClks,        --out std_logic_vector(15:0)
+      sSptHighTimeInSClks     => sSptHighTimeInSClks);     --out std_logic_vector(15:0)
 
 
 

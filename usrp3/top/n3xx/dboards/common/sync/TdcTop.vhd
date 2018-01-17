@@ -13,7 +13,7 @@
 --
 -- Purpose:
 --
--- This top level module orchestrates both of the TDC Cores for the RSP and RTC. It
+-- This top level module orchestrates both of the TDC Cores for the RP and SP. It
 -- handles PPS capture, resets, re-run logic, and PPS crossing logic. The guts of the TDC
 -- are all located in the Cores.
 --
@@ -31,8 +31,8 @@
 --       rEnablePpsCrossing   <= false
 --       sPpsClkCrossDelayVal <= don't care
 --     Prior to starting the core, the Sync Pulse counters must be loaded. Apply the
---     correct count values to rRspPeriodInRClks, etc, and then pulse the load bit for
---     each RSP and RTC. It is critical that this step is performed before de-asserting
+--     correct count values to rRpPeriodInRClks, etc, and then pulse the load bit for
+--     each RP and SP. It is critical that this step is performed before de-asserting
 --     reset.
 --
 --  1) De-assert the global reset, aReset, as well as the synchronous reset, rResetTdc,
@@ -45,9 +45,9 @@
 --     rPpsPulseCaptured bit will assert and will remain asserted until aReset or
 --     rResetTdc is asserted.
 --
---  3) When the TDC measurement completes, mRspOffsetDone and mRtcOffsetDone will assert
+--  3) When the TDC measurement completes, mRpOffsetDone and mSpOffsetDone will assert
 --     (not necessarily at the same time). The results of the measurements will be valid
---     on mRspOffset and mRtcOffset.
+--     on mRpOffset and mSpOffset.
 --
 --  4) To cross the PPS trigger into the SampleClk domain, first write the correct delay
 --     value to sPpsClkCrossDelayVal. Then (or at the same time), enable the crossing
@@ -57,13 +57,13 @@
 --     may be skipped.
 --
 --  5) To run the measurement again, assert the rReRunEnable input and capture the new
---     offsets whenever mRspOffsetValid or mRtcOffsetValid asserts.
+--     offsets whenever mRpOffsetValid or mSpOffsetValid asserts.
 --
 --
 --
--- Sync Pulse = RSP and RTC, which are the repeated pulses that are some integer
---  divisor of the Reference and Sample clocks. RSP = Repeated Sync Pulse in the
---  RefClk domain. RTC = Repeated TClk pulse in the SampleClk domain.
+-- Sync Pulse = RP and SP, which are the repeated pulses that are some integer
+--  divisor of the Reference and Sample clocks. RP = Reference Pulse in the
+--  RefClk domain. SP = Repeated TClk pulse in the SampleClk domain.
 --
 --
 -- Clock period relationship requirements to meet system concerns:
@@ -81,19 +81,15 @@ library ieee;
 
 entity TdcTop is
   generic (
+    -- Determines the maximum number of bits required to create the restart
+    -- pulser. This value is based off of the RefClk and RePulse rates.
+    kRClksPerRePulsePeriodBitsMax : integer range 3 to 32 := 24;
     -- Determines the maximum number of bits required to create the Gated and Freerunning
     -- sync pulsers. This value is based off of the RefClk and SyncPulse rates.
-    -- For example, for a 25 MHz RefClk and a 40 kHz SyncPulse, we require 625
-    -- RefClks per pulse, equating to 9 bits. Round to 12 for ease of implementation.
-    kRClksPerRspPeriodBitsMax : integer range 3 to 16 := 12;
+    kRClksPerRpPeriodBitsMax  : integer range 3 to 16 := 16;
     -- This value is based off of the SampleClk and SyncPulse rates.
-    -- For example, for a 156.3 MHz SampleClk and a 40 kHz SyncPulse, we require 3840
-    -- SampleClks per pulse, equating to 11 bits. Round to 12 for ease of implementation.
-    kSClksPerRtcPeriodBitsMax : integer range 3 to 16 := 12;
-    -- Default: 40 kHz Sync Pulse Period (25us) sampled by a ~171 MHz MeasClk
-    -- requires 4275 Measurement Clock periods = 13 bits.
-    -- All other implementations of the TDC use fewer than 13 bits, but leave this set
-    -- at 13 so we don't have to change it on a case-by-case basis.
+    kSClksPerSpPeriodBitsMax  : integer range 3 to 16 := 16;
+    -- Number of MeasClk periods required to count one period of RP or SP (in bits).
     kPulsePeriodCntSize       : integer := 13;
     -- Number of FreqRef periods to be measured (in bits).
     kFreqRefPeriodsToCheckSize: integer := 17;
@@ -137,7 +133,7 @@ entity TdcTop is
     -- until the TDC measurements are complete and sPpsClkCrossDelayVal is written.
     rEnablePpsCrossing   : in  boolean;
     -- Programmable delay value for crossing clock domains. This is used to compensate
-    -- for differences in sRTC pulses across modules. This value is typically set once
+    -- for differences in sSP pulses across modules. This value is typically set once
     -- after running initial synchronization.
     sPpsClkCrossDelayVal : in  unsigned(3 downto 0);
     -- PPS pulse output on the SampleClk domain.
@@ -148,33 +144,45 @@ entity TdcTop is
     -- Final FTDC measurements in MeasClk ticks. Done will assert when *Offset
     -- becomes valid and will remain asserted until aReset or rResetTdc asserts.
     -- FXP<+40,13> where kPulsePeriodCntSize is the number of integer bits.
-    mRspOffset      : out unsigned(kPulsePeriodCntSize+
+    mRpOffset       : out unsigned(kPulsePeriodCntSize+
                                    kSyncPeriodsToStampSize+
                                    kFreqRefPeriodsToCheckSize-1 downto 0);
-    mRtcOffset      : out unsigned(kPulsePeriodCntSize+
+    mSpOffset       : out unsigned(kPulsePeriodCntSize+
                                    kSyncPeriodsToStampSize+
                                    kFreqRefPeriodsToCheckSize-1 downto 0);
     mOffsetsDone    : out boolean;
     mOffsetsValid   : out boolean;
 
 
-    -- Setup for Sync Pulses : ----------------------------------------------------------
+    -- Setup for Pulsers : --------------------------------------------------------------
     -- Only load these counts when rResetTdc is asserted and rEnableTdc is de-asserted!!!
     -- If both of the above conditions are met, load the counts by pulsing Load
     -- when the counts are valid. It is not necessary to keep the count values valid
     -- after pulsing Load.
-    rLoadRspCounts      : in boolean;
-    rRspPeriodInRClks   : in unsigned(kRClksPerRspPeriodBitsMax - 1 downto 0);
-    rRspHighTimeInRClks : in unsigned(kRClksPerRspPeriodBitsMax - 1 downto 0);
-    sLoadRtcCounts      : in boolean;
-    sRtcPeriodInSClks   : in unsigned(kSClksPerRtcPeriodBitsMax - 1 downto 0);
-    sRtcHighTimeInSClks : in unsigned(kSClksPerRtcPeriodBitsMax - 1 downto 0);
+    rLoadRePulseCounts      : in boolean; -- RePulse
+    rRePulsePeriodInRClks   : in unsigned(kRClksPerRePulsePeriodBitsMax - 1 downto 0);
+    rRePulseHighTimeInRClks : in unsigned(kRClksPerRePulsePeriodBitsMax - 1 downto 0);
+    rLoadRpCounts       : in boolean; -- RP
+    rRpPeriodInRClks    : in unsigned(kRClksPerRpPeriodBitsMax - 1 downto 0);
+    rRpHighTimeInRClks  : in unsigned(kRClksPerRpPeriodBitsMax - 1 downto 0);
+    rLoadRptCounts      : in boolean; -- RP-transfer
+    rRptPeriodInRClks   : in unsigned(kRClksPerRpPeriodBitsMax - 1 downto 0);
+    rRptHighTimeInRClks : in unsigned(kRClksPerRpPeriodBitsMax - 1 downto 0);
+    sLoadSpCounts       : in boolean; -- SP
+    sSpPeriodInSClks    : in unsigned(kSClksPerSpPeriodBitsMax - 1 downto 0);
+    sSpHighTimeInSClks  : in unsigned(kSClksPerSpPeriodBitsMax - 1 downto 0);
+    sLoadSptCounts      : in boolean; -- SP-transfer
+    sSptPeriodInSClks   : in unsigned(kSClksPerSpPeriodBitsMax - 1 downto 0);
+    sSptHighTimeInSClks : in unsigned(kSClksPerSpPeriodBitsMax - 1 downto 0);
 
 
     -- Sync Pulse Outputs : -------------------------------------------------------------
     -- The repeating pulses can be useful for many things, including passing triggers.
-    rRSP               : out boolean;
-    sRTC               : out boolean;
+    -- The rising edges will always have a fixed (but unknown) phase relationship to one
+    -- another. This fixed phase relationship is valid across daughterboards and all
+    -- modules using the same Reference Clock and Sample Clock rates and sources.
+    rRpTransfer        : out boolean;
+    sSpTransfer        : out boolean;
 
     -- Pin bouncers out and in. Must go to unused and unconnected pins on the FPGA!
     rGatedPulseToPin   : inout std_logic;
@@ -187,7 +195,7 @@ architecture struct of TdcTop is
 
   component TdcCore
     generic (
-      kSourceClksPerPulseMaxBits : integer range 3 to 16 := 12;
+      kSourceClksPerPulseMaxBits : integer range 3 to 16 := 16;
       kPulsePeriodCntSize        : integer := 13;
       kFreqRefPeriodsToCheckSize : integer := 17;
       kSyncPeriodsToStampSize    : integer := 10);
@@ -213,46 +221,52 @@ architecture struct of TdcTop is
   end component;
 
   --vhook_sigstart
-  signal mRSP: boolean;
-  signal mRspOffsetDoneLcl: boolean;
-  signal mRspOffsetValidLcl: boolean;
-  signal mRTC: boolean;
-  signal mRtcOffsetDoneLcl: boolean;
-  signal mRtcOffsetValidLcl: boolean;
+  signal mRP: boolean;
+  signal mRpOffsetDoneLcl: boolean;
+  signal mRpOffsetValidLcl: boolean;
   signal mRunTdc: boolean;
+  signal mSP: boolean;
+  signal mSpOffsetDoneLcl: boolean;
+  signal mSpOffsetValidLcl: boolean;
   signal rCrossTrigRFI: boolean;
   signal rGatedCptrPulseIn: boolean;
-  signal rRspLcl: boolean;
-  signal rSyncPulseEnable: boolean;
-  signal sRtcLcl: boolean;
-  signal sSyncPulseEnable: boolean;
+  signal rRePulse: boolean;
+  signal rRePulseEnable: boolean;
+  signal rRpEnable: boolean;
+  signal rRptPulse: boolean;
+  signal sSpEnable: boolean;
+  signal sSptPulse: boolean;
   --vhook_sigend
 
-  signal sSyncPulseEnable_ms : boolean;
+  signal sSpEnable_ms : boolean;
 
-  signal rSyncPulseEnableDly1, rSyncPulseEnableDly2, rSyncPulseEnableDly3 : boolean;
-
-  signal mRtcDly,
-         mRtcReDly1,
-         mRtcReDly2,
-         mRtcRe : boolean;
+  -- Delay chain for enables.
+  constant kDelayForRpEnable      : integer := 2;
+  constant kAddtlDelayForSpEnable : integer := 3;
+  signal rSyncPulseEnableDly :
+    std_logic_vector(kDelayForRpEnable+
+                     kAddtlDelayForSpEnable-1 downto 0) := (others => '0');
 
   signal rResetTdcFlop_ms, rResetTdcFlop,
          rResetTdcDone_ms,
+         rSpEnable,
          mRunTdcEnable_ms, mRunTdcEnable,
+         mRunTdcEnableDly, mRunTdcEnableRe,
          mResetTdc_ms,     mResetTdc,
          sResetTdc_ms,     sResetTdc,
-         mRspValidStored,  mRtcValidStored,
+         mRpValidStored,  mSpValidStored,
          mOffsetsValidLcl,
          rPpsPulseDly,  rPpsPulseRe,
          mReRunEnable_ms,  mReRunEnable  : boolean;
+
+  signal rPpsCaptured : std_logic;
 
   type EnableFsmState_t is (Disabled, WaitForRunComplete, ReRuns);
   signal mEnableState : EnableFsmState_t;
 
   attribute ASYNC_REG : string;
-  attribute ASYNC_REG of sSyncPulseEnable_ms : signal is "true";
-  attribute ASYNC_REG of sSyncPulseEnable    : signal is "true";
+  attribute ASYNC_REG of sSpEnable_ms : signal is "true";
+  attribute ASYNC_REG of sSpEnable    : signal is "true";
   attribute ASYNC_REG of rResetTdcFlop_ms    : signal is "true";
   attribute ASYNC_REG of rResetTdcFlop       : signal is "true";
   attribute ASYNC_REG of rResetTdcDone_ms    : signal is "true";
@@ -319,64 +333,82 @@ begin
   -- Generate Enables for TDCs : --------------------------------------------------------
   -- When the TDC is enabled by asserting rEnableTdc, we start "listening" for a PPS
   -- rising edge to occur. We capture the first edge we see and then keep the all the
-  -- enables asserted until the TDC is disabled. The enabled are routed to each clock
-  -- domain with the delays noted below:
-  --
-  -- Signal routing delay:
-  --   rSyncPulseEnable -> RspTdc (0 delay cycles)
-  --   rSyncPulseEnable -> Sync to SampleClk -> RtcTDC (1-2 SampleClk)
-  --   rSyncPulseEnable -> Sync to MeasClk -> mRunTdc (RSP and RTC TDCs) (1-2 MeasClk)
+  -- enables asserted until the TDC is disabled.
   -- ------------------------------------------------------------------------------------
+  rPpsPulseRe <= rPpsPulse and not rPpsPulseDly;
+
   EnableTdc : process(aReset, RefClk)
   begin
     if aReset then
-      rPpsPulseDly         <= false;
-      rSyncPulseEnable     <= false;
-      rSyncPulseEnableDly1 <= false;
-      rSyncPulseEnableDly2 <= false;
-      rSyncPulseEnableDly3 <= false;
+      rPpsPulseDly <= false;
+      rPpsCaptured <= '0';
+      rSyncPulseEnableDly <= (others => '0');
     elsif rising_edge(RefClk) then
       -- RE detector for PPS to ONLY trigger on the edge and not accidentally half
       -- way through the high time.
-      rPpsPulseDly         <= rPpsPulse;
+      rPpsPulseDly <= rPpsPulse;
       -- When the TDC is enabled we capture the first PPS. This starts the Sync Pulses
-      -- (RSP / RTC) as well as enables the TDC measurement for capturing edges. Note
+      -- (RP / SP) as well as enables the TDC measurement for capturing edges. Note
       -- that this is independent from any synchronous reset such that we can control
       -- the PPS capture and the edge capture independently.
       if rEnableTdc then
-        -- Future PPS pulses will be ignored until rEnableTdc is de-asserted.
         if rPpsPulseRe then
-          rSyncPulseEnable <= true;
+          rPpsCaptured <= '1';
         end if;
       else
-        rSyncPulseEnable <= false;
+        rPpsCaptured <= '0';
+        rSyncPulseEnableDly <= (others => '0');
       end if;
 
-      -- Delay
-      rSyncPulseEnableDly1 <= rSyncPulseEnable;
-      rSyncPulseEnableDly2 <= rSyncPulseEnableDly1;
-      rSyncPulseEnableDly3 <= rSyncPulseEnableDly2;
+      -- Delay chain for the enable bits. Shift left.
+      rSyncPulseEnableDly <=
+        rSyncPulseEnableDly(rSyncPulseEnableDly'high-1 downto 0) & rPpsCaptured;
     end if;
   end process;
 
-  rPpsPulseRe <= rPpsPulse and not rPpsPulseDly;
+  -- Enables for the RePulse/RP/SP. The RePulse enable must be asserted two cycles
+  -- before the other enables to allow the TDC to start running before the RP/SP begin.
+  rRePulseEnable <= rPpsCaptured = '1'; -- no delay
+  rRpEnable <= rSyncPulseEnableDly(kDelayForRpEnable-1) = '1';
+  rSpEnable <= rSyncPulseEnableDly(kDelayForRpEnable+kAddtlDelayForSpEnable-1) = '1';
 
-  -- Local to debug outputs.
-  rPpsPulseCaptured <= rSyncPulseEnable;
+  -- Local to output.
+  rPpsPulseCaptured <= rPpsCaptured = '1';
 
-  -- Sync rSyncPulseEnable to other domains now... based on the "TDC Detail" diagram.
+  -- Sync rSpEnable to the SampleClk now... based on the "TDC 2.0" diagram.
   SyncEnableToSampleClk : process(aReset, SampleClk)
   begin
     if aReset then
-      sSyncPulseEnable_ms <= false;
-      sSyncPulseEnable    <= false;
+      sSpEnable_ms <= false;
+      sSpEnable    <= false;
     elsif rising_edge(SampleClk) then
-      sSyncPulseEnable_ms <= rSyncPulseEnableDly3;
-      sSyncPulseEnable    <= sSyncPulseEnable_ms;
+      sSpEnable_ms <= rSpEnable;
+      sSpEnable    <= sSpEnable_ms;
     end if;
   end process;
 
-  -- Generate the master Run signal, as well as the repeat run.
+  --vhook_e Pulser ReRunPulser
+  --vhook_a kClksPerPulseMaxBits kRClksPerRePulsePeriodBitsMax
+  --vhook_a Clk            RefClk
+  --vhook_a cLoadLimits    rLoadRePulseCounts
+  --vhook_a cPeriod        rRePulsePeriodInRClks
+  --vhook_a cHighTime      rRePulseHighTimeInRClks
+  --vhook_a cEnablePulse   rRePulseEnable
+  --vhook_a cPulse         rRePulse
+  ReRunPulser: entity work.Pulser (rtl)
+    generic map (kClksPerPulseMaxBits => kRClksPerRePulsePeriodBitsMax)  --integer range 3:32 :=16
+    port map (
+      aReset       => aReset,                   --in  boolean
+      Clk          => RefClk,                   --in  std_logic
+      cLoadLimits  => rLoadRePulseCounts,       --in  boolean
+      cPeriod      => rRePulsePeriodInRClks,    --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cHighTime    => rRePulseHighTimeInRClks,  --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cEnablePulse => rRePulseEnable,           --in  boolean
+      cPulse       => rRePulse);                --out boolean
+
+  mRunTdcEnableRe <= mRunTdcEnable and not mRunTdcEnableDly;
+
+  -- FSM to generate the master Run signal, as well as the repeat run.
   SyncEnableToMeasClk : process(aReset, MeasClk)
   begin
     if aReset then
@@ -384,25 +416,17 @@ begin
       mRunTdcEnable    <= false;
       mReRunEnable_ms  <= false;
       mReRunEnable     <= false;
-      mRunTdc <= false;
-      mRtcDly <= false;
-      mRtcReDly1 <= false;
-      mRtcReDly2 <= false;
-      mEnableState <= Disabled;
+      mRunTdcEnableDly <= false;
+      mRunTdc          <= false;
+      mEnableState     <= Disabled;
     elsif rising_edge(MeasClk) then
-      mRunTdcEnable_ms <= rSyncPulseEnable;
+      -- rRePulse is many, many MeasClk cycles high/low, so this is safe to double-sync.
+      mRunTdcEnable_ms <= rRePulse;
       mRunTdcEnable    <= mRunTdcEnable_ms;
       mReRunEnable_ms  <= rReRunEnable;
       mReRunEnable     <= mReRunEnable_ms;
 
-      -- Add two cycles of delay to the RTC RE signal to ensure the edge offset is
-      -- adequately smaller than the RTC period. When these delays are not in place,
-      -- the edge capture and processing algorithm occasionally rolls over a period
-      -- to start at zero, throwing off the total offset measurement.
-      mRtcReDly1 <= mRtcRe;
-      mRtcReDly2 <= mRtcReDly1;
-
-      mRtcDly <= mRTC;
+      mRunTdcEnableDly <= mRunTdcEnable;
 
       -- STATE MACHINE STARTUP !!! ------------------------------------------------------
       -- This state machine starts safely because it cannot change state until
@@ -416,7 +440,7 @@ begin
         -- Transition to WaitForRunComplete when the TDC is enabled. Pulse mRunTdc here,
         -- and then wait for it to complete in WaitForRunComplete.
         when Disabled =>
-          if mRunTdcEnable then
+          if mRunTdcEnableRe then
             mRunTdc <= true;
             mEnableState <= WaitForRunComplete;
           end if;
@@ -429,12 +453,11 @@ begin
             mEnableState <= ReRuns;
           end if;
 
-        -- Only pulse mRunTdc again after the rising edges of the RTC and RSP pulses have
-        -- passed. Instead of checking on both edges, we know from system analysis
-        -- that the RTC pulse is slightly delayed from the RSP, so we can just check
-        -- on the rising edge of the RTC to ensure both pulses have passed.
+        -- Only pulse mRunTdc again if re-runs are enabled and the rising edge of
+        -- the enable signal occurs. This guarantees our RP/SP have the correct phase
+        -- relationship every time the TDC is run.
         when ReRuns =>
-          if mReRunEnable and mRtcReDly2 then
+          if mReRunEnable and mRunTdcEnableRe then
             mRunTdc <= true;
             mEnableState <= WaitForRunComplete;
           end if;
@@ -444,15 +467,13 @@ begin
       end case;
 
       -- Synchronous reset for FSM.
-      if mResetTdc or not mRunTdcEnable then
+      if mResetTdc then
         mEnableState <= Disabled;
         mRunTdc <= false;
       end if;
 
     end if;
   end process;
-
-  mRtcRe <= mRTC and not mRtcDly;
 
 
 
@@ -471,8 +492,8 @@ begin
   begin
     if aReset then
       mOffsetsValidLcl <= false;
-      mRspValidStored  <= false;
-      mRtcValidStored  <= false;
+      mRpValidStored   <= false;
+      mSpValidStored   <= false;
     elsif rising_edge(MeasClk) then
       -- Reset the strobe signals.
       mOffsetsValidLcl <= false;
@@ -480,24 +501,24 @@ begin
       -- First, we're sensitive to the TDC sync reset signal.
       if mResetTdc then
         mOffsetsValidLcl <= false;
-        mRspValidStored  <= false;
-        mRtcValidStored  <= false;
+        mRpValidStored   <= false;
+        mSpValidStored   <= false;
       -- Case 1: Both Valid signals pulse at the same time.
       -- Case 4: Both Valid signals have been stored independently. Yes, this incurs
       --         a one-cycle delay in the output valid (from when the second one asserts)
       --         but it makes for cleaner code and is safe because by design because the
       --         valid signals cannot assert again for a longggg time.
-      elsif (mRspOffsetValidLcl and mRtcOffsetValidLcl) or
-            (mRspValidStored and mRtcValidStored) then
+      elsif (mRpOffsetValidLcl and mSpOffsetValidLcl) or
+            (mRpValidStored    and mSpValidStored) then
         mOffsetsValidLcl <= true;
-        mRspValidStored  <= false;
-        mRtcValidStored  <= false;
-      -- Case 2: RSP Valid pulses alone.
-      elsif mRspOffsetValidLcl then
-        mRspValidStored <= true;
-      -- Case 3: RTC Valid pulses alone.
-      elsif mRtcOffsetValidLcl then
-        mRtcValidStored <= true;
+        mRpValidStored   <= false;
+        mSpValidStored   <= false;
+      -- Case 2: RP Valid pulses alone.
+      elsif mRpOffsetValidLcl then
+        mRpValidStored <= true;
+      -- Case 3: SP Valid pulses alone.
+      elsif mSpOffsetValidLcl then
+        mSpValidStored <= true;
       end if;
     end if;
   end process;
@@ -505,113 +526,152 @@ begin
   -- Local to output.
   mOffsetsValid <= mOffsetsValidLcl;
   -- Only assert done with both cores are done.
-  mOffsetsDone  <= mRspOffsetDoneLcl and mRtcOffsetDoneLcl;
+  mOffsetsDone  <= mRpOffsetDoneLcl and mSpOffsetDoneLcl;
 
 
 
-  -- Reference Clock TDC (RSP) : --------------------------------------------------------
-  -- mRSP is only used for testbenching purposes, so ignore vhook warnings.
-  --vhook_nowarn mRSP
+  -- Reference Clock TDC (RP) : ---------------------------------------------------------
+  -- mRP is only used for testbenching purposes, so ignore vhook warnings.
+  --vhook_nowarn mRP
   -- ------------------------------------------------------------------------------------
 
-  --vhook   TdcCore    RspTdc
-  --vhook_g kSourceClksPerPulseMaxBits kRClksPerRspPeriodBitsMax
+  --vhook   TdcCore    RpTdc
+  --vhook_g kSourceClksPerPulseMaxBits kRClksPerRpPeriodBitsMax
   --vhook_a mResetPeriodMeas mResetTdc
   --vhook_a mResetTdcMeas    mResetTdc
   --vhook_a mPeriodMeasDone  open
   --vhook_a mRunTdcMeas      mRunTdc
-  --vhook_a mGatedPulse      mRSP
-  --vhook_a mAvgOffset       mRspOffset
-  --vhook_a mAvgOffsetDone   mRspOffsetDoneLcl
-  --vhook_a mAvgOffsetValid  mRspOffsetValidLcl
+  --vhook_a mGatedPulse      mRP
+  --vhook_a mAvgOffset       mRpOffset
+  --vhook_a mAvgOffsetDone   mRpOffsetDoneLcl
+  --vhook_a mAvgOffsetValid  mRpOffsetValidLcl
   --vhook_a SourceClk        RefClk
   --vhook_a sResetTdc        rResetTdcFlop
-  --vhook_a sSyncPulseLoadCnt  rLoadRspCounts
-  --vhook_a sSyncPulsePeriod   rRspPeriodInRClks
-  --vhook_a sSyncPulseHighTime rRspHighTimeInRClks
-  --vhook_a sSyncPulseEnable   rSyncPulseEnable
-  --vhook_a sGatedPulse        rRspLcl
+  --vhook_a sSyncPulseLoadCnt  rLoadRpCounts
+  --vhook_a sSyncPulsePeriod   rRpPeriodInRClks
+  --vhook_a sSyncPulseHighTime rRpHighTimeInRClks
+  --vhook_a sSyncPulseEnable   rRpEnable
+  --vhook_a sGatedPulse        open
   --vhook_a {^sGated(.*)}      rGated$1
-  RspTdc: TdcCore
+  RpTdc: TdcCore
     generic map (
-      kSourceClksPerPulseMaxBits => kRClksPerRspPeriodBitsMax,   --integer range 3:16 :=12
+      kSourceClksPerPulseMaxBits => kRClksPerRpPeriodBitsMax,    --integer range 3:16 :=16
       kPulsePeriodCntSize        => kPulsePeriodCntSize,         --integer:=13
       kFreqRefPeriodsToCheckSize => kFreqRefPeriodsToCheckSize,  --integer:=17
       kSyncPeriodsToStampSize    => kSyncPeriodsToStampSize)     --integer:=10
     port map (
-      aReset             => aReset,               --in  boolean
-      MeasClk            => MeasClk,              --in  std_logic
-      mResetPeriodMeas   => mResetTdc,            --in  boolean
-      mPeriodMeasDone    => open,                 --out boolean
-      mResetTdcMeas      => mResetTdc,            --in  boolean
-      mRunTdcMeas        => mRunTdc,              --in  boolean
-      mGatedPulse        => mRSP,                 --out boolean
-      mAvgOffset         => mRspOffset,           --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mAvgOffsetDone     => mRspOffsetDoneLcl,    --out boolean
-      mAvgOffsetValid    => mRspOffsetValidLcl,   --out boolean
-      SourceClk          => RefClk,               --in  std_logic
-      sResetTdc          => rResetTdcFlop,        --in  boolean
-      sSyncPulseLoadCnt  => rLoadRspCounts,       --in  boolean
-      sSyncPulsePeriod   => rRspPeriodInRClks,    --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
-      sSyncPulseHighTime => rRspHighTimeInRClks,  --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
-      sSyncPulseEnable   => rSyncPulseEnable,     --in  boolean
-      sGatedPulse        => rRspLcl,              --out boolean
-      sGatedPulseToPin   => rGatedPulseToPin);    --inout std_logic
+      aReset             => aReset,              --in  boolean
+      MeasClk            => MeasClk,             --in  std_logic
+      mResetPeriodMeas   => mResetTdc,           --in  boolean
+      mPeriodMeasDone    => open,                --out boolean
+      mResetTdcMeas      => mResetTdc,           --in  boolean
+      mRunTdcMeas        => mRunTdc,             --in  boolean
+      mGatedPulse        => mRP,                 --out boolean
+      mAvgOffset         => mRpOffset,           --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mAvgOffsetDone     => mRpOffsetDoneLcl,    --out boolean
+      mAvgOffsetValid    => mRpOffsetValidLcl,   --out boolean
+      SourceClk          => RefClk,              --in  std_logic
+      sResetTdc          => rResetTdcFlop,       --in  boolean
+      sSyncPulseLoadCnt  => rLoadRpCounts,       --in  boolean
+      sSyncPulsePeriod   => rRpPeriodInRClks,    --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
+      sSyncPulseHighTime => rRpHighTimeInRClks,  --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
+      sSyncPulseEnable   => rRpEnable,           --in  boolean
+      sGatedPulse        => open,                --out boolean
+      sGatedPulseToPin   => rGatedPulseToPin);   --inout std_logic
+
+  --vhook_e Pulser RpTransferPulse
+  --vhook_a kClksPerPulseMaxBits kRClksPerRpPeriodBitsMax
+  --vhook_a Clk            RefClk
+  --vhook_a cLoadLimits    rLoadRptCounts
+  --vhook_a cPeriod        rRptPeriodInRClks
+  --vhook_a cHighTime      rRptHighTimeInRClks
+  --vhook_a cEnablePulse   rRpEnable
+  --vhook_a cPulse         rRptPulse
+  RpTransferPulse: entity work.Pulser (rtl)
+    generic map (kClksPerPulseMaxBits => kRClksPerRpPeriodBitsMax)  --integer range 3:32 :=16
+    port map (
+      aReset       => aReset,               --in  boolean
+      Clk          => RefClk,               --in  std_logic
+      cLoadLimits  => rLoadRptCounts,       --in  boolean
+      cPeriod      => rRptPeriodInRClks,    --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cHighTime    => rRptHighTimeInRClks,  --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cEnablePulse => rRpEnable,            --in  boolean
+      cPulse       => rRptPulse);           --out boolean
 
   -- Local to output
-  rRSP <= rRspLcl;
+  rRpTransfer <= rRptPulse;
 
 
-  -- Sample Clock TDC (RTC) : -----------------------------------------------------------
-  --
+  -- Sample Clock TDC (SP) : ------------------------------------------------------------
+  -- mSP is only used for testbenching purposes, so ignore vhook warnings.
+  --vhook_nowarn mSP
   -- ------------------------------------------------------------------------------------
 
-  --vhook   TdcCore    RtcTdc
-  --vhook_g kSourceClksPerPulseMaxBits kSClksPerRtcPeriodBitsMax
+  --vhook   TdcCore    SpTdc
+  --vhook_g kSourceClksPerPulseMaxBits kSClksPerSpPeriodBitsMax
   --vhook_a mResetPeriodMeas mResetTdc
   --vhook_a mResetTdcMeas    mResetTdc
   --vhook_a mPeriodMeasDone  open
   --vhook_a mRunTdcMeas      mRunTdc
-  --vhook_a mGatedPulse      mRTC
-  --vhook_a mAvgOffset       mRtcOffset
-  --vhook_a mAvgOffsetDone   mRtcOffsetDoneLcl
-  --vhook_a mAvgOffsetValid  mRtcOffsetValidLcl
+  --vhook_a mGatedPulse      mSP
+  --vhook_a mAvgOffset       mSpOffset
+  --vhook_a mAvgOffsetDone   mSpOffsetDoneLcl
+  --vhook_a mAvgOffsetValid  mSpOffsetValidLcl
   --vhook_a SourceClk        SampleClk
   --vhook_a sResetTdc        sResetTdc
-  --vhook_a sSyncPulseLoadCnt  sLoadRtcCounts
-  --vhook_a sSyncPulsePeriod   sRtcPeriodInSClks
-  --vhook_a sSyncPulseHighTime sRtcHighTimeInSClks
-  --vhook_a sSyncPulseEnable sSyncPulseEnable
-  --vhook_a sGatedPulse      sRtcLcl
+  --vhook_a sSyncPulseLoadCnt  sLoadSpCounts
+  --vhook_a sSyncPulsePeriod   sSpPeriodInSClks
+  --vhook_a sSyncPulseHighTime sSpHighTimeInSClks
+  --vhook_a sSyncPulseEnable sSpEnable
+  --vhook_a sGatedPulse      open
   --vhook_a {^sGated(.*)}    sGated$1
-  RtcTdc: TdcCore
+  SpTdc: TdcCore
     generic map (
-      kSourceClksPerPulseMaxBits => kSClksPerRtcPeriodBitsMax,   --integer range 3:16 :=12
+      kSourceClksPerPulseMaxBits => kSClksPerSpPeriodBitsMax,    --integer range 3:16 :=16
       kPulsePeriodCntSize        => kPulsePeriodCntSize,         --integer:=13
       kFreqRefPeriodsToCheckSize => kFreqRefPeriodsToCheckSize,  --integer:=17
       kSyncPeriodsToStampSize    => kSyncPeriodsToStampSize)     --integer:=10
     port map (
-      aReset             => aReset,               --in  boolean
-      MeasClk            => MeasClk,              --in  std_logic
-      mResetPeriodMeas   => mResetTdc,            --in  boolean
-      mPeriodMeasDone    => open,                 --out boolean
-      mResetTdcMeas      => mResetTdc,            --in  boolean
-      mRunTdcMeas        => mRunTdc,              --in  boolean
-      mGatedPulse        => mRTC,                 --out boolean
-      mAvgOffset         => mRtcOffset,           --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mAvgOffsetDone     => mRtcOffsetDoneLcl,    --out boolean
-      mAvgOffsetValid    => mRtcOffsetValidLcl,   --out boolean
-      SourceClk          => SampleClk,            --in  std_logic
-      sResetTdc          => sResetTdc,            --in  boolean
-      sSyncPulseLoadCnt  => sLoadRtcCounts,       --in  boolean
-      sSyncPulsePeriod   => sRtcPeriodInSClks,    --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
-      sSyncPulseHighTime => sRtcHighTimeInSClks,  --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
-      sSyncPulseEnable   => sSyncPulseEnable,     --in  boolean
-      sGatedPulse        => sRtcLcl,              --out boolean
-      sGatedPulseToPin   => sGatedPulseToPin);    --inout std_logic
+      aReset             => aReset,              --in  boolean
+      MeasClk            => MeasClk,             --in  std_logic
+      mResetPeriodMeas   => mResetTdc,           --in  boolean
+      mPeriodMeasDone    => open,                --out boolean
+      mResetTdcMeas      => mResetTdc,           --in  boolean
+      mRunTdcMeas        => mRunTdc,             --in  boolean
+      mGatedPulse        => mSP,                 --out boolean
+      mAvgOffset         => mSpOffset,           --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mAvgOffsetDone     => mSpOffsetDoneLcl,    --out boolean
+      mAvgOffsetValid    => mSpOffsetValidLcl,   --out boolean
+      SourceClk          => SampleClk,           --in  std_logic
+      sResetTdc          => sResetTdc,           --in  boolean
+      sSyncPulseLoadCnt  => sLoadSpCounts,       --in  boolean
+      sSyncPulsePeriod   => sSpPeriodInSClks,    --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
+      sSyncPulseHighTime => sSpHighTimeInSClks,  --in  unsigned(kSourceClksPerPulseMaxBits-1:0)
+      sSyncPulseEnable   => sSpEnable,           --in  boolean
+      sGatedPulse        => open,                --out boolean
+      sGatedPulseToPin   => sGatedPulseToPin);   --inout std_logic
+
+  --vhook_e Pulser SpTransferPulse
+  --vhook_a kClksPerPulseMaxBits kSClksPerSpPeriodBitsMax
+  --vhook_a Clk            SampleClk
+  --vhook_a cLoadLimits    sLoadSptCounts
+  --vhook_a cPeriod        sSptPeriodInSClks
+  --vhook_a cHighTime      sSptHighTimeInSClks
+  --vhook_a cEnablePulse   sSpEnable
+  --vhook_a cPulse         sSptPulse
+  SpTransferPulse: entity work.Pulser (rtl)
+    generic map (kClksPerPulseMaxBits => kSClksPerSpPeriodBitsMax)  --integer range 3:32 :=16
+    port map (
+      aReset       => aReset,               --in  boolean
+      Clk          => SampleClk,            --in  std_logic
+      cLoadLimits  => sLoadSptCounts,       --in  boolean
+      cPeriod      => sSptPeriodInSClks,    --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cHighTime    => sSptHighTimeInSClks,  --in  unsigned(kClksPerPulseMaxBits-1:0)
+      cEnablePulse => sSpEnable,            --in  boolean
+      cPulse       => sSptPulse);           --out boolean
 
   -- Local to output
-  sRTC <= sRtcLcl;
+  sSpTransfer <= sSptPulse;
 
 
   -- Cross PPS to SampleClk : ----------------------------------------------------------
@@ -624,23 +684,23 @@ begin
   rGatedCptrPulseIn <= rCrossTrigRFI and rPpsPulseRe;
 
   --vhook_e CrossTrigger CrossCptrPulse
-  --vhook_a rRSP              rRspLcl
+  --vhook_a rRP               rRptPulse
   --vhook_a rReadyForInput    rCrossTrigRFI
   --vhook_a rEnableTrigger    rEnablePpsCrossing
   --vhook_a rTriggerIn        rGatedCptrPulseIn
-  --vhook_a sRTC              sRtcLcl
+  --vhook_a sSP               sSptPulse
   --vhook_a sElasticBufferPtr sPpsClkCrossDelayVal
   --vhook_a sTriggerOut       sPpsPulse
   CrossCptrPulse: entity work.CrossTrigger (rtl)
     port map (
       aReset            => aReset,                --in  boolean
       RefClk            => RefClk,                --in  std_logic
-      rRSP              => rRspLcl,               --in  boolean
+      rRP               => rRptPulse,             --in  boolean
       rReadyForInput    => rCrossTrigRFI,         --out boolean
       rEnableTrigger    => rEnablePpsCrossing,    --in  boolean
       rTriggerIn        => rGatedCptrPulseIn,     --in  boolean
       SampleClk         => SampleClk,             --in  std_logic
-      sRTC              => sRtcLcl,               --in  boolean
+      sSP               => sSptPulse,             --in  boolean
       sElasticBufferPtr => sPpsClkCrossDelayVal,  --in  unsigned(3:0)
       sTriggerOut       => sPpsPulse);            --out boolean
 
@@ -669,34 +729,44 @@ architecture test of tb_TdcTop is
 
   -- Constants for the clock periods.
   constant kSPer : time :=   8.000 ns; -- 125.00 MHz
-  constant kMPer : time :=   5.848 ns; -- 171.00 MHz
+  constant kMPer : time :=   5.050 ns; -- 198.00 MHz
   constant kRPer : time := 100.000 ns; --  10.00 MHz
 
-  constant kRClksPerRspPeriodBitsMax : integer := 12;
-  constant kSClksPerRtcPeriodBitsMax : integer := 12;
+  constant kRClksPerRePulsePeriodBitsMax : integer := 24;
+  constant kRClksPerRpPeriodBitsMax      : integer := 16;
+  constant kSClksPerSpPeriodBitsMax      : integer := 16;
 
-  -- Constants for the RSP/RTC pulses, based on the clock frequencies above. The periods
+  -- Constants for the RP/SP pulses, based on the clock frequencies above. The periods
   -- should all divide into one another without remainders, so this is safe to do...
   -- High time is 50% duty cycle, or close to it if the period isn't a round number.
-  constant kRspPeriod          : time    := 1000 ns;
-  constant kRspPeriodInRClks   : integer := kRspPeriod/kRPer;
-  constant kRspHighTimeInRClks : integer := integer(ceil(real(kRspPeriodInRClks)/2.0));
-  constant kRtcPeriodInSClks   : integer := kRspPeriod/kSPer;
-  constant kRtcHighTimeInSClks : integer := integer(ceil(real(kRtcPeriodInSClks)/2.0));
+  constant kRpPeriod           : time    :=  1000 ns;
+  constant kRpPeriodInRClks    : integer := kRpPeriod/kRPer;
+  constant kRpHighTimeInRClks  : integer := integer(floor(real(kRpPeriodInRClks)/2.0));
+  constant kRptPeriod          : time    := 25000 ns;
+  constant kRptPeriodInRClks   : integer := kRptPeriod/kRPer;
+  constant kRptHighTimeInRClks : integer := integer(floor(real(kRptPeriodInRClks)/2.0));
+  constant kSpPeriod           : time    :=   800 ns;
+  constant kSpPeriodInSClks    : integer := kSpPeriod/kSPer;
+  constant kSpHighTimeInSClks  : integer := integer(floor(real(kSpPeriodInSClks)/2.0));
+  constant kSptPeriod          : time    := 25000 ns;
+  constant kSptPeriodInSClks   : integer := kSptPeriod/kSPer;
+  constant kSptHighTimeInSClks : integer := integer(floor(real(kSptPeriodInSClks)/2.0));
+  constant kRePulsePeriod      : time    := 2.500 ms;
+  constant kRePulsePeriodInRClks   : integer := kRePulsePeriod/kRPer;
+  constant kRePulseHighTimeInRClks : integer := integer(floor(real(kRePulsePeriodInRClks)/2.0));
 
   -- This doesn't come out to a nice number (or shouldn't), but that's ok. Round up.
-  constant kMeasClksPerRsp           : integer := kRspPeriod/kMPer+1;
+  constant kMeasClksPerRp : integer := kRpPeriod/kMPer+1;
 
   -- Inputs to DUT
-  constant kPulsePeriodCntSize       : integer := integer(ceil(log2(real(kMeasClksPerRsp))));
-  constant kFreqRefPeriodsToCheckSize: integer := 12; --17
+  constant kPulsePeriodCntSize       : integer := integer(ceil(log2(real(kMeasClksPerRp))));
+  constant kFreqRefPeriodsToCheckSize: integer := 12; -- usually 17, but to save run time...
   constant kSyncPeriodsToStampSize   : integer := 10;
 
-  -- constant kFreqRefPeriodsToCheck    : integer := 2**kFreqRefPeriodsToCheckSize;
   constant kMeasurementTimeout : time :=
-             kMPer*(kMeasClksPerRsp*(2**kSyncPeriodsToStampSize) +
+             kMPer*(kMeasClksPerRp*(2**kSyncPeriodsToStampSize) +
                     40*(2**kSyncPeriodsToStampSize) +
-                    kMeasClksPerRsp*(2**kFreqRefPeriodsToCheckSize)
+                    kMeasClksPerRp*(2**kFreqRefPeriodsToCheckSize)
                    );
 
   --vhook_sigstart
@@ -704,37 +774,40 @@ architecture test of tb_TdcTop is
   signal MeasClk: std_logic := '0';
   signal mOffsetsDone: boolean;
   signal mOffsetsValid: boolean;
-  signal mRspOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
-  signal mRtcOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
+  signal mRpOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
+  signal mSpOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
   signal RefClk: std_logic := '0';
   signal rEnablePpsCrossing: boolean;
   signal rEnableTdc: boolean;
   signal rGatedPulseToPin: std_logic;
-  signal rLoadRspCounts: boolean;
+  signal rLoadRePulseCounts: boolean;
+  signal rLoadRpCounts: boolean;
+  signal rLoadRptCounts: boolean;
   signal rPpsPulse: boolean;
   signal rPpsPulseCaptured: boolean;
   signal rReRunEnable: boolean;
   signal rResetTdc: boolean;
   signal rResetTdcDone: boolean;
-  signal rRSP: boolean;
+  signal rRpTransfer: boolean;
   signal SampleClk: std_logic := '0';
   signal sGatedPulseToPin: std_logic;
-  signal sLoadRtcCounts: boolean;
+  signal sLoadSpCounts: boolean;
+  signal sLoadSptCounts: boolean;
   signal sPpsClkCrossDelayVal: unsigned(3 downto 0);
   signal sPpsPulse: boolean;
-  signal sRTC: boolean;
+  signal sSpTransfer: boolean;
   --vhook_sigend
 
   signal StopSim : boolean;
   signal EnableOutputChecks : boolean := true;
 
-  signal ExpectedRspOutput,
+  signal ExpectedRpOutput,
          ExpectedFinalMeas,
-         ExpectedRtcOutput : real := 0.0;
+         ExpectedSpOutput : real := 0.0;
 
   alias mRunTdc is <<signal .tb_TdcTop.dutx.mRunTdc : boolean>>;
-  alias mRTC is <<signal .tb_TdcTop.dutx.mRTC : boolean>>;
-  alias mRSP is <<signal .tb_TdcTop.dutx.mRSP : boolean>>;
+  alias mSP is <<signal .tb_TdcTop.dutx.mSP : boolean>>;
+  alias mRP is <<signal .tb_TdcTop.dutx.mRP : boolean>>;
 
   procedure ClkWait(
     signal   Clk   : in std_logic;
@@ -767,13 +840,17 @@ begin
   main: process
   begin
     -- Defaults, per instructions in Purpose
+    sPpsClkCrossDelayVal <= to_unsigned(0, sPpsClkCrossDelayVal'length);
     rResetTdc    <= true;
     rEnableTdc   <= false;
     rReRunEnable <= false;
     rEnablePpsCrossing <= false;
     rPpsPulse  <= false;
-    rLoadRspCounts <= false;
-    sLoadRtcCounts <= false;
+    rLoadRePulseCounts <= false;
+    rLoadRpCounts  <= false;
+    rLoadRptCounts <= false;
+    sLoadSpCounts  <= false;
+    sLoadSptCounts <= false;
 
     aReset <= true, false after kRPer*4;
     ClkWait(RefClk,10);
@@ -781,13 +858,19 @@ begin
     -- Step 0 : -------------------------------------------------------------------------
     -- Prior to de-asserting reset, we need to load the counters, so pulse the loads.
     ClkWait(RefClk);
-    rLoadRspCounts <= true;
+    rLoadRePulseCounts <= true;
+    rLoadRpCounts  <= true;
+    rLoadRptCounts <= true;
     ClkWait(RefClk);
-    rLoadRspCounts <= false;
+    rLoadRePulseCounts <= false;
+    rLoadRpCounts  <= false;
+    rLoadRptCounts <= false;
     ClkWait(SampleClk);
-    sLoadRtcCounts <= true;
+    sLoadSpCounts  <= true;
+    sLoadSptCounts <= true;
     ClkWait(SampleClk);
-    sLoadRtcCounts <= false;
+    sLoadSpCounts  <= false;
+    sLoadSptCounts <= false;
 
 
     -- Step 1 : -------------------------------------------------------------------------
@@ -815,7 +898,6 @@ begin
 
     -- Step 3 : -------------------------------------------------------------------------
     report "Waiting for Measurements to Complete..." severity note;
-    -- Now wait for the measurement to complete.
     wait until mOffsetsDone for kMeasurementTimeout;
     assert mOffsetsDone
       report "Offset measurements not completed within timeout"
@@ -824,11 +906,11 @@ begin
     -- Offset values checked below in CheckOutput.
 
     report "Printing Results..." & LF &
-       "RSP:  " & real'image(OffsetToReal(mRspOffset)) &
-       " Expected: " & real'image(ExpectedRspOutput) & LF &
-       "RTC:  " & real'image(OffsetToReal(mRtcOffset)) &
-       " Expected: " & real'image(ExpectedRtcOutput) & LF &
-       "Meas: " & real'image((OffsetToReal(mRtcOffset-mRspOffset)*real(kMPer/1 ns)+
+       "RP:   " & real'image(OffsetToReal(mRpOffset)) &
+       " Expected: " & real'image(ExpectedRpOutput) & LF &
+       "SP:  " & real'image(OffsetToReal(mSpOffset)) &
+       " Expected: " & real'image(ExpectedSpOutput) & LF &
+       "Meas: " & real'image((OffsetToReal(mSpOffset-mRpOffset)*real(kMPer/1 ns)+
                               real(kRPer/1 ns)-real(kSPer/1 ns))/real(kSPer/1 ns)) &
        " Expected: " & real'image(ExpectedFinalMeas)
       severity note;
@@ -836,22 +918,22 @@ begin
 
     -- Step 4 : -------------------------------------------------------------------------
     -- Trigger another PPS one-cycle pulse to watch it all cross over correctly.
-    -- Issue the trigger around where a real PPS pulse will come (RE of RSP).
+    -- Issue the trigger around where a real PPS pulse will come (RE of RP).
     -- First, set the programmable delay sPpsClkCrossDelayVal.
     ClkWait(SampleClk);
-    sPpsClkCrossDelayVal <= to_unsigned(7, sPpsClkCrossDelayVal'length);
+    sPpsClkCrossDelayVal <= to_unsigned(4, sPpsClkCrossDelayVal'length);
     ClkWait(RefClk);
     rEnablePpsCrossing   <= true;
-    wait until rRSP and not rRSP'delayed;
+    wait until rRpTransfer and not rRpTransfer'delayed;
     rPpsPulse <= true;
     ClkWait(RefClk);
     rPpsPulse <= false;
     ClkWait(RefClk);
 
-    -- We expect the PPS output pulse to arrive after FE and RE of sRTC have passed,
+    -- We expect the PPS output pulse to arrive after FE and RE of sSP have passed,
     -- and then a few extra cycles of SampleClk delay on there as well.
-    wait until (not sRTC) and (    sRTC'delayed); -- FE
-    wait until (    sRTC) and (not sRTC'delayed); -- RE
+    wait until (not sSpTransfer) and (    sSpTransfer'delayed); -- FE
+    wait until (    sSpTransfer) and (not sSpTransfer'delayed); -- RE
     ClkWait(SampleClk, 2 + to_integer(sPpsClkCrossDelayVal));
     -- Check on falling edge of clock.
     wait until falling_edge(SampleClk);
@@ -874,11 +956,11 @@ begin
     -- Offset values checked below in CheckOutput.
 
     report "Printing Results..." & LF &
-       "RSP:  " & real'image(OffsetToReal(mRspOffset)) &
-       " Expected: " & real'image(ExpectedRspOutput) & LF &
-       "RTC:  " & real'image(OffsetToReal(mRtcOffset)) &
-       " Expected: " & real'image(ExpectedRtcOutput) & LF &
-       "Meas: " & real'image((OffsetToReal(mRtcOffset-mRspOffset)*real(kMPer/1 ns)+
+       "RP:   " & real'image(OffsetToReal(mRpOffset)) &
+       " Expected: " & real'image(ExpectedRpOutput) & LF &
+       "SP:   " & real'image(OffsetToReal(mSpOffset)) &
+       " Expected: " & real'image(ExpectedSpOutput) & LF &
+       "Meas: " & real'image((OffsetToReal(mSpOffset-mRpOffset)*real(kMPer/1 ns)+
                               real(kRPer/1 ns)-real(kSPer/1 ns))/real(kSPer/1 ns)) &
        " Expected: " & real'image(ExpectedFinalMeas)
       severity note;
@@ -893,11 +975,11 @@ begin
         report "Offset measurements not re-completed within timeout"
         severity error;
       report "Printing Results..." & LF &
-         "RSP:  " & real'image(OffsetToReal(mRspOffset)) &
-         " Expected: " & real'image(ExpectedRspOutput) & LF &
-         "RTC:  " & real'image(OffsetToReal(mRtcOffset)) &
-         " Expected: " & real'image(ExpectedRtcOutput) & LF &
-         "Meas: " & real'image((OffsetToReal(mRtcOffset-mRspOffset)*real(kMPer/1 ns)+
+         "RP:   " & real'image(OffsetToReal(mRpOffset)) &
+         " Expected: " & real'image(ExpectedRpOutput) & LF &
+         "SP:   " & real'image(OffsetToReal(mSpOffset)) &
+         " Expected: " & real'image(ExpectedSpOutput) & LF &
+         "Meas: " & real'image((OffsetToReal(mSpOffset-mRpOffset)*real(kMPer/1 ns)+
                                 real(kRPer/1 ns)-real(kSPer/1 ns))/real(kSPer/1 ns)) &
          " Expected: " & real'image(ExpectedFinalMeas)
         severity note;
@@ -910,7 +992,7 @@ begin
     rReRunEnable <= false;
     -- Wait to make sure it doesn't keep going.
     wait until mOffsetsValid
-         for 2*(kMPer*(kMeasClksPerRsp*(2**kSyncPeriodsToStampSize) + 40*(2**kSyncPeriodsToStampSize)));
+         for 2*(kMPer*(kMeasClksPerRp*(2**kSyncPeriodsToStampSize) + 40*(2**kSyncPeriodsToStampSize)));
     assert not mOffsetsValid;
 
 
@@ -925,11 +1007,11 @@ begin
         report "Offset measurements not re-completed within timeout"
         severity error;
       report "Printing Results..." & LF &
-         "RSP:  " & real'image(OffsetToReal(mRspOffset)) &
-         " Expected: " & real'image(ExpectedRspOutput) & LF &
-         "RTC:  " & real'image(OffsetToReal(mRtcOffset)) &
-         " Expected: " & real'image(ExpectedRtcOutput) & LF &
-         "Meas: " & real'image((OffsetToReal(mRtcOffset-mRspOffset)*real(kMPer/1 ns)+
+         "RP:   " & real'image(OffsetToReal(mRpOffset)) &
+         " Expected: " & real'image(ExpectedRpOutput) & LF &
+         "SP:   " & real'image(OffsetToReal(mSpOffset)) &
+         " Expected: " & real'image(ExpectedSpOutput) & LF &
+         "Meas: " & real'image((OffsetToReal(mSpOffset-mRpOffset)*real(kMPer/1 ns)+
                                 real(kRPer/1 ns)-real(kSPer/1 ns))/real(kSPer/1 ns)) &
          " Expected: " & real'image(ExpectedFinalMeas)
         severity note;
@@ -945,31 +1027,31 @@ begin
     variable StartTime : time := 0 ns;
   begin
     wait until rPpsPulse;
-    wait until rRsp;
+    wait until rRpTransfer;
     StartTime := now;
-    wait until sRtc;
+    wait until sSpTransfer;
     ExpectedFinalMeas <= real((now - StartTime)/1 ps)/real((kSPer/1 ps));
     wait until rResetTdc;
   end process;
 
 
-  ExpectedRspOutputGen : process
+  ExpectedRpOutputGen : process
     variable StartTime : time := 0 ns;
   begin
     wait until mRunTdc;
     StartTime := now;
-    wait until mRSP;
-    ExpectedRspOutput <= real((now - StartTime)/1 ps)/real((kMPer/1 ps));
+    wait until mRP;
+    ExpectedRpOutput <= real((now - StartTime)/1 ps)/real((kMPer/1 ps));
     wait until mOffsetsValid;
   end process;
 
-  ExpectedRtcOutputGen : process
+  ExpectedSpOutputGen : process
     variable StartTime : time := 0 ns;
   begin
     wait until mRunTdc;
     StartTime := now;
-    wait until mRTC;
-    ExpectedRtcOutput <= real((now - StartTime)/1 ps)/real((kMPer/1 ps));
+    wait until mSP;
+    ExpectedSpOutput <= real((now - StartTime)/1 ps)/real((kMPer/1 ps));
     wait until mOffsetsValid;
   end process;
 
@@ -979,17 +1061,17 @@ begin
       if EnableOutputChecks then
 
         if mOffsetsValid then
-          assert (OffsetToReal(mRspOffset) < ExpectedRspOutput + 1.0) and
-                 (OffsetToReal(mRspOffset) > ExpectedRspOutput - 1.0)
-            report "Mismatch between mRspOffset and expected!" & LF &
-               "Actual: " & real'image(OffsetToReal(mRspOffset)) & LF &
-               "Expect: " & real'image(ExpectedRspOutput)
+          assert (OffsetToReal(mRpOffset) < ExpectedRpOutput + 1.0) and
+                 (OffsetToReal(mRpOffset) > ExpectedRpOutput - 1.0)
+            report "Mismatch between mRpOffset and expected!" & LF &
+               "Actual: " & real'image(OffsetToReal(mRpOffset)) & LF &
+               "Expect: " & real'image(ExpectedRpOutput)
             severity error;
-          assert (OffsetToReal(mRtcOffset) < ExpectedRtcOutput + 1.0) and
-                 (OffsetToReal(mRtcOffset) > ExpectedRtcOutput - 1.0)
-            report "Mismatch between mRtcOffset and expected!" & LF &
-               "Actual: " & real'image(OffsetToReal(mRtcOffset)) & LF &
-               "Expect: " & real'image(ExpectedRtcOutput)
+          assert (OffsetToReal(mSpOffset) < ExpectedSpOutput + 1.0) and
+                 (OffsetToReal(mSpOffset) > ExpectedSpOutput - 1.0)
+            report "Mismatch between mSpOffset and expected!" & LF &
+               "Actual: " & real'image(OffsetToReal(mSpOffset)) & LF &
+               "Expect: " & real'image(ExpectedSpOutput)
             severity error;
         end if;
       end if;
@@ -998,45 +1080,61 @@ begin
 
 
   --vhook_e TdcTop dutx
-  --vhook_a rRspPeriodInRClks    to_unsigned(kRspPeriodInRClks,   kRClksPerRspPeriodBitsMax)
-  --vhook_a rRspHighTimeInRClks  to_unsigned(kRspHighTimeInRClks, kRClksPerRspPeriodBitsMax)
-  --vhook_a sRtcPeriodInSClks    to_unsigned(kRtcPeriodInSClks,   kSClksPerRtcPeriodBitsMax)
-  --vhook_a sRtcHighTimeInSClks  to_unsigned(kRtcHighTimeInSClks, kSClksPerRtcPeriodBitsMax)
+  --vhook_a rRpPeriodInRClks    to_unsigned(kRpPeriodInRClks,   kRClksPerRpPeriodBitsMax)
+  --vhook_a rRpHighTimeInRClks  to_unsigned(kRpHighTimeInRClks, kRClksPerRpPeriodBitsMax)
+  --vhook_a sSpPeriodInSClks    to_unsigned(kSpPeriodInSClks,   kSClksPerSpPeriodBitsMax)
+  --vhook_a sSpHighTimeInSClks  to_unsigned(kSpHighTimeInSClks, kSClksPerSpPeriodBitsMax)
+  --vhook_a rRptPeriodInRClks   to_unsigned(kRptPeriodInRClks,   kRClksPerRpPeriodBitsMax)
+  --vhook_a rRptHighTimeInRClks to_unsigned(kRptHighTimeInRClks, kRClksPerRpPeriodBitsMax)
+  --vhook_a sSptPeriodInSClks   to_unsigned(kSptPeriodInSClks,   kSClksPerSpPeriodBitsMax)
+  --vhook_a sSptHighTimeInSClks to_unsigned(kSptHighTimeInSClks, kSClksPerSpPeriodBitsMax)
+  --vhook_a rRePulsePeriodInRClks   to_unsigned(kRePulsePeriodInRClks,   kRClksPerRePulsePeriodBitsMax)
+  --vhook_a rRePulseHighTimeInRClks to_unsigned(kRePulseHighTimeInRClks, kRClksPerRePulsePeriodBitsMax)
   dutx: entity work.TdcTop (struct)
     generic map (
-      kRClksPerRspPeriodBitsMax  => kRClksPerRspPeriodBitsMax,   --integer range 3:16 :=12
-      kSClksPerRtcPeriodBitsMax  => kSClksPerRtcPeriodBitsMax,   --integer range 3:16 :=12
-      kPulsePeriodCntSize        => kPulsePeriodCntSize,         --integer:=13
-      kFreqRefPeriodsToCheckSize => kFreqRefPeriodsToCheckSize,  --integer:=17
-      kSyncPeriodsToStampSize    => kSyncPeriodsToStampSize)     --integer:=10
+      kRClksPerRePulsePeriodBitsMax => kRClksPerRePulsePeriodBitsMax,  --integer range 3:32 :=24
+      kRClksPerRpPeriodBitsMax      => kRClksPerRpPeriodBitsMax,       --integer range 3:16 :=16
+      kSClksPerSpPeriodBitsMax      => kSClksPerSpPeriodBitsMax,       --integer range 3:16 :=16
+      kPulsePeriodCntSize           => kPulsePeriodCntSize,            --integer:=13
+      kFreqRefPeriodsToCheckSize    => kFreqRefPeriodsToCheckSize,     --integer:=17
+      kSyncPeriodsToStampSize       => kSyncPeriodsToStampSize)        --integer:=10
     port map (
-      aReset               => aReset,                                                       --in  boolean
-      RefClk               => RefClk,                                                       --in  std_logic
-      SampleClk            => SampleClk,                                                    --in  std_logic
-      MeasClk              => MeasClk,                                                      --in  std_logic
-      rResetTdc            => rResetTdc,                                                    --in  boolean
-      rResetTdcDone        => rResetTdcDone,                                                --out boolean
-      rEnableTdc           => rEnableTdc,                                                   --in  boolean
-      rReRunEnable         => rReRunEnable,                                                 --in  boolean
-      rPpsPulse            => rPpsPulse,                                                    --in  boolean
-      rPpsPulseCaptured    => rPpsPulseCaptured,                                            --out boolean
-      rEnablePpsCrossing   => rEnablePpsCrossing,                                           --in  boolean
-      sPpsClkCrossDelayVal => sPpsClkCrossDelayVal,                                         --in  unsigned(3:0)
-      sPpsPulse            => sPpsPulse,                                                    --out boolean
-      mRspOffset           => mRspOffset,                                                   --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mRtcOffset           => mRtcOffset,                                                   --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mOffsetsDone         => mOffsetsDone,                                                 --out boolean
-      mOffsetsValid        => mOffsetsValid,                                                --out boolean
-      rLoadRspCounts       => rLoadRspCounts,                                               --in  boolean
-      rRspPeriodInRClks    => to_unsigned(kRspPeriodInRClks, kRClksPerRspPeriodBitsMax),    --in  unsigned(kRClksPerRspPeriodBitsMax-1:0)
-      rRspHighTimeInRClks  => to_unsigned(kRspHighTimeInRClks, kRClksPerRspPeriodBitsMax),  --in  unsigned(kRClksPerRspPeriodBitsMax-1:0)
-      sLoadRtcCounts       => sLoadRtcCounts,                                               --in  boolean
-      sRtcPeriodInSClks    => to_unsigned(kRtcPeriodInSClks, kSClksPerRtcPeriodBitsMax),    --in  unsigned(kSClksPerRtcPeriodBitsMax-1:0)
-      sRtcHighTimeInSClks  => to_unsigned(kRtcHighTimeInSClks, kSClksPerRtcPeriodBitsMax),  --in  unsigned(kSClksPerRtcPeriodBitsMax-1:0)
-      rRSP                 => rRSP,                                                         --out boolean
-      sRTC                 => sRTC,                                                         --out boolean
-      rGatedPulseToPin     => rGatedPulseToPin,                                             --inout std_logic
-      sGatedPulseToPin     => sGatedPulseToPin);                                            --inout std_logic
+      aReset                  => aReset,                                                               --in  boolean
+      RefClk                  => RefClk,                                                               --in  std_logic
+      SampleClk               => SampleClk,                                                            --in  std_logic
+      MeasClk                 => MeasClk,                                                              --in  std_logic
+      rResetTdc               => rResetTdc,                                                            --in  boolean
+      rResetTdcDone           => rResetTdcDone,                                                        --out boolean
+      rEnableTdc              => rEnableTdc,                                                           --in  boolean
+      rReRunEnable            => rReRunEnable,                                                         --in  boolean
+      rPpsPulse               => rPpsPulse,                                                            --in  boolean
+      rPpsPulseCaptured       => rPpsPulseCaptured,                                                    --out boolean
+      rEnablePpsCrossing      => rEnablePpsCrossing,                                                   --in  boolean
+      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,                                                 --in  unsigned(3:0)
+      sPpsPulse               => sPpsPulse,                                                            --out boolean
+      mRpOffset               => mRpOffset,                                                            --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mSpOffset               => mSpOffset,                                                            --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mOffsetsDone            => mOffsetsDone,                                                         --out boolean
+      mOffsetsValid           => mOffsetsValid,                                                        --out boolean
+      rLoadRePulseCounts      => rLoadRePulseCounts,                                                   --in  boolean
+      rRePulsePeriodInRClks   => to_unsigned(kRePulsePeriodInRClks, kRClksPerRePulsePeriodBitsMax),    --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
+      rRePulseHighTimeInRClks => to_unsigned(kRePulseHighTimeInRClks, kRClksPerRePulsePeriodBitsMax),  --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
+      rLoadRpCounts           => rLoadRpCounts,                                                        --in  boolean
+      rRpPeriodInRClks        => to_unsigned(kRpPeriodInRClks, kRClksPerRpPeriodBitsMax),              --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rRpHighTimeInRClks      => to_unsigned(kRpHighTimeInRClks, kRClksPerRpPeriodBitsMax),            --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rLoadRptCounts          => rLoadRptCounts,                                                       --in  boolean
+      rRptPeriodInRClks       => to_unsigned(kRptPeriodInRClks, kRClksPerRpPeriodBitsMax),             --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rRptHighTimeInRClks     => to_unsigned(kRptHighTimeInRClks, kRClksPerRpPeriodBitsMax),           --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      sLoadSpCounts           => sLoadSpCounts,                                                        --in  boolean
+      sSpPeriodInSClks        => to_unsigned(kSpPeriodInSClks, kSClksPerSpPeriodBitsMax),              --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sSpHighTimeInSClks      => to_unsigned(kSpHighTimeInSClks, kSClksPerSpPeriodBitsMax),            --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sLoadSptCounts          => sLoadSptCounts,                                                       --in  boolean
+      sSptPeriodInSClks       => to_unsigned(kSptPeriodInSClks, kSClksPerSpPeriodBitsMax),             --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sSptHighTimeInSClks     => to_unsigned(kSptHighTimeInSClks, kSClksPerSpPeriodBitsMax),           --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      rRpTransfer             => rRpTransfer,                                                          --out boolean
+      sSpTransfer             => sSpTransfer,                                                          --out boolean
+      rGatedPulseToPin        => rGatedPulseToPin,                                                     --inout std_logic
+      sGatedPulseToPin        => sGatedPulseToPin);                                                    --inout std_logic
 
 
 end test;

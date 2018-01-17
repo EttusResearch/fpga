@@ -3053,15 +3053,15 @@ module n3xx (
     .aDacTx_n(USRPIO_A_TX_N),                //out std_logic_vector(3:0)
     .aSyncDacIn_n(DBA_MYK_SYNC_OUT_n),       //in  std_logic
     .sAdcDataValid(rx_a_valid),              //out std_logic
-    .sAdcDataSamples0I(rx[0][31:16]),          //out std_logic_vector(15:0)
-    .sAdcDataSamples0Q(rx[0][15:0]),           //out std_logic_vector(15:0)
-    .sAdcDataSamples1I(rx[1][31:16]),          //out std_logic_vector(15:0)
-    .sAdcDataSamples1Q(rx[1][15:0]),           //out std_logic_vector(15:0)
+    .sAdcDataSamples0I(rx[0][31:16]),        //out std_logic_vector(15:0)
+    .sAdcDataSamples0Q(rx[0][15:0]),         //out std_logic_vector(15:0)
+    .sAdcDataSamples1I(rx[1][31:16]),        //out std_logic_vector(15:0)
+    .sAdcDataSamples1Q(rx[1][15:0]),         //out std_logic_vector(15:0)
     .sDacReadyForInput(tx_a_rfi),            //out std_logic
-    .sDacDataSamples0I(tx[0][31:16]),          //in  std_logic_vector(15:0)
-    .sDacDataSamples0Q(tx[0][15:0]),           //in  std_logic_vector(15:0)
-    .sDacDataSamples1I(tx[1][31:16]),          //in  std_logic_vector(15:0)
-    .sDacDataSamples1Q(tx[1][15:0]),           //in  std_logic_vector(15:0)
+    .sDacDataSamples0I(tx[0][31:16]),        //in  std_logic_vector(15:0)
+    .sDacDataSamples0Q(tx[0][15:0]),         //in  std_logic_vector(15:0)
+    .sDacDataSamples1I(tx[1][31:16]),        //in  std_logic_vector(15:0)
+    .sDacDataSamples1Q(tx[1][15:0]),         //in  std_logic_vector(15:0)
     .RefClk(ref_clk),                        //in  std_logic
     .rPpsPulse(pps_refclk),                  //in  std_logic
     .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
@@ -3070,8 +3070,8 @@ module n3xx (
     .sAdcSync(),                             //out std_logic
     .sDacSync(),                             //out std_logic
     .sSysRef(),                              //out std_logic
-    .rRSP(),                                 //out std_logic
-    .sRTC()                                  //out std_logic
+    .rRpTransfer(),                          //out std_logic
+    .sSpTransfer()                           //out std_logic
   );
 
   assign rx_stb[0] = rx_a_valid;
@@ -3156,15 +3156,15 @@ module n3xx (
     .aDacTx_n(USRPIO_B_TX_N),                //out std_logic_vector(3:0)
     .aSyncDacIn_n(DBB_MYK_SYNC_OUT_n),       //in  std_logic
     .sAdcDataValid(rx_b_valid),              //out std_logic
-    .sAdcDataSamples0I(rx[2][31:16]),          //out std_logic_vector(15:0)
-    .sAdcDataSamples0Q(rx[2][15:0]),           //out std_logic_vector(15:0)
-    .sAdcDataSamples1I(rx[3][31:16]),          //out std_logic_vector(15:0)
-    .sAdcDataSamples1Q(rx[3][15:0]),           //out std_logic_vector(15:0)
+    .sAdcDataSamples0I(rx[2][31:16]),        //out std_logic_vector(15:0)
+    .sAdcDataSamples0Q(rx[2][15:0]),         //out std_logic_vector(15:0)
+    .sAdcDataSamples1I(rx[3][31:16]),        //out std_logic_vector(15:0)
+    .sAdcDataSamples1Q(rx[3][15:0]),         //out std_logic_vector(15:0)
     .sDacReadyForInput(tx_b_rfi),            //out std_logic
-    .sDacDataSamples0I(tx[2][31:16]),          //in  std_logic_vector(15:0)
-    .sDacDataSamples0Q(tx[2][15:0]),           //in  std_logic_vector(15:0)
-    .sDacDataSamples1I(tx[3][31:16]),          //in  std_logic_vector(15:0)
-    .sDacDataSamples1Q(tx[3][15:0]),           //in  std_logic_vector(15:0)
+    .sDacDataSamples0I(tx[2][31:16]),        //in  std_logic_vector(15:0)
+    .sDacDataSamples0Q(tx[2][15:0]),         //in  std_logic_vector(15:0)
+    .sDacDataSamples1I(tx[3][31:16]),        //in  std_logic_vector(15:0)
+    .sDacDataSamples1Q(tx[3][15:0]),         //in  std_logic_vector(15:0)
     .RefClk(ref_clk),                        //in  std_logic
     .rPpsPulse(pps_refclk),                  //in  std_logic
     .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
@@ -3173,8 +3173,8 @@ module n3xx (
     .sAdcSync(),                             //out std_logic
     .sDacSync(),                             //out std_logic
     .sSysRef(),                              //out std_logic
-    .rRSP(),                                 //out std_logic
-    .sRTC()                                  //out std_logic
+    .rRpTransfer(),                          //out std_logic
+    .sSpTransfer()                           //out std_logic
   );
 
   assign rx_stb[2] = rx_b_valid;
