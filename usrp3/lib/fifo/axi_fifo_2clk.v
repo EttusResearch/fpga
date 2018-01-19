@@ -107,7 +107,7 @@ module axi_fifo_2clk #(
 
   // Read/write logic for FIFO sections
   assign wr_data       = {{(INT_WIDTH-WIDTH){1'b0}}, i_pipe_tdata};
-  assign wr_en         = i_pipe_tvalid;
+  assign wr_en         = i_pipe_tready & i_pipe_tvalid;
   assign i_pipe_tready = &(~full);
   assign o_ext_tdata   = rd_data[WIDTH-1:0];
   assign o_ext_tvalid  = &(~empty);
