@@ -36,7 +36,7 @@ fragment@1 {
 			nvmem-cell-names = "address";
 
 			interrupts = <0 29 4>, <0 30 4>;
-			interrupt-names = "rx-irq", "tx-irq";
+			interrupt-names = "rx", "tx";
 			interrupt-parent = <&intc>;
 			status = "okay";
 
