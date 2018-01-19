@@ -101,6 +101,8 @@ module e310_core
   localparam RB32_CORE_DEBUG    = 5'd5;
   localparam RB32_CORE_TEST     = 5'd24;
 
+  localparam [7:0] COMPAT_NUM_MAJOR = 8'd17;
+  localparam [7:0] COMPAT_NUM_MINOR = 8'd0;
 
    /////////////////////////////////////////////////////////////////////////////////
    // Internal time synchronization
@@ -181,7 +183,7 @@ module e310_core
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
-      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'd16, 8'd0};
+      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
 `ifdef DRAM_TEST
