@@ -269,7 +269,7 @@ module axi_dma_fifo
    // Assign FIFO status bits
    wire [71:0] status_out_bclk;
    fifo_short_2clk status_fifo_2clk(
-      .rst(bus_reset),
+      .rst(dram_reset),
       .wr_clk(dram_clk), .din({{(72-(AWIDTH-2)){1'b0}}, occupied}),
       .wr_en(1'b1), .full(), .wr_data_count(),
       .rd_clk(bus_clk), .dout(status_out_bclk),
@@ -604,7 +604,7 @@ module axi_dma_fifo
    wire [6:0]   discard_i1;
    
    fifo_short_2clk fifo_short_2clk_i1 (
-      .rst(bus_reset),
+      .rst(dram_reset),
       .wr_clk(dram_clk),
       .din({7'h0,o_tlast_i5,o_tdata_i5}), // input [71 : 0] din
       .wr_en(write_out), // input wr_en
