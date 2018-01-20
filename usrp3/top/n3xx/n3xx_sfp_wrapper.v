@@ -301,13 +301,13 @@ module n3xx_sfp_wrapper #(
       // Converting tkeep to tuser for egress packets
       assign c2e_tuser = ~c2e_tlast ? 4'd0
                        : (c2e_tkeep == 8'b1111_1111) ? 4'd0
-                       : (c2e_tkeep == 8'b1111_1110) ? 4'd7
-                       : (c2e_tkeep == 8'b1111_1100) ? 4'd6
-                       : (c2e_tkeep == 8'b1111_1000) ? 4'd5
-                       : (c2e_tkeep == 8'b1111_0000) ? 4'd4
-                       : (c2e_tkeep == 8'b1110_0000) ? 4'd3
-                       : (c2e_tkeep == 8'b1100_0000) ? 4'd2
-                       : (c2e_tkeep == 8'b1000_0000) ? 4'd1
+                       : (c2e_tkeep == 8'b0111_1111) ? 4'd7
+                       : (c2e_tkeep == 8'b0011_1111) ? 4'd6
+                       : (c2e_tkeep == 8'b0001_1111) ? 4'd5
+                       : (c2e_tkeep == 8'b0000_1111) ? 4'd4
+                       : (c2e_tkeep == 8'b0000_0111) ? 4'd3
+                       : (c2e_tkeep == 8'b0000_0011) ? 4'd2
+                       : (c2e_tkeep == 8'b0000_0001) ? 4'd1
                        : 4'd0;
 
       n3xx_eth_switch #(
