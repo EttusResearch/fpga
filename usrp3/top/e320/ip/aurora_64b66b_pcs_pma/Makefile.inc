@@ -1,13 +1,11 @@
 #
-# Copyright 2016 Ettus Research
+# Copyright 2018 Ettus Research
 #
 
 include $(TOOLS_DIR)/make/viv_ip_builder.mak
 
 AURORA_PHY_SRCS = \
 $(IP_DIR)/aurora_64b66b_pcs_pma/aurora_phy_x1.v \
-$(IP_DIR)/aurora_64b66b_pcs_pma/aurora_phy_mmcm.v \
-$(IP_DIR)/aurora_64b66b_pcs_pma/aurora_phy_clk_gen.v \
 $(IP_DIR)/aurora_64b66b_pcs_pma/aurora_axis_mac.v \
 $(IP_AURORA_64B66B_PCS_PMA_EXAMPLE_SRCS)
 
