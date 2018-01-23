@@ -85,7 +85,7 @@ module noc_block_duc_tb();
       // Setup DUC
       tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
       tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
-      tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, (1 << 14) + 3515); // Scaling, set to 1
+      tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, (1 << 14)); // Scaling, set to 1
 
       fork
         begin
@@ -189,7 +189,7 @@ module noc_block_duc_tb();
     set_interp_rate(1);
     tb_streamer.write_reg(sid_noc_block_duc, SR_CONFIG_ADDR, 32'd1);   // Enable clear EOB'
     tb_streamer.write_reg(sid_noc_block_duc, SR_FREQ_ADDR, 32'd0);     // Reset phase increment
-    tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, 14070); // Scaling, set to 1
+    tb_streamer.write_reg(sid_noc_block_duc, SR_SCALE_IQ_ADDR, 16384); // Scaling, set to 1
     // Configure FFT
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
@@ -203,8 +203,8 @@ module noc_block_duc_tb();
     fork
       begin
         // Send timed tunes
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**27, SPP-1); // Shift by Fs/8
-        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**28, 2*SPP-1); // Shift by Fs/4
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**29, SPP-1); // Shift by Fs/8
+        tb_streamer.write_reg_timed(sid_noc_block_duc, SR_FREQ_ADDR, 2**30, 2*SPP-1); // Shift by Fs/4
       end
       begin
         cvita_payload_t send_payload;

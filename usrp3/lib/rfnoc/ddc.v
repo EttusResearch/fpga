@@ -12,7 +12,9 @@ module ddc #(
   parameter SR_COEFFS_ADDR   = 4,
   parameter PRELOAD_HBS      = 1, // Preload half band filter state with 0s
   parameter NUM_HB           = 3,
-  parameter CIC_MAX_DECIM    = 255
+  parameter CIC_MAX_DECIM    = 255,
+  parameter SAMPLE_WIDTH     = 16,
+  parameter WIDTH            = 24
 )(
   input clk, input reset,
   input clear, // Resets everything except the CORDIC timed phase inc FIFO and phase inc
@@ -23,46 +25,69 @@ module ddc #(
   input sample_in_tlast,
   output sample_in_tready,
   input sample_in_tuser,
+  input sample_in_eob,
   output [31:0] sample_out_tdata,
   output sample_out_tvalid,
   input sample_out_tready,
   output sample_out_tlast
 );
 
-  localparam  WIDTH = 24;
   localparam  cwidth = 25;
   localparam  zwidth = 24;
 
   wire [31:0] sr_phase_inc, sr_phase_inc_timed_tdata;
-  wire sr_phase_inc_valid, sr_phase_inc_timed_tvalid, sr_phase_inc_timed_tready;
+  wire sr_phase_inc_valid, sr_phase_inc_timed_tvalid, sr_phase_inc_timed_tready, sr_phase_inc_timed_tlast;
   reg [31:0] phase_inc;
-  reg [31:0] phase;
+  reg phase_inc_valid;
+  
+  wire [SAMPLE_WIDTH*2-1:0] dds_in_tdata;
+  wire dds_in_tlast;
+  wire dds_in_tvalid;
+  wire dds_in_tready;
+  wire [SAMPLE_WIDTH*2-1:0] dds_in_fifo_tdata;
+  wire dds_in_fifo_tlast;
+  wire dds_in_fifo_tvalid;
+  wire dds_in_fifo_tready;
+  wire [WIDTH-1:0] dds_in_i_tdata;
+  wire [WIDTH-1:0] dds_in_q_tdata;  
+  wire [WIDTH-1:0] dds_out_i_tdata;
+  wire [WIDTH-1:0] dds_out_q_tdata;
+  reg  [WIDTH-1:0] phase_tdata;
+  
+  wire [SAMPLE_WIDTH*2-1:0] dds_in_sync_tdata;
+  wire dds_in_sync_tvalid, dds_in_sync_tready, dds_in_sync_tlast;
+  wire [WIDTH-1:0] phase_sync_tdata;
+  wire phase_sync_tvalid, phase_sync_tready, phase_sync_tlast;  
+
+  wire phase_tvalid, phase_tready, phase_tlast;
+  wire dds_out_tlast;
+  wire dds_out_tvalid;
+  wire [15:0] dds_input_fifo_space, dds_input_fifo_occupied;  
 
   wire [17:0] scale_factor;
-  wire last_cordic, last_cic;
-  reg last_cordic_clip;
-  wire strobe_cordic;
-  wire [cwidth-1:0] i_cordic, q_cordic;
-  wire strobe_cordic_clip;
-  wire [WIDTH-1:0] i_cordic_clip, q_cordic_clip;
+  wire last_cic;
+  wire last_cic_decimate_in;
+  wire strobe_dds_clip;
+  wire [WIDTH-1:0] i_dds_clip, q_dds_clip;
   wire [WIDTH-1:0] i_cic, q_cic;
   wire [46:0] i_hb1, q_hb1;
   wire [46:0] i_hb2, q_hb2;
   wire [47:0] i_hb3, q_hb3;
+  wire sample_out_stb;
 
   wire strobe_cic, strobe_hb1, strobe_hb2, strobe_hb3;
+  wire ddc_chain_tready;
 
   reg [7:0] cic_decim_rate;
   wire [7:0] cic_decim_rate_int;
   wire rate_changed;
 
-  wire [WIDTH-1:0] sample_in_i = {sample_in_tdata[31:16], 8'd0};
-  wire [WIDTH-1:0] sample_in_q = {sample_in_tdata[15:0], 8'd0};
+  wire [SAMPLE_WIDTH-1:0] sample_in_i = {sample_in_tdata[31:16]};
+  wire [SAMPLE_WIDTH-1:0] sample_in_q = {sample_in_tdata[15:0]};
 
-  reg sample_mux_stb;
-  reg sample_mux_last;
-  reg sample_mux_set_freq;
-  reg [WIDTH-1:0] sample_mux_i, sample_mux_q;
+  wire sample_mux_tready;
+  wire sample_mux_set_freq;
+  wire [SAMPLE_WIDTH-1:0] sample_mux_i, sample_mux_q;
   wire realmode;
   wire swap_iq;
 
@@ -73,11 +98,13 @@ module ddc #(
   wire reload_go, reload_we1, reload_we2, reload_we3, reload_ld1, reload_ld2, reload_ld3;
   wire [17:0] coef_din;
 
+  //phase incr settings regs and mux.
   setting_reg #(.my_addr(SR_FREQ_ADDR)) set_freq (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out(sr_phase_inc),.changed(sr_phase_inc_valid));
 
-  assign sr_phase_inc_timed_tready = sample_mux_stb & sample_mux_set_freq;
+  assign sr_phase_inc_timed_tready = sample_in_tvalid & sample_in_tready & sample_mux_set_freq;
+
   axi_setting_reg #(
     .ADDR(SR_FREQ_ADDR),
     .USE_FIFO(1),
@@ -85,7 +112,7 @@ module ddc #(
   set_freq_timed (
     .clk(clk), .reset(reset), .error_stb(),
     .set_stb(timed_set_stb), .set_addr(timed_set_addr), .set_data(timed_set_data),
-    .o_tdata(sr_phase_inc_timed_tdata), .o_tlast(), .o_tvalid(sr_phase_inc_timed_tvalid),
+    .o_tdata(sr_phase_inc_timed_tdata), .o_tlast(sr_phase_inc_timed_tlast), .o_tvalid(sr_phase_inc_timed_tvalid),
     .o_tready(sr_phase_inc_timed_tready));
 
   // Load phase increment depending on whether or not the settings bus write is
@@ -93,12 +120,16 @@ module ddc #(
   always @(posedge clk) begin
     if (reset) begin
       phase_inc <= 'd0;
+      phase_inc_valid <= 'd0;
     end else begin
       if (sr_phase_inc_valid) begin
         phase_inc <= sr_phase_inc;
+        phase_inc_valid <= sr_phase_inc_valid;
       end else if (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready) begin
         phase_inc <= sr_phase_inc_timed_tdata;
-      end
+        phase_inc_valid <= sr_phase_inc_timed_tvalid;
+      end else
+        phase_inc_valid <= 1'b0;
     end
   end
 
@@ -148,65 +179,112 @@ module ddc #(
     end
   end
 
-  // MUX so we can do realmode signals on either input
+
+  //doesn't need to be registered and now can have back pressure from dds
+  assign sample_mux_set_freq = sample_in_tuser;
+  assign sample_mux_i = swap_iq ? sample_in_q : sample_in_i;
+  assign sample_mux_q = realmode ? 'd0 : (swap_iq ? sample_in_i : sample_in_q);
+
+  /** Phase accumulator, Xilinx DDS/Complex Mult **/
+  
+  //connect samples to dds
+  assign dds_in_tdata = {sample_mux_i,sample_mux_q};
+  assign dds_in_tvalid = sample_in_tvalid & ddc_chain_tready; //if the rest of the chain isn't ready, then halt all data flow. this should help with rate changes...
+  assign dds_in_tlast = sample_in_tlast;
+  assign sample_in_tready = dds_in_tready & ddc_chain_tready;
+ 
+  assign phase_tvalid = dds_in_tvalid;
+  assign phase_tlast = dds_in_tlast;
+ 
+   // NCO
   always @(posedge clk) begin
-    if (reset | clear) begin
-      sample_mux_i        <= 'd0;
-      sample_mux_q        <= 'd0;
-      sample_mux_stb      <= 1'b0;
-      sample_mux_last     <= 1'b0;
-      sample_mux_set_freq <= 1'b0;
-    end else begin
-      sample_mux_stb      <= sample_in_tvalid & sample_in_tready;
-      sample_mux_last     <= sample_in_tlast;
-      sample_mux_set_freq <= sample_in_tuser;
-      if (swap_iq) begin
-        sample_mux_i <= sample_in_q;
-        sample_mux_q <= realmode ? 'd0 : sample_in_i;
-      end else begin
-        sample_mux_i <= sample_in_i;
-        sample_mux_q <= realmode ? 'd0 : sample_in_q;
-      end
+    if (reset | clear | (phase_inc_valid & sr_phase_inc_timed_tready)) begin
+      phase_tdata <= 0;
+    end else if (dds_in_tvalid & dds_in_tready) begin //only increment phase when data is ready
+      phase_tdata <= phase_tdata + phase_inc[31:8];
     end
   end
 
-  // NCO
-  always @(posedge clk) begin
-    if (reset | clear | (sr_phase_inc_timed_tvalid & sr_phase_inc_timed_tready)) begin
-      phase <= 0;
-    end else if (sample_mux_stb) begin
-      phase <= phase + phase_inc;
-    end
-  end
+  // Sync the two path's pipeline delay.
+  // This is needed to ensure that applying the phase update happens on the
+  // correct sample regardless of differing downstream path delays.
+  axi_sync #(
+    .SIZE(2),
+    .WIDTH_VEC({WIDTH,2*SAMPLE_WIDTH}), // Vector of widths, each width is defined by a 32-bit value
+    .FIFO_SIZE(0))
+  axi_sync (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({phase_tdata,dds_in_tdata}),
+    .i_tlast({phase_tlast,dds_in_tlast}),
+    .i_tvalid({phase_tvalid,dds_in_tvalid}),
+    .i_tready({phase_tready,dds_in_tready}),
+    .o_tdata({phase_sync_tdata,dds_in_sync_tdata}),
+    .o_tlast({phase_sync_tlast,dds_in_sync_tlast}),
+    .o_tvalid({phase_sync_tvalid,dds_in_sync_tvalid}),
+    .o_tready({phase_sync_tready,dds_in_sync_tready}));
 
-  //sign extension of cordic input
-  wire [cwidth-1:0] to_cordic_i, to_cordic_q;
-  sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_i (.in(sample_mux_i), .out(to_cordic_i));
-  sign_extend #(.bits_in(WIDTH), .bits_out(cwidth)) sign_extend_cordic_q (.in(sample_mux_q), .out(to_cordic_q));
+  //hold data to align with dds pipelining  
+  axi_fifo #(.WIDTH(2*SAMPLE_WIDTH+1), .SIZE(5)) dds_input_fifo
+    (.clk(clk), .reset(reset), .clear(clear),
+    .i_tdata({dds_in_sync_tlast,dds_in_sync_tdata}), .i_tvalid(dds_in_sync_tvalid), .i_tready(dds_in_sync_tready),
+    .o_tdata({dds_in_fifo_tlast,dds_in_fifo_tdata}), .o_tvalid(dds_in_fifo_tvalid), .o_tready(dds_in_fifo_tready),
+    .space(dds_input_fifo_space), .occupied(dds_input_fifo_occupied)
+    );
+        
+  // after fifo, do q quick sign extend op to get up to 24 bits. to match how the cordic deals with the data path.
+  // add extra bits to fit the dds width, 5 bits added here
+  sign_extend #(
+    .bits_in(SAMPLE_WIDTH), .bits_out(WIDTH))
+  sign_extend_dds_i (
+    .in({dds_in_fifo_tdata[2*SAMPLE_WIDTH-1:SAMPLE_WIDTH]}), .out(dds_in_i_tdata));
 
-  // CORDIC  24-bit I/O
-  cordic #(.bitwidth(cwidth)) cordic (
-    .clk(clk), .reset(reset | clear), .enable(1'b1),
-    .strobe_in(sample_mux_stb), .strobe_out(strobe_cordic),
-    .last_in(sample_mux_last), .last_out(last_cordic),
-    .xi(to_cordic_i),. yi(to_cordic_q), .zi(phase[31:32-zwidth]),
-    .xo(i_cordic),.yo(q_cordic),.zo() );
+  sign_extend #(
+    .bits_in(SAMPLE_WIDTH), .bits_out(WIDTH))
+  sign_extend_dds_q (
+    .in({dds_in_fifo_tdata[SAMPLE_WIDTH-1:0]}), .out(dds_in_q_tdata));      
+  
+  
+  dds_freq_tune dds_freq_tune_inst (
+    .clk(clk),
+    .reset(reset | clear),
+    .eob(sample_in_eob),
+    .rate_changed(rate_changed_hold),
+    .dds_input_fifo_occupied(dds_input_fifo_occupied),
+    /* IQ input */
+    .s_axis_din_tlast(dds_in_fifo_tlast),
+    .s_axis_din_tvalid(dds_in_fifo_tvalid),
+    .s_axis_din_tready(dds_in_fifo_tready),
+    .s_axis_din_tdata({dds_in_q_tdata, dds_in_i_tdata}), //48 = WIDTH*2
+    /* Phase input from NCO */
+    .s_axis_phase_tvalid(phase_sync_tvalid),
+    .s_axis_phase_tready(phase_sync_tready), // used in the axi_sync
+    .s_axis_phase_tlast(phase_sync_tlast),
+    .s_axis_phase_tdata(phase_sync_tdata), //24 bit = WIDTH
+    /* IQ output */
+    .m_axis_dout_tlast(dds_out_tlast),
+    .m_axis_dout_tvalid(dds_out_tvalid),
+    .m_axis_dout_tready(ddc_chain_tready), 
+    .m_axis_dout_tdata({dds_out_q_tdata, dds_out_i_tdata})
+        
+  );
 
-  clip_reg #(.bits_in(cwidth), .bits_out(WIDTH)) clip_cordic_i (
-    .clk(clk), .reset(reset | clear), .in(i_cordic), .strobe_in(strobe_cordic), .out(i_cordic_clip), .strobe_out(strobe_cordic_clip));
-  clip_reg #(.bits_in(cwidth), .bits_out(WIDTH)) clip_cordic_q (
-    .clk(clk), .reset(reset | clear), .in(q_cordic), .strobe_in(strobe_cordic), .out(q_cordic_clip), .strobe_out());
-  always @(posedge clk) last_cordic_clip <= (reset | clear) ? 1'b0 : last_cordic;
-
+   //48 = WIDTH*2
+  //chop off top byte because it's not actually used and we want to match expected gain/bit use found in cordic impl  
+  assign i_dds_clip = {dds_out_i_tdata[15:0],8'h00};
+  assign q_dds_clip = {dds_out_q_tdata[15:0],8'h00};
+  assign strobe_dds_clip = dds_out_tvalid & sample_out_tready;
+  assign last_cic_decimate_in = dds_out_tlast;
+  
+  /** CIC DECIMATE **/
   cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(CIC_MAX_DECIM)) cic_decimate_i (
     .clk(clk), .reset(reset | clear),
-    .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_cordic_clip), .strobe_out(strobe_cic),
-    .last_in(last_cordic_clip), .last_out(last_cic), .signal_in(i_cordic_clip), .signal_out(i_cic));
+    .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_dds_clip), .strobe_out(strobe_cic),
+    .last_in(last_cic_decimate_in), .last_out(last_cic), .signal_in(i_dds_clip), .signal_out(i_cic));
 
   cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(CIC_MAX_DECIM)) cic_decimate_q (
     .clk(clk), .reset(reset | clear),
-    .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_cordic_clip), .strobe_out(),
-    .last_in(1'b0), .last_out(), .signal_in(q_cordic_clip), .signal_out(q_cic));
+    .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_dds_clip), .strobe_out(),
+    .last_in(1'b0), .last_out(), .signal_in(q_dds_clip), .signal_out(q_cic));
 
   // Halfbands
   wire nd1, nd2, nd3;
@@ -364,7 +442,7 @@ module ddc #(
     end
   endgenerate
 
-  assign sample_in_tready = sample_out_tready & hb1_rdy & hb2_rdy & hb3_rdy;
+  assign ddc_chain_tready = sample_out_tready & hb1_rdy & hb2_rdy & hb3_rdy;
 
   assign strobe_hb1 = data_valid1 & hb1_rdy;
   assign strobe_hb2 = data_valid2 & hb2_rdy;

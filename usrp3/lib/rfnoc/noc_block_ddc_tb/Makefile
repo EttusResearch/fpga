@@ -21,11 +21,15 @@ LIB_IP_DIR = $(BASE_DIR)/../lib/ip
 # *after* defining the LIB_IP_DIR
 include $(LIB_IP_DIR)/axi_fft/Makefile.inc
 include $(LIB_IP_DIR)/complex_to_magphase/Makefile.inc
+include $(LIB_IP_DIR)/complex_multiplier_dds/Makefile.inc
+include $(LIB_IP_DIR)/dds_sin_cos_lut_only/Makefile.inc
 include $(BASE_DIR)/x300/coregen_dsp/Makefile.srcs
 
 DESIGN_SRCS += $(abspath \
 $(LIB_IP_AXI_FFT_SRCS) \
 $(LIB_IP_COMPLEX_TO_MAGPHASE_SRCS) \
+$(LIB_IP_COMPLEX_MULTIPLIER_DDS_SRCS) \
+$(LIB_IP_DDS_SIN_COS_LUT_ONLY_SRCS) \
 $(COREGEN_DSP_SRCS) \
 )
 

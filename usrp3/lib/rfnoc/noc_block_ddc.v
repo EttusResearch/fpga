@@ -7,7 +7,7 @@ module noc_block_ddc #(
   parameter STR_SINK_FIFOSIZE = 11,     //Log2 of input buffer size in 8-byte words (must hold at least 2 MTU packets)
   parameter MTU               = 10,     //Log2 of output buffer size in 8-byte words (must hold at least 1 MTU packet)
   parameter NUM_CHAINS        = 2,
-  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MAJOR  = 32'h2,
   parameter COMPAT_NUM_MINOR  = 32'h0,
   parameter NUM_HB            = 3,
   parameter CIC_MAX_DECIM     = 255
@@ -210,8 +210,8 @@ module noc_block_ddc #(
       //
       ////////////////////////////////////////////////////////////
       wire [31:0] sample_in_tdata, sample_out_tdata;
-      wire sample_in_tuser;
-      wire sample_in_tvalid, sample_in_tready;
+      wire sample_in_tuser, sample_in_eob;
+      wire sample_in_tvalid, sample_in_tready, sample_in_tlast;
       wire sample_out_tvalid, sample_out_tready;
       wire nc;
       wire warning_long_throttle;
@@ -233,19 +233,22 @@ module noc_block_ddc #(
         .i_tuser(m_axis_tagged_tuser),
         .o_tdata({nc,s_axis_data_tdata}), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid),
         .o_tready(s_axis_data_tready), .o_tuser(s_axis_data_tuser),
-        .m_axis_data_tdata({sample_in_tuser,sample_in_tdata}), .m_axis_data_tlast(),
+        .m_axis_data_tdata({sample_in_tuser,sample_in_tdata}), .m_axis_data_tlast(sample_in_tlast),
         .m_axis_data_tvalid(sample_in_tvalid), .m_axis_data_tready(sample_in_tready),
         .s_axis_data_tdata({1'b0,sample_out_tdata}), .s_axis_data_tlast(1'b0),
         .s_axis_data_tvalid(sample_out_tvalid), .s_axis_data_tready(sample_out_tready),
         .warning_long_throttle(warning_long_throttle),
         .error_extra_outputs(error_extra_outputs),
         .error_drop_pkt_lockup(error_drop_pkt_lockup));
+      
+      assign sample_in_eob = m_axis_tagged_tuser[124]; //this should align with last packet output from axi_rate_change
 
       ////////////////////////////////////////////////////////////
       //
       // Digital Down Converter
       //
       ////////////////////////////////////////////////////////////
+      
       ddc #(
         .SR_FREQ_ADDR(SR_FREQ_ADDR),
         .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR),
@@ -259,11 +262,13 @@ module noc_block_ddc #(
         .clear(clear_user | clear_tx_seqnum[i]), // Use AXI Rate Change's clear user to reset block to initial state after EOB
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),
-        .sample_in_tdata(sample_in_tdata), .sample_in_tlast(1'b0),
+        .sample_in_tdata(sample_in_tdata), .sample_in_tlast(sample_in_tlast),
         .sample_in_tvalid(sample_in_tvalid), .sample_in_tready(sample_in_tready),
-        .sample_in_tuser(sample_in_tuser),
+        .sample_in_tuser(sample_in_tuser), .sample_in_eob(sample_in_eob),
         .sample_out_tdata(sample_out_tdata), .sample_out_tlast(),
-        .sample_out_tvalid(sample_out_tvalid), .sample_out_tready(sample_out_tready));
+        .sample_out_tvalid(sample_out_tvalid), .sample_out_tready(sample_out_tready)
+        );
+        
     end
   endgenerate
 
