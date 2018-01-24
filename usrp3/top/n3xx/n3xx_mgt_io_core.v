@@ -70,18 +70,20 @@ module n3xx_mgt_io_core #(
   output                  gt_tx_out_clk_unbuf,
   // Misc
   output                  link_up,
-  output                  activity
+  output reg              activity
 );
 
   //-----------------------------------------------------------------
   // Registers
   //-----------------------------------------------------------------
-  localparam [7:0] COMPAT_NUM         = 8'd1;
+  localparam [7:0] COMPAT_NUM         = 8'd2;
 
   // Common registers
   localparam REG_PORT_INFO            = REG_BASE + 'h0;
   localparam REG_MAC_CTRL_STATUS      = REG_BASE + 'h4;
   localparam REG_PHY_CTRL_STATUS      = REG_BASE + 'h8;
+  localparam REG_MAC_LED_CTL          = REG_BASE + 'hC;
+
   // Ethernet specific
   localparam REG_ETH_MDIO_BASE        = REG_BASE + 'h10;
   // Aurora specific
@@ -98,6 +100,7 @@ module n3xx_mgt_io_core #(
   // Protocol specific constants
   wire [7:0]  mgt_protocol;
   wire [31:0] mac_ctrl_rst_val, phy_ctrl_rst_val;
+  wire [1:0]  mac_led_ctl_rst_val = 2'h0;
 
   generate
     if (PROTOCOL == "Aurora") begin
@@ -122,17 +125,21 @@ module n3xx_mgt_io_core #(
   // Writable registers
   reg [31:0] mac_ctrl_reg = 32'h0;
   reg [31:0] phy_ctrl_reg = 32'h0;
+  reg [1:0]  mac_led_ctl  =  2'h0;
 
   always @(posedge bus_clk) begin
     if (bus_rst) begin
       mac_ctrl_reg <= mac_ctrl_rst_val;
       phy_ctrl_reg <= phy_ctrl_rst_val;
+      mac_led_ctl  <= mac_led_ctl_rst_val;
     end else if (reg_wr_req) begin
       case(reg_wr_addr)
         REG_MAC_CTRL_STATUS:
           mac_ctrl_reg <= reg_wr_data;
         REG_PHY_CTRL_STATUS:
           phy_ctrl_reg <= reg_wr_data;
+        REG_MAC_LED_CTL:
+          mac_led_ctl <= reg_wr_data[1:0];
       endcase
     end
   end
@@ -156,6 +163,8 @@ module n3xx_mgt_io_core #(
           reg_rd_data_glob <= mac_status_bclk;
         REG_PHY_CTRL_STATUS:
           reg_rd_data_glob <= phy_status_bclk;
+        REG_MAC_LED_CTL:
+          reg_rd_data_glob <= {30'd0, mac_led_ctl};
         REG_AURORA_OVERRUNS:
           reg_rd_data_glob <= overruns;
         REG_CHECKSUM_ERRORS:
@@ -621,6 +630,9 @@ module n3xx_mgt_io_core #(
     end
   endgenerate
 
+  wire identify_enable = mac_led_ctl[0];
+  wire identify_value  = mac_led_ctl[1];
+
   //-----------------------------------------------------------------
   // Activity detector
   //-----------------------------------------------------------------
@@ -629,7 +641,9 @@ module n3xx_mgt_io_core #(
     .clk(bus_clk),
     .rst(bus_rst | ~link_up),
     .pulse((s_axis_tvalid & s_axis_tready) | (m_axis_tvalid & m_axis_tready)),
-    .pulse_stretched(activity)
+    .pulse_stretched(activity_int)
   );
+
+  always @ (posedge bus_clk) activity <= identify_enable ? identify_value : activity_int;
 
 endmodule
