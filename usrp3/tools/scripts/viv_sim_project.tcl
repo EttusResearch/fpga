@@ -107,7 +107,7 @@ set_property xsim.elaborate.xelab.more_options -value {-timescale 1ns/1ns} -obje
 if [expr [string equal $simulator "Modelsim"] == 1] {
     set sim_64bit       $::env(VIV_SIM_64BIT)
 
-    set_property compxlib.compiled_library_dir $sim_complibdir [current_project]
+    set_property compxlib.modelsim_compiled_library_dir $sim_complibdir [current_project]
     # Does not work yet (as of Vivado 2015.2), but will be useful for 32-bit support
     # See: http://www.xilinx.com/support/answers/62210.html
     set_property modelsim.64bit $sim_64bit -objects [get_filesets $sim_fileset]
