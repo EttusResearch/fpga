@@ -324,8 +324,8 @@ module n310
   localparam N_AXILITE_SLAVES = 4;
   localparam REG_AWIDTH = 14; // log2(0x4000)
   localparam REG_DWIDTH = 32;
-
-
+  localparam FP_GPIO_OFFSET = 32;
+  localparam FP_GPIO_WIDTH = 12;
   // Internal connections to PS
   // HP0 -- High Performance port 0, FPGA is the master
   wire [5:0]  S_AXI_HP0_AWID;
@@ -1999,12 +1999,6 @@ module n310
   wire [63:0] ps_gpio_in;
   wire [63:0] ps_gpio_tri;
 
-  genvar i;
-  generate for (i=0; i<12; i=i+1) begin: io_tristate_gen
-    assign FPGA_GPIO[i] = ps_gpio_tri[32+i] ? 1'bz : ps_gpio_out[32+i];
-    assign ps_gpio_in[32+i] = FPGA_GPIO[i];
-  end endgenerate
-
   assign ps_gpio_in[10] = DBA_MYK_INTRQ;
   assign ps_gpio_in[11] = DBB_MYK_INTRQ;
 
@@ -2769,8 +2763,11 @@ module n310
     .DATA(build_datestamp), .CFGCLK(), .DATAVALID()
   );
 
-  n310_core #(.REG_AWIDTH(14), .BUS_CLK_RATE(BUS_CLK_RATE)) n310_core
-  (
+  n310_core #(
+    .REG_AWIDTH(14),
+    .BUS_CLK_RATE(BUS_CLK_RATE),
+    .FP_GPIO_WIDTH(FP_GPIO_WIDTH))
+    n310_core(
     //Clocks and resets
 `ifdef NO_DB
     .radio_clk(bus_clk),
@@ -2816,6 +2813,12 @@ module n310
     .s_axi_rresp(M_AXI_XBAR_RRESP),
     .s_axi_rvalid(M_AXI_XBAR_RVALID),
     .s_axi_rready(M_AXI_XBAR_RREADY),
+    // ps gpio source
+    .ps_gpio_tri(ps_gpio_tri[FP_GPIO_WIDTH+FP_GPIO_OFFSET-1:FP_GPIO_OFFSET]),
+    .ps_gpio_out(ps_gpio_out[FP_GPIO_WIDTH+FP_GPIO_OFFSET-1:FP_GPIO_OFFSET]),
+    .ps_gpio_in(ps_gpio_in[FP_GPIO_WIDTH+FP_GPIO_OFFSET-1:FP_GPIO_OFFSET]),
+    // FP_GPIO
+    .fp_gpio_inout(FPGA_GPIO),
     //radios atr
     .rx_atr(rx_atr),
     .tx_atr(tx_atr),

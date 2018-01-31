@@ -116,3 +116,37 @@ set_output_delay -clock [get_clocks async_out_clk] 0.000 $ASYNC_MB_OUTPUTS
 set_max_delay -to $ASYNC_MB_OUTPUTS 50.000
 set_min_delay -to $ASYNC_MB_OUTPUTS 0.000
 
+
+
+#*******************************************************************************
+## Front Panel GPIO
+# These bits are driven from the DB-A radio clock. Although they are received async in
+# the outside world, they should be constrained in the FPGA to avoid any race
+# conditions. The best way to do this is a skew constraint across all the bits.
+
+set FP_GPIO_CLK [get_ports {FPGA_GPIO[0]}]
+create_generated_clock -name fp_gpio_bus_clk \
+  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $FP_GPIO_CLK]/C] \
+  -divide_by 2 $FP_GPIO_CLK
+
+set MAX_SKEW 10
+set SETUP_SKEW [expr {($MAX_SKEW / 2)-0.5}]
+set HOLD_SKEW  [expr {($MAX_SKEW / 2)+0.5}]
+set PORT_LIST [get_ports {FPGA_GPIO[*]}]
+# Then add the output delay on each of the ports.
+set_output_delay                        -clock [get_clocks fp_gpio_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+set_output_delay -add_delay -clock_fall -clock [get_clocks fp_gpio_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+set_output_delay                        -clock [get_clocks fp_gpio_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
+set_output_delay -add_delay -clock_fall -clock [get_clocks fp_gpio_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
+# Finally, make both the setup and hold checks use the same launching and latching edges.
+set_multicycle_path -setup -to [get_clocks fp_gpio_bus_clk] -start 0
+set_multicycle_path -hold  -to [get_clocks fp_gpio_bus_clk] -1
+# Remove analysis from the output "clock" pin. There are ways to do this using TCL, but
+# they aren't supported in XDC files... so we do it the old fashioned way.
+set_output_delay -clock [get_clocks async_out_clk] 0.000 $FP_GPIO_CLK
+set_max_delay -to $FP_GPIO_CLK 50.000
+set_min_delay -to $FP_GPIO_CLK 0.000
+# All inputs on this interface are async.
+set_input_delay -clock [get_clocks async_in_clk] 0.000 $PORT_LIST
+set_max_delay -from $PORT_LIST 50.000
+set_min_delay -from $PORT_LIST 0.000

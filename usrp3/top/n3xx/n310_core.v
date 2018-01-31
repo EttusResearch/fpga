@@ -15,7 +15,8 @@
 module n310_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 32,  // Width of the address bus
-  parameter BUS_CLK_RATE = 200000000 // BUS_CLK rate
+  parameter BUS_CLK_RATE = 200000000, // BUS_CLK rate
+  parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
   input         radio_clk,
@@ -57,7 +58,12 @@ module n310_core #(
   output [1:0]             s_axi_rresp,
   output                   s_axi_rvalid,
   input                    s_axi_rready,
-
+  // ps gpio source
+  input  [FP_GPIO_WIDTH-1:0]  ps_gpio_out,
+  input  [FP_GPIO_WIDTH-1:0]  ps_gpio_tri,
+  output [FP_GPIO_WIDTH-1:0]  ps_gpio_in,
+  // n310 fp_gpio
+  inout  [FP_GPIO_WIDTH-1:0] fp_gpio_inout,
   // Radio GPIO control for DSA
   output [15:0] db_gpio_out0,
   output [15:0] db_gpio_out1,
@@ -200,7 +206,7 @@ module n310_core #(
   // Compatibility Number
   //
   localparam [15:0] COMPAT_MAJOR = 16'd5;
-  localparam [15:0] COMPAT_MINOR = 16'd1;
+  localparam [15:0] COMPAT_MINOR = 16'd2;
   /////////////////////////////////////////////////////////////////////////////////
 
   // Number of Channels per radio
@@ -219,22 +225,25 @@ module n310_core #(
   localparam REG_BASE_XBAR  = 14'h1000;
 
   // Misc Registers
-  localparam REG_COMPAT_NUM     = REG_BASE_MISC + 14'h00;
-  localparam REG_DATESTAMP      = REG_BASE_MISC + 14'h04;
-  localparam REG_GIT_HASH       = REG_BASE_MISC + 14'h08;
-  localparam REG_SCRATCH        = REG_BASE_MISC + 14'h0C;
-  localparam REG_NUM_CE         = REG_BASE_MISC + 14'h10;
-  localparam REG_NUM_IO_CE      = REG_BASE_MISC + 14'h14;
-  localparam REG_CLOCK_CTRL     = REG_BASE_MISC + 14'h18;
-  localparam REG_XADC_READBACK  = REG_BASE_MISC + 14'h1C;
-  localparam REG_BUS_CLK_RATE   = REG_BASE_MISC + 14'h20;
-  localparam REG_BUS_CLK_COUNT  = REG_BASE_MISC + 14'h24;
-  localparam REG_SFP_PORT0_INFO = REG_BASE_MISC + 14'h28;
-  localparam REG_SFP_PORT1_INFO = REG_BASE_MISC + 14'h2C;
+  localparam REG_COMPAT_NUM        = REG_BASE_MISC + 14'h00;
+  localparam REG_DATESTAMP         = REG_BASE_MISC + 14'h04;
+  localparam REG_GIT_HASH          = REG_BASE_MISC + 14'h08;
+  localparam REG_SCRATCH           = REG_BASE_MISC + 14'h0C;
+  localparam REG_NUM_CE            = REG_BASE_MISC + 14'h10;
+  localparam REG_NUM_IO_CE         = REG_BASE_MISC + 14'h14;
+  localparam REG_CLOCK_CTRL        = REG_BASE_MISC + 14'h18;
+  localparam REG_XADC_READBACK     = REG_BASE_MISC + 14'h1C;
+  localparam REG_BUS_CLK_RATE      = REG_BASE_MISC + 14'h20;
+  localparam REG_BUS_CLK_COUNT     = REG_BASE_MISC + 14'h24;
+  localparam REG_SFP_PORT0_INFO    = REG_BASE_MISC + 14'h28;
+  localparam REG_SFP_PORT1_INFO    = REG_BASE_MISC + 14'h2C;
+  localparam REG_FP_GPIO_MASTER    = REG_BASE_MISC + 14'h30;
+  localparam REG_FP_GPIO_RADIO_SRC = REG_BASE_MISC + 14'h34;
 
   reg [31:0] scratch_reg = 32'b0;
   reg [31:0] bus_counter = 32'h0;
-
+  reg [31:0] fp_gpio_master_reg = 32'h0;
+  reg [31:0] fp_gpio_src_reg = 32'h0;
   always @(posedge bus_clk) begin
      if (bus_rst)
         bus_counter <= 32'd0;
@@ -326,12 +335,20 @@ module n310_core #(
   always @ (posedge bus_clk) begin
     if (bus_rst) begin
       scratch_reg    <= 32'h0;
+      fp_gpio_master_reg <= 32'h0;
+      fp_gpio_src_reg <= 32'h0;
       pps_select     <= 4'h1;
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
     end else if (reg_wr_req) begin
       case (reg_wr_addr)
+        REG_FP_GPIO_MASTER: begin
+          fp_gpio_master_reg <= reg_wr_data;
+        end
+        REG_FP_GPIO_RADIO_SRC: begin
+          fp_gpio_src_reg <= reg_wr_data;
+        end
         REG_SCRATCH: begin
           scratch_reg <= reg_wr_data;
         end
@@ -374,6 +391,12 @@ module n310_core #(
 
         REG_GIT_HASH:
           reg_rd_data_glob <= 32'h`GIT_HASH;
+
+        REG_FP_GPIO_MASTER:
+          reg_rd_data_glob <= fp_gpio_master_reg;
+
+        REG_FP_GPIO_RADIO_SRC:
+          reg_rd_data_glob <= fp_gpio_src_reg;
 
         REG_SCRATCH:
           reg_rd_data_glob <= scratch_reg;
@@ -807,7 +830,7 @@ module n310_core #(
   wire [31:0] db_fe_set_data[0:3];
   wire        db_fe_rb_stb[0:3];
   wire [7:0]  db_fe_rb_addr[0:3];
-  wire [64:0] db_fe_rb_data[0:3];
+  wire [63:0] db_fe_rb_data[0:3];
   wire        rx_running[0:3], tx_running[0:3];
   wire [NUM_RADIO_CORES-1:0] sync_out;
 
@@ -871,10 +894,21 @@ module n310_core #(
   // TX/RX FrontEnd
   /////////////////////////////////////////////////////////////////////////////////
 
-  wire [15:0] db_gpio_in[0:3];
-  wire [15:0] db_gpio_out[0:3];
-  wire [15:0] db_gpio_ddr[0:3];
-  wire [15:0] db_gpio_fab[0:3];
+  wire [15:0] db_gpio_in[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [15:0] db_gpio_out[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [15:0] db_gpio_ddr[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [15:0] db_gpio_fab[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+
+  wire [31:0] radio_gpio_out[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [31:0] radio_gpio_ddr[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [31:0] radio_gpio_in[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_out;
+  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_ddr;
+  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_in;
+  wire [FP_GPIO_WIDTH-1:0] radio_gpio_sync;
+  wire [FP_GPIO_WIDTH-1:0] fp_gpio_in_int;
+  wire [FP_GPIO_WIDTH-1:0] fp_gpio_out_int;
+  wire [FP_GPIO_WIDTH-1:0] fp_gpio_ddr_int;
 
   assign {rx[0], rx[1]} = {rx0, rx1};
   assign {rx[2], rx[3]} = {rx2, rx3};
@@ -915,9 +949,9 @@ module n310_core #(
         .rx_running(rx_running[i]),
         .misc_ins(32'h0),
         .misc_outs(),
-        .fp_gpio_in(32'h0),
-        .fp_gpio_out(),
-        .fp_gpio_ddr(),
+        .fp_gpio_in(radio_gpio_in[i]),
+        .fp_gpio_out(radio_gpio_out[i]),
+        .fp_gpio_ddr(radio_gpio_ddr[i]),
         .fp_gpio_fab(32'h0),
         .db_gpio_in(db_gpio_in[i]),
         .db_gpio_out(db_gpio_out[i]),
@@ -1005,5 +1039,69 @@ module n310_core #(
     .reg_rd_data(reg_rd_data_xbar),
     .reg_rd_resp(reg_rd_resp_xbar)
   );
+
+
+  // Front panel GPIOs logic
+  // Double-sync for the GPIO inputs to the PS and to the Radio blocks.
+  synchronizer #(
+    .INITIAL_VAL(1'b0), .WIDTH(FP_GPIO_WIDTH)
+    ) ps_gpio_in_sync_i (
+    .clk(bus_clk), .rst(1'b0), .in(fp_gpio_in_int), .out(ps_gpio_in)
+    );
+  synchronizer #(
+    .INITIAL_VAL(1'b0), .WIDTH(FP_GPIO_WIDTH)
+    ) radio_gpio_in_sync_i (
+    .clk(radio_clk), .rst(1'b0), .in(fp_gpio_in_int), .out(radio_gpio_sync)
+    );
+  generate for (i=0; i<NUM_RADIO_CORES*NUM_CHANNELS; i=i+1) begin: gen_fp_gpio_in_sync
+    assign radio_gpio_in[i][FP_GPIO_WIDTH-1:0] = radio_gpio_sync;
+  end endgenerate
+
+  // For each of the FP GPIO bits, implement four control muxes, then the IO buffer.
+  generate for (i=0; i<FP_GPIO_WIDTH; i=i+1) begin: gpio_muxing_gen
+    // 1) Select which radio drives the output
+    always @ (posedge radio_clk) begin : gpio_src_mux_out
+      case (fp_gpio_src_reg[2*i+1:2*i])
+        2'b00: radio_gpio_src_out[i] <= radio_gpio_out[0][i];
+        2'b01: radio_gpio_src_out[i] <= radio_gpio_out[1][i];
+        2'b10: radio_gpio_src_out[i] <= radio_gpio_out[2][i];
+        2'b11: radio_gpio_src_out[i] <= radio_gpio_out[3][i];
+        default : radio_gpio_src_out[i] <= radio_gpio_out[0][i];
+      endcase
+    end
+    // 2) Select which radio drives the direction
+    always @ (posedge radio_clk) begin : gpio_src_mux_ddr
+      case (fp_gpio_src_reg[2*i+1:2*i])
+        2'b00: radio_gpio_src_ddr[i] <= radio_gpio_ddr[0][i];
+        2'b01: radio_gpio_src_ddr[i] <= radio_gpio_ddr[1][i];
+        2'b10: radio_gpio_src_ddr[i] <= radio_gpio_ddr[2][i];
+        2'b11: radio_gpio_src_ddr[i] <= radio_gpio_ddr[3][i];
+        default: radio_gpio_src_ddr[i] <= radio_gpio_ddr[0][i];
+      endcase
+    end
+    // 3) Select if the radio or the ps drives the output
+    // The following is implementing a 2:1 mux in a LUT6 explicitly to avoid
+    // glitching behavior that is introduced by unexpected Vivado synthesis.
+    (* dont_touch = "TRUE" *) LUT3 #(
+      .INIT(8'hCA) // Specify LUT Contents. O = ~I2&I0 | I2&I1
+    ) mux_out_i (
+      .O(fp_gpio_out_int[i]), // LUT general output. Mux output
+      .I0(radio_gpio_src_out[i]), // LUT input. Input 1
+      .I1(ps_gpio_out[i]), // LUT input. Input 2
+      .I2(fp_gpio_master_reg[i])// LUT input. Select bit
+    );
+    // 4) Select if the radio or the ps drives the direction
+    (* dont_touch = "TRUE" *) LUT3 #(
+      .INIT(8'hC5) // Specify LUT Contents. O = ~I2&I0 | I2&~I1
+    ) mux_ddr_i (
+      .O(fp_gpio_ddr_int[i]), // LUT general output. Mux output
+      .I0(radio_gpio_src_ddr[i]), // LUT input. Input 1
+      .I1(ps_gpio_tri[i]), // LUT input. Input 2
+      .I2(fp_gpio_master_reg[i]) // LUT input. Select bit
+    );
+    // Infer the IOBUFT
+    assign fp_gpio_inout[i] = fp_gpio_ddr_int[i] ? 1'bz : fp_gpio_out_int[i];
+    assign fp_gpio_in_int[i] = fp_gpio_inout[i];
+  end endgenerate
 
 endmodule //n310_core
