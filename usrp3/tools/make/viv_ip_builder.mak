@@ -77,7 +77,7 @@ BUILD_VIVADO_BD = \
 #       $3 = PART_ID (<device>/<package>/<speedgrade>)
 #       $4 = BDTCL_SRC_DIR (Absolute path to the top level ip src dir)
 #       $5 = BDTCL_BUILD_DIR (Absolute path to the top level ip build dir)
-#       $6 = BD_IP_REPOS (Colon-separated list of absolute paths to IP repos)
+#       $6 = BD_IP_REPOS (space-separated list of absolute paths to IP repos)
 # Prereqs: 
 # - TOOLS_DIR must be defined globally
 # -------------------------------------------------------------------
@@ -88,7 +88,7 @@ BUILD_VIVADO_BDTCL = \
 	echo "========================================================"; \
 	export BD_FILE=$(call RESOLVE_PATH,$(5)/$(1)/$(1).tcl); \
 	export PART_NAME=$(subst /,,$(3)); \
-	export BD_IP_REPOS=$(6); \
+	export BD_IP_REPOS=$(call RESOLVE_PATH,$(6)); \
 	echo "BUILDER: Staging BD Tcl in build directory..."; \
 	rm $(5)/$(1)/* -rf; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) reserve; \

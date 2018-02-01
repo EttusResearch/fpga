@@ -10,7 +10,7 @@ set src_ext [file extension $bd_file]             ;# BD or Tcl file?
 set part_name       $::env(PART_NAME)              ;# Full Xilinx part name
 set bd_name [file rootname [file tail $bd_file]]   ;# Extract IP name
 if {[info exists env(BD_IP_REPOS)]} {
-    set ip_repos [regsub -all {:} $::env(BD_IP_REPOS) { }] ;# Any supporting IP repos
+    set ip_repos $::env(BD_IP_REPOS);# Any supporting IP repos
 } else {
     set ip_repos {}
 }

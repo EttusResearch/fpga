@@ -1,4 +1,0 @@
-184c187
-<     parameter MEM_BITS         =      10; // Set this parameter to control how many write data bursts can be stored in memory.  The default is 2^10=1024.
----
->     parameter MEM_BITS         =      16; // Set this parameter to control how many write data bursts can be stored in memory.  The default is 2^10=1024.
