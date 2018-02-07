@@ -39,6 +39,21 @@ fragment@2 {
 			reg-names = "dboard-regs-1";
 			status = "okay";
 		};
+
+		uio@42100000 {
+			compatible = "usrp-uio";
+			reg = <0x42100000 0x1000>;
+			reg-names = "dboard-jtag-0";
+			status = "okay";
+		};
+
+		uio@42200000 {
+			compatible = "usrp-uio";
+			reg = <0x42200000 0x1000>;
+			reg-names = "dboard-jtag-1";
+			status = "okay";
+		};
+
 	};
 };
 

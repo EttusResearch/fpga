@@ -229,9 +229,9 @@ module n310
    output        DBA_MYK_SYNC_IN_n,
    input         DBA_MYK_SYNC_OUT_n,
 
-   output        DBA_CPLD_JTAG_TCK,
-   output        DBA_CPLD_JTAG_TMS,
-   output        DBA_CPLD_JTAG_TDI,
+   inout         DBA_CPLD_JTAG_TCK,
+   inout         DBA_CPLD_JTAG_TMS,
+   inout         DBA_CPLD_JTAG_TDI,
    input         DBA_CPLD_JTAG_TDO,
 
    output        DBA_MYK_GPIO_0,
@@ -289,9 +289,9 @@ module n310
    output        DBB_MYK_SYNC_IN_n,
    input         DBB_MYK_SYNC_OUT_n,
 
-   output        DBB_CPLD_JTAG_TCK,
-   output        DBB_CPLD_JTAG_TMS,
-   output        DBB_CPLD_JTAG_TDI,
+   inout         DBB_CPLD_JTAG_TCK,
+   inout         DBB_CPLD_JTAG_TMS,
+   inout         DBB_CPLD_JTAG_TDI,
    input         DBB_CPLD_JTAG_TDO,
 
    output        DBB_MYK_GPIO_0,
@@ -1990,16 +1990,6 @@ module n310
   wire [63:0] ps_gpio_in;
   wire [63:0] ps_gpio_tri;
 
-  assign DBA_CPLD_JTAG_TCK = ps_gpio_out[0];
-  assign DBA_CPLD_JTAG_TDI = ps_gpio_out[1];
-  assign DBA_CPLD_JTAG_TMS = ps_gpio_out[2];
-  assign ps_gpio_in[3]     = DBA_CPLD_JTAG_TDO;
-
-  assign DBB_CPLD_JTAG_TCK = ps_gpio_out[4];
-  assign DBB_CPLD_JTAG_TDI = ps_gpio_out[5];
-  assign DBB_CPLD_JTAG_TMS = ps_gpio_out[6];
-  assign ps_gpio_in[7]     = DBB_CPLD_JTAG_TDO;
-
   genvar i;
   generate for (i=0; i<12; i=i+1) begin: io_tristate_gen
     assign FPGA_GPIO[i] = ps_gpio_tri[32+i] ? 1'bz : ps_gpio_out[32+i];
@@ -2394,6 +2384,16 @@ module n310
     .GPIO_0_tri_i(ps_gpio_in),
     .GPIO_0_tri_o(ps_gpio_out),
     .GPIO_0_tri_t(ps_gpio_tri),
+
+    .JTAG0_TCK(DBA_CPLD_JTAG_TCK),
+    .JTAG0_TMS(DBA_CPLD_JTAG_TMS),
+    .JTAG0_TDI(DBA_CPLD_JTAG_TDI),
+    .JTAG0_TDO(DBA_CPLD_JTAG_TDO),
+
+    .JTAG1_TCK(DBB_CPLD_JTAG_TCK),
+    .JTAG1_TMS(DBB_CPLD_JTAG_TMS),
+    .JTAG1_TDI(DBB_CPLD_JTAG_TDI),
+    .JTAG1_TDO(DBB_CPLD_JTAG_TDO),
 
     .FCLK_CLK0(FCLK_CLK0),
     .FCLK_RESET0_N(FCLK_RESET0_N),
