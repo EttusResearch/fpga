@@ -204,72 +204,74 @@ set_property PACKAGE_PIN   AA7              [get_ports {MGT156MHZ_CLK1_N}]
 set_property PACKAGE_PIN   AF10             [get_ports {NETCLK_P}]
 set_property PACKAGE_PIN   AF9              [get_ports {NETCLK_N}]
 
+# Swapping SFP_0 and SFP_1 pinout to match the label on the silkscreen.
+# These FPGA pins are reversed with respect to the schematic now.
 ## MGTs, Bank 109
 
-set_property PACKAGE_PIN   AH9              [get_ports SFP_0_RX_N]
-set_property PACKAGE_PIN   AH10             [get_ports SFP_0_RX_P]
-set_property PACKAGE_PIN   AK9              [get_ports SFP_0_TX_N]
-set_property PACKAGE_PIN   AK10             [get_ports SFP_0_TX_P]
+set_property PACKAGE_PIN   AJ7              [get_ports SFP_0_RX_N]
+set_property PACKAGE_PIN   AJ8              [get_ports SFP_0_RX_P]
+set_property PACKAGE_PIN   AK5              [get_ports SFP_0_TX_N]
+set_property PACKAGE_PIN   AK6              [get_ports SFP_0_TX_P]
 
-set_property PACKAGE_PIN   AJ7              [get_ports SFP_1_RX_N]
-set_property PACKAGE_PIN   AJ8              [get_ports SFP_1_RX_P]
-set_property PACKAGE_PIN   AK5              [get_ports SFP_1_TX_N]
-set_property PACKAGE_PIN   AK6              [get_ports SFP_1_TX_P]
+set_property PACKAGE_PIN   AH9              [get_ports SFP_1_RX_N]
+set_property PACKAGE_PIN   AH10             [get_ports SFP_1_RX_P]
+set_property PACKAGE_PIN   AK9              [get_ports SFP_1_TX_N]
+set_property PACKAGE_PIN   AK10             [get_ports SFP_1_TX_P]
 
 ## SFP+ 0, Sideband, Bank 13 3.3V
 
-# set_property PACKAGE_PIN   V23              [get_ports {SFP_0_I2C_NPRESENT}]
+# set_property PACKAGE_PIN   T27              [get_ports {SFP_0_I2C_NPRESENT}]
 # set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_I2C_NPRESENT}]
 
-set_property PACKAGE_PIN   N26              [get_ports SFP_0_LED_A]
-set_property PACKAGE_PIN   P30              [get_ports SFP_0_LED_B]
+set_property PACKAGE_PIN   N27              [get_ports SFP_0_LED_A]
+set_property PACKAGE_PIN   N28              [get_ports SFP_0_LED_B]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_0_LED_*]
 set_property DRIVE         4                [get_ports SFP_0_LED_*]
 set_property SLEW          SLOW             [get_ports SFP_0_LED_*]
 
-set_property PACKAGE_PIN   R28              [get_ports SFP_0_LOS]
+set_property PACKAGE_PIN   R27              [get_ports SFP_0_LOS]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_0_LOS]
 
-set_property PACKAGE_PIN   T24              [get_ports SFP_0_RS0]
-set_property PACKAGE_PIN   P25              [get_ports SFP_0_RS1]
+set_property PACKAGE_PIN   R26              [get_ports SFP_0_RS0]
+set_property PACKAGE_PIN   P28              [get_ports SFP_0_RS1]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_0_RS*]
 set_property DRIVE         4                [get_ports SFP_0_RS*]
 set_property SLEW          SLOW             [get_ports SFP_0_RS*]
 
-set_property PACKAGE_PIN   V27              [get_ports SFP_0_TXDISABLE]
+set_property PACKAGE_PIN   U27              [get_ports SFP_0_TXDISABLE]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_0_TXDISABLE]
 set_property DRIVE         4                [get_ports SFP_0_TXDISABLE]
 set_property SLEW          SLOW             [get_ports SFP_0_TXDISABLE]
 
-set_property PACKAGE_PIN   W24              [get_ports SFP_0_TXFAULT]
+set_property PACKAGE_PIN   V26              [get_ports SFP_0_TXFAULT]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_0_TXFAULT]
 
 ## SFP+ 1, Slow Speed, Bank 13 3.3V
 
-# set_property PACKAGE_PIN   T27              [get_ports {SFP_1_I2C_NPRESENT}]
+# set_property PACKAGE_PIN   V23              [get_ports {SFP_1_I2C_NPRESENT}]
 # set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_1_I2C_NPRESENT}]
 
-set_property PACKAGE_PIN   N27              [get_ports SFP_1_LED_A]
-set_property PACKAGE_PIN   N28              [get_ports SFP_1_LED_B]
+set_property PACKAGE_PIN   N26              [get_ports SFP_1_LED_A]
+set_property PACKAGE_PIN   P30              [get_ports SFP_1_LED_B]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_LED_*]
 set_property DRIVE         4                [get_ports SFP_1_LED_*]
 set_property SLEW          SLOW             [get_ports SFP_1_LED_*]
 
-set_property PACKAGE_PIN   R27              [get_ports SFP_1_LOS]
+set_property PACKAGE_PIN   R28              [get_ports SFP_1_LOS]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_LOS]
 
-set_property PACKAGE_PIN   R26              [get_ports SFP_1_RS0]
-set_property PACKAGE_PIN   P28              [get_ports SFP_1_RS1]
+set_property PACKAGE_PIN   T24              [get_ports SFP_1_RS0]
+set_property PACKAGE_PIN   P25              [get_ports SFP_1_RS1]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_RS*]
 set_property DRIVE         4                [get_ports SFP_1_RS*]
 set_property SLEW          SLOW             [get_ports SFP_1_RS*]
 
-set_property PACKAGE_PIN   U27              [get_ports SFP_1_TXDISABLE]
+set_property PACKAGE_PIN   V27              [get_ports SFP_1_TXDISABLE]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_TXDISABLE]
 set_property DRIVE         4                [get_ports SFP_1_TXDISABLE]
 set_property SLEW          SLOW             [get_ports SFP_1_TXDISABLE]
 
-set_property PACKAGE_PIN   V26              [get_ports SFP_1_TXFAULT]
+set_property PACKAGE_PIN   W24              [get_ports SFP_1_TXFAULT]
 set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_TXFAULT]
 
 
