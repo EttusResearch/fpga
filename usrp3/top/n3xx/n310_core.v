@@ -192,14 +192,15 @@ module n310_core #(
 
   //misc
   input  [31:0]   build_datestamp,
-  input  [31:0]   xadc_readback
+  input  [31:0]   xadc_readback,
+  input  [63:0]   sfp_ports_info
 );
 
   /////////////////////////////////////////////////////////////////////////////////
   // Compatibility Number
   //
   localparam [15:0] COMPAT_MAJOR = 16'd5;
-  localparam [15:0] COMPAT_MINOR = 16'd0;
+  localparam [15:0] COMPAT_MINOR = 16'd1;
   /////////////////////////////////////////////////////////////////////////////////
 
   // Number of Channels per radio
@@ -228,6 +229,8 @@ module n310_core #(
   localparam REG_XADC_READBACK  = REG_BASE_MISC + 14'h1C;
   localparam REG_BUS_CLK_RATE   = REG_BASE_MISC + 14'h20;
   localparam REG_BUS_CLK_COUNT  = REG_BASE_MISC + 14'h24;
+  localparam REG_SFP_PORT0_INFO = REG_BASE_MISC + 14'h28;
+  localparam REG_SFP_PORT1_INFO = REG_BASE_MISC + 14'h2C;
 
   reg [31:0] scratch_reg = 32'b0;
   reg [31:0] bus_counter = 32'h0;
@@ -399,6 +402,12 @@ module n310_core #(
 
         REG_BUS_CLK_COUNT:
           reg_rd_data_glob <= bus_counter;
+
+        REG_SFP_PORT0_INFO:
+          reg_rd_data_glob <= sfp_ports_info[31:0];
+
+        REG_SFP_PORT1_INFO:
+          reg_rd_data_glob <= sfp_ports_info[63:32];
 
         default:
           reg_rd_resp_glob <= 1'b0;

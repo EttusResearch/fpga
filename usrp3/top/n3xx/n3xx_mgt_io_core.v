@@ -69,6 +69,7 @@ module n3xx_mgt_io_core #(
   output                  gt_pll_lock,
   output                  gt_tx_out_clk_unbuf,
   // Misc
+  output [31:0]           port_info,
   output                  link_up,
   output reg              activity
 );
@@ -152,13 +153,15 @@ module n3xx_mgt_io_core #(
   wire [31:0] mac_status, phy_status;
   wire [31:0] mac_status_bclk, phy_status_bclk;
 
+  assign port_info = {COMPAT_NUM, 6'h0, activity, link_up, mgt_protocol, PORTNUM};
+
   always @(posedge bus_clk) begin
     // No reset handling needed for readback
     if (reg_rd_req) begin
       reg_rd_resp_glob <= 1'b1;
       case(reg_rd_addr)
         REG_PORT_INFO:
-          reg_rd_data_glob <= {COMPAT_NUM, 6'h0, activity, link_up, mgt_protocol, PORTNUM};
+          reg_rd_data_glob <= port_info;
         REG_MAC_CTRL_STATUS:
           reg_rd_data_glob <= mac_status_bclk;
         REG_PHY_CTRL_STATUS:

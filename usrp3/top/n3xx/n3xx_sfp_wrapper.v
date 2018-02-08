@@ -118,6 +118,7 @@ module n3xx_sfp_wrapper #(
   output          c2e_tready,
 
   // MISC
+  output [31:0]   port_info,
   output          link_up,
   output          activity
 
@@ -255,6 +256,7 @@ module n3xx_sfp_wrapper #(
     .m_axis_tvalid  (sfpo_tvalid),
     .m_axis_tready  (sfpo_tready),
 
+    .port_info      (port_info),
     .link_up        (link_up),
     .activity       (activity)
   );

@@ -1249,6 +1249,9 @@ module n310
   wire        i_cvita_dma_tready;
   wire        i_cvita_dma_tvalid;
 
+  // Misc
+  wire [31:0] sfp_port0_info;
+  wire [31:0] sfp_port1_info;
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1365,6 +1368,9 @@ module n310
       .c2e_tlast(arm_eth0_tx_tlast_b),
       .c2e_tvalid(arm_eth0_tx_tvalid_b),
       .c2e_tready(arm_eth0_tx_tready_b),
+
+      // Misc
+      .port_info(sfp_port0_info),
 
       // LED
       .link_up(SFP_0_LED_B),
@@ -1484,6 +1490,9 @@ module n310
       .c2e_tlast(arm_eth1_tx_tlast_b),
       .c2e_tvalid(arm_eth1_tx_tvalid_b),
       .c2e_tready(arm_eth1_tx_tready_b),
+
+      // Misc
+      .port_info(sfp_port1_info),
 
       // LED
       .link_up(SFP_1_LED_B),
@@ -2937,7 +2946,8 @@ module n310
     .reg_rd_data_npio(reg_rd_data_npio),
 
     .build_datestamp(build_datestamp),
-    .xadc_readback({20'h0, device_temp})
+    .xadc_readback({20'h0, device_temp}),
+    .sfp_ports_info({sfp_port1_info, sfp_port0_info})
   );
 
   // Register the ATR bits once between sending them out to the CPLD to avoid
