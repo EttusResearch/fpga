@@ -16,15 +16,15 @@
 
   wire ce_clk = radio_clk;
   wire ce_rst = radio_rst;
-
-  noc_block_ddc #( .NUM_CHAINS(2)) inst_noc_block_ddc (
+  
+  noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(2), .CIC_MAX_DECIM(32)) inst_noc_block_ddc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
     .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
     .debug(ce_debug[0]));
 
-  noc_block_duc #( .NUM_CHAINS(2)) inst_noc_block_duc (
+  noc_block_duc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_INTERP(8)) inst_noc_block_duc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
