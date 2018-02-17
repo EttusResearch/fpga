@@ -145,6 +145,7 @@ module noc_block_moving_avg #(
     .set_addr(set_addr),
     .set_stb(set_stb),
     .set_time(),
+    .set_has_time(),
     .rb_stb(1'b1),
     .rb_data(rb_data),
     .rb_addr(rb_addr),
@@ -177,7 +178,9 @@ module noc_block_moving_avg #(
 
   // AXI Wrapper - Convert RFNoC Shell interface into AXI stream interface
   axi_wrapper
-  axi_wrapper (
+  axi_wrapper_i (
+    .bus_clk(bus_clk),
+    .bus_rst(bus_rst),
     .clk(ce_clk),
     .reset(ce_rst),
     // RFNoC Shell

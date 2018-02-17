@@ -85,10 +85,11 @@ module noc_block_window #(
     .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
     .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
   inst_axi_wrapper (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data), .set_time(), .set_has_time(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),

@@ -17,8 +17,8 @@ module noc_block_radio_core #(
   output [NUM_CHANNELS-1:0] db_fe_set_stb, output [NUM_CHANNELS*8-1:0] db_fe_set_addr, output [NUM_CHANNELS*32-1:0] db_fe_set_data,
   input  [NUM_CHANNELS-1:0] db_fe_rb_stb,  output [NUM_CHANNELS*8-1:0] db_fe_rb_addr,  input  [NUM_CHANNELS*64-1:0] db_fe_rb_data,
   // Ports connected to radio front end
-  input  [NUM_CHANNELS*32-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb, output [NUM_CHANNELS*32-1:0] rx_running,
-  output [NUM_CHANNELS*32-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb, output [NUM_CHANNELS*32-1:0] tx_running,
+  input  [NUM_CHANNELS*32-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb, output [NUM_CHANNELS-1:0] rx_running,
+  output [NUM_CHANNELS*32-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb, output [NUM_CHANNELS-1:0] tx_running,
   // Interfaces to front panel and daughter board
   input pps, input sync_in, output sync_out,
   output [63:0] debug
@@ -32,7 +32,6 @@ module noc_block_radio_core #(
   wire [NUM_CHANNELS*32-1:0]      set_data;
   wire [NUM_CHANNELS*8-1:0]       set_addr;
   wire [NUM_CHANNELS-1:0]         set_stb;
-  wire [NUM_CHANNELS*64-1:0]      set_time;
   wire [8*NUM_CHANNELS-1:0]       rb_addr;
   wire [64*NUM_CHANNELS-1:0]      rb_data;
   wire [NUM_CHANNELS-1:0]         rb_stb, rb_holdoff;
@@ -62,7 +61,7 @@ module noc_block_radio_core #(
     // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(set_time),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
     .rb_stb(rb_stb), .rb_addr(rb_addr), .rb_data(rb_data),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -161,6 +160,7 @@ module noc_block_radio_core #(
         .SIMPLE_MODE(0),
         .USE_SEQ_NUM(1))
       axi_wrapper (
+        .bus_clk(bus_clk), .bus_rst(bus_rst),
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
         .next_dst(next_dst_sid[16*i+15:16*i]),

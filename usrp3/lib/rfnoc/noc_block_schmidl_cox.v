@@ -36,9 +36,9 @@ module noc_block_schmidl_cox #(
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Computer Engine Clock Domain
-    .clk(ce_clk), .reset(ce_rst),
+    .clk(bus_clk), .reset(bus_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(), .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
     .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
@@ -56,7 +56,7 @@ module noc_block_schmidl_cox #(
 
    // FIXME this needs an axi_wrapper, it talks 32bit data
   schmidl_cox inst_schmidl_cox (
-    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
+    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));

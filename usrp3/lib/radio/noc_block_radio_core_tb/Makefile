@@ -21,7 +21,7 @@ SIM_TOP = noc_block_radio_core_tb
 SIM_SRCS = \
 $(abspath noc_block_radio_core_tb.sv)
 
-MODELSIM_USER_DO = $(abspath wave.do)
+# MODELSIM_USER_DO = $(abspath wave.do)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

@@ -31,7 +31,7 @@ module noc_block_ddc #(
   wire [NUM_CHAINS-1:0]         set_has_time;
   wire [NUM_CHAINS-1:0]         rb_stb;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
-  reg [64*NUM_CHAINS-1:0]      rb_data;
+  reg [64*NUM_CHAINS-1:0]       rb_data;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -94,16 +94,6 @@ module noc_block_ddc #(
   localparam RB_CIC_MAX_DECIM = 2;
   localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
 
-  // TODO Readback register for number of FIR filter taps
-  always @*
-    case(rb_addr[7:0])
-      RB_COMPAT_NUM    : rb_data[63:0] <= {COMPAT_NUM};
-      RB_NUM_HB        : rb_data[63:0] <= {NUM_HB};
-      RB_CIC_MAX_DECIM : rb_data[63:0] <= {CIC_MAX_DECIM};
-      default          : rb_data[63:0] <= 64'h0BADC0DE0BADC0DE;
-  endcase
-
-
   genvar i;
   generate
     for (i = 0; i < NUM_CHAINS; i = i + 1) begin : gen_ddc_chains
@@ -133,9 +123,19 @@ module noc_block_ddc #(
       wire [63:0] set_time_int     = set_time[64*i+63:64*i];
       wire        set_has_time_int = set_has_time[i];
 
+      // TODO Readback register for number of FIR filter taps
+      always @*
+        case(rb_addr[8*i+7:8*i])
+          RB_COMPAT_NUM    : rb_data[64*i+63:64*i] <= {COMPAT_NUM};
+          RB_NUM_HB        : rb_data[64*i+63:64*i] <= {NUM_HB};
+          RB_CIC_MAX_DECIM : rb_data[64*i+63:64*i] <= {CIC_MAX_DECIM};
+          default          : rb_data[64*i+63:64*i] <= 64'h0BADC0DE0BADC0DE;
+        endcase
+
       axi_wrapper #(
         .SIMPLE_MODE(0), .MTU(MTU))
       axi_wrapper (
+        .bus_clk(bus_clk), .bus_rst(bus_rst),
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
         .next_dst(next_dst_sid[16*i+15:16*i]),

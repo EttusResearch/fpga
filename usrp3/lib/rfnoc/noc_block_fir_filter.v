@@ -79,7 +79,7 @@ module noc_block_fir_filter #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -116,6 +116,7 @@ module noc_block_fir_filter #(
   axi_wrapper #(
     .SIMPLE_MODE(1))
   inst_axi_wrapper (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
