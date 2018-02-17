@@ -32,14 +32,13 @@ reset_sync.v \
 s7_icap_wb.v \
 serial_to_settings.v \
 setting_reg.v \
-settings_bus_crossclock.v \
-settings_bus_mux_crossclock.v \
 settings_bus_mux.v \
-settings_bus_timed_fifo.v \
+settings_bus_timed_2clk.v \
 simple_i2c_core.v \
 simple_spi_core.v \
 synchronizer_impl.v \
 synchronizer.v \
+pulse_synchronizer.v \
 user_settings.v \
 axil_regport_master.v \
 axil_to_ni_regport.v \

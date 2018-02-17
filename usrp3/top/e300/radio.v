@@ -209,15 +209,10 @@ module radio #(
        default : rb_data <= 64'd0;
      endcase // case (rb_addr)
 
-   settings_bus_crossclock #(.FLOW_CTRL(0)) settings_bus_crossclock
-     (.clk_a(radio_clk), .rst_a(radio_rst),
-      .set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
-      .rb_stb_a(), .rb_addr_a('h0), .rb_data_a(),
-      .rb_ready(1'b1),
-      .clk_b(bus_clk), .rst_b(bus_rst),
-      .set_stb_b(set_stb_b), .set_addr_b(set_addr_b), .set_data_b(set_data_b),
-      .rb_stb_b(1'b0), .rb_addr_b(), .rb_data_b('h0),
-      .set_ready(1'b1));
+   axi_fifo_2clk #(.WIDTH(8 + 32), .SIZE(0)) set_2clk_i (
+      .reset(radio_rst),
+      .i_aclk(radio_clk), .i_tdata({set_addr,   set_data}),   .i_tvalid(set_stb),   .i_tready(),
+      .o_aclk(bus_clk),   .o_tdata({set_addr_b, set_data_b}), .o_tvalid(set_stb_b), .o_tready(set_stb_b));
 
    // Write this register with any value to create DAC sync operation
    setting_reg #(.my_addr(SR_DACSYNC), .awidth(8), .width(1)) sr_dacsync

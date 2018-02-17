@@ -46,7 +46,7 @@ module db_control #(
   reg spi_readback_stb_hold;
   reg [31:0] spi_readback_hold;
   wire [31:0] spi_readback_sync;
-  wire [31:0] fp_gpio_readback, db_gpio_readback, leds_readback;
+  wire [31:0] fp_gpio_readback, db_gpio_readback;
   always @* begin
     case(rb_addr)
       // Use a latched spi readback stobe so additional readbacks after a SPI transaction will work
@@ -67,7 +67,7 @@ module db_control #(
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .rx(run_rx), .tx(run_tx),
     .gpio_in(32'd0), .gpio_out(leds), .gpio_ddr(/*unused, assumed output only*/),
-    .gpio_out_fab(32'h00000000 /*LEDs don't have fabric control*/), .gpio_sw_rb(leds_readback));
+    .gpio_out_fab(32'h00000000 /*LEDs don't have fabric control*/), .gpio_sw_rb());
 
   gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(32), .FAB_CTRL_EN(1), .DEFAULT_DDR(32'hFFFF_FFFF), .DEFAULT_IDLE(32'd0)) fp_gpio_atr (
     .clk(clk), .reset(reset),
@@ -86,29 +86,23 @@ module db_control #(
   /********************************************************
   ** SPI
   ********************************************************/
-  wire spi_set_stb, spi_ready;
+  wire spi_set_stb;
   wire [7:0] spi_set_addr;
   wire [31:0] spi_set_data;
   wire spi_readback_stb, spi_readback_stb_sync;
   wire [31:0] spi_readback;
   wire spi_clk_int, spi_rst_int;
-  genvar i;
   generate
     if (USE_SPI_CLK) begin
-      settings_bus_crossclock #(
-        .FLOW_CTRL(1),
-        .SR_AWIDTH(8),
-        .SR_DWIDTH(32),
-        .RB_DWIDTH(9))
-      settings_bus_crossclock (
-        .clk_a(clk), .rst_a(reset),
-        .set_stb_a(set_stb), .set_addr_a(set_addr), .set_data_a(set_data),
-        .rb_stb_a(spi_readback_stb_sync), .rb_addr_a(), .rb_data_a(spi_readback_sync),
-        .rb_ready(1'b1),
-        .clk_b(spi_clk), .rst_b(spi_rst),
-        .set_stb_b(spi_set_stb), .set_addr_b(spi_set_addr), .set_data_b(spi_set_data),
-        .rb_stb_b(spi_readback_stb), .rb_addr_b(), .rb_data_b(spi_readback),
-        .set_ready(spi_ready));
+      axi_fifo_2clk #(.WIDTH(8 + 32), .SIZE(0)) set_2clk_i (
+        .reset(reset),
+        .i_aclk(clk), .i_tdata({set_addr, set_data}), .i_tvalid(set_stb), .i_tready(),
+        .o_aclk(spi_clk), .o_tdata({spi_set_addr, spi_set_data}), .o_tvalid(spi_set_stb), .o_tready(spi_set_stb));
+
+      axi_fifo_2clk #(.WIDTH(32), .SIZE(0)) rb_2clk_i (
+        .reset(reset),
+        .i_aclk(spi_clk), .i_tdata(spi_readback), .i_tvalid(spi_readback_stb), .i_tready(),
+        .o_aclk(clk), .o_tdata(spi_readback_sync), .o_tvalid(spi_readback_stb_sync), .o_tready(spi_readback_stb_sync));
 
       assign spi_clk_int = spi_clk;
       assign spi_rst_int = spi_rst;
@@ -138,10 +132,12 @@ module db_control #(
     end
   end
 
+  // SPI Core instantiation
+  // Note: We don't use "ready" because we use readback_stb to backpressure the settings bus
   simple_spi_core #(.BASE(SR_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) simple_spi_core (
     .clock(spi_clk_int), .reset(spi_rst_int),
     .set_stb(spi_set_stb), .set_addr(spi_set_addr), .set_data(spi_set_data),
-    .readback(spi_readback), .readback_stb(spi_readback_stb), .ready(spi_ready),
+    .readback(spi_readback), .readback_stb(spi_readback_stb), .ready(/* Unused */),
     .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
     .debug());
 
