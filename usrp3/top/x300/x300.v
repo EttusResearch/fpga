@@ -262,15 +262,17 @@ module x300
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
    //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
    //----------------------------------------------------------------------------
-   // CLK_OUT1___166.667______0.000______50.0_______87.118_____73.940
+   // CLK_OUT1___187.500______0.000______50.0_______85.263_____73.940
    // CLK_OUT2___125.000______0.000______50.0_______91.831_____73.940
-   // CLK_OUT3____83.333______0.000______50.0_______98.933_____73.940
+   // CLK_OUT3____93.750______0.000______50.0_______96.813_____73.940
    // CLK_OUT4___214.286______0.000______50.0_______83.210_____73.940
    //
    //----------------------------------------------------------------------------
    // Input Clock   Freq (MHz)    Input Jitter (UI)
    //----------------------------------------------------------------------------
    // __primary_________125.000____________0.010
+
+   localparam BUS_CLK_RATE = 32'd187500000;
 
    wire ioport2_clk_unbuf;
 
@@ -728,7 +730,8 @@ module x300
       .NUM_RX_STREAMS(NUM_RX_STREAMS),
       .REGPORT_ADDR_WIDTH(20),
       .REGPORT_DATA_WIDTH(32),
-      .IOP2_MSG_WIDTH(IOP2_MSG_WIDTH)
+      .IOP2_MSG_WIDTH(IOP2_MSG_WIDTH),
+      .BUS_CLK_RATE(BUS_CLK_RATE)
    ) x300_pcie_int (
       .ioport2_clk(ioport2_clk),
       .bus_clk(bus_clk),
@@ -1266,7 +1269,7 @@ module x300
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   x300_core x300_core (
+   x300_core #( .BUS_CLK_RATE(BUS_CLK_RATE) ) x300_core (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
       .bus_clk_div2(bus_clk_div2),

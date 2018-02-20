@@ -13,7 +13,8 @@ module x300_pcie_int #(
     parameter NUM_RX_STREAMS       = 6,
     parameter REGPORT_ADDR_WIDTH   = 20,
     parameter REGPORT_DATA_WIDTH   = 32,
-    parameter IOP2_MSG_WIDTH       = 64
+    parameter IOP2_MSG_WIDTH       = 64,
+    parameter BUS_CLK_RATE         = 32'd166666666
 ) (
     //---------------------------------------------------------
     // Clocks and Resets
@@ -196,7 +197,7 @@ module x300_pcie_int #(
     assign fpga_status[15:8]   = {|(dmarx_error), 1'b0, dmarx_enabled};
 
     pcie_basic_regs #(
-        .SIGNATURE(32'h58333030 /*ASCII:"X300"*/), .CLK_FREQ(32'd166666667 /*bus_clk = 166.666667MHz*/)
+        .SIGNATURE(32'h58333030 /*ASCII:"X300"*/), .CLK_FREQ(BUS_CLK_RATE)
     ) basic_regs (
         .clk(bus_clk), .reset(bus_rst),
         .regi_tdata(basic_regi_tdata), .regi_tvalid(basic_regi_tvalid), .regi_tready(basic_regi_tready),

@@ -1,5 +1,7 @@
 
-module x300_core (
+module x300_core #(
+   parameter BUS_CLK_RATE = 32'd166666666
+)(
    //Clocks and resets
    input radio_clk,
    input radio_rst,
@@ -483,7 +485,8 @@ module x300_core (
       .DEFAULT_FIFO_SIZE({30'h01FFFFFF, 30'h01FFFFFF}),
       .STR_SINK_FIFOSIZE(14),
       .DEFAULT_BURST_TIMEOUT({12'd280, 12'd280}),
-      .EXTENDED_DRAM_BIST(1)
+      .EXTENDED_DRAM_BIST(1),
+      .BUS_CLK_RATE(BUS_CLK_RATE)
    ) inst_noc_block_dram_fifo (
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .ce_clk(ddr3_axi_clk_x2), .ce_rst(ddr3_axi_rst),

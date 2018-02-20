@@ -12,7 +12,7 @@ module axi_dma_fifo
    parameter DEFAULT_BASE     = 30'h00000000,
    parameter DEFAULT_MASK     = 30'hFF000000,
    parameter DEFAULT_TIMEOUT  = 12'd256,
-   parameter BUS_CLK_RATE     = 32'd166666666,  // Used to calc BIST. Default BUS_CLK_RATE matches x300 design (166.67e6)
+   parameter BUS_CLK_RATE     = 32'd166666666,  // Frequency in Hz of bus_clk
    parameter SR_BASE          = 0,              // Base address for settings registers
    parameter EXT_BIST         = 0,              // If 1 then instantiate extended BIST with dynamic SID, delays and BW counters
    parameter MAX_PKT_LEN      = 12              // Log2 of maximum packet length
