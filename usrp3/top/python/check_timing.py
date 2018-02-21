@@ -24,7 +24,7 @@ def print_timing_constraint_summary(twr_file):
     done = False
     try: open(twr_file)
     except IOError:
-        print "cannot open or find %s; no timing summary to print!"%twr_file
+        print("cannot open or find %s; no timing summary to print!"%twr_file)
         exit(-1)
     for line in open(twr_file).readlines():
         if 'Derived Constraint Report' in line: keep = True
@@ -32,6 +32,6 @@ def print_timing_constraint_summary(twr_file):
         if not keep and done: keep = True
         if keep: output += line
         if done: break
-    print("\n\n"+output)
+    print(("\n\n"+output))
 
-if __name__=='__main__': map(print_timing_constraint_summary, sys.argv[1:])
+if __name__=='__main__': list(map(print_timing_constraint_summary, sys.argv[1:]))

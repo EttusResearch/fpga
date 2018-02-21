@@ -24,7 +24,7 @@ import re
 
 if __name__=='__main__':
   if len(sys.argv) == 2:
-    print "Usage: %s <top level Verilog file> <pin definition UCF>"
+    print("Usage: %s <top level Verilog file> <pin definition UCF>")
     sys.exit(-1)
 
   verilog_filename = sys.argv[1]
@@ -52,11 +52,11 @@ if __name__=='__main__':
 
   for item in verilog_iolist:
     if item not in ucf_iolist:
-      print "Error: %s appears in the top-level Verilog file, but is not in the UCF definition file!" % item
+      print("Error: %s appears in the top-level Verilog file, but is not in the UCF definition file!" % item)
       err = True
 
   if err:
     sys.exit(-1)
 
-  print "No errors found."
+  print("No errors found.")
   sys.exit(0)
