@@ -63,10 +63,10 @@ set_property PACKAGE_PIN   AD19             [get_ports NETCLK_REF_N]
 set_property DIFF_TERM     TRUE             [get_ports NETCLK_REF_*]
 set_property IOSTANDARD    LVDS_25          [get_ports NETCLK_REF_*]
 
-set_property PACKAGE_PIN   AA18             [get_ports WB_20MHz_P]
-set_property PACKAGE_PIN   AA19             [get_ports WB_20MHz_N]
-set_property DIFF_TERM     TRUE             [get_ports WB_20MHz_*]
-set_property IOSTANDARD    LVDS_25          [get_ports WB_20MHz_*]
+set_property PACKAGE_PIN   AA18             [get_ports WB_20MHZ_P]
+set_property PACKAGE_PIN   AA19             [get_ports WB_20MHZ_N]
+set_property DIFF_TERM     TRUE             [get_ports WB_20MHZ_*]
+set_property IOSTANDARD    LVDS_25          [get_ports WB_20MHZ_*]
 
 
 ## Bank 13, 3.3V : ######################################################################
@@ -85,6 +85,7 @@ set_property PACKAGE_PIN   V29              [get_ports REF_1PPS_OUT]
 set_property IOSTANDARD    LVCMOS33         [get_ports REF_1PPS_OUT]
 set_property DRIVE         12               [get_ports REF_1PPS_OUT]
 set_property SLEW          SLOW             [get_ports REF_1PPS_OUT]
+set_property IOB           TRUE             [get_ports REF_1PPS_OUT]
 
 # set_property PACKAGE_PIN   U29              [get_ports REF_1PPS_IN_MGMT]
 # set_property IOSTANDARD    LVCMOS33         [get_ports REF_1PPS_IN_MGMT]
@@ -181,13 +182,14 @@ set_property PACKAGE_PIN   AH2              [get_ports {QSFP_TX3_P}]
 ## Bank 13, 3.3V
 #########################################################################################
 
-# set_property PACKAGE_PIN   T29              [get_ports {WB_DAC_DIN}]
-# set_property PACKAGE_PIN   T28              [get_ports {WB_DAC_NCLR}]
-# set_property PACKAGE_PIN   T30              [get_ports {WB_DAC_NLDAC}]
-# set_property PACKAGE_PIN   N29              [get_ports {WB_DAC_NSYNC}]
-# set_property PACKAGE_PIN   P29              [get_ports {WB_DAC_SCLK}]
-# set_property IOSTANDARD    LVCMOS33         [get_ports {WB_DAC_*}]
-# When implemented, the White Rabbit signals need DRIVE and SLEW attributes applied.
+set_property PACKAGE_PIN   T29              [get_ports {WB_DAC_DIN}]
+set_property PACKAGE_PIN   T28              [get_ports {WB_DAC_NCLR}]
+set_property PACKAGE_PIN   T30              [get_ports {WB_DAC_NLDAC}]
+set_property PACKAGE_PIN   N29              [get_ports {WB_DAC_NSYNC}]
+set_property PACKAGE_PIN   P29              [get_ports {WB_DAC_SCLK}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {WB_DAC_*}]
+set_property DRIVE         4                [get_ports {WB_DAC_*}]
+set_property SLEW          SLOW             [get_ports {WB_DAC_*}]
 
 
 ## SFP+ : ###############################################################################
@@ -220,8 +222,8 @@ set_property PACKAGE_PIN   AK10             [get_ports SFP_1_TX_P]
 
 ## SFP+ 0, Sideband, Bank 13 3.3V
 
-# set_property PACKAGE_PIN   T27              [get_ports {SFP_0_I2C_NPRESENT}]
-# set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_I2C_NPRESENT}]
+set_property PACKAGE_PIN   T27              [get_ports {SFP_0_I2C_NPRESENT}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {SFP_0_I2C_NPRESENT}]
 
 set_property PACKAGE_PIN   N27              [get_ports SFP_0_LED_A]
 set_property PACKAGE_PIN   N28              [get_ports SFP_0_LED_B]

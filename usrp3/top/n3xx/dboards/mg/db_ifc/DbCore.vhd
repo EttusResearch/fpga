@@ -37,6 +37,10 @@ library work;
 
 
 entity DbCore is
+  generic(
+    -- Set to '1' to include the White Rabbit TDC.
+    kInclWhiteRabbitTdc : std_logic := '0'
+  );
   port(
 
     -- Resets --
@@ -137,6 +141,14 @@ entity DbCore is
     rGatedPulseToPin       : inout std_logic; -- straight to pin
     sGatedPulseToPin       : inout std_logic; -- straight to pin
     sPps                   : out std_logic;
+    sPpsToIob              : out std_logic;
+
+    -- White Rabbit Timing & Sync --
+    WrRefClk               : in  std_logic;
+    rWrPpsPulse            : in  std_logic;
+    rWrGatedPulseToPin     : inout std_logic; -- straight to pin
+    sWrGatedPulseToPin     : inout std_logic; -- straight to pin
+    aPpsSfpSel             : in  std_logic_vector(1 downto 0);
 
 
     -- Debug for JESD
@@ -146,7 +158,9 @@ entity DbCore is
 
     -- Debug for Timing & Sync
     rRpTransfer            : out std_logic;
-    sSpTransfer            : out std_logic
+    sSpTransfer            : out std_logic;
+    rWrRpTransfer          : out std_logic;
+    sWrSpTransfer          : out std_logic
   );
 
 end DbCore;
@@ -154,44 +168,6 @@ end DbCore;
 
 architecture RTL of DbCore is
 
-  component SyncRegsIfc
-    port (
-      aBusReset               : in  std_logic;
-      bBusReset               : in  std_logic;
-      BusClk                  : in  std_logic;
-      aTdcReset               : out std_logic;
-      bRegPortInFlat          : in  std_logic_vector(49 downto 0);
-      bRegPortOutFlat         : out std_logic_vector(33 downto 0);
-      RefClk                  : in  std_logic;
-      rResetTdc               : out std_logic;
-      rResetTdcDone           : in  std_logic;
-      rEnableTdc              : out std_logic;
-      rReRunEnable            : out std_logic;
-      rEnablePpsCrossing      : out std_logic;
-      rPpsPulseCaptured       : in  std_logic;
-      SampleClk               : in  std_logic;
-      sPpsClkCrossDelayVal    : out std_logic_vector(3 downto 0);
-      MeasClk                 : in  std_logic;
-      mRpOffset               : in  std_logic_vector(39 downto 0);
-      mSpOffset               : in  std_logic_vector(39 downto 0);
-      mOffsetsDone            : in  std_logic;
-      mOffsetsValid           : in  std_logic;
-      rLoadRePulseCounts      : out std_logic;
-      rRePulsePeriodInRClks   : out std_logic_vector(23 downto 0);
-      rRePulseHighTimeInRClks : out std_logic_vector(23 downto 0);
-      rLoadRpCounts           : out std_logic;
-      rRpPeriodInRClks        : out std_logic_vector(15 downto 0);
-      rRpHighTimeInRClks      : out std_logic_vector(15 downto 0);
-      rLoadRptCounts          : out std_logic;
-      rRptPeriodInRClks       : out std_logic_vector(15 downto 0);
-      rRptHighTimeInRClks     : out std_logic_vector(15 downto 0);
-      sLoadSpCounts           : out std_logic;
-      sSpPeriodInSClks        : out std_logic_vector(15 downto 0);
-      sSpHighTimeInSClks      : out std_logic_vector(15 downto 0);
-      sLoadSptCounts          : out std_logic;
-      sSptPeriodInSClks       : out std_logic_vector(15 downto 0);
-      sSptHighTimeInSClks     : out std_logic_vector(15 downto 0));
-  end component;
   component Jesd204bXcvrCore
     port (
       bBusReset          : in  STD_LOGIC;
@@ -243,7 +219,6 @@ architecture RTL of DbCore is
   --vhook_sigstart
   signal aAdcSync: STD_LOGIC;
   signal aDacSync: STD_LOGIC;
-  signal aTdcReset: std_logic;
   signal bClockingRegPortOut: RegPortOut_t;
   signal bDbRegPortOut: RegPortOut_t;
   signal bFpgaClksStable: STD_LOGIC;
@@ -255,54 +230,25 @@ architecture RTL of DbCore is
   signal bRadioClk3xEnabled: std_logic;
   signal bRadioClkMmcmReset: std_logic;
   signal bRadioClksValid: std_logic;
-  signal bSyncRegPortInFlat: std_logic_vector(49 downto 0);
-  signal bSyncRegPortOutFlat: std_logic_vector(33 downto 0);
-  signal mOffsetsDone: std_logic;
-  signal mOffsetsValid: std_logic;
-  signal mRpOffset: std_logic_vector(39 downto 0);
-  signal mSpOffset: std_logic_vector(39 downto 0);
   signal pPsDone: std_logic;
   signal pPsEn: std_logic;
   signal pPsInc: std_logic;
   signal PsClk: std_logic;
-  signal rEnablePpsCrossing: std_logic;
-  signal rEnableTdc: std_logic;
-  signal rLoadRePulseCounts: std_logic;
-  signal rLoadRpCounts: std_logic;
-  signal rLoadRptCounts: std_logic;
-  signal rPpsPulseCaptured: std_logic;
-  signal rRePulseHighTimeInRClks: std_logic_vector(23 downto 0);
-  signal rRePulsePeriodInRClks: std_logic_vector(23 downto 0);
-  signal rReRunEnable: std_logic;
-  signal rResetTdc: std_logic;
-  signal rResetTdcDone: std_logic;
-  signal rRpHighTimeInRClks: std_logic_vector(15 downto 0);
-  signal rRpPeriodInRClks: std_logic_vector(15 downto 0);
-  signal rRptHighTimeInRClks: std_logic_vector(15 downto 0);
-  signal rRptPeriodInRClks: std_logic_vector(15 downto 0);
   signal sAdc0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sAdc1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal SampleClk1xOutLcl: std_logic;
   signal sDac0DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sDac1DataFlat: STD_LOGIC_VECTOR(31 downto 0);
   signal sDacReadyForInputAsyncReset: STD_LOGIC;
-  signal sLoadSpCounts: std_logic;
-  signal sLoadSptCounts: std_logic;
-  signal sPpsClkCrossDelayVal: std_logic_vector(3 downto 0);
-  signal sPpsPulseAsyncReset: std_logic;
-  signal sSpHighTimeInSClks: std_logic_vector(15 downto 0);
-  signal sSpPeriodInSClks: std_logic_vector(15 downto 0);
-  signal sSptHighTimeInSClks: std_logic_vector(15 downto 0);
-  signal sSptPeriodInSClks: std_logic_vector(15 downto 0);
+  signal sRegPps: std_logic;
   signal sSysRefAsyncReset: STD_LOGIC;
+  signal sWrPps: std_logic;
   --vhook_sigend
 
-  signal bJesdRegPortInGrp, bSyncRegPortInGrp, bRegPortIn : RegPortIn_t;
-  signal bJesdRegPortOut, bSyncRegPortOut, bRegPortOut : RegPortOut_t;
+  signal bJesdRegPortInGrp, bSyncRegPortIn, bWrSyncRegPortIn, bRegPortIn : RegPortIn_t;
+  signal bJesdRegPortOut, bSyncRegPortOut, bWrSyncRegPortOut, bRegPortOut : RegPortOut_t;
 
-  signal rPpsPulseAsyncReset_ms, rPpsPulseAsyncReset,
-         sPpsPulse_ms,           sPpsPulse,
-         sDacReadyForInput_ms,   sDacReadyForInputLcl,
+  signal sDacReadyForInput_ms,   sDacReadyForInputLcl,
          sDacSync_ms,            sDacSyncLcl,
          sAdcSync_ms,            sAdcSyncLcl,
          sSysRef_ms,             sSysRefLcl    : std_logic := '0';
@@ -310,11 +256,11 @@ architecture RTL of DbCore is
   signal sAdc0Data, sAdc1Data : AdcData_t;
   signal sDac0Data, sDac1Data : DacData_t;
 
+  signal sPpsSfpSel_ms, sPpsSfpSel : std_logic_vector(1 downto 0) := (others => '0');
+  signal sUseWrTdcPps : boolean := false;
+  signal sPpsInt, sPpsMuxed : std_logic := '0';
+
   attribute ASYNC_REG : string;
-  attribute ASYNC_REG of rPpsPulseAsyncReset_ms : signal is "true";
-  attribute ASYNC_REG of rPpsPulseAsyncReset    : signal is "true";
-  attribute ASYNC_REG of sPpsPulse_ms : signal is "true";
-  attribute ASYNC_REG of sPpsPulse    : signal is "true";
   attribute ASYNC_REG of sDacReadyForInput_ms : signal is "true";
   attribute ASYNC_REG of sDacReadyForInputLcl : signal is "true";
   attribute ASYNC_REG of sDacSync_ms : signal is "true";
@@ -323,6 +269,8 @@ architecture RTL of DbCore is
   attribute ASYNC_REG of sAdcSyncLcl : signal is "true";
   attribute ASYNC_REG of sSysRef_ms  : signal is "true";
   attribute ASYNC_REG of sSysRefLcl  : signal is "true";
+  attribute ASYNC_REG of sPpsSfpSel_ms  : signal is "true";
+  attribute ASYNC_REG of sPpsSfpSel     : signal is "true";
 
 begin
 
@@ -332,7 +280,8 @@ begin
 
   -- Combine return RegPorts.
   bRegPortOut <=   bJesdRegPortOut
-                 + bClockingRegPortOut + bSyncRegPortOut
+                 + bClockingRegPortOut
+                 + bSyncRegPortOut + bWrSyncRegPortOut
                  + bDbRegPortOut;
 
 
@@ -498,140 +447,97 @@ begin
   -- Timing and Sync : ------------------------------------------------------------------
   -- ------------------------------------------------------------------------------------
 
-  -- Cross the PPS from the no-reset domain into the aTdcReset domain since there is a
-  -- reset crossing going into the TdcWrapper (reset by aTdcReset)! No clock domain
-  -- crossing here, so crossing a single-cycle pulse is safe.
-  DoubleSyncToAsyncReset : process (aTdcReset, RefClk)
-  begin
-    if to_boolean(aTdcReset) then
-      rPpsPulseAsyncReset_ms <= '0';
-      rPpsPulseAsyncReset    <= '0';
-    elsif rising_edge(RefClk) then
-      rPpsPulseAsyncReset_ms <= rPpsPulse;
-      rPpsPulseAsyncReset    <= rPpsPulseAsyncReset_ms;
-    end if;
-  end process;
-
-  -- In a similar fashion, cross the output PPS trigger from the async aTdcReset domain
-  -- to the no-reset of the rest of the design. The odds of this signal triggering a
-  -- failure are astronomically low (since it only pulses one clock cycle per second),
-  -- but two flops is worth the assurance it won't mess something else up downstream.
-  -- Note this double-sync mainly protects against the reset assertion case, since in the
-  -- de-assertion case sPpsPulseAsyncReset should be zero and not transition for a long
-  -- time afterwards. Again no clock crossing here, so crossing a single-cycle pulse
-  -- is safe.
-  DoubleSyncToNoReset : process (SampleClk1xOutLcl)
-  begin
-    if rising_edge(SampleClk1xOutLcl) then
-      sPpsPulse_ms <= sPpsPulseAsyncReset;
-      sPpsPulse    <= sPpsPulse_ms;
-    end if;
-  end process;
-  -- Local to output.
-  sPps <= sPpsPulse;
+  bSyncRegPortIn <= Mask(RegPortIn       => bRegPortIn,
+                         kRegisterOffset => kTdc0OffsetsInEndpoint); -- 0x0200
 
   --vhook_e TdcWrapper
-  --vhook_a aReset    aTdcReset
   --vhook_# Use the local copy of the SampleClock, since we want the TDC to measure the
   --vhook_# clock offset for this daughterboard, not the global SampleClock.
   --vhook_a SampleClk SampleClk1xOutLcl
-  --vhook_a rPpsPulse rPpsPulseAsyncReset
-  --vhook_a sPpsPulse sPpsPulseAsyncReset
-  --vhook_a sGatedPulseToPin sGatedPulseToPin
-  --vhook_a {^s(.*)}  s$1
+  --vhook_a sPpsPulse sRegPps
   TdcWrapperx: entity work.TdcWrapper (struct)
     port map (
-      aReset                  => aTdcReset,                --in  std_logic
-      RefClk                  => RefClk,                   --in  std_logic
-      SampleClk               => SampleClk1xOutLcl,        --in  std_logic
-      MeasClk                 => MeasClk,                  --in  std_logic
-      rResetTdc               => rResetTdc,                --in  std_logic
-      rResetTdcDone           => rResetTdcDone,            --out std_logic
-      rEnableTdc              => rEnableTdc,               --in  std_logic
-      rReRunEnable            => rReRunEnable,             --in  std_logic
-      rPpsPulse               => rPpsPulseAsyncReset,      --in  std_logic
-      rPpsPulseCaptured       => rPpsPulseCaptured,        --out std_logic
-      rEnablePpsCrossing      => rEnablePpsCrossing,       --in  std_logic
-      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,     --in  std_logic_vector(3:0)
-      sPpsPulse               => sPpsPulseAsyncReset,      --out std_logic
-      mRpOffset               => mRpOffset,                --out std_logic_vector(39:0)
-      mSpOffset               => mSpOffset,                --out std_logic_vector(39:0)
-      mOffsetsDone            => mOffsetsDone,             --out std_logic
-      mOffsetsValid           => mOffsetsValid,            --out std_logic
-      rLoadRePulseCounts      => rLoadRePulseCounts,       --in  std_logic
-      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,    --in  std_logic_vector(23:0)
-      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,  --in  std_logic_vector(23:0)
-      rLoadRpCounts           => rLoadRpCounts,            --in  std_logic
-      rRpPeriodInRClks        => rRpPeriodInRClks,         --in  std_logic_vector(15:0)
-      rRpHighTimeInRClks      => rRpHighTimeInRClks,       --in  std_logic_vector(15:0)
-      rLoadRptCounts          => rLoadRptCounts,           --in  std_logic
-      rRptPeriodInRClks       => rRptPeriodInRClks,        --in  std_logic_vector(15:0)
-      rRptHighTimeInRClks     => rRptHighTimeInRClks,      --in  std_logic_vector(15:0)
-      sLoadSpCounts           => sLoadSpCounts,            --in  std_logic
-      sSpPeriodInSClks        => sSpPeriodInSClks,         --in  std_logic_vector(15:0)
-      sSpHighTimeInSClks      => sSpHighTimeInSClks,       --in  std_logic_vector(15:0)
-      sLoadSptCounts          => sLoadSptCounts,           --in  std_logic
-      sSptPeriodInSClks       => sSptPeriodInSClks,        --in  std_logic_vector(15:0)
-      sSptHighTimeInSClks     => sSptHighTimeInSClks,      --in  std_logic_vector(15:0)
-      rRpTransfer             => rRpTransfer,              --out std_logic
-      sSpTransfer             => sSpTransfer,              --out std_logic
-      rGatedPulseToPin        => rGatedPulseToPin,         --inout std_logic
-      sGatedPulseToPin        => sGatedPulseToPin);        --inout std_logic
+      BusClk           => BusClk,             --in  std_logic
+      bBusReset        => bBusReset,          --in  std_logic
+      RefClk           => RefClk,             --in  std_logic
+      SampleClk        => SampleClk1xOutLcl,  --in  std_logic
+      MeasClk          => MeasClk,            --in  std_logic
+      bSyncRegPortOut  => bSyncRegPortOut,    --out RegPortOut_t
+      bSyncRegPortIn   => bSyncRegPortIn,     --in  RegPortIn_t
+      rPpsPulse        => rPpsPulse,          --in  std_logic
+      sPpsPulse        => sRegPps,            --out std_logic
+      rRpTransfer      => rRpTransfer,        --out std_logic
+      sSpTransfer      => sSpTransfer,        --out std_logic
+      rGatedPulseToPin => rGatedPulseToPin,   --inout std_logic
+      sGatedPulseToPin => sGatedPulseToPin);  --inout std_logic
 
+  WrTdcGen: if kInclWhiteRabbitTdc = '1' generate
+    bWrSyncRegPortIn <= Mask(RegPortIn       => bRegPortIn,
+                             kRegisterOffset => kTdc1OffsetsInEndpoint); -- 0x0400
 
-  bSyncRegPortInGrp <= Mask(RegPortIn       => bRegPortIn,
-                            kRegisterOffset => kSyncOffsetsInEndpoint); -- 0x0200
+    --vhook_e TdcWrapper WrTdcWrapperx
+    --vhook_# Use the local copy of the SampleClock, since we want the TDC to measure the
+    --vhook_# clock offset for this daughterboard, not the global SampleClock.
+    --vhook_a bSyncRegPortIn  bWrSyncRegPortIn
+    --vhook_a bSyncRegPortOut bWrSyncRegPortOut
+    --vhook_a SampleClk SampleClk1xOutLcl
+    --vhook_a RefClk WrRefClk
+    --vhook_a rPpsPulse rWrPpsPulse
+    --vhook_a sPpsPulse sWrPps
+    --vhook_a rRpTransfer rWrRpTransfer
+    --vhook_a sSpTransfer sWrSpTransfer
+    --vhook_a rGatedPulseToPin rWrGatedPulseToPin
+    --vhook_a sGatedPulseToPin sWrGatedPulseToPin
+    WrTdcWrapperx: entity work.TdcWrapper (struct)
+      port map (
+        BusClk           => BusClk,              --in  std_logic
+        bBusReset        => bBusReset,           --in  std_logic
+        RefClk           => WrRefClk,            --in  std_logic
+        SampleClk        => SampleClk1xOutLcl,   --in  std_logic
+        MeasClk          => MeasClk,             --in  std_logic
+        bSyncRegPortOut  => bWrSyncRegPortOut,   --out RegPortOut_t
+        bSyncRegPortIn   => bWrSyncRegPortIn,    --in  RegPortIn_t
+        rPpsPulse        => rWrPpsPulse,         --in  std_logic
+        sPpsPulse        => sWrPps,              --out std_logic
+        rRpTransfer      => rWrRpTransfer,       --out std_logic
+        sSpTransfer      => sWrSpTransfer,       --out std_logic
+        rGatedPulseToPin => rWrGatedPulseToPin,  --inout std_logic
+        sGatedPulseToPin => sWrGatedPulseToPin); --inout std_logic
+  end generate WrTdcGen;
 
-  -- Expand/compress the RegPort for moving through the netlist boundary.
-  bSyncRegPortOut <= Unflatten(bSyncRegPortOutFlat);
-  bSyncRegPortInFlat <= Flatten(bSyncRegPortInGrp);
+  WrTdcNotGen: if kInclWhiteRabbitTdc = '0' generate
+    bWrSyncRegPortOut <= kRegPortOutZero;
+    sWrPps <= '0';
+    rWrRpTransfer <= '0';
+    sWrSpTransfer <= '0';
+    rWrGatedPulseToPin <= '0';
+    sWrGatedPulseToPin <= '0';
+  end generate WrTdcNotGen;
 
-  --vhook   SyncRegsIfc
-  --vhook_# Tying this low is safe because the sync reset is used inside SyncRegsIfc.
-  --vhook_a aBusReset '0'
-  --vhook_a bRegPortInFlat  bSyncRegPortInFlat
-  --vhook_a bRegPortOutFlat bSyncRegPortOutFlat
-  --vhook_a SampleClk SampleClk1xOutLcl
-  --vhook_a {^s(.*)}  s$1
-  SyncRegsIfcx: SyncRegsIfc
-    port map (
-      aBusReset               => '0',                      --in  std_logic
-      bBusReset               => bBusReset,                --in  std_logic
-      BusClk                  => BusClk,                   --in  std_logic
-      aTdcReset               => aTdcReset,                --out std_logic
-      bRegPortInFlat          => bSyncRegPortInFlat,       --in  std_logic_vector(49:0)
-      bRegPortOutFlat         => bSyncRegPortOutFlat,      --out std_logic_vector(33:0)
-      RefClk                  => RefClk,                   --in  std_logic
-      rResetTdc               => rResetTdc,                --out std_logic
-      rResetTdcDone           => rResetTdcDone,            --in  std_logic
-      rEnableTdc              => rEnableTdc,               --out std_logic
-      rReRunEnable            => rReRunEnable,             --out std_logic
-      rEnablePpsCrossing      => rEnablePpsCrossing,       --out std_logic
-      rPpsPulseCaptured       => rPpsPulseCaptured,        --in  std_logic
-      SampleClk               => SampleClk1xOutLcl,        --in  std_logic
-      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,     --out std_logic_vector(3:0)
-      MeasClk                 => MeasClk,                  --in  std_logic
-      mRpOffset               => mRpOffset,                --in  std_logic_vector(39:0)
-      mSpOffset               => mSpOffset,                --in  std_logic_vector(39:0)
-      mOffsetsDone            => mOffsetsDone,             --in  std_logic
-      mOffsetsValid           => mOffsetsValid,            --in  std_logic
-      rLoadRePulseCounts      => rLoadRePulseCounts,       --out std_logic
-      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,    --out std_logic_vector(23:0)
-      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,  --out std_logic_vector(23:0)
-      rLoadRpCounts           => rLoadRpCounts,            --out std_logic
-      rRpPeriodInRClks        => rRpPeriodInRClks,         --out std_logic_vector(15:0)
-      rRpHighTimeInRClks      => rRpHighTimeInRClks,       --out std_logic_vector(15:0)
-      rLoadRptCounts          => rLoadRptCounts,           --out std_logic
-      rRptPeriodInRClks       => rRptPeriodInRClks,        --out std_logic_vector(15:0)
-      rRptHighTimeInRClks     => rRptHighTimeInRClks,      --out std_logic_vector(15:0)
-      sLoadSpCounts           => sLoadSpCounts,            --out std_logic
-      sSpPeriodInSClks        => sSpPeriodInSClks,         --out std_logic_vector(15:0)
-      sSpHighTimeInSClks      => sSpHighTimeInSClks,       --out std_logic_vector(15:0)
-      sLoadSptCounts          => sLoadSptCounts,           --out std_logic
-      sSptPeriodInSClks       => sSptPeriodInSClks,        --out std_logic_vector(15:0)
-      sSptHighTimeInSClks     => sSptHighTimeInSClks);     --out std_logic_vector(15:0)
+  -- Mux the output PPS based on the SFP selection bits. Encoding is one-hot, with zero
+  -- also a valid state. Regardless of whether the user selects SFP0 or SFP1 as the time
+  -- source, there is only one White Rabbit TDC, so '01' and '10' are equivalent.
+  -- '00': Use the PPS output from the "regular" TDC.
+  -- '01': Use the PPS output from the "white rabbit" TDC.
+  -- '10': Use the PPS output from the "white rabbit" TDC.
+  PpsOutputMux : process (SampleClk1xOutLcl)
+  begin
+    if rising_edge(SampleClk1xOutLcl) then
+      -- Double-sync the control bits to the Sample Clock domain.
+      sPpsSfpSel_ms <= aPpsSfpSel;
+      sPpsSfpSel    <= sPpsSfpSel_ms;
 
+      -- OR the control bits together to produce a single override enable for the WR TDC.
+      sUseWrTdcPps <= to_boolean(sPpsSfpSel(0) or sPpsSfpSel(1));
 
+      -- Flop the outputs. One flop for the PPS output IOB, the other for use internally.
+      sPpsInt <= sPpsMuxed;
+    end if;
+  end process PpsOutputMux;
+
+  sPpsMuxed <= sWrPps when sUseWrTdcPps else sRegPps;
+  sPps      <= sPpsInt;
+  sPpsToIob <= sPpsMuxed; -- No added flop here since there's an IOB outside this module.
 
   -- Daughterboard Control : ------------------------------------------------------------
   -- ------------------------------------------------------------------------------------

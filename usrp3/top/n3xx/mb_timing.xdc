@@ -96,6 +96,35 @@ set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 2.111}] [get_ports 
 
 
 #*******************************************************************************
+## White Rabbit DAC
+# Constrain the DIN and NSYNC bits around the clock output. No readback.
+
+set WR_OUT_CLK [get_ports {WB_DAC_SCLK}]
+create_generated_clock -name wr_bus_clk \
+  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $WR_OUT_CLK]/C] \
+  -divide_by 2 $WR_OUT_CLK
+
+set MAX_SKEW 5
+set SETUP_SKEW [expr {($MAX_SKEW / 2)-0.5}]
+set HOLD_SKEW  [expr {($MAX_SKEW / 2)+0.5}]
+set PORT_LIST [get_ports {WB_DAC_DIN WB_DAC_NCLR WB_DAC_NSYNC WB_DAC_NLDAC}]
+# Then add the output delay on each of the ports.
+set_output_delay                        -clock [get_clocks wr_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+set_output_delay -add_delay -clock_fall -clock [get_clocks wr_bus_clk] -max -$SETUP_SKEW $PORT_LIST
+set_output_delay                        -clock [get_clocks wr_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
+set_output_delay -add_delay -clock_fall -clock [get_clocks wr_bus_clk] -min  $HOLD_SKEW  $PORT_LIST
+# Finally, make both the setup and hold checks use the same launching and latching edges.
+set_multicycle_path -setup -to [get_clocks wr_bus_clk] -start 0
+set_multicycle_path -hold  -to [get_clocks wr_bus_clk] -1
+# Remove analysis from the output "clock" pin. There are ways to do this using TCL, but
+# they aren't supported in XDC files... so we do it the old fashioned way.
+set_output_delay -clock [get_clocks async_out_clk] 0.000 $WR_OUT_CLK
+set_max_delay -to $WR_OUT_CLK 50.000
+set_min_delay -to $WR_OUT_CLK 0.000
+
+
+
+#*******************************************************************************
 ## MB Async Ins/Outs
 
 set ASYNC_MB_INPUTS [get_ports {SFP_*_LOS SFP_*_TXFAULT UNUSED_PIN_TDC*}]
@@ -105,12 +134,8 @@ set_max_delay -from $ASYNC_MB_INPUTS 50.000
 set_min_delay -from $ASYNC_MB_INPUTS 0.000
 
 
-# REF_1PPS_OUT is included in this list because timing is not currently analyzed on this
-# output circuit. It would be possible to analyze the board trace delays and compute the
-# data valid window on the output compared to the reference clock input... but that
-# is #FutureWork for another day.
 set ASYNC_MB_OUTPUTS [get_ports {*LED* SFP_*TXDISABLE UNUSED_PIN_TDC* \
-                               FPGA_TEST[*] REF_1PPS_OUT}]
+                               FPGA_TEST[*]}]
 
 set_output_delay -clock [get_clocks async_out_clk] 0.000 $ASYNC_MB_OUTPUTS
 set_max_delay -to $ASYNC_MB_OUTPUTS 50.000

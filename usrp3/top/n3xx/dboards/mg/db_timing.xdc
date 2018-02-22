@@ -331,3 +331,18 @@ set_input_delay -clock fpga_clk_a_v -max  0.646 [get_ports DBA_FPGA_SYSREF_*]
 
 set_input_delay -clock fpga_clk_b_v -min -0.906 [get_ports DBB_FPGA_SYSREF_*]
 set_input_delay -clock fpga_clk_b_v -max  0.646 [get_ports DBB_FPGA_SYSREF_*]
+
+
+
+#*******************************************************************************
+## PPS Timing
+
+# Due to the N3xx synchronization and clocking structure, the PPS output is driven from
+# the Sample Clock domain instead of the input Reference Clock. Constrain the output as
+# tightly as possible to accurately mimic the internal Sample Clock timing.
+set SETUP_SKEW  2.0
+set HOLD_SKEW  -0.5
+set_output_delay -clock [get_clocks fpga_clk_a_v] -max -$SETUP_SKEW [get_ports REF_1PPS_OUT]
+set_output_delay -clock [get_clocks fpga_clk_a_v] -min  $HOLD_SKEW  [get_ports REF_1PPS_OUT]
+set_multicycle_path -setup -to [get_ports REF_1PPS_OUT] -start 0
+set_multicycle_path -hold  -to [get_ports REF_1PPS_OUT] -1

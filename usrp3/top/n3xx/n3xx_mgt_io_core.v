@@ -68,6 +68,7 @@ module n3xx_mgt_io_core #(
   output                  qpllreset,
   output                  gt_pll_lock,
   output                  gt_tx_out_clk_unbuf,
+
   // Misc
   output [31:0]           port_info,
   output                  link_up,
@@ -639,6 +640,8 @@ module n3xx_mgt_io_core #(
   //-----------------------------------------------------------------
   // Activity detector
   //-----------------------------------------------------------------
+
+  wire activity_int;
 
   pulse_stretch act_pulse_str_i (
     .clk(bus_clk),

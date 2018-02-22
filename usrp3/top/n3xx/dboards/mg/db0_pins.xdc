@@ -11,6 +11,8 @@
 
 set_property PACKAGE_PIN   AB15             [get_ports {UNUSED_PIN_TDCA_0}]
 set_property PACKAGE_PIN   AB14             [get_ports {UNUSED_PIN_TDCA_1}]
+set_property PACKAGE_PIN   AB16             [get_ports {UNUSED_PIN_TDCA_2}]
+set_property PACKAGE_PIN   AB17             [get_ports {UNUSED_PIN_TDCA_3}]
 set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCA_*}]
 set_property IOB           TRUE             [get_ports {UNUSED_PIN_TDCA_*}]
 

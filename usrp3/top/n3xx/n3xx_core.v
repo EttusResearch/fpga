@@ -35,6 +35,7 @@ module n3xx_core #(
   input            pps,
   output reg[3:0]  pps_select = 4'h1,
   output reg       pps_out_enb,
+  output reg[1:0]  pps_select_sfp = 2'b0,
   output reg       ref_clk_reset,
   output reg       meas_clk_reset,
   input            ref_clk_locked,
@@ -325,6 +326,7 @@ module n3xx_core #(
       fp_gpio_master_reg <= 32'h0;
       fp_gpio_src_reg <= 32'h0;
       pps_select     <= 4'h1;
+      pps_select_sfp <= 2'h1;
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
@@ -342,6 +344,7 @@ module n3xx_core #(
         REG_CLOCK_CTRL: begin
           pps_select     <= reg_wr_data[3:0];
           pps_out_enb    <= reg_wr_data[4];
+          pps_select_sfp <= reg_wr_data[6:5];
           ref_clk_reset  <= reg_wr_data[8];
           meas_clk_reset <= reg_wr_data[12];
         end
@@ -398,6 +401,7 @@ module n3xx_core #(
           reg_rd_data_glob <= 32'b0;
           reg_rd_data_glob[3:0] <= pps_select;
           reg_rd_data_glob[4]   <= pps_out_enb;
+          reg_rd_data_glob[6:5] <= pps_select_sfp;
           reg_rd_data_glob[8]   <= ref_clk_reset;
           reg_rd_data_glob[9]   <= b_ref_clk_locked;
           reg_rd_data_glob[12]  <= meas_clk_reset;

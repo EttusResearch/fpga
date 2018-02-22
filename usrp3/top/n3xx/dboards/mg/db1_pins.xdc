@@ -11,6 +11,8 @@
 
 set_property PACKAGE_PIN   W21              [get_ports {UNUSED_PIN_TDCB_0}]
 set_property PACKAGE_PIN   Y21              [get_ports {UNUSED_PIN_TDCB_1}]
+set_property PACKAGE_PIN   Y22              [get_ports {UNUSED_PIN_TDCB_2}]
+set_property PACKAGE_PIN   Y23              [get_ports {UNUSED_PIN_TDCB_3}]
 set_property IOSTANDARD    LVCMOS25         [get_ports {UNUSED_PIN_TDCB_*}]
 set_property IOB           TRUE             [get_ports {UNUSED_PIN_TDCB_*}]
 

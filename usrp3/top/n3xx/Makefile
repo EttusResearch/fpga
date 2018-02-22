@@ -22,6 +22,7 @@
 # Uncomment this line to add four example Aurora loopback lanes on the QSFP NPIO bus.
 # OPTIONS += QSFP_LANES=4
 
+WX_DEFS=SFP0_WR=1     SFP1_10GBE=1  BUILD_WR=1     BUILD_10G=1    $(OPTIONS)
 HG_DEFS=SFP0_1GBE=1   SFP1_10GBE=1  BUILD_1G=1     BUILD_10G=1    $(OPTIONS)
 XG_DEFS=SFP0_10GBE=1  SFP1_10GBE=1  BUILD_10G=1                   $(OPTIONS)
 HA_DEFS=SFP0_1GBE=1   SFP1_AURORA=1 BUILD_1G=1     BUILD_AURORA=1 $(OPTIONS)
@@ -54,6 +55,11 @@ post_build = @\
 
 all:      N300_HG N300_XG N310_HG N310_XG ##(Default target)
 
+##N310_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1.
+N310_WX:  build/usrp_n310_fpga_WX.dts
+	$(call vivado_build,N310,$(WX_DEFS) N310=1)
+	$(call post_build,N310,WX)
+
 ##N310_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N310_HG:  build/usrp_n310_fpga_HG.dts
 	$(call vivado_build,N310,$(HG_DEFS) N310=1)
@@ -78,6 +84,11 @@ N310_XA: build/usrp_n310_fpga_XA.dts
 N310_AA: build/usrp_n310_fpga_AA.dts
 	$(call vivado_build,N310,$(AA_DEFS) N310=1)
 	$(call post_build,N310,AA)
+
+##N300_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1.
+N300_WX:  build/usrp_n300_fpga_WX.dts
+	$(call vivado_build,N300,$(WX_DEFS) N300=1)
+	$(call post_build,N300,WX)
 
 ##N300_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N300_HG:  build/usrp_n300_fpga_HG.dts
