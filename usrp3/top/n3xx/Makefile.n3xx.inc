@@ -72,14 +72,6 @@ ifdef BUILD_AURORA
 MB_XDC += $(abspath n310_aurora.xdc)
 endif
 
-ifdef SFP0_10GBE
-MB_XDC += $(abspath n310_10ge_port0.xdc)
-endif
-
-ifdef SFP1_10GBE
-MB_XDC += $(abspath n310_10ge_port1.xdc)
-endif
-
 ifndef NO_DRAM_FIFOS
 DRAM_SRCS = $(IP_DRAM_XCI_SRCS) $(abspath n310_dram.xdc)
 else
