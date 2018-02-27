@@ -1,16 +1,12 @@
 ///////////////////////////////////////////////////////////////////
 //
-// Copyright 2016-2017 Ettus Research
+// Copyright 2016-2018 Ettus Research
 //
 // N3xx TOP
 //
-// Rev D Brimstone MB
-//
-// Rev C Magnesium DB
-//
 //////////////////////////////////////////////////////////////////////
 
-module n310
+module n3xx
 (
    inout [11:0] FPGA_GPIO,
 
@@ -254,11 +250,11 @@ module n310
    input  [3:0]  USRPIO_A_RX_P,
    input  [3:0]  USRPIO_A_RX_N,
    output [3:0]  USRPIO_A_TX_P,
-   output [3:0]  USRPIO_A_TX_N,
+   output [3:0]  USRPIO_A_TX_N
 
-
+ `ifndef N300
    //USRP IO B
-   output        DBB_CPLD_PS_SPI_SCLK,
+   ,output        DBB_CPLD_PS_SPI_SCLK,
    output        DBB_CPLD_PS_SPI_LE,
    output        DBB_CPLD_PS_SPI_SDI,
    input         DBB_CPLD_PS_SPI_SDO,
@@ -315,9 +311,7 @@ module n310
    input  [3:0]  USRPIO_B_RX_N,
    output [3:0]  USRPIO_B_TX_P,
    output [3:0]  USRPIO_B_TX_N
-
-
-
+ `endif
 
 );
 
@@ -326,6 +320,16 @@ module n310
   localparam REG_DWIDTH = 32;
   localparam FP_GPIO_OFFSET = 32;
   localparam FP_GPIO_WIDTH = 12;
+
+`ifdef N310
+  localparam NUM_RADIOS = 4;
+  localparam NUM_CHANNELS_PER_RADIO = 1;
+`elsif N300
+  localparam NUM_RADIOS = 2;
+  localparam NUM_CHANNELS_PER_RADIO = 1;
+`endif
+  localparam NUM_CHANNELS = NUM_RADIOS * NUM_CHANNELS_PER_RADIO;
+
   // Internal connections to PS
   // HP0 -- High Performance port 0, FPGA is the master
   wire [5:0]  S_AXI_HP0_AWID;
@@ -2000,7 +2004,11 @@ module n310
   wire [63:0] ps_gpio_tri;
 
   assign ps_gpio_in[10] = DBA_MYK_INTRQ;
+`ifndef N300
   assign ps_gpio_in[11] = DBB_MYK_INTRQ;
+`else
+  assign ps_gpio_in[11] = 1'b0;
+`endif
 
   // Processing System
   n310_ps_bd inst_n310_ps
@@ -2020,6 +2028,7 @@ module n310
     .SPI0_SS2_O(spi0_ss2),
     .SPI0_SS_T(),
 
+  `ifndef N300
     .SPI1_SCLK_I(1'b0),
     .SPI1_SCLK_O(spi1_sclk),
     .SPI1_SCLK_T(),
@@ -2034,6 +2043,22 @@ module n310
     .SPI1_SS1_O(spi1_ss1),
     .SPI1_SS2_O(spi1_ss2),
     .SPI1_SS_T(),
+  `else
+    .SPI1_SCLK_I(1'b0),
+    .SPI1_SCLK_O(),
+    .SPI1_SCLK_T(),
+    .SPI1_MOSI_I(1'b0),
+    .SPI1_MOSI_O(),
+    .SPI1_MOSI_T(),
+    .SPI1_MISO_I(1'b0),
+    .SPI1_MISO_O(),
+    .SPI1_MISO_T(),
+    .SPI1_SS_I(1'b1),
+    .SPI1_SS_O(),
+    .SPI1_SS1_O(),
+    .SPI1_SS2_O(),
+    .SPI1_SS_T(),
+  `endif
 
     .bus_clk(bus_clk),
     .bus_rstn(~bus_rst),
@@ -2393,10 +2418,17 @@ module n310
     .JTAG0_TDI(DBA_CPLD_JTAG_TDI),
     .JTAG0_TDO(DBA_CPLD_JTAG_TDO),
 
+  `ifndef N300
     .JTAG1_TCK(DBB_CPLD_JTAG_TCK),
     .JTAG1_TMS(DBB_CPLD_JTAG_TMS),
     .JTAG1_TDI(DBB_CPLD_JTAG_TDI),
     .JTAG1_TDO(DBB_CPLD_JTAG_TDO),
+  `else
+    .JTAG1_TCK(),
+    .JTAG1_TMS(),
+    .JTAG1_TDI(),
+    .JTAG1_TDO('b0),
+  `endif
 
     .FCLK_CLK0(FCLK_CLK0),
     .FCLK_RESET0_N(FCLK_RESET0_N),
@@ -2600,15 +2632,15 @@ module n310
   // DB PS SPI Connections
   //
   ///////////////////////////////////////////////////////
-  wire [3:0] rx_atr;
-  wire [3:0] tx_atr;
-  (* IOB = "true" *) reg  [3:0] rx_atr_reg;
-  (* IOB = "true" *) reg  [3:0] tx_atr_reg;
+  wire [NUM_CHANNELS-1:0] rx_atr;
+  wire [NUM_CHANNELS-1:0] tx_atr;
+  (* IOB = "true" *) reg  [NUM_CHANNELS-1:0] rx_atr_reg;
+  (* IOB = "true" *) reg  [NUM_CHANNELS-1:0] tx_atr_reg;
 
-  wire [15:0] db_gpio_out[0:3];
-  wire [15:0] db_gpio_in[0:3];
-  wire [15:0] db_gpio_ddr[0:3];
-  wire [15:0] db_gpio_fab[0:3];
+  wire [15:0] db_gpio_out[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_in[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_ddr[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_fab[0:NUM_CHANNELS-1];
 
   // DB A SPI Connections
   wire cpld_a_cs_n;
@@ -2672,7 +2704,7 @@ module n310
   assign DBA_MYK_GPIO_14 = 1'b0;
   assign DBA_MYK_GPIO_15 = 1'b0;
 
-
+`ifndef N300
 
   // DB B SPI Connections
   wire cpld_b_cs_n;
@@ -2737,25 +2769,26 @@ module n310
   assign DBB_MYK_GPIO_14 = 1'b0;
   assign DBB_MYK_GPIO_15 = 1'b0;
 
-
-
+`endif
 
   ///////////////////////////////////////////////////////
   //
-  // N310 CORE
+  // N3xx CORE
   //
   ///////////////////////////////////////////////////////
 
   wire  [31:0]     rx0;
   wire  [31:0]     rx1;
-  wire  [31:0]     rx2;
-  wire  [31:0]     rx3;
   wire  [31:0]     tx0;
   wire  [31:0]     tx1;
+`ifndef N300
+  wire  [31:0]     rx2;
+  wire  [31:0]     rx3;
   wire  [31:0]     tx2;
   wire  [31:0]     tx3;
-  wire  [3:0]      rx_stb;
-  wire  [3:0]      tx_stb;
+`endif
+  wire  [NUM_CHANNELS-1:0]      rx_stb;
+  wire  [NUM_CHANNELS-1:0]      tx_stb;
   wire pps_radioclk1x;
   wire [31:0] build_datestamp;
 
@@ -2763,19 +2796,22 @@ module n310
     .DATA(build_datestamp), .CFGCLK(), .DATAVALID()
   );
 
-  n310_core #(
+  n3xx_core #(
     .REG_AWIDTH(14),
     .BUS_CLK_RATE(BUS_CLK_RATE),
-    .FP_GPIO_WIDTH(FP_GPIO_WIDTH))
-    n310_core(
-    //Clocks and resets
-`ifdef NO_DB
+    .FP_GPIO_WIDTH(FP_GPIO_WIDTH),
+    .NUM_RADIO_CORES(NUM_RADIOS),
+    .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
+    .NUM_CHANNELS(NUM_CHANNELS)
+  ) n3xx_core(
+    // Clocks and resets
+  `ifdef NO_DB
     .radio_clk(bus_clk),
     .radio_rst(bus_rst),
-`else
+  `else
     .radio_clk(radio_clk),
     .radio_rst(radio_rst),
-`endif
+  `endif
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .ddr3_dma_clk(ddr3_dma_clk),
@@ -2819,47 +2855,67 @@ module n310
     .ps_gpio_in(ps_gpio_in[FP_GPIO_WIDTH+FP_GPIO_OFFSET-1:FP_GPIO_OFFSET]),
     // FP_GPIO
     .fp_gpio_inout(FPGA_GPIO),
-    //radios atr
+    // Radio ATR
     .rx_atr(rx_atr),
     .tx_atr(tx_atr),
-    //radios gpio dsa
+    // Radio GPIO DSA
     .db_gpio_out0(db_gpio_out[0]),
     .db_gpio_out1(db_gpio_out[1]),
-    .db_gpio_out2(db_gpio_out[2]),
-    .db_gpio_out3(db_gpio_out[3]),
     .db_gpio_in0(db_gpio_in[0]),
     .db_gpio_in1(db_gpio_in[1]),
-    .db_gpio_in2(db_gpio_in[2]),
-    .db_gpio_in3(db_gpio_in[3]),
     .db_gpio_ddr0(db_gpio_ddr[0]),
     .db_gpio_ddr1(db_gpio_ddr[1]),
-    .db_gpio_ddr2(db_gpio_ddr[2]),
-    .db_gpio_ddr3(db_gpio_ddr[3]),
     .db_gpio_fab0(db_gpio_fab[0]),
     .db_gpio_fab1(db_gpio_fab[1]),
-    .db_gpio_fab2(db_gpio_fab[2]),
-    .db_gpio_fab3(db_gpio_fab[3]),
-    //radios data
+    // Radio Strobes
+    .rx_stb(rx_stb),
+    .tx_stb(tx_stb),
+    // Radio Data
     .rx0(rx0),
     .tx0(tx0),
     .rx1(rx1),
     .tx1(tx1),
-    .rx2(rx2),
-    .tx2(tx2),
-    .rx3(rx3),
-    .tx3(tx3),
-    .rx_stb(rx_stb),
-    .tx_stb(tx_stb),
-    //cpld rx_lo tx_lo  spi
+    // CPLD RX_LO TX_LO SPI
     .sclk0(DBA_CPLD_PL_SPI_SCLK),
     .sen0({DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
     .mosi0(DBA_CPLD_PL_SPI_SDI),
     .miso0(DBA_CPLD_PL_SPI_SDO),
+  `ifndef N300
+    .db_gpio_out2(db_gpio_out[2]),
+    .db_gpio_out3(db_gpio_out[3]),
+    .db_gpio_in2(db_gpio_in[2]),
+    .db_gpio_in3(db_gpio_in[3]),
+    .db_gpio_ddr2(db_gpio_ddr[2]),
+    .db_gpio_ddr3(db_gpio_ddr[3]),
+    .db_gpio_fab2(db_gpio_fab[2]),
+    .db_gpio_fab3(db_gpio_fab[3]),
+    .rx2(rx2),
+    .tx2(tx2),
+    .rx3(rx3),
+    .tx3(tx3),
     .sclk1(DBB_CPLD_PL_SPI_SCLK),
     .sen1({DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE}),
     .mosi1(DBB_CPLD_PL_SPI_SDI),
     .miso1(DBB_CPLD_PL_SPI_SDO),
-    // DRAM signals.
+  `else
+    .db_gpio_out2(),
+    .db_gpio_out3(),
+    .db_gpio_in2(16'b0),
+    .db_gpio_in3(16'b0),
+    .db_gpio_ddr2(),
+    .db_gpio_ddr3(),
+    .db_gpio_fab2(16'b0),
+    .db_gpio_fab3(16'b0),
+    .rx2(32'b0),
+    .tx2(),
+    .rx3(32'b0),
+    .tx3(),
+    .sclk1(),
+    .sen1(),
+    .mosi1(),
+    .miso1(1'b0),
+  `endif
+    // DRAM signals
     .ddr3_axi_clk              (ddr3_axi_clk),
     .ddr3_axi_rst              (ddr3_axi_rst),
     .ddr3_running              (ddr3_running),
@@ -2967,13 +3023,15 @@ module n310
   // //////////////////////////////////////////////////////////////////////
 
   wire [49:0] bRegPortInFlatA;
-  wire [49:0] bRegPortInFlatB;
   wire [33:0] bRegPortOutFlatA;
-  wire [33:0] bRegPortOutFlatB;
   wire rx_a_valid;
-  wire rx_b_valid;
   wire tx_a_rfi;
+`ifndef N300
+  wire [49:0] bRegPortInFlatB;
+  wire [33:0] bRegPortOutFlatB;
+  wire rx_b_valid;
   wire tx_b_rfi;
+`endif
 
   wire          reg_portA_rd;
   wire          reg_portA_wr;
@@ -3078,6 +3136,7 @@ module n310
     .reg_port_out_ready(reg_portA_ready)
   );
 
+`ifndef N300
   wire          reg_portB_rd;
   wire          reg_portB_wr;
   wire [14-1:0] reg_portB_addr;
@@ -3179,7 +3238,38 @@ module n310
     .reg_port_out_data (reg_portB_rd_data),
     .reg_port_out_ready(reg_portB_ready)
   );
+`else
+  // Tie off second daughterboard interface
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_dbb_core
+  (
+    // Clock and reset
+    .s_axi_aclk    (clk40),
+    .s_axi_areset  (clk40_rst),
+    // AXI4-Lite: Write address port (domain: s_axi_aclk)
+    .s_axi_awaddr(M_AXI_JESD1_AWADDR),
+    .s_axi_awvalid(M_AXI_JESD1_AWVALID),
+    .s_axi_awready(M_AXI_JESD1_AWREADY),
+    // AXI4-Lite: Write data port (domain: s_axi_aclk)
+    .s_axi_wdata(M_AXI_JESD1_WDATA),
+    .s_axi_wstrb(M_AXI_JESD1_WSTRB),
+    .s_axi_wvalid(M_AXI_JESD1_WVALID),
+    .s_axi_wready(M_AXI_JESD1_WREADY),
+    // AXI4-Lite: Write response port (domain: s_axi_aclk)
+    .s_axi_bresp(M_AXI_JESD1_BRESP),
+    .s_axi_bvalid(M_AXI_JESD1_BVALID),
+    .s_axi_bready(M_AXI_JESD1_BREADY),
+    // AXI4-Lite: Read address port (domain: s_axi_aclk)
+    .s_axi_araddr(M_AXI_JESD1_ARADDR),
+    .s_axi_arvalid(M_AXI_JESD1_ARVALID),
+    .s_axi_arready(M_AXI_JESD1_ARREADY),
+    // AXI4-Lite: Read data port (domain: s_axi_aclk)
+    .s_axi_rdata   (M_AXI_JESD1_RDATA),
+    .s_axi_rresp   (M_AXI_JESD1_RRESP),
+    .s_axi_rvalid  (M_AXI_JESD1_RVALID),
+    .s_axi_rready  (M_AXI_JESD1_RREADY)
+  );
 
+`endif
 
   // //////////////////////////////////////////////////////////////////////
   //

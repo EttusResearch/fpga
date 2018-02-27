@@ -5,7 +5,7 @@
 ##################################################
 # Project Setup
 ##################################################
-TOP_MODULE = n310
+TOP_MODULE = n3xx
 # NAME = <Input arg>
 # PART_ID = <Input arg>
 
@@ -45,7 +45,7 @@ include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
 # Sources
 ##################################################
 TOP_SRCS = \
-n310_core.v \
+n3xx_core.v \
 n3xx_sfp_wrapper.v \
 n3xx_mgt_io_core.v \
 n3xx_clocking.v \
@@ -61,7 +61,7 @@ mb_timing.xdc \
 mb_pins.xdc
 
 ifdef BUILD_10G
-MB_XDC += $(abspath n310_10ge.xdc) 
+MB_XDC += $(abspath n310_10ge.xdc)
 endif
 
 ifdef BUILD_1G
@@ -90,6 +90,12 @@ ifdef HLS
 HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
 else
 HLS_IP_GEN_SRCS =
+endif
+
+ifdef N300
+MAGNESIUM_DB_XDC = $(MAGNESIUM_DB0_XDC)
+else
+MAGNESIUM_DB_XDC = $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC)
 endif
 
 # The XDC files must be read in a specific order, motherboard first and then daughterboard.

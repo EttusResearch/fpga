@@ -17,9 +17,9 @@
 # Debug Options
 # Uncomment this line or add to make arg to omit radio_clk (sourced from db) and use bus_clk as radio_clk
 # OPTIONS += NO_DB=1
-# Uncomment this line to add two example Aurora loopback lanes on the general NPIO bus. 
+# Uncomment this line to add two example Aurora loopback lanes on the general NPIO bus.
 # OPTIONS += NPIO_LANES=2
-# Uncomment this line to add four example Aurora loopback lanes on the QSFP NPIO bus. 
+# Uncomment this line to add four example Aurora loopback lanes on the QSFP NPIO bus.
 # OPTIONS += QSFP_LANES=4
 
 HG_DEFS=SFP0_1GBE=1   SFP1_10GBE=1  BUILD_1G=1     BUILD_10G=1    $(OPTIONS)
@@ -35,6 +35,7 @@ vivado_build = make -f Makefile.n3xx.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream file..."; \
+	cp build-$(1)_$(2)/n300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
 	cp build-$(1)_$(2)/n310.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
 	echo "Exporting build report..."; \
 	cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
@@ -44,7 +45,7 @@ post_build = @\
 ##Supported Targets
 ##-----------------
 
-all:      N310_HG N310_XG ##(Default target)
+all:      N300_HG N300_XG N310_HG N310_XG ##(Default target)
 
 ##N310_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N310_HG:  build/usrp_n310_fpga_HG.dts
@@ -70,6 +71,31 @@ N310_XA: build/usrp_n310_fpga_XA.dts
 N310_AA: build/usrp_n310_fpga_AA.dts
 	$(call vivado_build,bin,N310,$(AA_DEFS) N310=1)
 	$(call post_build,N310,AA)
+
+##N300_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+N300_HG:  build/usrp_n300_fpga_HG.dts
+	$(call vivado_build,bin,N300,$(HG_DEFS) N300=1)
+	$(call post_build,N300,HG)
+
+##N300_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1.
+N300_XG: build/usrp_n300_fpga_XG.dts
+	$(call vivado_build,bin,N300,$(XG_DEFS) N300=1)
+	$(call post_build,N300,XG)
+
+##N300_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
+N300_HA: build/usrp_n300_fpga_HA.dts
+	$(call vivado_build,bin,N300,$(HA_DEFS) N300=1)
+	$(call post_build,N300,HA)
+
+##N300_XA:  10Gig on SFP+ Port0, Aurora on SFP+ Port1.
+N300_XA: build/usrp_n300_fpga_XA.dts
+	$(call vivado_build,bin,N300,$(XA_DEFS) N300=1)
+	$(call post_build,N300,XA)
+
+##N300_AA:  Aurora on SFP+ Port0, Aurora on SFP+ Port1.
+N300_AA: build/usrp_n300_fpga_AA.dts
+	$(call vivado_build,bin,N300,$(AA_DEFS) N300=1)
+	$(call post_build,N300,AA)
 
 build/%.dts: dts/%.dts dts/*.dtsi
 	-mkdir -p build

@@ -1,4 +1,4 @@
-// Copyright 2017 Ettus Research, A National Instruments Company
+// Copyright 2017-2018 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0
 //
@@ -12,10 +12,13 @@
 //
 /////////////////////////////////////////////////////////////////////
 
-module n310_core #(
+module n3xx_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 32,  // Width of the address bus
   parameter BUS_CLK_RATE = 200000000, // BUS_CLK rate
+  parameter NUM_RADIO_CORES = 4,
+  parameter NUM_CHANNELS_PER_RADIO = 1,
+  parameter NUM_CHANNELS = 4,
   parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
@@ -83,12 +86,12 @@ module n310_core #(
   input  [15:0] db_gpio_fab3,
 
   // Radio ATR
-  output [3:0] rx_atr,
-  output [3:0] tx_atr,
+  output [NUM_CHANNELS-1:0] rx_atr,
+  output [NUM_CHANNELS-1:0] tx_atr,
 
   // Radio Data
-  input  [3:0]  rx_stb,
-  input  [3:0]  tx_stb,
+  input  [NUM_CHANNELS-1:0]  rx_stb,
+  input  [NUM_CHANNELS-1:0]  tx_stb,
   input  [31:0] rx0,
   output [31:0] tx0,
   input  [31:0] rx1,
@@ -209,10 +212,6 @@ module n310_core #(
   localparam [15:0] COMPAT_MINOR = 16'd2;
   /////////////////////////////////////////////////////////////////////////////////
 
-  // Number of Channels per radio
-  localparam NUM_CHANNELS = 1;
-  // Number of Radio Cores Instantiated
-  localparam NUM_RADIO_CORES = 4;
   // Computation engines that need access to IO
   localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
 
@@ -821,35 +820,33 @@ module n310_core #(
   //------------------------------------
   // Radios
   //------------------------------------
-  wire [7:0]  sen[0:3];
-  wire        sclk[0:3], mosi[0:3], miso[0:3];
+  wire [7:0]  sen[0:NUM_CHANNELS-1];
+  wire        sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
   // Data
-  wire [31:0] rx[0:3], rx_data[0:3], tx[0:3], tx_data[0:3];
-  wire        db_fe_set_stb[0:3];
-  wire [7:0]  db_fe_set_addr[0:3];
-  wire [31:0] db_fe_set_data[0:3];
-  wire        db_fe_rb_stb[0:3];
-  wire [7:0]  db_fe_rb_addr[0:3];
-  wire [63:0] db_fe_rb_data[0:3];
-  wire        rx_running[0:3], tx_running[0:3];
+  wire [31:0] rx[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
+  wire        db_fe_set_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_set_addr[0:NUM_CHANNELS-1];
+  wire [31:0] db_fe_set_data[0:NUM_CHANNELS-1];
+  wire        db_fe_rb_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_rb_addr[0:NUM_CHANNELS-1];
+  wire [63:0] db_fe_rb_data[0:NUM_CHANNELS-1];
+  wire        rx_running[0:NUM_CHANNELS-1], tx_running[0:NUM_CHANNELS-1];
   wire [NUM_RADIO_CORES-1:0] sync_out;
 
-  assign rx_atr[0] = rx_running[0];
-  assign rx_atr[1] = rx_running[1];
-  assign rx_atr[2] = rx_running[2];
-  assign rx_atr[3] = rx_running[3];
-  assign tx_atr[0] = tx_running[0];
-  assign tx_atr[1] = tx_running[1];
-  assign tx_atr[2] = tx_running[2];
-  assign tx_atr[3] = tx_running[3];
-
   genvar i;
+  generate
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+      assign rx_atr[i] = rx_running[i];
+      assign tx_atr[i] = tx_running[i];
+    end
+  endgenerate
+
   generate
     for (i = FIRST_RADIO_CORE_INST; i < LAST_RADIO_CORE_INST; i = i + 1) begin
       noc_block_radio_core #(
         .NOC_ID(64'h12AD_1000_0000_0310),
-        .NUM_CHANNELS(NUM_CHANNELS),
-        .STR_SINK_FIFOSIZE({NUM_CHANNELS{RADIO_INPUT_BUFF_SIZE}}),
+        .NUM_CHANNELS(NUM_CHANNELS_PER_RADIO),
+        .STR_SINK_FIFOSIZE({NUM_CHANNELS_PER_RADIO{RADIO_INPUT_BUFF_SIZE}}),
         .MTU(RADIO_OUTPUT_BUFF_SIZE)
       ) noc_block_radio_core_i (
         // Clocks and reset
@@ -894,14 +891,14 @@ module n310_core #(
   // TX/RX FrontEnd
   /////////////////////////////////////////////////////////////////////////////////
 
-  wire [15:0] db_gpio_in[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
-  wire [15:0] db_gpio_out[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
-  wire [15:0] db_gpio_ddr[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
-  wire [15:0] db_gpio_fab[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [15:0] db_gpio_in[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_out[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_ddr[0:NUM_CHANNELS-1];
+  wire [15:0] db_gpio_fab[0:NUM_CHANNELS-1];
 
-  wire [31:0] radio_gpio_out[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
-  wire [31:0] radio_gpio_ddr[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
-  wire [31:0] radio_gpio_in[0:NUM_RADIO_CORES*NUM_CHANNELS-1];
+  wire [31:0] radio_gpio_out[0:NUM_CHANNELS-1];
+  wire [31:0] radio_gpio_ddr[0:NUM_CHANNELS-1];
+  wire [31:0] radio_gpio_in[0:NUM_CHANNELS-1];
   reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_out;
   reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_ddr;
   reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_in;
@@ -928,7 +925,7 @@ module n310_core #(
   assign {db_gpio_fab[2],db_gpio_fab[3]} = {db_gpio_fab2, db_gpio_fab3};
 
   generate
-    for (i = 0; i < NUM_RADIO_CORES*NUM_CHANNELS; i = i + 1) begin
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
       n3xx_db_fe_core db_fe_core_i (
         .clk(radio_clk),
         .reset(radio_rst),
@@ -975,6 +972,8 @@ module n310_core #(
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
   `ifdef N310
     `include "rfnoc_ce_default_inst_n310.v"
+  `elsif N300
+    `include "rfnoc_ce_default_inst_n300.v"
   `endif
 
   wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_o_tdata;
@@ -1053,10 +1052,11 @@ module n310_core #(
     ) radio_gpio_in_sync_i (
     .clk(radio_clk), .rst(1'b0), .in(fp_gpio_in_int), .out(radio_gpio_sync)
     );
-  generate for (i=0; i<NUM_RADIO_CORES*NUM_CHANNELS; i=i+1) begin: gen_fp_gpio_in_sync
+  generate for (i=0; i<NUM_CHANNELS; i=i+1) begin: gen_fp_gpio_in_sync
     assign radio_gpio_in[i][FP_GPIO_WIDTH-1:0] = radio_gpio_sync;
   end endgenerate
 
+  //FIXME: Change this for N300 to remove warnings
   // For each of the FP GPIO bits, implement four control muxes, then the IO buffer.
   generate for (i=0; i<FP_GPIO_WIDTH; i=i+1) begin: gpio_muxing_gen
     // 1) Select which radio drives the output
