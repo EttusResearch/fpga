@@ -130,6 +130,10 @@ def parse_args():
         '-v', '--verbose', default=False,
         action='store_true',
         help="Print Vivado output")
+    parser.add_argument(
+        '--warnings', default=False,
+        action='store_true',
+        help="Print Vivado warnings")
     our_args, viv_args = parser.parse_known_args()
     return our_args, " ".join(viv_args)
 
@@ -141,7 +145,7 @@ class VivadoRunner(object):
         'error': '\033[1;31m',
         'fatal': '\033[1;31m',
         'task': '\033[32m',
-        'cmd': '\033[34m',
+        'cmd': '\033[1;34m',
         'normal': '\033[0m',
     }
     # Black       0;30     Dark Gray     1;30
@@ -206,9 +210,6 @@ class VivadoRunner(object):
                 ],
                 'action': lambda x: self.act_on_build_msg('warning', x),
                 'id': "Warning",
-                'ignore': [
-                    '.', # All warnings are ignored by default (unless they're fatal)
-                ],
                 'fatal': [
                 ]
             },

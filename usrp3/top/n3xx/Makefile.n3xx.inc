@@ -5,7 +5,7 @@
 ##################################################
 # Project Setup
 ##################################################
-TOP_MODULE = n3xx
+# TOP_MODULE = <Input arg>
 # NAME = <Input arg>
 # PART_ID = <Input arg>
 
@@ -124,6 +124,9 @@ VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_n3xx.tcl),$(TOP_MODULE),$(PART_ID))
+
+rtl: .prereqs $$(DESIGN_SRCS) ip
+	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
 
 hls: .prereqs hls_ip bin
 
