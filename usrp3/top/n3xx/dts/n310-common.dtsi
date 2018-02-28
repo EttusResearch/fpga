@@ -12,7 +12,7 @@ fragment@0 {
 	__overlay__ {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		firmware-name = "n3xx.bin";
+		firmware-name = "n310.bin";
 	};
 };
 
