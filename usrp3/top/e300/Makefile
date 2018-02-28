@@ -14,8 +14,16 @@
 ## build/usrp_<product>_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_<product>_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
+# Option to stop after RTL elaboration. Use this flag as a synthesis check.
+ifdef CHECK
+TARGET = rtl
+else
+TARGET = bin
+endif
+TOP ?= e300
+
 # vivado_build($1=Device, $2=SG, $3=Definitions)
-vivado_build = make -f Makefile.e300.inc bin NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 EXTRA_DEFS="$3"
+vivado_build = make -f Makefile.e300.inc $(TARGET) NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 EXTRA_DEFS="$3"
 
 # post_build($1=Device, $2=TYPE, $3=SG)
 post_build = @\
@@ -73,6 +81,8 @@ help: ## Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##GUI=1     Launch the build in the Vivado GUI.
+##GUI=1        Launch the build in the Vivado GUI.
+##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall E310 E310_sg3 E3XX_idle E3XX_idle_SG3 help

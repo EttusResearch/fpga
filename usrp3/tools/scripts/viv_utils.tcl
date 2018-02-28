@@ -10,6 +10,7 @@ namespace eval ::vivado_utils {
     namespace export \
         initialize_project \
         synthesize_design \
+        check_design \
         generate_post_synth_reports \
         generate_post_place_reports \
         generate_post_route_reports \
@@ -90,9 +91,12 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         }
     }
 
-    puts "BUILDER: Refreshing IP"
-    generate_target all [get_ips *]
-    synth_ip [get_ips *]
+    # The 'synth_ip [get_ips *]' step causes builds in Windows to recompile various
+    # pieces of the IP. This is time-consuming and unnecessary behavior, thus is removed.
+    # These steps are redundant anyway since the IP builder performs both of them.
+    # puts "BUILDER: Refreshing IP"
+    # generate_target all [get_ips *]
+    # synth_ip [get_ips *]
 
     #might seem silly, but we need to add the bd files after the ip regeneration.
     foreach file $bd_files {
@@ -127,6 +131,32 @@ proc ::vivado_utils::synthesize_design {args} {
     set synth_cmd [concat $synth_cmd $incdir_args]
     set synth_cmd [concat $synth_cmd $args]
     puts "BUILDER: Synthesizing design"
+    eval $synth_cmd
+}
+
+# ---------------------------------------------------
+# Check design (Shortcut for Vivado's synth_design -rtl)
+# ---------------------------------------------------
+proc ::vivado_utils::check_design {args} {
+    variable g_top_module
+    variable g_part_name
+    variable g_verilog_defs
+    variable g_include_dirs
+
+    set vdef_args ""
+    foreach vdef $g_verilog_defs {
+        set vdef_args [concat $vdef_args "-verilog_define $vdef"]
+    }
+    set incdir_args ""
+    if { [string compare $g_include_dirs ""] != 0 } {
+        set incdir_args "-include_dirs $g_include_dirs"
+    }
+
+    set synth_cmd "synth_design -top $g_top_module -part $g_part_name -rtl -rtl_skip_ip -rtl_skip_constraints"
+    set synth_cmd [concat $synth_cmd $vdef_args]
+    set synth_cmd [concat $synth_cmd $incdir_args]
+    set synth_cmd [concat $synth_cmd $args]
+    puts "BUILDER: Checking syntax and elaborating design"
     eval $synth_cmd
 }
 

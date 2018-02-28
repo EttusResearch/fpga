@@ -27,8 +27,16 @@ XG_DEFS=BUILD_10G=1 SFP0_10GBE=1 SFP1_10GBE=1 $(OPTIONS)
 HA_DEFS=BUILD_1G=1 BUILD_AURORA=1 SFP0_1GBE=1 SFP1_AURORA=1 $(OPTIONS)
 XA_DEFS=BUILD_10G=1 BUILD_AURORA=1 SFP0_10GBE=1 SFP1_AURORA=1 $(OPTIONS)
 
-# vivado_build($1=Target, $2=Device, $3=Definitions)
-vivado_build = make -f Makefile.x300.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 EXTRA_DEFS="$3"
+# Option to stop after RTL elaboration. Use this flag as a synthesis check.
+ifdef CHECK
+TARGET = rtl
+else
+TARGET = bin
+endif
+TOP ?= x300
+
+# vivado_build($1=Device, $2=Definitions)
+vivado_build = make -f Makefile.x300.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
 
 # vivado_build($1=Device, $2=Option)
 post_build = @\
@@ -50,43 +58,43 @@ post_build = @\
 all:      X300_HG X310_HG X300_XG X310_XG ##(Default target)
 
 X310_1G:  ##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X310,$(GIGE_DEFS) X310=1)
+	$(call vivado_build,X310,$(GIGE_DEFS) X310=1)
 	$(call post_build,X310,1G)
 
 X300_1G:  ##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X300,$(GIGE_DEFS) X300=1)
+	$(call vivado_build,X300,$(GIGE_DEFS) X300=1)
 	$(call post_build,X300,1G)
 
 X310_HG:  ##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(HG_DEFS) X310=1)
+	$(call vivado_build,X310,$(HG_DEFS) X310=1)
 	$(call post_build,X310,HG)
 
 X300_HG:  ##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(HG_DEFS) X300=1)
+	$(call vivado_build,X300,$(HG_DEFS) X300=1)
 	$(call post_build,X300,HG)
 
 X310_XG:  ##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO.
-	$(call vivado_build,bin,X310,$(XG_DEFS) X310=1)
+	$(call vivado_build,X310,$(XG_DEFS) X310=1)
 	$(call post_build,X310,XG)
 
 X300_XG:  ##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO.
-	$(call vivado_build,bin,X300,$(XG_DEFS) X300=1)
+	$(call vivado_build,X300,$(XG_DEFS) X300=1)
 	$(call post_build,X300,XG)
 
 X310_HA:  ##USRP X310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X310,$(HA_DEFS) X310=1)
+	$(call vivado_build,X310,$(HA_DEFS) X310=1)
 	$(call post_build,X310,HA)
 
 X300_HA:  ##USRP X300. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X300,$(HA_DEFS) X300=1)
+	$(call vivado_build,X300,$(HA_DEFS) X300=1)
 	$(call post_build,X300,HA)
 
 X310_XA:  ##USRP X310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X310,$(XA_DEFS) X310=1)
+	$(call vivado_build,X310,$(XA_DEFS) X310=1)
 	$(call post_build,X310,XA)
 
 X300_XA:  ##USRP X300. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
-	$(call vivado_build,bin,X300,$(XA_DEFS) X300=1)
+	$(call vivado_build,X300,$(XA_DEFS) X300=1)
 	$(call post_build,X300,XA)
 
 
@@ -107,6 +115,8 @@ help:     ##Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##GUI=1     Launch the build in the Vivado GUI. 
+##GUI=1        Launch the build in the Vivado GUI.
+##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall help

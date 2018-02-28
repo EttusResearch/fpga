@@ -28,8 +28,16 @@ HA_DEFS=SFP0_1GBE=1   SFP1_AURORA=1 BUILD_1G=1     BUILD_AURORA=1 $(OPTIONS)
 XA_DEFS=SFP0_10GBE=1  SFP1_AURORA=1 BUILD_10G=1    BUILD_AURORA=1 $(OPTIONS)
 AA_DEFS=SFP0_AURORA=1 SFP1_AURORA=1 BUILD_AURORA=1                $(OPTIONS)
 
-# vivado_build($1=Target, $2=Device, $3=Definitions)
-vivado_build = make -f Makefile.n3xx.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=$(XIL_PART_ID_$2) $3 EXTRA_DEFS="$3"
+# Option to stop after RTL elaboration. Use this flag as a synthesis check.
+ifdef CHECK
+TARGET = rtl
+else
+TARGET = bin
+endif
+TOP ?= n3xx
+
+# vivado_build($1=Device, $2=Definitions)
+vivado_build = make -f Makefile.n3xx.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
 
 # vivado_build($1=Device, $2=Option)
 post_build = @\
@@ -48,52 +56,52 @@ all:      N300_HG N300_XG N310_HG N310_XG ##(Default target)
 
 ##N310_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N310_HG:  build/usrp_n310_fpga_HG.dts
-	$(call vivado_build,bin,N310,$(HG_DEFS) N310=1)
+	$(call vivado_build,N310,$(HG_DEFS) N310=1)
 	$(call post_build,N310,HG)
 
 ##N310_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N310_XG: build/usrp_n310_fpga_XG.dts
-	$(call vivado_build,bin,N310,$(XG_DEFS) N310=1)
+	$(call vivado_build,N310,$(XG_DEFS) N310=1)
 	$(call post_build,N310,XG)
 
 ##N310_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
 N310_HA: build/usrp_n310_fpga_HA.dts
-	$(call vivado_build,bin,N310,$(HA_DEFS) N310=1)
+	$(call vivado_build,N310,$(HA_DEFS) N310=1)
 	$(call post_build,N310,HA)
 
 ##N310_XA:  10Gig on SFP+ Port0, Aurora on SFP+ Port1.
 N310_XA: build/usrp_n310_fpga_XA.dts
-	$(call vivado_build,bin,N310,$(XA_DEFS) N310=1)
+	$(call vivado_build,N310,$(XA_DEFS) N310=1)
 	$(call post_build,N310,XA)
 
 ##N310_AA:  Aurora on SFP+ Port0, Aurora on SFP+ Port1.
 N310_AA: build/usrp_n310_fpga_AA.dts
-	$(call vivado_build,bin,N310,$(AA_DEFS) N310=1)
+	$(call vivado_build,N310,$(AA_DEFS) N310=1)
 	$(call post_build,N310,AA)
 
 ##N300_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N300_HG:  build/usrp_n300_fpga_HG.dts
-	$(call vivado_build,bin,N300,$(HG_DEFS) N300=1)
+	$(call vivado_build,N300,$(HG_DEFS) N300=1)
 	$(call post_build,N300,HG)
 
 ##N300_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 N300_XG: build/usrp_n300_fpga_XG.dts
-	$(call vivado_build,bin,N300,$(XG_DEFS) N300=1)
+	$(call vivado_build,N300,$(XG_DEFS) N300=1)
 	$(call post_build,N300,XG)
 
 ##N300_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
 N300_HA: build/usrp_n300_fpga_HA.dts
-	$(call vivado_build,bin,N300,$(HA_DEFS) N300=1)
+	$(call vivado_build,N300,$(HA_DEFS) N300=1)
 	$(call post_build,N300,HA)
 
 ##N300_XA:  10Gig on SFP+ Port0, Aurora on SFP+ Port1.
 N300_XA: build/usrp_n300_fpga_XA.dts
-	$(call vivado_build,bin,N300,$(XA_DEFS) N300=1)
+	$(call vivado_build,N300,$(XA_DEFS) N300=1)
 	$(call post_build,N300,XA)
 
 ##N300_AA:  Aurora on SFP+ Port0, Aurora on SFP+ Port1.
 N300_AA: build/usrp_n300_fpga_AA.dts
-	$(call vivado_build,bin,N300,$(AA_DEFS) N300=1)
+	$(call vivado_build,N300,$(AA_DEFS) N300=1)
 	$(call post_build,N300,AA)
 
 build/%.dts: dts/%.dts dts/*.dtsi
@@ -117,6 +125,8 @@ help:     ##Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##GUI=1     Launch the build in the Vivado GUI.
+##GUI=1        Launch the build in the Vivado GUI.
+##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall help
