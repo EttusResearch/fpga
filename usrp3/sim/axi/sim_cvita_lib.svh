@@ -39,7 +39,7 @@ typedef struct {
 } cvita_metadata_t;
 
 function logic[63:0] flatten_chdr_no_ts(input cvita_hdr_t hdr);
-  return {hdr.pkt_type, 1'b0 /* No timestamp */, hdr.eob, hdr.seqnum, hdr.length, hdr.src_sid, hdr.dst_sid};
+  return {hdr.pkt_type, hdr.has_time, hdr.eob, hdr.seqnum, hdr.length, hdr.src_sid, hdr.dst_sid};
 endfunction
 
 //TODO: This should be a function but it segfaults XSIM.
