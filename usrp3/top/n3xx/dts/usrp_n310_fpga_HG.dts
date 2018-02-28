@@ -9,19 +9,6 @@
 
 /{
 
-fragment@0 {
-	target = <&fpga_region0>;
-	reg = <0x0000>;
-	#address-cells = <1>;
-	#size-cells = <1>;
-	__overlay__ {
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		firmware-name = "n3xx.bin";
-	};
-};
-
 fragment@1 {
 	target = <&amba>;
 	reg = <0x0001>;
