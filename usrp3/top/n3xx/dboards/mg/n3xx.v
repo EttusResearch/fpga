@@ -1,318 +1,320 @@
 ///////////////////////////////////////////////////////////////////
+///
+// Copyright 2016-2018 Ettus Research, A National Instruments Company
 //
-// Copyright 2016-2018 Ettus Research
+// SPDX-License-Identifier: LGPL-3.0
 //
-// N3xx TOP
+// Module: n3xx
+// Description:
+//   Top Level for N3xx devices
 //
 //////////////////////////////////////////////////////////////////////
 
-module n3xx
-(
-   inout [11:0] FPGA_GPIO,
+module n3xx (
+  inout [11:0] FPGA_GPIO,
 
-   input FPGA_REFCLK_P,
-   input FPGA_REFCLK_N,
-   input REF_1PPS_IN,
-   input WB_20MHz_P,
-   input WB_20MHz_N,
-   input NETCLK_REF_P,
-   input NETCLK_REF_N,
-   //input REF_1PPS_IN_MGMT,
-   output REF_1PPS_OUT,
+  input FPGA_REFCLK_P,
+  input FPGA_REFCLK_N,
+  input REF_1PPS_IN,
+  input WB_20MHz_P,
+  input WB_20MHz_N,
+  input NETCLK_REF_P,
+  input NETCLK_REF_N,
+  //input REF_1PPS_IN_MGMT,
+  output REF_1PPS_OUT,
 
-   //TDC
-   inout UNUSED_PIN_TDCA_0,
-   inout UNUSED_PIN_TDCA_1,
-   inout UNUSED_PIN_TDCB_0,
-   inout UNUSED_PIN_TDCB_1,
+  //TDC
+  inout UNUSED_PIN_TDCA_0,
+  inout UNUSED_PIN_TDCA_1,
+  inout UNUSED_PIN_TDCB_0,
+  inout UNUSED_PIN_TDCB_1,
 
 `ifdef NPIO_LANES
-   input  NPIO_RX0_P,
-   input  NPIO_RX0_N,
-   output NPIO_TX0_P,
-   output NPIO_TX0_N,
-   input  NPIO_RX1_P,
-   input  NPIO_RX1_N,
-   output NPIO_TX1_P,
-   output NPIO_TX1_N,
+  input  NPIO_RX0_P,
+  input  NPIO_RX0_N,
+  output NPIO_TX0_P,
+  output NPIO_TX0_N,
+  input  NPIO_RX1_P,
+  input  NPIO_RX1_N,
+  output NPIO_TX1_P,
+  output NPIO_TX1_N,
 `endif
 `ifdef QSFP_LANES
-   input  QSFP_RX0_P,
-   input  QSFP_RX0_N,
-   output QSFP_TX0_P,
-   output QSFP_TX0_N,
-   input  QSFP_RX1_P,
-   input  QSFP_RX1_N,
-   output QSFP_TX1_P,
-   output QSFP_TX1_N,
-   input  QSFP_RX2_P,
-   input  QSFP_RX2_N,
-   output QSFP_TX2_P,
-   output QSFP_TX2_N,
-   input  QSFP_RX3_P,
-   input  QSFP_RX3_N,
-   output QSFP_TX3_P,
-   output QSFP_TX3_N,
+  input  QSFP_RX0_P,
+  input  QSFP_RX0_N,
+  output QSFP_TX0_P,
+  output QSFP_TX0_N,
+  input  QSFP_RX1_P,
+  input  QSFP_RX1_N,
+  output QSFP_TX1_P,
+  output QSFP_TX1_N,
+  input  QSFP_RX2_P,
+  input  QSFP_RX2_N,
+  output QSFP_TX2_P,
+  output QSFP_TX2_N,
+  input  QSFP_RX3_P,
+  input  QSFP_RX3_N,
+  output QSFP_TX3_P,
+  output QSFP_TX3_N,
  `endif
-   //TODO: Uncomment when connected here
-   //input NPIO_0_RXSYNC_0_P, NPIO_0_RXSYNC_1_P,
-   //input NPIO_0_RXSYNC_0_N, NPIO_0_RXSYNC_1_N,
-   //output NPIO_0_TXSYNC_0_P, NPIO_0_TXSYNC_1_P,
-   //output NPIO_0_TXSYNC_0_N, NPIO_0_TXSYNC_1_N,
-   //input NPIO_1_RXSYNC_0_P, NPIO_1_RXSYNC_1_P,
-   //input NPIO_1_RXSYNC_0_N, NPIO_1_RXSYNC_1_N,
-   //output NPIO_1_TXSYNC_0_P, NPIO_1_TXSYNC_1_P,
-   //output NPIO_1_TXSYNC_0_N, NPIO_1_TXSYNC_1_N,
-   //input NPIO_2_RXSYNC_0_P, NPIO_2_RXSYNC_1_P,
-   //input NPIO_2_RXSYNC_0_N, NPIO_2_RXSYNC_1_N,
-   //output NPIO_2_TXSYNC_0_P, NPIO_2_TXSYNC_1_P,
-   //output NPIO_2_TXSYNC_0_N, NPIO_2_TXSYNC_1_N,
+  //TODO: Uncomment when connected here
+  //input NPIO_0_RXSYNC_0_P, NPIO_0_RXSYNC_1_P,
+  //input NPIO_0_RXSYNC_0_N, NPIO_0_RXSYNC_1_N,
+  //output NPIO_0_TXSYNC_0_P, NPIO_0_TXSYNC_1_P,
+  //output NPIO_0_TXSYNC_0_N, NPIO_0_TXSYNC_1_N,
+  //input NPIO_1_RXSYNC_0_P, NPIO_1_RXSYNC_1_P,
+  //input NPIO_1_RXSYNC_0_N, NPIO_1_RXSYNC_1_N,
+  //output NPIO_1_TXSYNC_0_P, NPIO_1_TXSYNC_1_P,
+  //output NPIO_1_TXSYNC_0_N, NPIO_1_TXSYNC_1_N,
+  //input NPIO_2_RXSYNC_0_P, NPIO_2_RXSYNC_1_P,
+  //input NPIO_2_RXSYNC_0_N, NPIO_2_RXSYNC_1_N,
+  //output NPIO_2_TXSYNC_0_P, NPIO_2_TXSYNC_1_P,
+  //output NPIO_2_TXSYNC_0_N, NPIO_2_TXSYNC_1_N,
 
-   //GPS
-   input GPS_1PPS,
-   //input GPS_1PPS_RAW,
+  //GPS
+  input GPS_1PPS,
+  //input GPS_1PPS_RAW,
 
-   //Misc
-   input ENET0_CLK125,
-   //inout ENET0_PTP,
-   //output ENET0_PTP_DIR,
-   //inout ATSHA204_SDA,
-   input FPGA_PL_RESETN, // TODO:  Add to reset logic
-   // output reg [1:0] FPGA_TEST,
-   //input PWR_CLK_FPGA, // TODO: check direction
+  //Misc
+  input ENET0_CLK125,
+  //inout ENET0_PTP,
+  //output ENET0_PTP_DIR,
+  //inout ATSHA204_SDA,
+  input FPGA_PL_RESETN, // TODO:  Add to reset logic
+  // output reg [1:0] FPGA_TEST,
+  //input PWR_CLK_FPGA, // TODO: check direction
 
-   //White Rabbit
-   //input WB_20MHZ_P,
-   //input WB_20MHZ_N,
-   //output WB_DAC_DIN,
-   //output WB_DAC_NCLR,
-   //output WB_DAC_NLDAC,
-   //output WB_DAC_NSYNC,
-   //output WB_DAC_SCLK,
-   //output PWREN_CLK_WB_20MHZ,
+  //White Rabbit
+  //input WB_20MHZ_P,
+  //input WB_20MHZ_N,
+  //output WB_DAC_DIN,
+  //output WB_DAC_NCLR,
+  //output WB_DAC_NLDAC,
+  //output WB_DAC_NSYNC,
+  //output WB_DAC_SCLK,
+  //output PWREN_CLK_WB_20MHZ,
 
-   //LEDS
-   output PANEL_LED_GPS,
-   output PANEL_LED_LINK,
-   output PANEL_LED_PPS,
-   output PANEL_LED_REF,
+  //LEDS
+  output PANEL_LED_GPS,
+  output PANEL_LED_LINK,
+  output PANEL_LED_PPS,
+  output PANEL_LED_REF,
 
-   // ARM Connections (PS)
-   inout [53:0]  MIO,
-   inout         PS_SRSTB,
-   inout         PS_CLK,
-   inout         PS_PORB,
-   inout         DDR_Clk,
-   inout         DDR_Clk_n,
-   inout         DDR_CKE,
-   inout         DDR_CS_n,
-   inout         DDR_RAS_n,
-   inout         DDR_CAS_n,
-   inout         DDR_WEB,
-   inout [2:0]   DDR_BankAddr,
-   inout [14:0]  DDR_Addr,
-   inout         DDR_ODT,
-   inout         DDR_DRSTB,
-   inout [31:0]  DDR_DQ,
-   inout [3:0]   DDR_DM,
-   inout [3:0]   DDR_DQS,
-   inout [3:0]   DDR_DQS_n,
-   inout         DDR_VRP,
-   inout         DDR_VRN,
-
-
-   ///////////////////////////////////
-   //
-   // High Speed SPF+ signals and clocking
-   //
-   ///////////////////////////////////
-
-   // These clock inputs must always be enabled with a buffer regardless of the build
-   // target to avoid damage to the FPGA.
-   input NETCLK_P,
-   input NETCLK_N,
-   input MGT156MHZ_CLK1_P,
-   input MGT156MHZ_CLK1_N,
-
-   input SFP_0_RX_P, input SFP_0_RX_N,
-   output SFP_0_TX_P, output SFP_0_TX_N,
-   input SFP_1_RX_P, input SFP_1_RX_N,
-   output SFP_1_TX_P, output SFP_1_TX_N,
+  // ARM Connections (PS)
+  inout [53:0]  MIO,
+  inout         PS_SRSTB,
+  inout         PS_CLK,
+  inout         PS_PORB,
+  inout         DDR_Clk,
+  inout         DDR_Clk_n,
+  inout         DDR_CKE,
+  inout         DDR_CS_n,
+  inout         DDR_RAS_n,
+  inout         DDR_CAS_n,
+  inout         DDR_WEB,
+  inout [2:0]   DDR_BankAddr,
+  inout [14:0]  DDR_Addr,
+  inout         DDR_ODT,
+  inout         DDR_DRSTB,
+  inout [31:0]  DDR_DQ,
+  inout [3:0]   DDR_DM,
+  inout [3:0]   DDR_DQS,
+  inout [3:0]   DDR_DQS_n,
+  inout         DDR_VRP,
+  inout         DDR_VRN,
 
 
-   ///////////////////////////////////
-   //
-   // DRAM Interface
-   //
-   ///////////////////////////////////
-   inout [31:0] ddr3_dq,     // Data pins. Input for Reads, Output for Writes.
-   inout [3:0] ddr3_dqs_n,   // Data Strobes. Input for Reads, Output for Writes.
-   inout [3:0] ddr3_dqs_p,
-   //
-   output [15:0] ddr3_addr,  // Address
-   output [2:0] ddr3_ba,     // Bank Address
-   output ddr3_ras_n,        // Row Address Strobe.
-   output ddr3_cas_n,        // Column address select
-   output ddr3_we_n,         // Write Enable
-   output ddr3_reset_n,      // SDRAM reset pin.
-   output [0:0] ddr3_ck_p,         // Differential clock
-   output [0:0] ddr3_ck_n,
-   output [0:0] ddr3_cke,    // Clock Enable
-   output [0:0] ddr3_cs_n,         // Chip Select
-   output [3:0] ddr3_dm,     // Data Mask [3] = UDM.U26, [2] = LDM.U26, ...
-   output [0:0] ddr3_odt,    // On-Die termination enable.
-   //
-   input sys_clk_p,          // Differential
-   input sys_clk_n,          // 100MHz clock source to generate DDR3 clocking.
+  ///////////////////////////////////
+  //
+  // High Speed SPF+ signals and clocking
+  //
+  ///////////////////////////////////
+
+  // These clock inputs must always be enabled with a buffer regardless of the build
+  // target to avoid damage to the FPGA.
+  input NETCLK_P,
+  input NETCLK_N,
+  input MGT156MHZ_CLK1_P,
+  input MGT156MHZ_CLK1_N,
+
+  input SFP_0_RX_P, input SFP_0_RX_N,
+  output SFP_0_TX_P, output SFP_0_TX_N,
+  input SFP_1_RX_P, input SFP_1_RX_N,
+  output SFP_1_TX_P, output SFP_1_TX_N,
 
 
-   ///////////////////////////////////
-   //
-   // Supporting I/O for SPF+ interfaces
-   //  (non high speed stuff)
-   //
-   ///////////////////////////////////
+  ///////////////////////////////////
+  //
+  // DRAM Interface
+  //
+  ///////////////////////////////////
+  inout [31:0] ddr3_dq,     // Data pins. Input for Reads, Output for Writes.
+  inout [3:0] ddr3_dqs_n,   // Data Strobes. Input for Reads, Output for Writes.
+  inout [3:0] ddr3_dqs_p,
+  //
+  output [15:0] ddr3_addr,  // Address
+  output [2:0] ddr3_ba,     // Bank Address
+  output ddr3_ras_n,        // Row Address Strobe.
+  output ddr3_cas_n,        // Column address select
+  output ddr3_we_n,         // Write Enable
+  output ddr3_reset_n,      // SDRAM reset pin.
+  output [0:0] ddr3_ck_p,         // Differential clock
+  output [0:0] ddr3_ck_n,
+  output [0:0] ddr3_cke,    // Clock Enable
+  output [0:0] ddr3_cs_n,         // Chip Select
+  output [3:0] ddr3_dm,     // Data Mask [3] = UDM.U26, [2] = LDM.U26, ...
+  output [0:0] ddr3_odt,    // On-Die termination enable.
+  //
+  input sys_clk_p,          // Differential
+  input sys_clk_n,          // 100MHz clock source to generate DDR3 clocking.
 
-   //SFP+ 0, Slow Speed, Bank 13 3.3V
-   //input SFP_0_I2C_NPRESENT,
-   output SFP_0_LED_A,
-   output SFP_0_LED_B,
-   input SFP_0_LOS,
-   output SFP_0_RS0,
-   output SFP_0_RS1,
-   output SFP_0_TXDISABLE,
-   input SFP_0_TXFAULT,
 
-   //SFP+ 1, Slow Speed, Bank 13 3.3V
-   //input SFP_1_I2C_NPRESENT,
-   output SFP_1_LED_A,
-   output SFP_1_LED_B,
-   input SFP_1_LOS,
-   output SFP_1_RS0,
-   output SFP_1_RS1,
-   output SFP_1_TXDISABLE,
-   input SFP_1_TXFAULT,
+  ///////////////////////////////////
+  //
+  // Supporting I/O for SPF+ interfaces
+  //  (non high speed stuff)
+  //
+  ///////////////////////////////////
 
-   //USRP IO A
-   output        DBA_CPLD_PS_SPI_SCLK,
-   output        DBA_CPLD_PS_SPI_LE,
-   output        DBA_CPLD_PS_SPI_SDI,
-   input         DBA_CPLD_PS_SPI_SDO,
-   output [1:0]  DBA_CPLD_PS_SPI_ADDR,
+  //SFP+ 0, Slow Speed, Bank 13 3.3V
+  //input SFP_0_I2C_NPRESENT,
+  output SFP_0_LED_A,
+  output SFP_0_LED_B,
+  input SFP_0_LOS,
+  output SFP_0_RS0,
+  output SFP_0_RS1,
+  output SFP_0_TXDISABLE,
+  input SFP_0_TXFAULT,
 
-   output        DBA_ATR_RX_1,
-   output        DBA_ATR_RX_2,
-   output        DBA_ATR_TX_1,
-   output        DBA_ATR_TX_2,
+  //SFP+ 1, Slow Speed, Bank 13 3.3V
+  //input SFP_1_I2C_NPRESENT,
+  output SFP_1_LED_A,
+  output SFP_1_LED_B,
+  input SFP_1_LOS,
+  output SFP_1_RS0,
+  output SFP_1_RS1,
+  output SFP_1_TXDISABLE,
+  input SFP_1_TXFAULT,
 
-   output [5:0]  DBA_CH1_TX_DSA_DATA,
-   output [5:0]  DBA_CH1_RX_DSA_DATA,
-   output [5:0]  DBA_CH2_TX_DSA_DATA,
-   output [5:0]  DBA_CH2_RX_DSA_DATA,
+  //USRP IO A
+  output        DBA_CPLD_PS_SPI_SCLK,
+  output        DBA_CPLD_PS_SPI_LE,
+  output        DBA_CPLD_PS_SPI_SDI,
+  input         DBA_CPLD_PS_SPI_SDO,
+  output [1:0]  DBA_CPLD_PS_SPI_ADDR,
 
-   output        DBA_CPLD_PL_SPI_SCLK,
-   output        DBA_CPLD_PL_SPI_LE,
-   output        DBA_CPLD_PL_SPI_SDI,
-   input         DBA_CPLD_PL_SPI_SDO,
-   output [2:0]  DBA_CPLD_PL_SPI_ADDR,
+  output        DBA_ATR_RX_1,
+  output        DBA_ATR_RX_2,
+  output        DBA_ATR_TX_1,
+  output        DBA_ATR_TX_2,
 
-   output        DBA_MYK_SPI_SCLK,
-   output        DBA_MYK_SPI_CS_n,
-   input         DBA_MYK_SPI_SDO,
-   output        DBA_MYK_SPI_SDIO,
-   input         DBA_MYK_INTRQ,
+  output [5:0]  DBA_CH1_TX_DSA_DATA,
+  output [5:0]  DBA_CH1_RX_DSA_DATA,
+  output [5:0]  DBA_CH2_TX_DSA_DATA,
+  output [5:0]  DBA_CH2_RX_DSA_DATA,
 
-   output        DBA_MYK_SYNC_IN_n,
-   input         DBA_MYK_SYNC_OUT_n,
+  output        DBA_CPLD_PL_SPI_SCLK,
+  output        DBA_CPLD_PL_SPI_LE,
+  output        DBA_CPLD_PL_SPI_SDI,
+  input         DBA_CPLD_PL_SPI_SDO,
+  output [2:0]  DBA_CPLD_PL_SPI_ADDR,
 
-   inout         DBA_CPLD_JTAG_TCK,
-   inout         DBA_CPLD_JTAG_TMS,
-   inout         DBA_CPLD_JTAG_TDI,
-   input         DBA_CPLD_JTAG_TDO,
+  output        DBA_MYK_SPI_SCLK,
+  output        DBA_MYK_SPI_CS_n,
+  input         DBA_MYK_SPI_SDO,
+  output        DBA_MYK_SPI_SDIO,
+  input         DBA_MYK_INTRQ,
 
-   output        DBA_MYK_GPIO_0,
-   output        DBA_MYK_GPIO_1,
-   output        DBA_MYK_GPIO_3,
-   output        DBA_MYK_GPIO_4,
-   output        DBA_MYK_GPIO_12,
-   output        DBA_MYK_GPIO_13,
-   output        DBA_MYK_GPIO_14,
-   output        DBA_MYK_GPIO_15,
+  output        DBA_MYK_SYNC_IN_n,
+  input         DBA_MYK_SYNC_OUT_n,
 
-   input         DBA_FPGA_CLK_P,
-   input         DBA_FPGA_CLK_N,
-   input         DBA_FPGA_SYSREF_P,
-   input         DBA_FPGA_SYSREF_N,
+  inout         DBA_CPLD_JTAG_TCK,
+  inout         DBA_CPLD_JTAG_TMS,
+  inout         DBA_CPLD_JTAG_TDI,
+  input         DBA_CPLD_JTAG_TDO,
 
-   input         USRPIO_A_MGTCLK_P,
-   input         USRPIO_A_MGTCLK_N,
+  output        DBA_MYK_GPIO_0,
+  output        DBA_MYK_GPIO_1,
+  output        DBA_MYK_GPIO_3,
+  output        DBA_MYK_GPIO_4,
+  output        DBA_MYK_GPIO_12,
+  output        DBA_MYK_GPIO_13,
+  output        DBA_MYK_GPIO_14,
+  output        DBA_MYK_GPIO_15,
 
-   input  [3:0]  USRPIO_A_RX_P,
-   input  [3:0]  USRPIO_A_RX_N,
-   output [3:0]  USRPIO_A_TX_P,
-   output [3:0]  USRPIO_A_TX_N
+  input         DBA_FPGA_CLK_P,
+  input         DBA_FPGA_CLK_N,
+  input         DBA_FPGA_SYSREF_P,
+  input         DBA_FPGA_SYSREF_N,
 
- `ifndef N300
-   //USRP IO B
-   ,output        DBB_CPLD_PS_SPI_SCLK,
-   output        DBB_CPLD_PS_SPI_LE,
-   output        DBB_CPLD_PS_SPI_SDI,
-   input         DBB_CPLD_PS_SPI_SDO,
-   output [1:0]  DBB_CPLD_PS_SPI_ADDR,
+  input         USRPIO_A_MGTCLK_P,
+  input         USRPIO_A_MGTCLK_N,
 
-   output        DBB_ATR_RX_1,
-   output        DBB_ATR_RX_2,
-   output        DBB_ATR_TX_1,
-   output        DBB_ATR_TX_2,
+  input  [3:0]  USRPIO_A_RX_P,
+  input  [3:0]  USRPIO_A_RX_N,
+  output [3:0]  USRPIO_A_TX_P,
+  output [3:0]  USRPIO_A_TX_N
 
-   output [5:0]  DBB_CH1_TX_DSA_DATA,
-   output [5:0]  DBB_CH1_RX_DSA_DATA,
-   output [5:0]  DBB_CH2_TX_DSA_DATA,
-   output [5:0]  DBB_CH2_RX_DSA_DATA,
+`ifndef N300
+  //USRP IO B
+  ,output       DBB_CPLD_PS_SPI_SCLK,
+  output        DBB_CPLD_PS_SPI_LE,
+  output        DBB_CPLD_PS_SPI_SDI,
+  input         DBB_CPLD_PS_SPI_SDO,
+  output [1:0]  DBB_CPLD_PS_SPI_ADDR,
 
-   output        DBB_CPLD_PL_SPI_SCLK,
-   output        DBB_CPLD_PL_SPI_LE,
-   output        DBB_CPLD_PL_SPI_SDI,
-   input         DBB_CPLD_PL_SPI_SDO,
-   output [2:0]  DBB_CPLD_PL_SPI_ADDR,
+  output        DBB_ATR_RX_1,
+  output        DBB_ATR_RX_2,
+  output        DBB_ATR_TX_1,
+  output        DBB_ATR_TX_2,
 
-   output        DBB_MYK_SPI_SCLK,
-   output        DBB_MYK_SPI_CS_n,
-   input         DBB_MYK_SPI_SDO,
-   output        DBB_MYK_SPI_SDIO,
-   input         DBB_MYK_INTRQ,
+  output [5:0]  DBB_CH1_TX_DSA_DATA,
+  output [5:0]  DBB_CH1_RX_DSA_DATA,
+  output [5:0]  DBB_CH2_TX_DSA_DATA,
+  output [5:0]  DBB_CH2_RX_DSA_DATA,
 
-   output        DBB_MYK_SYNC_IN_n,
-   input         DBB_MYK_SYNC_OUT_n,
+  output        DBB_CPLD_PL_SPI_SCLK,
+  output        DBB_CPLD_PL_SPI_LE,
+  output        DBB_CPLD_PL_SPI_SDI,
+  input         DBB_CPLD_PL_SPI_SDO,
+  output [2:0]  DBB_CPLD_PL_SPI_ADDR,
 
-   inout         DBB_CPLD_JTAG_TCK,
-   inout         DBB_CPLD_JTAG_TMS,
-   inout         DBB_CPLD_JTAG_TDI,
-   input         DBB_CPLD_JTAG_TDO,
+  output        DBB_MYK_SPI_SCLK,
+  output        DBB_MYK_SPI_CS_n,
+  input         DBB_MYK_SPI_SDO,
+  output        DBB_MYK_SPI_SDIO,
+  input         DBB_MYK_INTRQ,
 
-   output        DBB_MYK_GPIO_0,
-   output        DBB_MYK_GPIO_1,
-   output        DBB_MYK_GPIO_3,
-   output        DBB_MYK_GPIO_4,
-   output        DBB_MYK_GPIO_12,
-   output        DBB_MYK_GPIO_13,
-   output        DBB_MYK_GPIO_14,
-   output        DBB_MYK_GPIO_15,
+  output        DBB_MYK_SYNC_IN_n,
+  input         DBB_MYK_SYNC_OUT_n,
 
-   input         DBB_FPGA_CLK_P,
-   input         DBB_FPGA_CLK_N,
-   input         DBB_FPGA_SYSREF_P,
-   input         DBB_FPGA_SYSREF_N,
+  inout         DBB_CPLD_JTAG_TCK,
+  inout         DBB_CPLD_JTAG_TMS,
+  inout         DBB_CPLD_JTAG_TDI,
+  input         DBB_CPLD_JTAG_TDO,
 
-   input         USRPIO_B_MGTCLK_P,
-   input         USRPIO_B_MGTCLK_N,
+  output        DBB_MYK_GPIO_0,
+  output        DBB_MYK_GPIO_1,
+  output        DBB_MYK_GPIO_3,
+  output        DBB_MYK_GPIO_4,
+  output        DBB_MYK_GPIO_12,
+  output        DBB_MYK_GPIO_13,
+  output        DBB_MYK_GPIO_14,
+  output        DBB_MYK_GPIO_15,
 
-   input  [3:0]  USRPIO_B_RX_P,
-   input  [3:0]  USRPIO_B_RX_N,
-   output [3:0]  USRPIO_B_TX_P,
-   output [3:0]  USRPIO_B_TX_N
- `endif
+  input         DBB_FPGA_CLK_P,
+  input         DBB_FPGA_CLK_N,
+  input         DBB_FPGA_SYSREF_P,
+  input         DBB_FPGA_SYSREF_N,
 
+  input         USRPIO_B_MGTCLK_P,
+  input         USRPIO_B_MGTCLK_N,
+
+  input  [3:0]  USRPIO_B_RX_P,
+  input  [3:0]  USRPIO_B_RX_N,
+  output [3:0]  USRPIO_B_TX_P,
+  output [3:0]  USRPIO_B_TX_N
+`endif
 );
 
   localparam N_AXILITE_SLAVES = 4;
@@ -324,9 +326,11 @@ module n3xx
 `ifdef N310
   localparam NUM_RADIOS = 4;
   localparam NUM_CHANNELS_PER_RADIO = 1;
+  localparam NUM_DBOARDS = 2;
 `elsif N300
   localparam NUM_RADIOS = 2;
   localparam NUM_CHANNELS_PER_RADIO = 1;
+  localparam NUM_DBOARDS = 1;
 `endif
   localparam NUM_CHANNELS = NUM_RADIOS * NUM_CHANNELS_PER_RADIO;
 
@@ -718,7 +722,6 @@ module n3xx
   assign clk40_rstn = ~clk40_rst;
 
 
-
   /////////////////////////////////////////////////////////////////////
   //
   // Timing
@@ -742,30 +745,30 @@ module n3xx
   localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate.
 
   n3xx_clocking n3xx_clocking_i (
-     .FPGA_REFCLK_P(FPGA_REFCLK_P),
-     .FPGA_REFCLK_N(FPGA_REFCLK_N),
-     .ref_clk(ref_clk),
-     .WB_20MHz_P(WB_20MHz_P),
-     .WB_20MHz_N(WB_20MHz_N),
-     .wr_refclk_buf(wr_refclk_buf),
-     .NETCLK_REF_P(NETCLK_REF_P),
-     .NETCLK_REF_N(NETCLK_REF_N),
-     .netclk_buf(netclk_buf),
-     .NETCLK_P(NETCLK_P),
-     .NETCLK_N(NETCLK_N),
-     .gige_refclk_buf(gige_refclk),
-     .MGT156MHZ_CLK1_P(MGT156MHZ_CLK1_P),
-     .MGT156MHZ_CLK1_N(MGT156MHZ_CLK1_N),
-     .xgige_refclk_buf(xgige_refclk),
-     .misc_clks_ref(meas_clk_ref),
-     .meas_clk(meas_clk),
-     .ddr3_dma_clk(ddr3_dma_clk),
-     .misc_clks_reset(meas_clk_reset),
-     .misc_clks_locked(meas_clk_locked),
-     .ext_pps_from_pin(REF_1PPS_IN),
-     .gps_pps_from_pin(GPS_1PPS),
-     .pps_select(pps_select),
-     .pps_refclk(pps_refclk)
+    .FPGA_REFCLK_P(FPGA_REFCLK_P),
+    .FPGA_REFCLK_N(FPGA_REFCLK_N),
+    .ref_clk(ref_clk),
+    .WB_20MHz_P(WB_20MHz_P),
+    .WB_20MHz_N(WB_20MHz_N),
+    .wr_refclk_buf(wr_refclk_buf),
+    .NETCLK_REF_P(NETCLK_REF_P),
+    .NETCLK_REF_N(NETCLK_REF_N),
+    .netclk_buf(netclk_buf),
+    .NETCLK_P(NETCLK_P),
+    .NETCLK_N(NETCLK_N),
+    .gige_refclk_buf(gige_refclk),
+    .MGT156MHZ_CLK1_P(MGT156MHZ_CLK1_P),
+    .MGT156MHZ_CLK1_N(MGT156MHZ_CLK1_N),
+    .xgige_refclk_buf(xgige_refclk),
+    .misc_clks_ref(meas_clk_ref),
+    .meas_clk(meas_clk),
+    .ddr3_dma_clk(ddr3_dma_clk),
+    .misc_clks_reset(meas_clk_reset),
+    .misc_clks_locked(meas_clk_locked),
+    .ext_pps_from_pin(REF_1PPS_IN),
+    .gps_pps_from_pin(GPS_1PPS),
+    .pps_select(pps_select),
+    .pps_refclk(pps_refclk)
   );
 
   // Drive the LED with the post-mux copy of the PPS in order for visual feedback that
@@ -789,8 +792,6 @@ module n3xx
   end
   // Local to output.
   assign REF_1PPS_OUT  = pps_out_refclk;
-
-
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -839,9 +840,8 @@ module n3xx
   // We reuse this GT_COMMON wrapper for both ethernet and Aurora because
   // the behavior is identical
   ten_gig_eth_pcs_pma_gt_common # (
-    .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") ) //Does not affect hardware
-  ten_gig_eth_pcs_pma_gt_common_block
-  (
+    .WRAPPER_SIM_GTRESET_SPEEDUP("TRUE") //Does not affect hardware
+  ) ten_gig_eth_pcs_pma_gt_common_block (
     .refclk(xgige_refclk),
     .qpllreset(qpllreset), //from 2nd sfp
     .qplllock(qplllock),
@@ -875,7 +875,6 @@ module n3xx
 
   assign SFP_1_RS0  = 1'b1;
   assign SFP_1_RS1  = 1'b1;
-
 
   // SFP port specific reference clocks
   wire  sfp0_gt_refclk, sfp1_gt_refclk;
@@ -953,7 +952,6 @@ module n3xx
   assign au_sync_clk = 1'b0;
   assign au_mmcm_locked = 1'b0;
 `endif
-
 
   //--------------------------------------------------------------
   // NPIO-QSFP MGT Lanes (Example loopback config)
@@ -1257,130 +1255,129 @@ module n3xx
   wire [31:0] sfp_port0_info;
   wire [31:0] sfp_port1_info;
 
-   /////////////////////////////////////////////////////////////////////
-   //
-   // SFP Wrapper 0: Network Interface (1/10G or Aurora)
-   //
-   //////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
+  //
+  // SFP Wrapper 0: Network Interface (1/10G or Aurora)
+  //
+  //////////////////////////////////////////////////////////////////////
 
-   n3xx_sfp_wrapper #(
-`ifdef SFP0_10GBE
-      .PROTOCOL("10GbE"),
-      .MDIO_EN(1'b1),
-      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
-`elsif SFP0_AURORA
-      .PROTOCOL("Aurora"),
-      .MDIO_EN(1'b0),
-`elsif SFP0_1GBE
-      .PROTOCOL("1GbE"),
-      .MDIO_EN(1'b1),
-      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
-`endif
-      .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .AWIDTH(REG_AWIDTH),     // Width of the address bus
-      .PORTNUM(8'd0)
+  n3xx_sfp_wrapper #(
+  `ifdef SFP0_10GBE
+    .PROTOCOL("10GbE"),
+    .MDIO_EN(1'b1),
+    .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
+  `elsif SFP0_AURORA
+    .PROTOCOL("Aurora"),
+    .MDIO_EN(1'b0),
+  `elsif SFP0_1GBE
+    .PROTOCOL("1GbE"),
+    .MDIO_EN(1'b1),
+    .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
+  `endif
+    .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .AWIDTH(REG_AWIDTH),     // Width of the address bus
+    .PORTNUM(8'd0)
    ) sfp_wrapper_0 (
-      .areset(global_rst),
-      .gt_refclk(sfp0_gt_refclk),
-      .gb_refclk(sfp0_gb_refclk),
-      .misc_clk(sfp0_misc_clk),
-      .user_clk(au_user_clk),
-      .sync_clk(au_sync_clk),
-      .gt_tx_out_clk_unbuf(sfp0_tx_out_clk),
+     .areset(global_rst),
+     .gt_refclk(sfp0_gt_refclk),
+     .gb_refclk(sfp0_gb_refclk),
+     .misc_clk(sfp0_misc_clk),
+     .user_clk(au_user_clk),
+     .sync_clk(au_sync_clk),
+     .gt_tx_out_clk_unbuf(sfp0_tx_out_clk),
 
-      .bus_rst(bus_rst),
-      .bus_clk(bus_clk),
+     .bus_rst(bus_rst),
+     .bus_clk(bus_clk),
 
-      .qpllreset(qpllreset_sfp0),
-      .qplllock(qplllock),
-      .qplloutclk(qplloutclk),
-      .qplloutrefclk(qplloutrefclk),
-      .qpllrefclklost(),
+     .qpllreset(qpllreset_sfp0),
+     .qplllock(qplllock),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
+     .qpllrefclklost(),
 
-      .mmcm_locked(au_mmcm_locked),
-      .gt_pll_lock(sfp0_gt_pll_lock),
+     .mmcm_locked(au_mmcm_locked),
+     .gt_pll_lock(sfp0_gt_pll_lock),
 
-      .txp(SFP_0_TX_P),
-      .txn(SFP_0_TX_N),
-      .rxp(SFP_0_RX_P),
-      .rxn(SFP_0_RX_N),
+     .txp(SFP_0_TX_P),
+     .txn(SFP_0_TX_N),
+     .rxp(SFP_0_RX_P),
+     .rxn(SFP_0_RX_N),
 
-      .sfpp_rxlos(SFP_0_LOS),
-      .sfpp_tx_fault(SFP_0_TXFAULT),
-      .sfpp_tx_disable(SFP_0_TXDISABLE),
+     .sfpp_rxlos(SFP_0_LOS),
+     .sfpp_tx_fault(SFP_0_TXFAULT),
+     .sfpp_tx_disable(SFP_0_TXDISABLE),
 
-      // Clock and reset
-      .s_axi_aclk(clk40),
-      .s_axi_aresetn(clk40_rstn),
-      // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr(M_AXI_NET0_AWADDR),
-      .s_axi_awvalid(M_AXI_NET0_AWVALID),
-      .s_axi_awready(M_AXI_NET0_AWREADY),
-      // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata(M_AXI_NET0_WDATA),
-      .s_axi_wstrb(M_AXI_NET0_WSTRB),
-      .s_axi_wvalid(M_AXI_NET0_WVALID),
-      .s_axi_wready(M_AXI_NET0_WREADY),
-      // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp(M_AXI_NET0_BRESP),
-      .s_axi_bvalid(M_AXI_NET0_BVALID),
-      .s_axi_bready(M_AXI_NET0_BREADY),
-      // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr(M_AXI_NET0_ARADDR),
-      .s_axi_arvalid(M_AXI_NET0_ARVALID),
-      .s_axi_arready(M_AXI_NET0_ARREADY),
-      // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata(M_AXI_NET0_RDATA),
-      .s_axi_rresp(M_AXI_NET0_RRESP),
-      .s_axi_rvalid(M_AXI_NET0_RVALID),
-      .s_axi_rready(M_AXI_NET0_RREADY),
+     // Clock and reset
+     .s_axi_aclk(clk40),
+     .s_axi_aresetn(clk40_rstn),
+     // AXI4-Lite: Write address port (domain: s_axi_aclk)
+     .s_axi_awaddr(M_AXI_NET0_AWADDR),
+     .s_axi_awvalid(M_AXI_NET0_AWVALID),
+     .s_axi_awready(M_AXI_NET0_AWREADY),
+     // AXI4-Lite: Write data port (domain: s_axi_aclk)
+     .s_axi_wdata(M_AXI_NET0_WDATA),
+     .s_axi_wstrb(M_AXI_NET0_WSTRB),
+     .s_axi_wvalid(M_AXI_NET0_WVALID),
+     .s_axi_wready(M_AXI_NET0_WREADY),
+     // AXI4-Lite: Write response port (domain: s_axi_aclk)
+     .s_axi_bresp(M_AXI_NET0_BRESP),
+     .s_axi_bvalid(M_AXI_NET0_BVALID),
+     .s_axi_bready(M_AXI_NET0_BREADY),
+     // AXI4-Lite: Read address port (domain: s_axi_aclk)
+     .s_axi_araddr(M_AXI_NET0_ARADDR),
+     .s_axi_arvalid(M_AXI_NET0_ARVALID),
+     .s_axi_arready(M_AXI_NET0_ARREADY),
+     // AXI4-Lite: Read data port (domain: s_axi_aclk)
+     .s_axi_rdata(M_AXI_NET0_RDATA),
+     .s_axi_rresp(M_AXI_NET0_RRESP),
+     .s_axi_rvalid(M_AXI_NET0_RVALID),
+     .s_axi_rready(M_AXI_NET0_RREADY),
 
-      // Ethernet to Vita
-      .e2v_tdata(e2v0_tdata),
-      .e2v_tlast(e2v0_tlast),
-      .e2v_tvalid(e2v0_tvalid),
-      .e2v_tready(e2v0_tready),
+     // Ethernet to Vita
+     .e2v_tdata(e2v0_tdata),
+     .e2v_tlast(e2v0_tlast),
+     .e2v_tvalid(e2v0_tvalid),
+     .e2v_tready(e2v0_tready),
 
-      // Vita to Ethernet
-      .v2e_tdata(v2e0_tdata),
-      .v2e_tlast(v2e0_tlast),
-      .v2e_tvalid(v2e0_tvalid),
-      .v2e_tready(v2e0_tready),
+     // Vita to Ethernet
+     .v2e_tdata(v2e0_tdata),
+     .v2e_tlast(v2e0_tlast),
+     .v2e_tvalid(v2e0_tvalid),
+     .v2e_tready(v2e0_tready),
 
-      // Crossover
-      .xo_tdata(e01_tdata),
-      .xo_tuser(e01_tuser),
-      .xo_tlast(e01_tlast),
-      .xo_tvalid(e01_tvalid),
-      .xo_tready(e01_tready),
-      .xi_tdata(e10_tdata),
-      .xi_tuser(e10_tuser),
-      .xi_tlast(e10_tlast),
-      .xi_tvalid(e10_tvalid),
-      .xi_tready(e10_tready),
+     // Crossover
+     .xo_tdata(e01_tdata),
+     .xo_tuser(e01_tuser),
+     .xo_tlast(e01_tlast),
+     .xo_tvalid(e01_tvalid),
+     .xo_tready(e01_tready),
+     .xi_tdata(e10_tdata),
+     .xi_tuser(e10_tuser),
+     .xi_tlast(e10_tlast),
+     .xi_tvalid(e10_tvalid),
+     .xi_tready(e10_tready),
 
-      // Ethernet to CPU
-      .e2c_tdata(arm_eth0_rx_tdata_b),
-      .e2c_tkeep(arm_eth0_rx_tkeep_b),
-      .e2c_tlast(arm_eth0_rx_tlast_b),
-      .e2c_tvalid(arm_eth0_rx_tvalid_b),
-      .e2c_tready(arm_eth0_rx_tready_b),
+     // Ethernet to CPU
+     .e2c_tdata(arm_eth0_rx_tdata_b),
+     .e2c_tkeep(arm_eth0_rx_tkeep_b),
+     .e2c_tlast(arm_eth0_rx_tlast_b),
+     .e2c_tvalid(arm_eth0_rx_tvalid_b),
+     .e2c_tready(arm_eth0_rx_tready_b),
 
-      // CPU to Ethernet
-      .c2e_tdata(arm_eth0_tx_tdata_b),
-      .c2e_tkeep(arm_eth0_tx_tkeep_b),
-      .c2e_tlast(arm_eth0_tx_tlast_b),
-      .c2e_tvalid(arm_eth0_tx_tvalid_b),
-      .c2e_tready(arm_eth0_tx_tready_b),
+     // CPU to Ethernet
+     .c2e_tdata(arm_eth0_tx_tdata_b),
+     .c2e_tkeep(arm_eth0_tx_tkeep_b),
+     .c2e_tlast(arm_eth0_tx_tlast_b),
+     .c2e_tvalid(arm_eth0_tx_tvalid_b),
+     .c2e_tready(arm_eth0_tx_tready_b),
 
-      // Misc
-      .port_info(sfp_port0_info),
+     // Misc
+     .port_info(sfp_port0_info),
 
-      // LED
-      .link_up(SFP_0_LED_B),
-      .activity(SFP_0_LED_A)
+     // LED
+     .link_up(SFP_0_LED_B),
+     .activity(SFP_0_LED_A)
    );
-
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1389,121 +1386,121 @@ module n3xx
    //////////////////////////////////////////////////////////////////////
 
    n3xx_sfp_wrapper #(
-`ifdef SFP1_10GBE
-      .PROTOCOL("10GbE"),
-      .MDIO_EN(1'b1),
-      .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
-`elsif SFP1_AURORA
-      .PROTOCOL("Aurora"),
-      .MDIO_EN(1'b0),
-`endif
-      .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
-      .AWIDTH(REG_AWIDTH),     // Width of the address bus
-      .PORTNUM(8'd1)
+  `ifdef SFP1_10GBE
+    .PROTOCOL("10GbE"),
+    .MDIO_EN(1'b1),
+    .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
+  `elsif SFP1_AURORA
+    .PROTOCOL("Aurora"),
+    .MDIO_EN(1'b0),
+  `endif
+    .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
+    .AWIDTH(REG_AWIDTH),     // Width of the address bus
+    .PORTNUM(8'd1)
    ) sfp_wrapper_1 (
-      .areset(global_rst),
+     .areset(global_rst),
 
-      .gt_refclk(sfp1_gt_refclk),
-      .gb_refclk(sfp1_gb_refclk),
-      .misc_clk(sfp1_misc_clk),
-      .user_clk(au_user_clk),
-      .sync_clk(au_sync_clk),
-      .gt_tx_out_clk_unbuf(sfp1_tx_out_clk),
+     .gt_refclk(sfp1_gt_refclk),
+     .gb_refclk(sfp1_gb_refclk),
+     .misc_clk(sfp1_misc_clk),
+     .user_clk(au_user_clk),
+     .sync_clk(au_sync_clk),
+     .gt_tx_out_clk_unbuf(sfp1_tx_out_clk),
 
-      .bus_rst(bus_rst),
-      .bus_clk(bus_clk),
+     .bus_rst(bus_rst),
+     .bus_clk(bus_clk),
 
-      .qpllreset(qpllreset_sfp1),
-      .qplllock(qplllock),
-      .qplloutclk(qplloutclk),
-      .qplloutrefclk(qplloutrefclk),
-      .qpllrefclklost(),
+     .qpllreset(qpllreset_sfp1),
+     .qplllock(qplllock),
+     .qplloutclk(qplloutclk),
+     .qplloutrefclk(qplloutrefclk),
+     .qpllrefclklost(),
 
-      .mmcm_locked(au_mmcm_locked),
-      .gt_pll_lock(sfp1_gt_pll_lock),
+     .mmcm_locked(au_mmcm_locked),
+     .gt_pll_lock(sfp1_gt_pll_lock),
 
-      .txp(SFP_1_TX_P),
-      .txn(SFP_1_TX_N),
-      .rxp(SFP_1_RX_P),
-      .rxn(SFP_1_RX_N),
+     .txp(SFP_1_TX_P),
+     .txn(SFP_1_TX_N),
+     .rxp(SFP_1_RX_P),
+     .rxn(SFP_1_RX_N),
 
-      .sfpp_rxlos(SFP_1_LOS),
-      .sfpp_tx_fault(SFP_1_TXFAULT),
-      .sfpp_tx_disable(SFP_1_TXDISABLE),
+     .sfpp_rxlos(SFP_1_LOS),
+     .sfpp_tx_fault(SFP_1_TXFAULT),
+     .sfpp_tx_disable(SFP_1_TXDISABLE),
 
-      // Clock and reset
-      .s_axi_aclk(clk40),
-      .s_axi_aresetn(clk40_rstn),
-      // AXI4-Lite: Write address port (domain: s_axi_aclk)
-      .s_axi_awaddr(M_AXI_NET1_AWADDR),
-      .s_axi_awvalid(M_AXI_NET1_AWVALID),
-      .s_axi_awready(M_AXI_NET1_AWREADY),
-      // AXI4-Lite: Write data port (domain: s_axi_aclk)
-      .s_axi_wdata(M_AXI_NET1_WDATA),
-      .s_axi_wstrb(M_AXI_NET1_WSTRB),
-      .s_axi_wvalid(M_AXI_NET1_WVALID),
-      .s_axi_wready(M_AXI_NET1_WREADY),
-      // AXI4-Lite: Write response port (domain: s_axi_aclk)
-      .s_axi_bresp(M_AXI_NET1_BRESP),
-      .s_axi_bvalid(M_AXI_NET1_BVALID),
-      .s_axi_bready(M_AXI_NET1_BREADY),
-      // AXI4-Lite: Read address port (domain: s_axi_aclk)
-      .s_axi_araddr(M_AXI_NET1_ARADDR),
-      .s_axi_arvalid(M_AXI_NET1_ARVALID),
-      .s_axi_arready(M_AXI_NET1_ARREADY),
-      // AXI4-Lite: Read data port (domain: s_axi_aclk)
-      .s_axi_rdata(M_AXI_NET1_RDATA),
-      .s_axi_rresp(M_AXI_NET1_RRESP),
-      .s_axi_rvalid(M_AXI_NET1_RVALID),
-      .s_axi_rready(M_AXI_NET1_RREADY),
+     // Clock and reset
+     .s_axi_aclk(clk40),
+     .s_axi_aresetn(clk40_rstn),
+     // AXI4-Lite: Write address port (domain: s_axi_aclk)
+     .s_axi_awaddr(M_AXI_NET1_AWADDR),
+     .s_axi_awvalid(M_AXI_NET1_AWVALID),
+     .s_axi_awready(M_AXI_NET1_AWREADY),
+     // AXI4-Lite: Write data port (domain: s_axi_aclk)
+     .s_axi_wdata(M_AXI_NET1_WDATA),
+     .s_axi_wstrb(M_AXI_NET1_WSTRB),
+     .s_axi_wvalid(M_AXI_NET1_WVALID),
+     .s_axi_wready(M_AXI_NET1_WREADY),
+     // AXI4-Lite: Write response port (domain: s_axi_aclk)
+     .s_axi_bresp(M_AXI_NET1_BRESP),
+     .s_axi_bvalid(M_AXI_NET1_BVALID),
+     .s_axi_bready(M_AXI_NET1_BREADY),
+     // AXI4-Lite: Read address port (domain: s_axi_aclk)
+     .s_axi_araddr(M_AXI_NET1_ARADDR),
+     .s_axi_arvalid(M_AXI_NET1_ARVALID),
+     .s_axi_arready(M_AXI_NET1_ARREADY),
+     // AXI4-Lite: Read data port (domain: s_axi_aclk)
+     .s_axi_rdata(M_AXI_NET1_RDATA),
+     .s_axi_rresp(M_AXI_NET1_RRESP),
+     .s_axi_rvalid(M_AXI_NET1_RVALID),
+     .s_axi_rready(M_AXI_NET1_RREADY),
 
-      // Ethernet to Vita
-      .e2v_tdata(e2v1_tdata),
-      .e2v_tlast(e2v1_tlast),
-      .e2v_tvalid(e2v1_tvalid),
-      .e2v_tready(e2v1_tready),
+     // Ethernet to Vita
+     .e2v_tdata(e2v1_tdata),
+     .e2v_tlast(e2v1_tlast),
+     .e2v_tvalid(e2v1_tvalid),
+     .e2v_tready(e2v1_tready),
 
-      // Vita to Ethernet
-      .v2e_tdata(v2e1_tdata),
-      .v2e_tlast(v2e1_tlast),
-      .v2e_tvalid(v2e1_tvalid),
-      .v2e_tready(v2e1_tready),
+     // Vita to Ethernet
+     .v2e_tdata(v2e1_tdata),
+     .v2e_tlast(v2e1_tlast),
+     .v2e_tvalid(v2e1_tvalid),
+     .v2e_tready(v2e1_tready),
 
-      // Crossover
-      .xo_tdata(e10_tdata),
-      .xo_tuser(e10_tuser),
-      .xo_tlast(e10_tlast),
-      .xo_tvalid(e10_tvalid),
-      .xo_tready(e10_tready),
-      .xi_tdata(e01_tdata),
-      .xi_tuser(e01_tuser),
-      .xi_tlast(e01_tlast),
-      .xi_tvalid(e01_tvalid),
-      .xi_tready(e01_tready),
+     // Crossover
+     .xo_tdata(e10_tdata),
+     .xo_tuser(e10_tuser),
+     .xo_tlast(e10_tlast),
+     .xo_tvalid(e10_tvalid),
+     .xo_tready(e10_tready),
+     .xi_tdata(e01_tdata),
+     .xi_tuser(e01_tuser),
+     .xi_tlast(e01_tlast),
+     .xi_tvalid(e01_tvalid),
+     .xi_tready(e01_tready),
 
-      // Ethernet to CPU
-      .e2c_tdata(arm_eth1_rx_tdata_b),
-      .e2c_tkeep(arm_eth1_rx_tkeep_b),
-      .e2c_tlast(arm_eth1_rx_tlast_b),
-      .e2c_tvalid(arm_eth1_rx_tvalid_b),
-      .e2c_tready(arm_eth1_rx_tready_b),
+     // Ethernet to CPU
+     .e2c_tdata(arm_eth1_rx_tdata_b),
+     .e2c_tkeep(arm_eth1_rx_tkeep_b),
+     .e2c_tlast(arm_eth1_rx_tlast_b),
+     .e2c_tvalid(arm_eth1_rx_tvalid_b),
+     .e2c_tready(arm_eth1_rx_tready_b),
 
-      // CPU to Ethernet
-      .c2e_tdata(arm_eth1_tx_tdata_b),
-      .c2e_tkeep(arm_eth1_tx_tkeep_b),
-      .c2e_tlast(arm_eth1_tx_tlast_b),
-      .c2e_tvalid(arm_eth1_tx_tvalid_b),
-      .c2e_tready(arm_eth1_tx_tready_b),
+     // CPU to Ethernet
+     .c2e_tdata(arm_eth1_tx_tdata_b),
+     .c2e_tkeep(arm_eth1_tx_tkeep_b),
+     .c2e_tlast(arm_eth1_tx_tlast_b),
+     .c2e_tvalid(arm_eth1_tx_tvalid_b),
+     .c2e_tready(arm_eth1_tx_tready_b),
 
-      // Misc
-      .port_info(sfp_port1_info),
+     // Misc
+     .port_info(sfp_port1_info),
 
-      // LED
-      .link_up(SFP_1_LED_B),
-      .activity(SFP_1_LED_A)
+     // LED
+     .link_up(SFP_1_LED_B),
+     .activity(SFP_1_LED_A)
    );
 
-   /////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
   //
   // Ethernet DMA 0
   //
@@ -1517,8 +1514,9 @@ module n3xx
 
 `ifdef SFP0_AURORA
   //If inst Aurora, tie off each axi/axi-lite interface
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp0_eth_dma
-  (
+  axi_dummy #(
+    .DEC_ERR(1'b0)
+  ) inst_axi_dummy_sfp0_eth_dma (
     .s_axi_aclk(bus_clk),
     .s_axi_areset(bus_rst),
 
@@ -1608,8 +1606,7 @@ module n3xx
 
 `else
 
-  axi_eth_dma inst_axi_eth_dma0
-  (
+  axi_eth_dma inst_axi_eth_dma0 (
     .s_axi_lite_aclk(clk40),
     .m_axi_sg_aclk(clk40),
     .m_axi_mm2s_aclk(clk40),
@@ -1717,7 +1714,10 @@ module n3xx
     .axi_dma_tstvec()
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_tx_0_fifo_2clk_i (
+  axi_fifo_2clk #(
+    .WIDTH(1+8+64),
+    .SIZE(5)
+  ) eth_tx_0_fifo_2clk_i (
     .reset(clk40_rst),
     .i_aclk(clk40),
     .i_tdata({arm_eth0_tx_tlast, arm_eth0_tx_tkeep, arm_eth0_tx_tdata}),
@@ -1729,7 +1729,10 @@ module n3xx
     .o_tready(arm_eth0_tx_tready_b)
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_rx_0_fifo_2clk_i (
+  axi_fifo_2clk #(
+    .WIDTH(1+8+64),
+    .SIZE(5)
+  ) eth_rx_0_fifo_2clk_i (
     .reset(bus_rst),
     .i_aclk(bus_clk),
     .i_tdata({arm_eth0_rx_tlast_b, arm_eth0_rx_tkeep_b, arm_eth0_rx_tdata_b}),
@@ -1742,6 +1745,7 @@ module n3xx
   );
 
 `endif
+
   /////////////////////////////////////////////////////////////////////
   //
   // Ethernet DMA 1
@@ -1753,101 +1757,101 @@ module n3xx
 
   assign {S_AXI_HP1_AWID, S_AXI_HP1_ARID} = 12'd0;
   assign {S_AXI_GP1_AWID, S_AXI_GP1_ARID} = 10'd0;
-  `ifdef SFP0_AURORA
-    //If inst Aurora, tie off each axi/axi-lite interface
-    axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp1_eth_dma
-    (
-      .s_axi_aclk(bus_clk),
-      .s_axi_areset(bus_rst),
 
-      .s_axi_awaddr(M_AXI_ETH_DMA1_AWADDR),
-      .s_axi_awvalid(M_AXI_ETH_DMA1_AWVALID),
-      .s_axi_awready(M_AXI_ETH_DMA1_AWREADY),
-
-      .s_axi_wdata(M_AXI_ETH_DMA1_WDATA),
-      .s_axi_wvalid(M_AXI_ETH_DMA1_WVALID),
-      .s_axi_wready(M_AXI_ETH_DMA1_WREADY),
-
-      .s_axi_bresp(M_AXI_ETH_DMA1_BRESP),
-      .s_axi_bvalid(M_AXI_ETH_DMA1_BVALID),
-      .s_axi_bready(M_AXI_ETH_DMA1_BREADY),
-
-      .s_axi_araddr(M_AXI_ETH_DMA1_ARADDR),
-      .s_axi_arvalid(M_AXI_ETH_DMA1_ARVALID),
-      .s_axi_arready(M_AXI_ETH_DMA1_ARREADY),
-
-      .s_axi_rdata(M_AXI_ETH_DMA1_RDATA),
-      .s_axi_rresp(M_AXI_ETH_DMA1_RRESP),
-      .s_axi_rvalid(M_AXI_ETH_DMA1_RVALID),
-      .s_axi_rready(M_AXI_ETH_DMA1_RREADY)
-
-    );
-    //S_AXI_GP0 outputs from axi_eth_dma, so needs some sort of controller/tie off
-    assign S_AXI_GP1_AWADDR = 32'h0;
-    assign S_AXI_GP1_AWLEN = 8'h0;
-    assign S_AXI_GP1_AWSIZE = 4'h0;
-    assign S_AXI_GP1_AWBURST = 3'h0;
-    assign S_AXI_GP1_AWPROT = 3'h0;
-    assign S_AXI_GP1_AWCACHE = 4'h0;
-    assign S_AXI_GP1_AWVALID = 1'b0;
-    //S_AXI_GP1_AWREADY output from PS
-    assign S_AXI_GP1_WDATA = 32'h0;
-    assign S_AXI_GP1_WSTRB = 4'h0;
-    assign S_AXI_GP1_WLAST = 1'b0;
-    assign S_AXI_GP1_WVALID = 1'b0;
-    //S_AXI_GP1_WREADY output from PS
-    //S_AXI_GP1_BRESP
-    //S_AXI_GP1_BVALID
-    assign S_AXI_GP1_BREADY = 1'b1;
-    assign S_AXI_GP1_ARADDR = 32'h0;
-    assign S_AXI_GP1_ARLEN = 8'h0;
-    assign S_AXI_GP1_ARSIZE = 3'h0;
-    assign S_AXI_GP1_ARBURST = 2'h0;
-    assign S_AXI_GP1_ARPROT = 3'h0;
-    assign S_AXI_GP1_ARCACHE = 4'h0;
-    assign S_AXI_GP1_ARVALID = 1'b0;
-    //S_AXI_GP1_ARREADY
-    //S_AXI_GP1_RDATA
-    //S_AXI_GP1_RRESP
-    //S_AXI_GP1_RLAST
-    //S_AXI_GP1_RVALID
-    assign S_AXI_GP1_RREADY = 1'b1;
-
-    //S_AXI_HP0 from axi_eth_dma
-    assign S_AXI_HP1_ARADDR = 32'h0;
-    assign S_AXI_HP1_ARLEN = 8'h0;
-    assign S_AXI_HP1_ARSIZE = 3'h0;
-    assign S_AXI_HP1_ARBURST = 2'h0;
-    assign S_AXI_HP1_ARPROT = 3'h0;
-    assign S_AXI_HP1_ARCACHE = 4'h0;
-    assign S_AXI_HP1_ARVALID = 1'b0;
-    //S_AXI_HP1_ARREADY
-    //S_AXI_HP1_RDATA
-    //S_AXI_HP1_RRESP
-    //S_AXI_HP1_RLAST
-    //S_AXI_HP1_RVALID
-    assign S_AXI_HP1_RREADY = 1'b1;
-    assign S_AXI_HP1_AWADDR = 32'h0;
-    assign S_AXI_HP1_AWLEN = 8'h0;
-    assign S_AXI_HP1_AWSIZE = 3'h0;
-    assign S_AXI_HP1_AWBURST = 2'h0;
-    assign S_AXI_HP1_AWPROT = 3'h0;
-    assign S_AXI_HP1_AWCACHE = 4'h0;
-    assign S_AXI_HP1_AWVALID = 1'b0;
-    //S_AXI_HP1_AWREADY
-    assign S_AXI_HP1_WDATA = 64'h0;
-    assign S_AXI_HP1_WSTRB = 8'h0;
-    assign S_AXI_HP1_WLAST = 1'b0;
-    assign S_AXI_HP1_WVALID = 1'b0;
-    //S_AXI_HP1_WREADY
-    //S_AXI_HP1_BRESP
-    //S_AXI_HP1_BVALID
-    assign S_AXI_HP1_BREADY = 1'b1;
-
-  `else
-
-  axi_eth_dma inst_axi_eth_dma1
+`ifdef SFP0_AURORA
+  //If inst Aurora, tie off each axi/axi-lite interface
+  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_sfp1_eth_dma
   (
+    .s_axi_aclk(bus_clk),
+    .s_axi_areset(bus_rst),
+
+    .s_axi_awaddr(M_AXI_ETH_DMA1_AWADDR),
+    .s_axi_awvalid(M_AXI_ETH_DMA1_AWVALID),
+    .s_axi_awready(M_AXI_ETH_DMA1_AWREADY),
+
+    .s_axi_wdata(M_AXI_ETH_DMA1_WDATA),
+    .s_axi_wvalid(M_AXI_ETH_DMA1_WVALID),
+    .s_axi_wready(M_AXI_ETH_DMA1_WREADY),
+
+    .s_axi_bresp(M_AXI_ETH_DMA1_BRESP),
+    .s_axi_bvalid(M_AXI_ETH_DMA1_BVALID),
+    .s_axi_bready(M_AXI_ETH_DMA1_BREADY),
+
+    .s_axi_araddr(M_AXI_ETH_DMA1_ARADDR),
+    .s_axi_arvalid(M_AXI_ETH_DMA1_ARVALID),
+    .s_axi_arready(M_AXI_ETH_DMA1_ARREADY),
+
+    .s_axi_rdata(M_AXI_ETH_DMA1_RDATA),
+    .s_axi_rresp(M_AXI_ETH_DMA1_RRESP),
+    .s_axi_rvalid(M_AXI_ETH_DMA1_RVALID),
+    .s_axi_rready(M_AXI_ETH_DMA1_RREADY)
+
+  );
+  //S_AXI_GP0 outputs from axi_eth_dma, so needs some sort of controller/tie off
+  assign S_AXI_GP1_AWADDR = 32'h0;
+  assign S_AXI_GP1_AWLEN = 8'h0;
+  assign S_AXI_GP1_AWSIZE = 4'h0;
+  assign S_AXI_GP1_AWBURST = 3'h0;
+  assign S_AXI_GP1_AWPROT = 3'h0;
+  assign S_AXI_GP1_AWCACHE = 4'h0;
+  assign S_AXI_GP1_AWVALID = 1'b0;
+  //S_AXI_GP1_AWREADY output from PS
+  assign S_AXI_GP1_WDATA = 32'h0;
+  assign S_AXI_GP1_WSTRB = 4'h0;
+  assign S_AXI_GP1_WLAST = 1'b0;
+  assign S_AXI_GP1_WVALID = 1'b0;
+  //S_AXI_GP1_WREADY output from PS
+  //S_AXI_GP1_BRESP
+  //S_AXI_GP1_BVALID
+  assign S_AXI_GP1_BREADY = 1'b1;
+  assign S_AXI_GP1_ARADDR = 32'h0;
+  assign S_AXI_GP1_ARLEN = 8'h0;
+  assign S_AXI_GP1_ARSIZE = 3'h0;
+  assign S_AXI_GP1_ARBURST = 2'h0;
+  assign S_AXI_GP1_ARPROT = 3'h0;
+  assign S_AXI_GP1_ARCACHE = 4'h0;
+  assign S_AXI_GP1_ARVALID = 1'b0;
+  //S_AXI_GP1_ARREADY
+  //S_AXI_GP1_RDATA
+  //S_AXI_GP1_RRESP
+  //S_AXI_GP1_RLAST
+  //S_AXI_GP1_RVALID
+  assign S_AXI_GP1_RREADY = 1'b1;
+
+  //S_AXI_HP0 from axi_eth_dma
+  assign S_AXI_HP1_ARADDR = 32'h0;
+  assign S_AXI_HP1_ARLEN = 8'h0;
+  assign S_AXI_HP1_ARSIZE = 3'h0;
+  assign S_AXI_HP1_ARBURST = 2'h0;
+  assign S_AXI_HP1_ARPROT = 3'h0;
+  assign S_AXI_HP1_ARCACHE = 4'h0;
+  assign S_AXI_HP1_ARVALID = 1'b0;
+  //S_AXI_HP1_ARREADY
+  //S_AXI_HP1_RDATA
+  //S_AXI_HP1_RRESP
+  //S_AXI_HP1_RLAST
+  //S_AXI_HP1_RVALID
+  assign S_AXI_HP1_RREADY = 1'b1;
+  assign S_AXI_HP1_AWADDR = 32'h0;
+  assign S_AXI_HP1_AWLEN = 8'h0;
+  assign S_AXI_HP1_AWSIZE = 3'h0;
+  assign S_AXI_HP1_AWBURST = 2'h0;
+  assign S_AXI_HP1_AWPROT = 3'h0;
+  assign S_AXI_HP1_AWCACHE = 4'h0;
+  assign S_AXI_HP1_AWVALID = 1'b0;
+  //S_AXI_HP1_AWREADY
+  assign S_AXI_HP1_WDATA = 64'h0;
+  assign S_AXI_HP1_WSTRB = 8'h0;
+  assign S_AXI_HP1_WLAST = 1'b0;
+  assign S_AXI_HP1_WVALID = 1'b0;
+  //S_AXI_HP1_WREADY
+  //S_AXI_HP1_BRESP
+  //S_AXI_HP1_BVALID
+  assign S_AXI_HP1_BREADY = 1'b1;
+
+`else
+
+  axi_eth_dma inst_axi_eth_dma1 (
     .s_axi_lite_aclk(clk40),
     .m_axi_sg_aclk(clk40),
     .m_axi_mm2s_aclk(clk40),
@@ -1955,7 +1959,10 @@ module n3xx
     .axi_dma_tstvec()
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_tx_1_fifo_2clk_i (
+  axi_fifo_2clk #(
+    .WIDTH(1+8+64),
+    .SIZE(5)
+  ) eth_tx_1_fifo_2clk_i (
     .reset(clk40_rst),
     .i_aclk(clk40),
     .i_tdata({arm_eth1_tx_tlast, arm_eth1_tx_tkeep, arm_eth1_tx_tdata}),
@@ -1967,7 +1974,10 @@ module n3xx
     .o_tready(arm_eth1_tx_tready_b)
   );
 
-  axi_fifo_2clk #(.WIDTH(1+8+64), .SIZE(5)) eth_rx_1_fifo_2clk_i (
+  axi_fifo_2clk #(
+    .WIDTH(1+8+64),
+    .SIZE(5)
+  ) eth_rx_1_fifo_2clk_i (
     .reset(bus_rst),
     .i_aclk(bus_clk),
     .i_tdata({arm_eth1_rx_tlast_b, arm_eth1_rx_tkeep_b, arm_eth1_rx_tdata_b}),
@@ -2011,8 +2021,7 @@ module n3xx
 `endif
 
   // Processing System
-  n310_ps_bd inst_n310_ps
-  (
+  n310_ps_bd inst_n310_ps (
     .SPI0_SCLK_I(1'b0),
     .SPI0_SCLK_O(spi0_sclk),
     .SPI0_SCLK_T(),
@@ -2467,165 +2476,164 @@ module n3xx
     .PS_PORB(PS_PORB)
   );
 
-   ///////////////////////////////////////////////////////////////////////////////////
-   //
-   // Xilinx DDR3 Controller and PHY.
-   //
-   ///////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////
+  //
+  // Xilinx DDR3 Controller and PHY.
+  //
+  ///////////////////////////////////////////////////////////////////////////////////
+
+  wire         ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
+  wire         ddr3_axi_rst;           // Synchronized to ddr_sys_clk
+  wire         ddr3_running;           // DRAM calibration complete.
+  wire [11:0]  device_temp;
+
+  // Slave Interface Write Address Ports
+  wire [3:0]   ddr3_axi_awid;
+  wire [31:0]  ddr3_axi_awaddr;
+  wire [7:0]   ddr3_axi_awlen;
+  wire [2:0]   ddr3_axi_awsize;
+  wire [1:0]   ddr3_axi_awburst;
+  wire [0:0]   ddr3_axi_awlock;
+  wire [3:0]   ddr3_axi_awcache;
+  wire [2:0]   ddr3_axi_awprot;
+  wire [3:0]   ddr3_axi_awqos;
+  wire         ddr3_axi_awvalid;
+  wire         ddr3_axi_awready;
+  // Slave Interface Write Data Ports
+  wire [255:0] ddr3_axi_wdata;
+  wire [31:0]  ddr3_axi_wstrb;
+  wire         ddr3_axi_wlast;
+  wire         ddr3_axi_wvalid;
+  wire         ddr3_axi_wready;
+  // Slave Interface Write Response Ports
+  wire         ddr3_axi_bready;
+  wire [3:0]   ddr3_axi_bid;
+  wire [1:0]   ddr3_axi_bresp;
+  wire         ddr3_axi_bvalid;
+  // Slave Interface Read Address Ports
+  wire [3:0]   ddr3_axi_arid;
+  wire [31:0]  ddr3_axi_araddr;
+  wire [7:0]   ddr3_axi_arlen;
+  wire [2:0]   ddr3_axi_arsize;
+  wire [1:0]   ddr3_axi_arburst;
+  wire [0:0]   ddr3_axi_arlock;
+  wire [3:0]   ddr3_axi_arcache;
+  wire [2:0]   ddr3_axi_arprot;
+  wire [3:0]   ddr3_axi_arqos;
+  wire         ddr3_axi_arvalid;
+  wire         ddr3_axi_arready;
+  // Slave Interface Read Data Ports
+  wire         ddr3_axi_rready;
+  wire [3:0]   ddr3_axi_rid;
+  wire [255:0] ddr3_axi_rdata;
+  wire [1:0]   ddr3_axi_rresp;
+  wire         ddr3_axi_rlast;
+  wire         ddr3_axi_rvalid;
+
+  reg      ddr3_axi_rst_reg_n;
+
+  // Copied this reset circuit from example design.
+  always @(posedge ddr3_axi_clk)
+    ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
 
-   wire         ddr3_axi_clk;           // 1/4 DDR external clock rate (200MHz)
-   wire         ddr3_axi_rst;           // Synchronized to ddr_sys_clk
-   wire         ddr3_running;           // DRAM calibration complete.
-   wire [11:0]  device_temp;
+  // Instantiate the DDR3 MIG core
+  //
+  // The top-level IP block has no parameters defined for some reason.
+  // Most of configurable parameters are hard-coded in the mig so get
+  // some additional knobs we pull those out into verilog headers.
+  //
+  // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
+  // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
 
-   // Slave Interface Write Address Ports
-   wire [3:0]   ddr3_axi_awid;
-   wire [31:0]  ddr3_axi_awaddr;
-   wire [7:0]   ddr3_axi_awlen;
-   wire [2:0]   ddr3_axi_awsize;
-   wire [1:0]   ddr3_axi_awburst;
-   wire [0:0]   ddr3_axi_awlock;
-   wire [3:0]   ddr3_axi_awcache;
-   wire [2:0]   ddr3_axi_awprot;
-   wire [3:0]   ddr3_axi_awqos;
-   wire         ddr3_axi_awvalid;
-   wire         ddr3_axi_awready;
-   // Slave Interface Write Data Ports
-   wire [255:0] ddr3_axi_wdata;
-   wire [31:0]  ddr3_axi_wstrb;
-   wire         ddr3_axi_wlast;
-   wire         ddr3_axi_wvalid;
-   wire         ddr3_axi_wready;
-   // Slave Interface Write Response Ports
-   wire         ddr3_axi_bready;
-   wire [3:0]   ddr3_axi_bid;
-   wire [1:0]   ddr3_axi_bresp;
-   wire         ddr3_axi_bvalid;
-   // Slave Interface Read Address Ports
-   wire [3:0]   ddr3_axi_arid;
-   wire [31:0]  ddr3_axi_araddr;
-   wire [7:0]   ddr3_axi_arlen;
-   wire [2:0]   ddr3_axi_arsize;
-   wire [1:0]   ddr3_axi_arburst;
-   wire [0:0]   ddr3_axi_arlock;
-   wire [3:0]   ddr3_axi_arcache;
-   wire [2:0]   ddr3_axi_arprot;
-   wire [3:0]   ddr3_axi_arqos;
-   wire         ddr3_axi_arvalid;
-   wire         ddr3_axi_arready;
-   // Slave Interface Read Data Ports
-   wire         ddr3_axi_rready;
-   wire [3:0]   ddr3_axi_rid;
-   wire [255:0] ddr3_axi_rdata;
-   wire [1:0]   ddr3_axi_rresp;
-   wire         ddr3_axi_rlast;
-   wire         ddr3_axi_rvalid;
+  ddr3_32bit u_ddr3_32bit (
+    // Memory interface ports
+    .ddr3_addr                      (ddr3_addr),
+    .ddr3_ba                        (ddr3_ba),
+    .ddr3_cas_n                     (ddr3_cas_n),
+    .ddr3_ck_n                      (ddr3_ck_n),
+    .ddr3_ck_p                      (ddr3_ck_p),
+    .ddr3_cke                       (ddr3_cke),
+    .ddr3_ras_n                     (ddr3_ras_n),
+    .ddr3_reset_n                   (ddr3_reset_n),
+    .ddr3_we_n                      (ddr3_we_n),
+    .ddr3_dq                        (ddr3_dq),
+    .ddr3_dqs_n                     (ddr3_dqs_n),
+    .ddr3_dqs_p                     (ddr3_dqs_p),
+    .init_calib_complete            (ddr3_running),
+    .device_temp_i                  (device_temp),
 
-   reg      ddr3_axi_rst_reg_n;
+    .ddr3_cs_n                      (ddr3_cs_n),
+    .ddr3_dm                        (ddr3_dm),
+    .ddr3_odt                       (ddr3_odt),
+    // Application interface ports
+    .ui_clk                         (ddr3_axi_clk),  // 200Hz clock out
+    .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
+    .aresetn                        (ddr3_axi_rst_reg_n),
+    .app_sr_req                     (1'b0),
+    .app_sr_active                  (),
+    .app_ref_req                    (1'b0),
+    .app_ref_ack                    (),
+    .app_zq_req                     (1'b0),
+    .app_zq_ack                     (),
+    // Slave Interface Write Address Ports
+    .s_axi_awid                     (ddr3_axi_awid),
+    .s_axi_awaddr                   (ddr3_axi_awaddr),
+    .s_axi_awlen                    (ddr3_axi_awlen),
+    .s_axi_awsize                   (ddr3_axi_awsize),
+    .s_axi_awburst                  (ddr3_axi_awburst),
+    .s_axi_awlock                   (ddr3_axi_awlock),
+    .s_axi_awcache                  (ddr3_axi_awcache),
+    .s_axi_awprot                   (ddr3_axi_awprot),
+    .s_axi_awqos                    (ddr3_axi_awqos),
+    .s_axi_awvalid                  (ddr3_axi_awvalid),
+    .s_axi_awready                  (ddr3_axi_awready),
+    // Slave Interface Write Data Ports
+    .s_axi_wdata                    (ddr3_axi_wdata),
+    .s_axi_wstrb                    (ddr3_axi_wstrb),
+    .s_axi_wlast                    (ddr3_axi_wlast),
+    .s_axi_wvalid                   (ddr3_axi_wvalid),
+    .s_axi_wready                   (ddr3_axi_wready),
+    // Slave Interface Write Response Ports
+    .s_axi_bid                      (ddr3_axi_bid),
+    .s_axi_bresp                    (ddr3_axi_bresp),
+    .s_axi_bvalid                   (ddr3_axi_bvalid),
+    .s_axi_bready                   (ddr3_axi_bready),
+    // Slave Interface Read Address Ports
+    .s_axi_arid                     (ddr3_axi_arid),
+    .s_axi_araddr                   (ddr3_axi_araddr),
+    .s_axi_arlen                    (ddr3_axi_arlen),
+    .s_axi_arsize                   (ddr3_axi_arsize),
+    .s_axi_arburst                  (ddr3_axi_arburst),
+    .s_axi_arlock                   (ddr3_axi_arlock),
+    .s_axi_arcache                  (ddr3_axi_arcache),
+    .s_axi_arprot                   (ddr3_axi_arprot),
+    .s_axi_arqos                    (ddr3_axi_arqos),
+    .s_axi_arvalid                  (ddr3_axi_arvalid),
+    .s_axi_arready                  (ddr3_axi_arready),
+    // Slave Interface Read Data Ports
+    .s_axi_rid                      (ddr3_axi_rid),
+    .s_axi_rdata                    (ddr3_axi_rdata),
+    .s_axi_rresp                    (ddr3_axi_rresp),
+    .s_axi_rlast                    (ddr3_axi_rlast),
+    .s_axi_rvalid                   (ddr3_axi_rvalid),
+    .s_axi_rready                   (ddr3_axi_rready),
+    // System Clock Ports
+    .sys_clk_p                      (sys_clk_p),
+    .sys_clk_n                      (sys_clk_n),
+    .clk_ref_i                      (bus_clk),
 
-   // Copied this reset circuit from example design.
-   always @(posedge ddr3_axi_clk)
-     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
+    .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+  );
 
-
-   // Instantiate the DDR3 MIG core
-   //
-   // The top-level IP block has no parameters defined for some reason.
-   // Most of configurable parameters are hard-coded in the mig so get
-   // some additional knobs we pull those out into verilog headers.
-   //
-   // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
-   // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
-
-   ddr3_32bit u_ddr3_32bit (
-      // Memory interface ports
-      .ddr3_addr                      (ddr3_addr),
-      .ddr3_ba                        (ddr3_ba),
-      .ddr3_cas_n                     (ddr3_cas_n),
-      .ddr3_ck_n                      (ddr3_ck_n),
-      .ddr3_ck_p                      (ddr3_ck_p),
-      .ddr3_cke                       (ddr3_cke),
-      .ddr3_ras_n                     (ddr3_ras_n),
-      .ddr3_reset_n                   (ddr3_reset_n),
-      .ddr3_we_n                      (ddr3_we_n),
-      .ddr3_dq                        (ddr3_dq),
-      .ddr3_dqs_n                     (ddr3_dqs_n),
-      .ddr3_dqs_p                     (ddr3_dqs_p),
-      .init_calib_complete            (ddr3_running),
-      .device_temp_i                  (device_temp),
-
-      .ddr3_cs_n                      (ddr3_cs_n),
-      .ddr3_dm                        (ddr3_dm),
-      .ddr3_odt                       (ddr3_odt),
-      // Application interface ports
-      .ui_clk                         (ddr3_axi_clk),  // 200Hz clock out
-      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 200 MHz.
-      .aresetn                        (ddr3_axi_rst_reg_n),
-      .app_sr_req                     (1'b0),
-      .app_sr_active                  (),
-      .app_ref_req                    (1'b0),
-      .app_ref_ack                    (),
-      .app_zq_req                     (1'b0),
-      .app_zq_ack                     (),
-      // Slave Interface Write Address Ports
-      .s_axi_awid                     (ddr3_axi_awid),
-      .s_axi_awaddr                   (ddr3_axi_awaddr),
-      .s_axi_awlen                    (ddr3_axi_awlen),
-      .s_axi_awsize                   (ddr3_axi_awsize),
-      .s_axi_awburst                  (ddr3_axi_awburst),
-      .s_axi_awlock                   (ddr3_axi_awlock),
-      .s_axi_awcache                  (ddr3_axi_awcache),
-      .s_axi_awprot                   (ddr3_axi_awprot),
-      .s_axi_awqos                    (ddr3_axi_awqos),
-      .s_axi_awvalid                  (ddr3_axi_awvalid),
-      .s_axi_awready                  (ddr3_axi_awready),
-      // Slave Interface Write Data Ports
-      .s_axi_wdata                    (ddr3_axi_wdata),
-      .s_axi_wstrb                    (ddr3_axi_wstrb),
-      .s_axi_wlast                    (ddr3_axi_wlast),
-      .s_axi_wvalid                   (ddr3_axi_wvalid),
-      .s_axi_wready                   (ddr3_axi_wready),
-      // Slave Interface Write Response Ports
-      .s_axi_bid                      (ddr3_axi_bid),
-      .s_axi_bresp                    (ddr3_axi_bresp),
-      .s_axi_bvalid                   (ddr3_axi_bvalid),
-      .s_axi_bready                   (ddr3_axi_bready),
-      // Slave Interface Read Address Ports
-      .s_axi_arid                     (ddr3_axi_arid),
-      .s_axi_araddr                   (ddr3_axi_araddr),
-      .s_axi_arlen                    (ddr3_axi_arlen),
-      .s_axi_arsize                   (ddr3_axi_arsize),
-      .s_axi_arburst                  (ddr3_axi_arburst),
-      .s_axi_arlock                   (ddr3_axi_arlock),
-      .s_axi_arcache                  (ddr3_axi_arcache),
-      .s_axi_arprot                   (ddr3_axi_arprot),
-      .s_axi_arqos                    (ddr3_axi_arqos),
-      .s_axi_arvalid                  (ddr3_axi_arvalid),
-      .s_axi_arready                  (ddr3_axi_arready),
-      // Slave Interface Read Data Ports
-      .s_axi_rid                      (ddr3_axi_rid),
-      .s_axi_rdata                    (ddr3_axi_rdata),
-      .s_axi_rresp                    (ddr3_axi_rresp),
-      .s_axi_rlast                    (ddr3_axi_rlast),
-      .s_axi_rvalid                   (ddr3_axi_rvalid),
-      .s_axi_rready                   (ddr3_axi_rready),
-      // System Clock Ports
-      .sys_clk_p                      (sys_clk_p),
-      .sys_clk_n                      (sys_clk_n),
-      .clk_ref_i                      (bus_clk),
-
-      .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
-   );
-
-   // Temperature monitor module
-   mig_7series_v4_0_tempmon #(
-      .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(5000 /* 200MHz clock period in ps */)
-   ) tempmon_i (
-      .clk(bus_clk), .xadc_clk(bus_clk), .rst(bus_rst),
-      .device_temp_i(12'd0 /* ignored */), .device_temp(device_temp)
-   );
-
+  // Temperature monitor module
+  mig_7series_v4_0_tempmon #(
+     .TEMP_MON_CONTROL("INTERNAL"),
+     .XADC_CLK_PERIOD(5000 /* 200MHz clock period in ps */)
+  ) tempmon_i (
+     .clk(bus_clk), .xadc_clk(bus_clk), .rst(bus_rst),
+     .device_temp_i(12'd0 /* ignored */), .device_temp(device_temp)
+  );
 
   ///////////////////////////////////////////////////////
   //
@@ -2637,10 +2645,11 @@ module n3xx
   (* IOB = "true" *) reg  [NUM_CHANNELS-1:0] rx_atr_reg;
   (* IOB = "true" *) reg  [NUM_CHANNELS-1:0] tx_atr_reg;
 
-  wire [15:0] db_gpio_out[0:NUM_CHANNELS-1];
-  wire [15:0] db_gpio_in[0:NUM_CHANNELS-1];
-  wire [15:0] db_gpio_ddr[0:NUM_CHANNELS-1];
-  wire [15:0] db_gpio_fab[0:NUM_CHANNELS-1];
+  // Radio GPIO control for DSA
+  wire [16*NUM_CHANNELS-1:0] db_gpio_out;
+  wire [16*NUM_CHANNELS-1:0] db_gpio_ddr;
+  wire [16*NUM_CHANNELS-1:0] db_gpio_in;
+  wire [16*NUM_CHANNELS-1:0] db_gpio_fab;
 
   // DB A SPI Connections
   wire cpld_a_cs_n;
@@ -2674,15 +2683,14 @@ module n3xx
   assign DBA_CPLD_PS_SPI_ADDR[1]  = dac_a_cs_n;
   assign DBA_MYK_SPI_CS_n         = myk_a_cs_n;
 
-
   // Instantiate DSA registers in the IOB
   (* IOB = "true" *) reg [5:0] dsa_tx1_a_out_iob, dsa_rx1_a_out_iob;
   (* IOB = "true" *) reg [5:0] dsa_tx2_a_out_iob, dsa_rx2_a_out_iob;
   always @(posedge radio_clk) begin
-    dsa_tx1_a_out_iob  <= db_gpio_out[0][11:6];
-    dsa_rx1_a_out_iob  <= db_gpio_out[0][05:0];
-    dsa_tx2_a_out_iob  <= db_gpio_out[1][11:6];
-    dsa_rx2_a_out_iob  <= db_gpio_out[1][05:0];
+    dsa_tx1_a_out_iob  <= db_gpio_out[16*0+11:16*0+6];
+    dsa_rx1_a_out_iob  <= db_gpio_out[16*0+5:16*0+0];
+    dsa_tx2_a_out_iob  <= db_gpio_out[16*1+11:16*1+6];
+    dsa_rx2_a_out_iob  <= db_gpio_out[16*1+5:16*1+0];
   end
 
   assign DBA_CH1_TX_DSA_DATA = dsa_tx1_a_out_iob;
@@ -2739,15 +2747,14 @@ module n3xx
   assign DBB_CPLD_PS_SPI_ADDR[1]  = dac_b_cs_n;
   assign DBB_MYK_SPI_CS_n         = myk_b_cs_n;
 
-
   // Instantiate DSA registers in the IOB
   (* IOB = "true" *) reg [5:0] dsa_tx1_b_out_iob, dsa_rx1_b_out_iob;
   (* IOB = "true" *) reg [5:0] dsa_tx2_b_out_iob, dsa_rx2_b_out_iob;
   always @(posedge radio_clk) begin
-    dsa_tx1_b_out_iob  <= db_gpio_out[2][11:6];
-    dsa_rx1_b_out_iob  <= db_gpio_out[2][05:0];
-    dsa_tx2_b_out_iob  <= db_gpio_out[3][11:6];
-    dsa_rx2_b_out_iob  <= db_gpio_out[3][05:0];
+    dsa_tx1_b_out_iob  <= db_gpio_out[16*2+11:16*2+6];
+    dsa_rx1_b_out_iob  <= db_gpio_out[16*2+5:16*2+0];
+    dsa_tx2_b_out_iob  <= db_gpio_out[16*3+11:16*3+6];
+    dsa_rx2_b_out_iob  <= db_gpio_out[16*3+5:16*3+0];
   end
 
   assign DBB_CH1_TX_DSA_DATA = dsa_tx1_b_out_iob;
@@ -2777,20 +2784,25 @@ module n3xx
   //
   ///////////////////////////////////////////////////////
 
-  wire  [31:0]     rx0;
-  wire  [31:0]     rx1;
-  wire  [31:0]     tx0;
-  wire  [31:0]     tx1;
-`ifndef N300
-  wire  [31:0]     rx2;
-  wire  [31:0]     rx3;
-  wire  [31:0]     tx2;
-  wire  [31:0]     tx3;
-`endif
-  wire  [NUM_CHANNELS-1:0]      rx_stb;
-  wire  [NUM_CHANNELS-1:0]      tx_stb;
+  wire [31:0] rx[NUM_CHANNELS-1:0];
+  wire [31:0] tx[NUM_CHANNELS-1:0];
+  wire [32*NUM_CHANNELS-1:0] rx_flat;
+  wire [32*NUM_CHANNELS-1:0] tx_flat;
+
+  wire [NUM_CHANNELS-1:0] rx_stb;
+  wire [NUM_CHANNELS-1:0] tx_stb;
+
   wire pps_radioclk1x;
   wire [31:0] build_datestamp;
+
+  genvar i;
+  generate
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+      // Radio Data
+      assign rx_flat[32*i+31:32*i] = rx[i];
+      assign tx[i] = tx_flat[32*i+31:32*i];
+    end
+  endgenerate
 
   USR_ACCESSE2 usr_access_i (
     .DATA(build_datestamp), .CFGCLK(), .DATAVALID()
@@ -2802,7 +2814,8 @@ module n3xx
     .FP_GPIO_WIDTH(FP_GPIO_WIDTH),
     .NUM_RADIO_CORES(NUM_RADIOS),
     .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
-    .NUM_CHANNELS(NUM_CHANNELS)
+    .NUM_CHANNELS(NUM_CHANNELS),
+    .NUM_DBOARDS(NUM_DBOARDS)
   ) n3xx_core(
     // Clocks and resets
   `ifdef NO_DB
@@ -2859,61 +2872,31 @@ module n3xx
     .rx_atr(rx_atr),
     .tx_atr(tx_atr),
     // Radio GPIO DSA
-    .db_gpio_out0(db_gpio_out[0]),
-    .db_gpio_out1(db_gpio_out[1]),
-    .db_gpio_in0(db_gpio_in[0]),
-    .db_gpio_in1(db_gpio_in[1]),
-    .db_gpio_ddr0(db_gpio_ddr[0]),
-    .db_gpio_ddr1(db_gpio_ddr[1]),
-    .db_gpio_fab0(db_gpio_fab[0]),
-    .db_gpio_fab1(db_gpio_fab[1]),
+    .db_gpio_out_flat(db_gpio_out),
+    .db_gpio_in_flat(db_gpio_in),
+    .db_gpio_ddr_flat(db_gpio_ddr),
+    .db_gpio_fab_flat(db_gpio_fab),
     // Radio Strobes
     .rx_stb(rx_stb),
     .tx_stb(tx_stb),
     // Radio Data
-    .rx0(rx0),
-    .tx0(tx0),
-    .rx1(rx1),
-    .tx1(tx1),
+    .rx(rx_flat),
+    .tx(tx_flat),
     // CPLD RX_LO TX_LO SPI
-    .sclk0(DBA_CPLD_PL_SPI_SCLK),
-    .sen0({DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
-    .mosi0(DBA_CPLD_PL_SPI_SDI),
-    .miso0(DBA_CPLD_PL_SPI_SDO),
   `ifndef N300
-    .db_gpio_out2(db_gpio_out[2]),
-    .db_gpio_out3(db_gpio_out[3]),
-    .db_gpio_in2(db_gpio_in[2]),
-    .db_gpio_in3(db_gpio_in[3]),
-    .db_gpio_ddr2(db_gpio_ddr[2]),
-    .db_gpio_ddr3(db_gpio_ddr[3]),
-    .db_gpio_fab2(db_gpio_fab[2]),
-    .db_gpio_fab3(db_gpio_fab[3]),
-    .rx2(rx2),
-    .tx2(tx2),
-    .rx3(rx3),
-    .tx3(tx3),
-    .sclk1(DBB_CPLD_PL_SPI_SCLK),
-    .sen1({DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE}),
-    .mosi1(DBB_CPLD_PL_SPI_SDI),
-    .miso1(DBB_CPLD_PL_SPI_SDO),
+    .sclk_flat({DBA_CPLD_PL_SPI_SCLK,
+                DBB_CPLD_PL_SPI_SCLK}),
+    .sen_flat({5'b0,DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE,
+               5'b0,DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE}),
+    .mosi_flat({DBA_CPLD_PL_SPI_SDI,
+                DBB_CPLD_PL_SPI_SDI}),
+    .miso_flat({DBA_CPLD_PL_SPI_SDO,
+                DBB_CPLD_PL_SPI_SDO}),
   `else
-    .db_gpio_out2(),
-    .db_gpio_out3(),
-    .db_gpio_in2(16'b0),
-    .db_gpio_in3(16'b0),
-    .db_gpio_ddr2(),
-    .db_gpio_ddr3(),
-    .db_gpio_fab2(16'b0),
-    .db_gpio_fab3(16'b0),
-    .rx2(32'b0),
-    .tx2(),
-    .rx3(32'b0),
-    .tx3(),
-    .sclk1(),
-    .sen1(),
-    .mosi1(),
-    .miso1(1'b0),
+    .sclk_flat(DBA_CPLD_PL_SPI_SCLK),
+    .sen_flat({5'b0,DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
+    .mosi_flat(DBA_CPLD_PL_SPI_SDI),
+    .miso_flat(DBA_CPLD_PL_SPI_SDO),
   `endif
     // DRAM signals
     .ddr3_axi_clk              (ddr3_axi_clk),
@@ -3044,53 +3027,52 @@ module n3xx
   assign bRegPortInFlatA = {2'b0, reg_portA_addr, reg_portA_wr_data, reg_portA_rd, reg_portA_wr};
   assign {reg_portA_rd_data, validA_unused, reg_portA_ready} = bRegPortOutFlatA;
 
-  DbCore
-    dba_core (
-      .bBusReset(clk40_rst),                   //in  std_logic
-      .BusClk(clk40),                          //in  std_logic
-      .Clk40(clk40),                           //in  std_logic
-      .MeasClk(meas_clk),                      //in  std_logic
-      .FpgaClk_p(DBA_FPGA_CLK_P),              //in  std_logic
-      .FpgaClk_n(DBA_FPGA_CLK_N),              //in  std_logic
-      .SampleClk1xOut(radio_clk),              //out std_logic
-      .SampleClk1x(radio_clk),                 //in  std_logic
-      .SampleClk2xOut(radio_clk_2x),           //out std_logic
-      .SampleClk2x(radio_clk_2x),              //in  std_logic
-      .bRegPortInFlat(bRegPortInFlatA),        //in  std_logic_vector(49:0)
-      .bRegPortOutFlat(bRegPortOutFlatA),      //out std_logic_vector(33:0)
-      .kSlotId(1'b0),                          //in  std_logic
-      .sSysRefFpgaLvds_p(DBA_FPGA_SYSREF_P),   //in  std_logic
-      .sSysRefFpgaLvds_n(DBA_FPGA_SYSREF_N),   //in  std_logic
-      .aLmkSync(DBA_CPLD_PL_SPI_ADDR[2]),      //out std_logic
-      .JesdRefClk_p(USRPIO_A_MGTCLK_P),        //in  std_logic
-      .JesdRefClk_n(USRPIO_A_MGTCLK_N),        //in  std_logic
-      .aAdcRx_p(USRPIO_A_RX_P),                //in  std_logic_vector(3:0)
-      .aAdcRx_n(USRPIO_A_RX_N),                //in  std_logic_vector(3:0)
-      .aSyncAdcOut_n(DBA_MYK_SYNC_IN_n),       //out std_logic
-      .aDacTx_p(USRPIO_A_TX_P),                //out std_logic_vector(3:0)
-      .aDacTx_n(USRPIO_A_TX_N),                //out std_logic_vector(3:0)
-      .aSyncDacIn_n(DBA_MYK_SYNC_OUT_n),       //in  std_logic
-      .sAdcDataValid(rx_a_valid),              //out std_logic
-      .sAdcDataSamples0I(rx0[31:16]),          //out std_logic_vector(15:0)
-      .sAdcDataSamples0Q(rx0[15:0]),           //out std_logic_vector(15:0)
-      .sAdcDataSamples1I(rx1[31:16]),          //out std_logic_vector(15:0)
-      .sAdcDataSamples1Q(rx1[15:0]),           //out std_logic_vector(15:0)
-      .sDacReadyForInput(tx_a_rfi),            //out std_logic
-      .sDacDataSamples0I(tx0[31:16]),          //in  std_logic_vector(15:0)
-      .sDacDataSamples0Q(tx0[15:0]),           //in  std_logic_vector(15:0)
-      .sDacDataSamples1I(tx1[31:16]),          //in  std_logic_vector(15:0)
-      .sDacDataSamples1Q(tx1[15:0]),           //in  std_logic_vector(15:0)
-      .RefClk(ref_clk),                        //in  std_logic
-      .rPpsPulse(pps_refclk),                  //in  std_logic
-      .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
-      .sGatedPulseToPin(UNUSED_PIN_TDCA_1),    //inout std_logic
-      .sPps(pps_radioclk1x),                   //out std_logic
-      .sAdcSync(),                             //out std_logic
-      .sDacSync(),                             //out std_logic
-      .sSysRef(),                              //out std_logic
-      .rRSP(),                                 //out std_logic
-      .sRTC());                                //out std_logic
-
+  DbCore dba_core (
+    .bBusReset(clk40_rst),                   //in  std_logic
+    .BusClk(clk40),                          //in  std_logic
+    .Clk40(clk40),                           //in  std_logic
+    .MeasClk(meas_clk),                      //in  std_logic
+    .FpgaClk_p(DBA_FPGA_CLK_P),              //in  std_logic
+    .FpgaClk_n(DBA_FPGA_CLK_N),              //in  std_logic
+    .SampleClk1xOut(radio_clk),              //out std_logic
+    .SampleClk1x(radio_clk),                 //in  std_logic
+    .SampleClk2xOut(radio_clk_2x),           //out std_logic
+    .SampleClk2x(radio_clk_2x),              //in  std_logic
+    .bRegPortInFlat(bRegPortInFlatA),        //in  std_logic_vector(49:0)
+    .bRegPortOutFlat(bRegPortOutFlatA),      //out std_logic_vector(33:0)
+    .kSlotId(1'b0),                          //in  std_logic
+    .sSysRefFpgaLvds_p(DBA_FPGA_SYSREF_P),   //in  std_logic
+    .sSysRefFpgaLvds_n(DBA_FPGA_SYSREF_N),   //in  std_logic
+    .aLmkSync(DBA_CPLD_PL_SPI_ADDR[2]),      //out std_logic
+    .JesdRefClk_p(USRPIO_A_MGTCLK_P),        //in  std_logic
+    .JesdRefClk_n(USRPIO_A_MGTCLK_N),        //in  std_logic
+    .aAdcRx_p(USRPIO_A_RX_P),                //in  std_logic_vector(3:0)
+    .aAdcRx_n(USRPIO_A_RX_N),                //in  std_logic_vector(3:0)
+    .aSyncAdcOut_n(DBA_MYK_SYNC_IN_n),       //out std_logic
+    .aDacTx_p(USRPIO_A_TX_P),                //out std_logic_vector(3:0)
+    .aDacTx_n(USRPIO_A_TX_N),                //out std_logic_vector(3:0)
+    .aSyncDacIn_n(DBA_MYK_SYNC_OUT_n),       //in  std_logic
+    .sAdcDataValid(rx_a_valid),              //out std_logic
+    .sAdcDataSamples0I(rx[0][31:16]),          //out std_logic_vector(15:0)
+    .sAdcDataSamples0Q(rx[0][15:0]),           //out std_logic_vector(15:0)
+    .sAdcDataSamples1I(rx[1][31:16]),          //out std_logic_vector(15:0)
+    .sAdcDataSamples1Q(rx[1][15:0]),           //out std_logic_vector(15:0)
+    .sDacReadyForInput(tx_a_rfi),            //out std_logic
+    .sDacDataSamples0I(tx[0][31:16]),          //in  std_logic_vector(15:0)
+    .sDacDataSamples0Q(tx[0][15:0]),           //in  std_logic_vector(15:0)
+    .sDacDataSamples1I(tx[1][31:16]),          //in  std_logic_vector(15:0)
+    .sDacDataSamples1Q(tx[1][15:0]),           //in  std_logic_vector(15:0)
+    .RefClk(ref_clk),                        //in  std_logic
+    .rPpsPulse(pps_refclk),                  //in  std_logic
+    .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
+    .sGatedPulseToPin(UNUSED_PIN_TDCA_1),    //inout std_logic
+    .sPps(pps_radioclk1x),                   //out std_logic
+    .sAdcSync(),                             //out std_logic
+    .sDacSync(),                             //out std_logic
+    .sSysRef(),                              //out std_logic
+    .rRSP(),                                 //out std_logic
+    .sRTC()                                  //out std_logic
+  );
 
   assign rx_stb[0] = rx_a_valid;
   assign rx_stb[1] = rx_a_valid;
@@ -3148,52 +3130,52 @@ module n3xx
   assign bRegPortInFlatB = {2'b0, reg_portB_addr, reg_portB_wr_data, reg_portB_rd, reg_portB_wr};
   assign {reg_portB_rd_data, validB_unused, reg_portB_ready} = bRegPortOutFlatB;
 
-  DbCore
-    dbb_core (
-      .bBusReset(clk40_rst),                   //in  std_logic
-      .BusClk(clk40),                          //in  std_logic
-      .Clk40(clk40),                           //in  std_logic
-      .MeasClk(meas_clk),                      //in  std_logic
-      .FpgaClk_p(DBB_FPGA_CLK_P),              //in  std_logic
-      .FpgaClk_n(DBB_FPGA_CLK_N),              //in  std_logic
-      .SampleClk1xOut(),                       //out std_logic
-      .SampleClk1x(radio_clk),                 //in  std_logic
-      .SampleClk2xOut(),                       //out std_logic
-      .SampleClk2x(radio_clk_2x),              //in  std_logic
-      .bRegPortInFlat(bRegPortInFlatB),        //in  std_logic_vector(49:0)
-      .bRegPortOutFlat(bRegPortOutFlatB),      //out std_logic_vector(33:0)
-      .kSlotId(1'b1),                          //in  std_logic
-      .sSysRefFpgaLvds_p(DBB_FPGA_SYSREF_P),   //in  std_logic
-      .sSysRefFpgaLvds_n(DBB_FPGA_SYSREF_N),   //in  std_logic
-      .aLmkSync(DBB_CPLD_PL_SPI_ADDR[2]),      //out std_logic
-      .JesdRefClk_p(USRPIO_B_MGTCLK_P),        //in  std_logic
-      .JesdRefClk_n(USRPIO_B_MGTCLK_N),        //in  std_logic
-      .aAdcRx_p(USRPIO_B_RX_P),                //in  std_logic_vector(3:0)
-      .aAdcRx_n(USRPIO_B_RX_N),                //in  std_logic_vector(3:0)
-      .aSyncAdcOut_n(DBB_MYK_SYNC_IN_n),       //out std_logic
-      .aDacTx_p(USRPIO_B_TX_P),                //out std_logic_vector(3:0)
-      .aDacTx_n(USRPIO_B_TX_N),                //out std_logic_vector(3:0)
-      .aSyncDacIn_n(DBB_MYK_SYNC_OUT_n),       //in  std_logic
-      .sAdcDataValid(rx_b_valid),              //out std_logic
-      .sAdcDataSamples0I(rx2[31:16]),          //out std_logic_vector(15:0)
-      .sAdcDataSamples0Q(rx2[15:0]),           //out std_logic_vector(15:0)
-      .sAdcDataSamples1I(rx3[31:16]),          //out std_logic_vector(15:0)
-      .sAdcDataSamples1Q(rx3[15:0]),           //out std_logic_vector(15:0)
-      .sDacReadyForInput(tx_b_rfi),            //out std_logic
-      .sDacDataSamples0I(tx2[31:16]),          //in  std_logic_vector(15:0)
-      .sDacDataSamples0Q(tx2[15:0]),           //in  std_logic_vector(15:0)
-      .sDacDataSamples1I(tx3[31:16]),          //in  std_logic_vector(15:0)
-      .sDacDataSamples1Q(tx3[15:0]),           //in  std_logic_vector(15:0)
-      .RefClk(ref_clk),                        //in  std_logic
-      .rPpsPulse(pps_refclk),                  //in  std_logic
-      .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
-      .sGatedPulseToPin(UNUSED_PIN_TDCB_1),    //inout std_logic
-      .sPps(),                                 //out std_logic
-      .sAdcSync(),                             //out std_logic
-      .sDacSync(),                             //out std_logic
-      .sSysRef(),                              //out std_logic
-      .rRSP(),                                 //out std_logic
-      .sRTC());                                //out std_logic
+  DbCore dbb_core (
+    .bBusReset(clk40_rst),                   //in  std_logic
+    .BusClk(clk40),                          //in  std_logic
+    .Clk40(clk40),                           //in  std_logic
+    .MeasClk(meas_clk),                      //in  std_logic
+    .FpgaClk_p(DBB_FPGA_CLK_P),              //in  std_logic
+    .FpgaClk_n(DBB_FPGA_CLK_N),              //in  std_logic
+    .SampleClk1xOut(),                       //out std_logic
+    .SampleClk1x(radio_clk),                 //in  std_logic
+    .SampleClk2xOut(),                       //out std_logic
+    .SampleClk2x(radio_clk_2x),              //in  std_logic
+    .bRegPortInFlat(bRegPortInFlatB),        //in  std_logic_vector(49:0)
+    .bRegPortOutFlat(bRegPortOutFlatB),      //out std_logic_vector(33:0)
+    .kSlotId(1'b1),                          //in  std_logic
+    .sSysRefFpgaLvds_p(DBB_FPGA_SYSREF_P),   //in  std_logic
+    .sSysRefFpgaLvds_n(DBB_FPGA_SYSREF_N),   //in  std_logic
+    .aLmkSync(DBB_CPLD_PL_SPI_ADDR[2]),      //out std_logic
+    .JesdRefClk_p(USRPIO_B_MGTCLK_P),        //in  std_logic
+    .JesdRefClk_n(USRPIO_B_MGTCLK_N),        //in  std_logic
+    .aAdcRx_p(USRPIO_B_RX_P),                //in  std_logic_vector(3:0)
+    .aAdcRx_n(USRPIO_B_RX_N),                //in  std_logic_vector(3:0)
+    .aSyncAdcOut_n(DBB_MYK_SYNC_IN_n),       //out std_logic
+    .aDacTx_p(USRPIO_B_TX_P),                //out std_logic_vector(3:0)
+    .aDacTx_n(USRPIO_B_TX_N),                //out std_logic_vector(3:0)
+    .aSyncDacIn_n(DBB_MYK_SYNC_OUT_n),       //in  std_logic
+    .sAdcDataValid(rx_b_valid),              //out std_logic
+    .sAdcDataSamples0I(rx[2][31:16]),          //out std_logic_vector(15:0)
+    .sAdcDataSamples0Q(rx[2][15:0]),           //out std_logic_vector(15:0)
+    .sAdcDataSamples1I(rx[3][31:16]),          //out std_logic_vector(15:0)
+    .sAdcDataSamples1Q(rx[3][15:0]),           //out std_logic_vector(15:0)
+    .sDacReadyForInput(tx_b_rfi),            //out std_logic
+    .sDacDataSamples0I(tx[2][31:16]),          //in  std_logic_vector(15:0)
+    .sDacDataSamples0Q(tx[2][15:0]),           //in  std_logic_vector(15:0)
+    .sDacDataSamples1I(tx[3][31:16]),          //in  std_logic_vector(15:0)
+    .sDacDataSamples1Q(tx[3][15:0]),           //in  std_logic_vector(15:0)
+    .RefClk(ref_clk),                        //in  std_logic
+    .rPpsPulse(pps_refclk),                  //in  std_logic
+    .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
+    .sGatedPulseToPin(UNUSED_PIN_TDCB_1),    //inout std_logic
+    .sPps(),                                 //out std_logic
+    .sAdcSync(),                             //out std_logic
+    .sDacSync(),                             //out std_logic
+    .sSysRef(),                              //out std_logic
+    .rRSP(),                                 //out std_logic
+    .sRTC()                                  //out std_logic
+  );
 
   assign rx_stb[2] = rx_b_valid;
   assign rx_stb[3] = rx_b_valid;
@@ -3240,8 +3222,9 @@ module n3xx
   );
 `else
   // Tie off second daughterboard interface
-  axi_dummy #(.DEC_ERR(1'b0)) inst_axi_dummy_dbb_core
-  (
+  axi_dummy #(
+    .DEC_ERR(1'b0)
+  ) inst_axi_dummy_dbb_core (
     // Clock and reset
     .s_axi_aclk    (clk40),
     .s_axi_areset  (clk40_rst),

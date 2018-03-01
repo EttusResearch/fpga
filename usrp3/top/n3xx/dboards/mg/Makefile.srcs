@@ -21,12 +21,14 @@ MAGNESIUM_TOP_SRCS = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
 n3xx.v \
 ))
 
-MAGNESIUM_DB0_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
+MAGNESIUM_DB_TIMING_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
 db_timing.xdc \
+))
+
+MAGNESIUM_DB0_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
 db0_pins.xdc \
 ))
 
 MAGNESIUM_DB1_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/mg/, \
-db_timing.xdc \
 db1_pins.xdc \
 ))

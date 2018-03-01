@@ -1,3 +1,5 @@
+/////////////////////////////////////////////////////////////////////
+//
 // Copyright 2017-2018 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0
@@ -19,6 +21,7 @@ module n3xx_core #(
   parameter NUM_RADIO_CORES = 4,
   parameter NUM_CHANNELS_PER_RADIO = 1,
   parameter NUM_CHANNELS = 4,
+  parameter NUM_DBOARDS = 2,
   parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
@@ -61,55 +64,36 @@ module n3xx_core #(
   output [1:0]             s_axi_rresp,
   output                   s_axi_rvalid,
   input                    s_axi_rready,
-  // ps gpio source
+
+  // PS GPIO source
   input  [FP_GPIO_WIDTH-1:0]  ps_gpio_out,
   input  [FP_GPIO_WIDTH-1:0]  ps_gpio_tri,
   output [FP_GPIO_WIDTH-1:0]  ps_gpio_in,
-  // n310 fp_gpio
+
+  // Front Panel GPIO
   inout  [FP_GPIO_WIDTH-1:0] fp_gpio_inout,
+
   // Radio GPIO control for DSA
-  output [15:0] db_gpio_out0,
-  output [15:0] db_gpio_out1,
-  output [15:0] db_gpio_out2,
-  output [15:0] db_gpio_out3,
-  output [15:0] db_gpio_ddr0,
-  output [15:0] db_gpio_ddr1,
-  output [15:0] db_gpio_ddr2,
-  output [15:0] db_gpio_ddr3,
-  input  [15:0] db_gpio_in0,
-  input  [15:0] db_gpio_in1,
-  input  [15:0] db_gpio_in2,
-  input  [15:0] db_gpio_in3,
-  input  [15:0] db_gpio_fab0,
-  input  [15:0] db_gpio_fab1,
-  input  [15:0] db_gpio_fab2,
-  input  [15:0] db_gpio_fab3,
+  output [16*NUM_CHANNELS-1:0] db_gpio_out_flat,
+  output [16*NUM_CHANNELS-1:0] db_gpio_ddr_flat,
+  input  [16*NUM_CHANNELS-1:0] db_gpio_in_flat,
+  input  [16*NUM_CHANNELS-1:0] db_gpio_fab_flat,
 
   // Radio ATR
   output [NUM_CHANNELS-1:0] rx_atr,
   output [NUM_CHANNELS-1:0] tx_atr,
 
   // Radio Data
-  input  [NUM_CHANNELS-1:0]  rx_stb,
-  input  [NUM_CHANNELS-1:0]  tx_stb,
-  input  [31:0] rx0,
-  output [31:0] tx0,
-  input  [31:0] rx1,
-  output [31:0] tx1,
-  input  [31:0] rx2,
-  output [31:0] tx2,
-  input  [31:0] rx3,
-  output [31:0] tx3,
+  input  [NUM_CHANNELS-1:0]    rx_stb,
+  input  [NUM_CHANNELS-1:0]    tx_stb,
+  input  [32*NUM_CHANNELS-1:0] rx,
+  output [32*NUM_CHANNELS-1:0] tx,
 
   // CPLD
-  output [7:0] sen0,
-  output       sclk0,
-  output       mosi0,
-  input        miso0,
-  output [7:0] sen1,
-  output       sclk1,
-  output       mosi1,
-  input        miso1,
+  output [8*NUM_DBOARDS-1:0] sen_flat,
+  output [NUM_DBOARDS-1:0]   sclk_flat,
+  output [NUM_DBOARDS-1:0]   mosi_flat,
+  input  [NUM_DBOARDS-1:0]   miso_flat,
 
   // DMA
   output [63:0] dmao_tdata,
@@ -123,51 +107,51 @@ module n3xx_core #(
   output        dmai_tready,
 
   // AXI4 (256b@200MHz) interface to DDR3 controller
-  input           ddr3_axi_clk,
-  input           ddr3_axi_rst,
-  input           ddr3_running,
+  input          ddr3_axi_clk,
+  input          ddr3_axi_rst,
+  input          ddr3_running,
   // Write Address Ports
-  output  [3:0]   ddr3_axi_awid,
-  output  [31:0]  ddr3_axi_awaddr,
-  output  [7:0]   ddr3_axi_awlen,
-  output  [2:0]   ddr3_axi_awsize,
-  output  [1:0]   ddr3_axi_awburst,
-  output  [0:0]   ddr3_axi_awlock,
-  output  [3:0]   ddr3_axi_awcache,
-  output  [2:0]   ddr3_axi_awprot,
-  output  [3:0]   ddr3_axi_awqos,
-  output          ddr3_axi_awvalid,
-  input           ddr3_axi_awready,
+  output [3:0]   ddr3_axi_awid,
+  output [31:0]  ddr3_axi_awaddr,
+  output [7:0]   ddr3_axi_awlen,
+  output [2:0]   ddr3_axi_awsize,
+  output [1:0]   ddr3_axi_awburst,
+  output [0:0]   ddr3_axi_awlock,
+  output [3:0]   ddr3_axi_awcache,
+  output [2:0]   ddr3_axi_awprot,
+  output [3:0]   ddr3_axi_awqos,
+  output         ddr3_axi_awvalid,
+  input          ddr3_axi_awready,
   // Write Data Ports
-  output  [255:0] ddr3_axi_wdata,
-  output  [31:0]  ddr3_axi_wstrb,
-  output          ddr3_axi_wlast,
-  output          ddr3_axi_wvalid,
-  input           ddr3_axi_wready,
+  output [255:0] ddr3_axi_wdata,
+  output [31:0]  ddr3_axi_wstrb,
+  output         ddr3_axi_wlast,
+  output         ddr3_axi_wvalid,
+  input          ddr3_axi_wready,
   // Write Response Ports
-  output          ddr3_axi_bready,
-  input [3:0]     ddr3_axi_bid,
-  input [1:0]     ddr3_axi_bresp,
-  input           ddr3_axi_bvalid,
+  output         ddr3_axi_bready,
+  input [3:0]    ddr3_axi_bid,
+  input [1:0]    ddr3_axi_bresp,
+  input          ddr3_axi_bvalid,
   // Read Address Ports
-  output  [3:0]   ddr3_axi_arid,
-  output  [31:0]  ddr3_axi_araddr,
-  output  [7:0]   ddr3_axi_arlen,
-  output  [2:0]   ddr3_axi_arsize,
-  output  [1:0]   ddr3_axi_arburst,
-  output  [0:0]   ddr3_axi_arlock,
-  output  [3:0]   ddr3_axi_arcache,
-  output  [2:0]   ddr3_axi_arprot,
-  output  [3:0]   ddr3_axi_arqos,
-  output          ddr3_axi_arvalid,
-  input           ddr3_axi_arready,
+  output [3:0]   ddr3_axi_arid,
+  output [31:0]  ddr3_axi_araddr,
+  output [7:0]   ddr3_axi_arlen,
+  output [2:0]   ddr3_axi_arsize,
+  output [1:0]   ddr3_axi_arburst,
+  output [0:0]   ddr3_axi_arlock,
+  output [3:0]   ddr3_axi_arcache,
+  output [2:0]   ddr3_axi_arprot,
+  output [3:0]   ddr3_axi_arqos,
+  output         ddr3_axi_arvalid,
+  input          ddr3_axi_arready,
   // Read Data Ports
-  output          ddr3_axi_rready,
-  input [3:0]     ddr3_axi_rid,
-  input [255:0]   ddr3_axi_rdata,
-  input [1:0]     ddr3_axi_rresp,
-  input           ddr3_axi_rlast,
-  input           ddr3_axi_rvalid,
+  output         ddr3_axi_rready,
+  input [3:0]    ddr3_axi_rid,
+  input [255:0]  ddr3_axi_rdata,
+  input [1:0]    ddr3_axi_rresp,
+  input          ddr3_axi_rlast,
+  input          ddr3_axi_rvalid,
 
   // v2e (vita to ethernet) and e2v (eth to vita)
   output [63:0] v2e0_tdata,
@@ -190,16 +174,16 @@ module n3xx_core #(
   input         e2v1_tvalid,
   output        e2v1_tready,
 
-  //regport interface to npio
-  output                     reg_wr_req_npio,
-  output [REG_AWIDTH-1:0]    reg_wr_addr_npio,
-  output [REG_DWIDTH-1:0]    reg_wr_data_npio,
-  output                     reg_rd_req_npio,
-  output [REG_AWIDTH-1:0]    reg_rd_addr_npio,
-  input                      reg_rd_resp_npio,
-  input  [REG_DWIDTH-1:0]    reg_rd_data_npio,
+  // RegPort interface to NPIO
+  output                  reg_wr_req_npio,
+  output [REG_AWIDTH-1:0] reg_wr_addr_npio,
+  output [REG_DWIDTH-1:0] reg_wr_data_npio,
+  output                  reg_rd_req_npio,
+  output [REG_AWIDTH-1:0] reg_rd_addr_npio,
+  input                   reg_rd_resp_npio,
+  input  [REG_DWIDTH-1:0] reg_rd_data_npio,
 
-  //misc
+  // Misc
   input  [31:0]   build_datestamp,
   input  [31:0]   xadc_readback,
   input  [63:0]   sfp_ports_info
@@ -213,7 +197,7 @@ module n3xx_core #(
   /////////////////////////////////////////////////////////////////////////////////
 
   // Computation engines that need access to IO
-  localparam NUM_IO_CE = NUM_RADIO_CORES+1; //NUM_RADIO_CORES + 1 DMA_FIFO
+  localparam NUM_IO_CE = NUM_RADIO_CORES + 1; // NUM_RADIO_CORES + 1 DMA_FIFO
 
   /////////////////////////////////////////////////////////////////////////////////
   // Motherboard Registers
@@ -223,7 +207,7 @@ module n3xx_core #(
   localparam REG_BASE_MISC  = 14'h0;
   localparam REG_BASE_XBAR  = 14'h1000;
 
-  // Misc Registers
+  // Misc Motherboard Registers
   localparam REG_COMPAT_NUM        = REG_BASE_MISC + 14'h00;
   localparam REG_DATESTAMP         = REG_BASE_MISC + 14'h04;
   localparam REG_GIT_HASH          = REG_BASE_MISC + 14'h08;
@@ -243,6 +227,7 @@ module n3xx_core #(
   reg [31:0] bus_counter = 32'h0;
   reg [31:0] fp_gpio_master_reg = 32'h0;
   reg [31:0] fp_gpio_src_reg = 32'h0;
+
   always @(posedge bus_clk) begin
      if (bus_rst)
         bus_counter <= 32'd0;
@@ -250,22 +235,25 @@ module n3xx_core #(
         bus_counter <= bus_counter + 32'd1;
   end
 
-  wire                     reg_wr_req;
-  wire [REG_AWIDTH-1:0]    reg_wr_addr;
-  wire [REG_DWIDTH-1:0]    reg_wr_data;
-  wire                     reg_rd_req;
-  wire  [REG_AWIDTH-1:0]   reg_rd_addr;
-  wire                     reg_rd_resp;
-  wire  [REG_DWIDTH-1:0]   reg_rd_data;
+  // Regport
+  wire                  reg_wr_req;
+  wire [REG_AWIDTH-1:0] reg_wr_addr;
+  wire [REG_DWIDTH-1:0] reg_wr_data;
+  wire                  reg_rd_req;
+  wire [REG_AWIDTH-1:0] reg_rd_addr;
+  wire                  reg_rd_resp;
+  wire [REG_DWIDTH-1:0] reg_rd_data;
 
-  reg                      reg_rd_resp_glob;
-  reg   [REG_DWIDTH-1:0]   reg_rd_data_glob;
+  reg                   reg_rd_resp_glob;
+  reg  [REG_DWIDTH-1:0] reg_rd_data_glob;
 
-  wire  [REG_DWIDTH-1:0]   reg_rd_data_xbar;
-  wire                     reg_rd_resp_xbar;
+  wire [REG_DWIDTH-1:0] reg_rd_data_xbar;
+  wire                  reg_rd_resp_xbar;
 
-  regport_resp_mux #(.WIDTH(REG_DWIDTH), .NUM_SLAVES(3)) inst_regport_resp_mux
-  (
+  regport_resp_mux #(
+    .WIDTH(REG_DWIDTH),
+    .NUM_SLAVES(3)
+  ) inst_mboard_regport_resp_mux (
     .clk(bus_clk),
     .reset(bus_rst),
     .sla_rd_resp({reg_rd_resp_npio, reg_rd_resp_glob, reg_rd_resp_xbar}),
@@ -280,7 +268,7 @@ module n3xx_core #(
     .WRBASE   (0),          // Write address base
     .RDBASE   (0),          // Read address base
     .TIMEOUT  (10)          // log2(timeout). Read will timeout after (2^TIMEOUT - 1) cycles
-  ) regport_master_i (
+  ) mboard_regport_master_i (
     // Clock and reset
     .s_axi_aclk    (s_axi_aclk),
     .s_axi_aresetn (s_axi_aresetn),
@@ -441,7 +429,7 @@ module n3xx_core #(
     end
   end
 
-  // ioce
+  // IOCE
   wire     [NUM_IO_CE*64-1:0]  ioce_flat_o_tdata;
   wire     [NUM_IO_CE*64-1:0]  ioce_flat_i_tdata;
   wire     [63:0]              ioce_o_tdata[0:NUM_IO_CE-1];
@@ -459,16 +447,19 @@ module n3xx_core #(
      assign ioce_flat_i_tdata[ioce_i*64+63:ioce_i*64] = ioce_i_tdata[ioce_i];
   end endgenerate
 
-  /////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
   //
   // DRAM FIFO
   //
-  /////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
+
   localparam NUM_DRAM_FIFOS = 4;
   localparam DRAM_FIFO_INPUT_BUFF_SIZE = 8'd13;
 
   wire ddr3_dma_rst;
-  synchronizer #( .INITIAL_VAL(1'b1) ) ddr3_dma_rst_sync_i (
+  synchronizer #(
+    .INITIAL_VAL(1'b1)
+  ) ddr3_dma_rst_sync_i (
     .clk(ddr3_dma_clk), .rst(1'b0), .in(ddr3_axi_rst), .out(ddr3_dma_rst)
   );
 
@@ -731,14 +722,14 @@ module n3xx_core #(
   );
 
   noc_block_axi_dma_fifo #(
-    .NOC_ID                 (64'hF1F0_D000_0000_0004),
-    .NUM_FIFOS              (NUM_DRAM_FIFOS),
-    .BUS_CLK_RATE           (BUS_CLK_RATE),
-    .DEFAULT_FIFO_BASE      ({30'h06000000, 30'h04000000, 30'h02000000, 30'h00000000}),
-    .DEFAULT_FIFO_SIZE      ({30'h01FFFFFF, 30'h01FFFFFF, 30'h01FFFFFF, 30'h01FFFFFF}),
-    .STR_SINK_FIFOSIZE      (DRAM_FIFO_INPUT_BUFF_SIZE),
-    .DEFAULT_BURST_TIMEOUT  ({NUM_DRAM_FIFOS{12'd280}}),
-    .EXTENDED_DRAM_BIST     (1)
+    .NOC_ID               (64'hF1F0_D000_0000_0004),
+    .NUM_FIFOS            (NUM_DRAM_FIFOS),
+    .BUS_CLK_RATE         (BUS_CLK_RATE),
+    .DEFAULT_FIFO_BASE    ({30'h06000000, 30'h04000000, 30'h02000000, 30'h00000000}),
+    .DEFAULT_FIFO_SIZE    ({30'h01FFFFFF, 30'h01FFFFFF, 30'h01FFFFFF, 30'h01FFFFFF}),
+    .STR_SINK_FIFOSIZE    (DRAM_FIFO_INPUT_BUFF_SIZE),
+    .DEFAULT_BURST_TIMEOUT({NUM_DRAM_FIFOS{12'd280}}),
+    .EXTENDED_DRAM_BIST   (1)
   ) noc_block_dram_fifo_i (
     // Clocks and resets
     .bus_clk(bus_clk), .bus_rst(bus_rst),
@@ -801,7 +792,6 @@ module n3xx_core #(
   //
   /////////////////////////////////////////////////////////////////////////////
 
-
   localparam FIRST_RADIO_CORE_INST = 1;
   localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
 
@@ -823,7 +813,7 @@ module n3xx_core #(
   wire [7:0]  sen[0:NUM_CHANNELS-1];
   wire        sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
   // Data
-  wire [31:0] rx[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
+  wire [31:0] rx_int[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
   wire        db_fe_set_stb[0:NUM_CHANNELS-1];
   wire [7:0]  db_fe_set_addr[0:NUM_CHANNELS-1];
   wire [31:0] db_fe_set_data[0:NUM_CHANNELS-1];
@@ -888,7 +878,9 @@ module n3xx_core #(
   endgenerate
 
   /////////////////////////////////////////////////////////////////////////////////
+  //
   // TX/RX FrontEnd
+  //
   /////////////////////////////////////////////////////////////////////////////////
 
   wire [15:0] db_gpio_in[0:NUM_CHANNELS-1];
@@ -899,30 +891,38 @@ module n3xx_core #(
   wire [31:0] radio_gpio_out[0:NUM_CHANNELS-1];
   wire [31:0] radio_gpio_ddr[0:NUM_CHANNELS-1];
   wire [31:0] radio_gpio_in[0:NUM_CHANNELS-1];
-  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_out;
-  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_ddr;
+  wire [FP_GPIO_WIDTH-1:0] radio_gpio_src_out;
+  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_out_reg;
+  wire [FP_GPIO_WIDTH-1:0] radio_gpio_src_ddr;
+  reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_ddr_reg;
   reg  [FP_GPIO_WIDTH-1:0] radio_gpio_src_in;
   wire [FP_GPIO_WIDTH-1:0] radio_gpio_sync;
   wire [FP_GPIO_WIDTH-1:0] fp_gpio_in_int;
   wire [FP_GPIO_WIDTH-1:0] fp_gpio_out_int;
   wire [FP_GPIO_WIDTH-1:0] fp_gpio_ddr_int;
 
-  assign {rx[0], rx[1]} = {rx0, rx1};
-  assign {rx[2], rx[3]} = {rx2, rx3};
-  assign {tx0, tx1} = {tx[0], tx[1]};
-  assign {tx2, tx3} = {tx[2], tx[3]};
-  assign {miso[0], miso[2]} = {miso0, miso1};
-  assign {sclk0, sclk1} = {sclk[0], sclk[2]};
-  assign {sen0, sen1} = {sen[0], sen[2]} ;
-  assign {mosi0, mosi1} = {mosi[0], mosi[2]};
-  assign {db_gpio_out0, db_gpio_out1} = {db_gpio_out[0], db_gpio_out[1]};
-  assign {db_gpio_out2, db_gpio_out3} = {db_gpio_out[2], db_gpio_out[3]};
-  assign {db_gpio_ddr0, db_gpio_ddr1} = {db_gpio_ddr[0], db_gpio_ddr[1]};
-  assign {db_gpio_ddr2, db_gpio_ddr3} = {db_gpio_ddr[2], db_gpio_ddr[3]};
-  assign {db_gpio_in[0],db_gpio_in[1]} = {db_gpio_in0, db_gpio_in1};
-  assign {db_gpio_in[2],db_gpio_in[3]} = {db_gpio_in2, db_gpio_in3};
-  assign {db_gpio_fab[0],db_gpio_fab[1]} = {db_gpio_fab0, db_gpio_fab1};
-  assign {db_gpio_fab[2],db_gpio_fab[3]} = {db_gpio_fab2, db_gpio_fab3};
+  generate
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+      // Radio Data
+      assign rx_int[i] = rx[32*i+31:32*i];
+      assign tx[32*i+31:32*i] = tx_int[i];
+      // GPIO
+      assign db_gpio_out_flat[16*i+15:16*i] = db_gpio_out[i];
+      assign db_gpio_ddr_flat[16*i+15:16*i] = db_gpio_ddr[i];
+      assign db_gpio_in[i] = db_gpio_in_flat[16*i+15:16*i];
+      assign db_gpio_fab[i] = db_gpio_fab_flat[16*i+15:16*i];
+    end
+  endgenerate
+
+  generate
+    for (i = 0; i < NUM_DBOARDS; i = i + 1) begin
+      // SPI
+      assign miso[2*i] = miso_flat[i];
+      assign sclk_flat[i] = sclk[2*i];
+      assign sen_flat[8*i+7:8*i] = sen[2*i];
+      assign mosi_flat[i] = mosi[2*i];
+    end
+  endgenerate
 
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
@@ -938,10 +938,10 @@ module n3xx_core #(
         .time_sync(sync_out[i < 2 ? 0 : 1]),
         .tx_stb(tx_stb[i]),
         .tx_data_in(tx_data[i]),
-        .tx_data_out(tx[i]),
+        .tx_data_out(tx_int[i]),
         .tx_running(tx_running[i]),
         .rx_stb(rx_stb[i]),
-        .rx_data_in(rx[i]),
+        .rx_data_in(rx_int[i]),
         .rx_data_out(rx_data[i]),
         .rx_running(rx_running[i]),
         .misc_ins(32'h0),
@@ -966,7 +966,9 @@ module n3xx_core #(
   endgenerate
 
   /////////////////////////////////////////////////////////////////////////////////
+  //
   // RFNoC
+  //
   /////////////////////////////////////////////////////////////////////////////////
 
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
@@ -996,7 +998,8 @@ module n3xx_core #(
   assign xbar_ce_o_tready                     = {ce_o_tready, ioce_o_tready};
   assign {ce_o_tlast, ioce_o_tlast}           = xbar_ce_o_tlast;
 
-  // //////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////
+  //
   // axi_crossbar ports
   // 0  - ETH0
   // 1  - ETH1
@@ -1004,7 +1007,8 @@ module n3xx_core #(
   // 3  - CE0
   // ...
   // 15 - CE13
-  // //////////////////////////////////////////////////////////////////////
+  //
+  ////////////////////////////////////////////////////////////////////////
 
   // Base width of crossbar based on fixed components (ethernet, DMA)
   localparam XBAR_FIXED_PORTS = 3;
@@ -1039,69 +1043,74 @@ module n3xx_core #(
     .reg_rd_resp(reg_rd_resp_xbar)
   );
 
-
   // Front panel GPIOs logic
   // Double-sync for the GPIO inputs to the PS and to the Radio blocks.
   synchronizer #(
     .INITIAL_VAL(1'b0), .WIDTH(FP_GPIO_WIDTH)
     ) ps_gpio_in_sync_i (
     .clk(bus_clk), .rst(1'b0), .in(fp_gpio_in_int), .out(ps_gpio_in)
-    );
+  );
   synchronizer #(
     .INITIAL_VAL(1'b0), .WIDTH(FP_GPIO_WIDTH)
     ) radio_gpio_in_sync_i (
     .clk(radio_clk), .rst(1'b0), .in(fp_gpio_in_int), .out(radio_gpio_sync)
-    );
-  generate for (i=0; i<NUM_CHANNELS; i=i+1) begin: gen_fp_gpio_in_sync
-    assign radio_gpio_in[i][FP_GPIO_WIDTH-1:0] = radio_gpio_sync;
-  end endgenerate
+  );
 
-  //FIXME: Change this for N300 to remove warnings
+  generate
+    for (i=0; i<NUM_CHANNELS; i=i+1) begin: gen_fp_gpio_in_sync
+      assign radio_gpio_in[i][FP_GPIO_WIDTH-1:0] = radio_gpio_sync;
+    end
+  endgenerate
+
   // For each of the FP GPIO bits, implement four control muxes, then the IO buffer.
-  generate for (i=0; i<FP_GPIO_WIDTH; i=i+1) begin: gpio_muxing_gen
-    // 1) Select which radio drives the output
-    always @ (posedge radio_clk) begin : gpio_src_mux_out
-      case (fp_gpio_src_reg[2*i+1:2*i])
-        2'b00: radio_gpio_src_out[i] <= radio_gpio_out[0][i];
-        2'b01: radio_gpio_src_out[i] <= radio_gpio_out[1][i];
-        2'b10: radio_gpio_src_out[i] <= radio_gpio_out[2][i];
-        2'b11: radio_gpio_src_out[i] <= radio_gpio_out[3][i];
-        default : radio_gpio_src_out[i] <= radio_gpio_out[0][i];
-      endcase
+  generate
+    for (i=0; i<FP_GPIO_WIDTH; i=i+1) begin: gpio_muxing_gen
+
+      // 1) Select which radio drives the output
+      assign radio_gpio_src_out[i] = radio_gpio_out[fp_gpio_src_reg[2*i+1:2*i]][i];
+      always @ (posedge radio_clk) begin
+        if (radio_rst) begin
+          radio_gpio_src_out_reg <= 'b0;
+        end else begin
+          radio_gpio_src_out_reg <= radio_gpio_src_out;
+        end
+      end
+
+      // 2) Select which radio drives the direction
+      assign radio_gpio_src_ddr[i] = radio_gpio_ddr[fp_gpio_src_reg[2*i+1:2*i]][i];
+      always @ (posedge radio_clk) begin
+        if (radio_rst) begin
+          radio_gpio_src_ddr_reg <= 'b0;
+        end else begin
+          radio_gpio_src_ddr_reg <= radio_gpio_src_ddr;
+        end
+      end
+
+      // 3) Select if the radio or the ps drives the output
+      // The following is implementing a 2:1 mux in a LUT6 explicitly to avoid
+      // glitching behavior that is introduced by unexpected Vivado synthesis.
+      (* dont_touch = "TRUE" *) LUT3 #(
+        .INIT(8'hCA) // Specify LUT Contents. O = ~I2&I0 | I2&I1
+      ) mux_out_i (
+        .O(fp_gpio_out_int[i]), // LUT general output. Mux output
+        .I0(radio_gpio_src_out_reg[i]), // LUT input. Input 1
+        .I1(ps_gpio_out[i]), // LUT input. Input 2
+        .I2(fp_gpio_master_reg[i])// LUT input. Select bit
+      );
+      // 4) Select if the radio or the ps drives the direction
+      (* dont_touch = "TRUE" *) LUT3 #(
+        .INIT(8'hC5) // Specify LUT Contents. O = ~I2&I0 | I2&~I1
+      ) mux_ddr_i (
+        .O(fp_gpio_ddr_int[i]), // LUT general output. Mux output
+        .I0(radio_gpio_src_ddr_reg[i]), // LUT input. Input 1
+        .I1(ps_gpio_tri[i]), // LUT input. Input 2
+        .I2(fp_gpio_master_reg[i]) // LUT input. Select bit
+      );
+
+      // Infer the IOBUFT
+      assign fp_gpio_inout[i] = fp_gpio_ddr_int[i] ? 1'bz : fp_gpio_out_int[i];
+      assign fp_gpio_in_int[i] = fp_gpio_inout[i];
     end
-    // 2) Select which radio drives the direction
-    always @ (posedge radio_clk) begin : gpio_src_mux_ddr
-      case (fp_gpio_src_reg[2*i+1:2*i])
-        2'b00: radio_gpio_src_ddr[i] <= radio_gpio_ddr[0][i];
-        2'b01: radio_gpio_src_ddr[i] <= radio_gpio_ddr[1][i];
-        2'b10: radio_gpio_src_ddr[i] <= radio_gpio_ddr[2][i];
-        2'b11: radio_gpio_src_ddr[i] <= radio_gpio_ddr[3][i];
-        default: radio_gpio_src_ddr[i] <= radio_gpio_ddr[0][i];
-      endcase
-    end
-    // 3) Select if the radio or the ps drives the output
-    // The following is implementing a 2:1 mux in a LUT6 explicitly to avoid
-    // glitching behavior that is introduced by unexpected Vivado synthesis.
-    (* dont_touch = "TRUE" *) LUT3 #(
-      .INIT(8'hCA) // Specify LUT Contents. O = ~I2&I0 | I2&I1
-    ) mux_out_i (
-      .O(fp_gpio_out_int[i]), // LUT general output. Mux output
-      .I0(radio_gpio_src_out[i]), // LUT input. Input 1
-      .I1(ps_gpio_out[i]), // LUT input. Input 2
-      .I2(fp_gpio_master_reg[i])// LUT input. Select bit
-    );
-    // 4) Select if the radio or the ps drives the direction
-    (* dont_touch = "TRUE" *) LUT3 #(
-      .INIT(8'hC5) // Specify LUT Contents. O = ~I2&I0 | I2&~I1
-    ) mux_ddr_i (
-      .O(fp_gpio_ddr_int[i]), // LUT general output. Mux output
-      .I0(radio_gpio_src_ddr[i]), // LUT input. Input 1
-      .I1(ps_gpio_tri[i]), // LUT input. Input 2
-      .I2(fp_gpio_master_reg[i]) // LUT input. Select bit
-    );
-    // Infer the IOBUFT
-    assign fp_gpio_inout[i] = fp_gpio_ddr_int[i] ? 1'bz : fp_gpio_out_int[i];
-    assign fp_gpio_in_int[i] = fp_gpio_inout[i];
-  end endgenerate
+  endgenerate
 
 endmodule //n310_core

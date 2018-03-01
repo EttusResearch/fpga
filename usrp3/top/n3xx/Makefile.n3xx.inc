@@ -93,9 +93,9 @@ HLS_IP_GEN_SRCS =
 endif
 
 ifdef N300
-MAGNESIUM_DB_XDC = $(MAGNESIUM_DB0_XDC)
+MAGNESIUM_DB_XDC = $(MAGNESIUM_DB_TIMING_XDC) $(MAGNESIUM_DB0_XDC)
 else
-MAGNESIUM_DB_XDC = $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC)
+MAGNESIUM_DB_XDC = $(MAGNESIUM_DB_TIMING_XDC) $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC)
 endif
 
 # The XDC files must be read in a specific order, motherboard first and then daughterboard.

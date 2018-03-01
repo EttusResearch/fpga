@@ -35,8 +35,7 @@ vivado_build = make -f Makefile.n3xx.inc $1 NAME=$@ ARCH=$(XIL_ARCH_$2) PART_ID=
 post_build = @\
 	mkdir -p build; \
 	echo "Exporting bitstream file..."; \
-	cp build-$(1)_$(2)/n300.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
-	cp build-$(1)_$(2)/n310.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
+	cp build-$(1)_$(2)/n3xx.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
 	echo "Exporting build report..."; \
 	cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
 	echo "Build DONE ... $(1)_$(2)";

@@ -5,7 +5,7 @@
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
   wire [63:0]          ce_debug[0:NUM_CE-1];
 
-  // Flattern CE tdata arrays
+  // Flatten CE tdata arrays
   genvar k;
   generate
     for (k = 0; k < NUM_CE; k = k + 1) begin
@@ -17,14 +17,14 @@
   wire ce_clk = bus_clk;
   wire ce_rst = bus_rst;
 
-  noc_block_ddc #( .NUM_CHAINS(1), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc_0 (
+  noc_block_ddc #( .NUM_CHAINS(NUM_CHANNELS_PER_RADIO), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc_0 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
     .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
     .debug(ce_debug[0]));
 
-  noc_block_ddc #( .NUM_CHAINS(1), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc_1 (
+  noc_block_ddc #( .NUM_CHAINS(NUM_CHANNELS_PER_RADIO), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc_1 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
