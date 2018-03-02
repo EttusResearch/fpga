@@ -9,6 +9,8 @@
 
 /{
 
+#include "n310-fpga.dtsi"
+
 fragment@1 {
 	target = <&amba>;
 	reg = <0x0001>;
