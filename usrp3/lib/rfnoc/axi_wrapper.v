@@ -24,12 +24,13 @@
 module axi_wrapper
   #(parameter MTU=10,
     parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
-    parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
+    parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration buses
     parameter CONFIG_BUS_FIFO_DEPTH=1,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
     parameter USE_SEQ_NUM=0,            // 0 = Frame will automatically handle sequence number, 1 = Use sequence number provided in s_axis_data_tuser
     parameter RESIZE_INPUT_PACKET=0,    // 0 = Do not resize, packet length determined by i_tlast, 1 = Generate m_axis_data_tlast based on user input m_axis_pkt_len_tdata
-    parameter RESIZE_OUTPUT_PACKET=0)   // 0 = Do not resize, packet length determined by s_axis_data_tlast, 1 = Use packet length from user header (s_axis_data_tuser)
+    parameter RESIZE_OUTPUT_PACKET=0,   // 0 = Do not resize, packet length determined by s_axis_data_tlast, 1 = Use packet length from user header (s_axis_data_tuser)
+    parameter WIDTH=32)                 // Specify the output width for the AXI stream data (can be 32 or 64)
    (input clk, input reset,
     input bus_clk, input bus_rst,
 
@@ -42,11 +43,11 @@ module axi_wrapper
     output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready,
 
     // To AXI IP
-    output [31:0] m_axis_data_tdata, output [127:0] m_axis_data_tuser, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
-    input [31:0] s_axis_data_tdata, input [127:0] s_axis_data_tuser, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready, 
+    output [WIDTH-1:0] m_axis_data_tdata, output [127:0] m_axis_data_tuser, output m_axis_data_tlast, output m_axis_data_tvalid, input m_axis_data_tready,
+    input [WIDTH-1:0] s_axis_data_tdata, input [127:0] s_axis_data_tuser, input s_axis_data_tlast, input s_axis_data_tvalid, output s_axis_data_tready, 
     input [15:0] m_axis_pkt_len_tdata, input m_axis_pkt_len_tvalid, output m_axis_pkt_len_tready, // Used when RESIZE_INPUT_PACKET=1
 
-    // Variable number of AXI configuration busses
+    // Variable number of AXI configuration buses
     output [NUM_AXI_CONFIG_BUS*32-1:0] m_axis_config_tdata,
     output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tlast,
     output [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tvalid,
@@ -66,7 +67,7 @@ module axi_wrapper
    wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
-   chdr_deframer_2clk chdr_deframer (
+   chdr_deframer_2clk #(.WIDTH(WIDTH)) chdr_deframer (
       .samp_clk(clk), .samp_rst(reset | clear_tx_seqnum), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready)
@@ -153,16 +154,16 @@ module axi_wrapper
        reg [15:0] s_axis_pkt_len;
        always @(posedge clk) begin
          if (reset | clear_tx_seqnum) begin
-           s_axis_pkt_cnt        <= 4;
+           s_axis_pkt_cnt        <= (WIDTH/8);
            s_axis_pkt_len        <= 0;
          end else begin
            // Remove header
            s_axis_pkt_len <= s_axis_data_tuser_int[125] ? s_axis_data_tuser_int[111:96]-16 : s_axis_data_tuser_int[111:96]-8;
            if (s_axis_data_tvalid & s_axis_data_tready) begin
              if ((s_axis_pkt_cnt >= s_axis_pkt_len) | s_axis_data_tlast) begin
-               s_axis_pkt_cnt        <= 4;
+               s_axis_pkt_cnt        <= (WIDTH/8);
              end else begin
-               s_axis_pkt_cnt        <= s_axis_pkt_cnt + 4;
+               s_axis_pkt_cnt        <= s_axis_pkt_cnt + (WIDTH/8);
              end
            end
          end
@@ -176,7 +177,7 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Output side handling, chdr_framer
-   chdr_framer_2clk #(.SIZE(MTU), .USE_SEQ_NUM(USE_SEQ_NUM)) chdr_framer (
+   chdr_framer_2clk #(.SIZE(MTU), .WIDTH(WIDTH), .USE_SEQ_NUM(USE_SEQ_NUM)) chdr_framer (
       .samp_clk(clk), .samp_rst(reset | clear_tx_seqnum), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
       .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast_int), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready)
