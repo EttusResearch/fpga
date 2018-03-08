@@ -25,6 +25,7 @@ localparam [7:0] RB_VITA_LASTPPS         = 1;
 localparam [7:0] RB_TEST                 = 2;
 localparam [7:0] RB_TXRX                 = 3;
 localparam [7:0] RB_RADIO_NUM            = 4;
+localparam [7:0] RB_COMPAT_NUM           = 5;
 
 /* NOTE: Settings and readback offsets for the dboard and frontend
  *       controller cores. These are device specific */

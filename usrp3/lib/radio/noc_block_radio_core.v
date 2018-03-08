@@ -7,6 +7,8 @@ module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
   parameter NUM_CHANNELS = 1,
   parameter STR_SINK_FIFOSIZE = {NUM_CHANNELS{8'd11}},
+  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MINOR  = 32'h0,
   parameter MTU = 10                            //Log2 of maximum packet size (in 8-byte words)
 )(
   input bus_clk, input bus_rst,
@@ -205,8 +207,11 @@ module noc_block_radio_core #(
         .resp_tdata(resp_tdata[64*i+63:64*i]), .resp_tlast(resp_tlast[i]), .resp_tvalid(resp_tvalid[i]), .resp_tready(resp_tready[i])
       );
 
+      // Readback Radio Register
       assign rb_stb[i]             = db_fe_rb_stb[i] | rb_stb_dp[i];
-      assign rb_data[64*i+63:64*i] = (rb_addr[8*i+7:8*i] >= RB_DB_FE_BASE) ? db_fe_rb_data[64*i+63:64*i] : rb_data_dp[64*i+63:64*i];
+      assign rb_data[64*i+63:64*i] = (rb_addr[8*i+7:8*i] >= RB_DB_FE_BASE) ? db_fe_rb_data[64*i+63:64*i] :
+                                     (rb_addr[8*i+7:8*i] == RB_COMPAT_NUM) ? {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR} :
+                                                                             rb_data_dp[64*i+63:64*i];
     end
   endgenerate
 endmodule
