@@ -792,6 +792,9 @@ module n3xx_core #(
   //
   /////////////////////////////////////////////////////////////////////////////
 
+  localparam RADIO_COMPAT_NUM_MAJOR = 32'b1;
+  localparam RADIO_COMPAT_NUM_MINOR = 32'b0;
+  localparam RADIO_NOC_ID = 64'h12AD_1000_0001_1310 + NUM_CHANNELS_PER_RADIO;
   localparam FIRST_RADIO_CORE_INST = 1;
   localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
 
@@ -834,9 +837,11 @@ module n3xx_core #(
   generate
     for (i = FIRST_RADIO_CORE_INST; i < LAST_RADIO_CORE_INST; i = i + 1) begin
       noc_block_radio_core #(
-        .NOC_ID(64'h12AD_1000_0000_0310),
+        .NOC_ID(RADIO_NOC_ID),
         .NUM_CHANNELS(NUM_CHANNELS_PER_RADIO),
         .STR_SINK_FIFOSIZE({NUM_CHANNELS_PER_RADIO{RADIO_INPUT_BUFF_SIZE}}),
+        .COMPAT_NUM_MAJOR(RADIO_COMPAT_NUM_MAJOR),
+        .COMPAT_NUM_MINOR(RADIO_COMPAT_NUM_MINOR),
         .MTU(RADIO_OUTPUT_BUFF_SIZE)
       ) noc_block_radio_core_i (
         // Clocks and reset
@@ -854,23 +859,23 @@ module n3xx_core #(
         .o_tvalid(ioce_i_tvalid[i]),
         .o_tready(ioce_i_tready[i]),
         // Data ports connected to radio front end
-        .rx({rx_data[i-FIRST_RADIO_CORE_INST]}),
-        .rx_stb({rx_stb[i-FIRST_RADIO_CORE_INST]}),
-        .tx({tx_data[i-FIRST_RADIO_CORE_INST]}),
-        .tx_stb({tx_stb[i-FIRST_RADIO_CORE_INST]}),
+        .rx({rx_data[2*(i-FIRST_RADIO_CORE_INST)+1], rx_data[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .rx_stb({rx_stb[2*(i-FIRST_RADIO_CORE_INST)+1], rx_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .tx({tx_data[2*(i-FIRST_RADIO_CORE_INST)+1], tx_data[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .tx_stb({tx_stb[2*(i-FIRST_RADIO_CORE_INST)+1], tx_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
         // Timing and sync
         .pps(pps),
         .sync_in(1'b0),
         .sync_out(sync_out[i]),
-        .rx_running({rx_running[i-FIRST_RADIO_CORE_INST]}),
-        .tx_running({tx_running[i-FIRST_RADIO_CORE_INST]}),
+        .rx_running({rx_running[2*(i-FIRST_RADIO_CORE_INST)+1],rx_running[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .tx_running({tx_running[2*(i-FIRST_RADIO_CORE_INST)+1],tx_running[2*(i-FIRST_RADIO_CORE_INST)]}),
         // Ctrl ports connected to radio dboard and front end core
-        .db_fe_set_stb ({db_fe_set_stb [i-FIRST_RADIO_CORE_INST]}),
-        .db_fe_set_addr({db_fe_set_addr[i-FIRST_RADIO_CORE_INST]}),
-        .db_fe_set_data({db_fe_set_data[i-FIRST_RADIO_CORE_INST]}),
-        .db_fe_rb_stb  ({db_fe_rb_stb  [i-FIRST_RADIO_CORE_INST]}),
-        .db_fe_rb_addr ({db_fe_rb_addr [i-FIRST_RADIO_CORE_INST]}),
-        .db_fe_rb_data ({db_fe_rb_data [i-FIRST_RADIO_CORE_INST]}),
+        .db_fe_set_stb ({db_fe_set_stb[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_set_addr({db_fe_set_addr[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_addr[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_set_data({db_fe_set_data[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_data[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_rb_stb  ({db_fe_rb_stb[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_rb_addr ({db_fe_rb_addr[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_addr[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_rb_data ({db_fe_rb_data[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_data[2*(i-FIRST_RADIO_CORE_INST)]}),
         //Debug
         .debug()
       );

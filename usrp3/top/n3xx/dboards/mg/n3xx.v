@@ -324,12 +324,12 @@ module n3xx (
   localparam FP_GPIO_WIDTH = 12;
 
 `ifdef N310
-  localparam NUM_RADIOS = 4;
-  localparam NUM_CHANNELS_PER_RADIO = 1;
+  localparam NUM_RADIOS = 2;
+  localparam NUM_CHANNELS_PER_RADIO = 2;
   localparam NUM_DBOARDS = 2;
 `elsif N300
-  localparam NUM_RADIOS = 2;
-  localparam NUM_CHANNELS_PER_RADIO = 1;
+  localparam NUM_RADIOS = 1;
+  localparam NUM_CHANNELS_PER_RADIO = 2;
   localparam NUM_DBOARDS = 1;
 `endif
   localparam NUM_CHANNELS = NUM_RADIOS * NUM_CHANNELS_PER_RADIO;
