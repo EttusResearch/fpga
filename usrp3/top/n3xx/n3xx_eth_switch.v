@@ -14,6 +14,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+`default_nettype none
 module n3xx_eth_switch #(
   parameter BASE                     = 0,
   parameter XO_FIFOSIZE              = 1,
@@ -27,74 +28,74 @@ module n3xx_eth_switch #(
   parameter [31:0] DEFAULT_UDP_PORTS = {16'd49154, 16'd49153}
 )(
 
-  input           clk,
-  input           reset,
-  input           clear,
+  input  wire         clk,
+  input  wire         reset,
+  input  wire         clear,
 
   // Register port: Write port (domain: clk)
-  input                       reg_wr_req,
-  input   [REG_AWIDTH-1:0]    reg_wr_addr,
-  input   [REG_DWIDTH-1:0]    reg_wr_data,
-  input   [REG_DWIDTH/8-1:0]  reg_wr_keep,
+  input  wire                     reg_wr_req,
+  input  wire [REG_AWIDTH-1:0]    reg_wr_addr,
+  input  wire [REG_DWIDTH-1:0]    reg_wr_data,
+  input  wire [REG_DWIDTH/8-1:0]  reg_wr_keep,
 
   // Register port: Read port (domain: clk)
-  input                       reg_rd_req,
-  input   [REG_AWIDTH-1:0]    reg_rd_addr,
-  output reg                  reg_rd_resp,
-  output reg [REG_DWIDTH-1:0] reg_rd_data,
+  input  wire                  reg_rd_req,
+  input  wire [REG_AWIDTH-1:0] reg_rd_addr,
+  output reg                   reg_rd_resp,
+  output reg  [REG_DWIDTH-1:0] reg_rd_data,
 
   // Eth ports
-  output  [63:0]  eth_tx_tdata,
-  output  [3:0]   eth_tx_tuser,
-  output          eth_tx_tlast,
-  output          eth_tx_tvalid,
-  input           eth_tx_tready,
+  output wire [63:0]  eth_tx_tdata,
+  output wire [3:0]   eth_tx_tuser,
+  output wire         eth_tx_tlast,
+  output wire         eth_tx_tvalid,
+  input  wire         eth_tx_tready,
 
-  input   [63:0]  eth_rx_tdata,
-  input   [3:0]   eth_rx_tuser,
-  input           eth_rx_tlast,
-  input           eth_rx_tvalid,
-  output          eth_rx_tready,
+  input  wire [63:0]  eth_rx_tdata,
+  input  wire [3:0]   eth_rx_tuser,
+  input  wire         eth_rx_tlast,
+  input  wire         eth_rx_tvalid,
+  output wire         eth_rx_tready,
 
   // Vita router interface
-  output  [63:0]  e2v_tdata,
-  output          e2v_tlast,
-  output          e2v_tvalid,
-  input           e2v_tready,
+  output wire [63:0]  e2v_tdata,
+  output wire         e2v_tlast,
+  output wire         e2v_tvalid,
+  input  wire         e2v_tready,
 
-  input   [63:0]  v2e_tdata,
-  input           v2e_tlast,
-  input           v2e_tvalid,
-  output          v2e_tready,
+  input  wire [63:0]  v2e_tdata,
+  input  wire         v2e_tlast,
+  input  wire         v2e_tvalid,
+  output wire         v2e_tready,
 
   // Ethernet crossover
-  output  [63:0]  xo_tdata,
-  output  [3:0]   xo_tuser,
-  output          xo_tlast,
-  output          xo_tvalid,
-  input           xo_tready,
+  output wire [63:0]  xo_tdata,
+  output wire [3:0]   xo_tuser,
+  output wire         xo_tlast,
+  output wire         xo_tvalid,
+  input  wire         xo_tready,
 
-  input   [63:0]  xi_tdata,
-  input   [3:0]   xi_tuser,
-  input           xi_tlast,
-  input           xi_tvalid,
-  output          xi_tready,
+  input  wire [63:0]  xi_tdata,
+  input  wire [3:0]   xi_tuser,
+  input  wire         xi_tlast,
+  input  wire         xi_tvalid,
+  output wire         xi_tready,
 
   // CPU
-  output  [63:0]  e2c_tdata,
-  output  [3:0]   e2c_tuser,
-  output          e2c_tlast,
-  output          e2c_tvalid,
-  input           e2c_tready,
+  output wire [63:0]  e2c_tdata,
+  output wire [3:0]   e2c_tuser,
+  output wire         e2c_tlast,
+  output wire         e2c_tvalid,
+  input  wire         e2c_tready,
 
-  input   [63:0]  c2e_tdata,
-  input   [3:0]   c2e_tuser,
-  input           c2e_tlast,
-  input           c2e_tvalid,
-  output          c2e_tready,
+  input  wire [63:0]  c2e_tdata,
+  input  wire [3:0]   c2e_tuser,
+  input  wire         c2e_tlast,
+  input  wire         c2e_tvalid,
+  output wire         c2e_tready,
 
   // Debug
-  output  [31:0]  debug
+  output wire [31:0]  debug
   );
 
   //---------------------------------------------------------
@@ -144,6 +145,7 @@ module n3xx_eth_switch #(
   wire [47:0]     my_mac;
   wire [31:0]     my_ip;
   wire [15:0]     my_udp_port0;
+  wire [15:0]     my_udp_port1;
 
   assign my_mac       = bridge_en ? bridge_mac_reg : mac_reg;
   assign my_ip        = bridge_en ? bridge_ip_reg : ip_reg;
@@ -328,7 +330,7 @@ module n3xx_eth_switch #(
 
     .set_stb(dispatch_set_stb),
     .set_addr(dispatch_set_addr),
-    .set_data(disptach_set_data),
+    .set_data(dispatch_set_data),
 
     .in_tdata(epg_tdata_int),
     .in_tuser(epg_tuser_int),
@@ -600,3 +602,4 @@ module n3xx_eth_switch #(
   );
 
 endmodule // eth_switch
+`default_nettype wire
