@@ -23,7 +23,7 @@ endif
 TOP ?= n230
 
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.n230.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_N230) PART_ID=$(XIL_PART_ID_N230) $1
+vivado_build = make -f Makefile.n230.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_N230) PART_ID=$(XIL_PART_ID_N230) $1 TOP_MODULE=$(TOP) 
 
 post_build = @\
 	mkdir -p build; \
