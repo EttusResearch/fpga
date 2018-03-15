@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // CORDIC that supports timed commands via the settings bus
 
 module cordic_timed #(

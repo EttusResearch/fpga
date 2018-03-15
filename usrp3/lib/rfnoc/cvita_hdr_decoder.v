@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Decoder header word into CVITA header fields
 
 module cvita_hdr_decoder (

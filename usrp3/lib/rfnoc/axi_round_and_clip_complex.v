@@ -1,6 +1,8 @@
 
 
 // Copyright 2014, Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 module axi_round_and_clip_complex
   #(parameter WIDTH_IN=24,

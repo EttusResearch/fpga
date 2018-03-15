@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // - When the user executes a timed settings bus command,
 //   this module will tag the sample (on m_axis_data_tuser)
 //   that the command should apply on.

@@ -1,5 +1,11 @@
+//
+// Copyright 2015 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+
 //------------------------------------------------------------------
-// NOTE: B205 is a SISO only device. MIMO references are unsued code branches.
+// NOTE: B205 is a SISO only device. MIMO references are unused code branches.
 //
 // In SISO mode, we output a clock thats 1x the frequency of the Catalina
 // source-synchronous bus clock to be used as the radio_clk.

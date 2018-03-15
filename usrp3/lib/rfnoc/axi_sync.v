@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Synchronizes AXI stream buses so data is released on every port simultaneously.
 //
 // Note: If inputs have inequal bitwidths, use WIDTH_VEC instead of WIDTH to define

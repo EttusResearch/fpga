@@ -1,5 +1,7 @@
 
 // Copyright 2014 Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Write xilinx DSP48E1 primitive for mult-add with AXI interfaces
 
 module mult_add

@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Responds with an error packet if input packet is malformed.
 
 module packet_error_responder #(

@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // - Implements rate change of N:M (a.k.a. M/N), handles headers automatically
 // - Note: N should always be written before M in software to prevent false rate changes
 //         while the block is active

@@ -1,5 +1,8 @@
 
 // Copyright 2012 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // axi_demux -- takes 1 AXI stream, demuxes to up to 16 output streams
 //  One bubble cycle between each packet
 

@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // User parameters:
 //   NOC_ID               Unique block ID
 //   INPUT_PORTS          Number of input ports, min 1

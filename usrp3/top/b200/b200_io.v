@@ -1,3 +1,10 @@
+//
+// Copyright 2013 Ettus Research LLC
+// Copyright 2017 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+//
 //------------------------------------------------------------------
 //
 // In SISO mode, we output a clock thats 1x the frequency of the Catalina

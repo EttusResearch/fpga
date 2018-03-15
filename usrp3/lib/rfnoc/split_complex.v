@@ -1,5 +1,7 @@
 
 // Copyright 2014, Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 // Module to split a complex stream to I and Q outputs.  NOTE -- ONLY works when you can guarantee downstream paths match!
 

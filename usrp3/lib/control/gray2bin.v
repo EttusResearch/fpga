@@ -1,4 +1,9 @@
 //
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+//
 // Gray: {a,b,c,d}
 // Bits: {a,a^b,a^b^c,a^b^c^d}
 //

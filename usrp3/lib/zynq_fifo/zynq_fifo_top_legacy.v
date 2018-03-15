@@ -1,12 +1,15 @@
-`timescale 1ns / 1ps
-
 //////////////////////////////////////////////////////////////////////////////////
 // Copyright Ettus Research LLC
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // The ZYNQ FIFO Top:
 //  - takes read and write 32-bit addressable AXI slave
 //  - takes read and write 64-bit addressable AXI master
 //  - drives N input and output AXI stream FIFOs
 //////////////////////////////////////////////////////////////////////////////////
+`timescale 1ns / 1ps
 
 // Mapping:
 // Page0 - stream to host config

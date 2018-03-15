@@ -1,6 +1,8 @@
 //
 // Copyright 2017 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Multiply-accumulate with preadder for use as a computation unit
 // in FIR filters. Designed to infer a DSP48 for all registers
 // and arithmetic.

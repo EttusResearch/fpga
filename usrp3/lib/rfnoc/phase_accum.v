@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Expects scaled radians fixed point input format of the form Q2.#,
 // Example: WIDTH_IN=8 then input format: Q2.5 (sign bit, 2 integer bits, 5 fraction bits)
 module phase_accum #(

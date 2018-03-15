@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Parses CVITA packet header and outputs discrete signals.
 
 module cvita_hdr_parser #(

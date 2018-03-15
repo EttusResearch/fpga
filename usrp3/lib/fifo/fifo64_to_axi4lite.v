@@ -2,6 +2,8 @@
 //
 // Copyright 2016-2017 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 //////////////////////////////////////////////////////////////////////
 
 module fifo64_to_axi4lite

@@ -1,6 +1,8 @@
 //
 // Copyright 2014-2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 //  This block passes the in_* AXI port to the out_* AXI port only when it has
 //  enough flow control credits. Data is held when there are not enough credits.
 //  Credits are replenished with extension context packets which update the 

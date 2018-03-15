@@ -1,6 +1,8 @@
 //
 // Copyright 2016-2017 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 // An AXI4-Lite read/write register port adapter
 //

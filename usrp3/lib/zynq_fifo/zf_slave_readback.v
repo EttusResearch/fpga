@@ -1,5 +1,9 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Copyright Ettus Research LLC
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // The ZYNQ FIFO slave readback:
 //  - implements read state machine for 32-bit addressable AXI slave
 //  - provides readback for state of per-stream fifo pointers

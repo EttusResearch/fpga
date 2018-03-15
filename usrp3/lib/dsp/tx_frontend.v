@@ -1,3 +1,8 @@
+//
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module tx_frontend
   #(parameter BASE=0,

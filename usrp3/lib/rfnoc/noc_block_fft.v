@@ -1,6 +1,8 @@
 //
 // Copyright 2014-2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module noc_block_fft #(
   parameter EN_MAGNITUDE_OUT = 1,        // CORDIC based magnitude calculation

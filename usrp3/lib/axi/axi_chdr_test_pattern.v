@@ -1,4 +1,9 @@
 //
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+//
 // Synthesizable test pattern generator and checker
 // for AXI-Stream that can be used to test transparent blocks
 // (FIFOs, switches, etc)

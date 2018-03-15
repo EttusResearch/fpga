@@ -1,5 +1,8 @@
 //
 // Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Write xilinx DSP48E1 primitive for multiplication with AXI interfaces
 // Latency must be 2 to 4

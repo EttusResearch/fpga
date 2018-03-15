@@ -1,5 +1,7 @@
 //
-// Copyright (c) 2017 National Instruments
+// Copyright 2017 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
 module pulse_stretch #(

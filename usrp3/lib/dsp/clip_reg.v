@@ -3,6 +3,8 @@
 //  USRP - Universal Software Radio Peripheral
 //
 //  Copyright (C) 2008 Matt Ettus
+// 
+//  SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
 //

@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Encodes CVITA packet header fields into a header word
 
 module cvita_hdr_encoder (

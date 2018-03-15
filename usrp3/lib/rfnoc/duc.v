@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 //! RFNoC specific digital up-conversion chain
 // High level block diagram:

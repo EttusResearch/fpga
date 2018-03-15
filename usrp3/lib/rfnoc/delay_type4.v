@@ -1,7 +1,10 @@
 //
 // Copyright 2018 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
 //
-// This delay doesn't use a fifo, and solves pipeline bubble issues.  
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+// This delay doesn't use a fifo, and solves pipeline bubble issues.
 // fixes some issues that seemed to occur with delay_type2:
 // - o_tvalid is set to 0 when delay_done is 0
 // - added the clear signal

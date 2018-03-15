@@ -1,5 +1,7 @@
 
 // Copyright 2014 Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 
 module axi_pipe_join

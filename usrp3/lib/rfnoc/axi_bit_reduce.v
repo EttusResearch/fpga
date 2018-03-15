@@ -1,5 +1,9 @@
-
+//
 // Copyright Ettus Research, 2014
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // no logic, just wires
 
 module axi_bit_reduce

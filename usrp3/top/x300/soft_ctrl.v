@@ -1,4 +1,9 @@
+//
 // Copyright 2012 Ettus Research LLC
+// Copyright 2017 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module soft_ctrl
 #(

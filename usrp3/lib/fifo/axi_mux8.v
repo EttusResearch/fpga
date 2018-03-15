@@ -1,5 +1,8 @@
 
 // Copyright 2012 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // axi_mux -- takes 8 64-bit AXI stream, merges them to 1 output channel
 // Round-robin if PRIO=0, priority if PRIO=1 (lower number ports get priority)
 // Bubble cycles are inserted after each packet in PRIO mode, or on wraparound in Round Robin mode

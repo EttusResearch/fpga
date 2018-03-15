@@ -1,5 +1,9 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Copyright Ettus Research LLC
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // The ZYNQ FIFO configuration arbiter:
 //  - holds configuration memory addresses
 //  - setting and readback for slave state machines

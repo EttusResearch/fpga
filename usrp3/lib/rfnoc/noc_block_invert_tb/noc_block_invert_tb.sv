@@ -1,5 +1,7 @@
 //
-// Copyright 2016 Ettus Research
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Example test bench for a 1 input, 2 output block
 //

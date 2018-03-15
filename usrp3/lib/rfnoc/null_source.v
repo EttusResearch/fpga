@@ -1,5 +1,7 @@
 
 // Copyright 2014, Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 // Dummy data source.  Turn it on by setting a packet length in its setting reg, turn it off by setting 0.  
 // Will generate as fast as it can.
