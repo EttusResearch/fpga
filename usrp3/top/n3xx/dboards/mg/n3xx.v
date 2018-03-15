@@ -2884,14 +2884,14 @@ module n3xx (
     .tx(tx_flat),
     // CPLD RX_LO TX_LO SPI
   `ifndef N300
-    .sclk_flat({DBA_CPLD_PL_SPI_SCLK,
-                DBB_CPLD_PL_SPI_SCLK}),
-    .sen_flat({5'b0,DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE,
-               5'b0,DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE}),
-    .mosi_flat({DBA_CPLD_PL_SPI_SDI,
-                DBB_CPLD_PL_SPI_SDI}),
-    .miso_flat({DBA_CPLD_PL_SPI_SDO,
-                DBB_CPLD_PL_SPI_SDO}),
+    .sclk_flat({DBB_CPLD_PL_SPI_SCLK,
+                DBA_CPLD_PL_SPI_SCLK}),
+    .sen_flat({5'b0,DBB_CPLD_PL_SPI_ADDR[1],DBB_CPLD_PL_SPI_ADDR[0],DBB_CPLD_PL_SPI_LE,
+               5'b0,DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
+    .mosi_flat({DBB_CPLD_PL_SPI_SDI,
+                DBA_CPLD_PL_SPI_SDI}),
+    .miso_flat({DBB_CPLD_PL_SPI_SDO,
+                DBA_CPLD_PL_SPI_SDO}),
   `else
     .sclk_flat(DBA_CPLD_PL_SPI_SCLK),
     .sen_flat({5'b0,DBA_CPLD_PL_SPI_ADDR[1],DBA_CPLD_PL_SPI_ADDR[0],DBA_CPLD_PL_SPI_LE}),
