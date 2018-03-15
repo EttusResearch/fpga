@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module noc_block_ddc #(
   parameter NOC_ID            = 64'hDDC0_0000_0000_0000,

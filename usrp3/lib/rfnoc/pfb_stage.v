@@ -1,6 +1,8 @@
 
 
 // Copyright 2014, Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 module pfb_stage
   #(parameter BASE=0,

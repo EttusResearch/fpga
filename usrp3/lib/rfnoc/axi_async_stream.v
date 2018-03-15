@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // - Tracks and fills out header information for an axi stream that is
 //   asynchronous or does not have a 1:1 input / output ratio.
 // - User must pass through **ALL** received words and use the tkeep

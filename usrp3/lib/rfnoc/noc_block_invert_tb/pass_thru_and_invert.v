@@ -1,3 +1,8 @@
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 module pass_thru_and_invert (
   input clk, input reset,
   input [31:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,

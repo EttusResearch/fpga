@@ -2,6 +2,10 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 // Copyright Ettus Research LLC
+// Copyright 2013 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // The ZYNQ FIFO Top:
 //  - takes read and write 32-bit addressable AXI slave
 //  - takes read and write 64-bit addressable AXI master

@@ -1,5 +1,8 @@
 //
 // Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Insert tlast bit for fifos that don't support it.  This only works with VALID CVITA frames
 //  A single partial or invalid frame will make this wrong FOREVER

@@ -1,5 +1,8 @@
 //
 // Copyright 2017 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Generates an LFSR based on a given seed value
 // Note that not all length LFSRs are supported in the file

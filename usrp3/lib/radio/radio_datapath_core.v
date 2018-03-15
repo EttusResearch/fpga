@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // radio_core
 //   Contains all clock-rate DSP components, all radio and hardware controls and settings
 //   Designed to connect to a noc_shell

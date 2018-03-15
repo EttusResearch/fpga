@@ -2,7 +2,7 @@
 //
 // Copyright 2017 Ettus Research, A National Instruments Company
 //
-// SPDX-License-Identifier: LGPL-3.0
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Module: n3xx_npio_qsfp_wrapper
 // Description:

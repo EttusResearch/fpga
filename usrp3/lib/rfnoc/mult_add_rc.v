@@ -1,5 +1,7 @@
 
 // Copyright 2014 Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Complex times real.  Complex number is on port B (18I, 18Q), real is on A (25 bits)
 
 module mult_add_rc

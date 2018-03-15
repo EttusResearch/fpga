@@ -1,5 +1,8 @@
 //
 // Copyright 2015 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // NoC input port
 //  Implements destination flow control and sequence number error handling for a single port

@@ -1,3 +1,8 @@
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 module iq_to_float_tb();
 
 

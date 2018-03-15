@@ -6,6 +6,9 @@
  * always work in the so-called first-word-fall-thru mode.
  *
  * Copyright (C) 2014  Ettus Corporation LLC
+ * Copyright 2018 Ettus Research, a National Instruments Company
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  *
  * vim: ts=4 sw=4
  */

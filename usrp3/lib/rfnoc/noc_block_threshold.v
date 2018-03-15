@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Example thresholding block that also shows how to use
 // axi_async_stream to handle asynchronous data
 //

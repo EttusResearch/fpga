@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Assumes 32-bit elements (like sc16) carried over AXI
 // SIMPLE_MODE          -- Automatically handle header (s_axis_data_tuser), packets must be consumed / produced 1-to-1
 // RESIZE_INPUT_PACKET  -- Resize input packets. m_axis_data_tlast will be based on pkt_length. Otherwise packet length based on actual input packet length (via i_tlast).

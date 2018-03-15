@@ -1,5 +1,7 @@
 
 // Copyright 2014 Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 // Latency must be 3 or 4
 

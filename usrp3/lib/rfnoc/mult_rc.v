@@ -1,5 +1,7 @@
 
 // Copyright 2014 Ettus Research
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Complex times real.  One width must be less than 26 and the other less than 19.
 
 module mult_rc

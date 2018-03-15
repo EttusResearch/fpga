@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Generates flow control and error packets
 
 module noc_responder #(

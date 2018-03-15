@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Responds with flow control packets as input packets are consumed.
 
 module flow_control_responder #(

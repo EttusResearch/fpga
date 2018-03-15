@@ -1,3 +1,8 @@
+//
+// Copyright 2015 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 //
 // There are various obligations put on this code not present in regular BRAM based FIFO's

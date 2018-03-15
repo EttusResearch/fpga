@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // AXI Stream FIFO with additional error port.
 // If i_terror is asserted along with i_tlast, the current
 // input packet will be dropped (by rewinding the write 

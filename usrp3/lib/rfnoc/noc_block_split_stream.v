@@ -1,6 +1,8 @@
 //
 // Copyright 2015 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module noc_block_split_stream #(
   parameter NOC_ID = 64'h5757_0000_0000_0000,

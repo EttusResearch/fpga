@@ -1,6 +1,8 @@
 //
 // Copyright 2017 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Parameterized FIR filter with AXI stream interface.
 // Has several optimizations to resource utilization such as
 // using half the number of DSP slices for symmetric coefficients,

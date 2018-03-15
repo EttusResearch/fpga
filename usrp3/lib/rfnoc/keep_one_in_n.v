@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Note: n == 0 lets everything through.
 // Warning: Sample / packet counts reset when n is changed, caution if changing during operation!
 

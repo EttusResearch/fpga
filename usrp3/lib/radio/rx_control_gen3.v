@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Converts strobed sample data from radio frontend to the AXI-Stream bus
 // Outputs an error packet if an overrun, late timed command, or empty command fifo error occurs.
 

@@ -1,5 +1,8 @@
 //
 // Copyright 2015 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Single cycle latency, depth of 2 "Flip flop" with no end to end combinatorial paths on
 // AXI control signals (such as i_tready depends on o_tready). Breaking the combinatorial

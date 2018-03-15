@@ -1,11 +1,16 @@
-// Copyright 2014, Ettus Research
+// Copyright 2014-2016 Ettus Research LLC
+// Copyright 2015 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+
 //
 // This module bundles the PHY and clocking interfaces that utilize the GTP
-// transcievers. This is convenient only because in the X7A100 Artix, there 
+// transceivers. This is convenient only because in the X7A100 Artix, there
 // is only one quad available, and all the PHYs need to share the two PLLs, so
-// rather than manage a ratsnest of connections between the PHY IP, MMCMs, 
+// rather than manage a ratsnest of connections between the PHY IP, MMCMs,
 // and GTPE2_COMMON, those connections are contained here.
-// 
+//
 
 module phy_clump(
 reset,

@@ -1,3 +1,8 @@
+//
+// Copyright 2015 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // 10MHz master_clock_rate
 always #50 clk <= ~clk;
 

@@ -1,6 +1,8 @@
 //
 // Copyright 2014-2017 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Parameterized FIR filter RFNoC block with optional reloadable
 // coefficients.
 // Has several optimizations to resource utilization such as

@@ -1,4 +1,8 @@
-// Copyright 2016 Ettus Research
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 module axi_clip_complex #(
   parameter WIDTH_IN  = 24,

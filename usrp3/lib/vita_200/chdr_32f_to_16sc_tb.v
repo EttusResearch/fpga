@@ -1,3 +1,8 @@
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 `timescale 1ns/1ps
 
 module chdr_32f_to_16sc_tb();

@@ -1,5 +1,8 @@
 //
 // Copyright 2013 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
 // Quantize cvita packets to a configurable quantum value. o_tlast and 

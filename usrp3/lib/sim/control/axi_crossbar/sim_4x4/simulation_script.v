@@ -1,3 +1,8 @@
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Simulate a 4x4 switch configuration
 localparam NUM_INPUTS = 4;
 localparam NUM_OUTPUTS = 4;

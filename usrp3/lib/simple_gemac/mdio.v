@@ -1,3 +1,8 @@
+//
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Define MDIO to add support for clause 22 and clause 45 MDIO interface
 `define MDIO
 // If WB clock is 62.5MHz and max MDC spec is 2.5MHz, then divide by 25

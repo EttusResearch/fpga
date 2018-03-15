@@ -1,3 +1,8 @@
+//
+// Copyright 2017 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 `default_nettype none
 
 module axis_to_cvita

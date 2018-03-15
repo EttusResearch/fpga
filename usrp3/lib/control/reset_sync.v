@@ -1,5 +1,8 @@
 //
 // Copyright 2011 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // The purpose of this module is to synchronize a reset from one clock domain
 // to another. The reset_in signal must be driven by a glitch-free source.

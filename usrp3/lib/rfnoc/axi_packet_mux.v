@@ -1,6 +1,8 @@
 //
 // Copyright 2016 Ettus Research
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // Muxes and packetizes input AXI-streams. Assumes header on tuser. 
 
 module axi_packet_mux #(
