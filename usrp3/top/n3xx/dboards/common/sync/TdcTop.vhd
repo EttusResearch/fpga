@@ -127,6 +127,10 @@ entity TdcTop is
     -- Debug, held asserted when pulse is captured.
     rPpsPulseCaptured  : out boolean;
 
+    -- Programmable value for delaying the RP and SP pulsers from when the Restart
+    -- Pulser begins.
+    rPulserEnableDelayVal : in  unsigned(3 downto 0);
+
 
     -- Crossing PPS into Sample Clock : -------------------------------------------------
     -- Enable crossing rPpsPulse into SampleClk domain. This should remain de-asserted
@@ -241,11 +245,14 @@ architecture struct of TdcTop is
   signal sSpEnable_ms : boolean;
 
   -- Delay chain for enables.
-  constant kDelayForRpEnable      : integer := 2;
+  constant kDelaySizeForRpEnable  : integer := 15;
   constant kAddtlDelayForSpEnable : integer := 3;
   signal rSyncPulseEnableDly :
-    std_logic_vector(kDelayForRpEnable+
+    std_logic_vector(kDelaySizeForRpEnable+
                      kAddtlDelayForSpEnable-1 downto 0) := (others => '0');
+  -- Adding kAddtlDelayForSpEnable stages, so this vector needs to handle one extra
+  -- bit of range (hence no -1 downto 0).
+  signal rSyncPulseEnableDlyVal : unsigned(rPulserEnableDelayVal'length downto 0);
 
   signal rResetTdcFlop_ms, rResetTdcFlop,
          rResetTdcDone_ms,
@@ -360,17 +367,19 @@ begin
         rSyncPulseEnableDly <= (others => '0');
       end if;
 
-      -- Delay chain for the enable bits. Shift left.
+      -- Delay chain for the enable bits. Shift left low to high.
       rSyncPulseEnableDly <=
         rSyncPulseEnableDly(rSyncPulseEnableDly'high-1 downto 0) & rPpsCaptured;
     end if;
   end process;
 
+  rSyncPulseEnableDlyVal <= resize(rPulserEnableDelayVal, rSyncPulseEnableDlyVal'length);
+
   -- Enables for the RePulse/RP/SP. The RePulse enable must be asserted two cycles
   -- before the other enables to allow the TDC to start running before the RP/SP begin.
   rRePulseEnable <= rPpsCaptured = '1'; -- no delay
-  rRpEnable <= rSyncPulseEnableDly(kDelayForRpEnable-1) = '1';
-  rSpEnable <= rSyncPulseEnableDly(kDelayForRpEnable+kAddtlDelayForSpEnable-1) = '1';
+  rRpEnable <= rSyncPulseEnableDly(to_integer(rSyncPulseEnableDlyVal)) = '1';
+  rSpEnable <= rSyncPulseEnableDly(to_integer(rSyncPulseEnableDlyVal)+kAddtlDelayForSpEnable-1) = '1';
 
   -- Local to output.
   rPpsPulseCaptured <= rPpsCaptured = '1';
@@ -785,6 +794,7 @@ architecture test of tb_TdcTop is
   signal rLoadRptCounts: boolean;
   signal rPpsPulse: boolean;
   signal rPpsPulseCaptured: boolean;
+  signal rPulserEnableDelayVal: unsigned(3 downto 0);
   signal rReRunEnable: boolean;
   signal rResetTdc: boolean;
   signal rResetTdcDone: boolean;
@@ -840,7 +850,8 @@ begin
   main: process
   begin
     -- Defaults, per instructions in Purpose
-    sPpsClkCrossDelayVal <= to_unsigned(0, sPpsClkCrossDelayVal'length);
+    sPpsClkCrossDelayVal  <= to_unsigned(0, sPpsClkCrossDelayVal'length);
+    rPulserEnableDelayVal <= to_unsigned(1, rPulserEnableDelayVal'length);
     rResetTdc    <= true;
     rEnableTdc   <= false;
     rReRunEnable <= false;
@@ -1109,6 +1120,7 @@ begin
       rReRunEnable            => rReRunEnable,                                                         --in  boolean
       rPpsPulse               => rPpsPulse,                                                            --in  boolean
       rPpsPulseCaptured       => rPpsPulseCaptured,                                                    --out boolean
+      rPulserEnableDelayVal   => rPulserEnableDelayVal,                                                --in  unsigned(3:0)
       rEnablePpsCrossing      => rEnablePpsCrossing,                                                   --in  boolean
       sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,                                                 --in  unsigned(3:0)
       sPpsPulse               => sPpsPulse,                                                            --out boolean

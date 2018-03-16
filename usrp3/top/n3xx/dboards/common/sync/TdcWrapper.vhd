@@ -82,6 +82,7 @@ architecture struct of TdcWrapper is
       rReRunEnable            : out std_logic;
       rEnablePpsCrossing      : out std_logic;
       rPpsPulseCaptured       : in  std_logic;
+      rPulserEnableDelayVal   : out std_logic_vector(3 downto 0);
       SampleClk               : in  std_logic;
       sPpsClkCrossDelayVal    : out std_logic_vector(3 downto 0);
       MeasClk                 : in  std_logic;
@@ -132,6 +133,7 @@ architecture struct of TdcWrapper is
   signal rLoadRpCounts: std_logic;
   signal rLoadRptCounts: std_logic;
   signal rPpsPulseCaptured: boolean;
+  signal rPulserEnableDelayVal: std_logic_vector(3 downto 0);
   signal rRePulseHighTimeInRClks: std_logic_vector(kRClksPerRePulsePeriodBitsMax-1 downto 0);
   signal rRePulsePeriodInRClks: std_logic_vector(kRClksPerRePulsePeriodBitsMax-1 downto 0);
   signal rReRunEnable: std_logic;
@@ -207,7 +209,8 @@ begin
       sPpsPulseOut    <= sPpsPulseOut_ms;
     end if;
   end process;
-  sPpsPulse <= sPpsPulseOut;
+
+  sPpsPulse  <= sPpsPulseOut;
 
 
   rRpTransfer <= to_stdlogic(rRpTransferBool);
@@ -225,7 +228,8 @@ begin
   --vhook_a sLoadSpCounts        to_boolean(sLoadSpCounts)
   --vhook_a sLoadSptCounts       to_boolean(sLoadSptCounts)
   --vhook_a rEnablePpsCrossing   to_boolean(rEnablePpsCrossing)
-  --vhook_a sPpsClkCrossDelayVal unsigned(sPpsClkCrossDelayVal)
+  --vhook_a rPulserEnableDelayVal unsigned(rPulserEnableDelayVal)
+  --vhook_a sPpsClkCrossDelayVal  unsigned(sPpsClkCrossDelayVal)
   --vhook_a rRpTransfer          rRpTransferBool
   --vhook_a sSpTransfer          sSpTransferBool
   --vhook_a sPpsPulse            sPpsPulseAsyncReset
@@ -250,6 +254,7 @@ begin
       rReRunEnable            => to_boolean(rReRunEnable),           --in  boolean
       rPpsPulse               => to_boolean(rPpsPulseAsyncReset),    --in  boolean
       rPpsPulseCaptured       => rPpsPulseCaptured,                  --out boolean
+      rPulserEnableDelayVal   => unsigned(rPulserEnableDelayVal),    --in  unsigned(3:0)
       rEnablePpsCrossing      => to_boolean(rEnablePpsCrossing),     --in  boolean
       sPpsClkCrossDelayVal    => unsigned(sPpsClkCrossDelayVal),     --in  unsigned(3:0)
       sPpsPulse               => sPpsPulseAsyncReset,                --out boolean
@@ -307,6 +312,7 @@ begin
       rReRunEnable            => rReRunEnable,                    --out std_logic
       rEnablePpsCrossing      => rEnablePpsCrossing,              --out std_logic
       rPpsPulseCaptured       => to_stdlogic(rPpsPulseCaptured),  --in  std_logic
+      rPulserEnableDelayVal   => rPulserEnableDelayVal,           --out std_logic_vector(3:0)
       SampleClk               => SampleClk,                       --in  std_logic
       sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,            --out std_logic_vector(3:0)
       MeasClk                 => MeasClk,                         --in  std_logic
