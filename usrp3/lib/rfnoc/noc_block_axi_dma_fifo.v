@@ -5,12 +5,14 @@
 module noc_block_axi_dma_fifo #(
   parameter NOC_ID = 64'hF1F0_D000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11,             //Input buffering to tolerate DMA (usually DRAM) latency variation
-  parameter MTU = 12,                           //Log2 of maximum packet length
+  parameter MTU = 10,                           //Log2 of maximum packet size (in 8-byte words)
   parameter NUM_FIFOS = 1,                      //Number of FIFOs that share the AXI4 memory space (max 4)
+  parameter BUS_CLK_RATE = 32'd166666666,       //Frequency in Hz of bus_clk
   parameter [NUM_FIFOS*30-1:0] DEFAULT_FIFO_BASE = {NUM_FIFOS{30'h00000000}}, //Default base addr for each FIFO (configurable via setting reg)
   parameter [NUM_FIFOS*30-1:0] DEFAULT_FIFO_SIZE = {NUM_FIFOS{30'h01FFFFFF}}, //Default size of each FIFO (configurable via setting reg)
   parameter [NUM_FIFOS*12-1:0] DEFAULT_BURST_TIMEOUT = {NUM_FIFOS{12'd256}}, //Timeout (in memory clock cycles) for issuing smaller than optimal bursts
-  parameter EXTENDED_DRAM_BIST = 0              //Prune out additional BIST features for production
+  parameter EXTENDED_DRAM_BIST = 0,             //Prune out additional BIST features for production
+  parameter SIMULATION = 0                      //Indicate if this is simulation or synthesis
 )(
   //
   // Clocks and Resets
@@ -190,9 +192,11 @@ module noc_block_axi_dma_fifo #(
       assign s_axis_data_tready = str_src_tready[i];
 
       axi_dma_fifo #(
+        .SIMULATION(SIMULATION),
         .DEFAULT_BASE(DEFAULT_FIFO_BASE[(30*(i+1))-1:30*i]),
         .DEFAULT_MASK(~(DEFAULT_FIFO_SIZE[(30*(i+1))-1:30*i])),
         .DEFAULT_TIMEOUT(DEFAULT_BURST_TIMEOUT[(12*(i+1))-1:12*i]),
+        .BUS_CLK_RATE(BUS_CLK_RATE),
         .SR_BASE(SR_USER_REG_BASE),
         .EXT_BIST(EXTENDED_DRAM_BIST),
         .MAX_PKT_LEN(MTU))

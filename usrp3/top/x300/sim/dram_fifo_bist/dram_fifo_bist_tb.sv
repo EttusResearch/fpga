@@ -6,7 +6,7 @@
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US  3000
 `define NS_PER_TICK     1
-`define NUM_TEST_CASES  24
+`define NUM_TEST_CASES  25
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
@@ -15,7 +15,7 @@
 `include "sim_set_rb_lib.svh"
 
 //`define USE_SRAM_FIFO     //Use an AXI-Stream SRAM FIFO (for testing)
-`define USE_SRAM_MIG 0      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
+`define USE_SRAM_MIG 1      //Use the DMA engine from the DRAM FIFO but SRAM as the base memory
 `define USE_BD_INTERCON 1     //Use the Block Design Axi Interconnect
 
 
@@ -26,7 +26,7 @@ module dram_fifo_bist_tb();
   `DEFINE_CLK(sys_clk, 10, 50)            //100MHz sys_clk to generate DDR3 clocking
   `DEFINE_CLK(bus_clk, 1000/166.6667, 50) //166MHz bus_clk
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
-  `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
+  `DEFINE_RESET(sys_rst, 0, 100)          //100ns for GSR to deassert
 
   // Initialize DUT
   wire            calib_complete;
@@ -60,7 +60,7 @@ module dram_fifo_bist_tb();
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .sys_clk(sys_clk),
-    .sys_rst_n(sys_rst_n),
+    .sys_rst(sys_rst),
     
     .i_tdata(cvita_fifo_in.axis.tdata),
     .i_tlast(cvita_fifo_in.axis.tlast),
@@ -84,8 +84,9 @@ module dram_fifo_bist_tb();
   assign {error, done, running} = rb_data[3:0];
 
   //Testbench variables
-  cvita_hdr_t   header, header_out;
-  cvita_stats_t stats;
+  cvita_hdr_t   header;
+  cvita_pkt_t   pkt_out;
+  integer       i;
   integer single_run_time;
   integer xfer_cnt, cyc_cnt;
 
@@ -97,8 +98,8 @@ module dram_fifo_bist_tb();
 
     `TEST_CASE_START("Wait for reset");
     while (bus_rst) @(posedge bus_clk);
-    while (~sys_rst_n) @(posedge sys_clk);
-    `TEST_CASE_DONE(~bus_rst & sys_rst_n);
+    while (sys_rst) @(posedge sys_clk);
+    `TEST_CASE_DONE(~bus_rst & ~sys_rst);
     
     forced_bit_err <= 64'h0;
     repeat (200) @(posedge sys_clk);
@@ -107,8 +108,13 @@ module dram_fifo_bist_tb();
     while (calib_complete !== 1'b1) @(posedge bus_clk);
     `TEST_CASE_DONE(calib_complete);
 
-    //Pull the FIFO out of clear mode
+    `TEST_CASE_START("Clear FIFO");
+    tst_set.write(SR_FIFO_BASE + 1, {16'h0, 12'd280, 2'b00, 1'b0, 1'b1});
+    repeat (200) @(posedge bus_clk);
     tst_set.write(SR_FIFO_BASE + 1, {16'h0, 12'd280, 2'b00, 1'b0, 1'b0});
+    repeat (200) @(posedge bus_clk);
+    `TEST_CASE_DONE(1);
+
     //Select BIST status as the readback output
     tst_set.write(SR_FIFO_BASE + 0, 3'd1);
 
@@ -116,16 +122,20 @@ module dram_fifo_bist_tb();
       pkt_type:DATA, has_time:0, eob:0, seqnum:12'h666,
       length:0, src_sid:$random, dst_sid:$random, timestamp:64'h0};
 
-    `TEST_CASE_START("User Data: Fill up FIFO and then empty");
-    cvita_fifo_out.axis.tready = 0;
-    cvita_fifo_in.push_ramp_pkt(16, 64'd0, 64'h100, header);
-    cvita_fifo_out.axis.tready = 1;
-    cvita_fifo_out.wait_for_pkt_get_info(header_out, stats);
-    $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",16,stats.count);
-    `ASSERT_ERROR(stats.count==16, s);
+    `TEST_CASE_START("Fill up empty FIFO then drain (long packet)");
+    cvita_fifo_in.push_ramp_pkt(100, 64'd0, 64'h100, header);
+    cvita_fifo_out.pull_pkt(pkt_out);
+    $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",100,pkt_out.payload.size());
+    `ASSERT_ERROR(pkt_out.payload.size()==100, s);
     $sformat(s, "Bad packet: Wrong SID. Expected: %08x, Actual: %08x",
-        {header.src_sid,header.dst_sid},{header_out.src_sid,header_out.dst_sid});
-    `ASSERT_ERROR({header.src_sid,header.dst_sid}=={header_out.src_sid,header_out.dst_sid}, s);
+      {header.src_sid,header.dst_sid},{pkt_out.hdr.src_sid,pkt_out.hdr.dst_sid});
+    `ASSERT_ERROR({header.src_sid,header.dst_sid}=={pkt_out.hdr.src_sid,pkt_out.hdr.dst_sid}, s);
+    i = 0;
+    repeat (100) begin
+      $sformat(s, "Bad packet: Wrong payload. Index: %d, Expected: %08x, Actual: %08x",
+        i,(i * 64'h100),pkt_out.payload[i]);
+      `ASSERT_ERROR(pkt_out.payload[i]==(i * 64'h100), s);
+    end
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Setup BIST: 10 x 40byte packets");
@@ -195,11 +205,11 @@ module dram_fifo_bist_tb();
         cvita_fifo_in.push_ramp_pkt(20, 64'd0, 64'h100, header);
       end
       begin
-        cvita_fifo_out.wait_for_pkt_get_info(header_out, stats);
+        cvita_fifo_out.pull_pkt(pkt_out);
       end
     join
-    $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",20,stats.count);
-    `ASSERT_ERROR(stats.count==20, s);
+    $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",20,pkt_out.payload.size());
+    `ASSERT_ERROR(pkt_out.payload.size()==20, s);
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Setup BIST: 256 x 600byte ramping packets");

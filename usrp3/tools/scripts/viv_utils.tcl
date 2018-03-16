@@ -10,6 +10,7 @@ namespace eval ::vivado_utils {
     namespace export \
         initialize_project \
         synthesize_design \
+        check_design \
         generate_post_synth_reports \
         generate_post_place_reports \
         generate_post_route_reports \
@@ -63,7 +64,7 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         if [expr [lsearch {.vhd .vhdl} $src_ext] >= 0] {
             puts "BUILDER: Adding VHDL    : $src_file"
             read_vhdl -library work $src_file
-        } elseif [expr [lsearch {.v} $src_ext] >= 0] {
+        } elseif [expr [lsearch {.v .vh} $src_ext] >= 0] {
             puts "BUILDER: Adding Verilog : $src_file"
             read_verilog $src_file
         } elseif [expr [lsearch {.xdc} $src_ext] >= 0] {
@@ -73,7 +74,7 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
             puts "BUILDER: Adding IP      : $src_file"
             read_ip $src_file
             set_property generate_synth_checkpoint true [get_files $src_file]
-        } elseif [expr [lsearch {.ngc .edif} $src_ext] >= 0] {
+        } elseif [expr [lsearch {.ngc .edif .edf} $src_ext] >= 0] {
             puts "BUILDER: Adding Netlist : $src_file"
             read_edif $src_file
         } elseif [expr [lsearch {.bd} $src_ext] >= 0] {
@@ -90,15 +91,18 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         }
     }
 
-    puts "BUILDER: Refreshing IP"
-    generate_target all [get_ips *]
-    synth_ip [get_ips *]
+    # The 'synth_ip [get_ips *]' step causes builds in Windows to recompile various
+    # pieces of the IP. This is time-consuming and unnecessary behavior, thus is removed.
+    # These steps are redundant anyway since the IP builder performs both of them.
+    # puts "BUILDER: Refreshing IP"
+    # generate_target all [get_ips *]
+    # synth_ip [get_ips *]
 
     #might seem silly, but we need to add the bd files after the ip regeneration.
     foreach file $bd_files {
         puts "BUILDER: Adding file from Block Design list: $file"
         add_files -norecurse $file
-    } 
+    }
 
     puts "BUILDER: Setting $g_top_module as the top module"
     set_property top $g_top_module [current_fileset]
@@ -127,6 +131,32 @@ proc ::vivado_utils::synthesize_design {args} {
     set synth_cmd [concat $synth_cmd $incdir_args]
     set synth_cmd [concat $synth_cmd $args]
     puts "BUILDER: Synthesizing design"
+    eval $synth_cmd
+}
+
+# ---------------------------------------------------
+# Check design (Shortcut for Vivado's synth_design -rtl)
+# ---------------------------------------------------
+proc ::vivado_utils::check_design {args} {
+    variable g_top_module
+    variable g_part_name
+    variable g_verilog_defs
+    variable g_include_dirs
+
+    set vdef_args ""
+    foreach vdef $g_verilog_defs {
+        set vdef_args [concat $vdef_args "-verilog_define $vdef"]
+    }
+    set incdir_args ""
+    if { [string compare $g_include_dirs ""] != 0 } {
+        set incdir_args "-include_dirs $g_include_dirs"
+    }
+
+    set synth_cmd "synth_design -top $g_top_module -part $g_part_name -rtl -rtl_skip_ip -rtl_skip_constraints"
+    set synth_cmd [concat $synth_cmd $vdef_args]
+    set synth_cmd [concat $synth_cmd $incdir_args]
+    set synth_cmd [concat $synth_cmd $args]
+    puts "BUILDER: Checking syntax and elaborating design"
     eval $synth_cmd
 }
 
@@ -202,7 +232,10 @@ proc ::vivado_utils::write_implementation_outputs { {byte_swap_bin 0} } {
     write_debug_probes -force $g_output_dir/${g_top_module}.ltx
     puts "BUILDER: Writing export report"
     report_utilization -omit_locs -file $g_output_dir/build.rpt
-    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
+    report_timing_summary -no_detailed_paths -file $g_output_dir/build.rpt -append
+    if {! [string match -nocase {*timing constraints are met*} [read [open $g_output_dir/build.rpt]]]} {
+        send_msg_id {Builder 0-0} error "The design did not satisfy timing constraints. (Implementation outputs were still generated)"
+    }
 }
 
 proc ::vivado_utils::write_netlist_outputs { {suffix ""} } {
@@ -218,7 +251,10 @@ proc ::vivado_utils::write_netlist_outputs { {suffix ""} } {
     write_xdc -no_fixed_only -force ${filename}.xdc
     puts "BUILDER: Writing export report"
     report_utilization -omit_locs -file $g_output_dir/build.rpt
-    report_timing_summary -no_detailed_paths -warn_on_violation -file $g_output_dir/build.rpt -append
+    report_timing_summary -no_detailed_paths -file $g_output_dir/build.rpt -append
+    if {! [string match -nocase {*timing constraints are met*} [read [open $g_output_dir/build.rpt]]]} {
+        send_msg_id {Builder 0-0} error "The design did not meet all timing constraints. (Implementation outputs were still generated)"
+    }
 }
 
 # ---------------------------------------------------

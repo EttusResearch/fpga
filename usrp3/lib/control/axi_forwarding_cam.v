@@ -4,8 +4,8 @@
 // This module implements a highly customized content-addressable memory (CAM)
 // that enables forwarding decisions to be made on a 16 bit field from a stream ID (SID) field.
 // The forwarding is generic in the sense that a SID's host destination can map to any endpoint / crossbar port.
-// 
-// The 16 bits are allocated by convention as 8 bits of Network address (addresses USRP's / AXI crossbars) and 
+//
+// The 16 bits are allocated by convention as 8 bits of Network address (addresses USRP's / AXI crossbars) and
 // 8 bits of Host address (addresses endpoints / crossbar ports in a USRP).
 //
 // By definition if the destination field in the SID addresses a different
@@ -21,21 +21,6 @@
 // | NETWORK |   HOST  | NETWORK |   HOST  |
 // |---------|---------|---------|---------|
 //      8         8         8         8
-
-// TODO: Replace with $clog(N) after EDA adoption improves
-`ifndef LOG2
-`define LOG2(N) (\
-                 N < 2    ? 0 : \
-                 N < 4    ? 1 : \
-                 N < 8    ? 2 : \
-                 N < 16   ? 3 : \
-                 N < 32   ? 4 : \
-                 N < 64   ? 5 : \
-                 N < 128  ? 6 : \
-                 N < 256  ? 7 : \
-                 N < 512  ? 8 : \
-                 N < 1024 ? 9 : 10)
-`endif
 
 module axi_forwarding_cam
   #(
@@ -55,16 +40,16 @@ module axi_forwarding_cam
      input 			  pkt_present,
      // Configuration
      input [7:0] 		  local_addr,
-     // Setting Bus 
+     // Setting Bus
      input 			  set_stb,
      input [15:0] 		  set_addr,
      input [31:0] 		  set_data,
-     // Forwarding Flags
+
      output reg [NUM_OUTPUTS-1:0] forward_valid,
      input [NUM_OUTPUTS-1:0] 	  forward_ack,
-     // readback bus
+
      input                        rb_rd_stb,
-     input [`LOG2(NUM_OUTPUTS):0] rb_addr,
+     input [$clog2(NUM_OUTPUTS)-1:0] rb_addr,
      output [31:0]                rb_data
      );
 
@@ -72,18 +57,18 @@ module axi_forwarding_cam
    localparam WAIT_SOF = 0;
    localparam WAIT_EOF = 1;
    reg 				  state;
-   
+
    localparam IDLE = 0;
    localparam FORWARD = 1;
    localparam WAIT = 2;
-   
+
    reg 	[1:0]			  demux_state;
 
    reg [15:0] 			  dst;
    reg 				  dst_valid, dst_valid_reg;
    wire 			  local_dst;
    wire [8:0] 			  read_addr;
-   
+
    //
    // Monitor packets leaving FIFO
    //
@@ -95,10 +80,10 @@ module axi_forwarding_cam
 	 //
 	 // After RESET or the EOF of previous packet, the first cycle with
 	 // output valid asserted is the SOF and presents the Header word.
-	 // The cycle following the concurrent presentation of asserted output 
+	 // The cycle following the concurrent presentation of asserted output
 	 // valid and output ready presents the word following the header.
 	 //
-         WAIT_SOF: 
+         WAIT_SOF:
            if (o_tvalid && o_tready) begin
               state <= WAIT_EOF;
            end else begin
@@ -107,14 +92,14 @@ module axi_forwarding_cam
 	 //
 	 // EOF is signalled by o_tlast asserted whilst output valid and ready asserted.
 	 //
-         WAIT_EOF: 
+         WAIT_EOF:
            if (o_tlast && o_tvalid && o_tready) begin
               state <= WAIT_SOF;
            end else begin
               state <= WAIT_EOF;
            end
-       endcase // case(in_state)  
-   
+       endcase // case(in_state)
+
    //
    // Extract Destination fields(s) from SID
    //
@@ -122,12 +107,12 @@ module axi_forwarding_cam
      if (reset | clear) begin
 	dst <= 0;
 	dst_valid <= 0;
-	dst_valid_reg <= 0;	
+	dst_valid_reg <= 0;
      end else if (o_tvalid && (state == WAIT_SOF) && pkt_present) begin
 	// SID will remain valid until o_tready is asserted as this will cause a state transition.
-	dst <= o_tdata[15:0]; 
+	dst <= o_tdata[15:0];
 	dst_valid <= 1;
-	dst_valid_reg <= dst_valid;	
+	dst_valid_reg <= dst_valid;
      end else begin
 	dst_valid <= 0;
 	dst_valid_reg <= dst_valid;
@@ -137,7 +122,7 @@ module axi_forwarding_cam
    // Is Network field in DST our local address?
    //
    assign local_dst = (dst[15:8] == local_addr) && dst_valid;
-   
+
 
    //
    // Mux address to RAM so that it searches CAM for Network field or Host field.
@@ -145,11 +130,11 @@ module axi_forwarding_cam
    //
    assign read_addr = {local_dst,(local_dst ? dst[7:0] : dst[15:8])};
 
-   // 
+   //
    // Implement CAM as block RAM here, 512xCeil(Log2(NUM_OUTPUTS))
    //
    //synthesis attribute ram_style of mem is block
-   reg [(`LOG2(NUM_OUTPUTS)) : 0] mem [0:511];
+   reg [$clog2(NUM_OUTPUTS)-1 : 0] mem [0:511];
 
    // Initialize the CAM's local address forwarding decisions with sensible defaults by
    // assuming dst[7:4] = crossbar port, dst[3:0] = block port. Setup a one-to-one mapping
@@ -168,19 +153,19 @@ module axi_forwarding_cam
        end
      end
    end
-   
+
    reg [8:0] 			   read_addr_reg;
    wire 			   write;
-   wire [`LOG2(NUM_OUTPUTS):0] 	   read_data;
-   
+   wire [$clog2(NUM_OUTPUTS)-1:0] 	   read_data;
+
    assign write = (set_addr[15:9] == (BASE >>9)) && set_stb; // Addr decode.
-   
-   always @(posedge clk) 
+
+   always @(posedge clk)
      begin
 	read_addr_reg <= read_addr;
 
 	if (write) begin
-	   mem[set_addr[8:0]] <= set_data[`LOG2(NUM_OUTPUTS):0];
+	   mem[set_addr[8:0]] <= set_data[$clog2(NUM_OUTPUTS)-1:0];
 	end
 
      end
@@ -197,7 +182,7 @@ module axi_forwarding_cam
         demux_state <= IDLE;
      end else
        case(demux_state)
-	
+
 	 // Wait for Valid DST which indicates a new packet lookup in the CAM.
 	 IDLE: begin
 	    if (dst_valid_reg == 1) begin
@@ -226,24 +211,14 @@ module axi_forwarding_cam
   //
   genvar m;
   reg [31:0] statistics [0:NUM_OUTPUTS-1];
-  reg [NUM_OUTPUTS-1:0] clear_statistics;
 
   generate
     for (m = 0; m < NUM_OUTPUTS; m = m + 1) begin: generate_stats
       always @(posedge clk) begin
         if (reset | clear) begin
           statistics[m] <= 0;
-          clear_statistics[m] <= 0;
-        end else if ((rb_addr == m) && rb_rd_stb) begin
-          clear_statistics[m] <= 1;
-        end else begin
-          // Clear statistic one clock cycle after readback strobe
-          // to allow time for reading rb_data
-          if (clear_statistics[m]) begin
-            statistics[m] <= 0;
-          end else if (forward_ack[m] & forward_valid[m]) begin
+        end else if (forward_ack[m] & forward_valid[m]) begin
             statistics[m] <= statistics[m] + 1;
-          end
         end
       end
     end

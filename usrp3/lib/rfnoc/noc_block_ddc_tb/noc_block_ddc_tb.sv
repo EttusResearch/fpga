@@ -26,6 +26,8 @@ module noc_block_ddc_tb();
   wire [11:0] fft_scale      = 12'b011010101010;        // Conservative scaling of 1/N
   // Padding of the control word depends on the FFT options enabled
   wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
+  int num_hb; //default 3
+  int cic_max_decim; //default 255
 
   // DDC
   wire [7:0] SR_N_ADDR           = noc_block_ddc.gen_ddc_chains[0].axi_rate_change.SR_N_ADDR;
@@ -36,6 +38,9 @@ module noc_block_ddc_tb();
   wire [7:0] SR_DECIM_ADDR       = noc_block_ddc.gen_ddc_chains[0].ddc.SR_DECIM_ADDR;
   wire [7:0] SR_MUX_ADDR         = noc_block_ddc.gen_ddc_chains[0].ddc.SR_MUX_ADDR;
   wire [7:0] SR_COEFFS_ADDR      = noc_block_ddc.gen_ddc_chains[0].ddc.SR_COEFFS_ADDR;
+  wire [7:0] RB_NUM_HB           = noc_block_ddc.RB_NUM_HB;
+  wire [7:0] RB_CIC_MAX_DECIM    = noc_block_ddc.RB_CIC_MAX_DECIM;
+
 
   localparam SPP                 = FFT_SIZE;
   localparam PKT_SIZE_BYTES      = FFT_SIZE*4;
@@ -52,20 +57,16 @@ module noc_block_ddc_tb();
 
       int _decim_rate = decim_rate;
 
-      `ASSERT_ERROR(decim_rate <= 2040, "Decimation rate cannot exceed 1060!");
-      `ASSERT_ERROR((decim_rate <= 510) ||
-                    (decim_rate > 511  && decim_rate[1:0] == 2'b0 && decim_rate <= 1020) || // Only rates div 4 work
-                    (decim_rate > 1020 && decim_rate[2:0] == 3'b0 && decim_rate <= 2040),  // Only rates div 8
-                    "Invalid decimation rate!");
-      `ASSERT_ERROR(decim_rate > 0, "Decimation rate must be positive and cannot equal 0!");
-
       // Calculate which half bands to enable and whatever is left over set the CIC
-      while ((_decim_rate[0] == 0) && (hb_enables < 3)) begin
+      while ((_decim_rate[0] == 0) && (hb_enables < num_hb)) begin
         hb_enables += 1'b1;
         _decim_rate = _decim_rate >> 1;
       end
       // CIC rate cannot be set to 0
       cic_rate = (_decim_rate[7:0] == 8'd0) ? 8'd1 : _decim_rate[7:0];
+      `ASSERT_ERROR(hb_enables <= num_hb, "Enabled halfbands may not exceed total number of half bands.");
+      `ASSERT_ERROR(cic_rate > 0 && cic_rate <= cic_max_decim,
+      "CIC Decimation rate must be positive, not exceed the max cic decimation rate, and cannot equal 0!");
 
       // Setup DDC
       $display("Set decimation to %0d", decim_rate);
@@ -247,6 +248,9 @@ module noc_block_ddc_tb();
     $display("Note: This test will take a long time!");
     `RFNOC_CONNECT(noc_block_tb, noc_block_ddc, SC16, SPP);
     `RFNOC_CONNECT(noc_block_ddc, noc_block_tb, SC16, SPP);
+    //readback regs
+    tb_streamer.read_user_reg(sid_noc_block_ddc, RB_NUM_HB, num_hb);
+    tb_streamer.read_user_reg(sid_noc_block_ddc, RB_CIC_MAX_DECIM, cic_max_decim);
     // List of rates to catch most issues
     send_ramp(1);    // HBs enabled: 0, CIC rate: 1
     send_ramp(2);    // HBs enabled: 1, CIC rate: 1

@@ -29,12 +29,13 @@ module axi_wrapper
   #(parameter MTU=10,
     parameter SR_AXI_CONFIG_BASE=129,   // AXI configuration bus base, settings bus address range size is 2*NUM_AXI_CONFIG_BUS
     parameter NUM_AXI_CONFIG_BUS=1,     // Number of AXI configuration busses
-    parameter CONFIG_BUS_FIFO_DEPTH=5,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
+    parameter CONFIG_BUS_FIFO_DEPTH=1,  // Depth of AXI configuration bus FIFO. Note: AXI configuration bus lacks back pressure.
     parameter SIMPLE_MODE=1,            // 0 = User handles CHDR insertion via tuser signals, 1 = Automatically save / insert CHDR with internal FIFO
     parameter USE_SEQ_NUM=0,            // 0 = Frame will automatically handle sequence number, 1 = Use sequence number provided in s_axis_data_tuser
     parameter RESIZE_INPUT_PACKET=0,    // 0 = Do not resize, packet length determined by i_tlast, 1 = Generate m_axis_data_tlast based on user input m_axis_pkt_len_tdata
     parameter RESIZE_OUTPUT_PACKET=0)   // 0 = Do not resize, packet length determined by s_axis_data_tlast, 1 = Use packet length from user header (s_axis_data_tuser)
    (input clk, input reset,
+    input bus_clk, input bus_rst,
 
     input clear_tx_seqnum,
     input [15:0] next_dst,              // Used with SIMPLE_MODE=1
@@ -56,6 +57,10 @@ module axi_wrapper
     input [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tready
     );
 
+   wire clear_tx_seqnum_bclk;
+   synchronizer #(.INITIAL_VAL(1'b0)) clear_tx_sync_i (
+     .clk(bus_clk), .rst(1'b0), .in(clear_tx_seqnum), .out(clear_tx_seqnum_bclk));
+
    // /////////////////////////////////////////////////////////
    // Input side handling, chdr_deframer
    wire [127:0] s_axis_data_tuser_int, m_axis_data_tuser_int;
@@ -65,10 +70,11 @@ module axi_wrapper
    wire [127:0] header_fifo_i_tdata  = {m_axis_data_tuser[127:96],m_axis_data_tuser[79:64],next_dst,m_axis_data_tuser[63:0]};
    wire         header_fifo_i_tvalid = sof_in & m_axis_data_tvalid & m_axis_data_tready;
 
-   chdr_deframer chdr_deframer
-     (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
+   chdr_deframer_2clk chdr_deframer (
+      .samp_clk(clk), .samp_rst(reset | clear_tx_seqnum), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
-      .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready));
+      .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready)
+   );
 
    assign m_axis_data_tuser[127:80] = m_axis_data_tuser_int[127:80];
    assign m_axis_data_tuser[79:64]  = RESIZE_INPUT_PACKET ? (m_axis_data_tuser_int[125] ? m_axis_pkt_len_reg+16 : m_axis_pkt_len_reg+8) : m_axis_data_tuser_int[79:64];
@@ -90,7 +96,7 @@ module axi_wrapper
       if(SIMPLE_MODE)
          begin
             // FIFO 
-            axi_fifo_short #(.WIDTH(128)) header_fifo
+            axi_fifo #(.WIDTH(128), .SIZE(5)) header_fifo
             (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
              .i_tdata(header_fifo_i_tdata),
              .i_tvalid(header_fifo_i_tvalid), .i_tready(),
@@ -174,10 +180,11 @@ module axi_wrapper
 
    // /////////////////////////////////////////////////////////
    // Output side handling, chdr_framer
-   chdr_framer #(.SIZE(MTU), .USE_SEQ_NUM(USE_SEQ_NUM)) chdr_framer
-     (.clk(clk), .reset(reset), .clear(clear_tx_seqnum),
+   chdr_framer_2clk #(.SIZE(MTU), .USE_SEQ_NUM(USE_SEQ_NUM)) chdr_framer (
+      .samp_clk(clk), .samp_rst(reset | clear_tx_seqnum), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
       .i_tdata(s_axis_data_tdata), .i_tuser(s_axis_data_tuser_int), .i_tlast(s_axis_data_tlast_int), .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
-      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
+      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready)
+   );
 
    // /////////////////////////////////////////////////////////
    // Control bus handling

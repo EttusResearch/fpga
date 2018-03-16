@@ -18,7 +18,7 @@ module axi_fifo_2clk #(
     input o_tready
 );
 
-    localparam FIFOSIZE = (SIZE < 1) ? 1 : SIZE;
+    localparam FIFOSIZE = (SIZE < 5) ? 5 : SIZE;
 
     // Synchronizers
     wire o_rst_sync, i_rst_sync;

@@ -85,7 +85,7 @@ def call_xsim(path):
     env = os.environ
     env["REPO_BASE_PATH"] = _BASE_DIR
     env["DISPLAY_NAME"] = "USRP-XSIM"
-    env["VIVADO_VER"] = "2015.4"
+    env["VIVADO_VER"] = "2017.4"
     env["PRODUCT_ID_MAP"] = "foo/foo/bar/bar"
     setup_env = os.path.join(_BASE_DIR, "tools", "scripts", "setupenv_base.sh")
     result = subprocess.Popen(

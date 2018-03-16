@@ -25,8 +25,9 @@ module noc_block_null_source_sink #(
   wire [63:0] cmdout_tdata, ackin_tdata;
   wire        cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
 
-  wire [63:0] str_sink_tdata, str_src_tdata;
+  wire [63:0] str_sink_tdata, str_src_tdata, str_src_tdata_bclk;
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire        str_src_tlast_bclk, str_src_tvalid_bclk, str_src_tready_bclk;
 
   wire [15:0] src_sid, next_dst_sid;
   wire        clear_tx_seqnum;
@@ -41,7 +42,8 @@ module noc_block_null_source_sink #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb),
+    .vita_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_has_time(), .set_time(),
     .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -49,7 +51,7 @@ module noc_block_null_source_sink #(
     // Stream Sink
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
-    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+    .str_src_tdata(str_src_tdata_bclk), .str_src_tlast(str_src_tlast_bclk), .str_src_tvalid(str_src_tvalid_bclk), .str_src_tready(str_src_tready_bclk),
     .clear_tx_seqnum(clear_tx_seqnum), .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
@@ -67,6 +69,15 @@ module noc_block_null_source_sink #(
   // User code
   //
   ////////////////////////////////////////////////////////////
+
+  axi_fifo_2clk #(
+    .WIDTH(65), .SIZE(5)
+  ) ack_2clk_i (
+    .reset(ce_rst), .i_aclk(ce_clk),
+    .i_tdata({str_src_tlast, str_src_tdata}), .i_tvalid(str_src_tvalid), .i_tready(str_src_tready),
+    .o_aclk(bus_clk),
+    .o_tdata({str_src_tlast_bclk, str_src_tdata_bclk}), .o_tvalid(str_src_tvalid_bclk), .o_tready(str_src_tready_bclk)
+  );
 
   localparam SR_LINES_PER_PACKET    = 129;
   localparam SR_LINE_RATE           = 130;

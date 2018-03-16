@@ -29,8 +29,7 @@ module axi_rate_change_tb();
   logic [31:0] m_axis_data_tdata, s_axis_data_tdata;
   logic m_axis_data_tlast, m_axis_data_tvalid, m_axis_data_tready;
   logic s_axis_data_tlast, s_axis_data_tvalid, s_axis_data_tready;
-  logic warning_header_fifo_full, warning_long_throttle;
-  logic error_extra_outputs, error_drop_pkt_lockup;
+  logic warning_long_throttle, error_extra_outputs, error_drop_pkt_lockup;
   axi_rate_change #(
     .WIDTH(32),
     .MAX_N(MAX_N),
@@ -48,7 +47,6 @@ module axi_rate_change_tb();
     .m_axis_data_tvalid(m_axis_data_tvalid), .m_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tdata(s_axis_data_tdata), .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid), .s_axis_data_tready(s_axis_data_tready),
-    .warning_header_fifo_full(warning_header_fifo_full),
     .warning_long_throttle(warning_long_throttle),
     .error_extra_outputs(error_extra_outputs),
     .error_drop_pkt_lockup(error_drop_pkt_lockup));
@@ -99,7 +97,7 @@ module axi_rate_change_tb();
   always @(posedge clk) begin
     if (clock_cnt_en == 1'b1) begin
       // Wait until output data starts
-      if (s_axis_data_tvalid & s_axis_data_tready & ~clock_cnt_start) begin
+      if (s_axis.axis.tvalid & ~clock_cnt_start) begin
         clock_cnt_start <= 1'b1;
         clock_cnt       <= clock_cnt + 1;
       end else if (clock_cnt_start) begin
@@ -203,7 +201,7 @@ module axi_rate_change_tb();
           word_cnt_div_m_frac++;
           words_recvd++;
           words_left_to_recv--;
-          timestamp += 1.0;
+          timestamp += 1.0*n;
           // Check packet length
           if ((word_cnt_div_spp_frac == spp) || (words_left_to_recv == 0)) begin
             `ASSERT_FATAL(last == 1, "Incorrect packet length! Last not asserted!");
@@ -316,7 +314,6 @@ module axi_rate_change_tb();
     while (reset) @(posedge clk);
     forever begin
       @(posedge clk);
-      `ASSERT_FATAL(~warning_header_fifo_full, "Header FIFO full deadlock!");
       `ASSERT_FATAL(~warning_long_throttle,    "Throttle state deadlock!");
       `ASSERT_FATAL(~error_extra_outputs,      "Extra outputs detected!");
       `ASSERT_FATAL(~error_drop_pkt_lockup,    "Drop packet deadlock!");

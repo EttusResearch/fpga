@@ -2,7 +2,7 @@
 ;  83% effective BW, 64dB to 85dB rolloff
 Radix=10;
 CoefData =
--62, 
+-62,
  0,
  194,
  0,
@@ -45,7 +45,7 @@ CoefData =
  855,
  0,
 -440,
- 0
+ 0,
  194,
  0,
 -62;

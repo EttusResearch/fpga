@@ -14,28 +14,28 @@
     end
   endgenerate
 
-  noc_block_ddc #( .NUM_CHAINS(2)) inst_noc_block_ddc_0 (
+  noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(3), .CIC_MAX_DECIM(255)) inst_noc_block_ddc_0 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
     .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
     .debug(ce_debug[0]));
 
-  noc_block_ddc #( .NUM_CHAINS(2)) inst_noc_block_ddc_1 (
+  noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(3), .CIC_MAX_DECIM(255)) inst_noc_block_ddc_1 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
     .o_tdata(ce_i_tdata[1]), .o_tlast(ce_i_tlast[1]), .o_tvalid(ce_i_tvalid[1]), .o_tready(ce_i_tready[1]),
     .debug(ce_debug[1]));
 
-  noc_block_duc inst_noc_block_duc_0 (
+  noc_block_duc #( .NUM_HB(2), .CIC_MAX_INTERP(128)) inst_noc_block_duc_0 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[2]), .i_tlast(ce_o_tlast[2]), .i_tvalid(ce_o_tvalid[2]), .i_tready(ce_o_tready[2]),
     .o_tdata(ce_i_tdata[2]), .o_tlast(ce_i_tlast[2]), .o_tvalid(ce_i_tvalid[2]), .o_tready(ce_i_tready[2]),
     .debug(ce_debug[2]));
 
-  noc_block_duc inst_noc_block_duc_1 (
+  noc_block_duc #( .NUM_HB(2), .CIC_MAX_INTERP(128)) inst_noc_block_duc_1 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[3]), .i_tlast(ce_o_tlast[3]), .i_tvalid(ce_o_tvalid[3]), .i_tready(ce_o_tready[3]),

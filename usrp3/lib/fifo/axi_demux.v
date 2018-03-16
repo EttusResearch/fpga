@@ -9,7 +9,7 @@ module axi_demux
     parameter PRE_FIFO_SIZE=0,
     parameter POST_FIFO_SIZE=0)
    (input clk, input reset, input clear,
-    output [WIDTH-1:0] header, input [3:0] dest,
+    output [WIDTH-1:0] header, input [$clog2(SIZE)-1:0] dest,
     input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [(WIDTH*SIZE)-1:0] o_tdata, output [SIZE-1:0] o_tlast, output [SIZE-1:0] o_tvalid, input [SIZE-1:0] o_tready);
 

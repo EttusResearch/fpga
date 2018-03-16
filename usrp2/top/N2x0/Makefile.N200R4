@@ -64,7 +64,8 @@ $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS)
 ##################################################
 SYNTHESIZE_PROPERTIES = \
 "Number of Clock Buffers" 8 \
-"Pack I/O Registers into IOBs" Yes \
+"Pack I/O Registers into IOBs" No \
+"Optimization Goal" Speed \
 "Optimization Effort" High \
 "Optimize Instantiated Primitives" TRUE \
 "Register Balancing" Yes \
@@ -81,7 +82,7 @@ MAP_PROPERTIES = \
 "Allow Logic Optimization Across Hierarchy" TRUE \
 "Map to Input Functions" 4 \
 "Optimization Strategy (Cover Mode)" Speed \
-"Pack I/O Registers/Latches into IOBs" "For Inputs and Outputs" \
+"Pack I/O Registers/Latches into IOBs" "Off" \
 "Perform Timing-Driven Packing and Placement" TRUE \
 "Map Effort Level" High \
 "Extra Effort" Normal \
@@ -89,7 +90,8 @@ MAP_PROPERTIES = \
 "Register Duplication" TRUE
 
 PLACE_ROUTE_PROPERTIES = \
-"Place & Route Effort Level (Overall)" High 
+"Place & Route Effort Level (Overall)" High \
+"Extra Effort (Highest PAR level only)" Normal
 
 STATIC_TIMING_PROPERTIES = \
 "Number of Paths in Error/Verbose Report" 10 \

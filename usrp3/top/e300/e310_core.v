@@ -108,6 +108,8 @@ module e310_core
   localparam RB32_CORE_NUMCE    = 5'd8;
   localparam RB32_CORE_TEST     = 5'd24;
 
+  localparam [7:0] COMPAT_NUM_MAJOR = 8'd255;
+  localparam [7:0] COMPAT_NUM_MINOR = 8'd0;
 
    /////////////////////////////////////////////////////////////////////////////////
    // Internal time synchronization
@@ -180,7 +182,7 @@ module e310_core
     case(rb_addr)
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
-      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, 8'd255, 8'd0};
+      RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
       RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
       RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE+4'd1}; // +1 for radio core
@@ -314,37 +316,73 @@ module e310_core
   ////////////////////////////////////////////////////////////////////
   // radio instantiation
   ////////////////////////////////////////////////////////////////////
-  // Daughter board I/O is replicated per radio, some of it is unused
   localparam NUM_CHANNELS = 2;
+
+  // Data
+  wire [31:0] rx_data_in[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1], tx_data_out[0:NUM_CHANNELS-1];
+  wire        rx_stb[0:NUM_CHANNELS-1], tx_stb[0:NUM_CHANNELS-1];
+   wire        rx_running[0:NUM_CHANNELS-1], tx_running[0:NUM_CHANNELS-1];
+  wire        db_fe_set_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_set_addr[0:NUM_CHANNELS-1];
+  wire [31:0] db_fe_set_data[0:NUM_CHANNELS-1];
+  wire        db_fe_rb_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_rb_addr[0:NUM_CHANNELS-1];
+  wire [64:0] db_fe_rb_data[0:NUM_CHANNELS-1];
+
+  // Daughter board I/O is replicated per radio, some of it is unused
   wire [31:0] leds[0:NUM_CHANNELS-1];
   wire [31:0] fp_gpio_in[0:NUM_CHANNELS-1], fp_gpio_out[0:NUM_CHANNELS-1], fp_gpio_ddr[0:NUM_CHANNELS-1];
   wire [31:0] db_gpio_out[0:NUM_CHANNELS-1];
   wire [7:0] sen[0:NUM_CHANNELS-1];
   wire sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
+
   noc_block_radio_core #(
     .NUM_CHANNELS(NUM_CHANNELS),
-    .STR_SINK_FIFOSIZE({8'd13,8'd13}),
-    .MTU(10),                // Tuned value
-    .USE_SPI_CLK(1))
-  noc_block_radio_core (
+    .STR_SINK_FIFOSIZE({8'd11,8'd11}),
+    .MTU(10)
+  ) noc_block_radio_core_i (
+    //Clocks
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(radio_clk), .ce_rst(radio_rst),
+    //AXIS data to/from crossbar
     .i_tdata(ro_tdata), .i_tlast(ro_tlast), .i_tvalid(ro_tvalid), .i_tready(ro_tready),
     .o_tdata(ri_tdata), .o_tlast(ri_tlast), .o_tvalid(ri_tvalid), .o_tready(ri_tready),
-    // Output timed settings bus, one per radio
-    .ext_set_stb(), .ext_set_addr(), .ext_set_data(),
-    // Ports connected to radio front end
-    .rx({rx_data1,rx_data0}), .rx_stb({rx_stb1,rx_stb0}),
-    .tx({tx_data1,tx_data0}), .tx_stb({tx_stb1,tx_stb0}),
-    // Interfaces to front panel and daughter board
-    .pps(pps), .sync_out(),
-    .misc_ins('d0), .misc_outs(),
-    .fp_gpio_in({fp_gpio_in[1],fp_gpio_in[0]}), .fp_gpio_out({fp_gpio_out[1],fp_gpio_out[0]}), .fp_gpio_ddr({fp_gpio_ddr[1],fp_gpio_ddr[0]}),
-    .db_gpio_in('d0), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr(),
-    .leds({leds[1],leds[0]}),
-    .spi_clk(bus_clk), .spi_rst(bus_rst),
-    .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
-    .debug());
+    // Data ports connected to radio front end
+    .rx({rx_data[1],rx_data[0]}), .rx_stb({rx_stb[1],rx_stb[0]}),
+    .tx({tx_data[1],tx_data[0]}), .tx_stb({tx_stb[1],tx_stb[0]}),
+    // Timing and sync
+    .pps(pps), .sync_in(1'b0), .sync_out(),
+    .rx_running({rx_running[1], rx_running[0]}), .tx_running({tx_running[1], tx_running[0]}), 
+    // Ctrl ports connected to radio dboard and front end core
+    .db_fe_set_stb({db_fe_set_stb[1],db_fe_set_stb[0]}),
+    .db_fe_set_addr({db_fe_set_addr[1],db_fe_set_addr[0]}),
+    .db_fe_set_data({db_fe_set_data[1],db_fe_set_data[0]}),
+    .db_fe_rb_stb({db_fe_rb_stb[1],db_fe_rb_stb[0]}),
+    .db_fe_rb_addr({db_fe_rb_addr[1],db_fe_rb_addr[0]}),
+    .db_fe_rb_data({db_fe_rb_data[1],db_fe_rb_data[0]}),
+    //Debug
+    .debug()
+  );
+
+  genvar i;
+  generate for (i = 0; i < NUM_CHANNELS; i=i+1) begin: dbch
+    db_control #(
+      .USE_SPI_CLK(1), .SR_BASE(160), .RB_BASE(16)
+    ) db_control_i (
+      .clk(radio_clk), .reset(radio_rst),
+      .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i]), .set_data(db_fe_set_data[i]),
+      .rb_stb(db_fe_rb_stb[i]), .rb_addr(db_fe_rb_addr[i]), .rb_data(db_fe_rb_data[i]),
+      .run_rx(rx_running[i]), .run_tx(tx_running[i]),
+      .misc_ins('h0), .misc_outs(),
+      .fp_gpio_in(fp_gpio_in[i]), .fp_gpio_out(fp_gpio_out[i]),
+      .fp_gpio_ddr(fp_gpio_ddr[i]), .fp_gpio_fab('h0),
+      .db_gpio_in('h0), .db_gpio_out(db_gpio_out[i]),
+      .db_gpio_ddr(), .db_gpio_fab('h0),
+      .leds(leds[i]),
+      .spi_clk(bus_clk), .spi_rst(bus_rst),
+      .sen(sen[i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i])
+    );
+  end endgenerate
 
   // Connect daughter board I/O
   assign fp_gpio_in[0]      = {26'd0,fp_gpio_in0};

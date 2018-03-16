@@ -5,23 +5,43 @@
 # ---------------------------------------
 # Gather all external parameters
 # ---------------------------------------
-set bd_file         $::env(BD_FILE)               ;# Absolute path to XCI file from src dir
+set bd_file         $::env(BD_FILE)               ;# Absolute path to BD/Tcl file from src dir
+set src_ext [file extension $bd_file]             ;# BD or Tcl file?
 set part_name       $::env(PART_NAME)              ;# Full Xilinx part name
 set bd_name [file rootname [file tail $bd_file]]   ;# Extract IP name
+if {[info exists env(BD_IP_REPOS)]} {
+    set ip_repos $::env(BD_IP_REPOS);# Any supporting IP repos
+} else {
+    set ip_repos {}
+}
 
 # Delete any previous output cookie file
 file delete -force "$bd_file.out"
 # ---------------------------------------
 # Vivado Commands
 # ---------------------------------------
-puts "BUILDER: Adding Block Diagram: $bd_file"
-create_project -part $part_name -in_memory
-add_files -norecurse $bd_file
-puts "BUILDER: Generating BD Target first pass..."
-generate_target all [get_files $bd_file] -force
-report_ip_status
-puts "BUILDER: Report_ip_status done"
-open_bd_design $bd_file
+if [expr [lsearch {.tcl} $src_ext] >= 0] {
+    puts "BUILDER: Generating Block Diagram from script: $bd_file"
+    create_project -part $part_name -in_memory
+    set_property ip_repo_paths "{$ip_repos}" [current_project]
+    update_ip_catalog
+    create_bd_design -dir . $bd_name
+    source $bd_file
+    report_ip_status
+    puts "BUILDER: Report_ip_status done"
+    set bd_file $bd_name.bd
+} else {
+    puts "BUILDER: Adding Block Diagram: $bd_file"
+    create_project -part $part_name -in_memory
+    set_property ip_repo_paths "{$ip_repos}" [current_project]
+    update_ip_catalog
+    add_files -norecurse $bd_file
+    puts "BUILDER: Generating BD Target first pass..."
+    generate_target all [get_files $bd_file] -force
+    report_ip_status
+    puts "BUILDER: Report_ip_status done"
+    open_bd_design $bd_file
+}
 puts "BUILDER: Generating BD Target..."
 generate_target all [get_files $bd_file]
 puts "BUILDER: Generate all done"

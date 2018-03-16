@@ -36,63 +36,58 @@
 //////////////////////////////////////////////////////////////////////
 
 `include "defines.v"
- 
+
 module wishbone_if(/*AUTOARG*/
   // Outputs
-  wb_dat_o, wb_ack_o, wb_int_o, ctrl_tx_enable, 
-  `ifdef MDIO
-   mdc, mdio_out, mdio_tri, xge_gpo,
-   `endif
-		   
+  wb_dat_o, wb_ack_o, wb_int_o, ctrl_tx_enable,
+  mdc, mdio_out, mdio_tri, xge_gpo,
+
   // Inputs
   wb_clk_i, wb_rst_i, wb_adr_i, wb_dat_i, wb_we_i, wb_stb_i, wb_cyc_i,
   status_crc_error, status_fragment_error, status_txdfifo_ovflow,
   status_txdfifo_udflow, status_rxdfifo_ovflow, status_rxdfifo_udflow,
-  status_pause_frame_rx, status_local_fault, status_remote_fault
-  `ifdef MDIO
-  ,mdio_in, xge_gpi
-  `endif		   
+  status_pause_frame_rx, status_local_fault, status_remote_fault,
+  mdio_in, xge_gpi
   );
- 
- 
+
+
 input         wb_clk_i;
 input         wb_rst_i;
- 
+
 input  [7:0]  wb_adr_i;
 input  [31:0] wb_dat_i;
 input         wb_we_i;
 input         wb_stb_i;
 input         wb_cyc_i;
- 
+
 output [31:0] wb_dat_o;
 output        wb_ack_o;
 output        wb_int_o;
- 
+
 input         status_crc_error;
 input         status_fragment_error;
- 
+
 input         status_txdfifo_ovflow;
- 
+
 input         status_txdfifo_udflow;
- 
+
 input         status_rxdfifo_ovflow;
- 
+
 input         status_rxdfifo_udflow;
- 
+
 input         status_pause_frame_rx;
- 
+
 input         status_local_fault;
 input         status_remote_fault;
- 
+
 output        ctrl_tx_enable;
- 
-  `ifdef MDIO
-   output reg    mdc;
-   output reg    mdio_out;
-   output reg    mdio_tri;   // Assert to tristate driver.
-   input      mdio_in;
-   input [7:0] xge_gpi;
-   output reg [7:0] xge_gpo;
+
+output reg    mdc;
+output reg    mdio_out;
+output reg    mdio_tri;   // Assert to tristate driver.
+input      mdio_in;
+input [7:0] xge_gpi;
+output reg [7:0] xge_gpo;
 
    //
    // State Declarations
@@ -197,106 +192,103 @@ output        ctrl_tx_enable;
 		C45_ADDR15 = 97,
 		C45_ADDR16 = 98,
 		PREIDLE = 99;
-   
-       
-`endif
 
-   
+
+
+
 /*AUTOREG*/
 // Beginning of automatic regs (for this module's undeclared outputs)
 reg [31:0]              wb_dat_o;
 reg                     wb_int_o;
 // End of automatics
- 
+
 reg  [0:0]              cpureg_config0;
 reg  [8:0]              cpureg_int_pending;
 reg  [8:0]              cpureg_int_mask;
- 
+
 reg                     cpuack;
- 
+
 reg                     status_remote_fault_d1;
 reg                     status_local_fault_d1;
 
-`ifdef MDIO
-   reg [15:0]			mdio_read_data;
-   reg [15:0] 			mdio_write_data;
-   reg [15:0] 			mdio_address;
-   reg [12:0] 			mdio_operation;
-   reg 				mdio_control;
-   reg [7:0] 			mdc_clk_count;
-   reg 				mdc_falling_edge;
-   reg 				mdio_running;
-   reg 				mdio_done;
-   reg [7:0] 			state;
-   reg [7:0] 			xge_gpi_reg;
-   reg [7:0] 			xge_gpo_reg;
-   
-`endif
-   
- 
+reg [15:0]			mdio_read_data;
+reg [15:0] 			mdio_write_data;
+reg [15:0] 			mdio_address;
+reg [12:0] 			mdio_operation;
+reg 				mdio_control;
+reg [7:0] 			mdc_clk_count;
+reg 				mdc_falling_edge;
+reg 				mdio_running;
+reg 				mdio_done;
+reg [7:0] 			state;
+reg [7:0] 			xge_gpi_reg;
+reg [7:0] 			xge_gpo_reg;
+
+
+
 /*AUTOWIRE*/
- 
+
 wire [8:0] 			int_sources;
- 
- 
+
+
 //---
 // Source of interrupts, some are edge sensitive, others
 // expect a pulse signal.
- 
+
 assign int_sources = {
                       status_fragment_error,
                       status_crc_error,
- 
+
                       status_pause_frame_rx,
- 
+
                       status_remote_fault ^ status_remote_fault_d1,
                       status_local_fault ^ status_local_fault_d1,
- 
+
                       status_rxdfifo_udflow,
                       status_rxdfifo_ovflow,
                       status_txdfifo_udflow,
                       status_txdfifo_ovflow
                       };
- 
+
 //---
 // Config Register 0
- 
-assign ctrl_tx_enable = cpureg_config0[0];
- 
- 
- 
+
+//TODO
+//assign ctrl_tx_enable = cpureg_config0[0];
+assign ctrl_tx_enable = 1'b1;
+
+
+
 //---
 // Wishbone signals
- 
+
 assign wb_ack_o = cpuack && wb_stb_i;
- 
+
 always @(posedge wb_clk_i or posedge wb_rst_i) begin
- 
+
     if (wb_rst_i == 1'b1) begin
- 
+
         cpureg_config0 <= 1'h1;
         cpureg_int_pending <= 9'b0;
         cpureg_int_mask <= 9'b0;
- 
+
         wb_dat_o <= 32'b0;
         wb_int_o <= 1'b0;
- 
+
         cpuack <= 1'b0;
 
-`ifdef MDIO
        mdio_address <= 0;
        mdio_operation <= 0;
        mdio_write_data <= 0;
-       
+
        mdio_running <= 0;
        xge_gpi_reg <= 0;
        xge_gpo <= 0;
        xge_gpo_reg <= 0;
-       
 
-`endif
-	 
- 
+
+
+
  //       status_remote_fault_d1 <= status_remote_fault;
  //       status_local_fault_d1 <= status_local_fault;
        // IJB. Original code was unsynthesizable and a little bizzare
@@ -305,17 +297,16 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
        status_local_fault_d1 <= 0;
     end
     else begin
- 
+
         wb_int_o <= |(cpureg_int_pending & cpureg_int_mask);
- 
+
         cpureg_int_pending <= cpureg_int_pending | int_sources;
- 
+
         cpuack <= wb_cyc_i && wb_stb_i;
- 
+
         status_remote_fault_d1 <= status_remote_fault;
         status_local_fault_d1 <= status_local_fault;
-       
-`ifdef MDIO
+
        // Handshake to MDIO state machine to reset running flag in status.
        // Wait for falling MDC edge to prevent S/W race condition occuring
        // where done flag still asserted but running flag now cleared (repeatedly).
@@ -325,39 +316,37 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
        // Register GPIO to allow regs placed in the I/O cells and provide some metastability prot
        xge_gpi_reg <= xge_gpi;
        xge_gpo <= xge_gpo_reg;
-       
 
-`endif
+
         //---
         // Read access
- 
+
         if (wb_cyc_i && wb_stb_i && !wb_we_i) begin
- 
+
             case ({wb_adr_i[7:2], 2'b0})
- 
+
               `CPUREG_CONFIG0: begin
                   wb_dat_o <= {31'b0, cpureg_config0};
               end
- 
+
               `CPUREG_INT_PENDING: begin
                   wb_dat_o <= {23'b0, cpureg_int_pending};
                   cpureg_int_pending <= int_sources;
                   wb_int_o <= 1'b0;
               end
- 
+
               `CPUREG_INT_STATUS: begin
                   wb_dat_o <= {23'b0, int_sources};
               end
- 
+
               `CPUREG_INT_MASK: begin
                   wb_dat_o <= {23'b0, cpureg_int_mask};
               end
 
- `ifdef MDIO
 	      `CPUREG_MDIO_DATA: begin
 		 wb_dat_o <= {16'b0, mdio_read_data};
 	      end
-	      
+
 	      `CPUREG_MDIO_STATUS: begin
 		 wb_dat_o <= {31'b0, mdio_running};
 	      end
@@ -365,37 +354,35 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 	      `CPUREG_GPIO: begin
 		 wb_dat_o <= {24'b0, xge_gpi_reg};
 	      end
-	      
- `endif  
-	      
+
+
               default: begin
               end
- 
+
             endcase
- 
+
         end
- 
+
         //---
         // Write access
- 
+
         if (wb_cyc_i && wb_stb_i && wb_we_i) begin
 	   $display("reg write @ addr %x",({wb_adr_i[7:2], 2'b0}));
-	   
+
             case ({wb_adr_i[7:2], 2'b0})
- 
+
               `CPUREG_CONFIG0: begin
                   cpureg_config0 <= wb_dat_i[0:0];
               end
- 
+
               `CPUREG_INT_PENDING: begin
                   cpureg_int_pending <= wb_dat_i[8:0] | cpureg_int_pending | int_sources;
               end
- 
+
               `CPUREG_INT_MASK: begin
                   cpureg_int_mask <= wb_dat_i[8:0];
               end
 
-`ifdef MDIO
 	      `CPUREG_MDIO_DATA: begin
 		 mdio_write_data <= wb_dat_i[15:0];
 	      end
@@ -403,7 +390,7 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 	       `CPUREG_MDIO_ADDR: begin
 		 mdio_address <= wb_dat_i[15:0];
 	       end
-	      
+
 	      `CPUREG_MDIO_OP: begin
 		 mdio_operation <= wb_dat_i[12:0];
 	       end
@@ -411,27 +398,25 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 	      `CPUREG_MDIO_CONTROL: begin
 		 // Trigger mdio operation here. Cleared by state machine at end of bus transaction.
 		 if (wb_dat_i[0])
-		   mdio_running <= 1;		 
+		   mdio_running <= 1;
 	      end
 
 	      `CPUREG_GPIO: begin
 		 xge_gpo_reg <= wb_dat_i[7:0];
 	       end
-	      
-`endif //  `ifdef MDIO
-	       
+
+
               default: begin
               end
- 
+
             endcase
- 
+
         end
- 
+
     end
- 
+
 end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 
-`ifdef MDIO
    //
    // Produce mdc clock as a signal synchronously from Wishbone clock.
    //
@@ -440,20 +425,20 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
        begin
 	  mdc_clk_count <= 1;
 	  mdc <= 0;
-	  mdc_falling_edge <= 0;	  
+	  mdc_falling_edge <= 0;
        end
      else if (mdc_clk_count == `MDC_HALF_PERIOD)
        begin
 	  mdc_clk_count <= 1;
 	  mdc <= ~mdc;
-	  mdc_falling_edge <= mdc;	  
+	  mdc_falling_edge <= mdc;
        end
      else
        begin
 	  mdc_clk_count <= mdc_clk_count + 1;
-	  mdc_falling_edge <= 0;		   
+	  mdc_falling_edge <= 0;
        end
-  
+
    //
    // MDIO state machine
    //
@@ -469,18 +454,18 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
      else if (mdc_falling_edge)
        //
        // This is the MDIO bus controller. Use falling edge of MDC.
-       //      
+       //
        begin
-	  // Defaults	  
+	  // Defaults
 	  mdio_tri <= 1;
 	  mdio_out <= 0;
 	  mdio_done <= 0;
-	  
-	  
+
+
 	  case(state)
 	    // IDLE.
 	    // In Clause 22 & 45 the master of the MDIO bus is tristate during idle.
-	    // 
+	    //
 	    IDLE: begin
 	       mdio_tri <= 1;
 	       mdio_out <= 0;
@@ -490,37 +475,37 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	    // Preamble. All MDIO transactions begin witrh 32bits of 1 bits as a preamble.
 	    PREAMBLE1: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE2;
 	    end
 	    PREAMBLE2: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE3;
-	    end 
+	    end
 	    PREAMBLE3: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE4;
-	    end 
+	    end
 	    PREAMBLE4: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE5;
-	    end 
+	    end
 	    PREAMBLE5: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE6;
 	    end
 	    PREAMBLE6: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE7;
 	    end
 	    PREAMBLE7: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE8;
 	    end
 	    PREAMBLE8: begin
@@ -540,37 +525,37 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	    end
 	    PREAMBLE11: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE12;
 	    end
 	    PREAMBLE12: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE13;
-	    end 
+	    end
 	    PREAMBLE13: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE14;
-	    end 
+	    end
 	    PREAMBLE14: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE15;
-	    end 
+	    end
 	    PREAMBLE15: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE16;
 	    end
 	    PREAMBLE16: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE17;
 	    end
 	    PREAMBLE17: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE18;
 	    end
 	    PREAMBLE18: begin
@@ -590,37 +575,37 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	    end
 	    PREAMBLE21: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE22;
 	    end
 	    PREAMBLE22: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE23;
-	    end 
+	    end
 	    PREAMBLE23: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE24;
-	    end 
+	    end
 	    PREAMBLE24: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE25;
-	    end 
+	    end
 	    PREAMBLE25: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE26;
 	    end
 	    PREAMBLE26: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE27;
 	    end
 	    PREAMBLE27: begin
 	       mdio_tri <= 0;
-	       mdio_out <= 1;  
+	       mdio_out <= 1;
 	       state <= PREAMBLE28;
 	    end
 	    PREAMBLE28: begin
@@ -658,7 +643,7 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 		 // Clause 45 bit set.
 		 state <= C45_START2;
 	       else
-		 state <= C22_START2;	       
+		 state <= C22_START2;
 	    end
 	    //
 	    // 2nd Clause 22 start bit is a 1
@@ -697,52 +682,52 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	    PRTAD1: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[9];
-	       state <= PRTAD2;	       
+	       state <= PRTAD2;
 	    end
 	    PRTAD2: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[8];
-	       state <= PRTAD3;	       
+	       state <= PRTAD3;
 	    end
 	    PRTAD3: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[7];
-	       state <= PRTAD4;	       
+	       state <= PRTAD4;
 	    end
 	    PRTAD4: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[6];
-	       state <= PRTAD5;	       
+	       state <= PRTAD5;
 	    end
 	    PRTAD5: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[5];
-	       state <= DEVAD1;	       
+	       state <= DEVAD1;
 	    end
 	    DEVAD1: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[4];
-	       state <= DEVAD2;	       
+	       state <= DEVAD2;
 	    end
 	    DEVAD2: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[3];
-	       state <= DEVAD3;	       
+	       state <= DEVAD3;
 	    end
 	    DEVAD3: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[2];
-	       state <= DEVAD4;	       
+	       state <= DEVAD4;
 	    end
 	    DEVAD4: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[1];
-	       state <= DEVAD5;	       
+	       state <= DEVAD5;
 	    end
 	    DEVAD5: begin
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_operation[0];
-	       state <= TA1;	       
+	       state <= TA1;
 	    end
 	    //
 	    // Both Clause 22 & Clause 45 use the same turn around on the bus.
@@ -781,86 +766,86 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	    // Clause 22 Reads and both forms of clause 45 Reads have the same bus transaction from here out.
 	    //
 	    READ1: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[15] <= mdio_in;
-	       state <= READ2;	    
+	       state <= READ2;
 	    end
 	    READ2: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[14] <= mdio_in;
-	       state <= READ3;	    
+	       state <= READ3;
 	    end
 	    READ3: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[13] <= mdio_in;
-	       state <= READ4;	    
+	       state <= READ4;
 	    end
 	    READ4: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[12] <= mdio_in;
-	       state <= READ5;	    
+	       state <= READ5;
 	    end
 	    READ5: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[11] <= mdio_in;
-	       state <= READ6;	    
+	       state <= READ6;
 	    end
 	    READ6: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[10] <= mdio_in;
-	       state <= READ7;	    
+	       state <= READ7;
 	    end
 	    READ7: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[9] <= mdio_in;
-	       state <= READ8;	    
+	       state <= READ8;
 	    end
 	    READ8: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[8] <= mdio_in;
-	       state <= READ9;	    
+	       state <= READ9;
 	    end
 	    READ9: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[7] <= mdio_in;
-	       state <= READ10;	    
+	       state <= READ10;
 	    end
 	    READ10: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[6] <= mdio_in;
-	       state <= READ11;	    
+	       state <= READ11;
 	    end
 	    READ11: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[5] <= mdio_in;
-	       state <= READ12;	    
+	       state <= READ12;
 	    end
 	    READ12: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[4] <= mdio_in;
-	       state <= READ13;	    
+	       state <= READ13;
 	    end
 	    READ13: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[3] <= mdio_in;
-	       state <= READ14;	    
+	       state <= READ14;
 	    end
 	    READ14: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[2] <= mdio_in;
-	       state <= READ15;	    
+	       state <= READ15;
 	    end
 	    READ15: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[1] <= mdio_in;
-	       state <= READ16;	    
+	       state <= READ16;
 	    end
 	    READ16: begin
-	       mdio_tri <= 1;	
+	       mdio_tri <= 1;
 	       mdio_read_data[0] <= mdio_in;
-	       state <= PREIDLE;	 
-	       mdio_done <= 1;	          
-	    end	    
+	       state <= PREIDLE;
+	       mdio_done <= 1;
+	    end
 	    //
 	    // Write 16bits of data for all types of Write.
 	    //
@@ -943,7 +928,7 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_write_data[0];
 	       state <= PREIDLE;
-	       mdio_done <= 1;	       
+	       mdio_done <= 1;
 	    end
 	    //
 	    // Write 16bits of address for a Clause 45 Address transaction
@@ -1027,7 +1012,7 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	       mdio_tri <= 0;
 	       mdio_out <= mdio_address[0];
 	       state <= PREIDLE;
-	       mdio_done <= 1;	       
+	       mdio_done <= 1;
 	    end
 	    //
 	    // PREIDLE allows the mdio_running bit to reset.
@@ -1036,12 +1021,11 @@ end // always @ (posedge wb_clk_i or posedge wb_rst_i)
 	       state <= IDLE;
 	    end
 	  endcase // case(state)
-	  
+
        end // if (mdc_falling_edge)
 
 
-   
-`endif //  ifdef MDIO
-		   
+
+
 endmodule
- 
+

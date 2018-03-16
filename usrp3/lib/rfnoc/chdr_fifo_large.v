@@ -32,7 +32,7 @@ module chdr_fifo_large #(
   wire        i_tlast_pre, i_tvalid_pre, i_tready_pre;
   
   // SRL based FIFO to break timing paths to BRAM resources
-  axi_fifo_short #(.WIDTH(65)) pre_fifo (
+  axi_fifo_flop2 #(.WIDTH(65)) pre_fifo (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata({i_tlast, i_tdata}), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata({i_tlast_pre, i_tdata_pre}), .o_tvalid(i_tvalid_pre), .o_tready(i_tready_pre),
@@ -50,7 +50,7 @@ module chdr_fifo_large #(
         .o_tdata({o_tlast_int, o_tdata_int}), .o_tvalid(o_tvalid_int), .o_tready(o_tready_int),
         .space(), .occupied()
       );
-      axi_fifo_short #(.WIDTH(65)) short_fifo (
+      axi_fifo_flop2 #(.WIDTH(65)) fifo_flop2 (
         .clk(clk), .reset(reset), .clear(clear),
         .i_tdata({o_tlast_int, o_tdata_int}), .i_tvalid(o_tvalid_int), .i_tready(o_tready_int),
         .o_tdata({o_tlast, o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
@@ -78,7 +78,7 @@ module chdr_fifo_large #(
           .o_tdata({int_tlast[i], int_tdata[i]}), .o_tvalid(int_tvalid[i]), .o_tready(int_tready[i]),
           .space(), .occupied()
         );
-        axi_fifo_short #(.WIDTH(65)) short_fifo (
+        axi_fifo_flop2 #(.WIDTH(65)) fifo_flop2 (
           .clk(clk), .reset(reset), .clear(clear),
           .i_tdata({int_tlast[i], int_tdata[i]}), .i_tvalid(int_tvalid[i]), .i_tready(int_tready[i]),
           .o_tdata({c_tlast[i+1], c_tdata[i+1]}), .o_tvalid(c_tvalid[i+1]), .o_tready(c_tready[i+1]),

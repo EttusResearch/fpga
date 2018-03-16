@@ -19,7 +19,7 @@ parser.add_option("--output-src-path", type="string", dest="output_src_path", he
 
 # Args
 if (len(args) < 1):
-	print 'ERROR: Please specify the input LVBITX file name'
+	print('ERROR: Please specify the input LVBITX file name')
 	parser.print_help()
 	sys.exit(1)
 
@@ -27,15 +27,15 @@ lvbitx_filename = args[0]
 input_filename = os.path.abspath(lvbitx_filename)
 
 if (not os.path.isfile(input_filename)):
-	print 'ERROR: LVBITX File ' + input_filename + ' could not be accessed or is not a file.'
+	print('ERROR: LVBITX File ' + input_filename + ' could not be accessed or is not a file.')
 	parser.print_help()
 	sys.exit(1)
 if (options.input_bin is not None and not os.path.isfile(os.path.abspath(options.input_bin))):
-	print 'ERROR: FPGA Bin File ' + options.input_bin + ' could not be accessed or is not a file.'
+	print('ERROR: FPGA Bin File ' + options.input_bin + ' could not be accessed or is not a file.')
 	parser.print_help()
 	sys.exit(1)
 if (options.output_lvbitx_path is not None and input_filename == options.output_lvbitx_path):
-	print 'ERROR: Input and output LVBITX files were the same. Choose a difference input or output file.'
+	print('ERROR: Input and output LVBITX files were the same. Choose a difference input or output file.')
 	parser.print_help()
 	sys.exit(1)
 
@@ -63,7 +63,7 @@ if (options.input_bin is not None):
 # Write BIN file
 bitstream = base64.b64decode(root.find('Bitstream').text)
 if (options.output_lvbitx_path is not None and md5.new(bitstream).hexdigest() != root.find('BitstreamMD5').text):
-	print 'ERROR: The MD5 sum for the output LVBITX was incorrect. Make sure that the bitstream in the input LVBITX or BIN file is valid.'
+	print('ERROR: The MD5 sum for the output LVBITX was incorrect. Make sure that the bitstream in the input LVBITX or BIN file is valid.')
 	sys.exit(1)
 if (options.output_bin is not None):
 	fpga_bin_file = open(options.output_bin, 'w')

@@ -14,8 +14,16 @@
 ## build/usrp_n230_fpga_<image_type>.bin:    Configuration bitstream without header
 ## build/usrp_n230_fpga_<image_type>.rpt:    Build report (includes utilization and timing summary)
 
+# Option to stop after RTL elaboration. Use this flag as a synthesis check.
+ifdef CHECK
+TARGET = rtl
+else
+TARGET = bin
+endif
+TOP ?= n230
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.n230.inc bin NAME=$@ ARCH=$(XIL_ARCH_N230) PART_ID=$(XIL_PART_ID_N230) $1
+vivado_build = make -f Makefile.n230.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_N230) PART_ID=$(XIL_PART_ID_N230) $1 TOP_MODULE=$(TOP) 
 
 post_build = @\
 	mkdir -p build; \
@@ -57,6 +65,8 @@ help:     ##Show this help message.
 ##
 ##Supported Options
 ##-----------------
-##GUI=1     Launch the build in the Vivado GUI. 
+##GUI=1        Launch the build in the Vivado GUI.
+##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall help N230 N230_SAFE

@@ -262,15 +262,17 @@ module x300
    //  Output     Output      Phase    Duty Cycle   Pk-to-Pk     Phase
    //   Clock     Freq (MHz)  (degrees)    (%)     Jitter (ps)  Error (ps)
    //----------------------------------------------------------------------------
-   // CLK_OUT1___166.667______0.000______50.0_______87.118_____73.940
+   // CLK_OUT1___187.500______0.000______50.0_______85.263_____73.940
    // CLK_OUT2___125.000______0.000______50.0_______91.831_____73.940
-   // CLK_OUT3____83.333______0.000______50.0_______98.933_____73.940
+   // CLK_OUT3____93.750______0.000______50.0_______96.813_____73.940
    // CLK_OUT4___214.286______0.000______50.0_______83.210_____73.940
    //
    //----------------------------------------------------------------------------
    // Input Clock   Freq (MHz)    Input Jitter (UI)
    //----------------------------------------------------------------------------
    // __primary_________125.000____________0.010
+
+   localparam BUS_CLK_RATE = 32'd187500000;
 
    wire ioport2_clk_unbuf;
 
@@ -369,13 +371,13 @@ module x300
    // __primary_________200.000____________0.010
    //
    ////////////////////////////////////////////////////////////////////
-   
+
    wire radio_clk_locked;
    radio_clk_gen radio_clk_gen (
-      .CLK_IN1_p(FPGA_CLK_p), .CLK_IN1_n(FPGA_CLK_n),
+      .clk_in1_p(FPGA_CLK_p), .clk_in1_n(FPGA_CLK_n),
       .CLK_OUT1(radio_clk), .CLK_OUT2(radio_clk_2x), .CLK_OUT3(dac_dci_clk),
       .RESET(sw_rst[2]), .LOCKED(radio_clk_locked));
-   
+
    ////////////////////////////////////////////////////////////////////
    //
    // IJB. Radio PLL doesn't seem to lock at power up.
@@ -399,7 +401,7 @@ module x300
       .reset_in(global_rst || !bus_clk_locked),
       .reset_out(bus_rst)
    );
-   
+
    reset_sync int_div2_reset_sync (
       .clk(bus_clk_div2),
       .reset_in(global_rst || !bus_clk_locked),
@@ -565,7 +567,7 @@ module x300
 
    // IDELAYCTRL to calibrate all IDELAYE2 instances in capture_ddrlvds for both sides
    wire adc_idlyctrl_rdy;
-   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(adc_idlyctrl_rst)); 
+   IDELAYCTRL adc_cap_idelayctrl_i (.RDY(adc_idlyctrl_rdy), .REFCLK(radio_clk), .RST(adc_idlyctrl_rst));
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -728,7 +730,8 @@ module x300
       .NUM_RX_STREAMS(NUM_RX_STREAMS),
       .REGPORT_ADDR_WIDTH(20),
       .REGPORT_DATA_WIDTH(32),
-      .IOP2_MSG_WIDTH(IOP2_MSG_WIDTH)
+      .IOP2_MSG_WIDTH(IOP2_MSG_WIDTH),
+      .BUS_CLK_RATE(BUS_CLK_RATE)
    ) x300_pcie_int (
       .ioport2_clk(ioport2_clk),
       .bus_clk(bus_clk),
@@ -796,7 +799,7 @@ module x300
    // The PCIe logic will tend to stay close to the physical IoPort2 pins
    // so add an additional stage of pipelining to give the tool more routing
    // slack. This is significantly help timing closure.
-   
+
    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) pcii_pipeline_srl (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata({dmatx_tlast, dmatx_tdata}), .i_tvalid(dmatx_tvalid), .i_tready(dmatx_tready),
@@ -818,7 +821,6 @@ module x300
    wire  gige_refclk, gige_refclk_bufg;
 
    one_gige_phy_clk_gen gige_clk_gen_i (
-      .areset(global_rst | sw_rst[0]),
       .refclk_p(ETH_CLK_p),
       .refclk_n(ETH_CLK_n),
       .refclk(gige_refclk),
@@ -943,13 +945,13 @@ module x300
       .sfpp_rxlos(SFPP0_RxLOS),
       .sfpp_tx_fault(SFPP0_TxFault),
       .sfpp_tx_disable(SFPP0_TxDisable),
-   
+
       .s_axis_tdata(sfp0_tx_tdata),
       .s_axis_tuser(sfp0_tx_tuser),
       .s_axis_tlast(sfp0_tx_tlast),
       .s_axis_tvalid(sfp0_tx_tvalid),
       .s_axis_tready(sfp0_tx_tready),
-   
+
       .m_axis_tdata(sfp0_rx_tdata),
       .m_axis_tuser(sfp0_rx_tuser),
       .m_axis_tlast(sfp0_rx_tlast),
@@ -960,7 +962,7 @@ module x300
       .wb_cyc_i(sfp0_wb_cyc),
       .wb_dat_i(sfp0_wb_dat_o),
       .wb_stb_i(sfp0_wb_stb),
-      .wb_we_i(sfp0_wb_we), 
+      .wb_we_i(sfp0_wb_we),
       .wb_ack_o(sfp0_wb_ack),
       .wb_dat_o(sfp0_wb_dat_i),
       .wb_int_o(sfp0_wb_int),
@@ -1016,13 +1018,13 @@ module x300
       .sfpp_rxlos(SFPP1_RxLOS),
       .sfpp_tx_fault(SFPP1_TxFault),
       .sfpp_tx_disable(SFPP1_TxDisable),
-   
+
       .s_axis_tdata(sfp1_tx_tdata),
       .s_axis_tuser(sfp1_tx_tuser),
       .s_axis_tlast(sfp1_tx_tlast),
       .s_axis_tvalid(sfp1_tx_tvalid),
       .s_axis_tready(sfp1_tx_tready),
-   
+
       .m_axis_tdata(sfp1_rx_tdata),
       .m_axis_tuser(sfp1_rx_tuser),
       .m_axis_tlast(sfp1_rx_tlast),
@@ -1033,7 +1035,7 @@ module x300
       .wb_cyc_i(sfp1_wb_cyc),
       .wb_dat_i(sfp1_wb_dat_o),
       .wb_stb_i(sfp1_wb_stb),
-      .wb_we_i(sfp1_wb_we), 
+      .wb_we_i(sfp1_wb_we),
       .wb_ack_o(sfp1_wb_ack),
       .wb_dat_o(sfp1_wb_dat_i),
       .wb_int_o(sfp1_wb_int),
@@ -1076,69 +1078,63 @@ module x300
    ///////////////////////////////////////////////////////////////////////////////////
 
 
-   wire        ddr3_axi_clk;           // 1/4 DDR external clock rate (250MHz)
-   wire        ddr3_axi_clk_x2;        // 1/4 DDR external clock rate (250MHz)
-   wire        ddr3_axi_rst;           // Synchronized to ddr_sys_clk
-   wire        ddr3_running;           // DRAM calibration complete.
+   wire           ddr3_axi_clk;           // 1/4 DDR external clock rate (150MHz)
+   wire           ddr3_axi_clk_x2;        // 1/2 DDR external clock rate (300MHz)
+   wire           ddr3_axi_rst;           // Synchronized to ddr_sys_clk
+   wire           ddr3_running;           // DRAM calibration complete.
+   wire [11:0]    device_temp;
 
    // Slave Interface Write Address Ports
-   wire        s_axi_awid;
-   wire [31:0] s_axi_awaddr;
-   wire [7:0]  s_axi_awlen;
-   wire [2:0]  s_axi_awsize;
-   wire [1:0]  s_axi_awburst;
-   wire [0:0]  s_axi_awlock;
-   wire [3:0]  s_axi_awcache;
-   wire [2:0]  s_axi_awprot;
-   wire [3:0]  s_axi_awqos;
-   wire        s_axi_awvalid;
-   wire        s_axi_awready;
+   wire           s_axi_awid;
+   wire [31:0]    s_axi_awaddr;
+   wire [7:0]     s_axi_awlen;
+   wire [2:0]     s_axi_awsize;
+   wire [1:0]     s_axi_awburst;
+   wire [0:0]     s_axi_awlock;
+   wire [3:0]     s_axi_awcache;
+   wire [2:0]     s_axi_awprot;
+   wire [3:0]     s_axi_awqos;
+   wire           s_axi_awvalid;
+   wire           s_axi_awready;
    // Slave Interface Write Data Ports
-   wire [255:0] s_axi_wdata;
-   wire [31:0]  s_axi_wstrb;
-   wire     s_axi_wlast;
-   wire     s_axi_wvalid;
-   wire     s_axi_wready;
+   wire [255:0]   s_axi_wdata;
+   wire [31:0]    s_axi_wstrb;
+   wire           s_axi_wlast;
+   wire           s_axi_wvalid;
+   wire           s_axi_wready;
    // Slave Interface Write Response Ports
-   wire     s_axi_bready;
-   wire     s_axi_bid;
-   wire [1:0]   s_axi_bresp;
-   wire     s_axi_bvalid;
+   wire           s_axi_bready;
+   wire           s_axi_bid;
+   wire [1:0]     s_axi_bresp;
+   wire           s_axi_bvalid;
    // Slave Interface Read Address Ports
-   wire     s_axi_arid;
-   wire [31:0]  s_axi_araddr;
-   wire [7:0]   s_axi_arlen;
-   wire [2:0]   s_axi_arsize;
-   wire [1:0]   s_axi_arburst;
-   wire [0:0]   s_axi_arlock;
-   wire [3:0]   s_axi_arcache;
-   wire [2:0]   s_axi_arprot;
-   wire [3:0]   s_axi_arqos;
-   wire     s_axi_arvalid;
-   wire     s_axi_arready;
+   wire           s_axi_arid;
+   wire [31:0]    s_axi_araddr;
+   wire [7:0]     s_axi_arlen;
+   wire [2:0]     s_axi_arsize;
+   wire [1:0]     s_axi_arburst;
+   wire [0:0]     s_axi_arlock;
+   wire [3:0]     s_axi_arcache;
+   wire [2:0]     s_axi_arprot;
+   wire [3:0]     s_axi_arqos;
+   wire           s_axi_arvalid;
+   wire           s_axi_arready;
    // Slave Interface Read Data Ports
-   wire     s_axi_rready;
-   wire     s_axi_rid;
-   wire [255:0] s_axi_rdata;
-   wire [1:0]   s_axi_rresp;
-   wire     s_axi_rlast;
-   wire     s_axi_rvalid;
+   wire           s_axi_rready;
+   wire           s_axi_rid;
+   wire [255:0]   s_axi_rdata;
+   wire [1:0]     s_axi_rresp;
+   wire           s_axi_rlast;
+   wire           s_axi_rvalid;
 
-   reg      ddr3_axi_rst_reg_n;
+   wire           ddr3_idelay_refclk;
+   reg            ddr3_axi_rst_reg_n;
 
    // Copied this reset circuit from example design.
    always @(posedge ddr3_axi_clk)
      ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
    // Instantiate the DDR3 MIG core
-   //
-   // The top-level IP block has no parameters defined for some reason.
-   // Most of configurable parameters are hard-coded in the mig so get 
-   // some additional knobs we pull those out into verilog headers.
-   //
-   // Synthesis params:  ip/ddr3_32bit/ddr3_32bit_mig_parameters.vh
-   // Simulation params: ip/ddr3_32bit/ddr3_32bit_mig_sim_parameters.vh
-
    ddr3_32bit u_ddr3_32bit (
       // Memory interface ports
       .ddr3_addr                      (ddr3_addr),
@@ -1153,22 +1149,27 @@ module x300
       .ddr3_dq                        (ddr3_dq),
       .ddr3_dqs_n                     (ddr3_dqs_n),
       .ddr3_dqs_p                     (ddr3_dqs_p),
-      .init_calib_complete            (ddr3_running),
-
       .ddr3_cs_n                      (ddr3_cs_n),
       .ddr3_dm                        (ddr3_dm),
       .ddr3_odt                       (ddr3_odt),
+      .init_calib_complete            (ddr3_running),
+      .device_temp_i                  (device_temp),
       // Application interface ports
-      .ui_clk                         (ddr3_axi_clk),  // 250MHz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2),
-      .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 250MHz
+      .ui_clk                         (ddr3_axi_clk),    // 150MHz clock out
+      .ui_addn_clk_0                  (ddr3_axi_clk_x2), // 300MHz clock out
+      .ui_addn_clk_1                  (ddr3_idelay_refclk),
+      .ui_addn_clk_2                  (),
+      .ui_addn_clk_3                  (),
+      .ui_addn_clk_4                  (),
+      .clk_ref_i                      (ddr3_idelay_refclk),
+      .ui_clk_sync_rst                (ddr3_axi_rst),    // Active high Reset signal synchronised to 150MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
-      .app_sr_active                  (app_sr_active),
+      .app_sr_active                  (),
       .app_ref_req                    (1'b0),
-      .app_ref_ack                    (app_ref_ack),
+      .app_ref_ack                    (),
       .app_zq_req                     (1'b0),
-      .app_zq_ack                     (app_zq_ack),
+      .app_zq_ack                     (),
 
       // Slave Interface Write Address Ports
       .s_axi_awid                     (s_axi_awid),
@@ -1214,9 +1215,16 @@ module x300
       .s_axi_rready                   (s_axi_rready),
       // System Clock Ports
       .sys_clk_i                      (sys_clk_i),  // From external 100MHz source.
-      .sys_rst                        (~global_rst) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+      .sys_rst                        (global_rst)
    );
 
+   // Temperature monitor module
+   mig_7series_v4_0_tempmon #(
+      .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(8000 /* 125MHz clock period in ps */)
+   ) tempmon_i (
+      .clk(bus_clk), .xadc_clk(ioport2_clk), .rst(bus_rst),
+      .device_temp_i(12'd0 /* ignored */), .device_temp(device_temp)
+   );
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1261,14 +1269,14 @@ module x300
    //
    ///////////////////////////////////////////////////////////////////////////////////
 
-   x300_core x300_core (
+   x300_core #( .BUS_CLK_RATE(BUS_CLK_RATE) ) x300_core (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .bus_clk(bus_clk), .bus_rst(bus_rst), .sw_rst(sw_rst),
       .bus_clk_div2(bus_clk_div2),
       .ce_clk(ce_clk),
       .ce_rst(ce_rst),
       // Radio0 signals
-      .rx0(rx0), .tx0(tx0), 
+      .rx0(rx0), .tx0(tx0),
       .db0_gpio_in(db0_gpio_in), .db0_gpio_out(db0_gpio_out), .db0_gpio_ddr(db0_gpio_ddr),
       .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .sen0(sen0), .sclk0(sclk0), .mosi0(mosi0), .miso0(miso0),
@@ -1320,6 +1328,7 @@ module x300
       .debug_rxd(debug_rxd), .debug_txd(debug_txd),
       // Misc.
       .led_misc(leds),
+      .xadc_readback({20'h0, device_temp}),
       .debug0(), .debug1(), .debug2(),
       // DRAM signals.
       .ddr3_axi_clk              (ddr3_axi_clk),
@@ -1387,7 +1396,7 @@ module x300
       .pcii_tvalid               (pcii_tvalid),
       .pcii_tready               (pcii_tready)
    );
-   
+
    assign {DB_ADC_RESET, DB_DAC_RESET,DB0_DAC_ENABLE} = radio0_misc_out[2:0];
    assign {DB1_DAC_ENABLE}                            = radio1_misc_out[0];   //[2:1] unused
 
@@ -1398,14 +1407,14 @@ module x300
    //////////////////////////////////////////////////////////////////////
    // This is a workaround for a silicon bug in Series 7 FPGA where a
    // race condition with the reading of PUDC during the erase of the FPGA
-   // image cause glitches on output IO pins. This glitch happens even if 
-   // you have PUDC correctly pulled high!!  When PUDC is high the pull up 
+   // image cause glitches on output IO pins. This glitch happens even if
+   // you have PUDC correctly pulled high!!  When PUDC is high the pull up
    // resistor should never be enabled on the IO lines, however there is a
    // race condition that causes this to not be the case.
    //
    // Workaround:
    // - Define the PUDC pin in the XDC file with a pullup.
-   // - Implements an IBUF on the PUDC input and make sure that it does 
+   // - Implements an IBUF on the PUDC input and make sure that it does
    //   not get optimized out.
    (* dont_touch = "true" *) wire fpga_pudc_b_buf;
    IBUF pudc_ibuf_i (

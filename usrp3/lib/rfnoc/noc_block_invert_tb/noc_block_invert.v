@@ -88,6 +88,7 @@ module noc_block_invert #(
     .SIMPLE_MODE(0) /* Handle header internally */)
   axi_wrapper_0 (
     .clk(ce_clk), .reset(ce_rst),
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clear_tx_seqnum(clear_tx_seqnum[0]),
     .next_dst(next_dst_sid[0]),
     .set_stb(), .set_addr(), .set_data(),
@@ -115,6 +116,7 @@ module noc_block_invert #(
     .SIMPLE_MODE(0))
   axi_wrapper_1 (
     .clk(ce_clk), .reset(ce_rst),
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clear_tx_seqnum(clear_tx_seqnum[1]),
     .next_dst(next_dst_sid[1]),
     .set_stb(), .set_addr(), .set_data(),

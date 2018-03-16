@@ -10,6 +10,7 @@ ad5662_auto_spi.v \
 arb_qualify_master.v \
 axi_crossbar_intf.sv \
 axi_crossbar.v \
+axi_crossbar_regport.v \
 axi_fifo_header.v \
 axi_forwarding_cam.v \
 axi_setting_reg.v \
@@ -31,13 +32,19 @@ reset_sync.v \
 s7_icap_wb.v \
 serial_to_settings.v \
 setting_reg.v \
-settings_bus_crossclock.v \
-settings_bus_mux_crossclock.v \
 settings_bus_mux.v \
-settings_bus_timed_fifo.v \
+settings_bus_timed_2clk.v \
 simple_i2c_core.v \
 simple_spi_core.v \
 synchronizer_impl.v \
 synchronizer.v \
+pulse_synchronizer.v \
 user_settings.v \
+axil_regport_master.v \
+axil_to_ni_regport.v \
+regport_resp_mux.v \
+regport_to_xbar_settingsbus.v \
+regport_to_settingsbus.v \
+pulse_stretch.v \
+mdio_master.v \
 ))

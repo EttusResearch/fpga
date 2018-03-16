@@ -1,0 +1,189 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <style type="text/css">
+
+      body {
+        margin: 5px;
+        font-family: verdana, "Trebuchet MS", arial, helvetica, sans-serif;
+        font-size: 80%;
+        line-height: 1.3;
+      }
+
+      @media print {
+        body {
+          margin: 0px;
+          font-family: arial, helvetica, sans-serif;
+          font-size: 80%;
+          line-height: 1;
+        }
+      }        div.nav {
+          font-size: 95%;
+        }
+        
+        div.sh {
+          display: none;
+          margin-left: 15px;
+        }
+        
+        div.shr {
+          display: block;
+          margin-left: 15px;
+        }
+        
+        div.nav span.pm, div.nav span.pm_2 {
+          color: black;
+          font-family: courier new, courier;
+          margin-right: 5px;
+        }
+        
+        div.nav span.pm {
+          cursor: pointer;
+        }
+        
+        div.nav p {
+          margin: 0px;
+          padding: 0px;
+          white-space: nowrap;
+        }
+        
+        div.nav span {
+          cursor: pointer;
+        }
+        
+        div.nav span.regmap {
+          color: #000080;
+        }
+        
+        div.nav span.group {
+          color: #006000;
+        }
+        
+        div.nav span.enum {
+          color: #800000;
+          margin-left: 10px;
+        }
+        
+        div.nav span.register {
+          color: #004040;
+          margin-left: 10px;
+        }      
+      </style>
+      <script type="text/javascript">
+      
+        function toggleText( id, sign ) {
+          if (sign == "nochange") return;
+          if ( document.getElementById )
+            elem = document.getElementById( id );
+          else if ( document.all )
+            elem = eval( "document.all." + id );
+          if (elem) {
+            elemStyle = elem.style;
+            if (sign=="+") {
+              elemStyle.display = "block"
+            } else {
+              elemStyle.display = "none"
+            }
+            /*if ( elemStyle.display == "block" ) {
+              elemStyle.display = "none"
+            } else {
+              elemStyle.display = "block"
+            }*/
+          }
+        }        
+        function changePm( id ) {
+          if ( document.getElementById )
+            elem = document.getElementById( id );
+          else if ( document.all )
+            elem = eval( "document.all." + id );
+          else
+            return "nochange";
+          var val = elem.innerHTML;
+          if (val == "+") {
+            elem.innerHTML = "-";
+          } else {
+            elem.innerHTML = "+";
+          }
+          return val;
+        }
+        
+        function pm( id ) {
+          var sign = changePm("pm_" + id);
+          toggleText("div_" + id, sign);
+        }
+        
+        function a( id ) {
+          var currentURL= document.URL;
+          var targetURL = currentURL.replace("_left", "_right");
+          parent.frames[1].location = targetURL + '#' + id;
+        }  
+    </script>
+  </head>
+  <body>    
+    <div class="nav">    
+    <p>
+      <span class="pm" id="pm_MgCpld" onclick="pm('MgCpld');">+</span>
+      <span class="regmap" id="a_MgCpld" onclick="a('MgCpld');">MgCpld</span>
+    </p>
+    <div class="sh" id="div_MgCpld">      
+      <p>        
+        <span class="pm" id="pm_P5 Content" onclick="pm('P5 Content');">+</span>      
+        <span class="group" id="a_P5 Content" onclick="a('P5 Content');">P5 Content</span>
+      </p>
+      <div class="sh" id="div_P5 Content">      
+      </div>    
+    </div>    
+    <p>
+      <span class="pm" id="pm_MgCpld" onclick="pm('MgCpld');">-</span>
+      <span class="regmap" id="a_MgCpld" onclick="a('MgCpld');">MgCpld</span>
+    </p>    <div class="shr" id="div_MgCpld">      
+      <p>        
+        <span class="pm" id="pm_MgCpld|PsSpi_CpldRegisters" onclick="pm('MgCpld|PsSpi_CpldRegisters');">+</span>      
+        <span class="group" id="a_MgCpld|PsSpi_CpldRegisters" onclick="a('MgCpld|PsSpi_CpldRegisters');">PsSpi_CpldRegisters</span>
+      </p>
+      <div class="sh" id="div_MgCpld|PsSpi_CpldRegisters">        
+        <p><span class="register" id="a_MgCpld|SignatureReg" onclick="a('MgCpld|SignatureReg');">SignatureReg</span></p>        
+        <p><span class="register" id="a_MgCpld|MinorRevReg" onclick="a('MgCpld|MinorRevReg');">MinorRevReg</span></p>        
+        <p><span class="register" id="a_MgCpld|MajorRevReg" onclick="a('MgCpld|MajorRevReg');">MajorRevReg</span></p>        
+        <p><span class="register" id="a_MgCpld|BuildCodeLSB" onclick="a('MgCpld|BuildCodeLSB');">BuildCodeLSB</span></p>        
+        <p><span class="register" id="a_MgCpld|BuildCodeMSB" onclick="a('MgCpld|BuildCodeMSB');">BuildCodeMSB</span></p>        
+        <p><span class="register" id="a_MgCpld|Scratch" onclick="a('MgCpld|Scratch');">Scratch</span></p>        
+        <p><span class="register" id="a_MgCpld|CpldControl" onclick="a('MgCpld|CpldControl');">CpldControl</span></p>        
+        <p><span class="register" id="a_MgCpld|LmkControl" onclick="a('MgCpld|LmkControl');">LmkControl</span></p>        
+        <p><span class="register" id="a_MgCpld|LoStatus" onclick="a('MgCpld|LoStatus');">LoStatus</span></p>        
+        <p><span class="register" id="a_MgCpld|MykonosControl" onclick="a('MgCpld|MykonosControl');">MykonosControl</span></p>      
+      </div>      
+      <p>        
+        <span class="pm" id="pm_MgCpld|PlSpi_FrontEndControl" onclick="pm('MgCpld|PlSpi_FrontEndControl');">+</span>      
+        <span class="group" id="a_MgCpld|PlSpi_FrontEndControl" onclick="a('MgCpld|PlSpi_FrontEndControl');">PlSpi_FrontEndControl</span>
+      </p>
+      <div class="sh" id="div_MgCpld|PlSpi_FrontEndControl">        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch1" onclick="a('MgCpld|Rx1Switch1');">enum Rx1Switch1</span></p>        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch2" onclick="a('MgCpld|Rx1Switch2');">enum Rx1Switch2</span></p>        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch3" onclick="a('MgCpld|Rx1Switch3');">enum Rx1Switch3</span></p>        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch4" onclick="a('MgCpld|Rx1Switch4');">enum Rx1Switch4</span></p>        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch5" onclick="a('MgCpld|Rx1Switch5');">enum Rx1Switch5</span></p>        
+        <p><span class="enum" id="a_MgCpld|Rx1Switch6" onclick="a('MgCpld|Rx1Switch6');">enum Rx1Switch6</span></p>        
+        <p><span class="enum" id="a_MgCpld|TrxSwitch" onclick="a('MgCpld|TrxSwitch');">enum TrxSwitch</span></p>        
+        <p><span class="enum" id="a_MgCpld|TxSwitch1" onclick="a('MgCpld|TxSwitch1');">enum TxSwitch1</span></p>        
+        <p><span class="enum" id="a_MgCpld|TxSwitch2" onclick="a('MgCpld|TxSwitch2');">enum TxSwitch2</span></p>        
+        <p><span class="enum" id="a_MgCpld|TxSwitch3" onclick="a('MgCpld|TxSwitch3');">enum TxSwitch3</span></p>        
+        <p><span class="register" id="a_MgCpld|PlScratch" onclick="a('MgCpld|PlScratch');">PlScratch</span></p>        
+        <p><span class="register" id="a_MgCpld|PlCpldControl" onclick="a('MgCpld|PlCpldControl');">PlCpldControl</span></p>        
+        <p><span class="register" id="a_MgCpld|TxCh1_Idle" onclick="a('MgCpld|TxCh1_Idle');">TxCh1_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh1_0_Idle" onclick="a('MgCpld|RxCh1_0_Idle');">RxCh1_0_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh1_1_Idle" onclick="a('MgCpld|RxCh1_1_Idle');">RxCh1_1_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|TxCh1_TxOn" onclick="a('MgCpld|TxCh1_TxOn');">TxCh1_TxOn</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh1_0_RxOn" onclick="a('MgCpld|RxCh1_0_RxOn');">RxCh1_0_RxOn</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh1_1_RxOn" onclick="a('MgCpld|RxCh1_1_RxOn');">RxCh1_1_RxOn</span></p>        
+        <p><span class="register" id="a_MgCpld|TxCh2_Idle" onclick="a('MgCpld|TxCh2_Idle');">TxCh2_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh2_0_Idle" onclick="a('MgCpld|RxCh2_0_Idle');">RxCh2_0_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh2_1_Idle" onclick="a('MgCpld|RxCh2_1_Idle');">RxCh2_1_Idle</span></p>        
+        <p><span class="register" id="a_MgCpld|TxCh2_TxOn" onclick="a('MgCpld|TxCh2_TxOn');">TxCh2_TxOn</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh2_0_RxOn" onclick="a('MgCpld|RxCh2_0_RxOn');">RxCh2_0_RxOn</span></p>        
+        <p><span class="register" id="a_MgCpld|RxCh2_1_RxOn" onclick="a('MgCpld|RxCh2_1_RxOn');">RxCh2_1_RxOn</span></p>      
+      </div>    
+    </div>
+    </div>
+  </body>
+</HTML>

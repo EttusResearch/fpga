@@ -118,7 +118,7 @@ module radio_legacy
 
    localparam SR_LOOPBACK     = 8'd6;
    localparam SR_SPI          = 8'd8;
-   localparam SR_ATR          = 8'd12; // thorugh 8'd16
+   localparam SR_ATR          = 8'd12; // thorugh 8'd18
    localparam SR_TEST         = 8'd21;
    localparam SR_CODEC_IDLE   = 8'd22;
    localparam SR_READBACK     = 8'd32;
@@ -129,7 +129,7 @@ module radio_legacy
    localparam SR_TX_FMT       = 8'd138;
    localparam SR_RX_DSP       = 8'd144;
    localparam SR_TX_DSP       = 8'd184;
-   localparam SR_FP_GPIO      = 8'd200;
+   localparam SR_FP_GPIO      = 8'd200; // thorugh 8'd206
    localparam SR_USER_SR_BASE = 8'd253;
    localparam SR_USER_RB_ADDR = 8'd255;
 
@@ -256,19 +256,21 @@ endgenerate
    //The fe_atr pins driven by this module are always configured as outputs so default
    //the DDR (data direction register) to be all ones (outputs) so that the drive direction
    //these lines does not change during/after resets.
-   gpio_atr #(.BASE(SR_ATR), .WIDTH(32), .DEFAULT_DDR(32'hFFFFFFFF), .DEFAULT_IDLE(32'h00000000)) fe_gpio_atr
+   gpio_atr #(.BASE(SR_ATR), .WIDTH(32), .FAB_CTRL_EN(0), .DEFAULT_DDR(32'hFFFFFFFF), .DEFAULT_IDLE(32'h00000000)) fe_gpio_atr
      (.clk(radio_clk),.reset(radio_rst),
       .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
       .rx(run_rx), .tx(run_tx),
-      .gpio_in(fe_gpio_in), .gpio_out(fe_gpio_out), .gpio_ddr(fe_gpio_ddr), .gpio_sw_rb() );
+      .gpio_in(fe_gpio_in), .gpio_out(fe_gpio_out), .gpio_ddr(fe_gpio_ddr),
+      .gpio_out_fab(32'h00000000 /* no fabric control */), .gpio_sw_rb() );
 
    generate
       if (FP_GPIO != 0) begin: add_fp_gpio
-         gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(10)) fp_gpio_atr
+         gpio_atr #(.BASE(SR_FP_GPIO), .WIDTH(10), .FAB_CTRL_EN(0)) fp_gpio_atr
             (.clk(radio_clk),.reset(radio_rst),
             .set_stb(set_stb),.set_addr(set_addr),.set_data(set_data),
             .rx(run_rx), .tx(run_tx),
-            .gpio_in(fp_gpio_in), .gpio_out(fp_gpio_out), .gpio_ddr(fp_gpio_ddr), .gpio_sw_rb(fp_gpio_readback));
+            .gpio_in(fp_gpio_in), .gpio_out(fp_gpio_out), .gpio_ddr(fp_gpio_ddr), 
+            .gpio_out_fab(10'h000 /* no fabric control */), .gpio_sw_rb(fp_gpio_readback));
       end
    endgenerate
 

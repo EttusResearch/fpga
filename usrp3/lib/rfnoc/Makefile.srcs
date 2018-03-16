@@ -9,7 +9,9 @@ RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
 cmd_pkt_proc.v \
 chdr_fifo_large.v \
 chdr_framer.v \
+chdr_framer_2clk.v \
 chdr_deframer.v \
+chdr_deframer_2clk.v \
 noc_shell.v \
 noc_shell_regs.vh \
 axi_packet_mux.v \
@@ -88,6 +90,7 @@ axi_clip.v \
 axi_clip_unsigned.v \
 axi_serializer.v \
 axi_deserializer.v \
+axi_throttle.v \
 axi_packer.v \
 complex_to_mag_approx.v \
 noc_block_file_source.v \

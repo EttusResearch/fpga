@@ -39,6 +39,7 @@ module axi_drop_packet #(
       reg [WIDTH-1:0] int_tdata;
       reg int_tlast, int_tvalid;
       wire int_tready;
+      wire hold;
 
       reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr;
       reg [$clog2(MAX_PKT_SIZE):0] in_pkt_cnt, out_pkt_cnt;
@@ -92,7 +93,7 @@ module axi_drop_packet #(
       end
 
       // Read logic
-      wire hold         = (in_pkt_cnt == out_pkt_cnt);
+      assign hold         = (in_pkt_cnt == out_pkt_cnt);
 
       always @(posedge clk) begin
         if (int_tready) begin

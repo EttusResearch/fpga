@@ -25,5 +25,6 @@ rtl/verilog/tx_enqueue.v \
 rtl/verilog/tx_hold_fifo.v \
 rtl/verilog/wishbone_if.v \
 rtl/verilog/xge_mac.v \
+rtl/verilog/xge_mac_wb.v \
 ))
 

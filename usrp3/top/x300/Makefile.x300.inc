@@ -5,9 +5,9 @@
 ##################################################
 # Project Setup
 ##################################################
-TOP_MODULE = x300
-# NAME = <Input arg> 
-# PART_ID = <Input arg> 
+# TOP_MODULE = <Input arg>
+# NAME = <Input arg>
+# PART_ID = <Input arg>
 
 ##################################################
 # Include other makefiles
@@ -48,6 +48,7 @@ x300_pcie_int.v \
 x300_core.v \
 x300_sfpp_io_core.v \
 x300_zpu_config.vhd \
+x300_db_fe_core.v \
 soft_ctrl.v \
 capture_ddrlvds.v \
 gen_ddrlvds.v \
@@ -82,9 +83,9 @@ DRAM_SRCS =
 endif
 
 ifdef HLS
-HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
+HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
 else
-HLS_IP_GEN_SRCS =
+HLS_IP_TARGETS =
 endif
 
 DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
@@ -95,7 +96,7 @@ $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(SFP_SERDES_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
-$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
+$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_TARGETS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 
 SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 
@@ -107,9 +108,10 @@ SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
 VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
-bin: .prereqs $$(DESIGN_SRCS) ip 
+bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_x300.tcl),$(TOP_MODULE),$(PART_ID))
 
-hls: .prereqs hls_ip bin
+rtl: .prereqs $$(DESIGN_SRCS) ip
+	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
 
-.PHONY: bin hls
+.PHONY: bin rtl

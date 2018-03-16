@@ -1,0 +1,16 @@
+#
+# Copyright 2017 Ettus Research LLC
+#
+
+##################################################
+# DB COMMON Sources
+##################################################
+DB_COMMON_SRCS = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/common/, \
+PkgRegs.vhd \
+sync/CrossTrigger.vhd \
+sync/Pulser.vhd \
+sync/TdcTop.vhd \
+sync/TdcWrapper.vhd \
+sync/TdcCore.edf \
+sync/SyncRegsIfc.edf \
+))

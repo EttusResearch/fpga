@@ -13,7 +13,8 @@ module x300_pcie_int #(
     parameter NUM_RX_STREAMS       = 6,
     parameter REGPORT_ADDR_WIDTH   = 20,
     parameter REGPORT_DATA_WIDTH   = 32,
-    parameter IOP2_MSG_WIDTH       = 64
+    parameter IOP2_MSG_WIDTH       = 64,
+    parameter BUS_CLK_RATE         = 32'd166666666
 ) (
     //---------------------------------------------------------
     // Clocks and Resets
@@ -196,7 +197,7 @@ module x300_pcie_int #(
     assign fpga_status[15:8]   = {|(dmarx_error), 1'b0, dmarx_enabled};
 
     pcie_basic_regs #(
-        .SIGNATURE(32'h58333030 /*ASCII:"X300"*/), .CLK_FREQ(32'd166666667 /*bus_clk = 166.666667MHz*/)
+        .SIGNATURE(32'h58333030 /*ASCII:"X300"*/), .CLK_FREQ(BUS_CLK_RATE)
     ) basic_regs (
         .clk(bus_clk), .reset(bus_rst),
         .regi_tdata(basic_regi_tdata), .regi_tvalid(basic_regi_tvalid), .regi_tready(basic_regi_tready),
@@ -257,7 +258,10 @@ module x300_pcie_int #(
             );
 
             data_swapper_64 tx_data_swapper (
-                .swap_lanes(`GET_SWAP_BUS(dmatx_swap,i)), .i_tdata(`GET_DMA_BUS(dmatx_tdata_in,i)), .o_tdata(`GET_DMA_BUS(dmatx_tdata_swap,i))
+                .clk(1'b0),
+                .swap_lanes(`GET_SWAP_BUS(dmatx_swap,i)), .i_tdata(`GET_DMA_BUS(dmatx_tdata_in,i)), .o_tdata(`GET_DMA_BUS(dmatx_tdata_swap,i)),
+                .i_tvalid(1'b1), .i_tlast(1'b1), .o_tready(1'b1), // Not actually used
+                .i_tready(), .o_tvalid(), .o_tlast()
             );
 
             cvita_dechunker tx_dma_dechunker (
@@ -344,7 +348,10 @@ module x300_pcie_int #(
             );
 
             data_swapper_64 rx_data_swapper (
-                .swap_lanes(`GET_SWAP_BUS(dmarx_swap,j)), .i_tdata(`GET_DMA_BUS(dmarx_tdata_pad,j)), .o_tdata(`GET_DMA_BUS(dmarx_tdata_swap,j))
+                .clk(1'b0),
+                .swap_lanes(`GET_SWAP_BUS(dmarx_swap,j)), .i_tdata(`GET_DMA_BUS(dmarx_tdata_pad,j)), .o_tdata(`GET_DMA_BUS(dmarx_tdata_swap,j)),
+                .i_tvalid(1'b1), .i_tlast(1'b1), .o_tready(1'b1), // Not actually used
+                .i_tready(), .o_tvalid(), .o_tlast()
             );
 
             pcie_lossy_samp_gate rx_samp_gate (

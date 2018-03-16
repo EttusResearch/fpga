@@ -10,7 +10,9 @@ module ddc #(
   parameter SR_DECIM_ADDR    = 2,
   parameter SR_MUX_ADDR      = 3,
   parameter SR_COEFFS_ADDR   = 4,
-  parameter PRELOAD_HBS      = 1 // Preload half band filter state with 0s
+  parameter PRELOAD_HBS      = 1, // Preload half band filter state with 0s
+  parameter NUM_HB           = 3,
+  parameter CIC_MAX_DECIM    = 255
 )(
   input clk, input reset,
   input clear, // Resets everything except the CORDIC timed phase inc FIFO and phase inc
@@ -196,12 +198,12 @@ module ddc #(
     .clk(clk), .reset(reset | clear), .in(q_cordic), .strobe_in(strobe_cordic), .out(q_cordic_clip), .strobe_out());
   always @(posedge clk) last_cordic_clip <= (reset | clear) ? 1'b0 : last_cordic;
 
-  cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(255)) cic_decimate_i (
+  cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(CIC_MAX_DECIM)) cic_decimate_i (
     .clk(clk), .reset(reset | clear),
     .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_cordic_clip), .strobe_out(strobe_cic),
     .last_in(last_cordic_clip), .last_out(last_cic), .signal_in(i_cordic_clip), .signal_out(i_cic));
 
-  cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(255)) cic_decimate_q (
+  cic_decimate #(.WIDTH(WIDTH), .N(4), .MAX_RATE(CIC_MAX_DECIM)) cic_decimate_q (
     .clk(clk), .reset(reset | clear),
     .rate_stb(rate_changed_stb), .rate(cic_decim_rate), .strobe_in(strobe_cordic_clip), .strobe_out(),
     .last_in(1'b0), .last_out(), .signal_in(q_cordic_clip), .signal_out(q_cic));
@@ -370,59 +372,81 @@ module ddc #(
   assign nd1 = strobe_cic | hb1_en;
   assign nd2 = strobe_hb1 | hb2_en;
   assign nd3 = strobe_hb2 | hb3_en;
-
-  hbdec1 hbdec1 (
-    .clk(clk), // input clk
-    .sclr(reset | clear), // input sclr
-    .ce(1'b1), // input ce
-    .coef_ld(reload_go & reload_ld1), // input coef_ld
-    .coef_we(reload_go & reload_we1), // input coef_we
-    .coef_din(coef_din), // input [17 : 0] coef_din
-    .rfd(rfd1), // output rfd
-    .nd(nd1), // input nd
-    .din_1(i_cic), // input [23 : 0] din_1
-    .din_2(q_cic), // input [23 : 0] din_2
-    .rdy(rdy1), // output rdy
-    .data_valid(data_valid1), // output data_valid
-    .dout_1(i_hb1), // output [46 : 0] dout_1
-    .dout_2(q_hb1)); // output [46 : 0] dout_2
-
-  hbdec2 hbdec2 (
-    .clk(clk), // input clk
-    .sclr(reset | clear), // input sclr
-    .ce(1'b1), // input ce
-    .coef_ld(reload_go & reload_ld2), // input coef_ld
-    .coef_we(reload_go & reload_we2), // input coef_we
-    .coef_din(coef_din), // input [17 : 0] coef_din
-    .rfd(rfd2), // output rfd
-    .nd(nd2), // input nd
-    .din_1(i_hb1[23+HB1_SCALE:HB1_SCALE]), // input [23 : 0] din_1
-    .din_2(q_hb1[23+HB1_SCALE:HB1_SCALE]), // input [23 : 0] din_2
-    .rdy(rdy2), // output rdy
-    .data_valid(data_valid2), // output data_valid
-    .dout_1(i_hb2), // output [46 : 0] dout_1
-    .dout_2(q_hb2)); // output [46 : 0] dout_2
-
-  hbdec3 hbdec3 (
-    .clk(clk), // input clk
-    .sclr(reset | clear), // input sclr
-    .ce(1'b1), // input ce
-    .coef_ld(reload_go & reload_ld3), // input coef_ld
-    .coef_we(reload_go & reload_we3), // input coef_we
-    .coef_din(coef_din), // input [17 : 0] coef_din
-    .rfd(rfd3), // output rfd
-    .nd(nd3), // input nd
-    .din_1(i_hb2[23+HB2_SCALE:HB2_SCALE]), // input [23 : 0] din_1
-    .din_2(q_hb2[23+HB2_SCALE:HB2_SCALE]), // input [23 : 0] din_2
-    .rdy(rdy3), // output rdy
-    .data_valid(data_valid3), // output data_valid
-    .dout_1(i_hb3), // output [47 : 0] dout_1
-    .dout_2(q_hb3)); // output [47 : 0] dout_2
-
+  generate //no point in using a for loop generate because each hb is different.
+  if( NUM_HB > 0) begin
+    hbdec1 hbdec1 (
+      .clk(clk), // input clk
+      .sclr(reset | clear), // input sclr
+      .ce(1'b1), // input ce
+      .coef_ld(reload_go & reload_ld1), // input coef_ld
+      .coef_we(reload_go & reload_we1), // input coef_we
+      .coef_din(coef_din), // input [17 : 0] coef_din
+      .rfd(rfd1), // output rfd
+      .nd(nd1), // input nd
+      .din_1(i_cic), // input [23 : 0] din_1
+      .din_2(q_cic), // input [23 : 0] din_2
+      .rdy(rdy1), // output rdy
+      .data_valid(data_valid1), // output data_valid
+      .dout_1(i_hb1), // output [46 : 0] dout_1
+      .dout_2(q_hb1)); // output [46 : 0] dout_2
+  end else begin //if (NUM_HB <= 2)
+    assign rdy1 = 1'b1;
+    assign rfd1 = 1'b1;
+    assign data_valid1 = 1'b1;
+    assign i_hb1 = 'h0;
+    assign q_hb1 = 'h0;
+  end
+  if( NUM_HB > 1) begin
+    hbdec2 hbdec2 (
+      .clk(clk), // input clk
+      .sclr(reset | clear), // input sclr
+      .ce(1'b1), // input ce
+      .coef_ld(reload_go & reload_ld2), // input coef_ld
+      .coef_we(reload_go & reload_we2), // input coef_we
+      .coef_din(coef_din), // input [17 : 0] coef_din
+      .rfd(rfd2), // output rfd
+      .nd(nd2), // input nd
+      .din_1(i_hb1[23+HB1_SCALE:HB1_SCALE]), // input [23 : 0] din_1
+      .din_2(q_hb1[23+HB1_SCALE:HB1_SCALE]), // input [23 : 0] din_2
+      .rdy(rdy2), // output rdy
+      .data_valid(data_valid2), // output data_valid
+      .dout_1(i_hb2), // output [46 : 0] dout_1
+      .dout_2(q_hb2)); // output [46 : 0] dout_2
+  end else begin //if (NUM_HB <= 2)
+    assign rdy2 = 1'b1;
+    assign rfd2 = 1'b1;
+    assign data_valid2 = 1'b1;
+    assign i_hb2 = 'h0;
+    assign q_hb2 = 'h0;
+  end
+  if( NUM_HB > 2) begin
+    hbdec3 hbdec3 (
+      .clk(clk), // input clk
+      .sclr(reset | clear), // input sclr
+      .ce(1'b1), // input ce
+      .coef_ld(reload_go & reload_ld3), // input coef_ld
+      .coef_we(reload_go & reload_we3), // input coef_we
+      .coef_din(coef_din), // input [17 : 0] coef_din
+      .rfd(rfd3), // output rfd
+      .nd(nd3), // input nd
+      .din_1(i_hb2[23+HB2_SCALE:HB2_SCALE]), // input [23 : 0] din_1
+      .din_2(q_hb2[23+HB2_SCALE:HB2_SCALE]), // input [23 : 0] din_2
+      .rdy(rdy3), // output rdy
+      .data_valid(data_valid3), // output data_valid
+      .dout_1(i_hb3), // output [47 : 0] dout_1
+      .dout_2(q_hb3)); // output [47 : 0] dout_2
+  end else begin //if (NUM_HB <= 2)
+    assign rdy3 = 1'b1;
+    assign rfd3 = 1'b1;
+    assign data_valid3 = 1'b1;
+    assign i_hb3 = 'h0;
+    assign q_hb3 = 'h0;
+  end
+  endgenerate
   reg [23:0] i_unscaled, q_unscaled;
   reg strobe_unscaled;
   reg last_unscaled;
-
+  //this state machine must be changed if the user wants 4 hbs
   always @(posedge clk) begin
     if (reset | clear) begin
       i_unscaled <= 'd0;
@@ -517,6 +541,7 @@ module ddc #(
   round_sd #(.WIDTH_IN(24), .WIDTH_OUT(16), .DISABLE_SD(1)) round_q (
     .clk(clk), .reset(reset | clear), .in(q_clip), .strobe_in(strobe_clip), .out(sample_out[15:0]), .strobe_out());
 
+  //FIFO_SIZE = 8 infers a bram fifo
   strobed_to_axi #(
     .WIDTH(32),
     .FIFO_SIZE(8))

@@ -62,7 +62,8 @@ module axis_dram_fifo_dual #(
   noc_block_axi_dma_fifo #(
     .NUM_FIFOS(2),
     .DEFAULT_FIFO_BASE({30'h00020000, 30'h00000000}),
-    .DEFAULT_FIFO_SIZE({30'h0001FFFF, 30'h0001FFFF})
+    .DEFAULT_FIFO_SIZE({30'h0001FFFF, 30'h0001FFFF}),
+    .SIMULATION(1)
   ) inst_noc_block_dram_fifo (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ddr3_axi_clk_x2), .ce_rst(ddr3_axi_rst),
@@ -195,11 +196,10 @@ module axis_dram_fifo_dual #(
     //---------------------------------------------------
     // We use an interconnect to connect to FIFOs.
     //---------------------------------------------------
-    axi_intercon_2x64_128 axi_intercon_2x64_128_i (
+    axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_i (
       .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
       .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
       //
-      .S00_AXI_ARESET_OUT_N                 (), // output S00_AXI_ARESET_OUT_N
       .S00_AXI_ACLK                         (ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S00_AXI_AWID                         (dma0_axi_wr.addr.id), // input [0 : 0] S00_AXI_AWID
       .S00_AXI_AWADDR                       (dma0_axi_wr.addr.addr), // input [31 : 0] S00_AXI_AWADDR
@@ -239,7 +239,6 @@ module axis_dram_fifo_dual #(
       .S00_AXI_RVALID                       (dma0_axi_rd.data.valid), // output S00_AXI_RVALID
       .S00_AXI_RREADY                       (dma0_axi_rd.data.ready), // input S00_AXI_RREADY
       //
-      .S01_AXI_ARESET_OUT_N                 (), // output S01_AXI_ARESET_OUT_N
       .S01_AXI_ACLK                         (ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S01_AXI_AWID                         (dma1_axi_wr.addr.id), // input [0 : 0] S00_AXI_AWID
       .S01_AXI_AWADDR                       (dma1_axi_wr.addr.addr), // input [31 : 0] S00_AXI_AWADDR
@@ -279,7 +278,6 @@ module axis_dram_fifo_dual #(
       .S01_AXI_RVALID                       (dma1_axi_rd.data.valid), // output S00_AXI_RVALID
       .S01_AXI_RREADY                       (dma1_axi_rd.data.ready), // input S00_AXI_RREADY
       //
-      .M00_AXI_ARESET_OUT_N                 (), // output M00_AXI_ARESET_OUT_N
       .M00_AXI_ACLK                         (ddr3_axi_clk), // input M00_AXI_ACLK
       .M00_AXI_AWID                         (mig_axi_wr.addr.id), // output [3 : 0] M00_AXI_AWID
       .M00_AXI_AWADDR                       (mig_axi_wr.addr.addr), // output [31 : 0] M00_AXI_AWADDR

@@ -1,5 +1,7 @@
 
-module x300_core (
+module x300_core #(
+   parameter BUS_CLK_RATE = 32'd166666666
+)(
    //Clocks and resets
    input radio_clk,
    input radio_rst,
@@ -103,6 +105,8 @@ module x300_core (
    output sfp1_wb_we,
    input sfp1_wb_int,  // IJB. Nothing to connect this too!! No IRQ controller on x300.
 
+   input [31:0] xadc_readback,
+
    // Time
    input pps,
    output [1:0] pps_select,
@@ -190,14 +194,6 @@ module x300_core (
    output [127:0] debug2
 );
 
-   wire [63:0] sfp0_rx_tdata, sfp0_tx_tdata;
-   wire [3:0]  sfp0_rx_tuser, sfp0_tx_tuser;
-   wire        sfp0_rx_tlast, sfp0_tx_tlast, sfp0_rx_tvalid, sfp0_tx_tvalid, sfp0_rx_tready, sfp0_tx_tready;
-
-   wire [63:0] eth1_rx_tdata, eth1_tx_tdata;
-   wire [3:0]  eth1_rx_tuser, eth1_tx_tuser;
-   wire        eth1_rx_tlast, eth1_tx_tlast, eth1_rx_tvalid, eth1_tx_tvalid, eth1_rx_tready, eth1_tx_tready;
-
    // Computation engines that need access to IO
    localparam NUM_IO_CE = 3;
 
@@ -254,7 +250,7 @@ module x300_core (
    /////////////////////////////////////////////////////////////////////////////////
    // Bus Int containing soft CPU control, routing fabric
    /////////////////////////////////////////////////////////////////////////////////
-   bus_int #(.NUM_CE(NUM_CE + NUM_IO_CE)) bus_int (
+   bus_int #(.NUM_CE(NUM_CE + NUM_IO_CE)) bus_int_i (
       .clk(bus_clk), .clk_div2(bus_clk_div2), .reset(bus_rst), .reset_div2(bus_rst_div2),
       .sen(LMK_SEN), .sclk(LMK_SCLK), .mosi(LMK_MOSI), .miso(1'b0),
       .scl0(SFPP0_SCL), .sda0(SFPP0_SDA),
@@ -303,6 +299,7 @@ module x300_core (
       //Status signals
       .sfp0_phy_status(sfp0_phy_status),
       .sfp1_phy_status(sfp1_phy_status),
+      .xadc_readback(xadc_readback),
 
       // Debug
       .debug0(debug0), .debug1(debug1), .debug2(debug2)
@@ -361,9 +358,6 @@ module x300_core (
    wire [0:0]  s00_axi_ruser, s01_axi_ruser;
 
    axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_bd_i (
-      .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
-      .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
-      //
       .S00_AXI_ACLK(ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S00_AXI_ARESETN(~ddr3_axi_rst), // input S00_AXI_ARESETN
       .S00_AXI_AWID(s00_axi_awid), // input [0 : 0] S00_AXI_AWID
@@ -491,7 +485,8 @@ module x300_core (
       .DEFAULT_FIFO_SIZE({30'h01FFFFFF, 30'h01FFFFFF}),
       .STR_SINK_FIFOSIZE(14),
       .DEFAULT_BURST_TIMEOUT({12'd280, 12'd280}),
-      .EXTENDED_DRAM_BIST(1)
+      .EXTENDED_DRAM_BIST(1),
+      .BUS_CLK_RATE(BUS_CLK_RATE)
    ) inst_noc_block_dram_fifo (
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .ce_clk(ddr3_axi_clk_x2), .ce_rst(ddr3_axi_rst),
@@ -552,7 +547,17 @@ module x300_core (
    // Radios
    //
    /////////////////////////////////////////////////////////////////////////////////////////////
-   localparam RADIO_STR_FIFO_SIZE = 8'd12;
+
+   // We need enough input buffering for 4 MTU sized packets.
+   // Regardless of the sample rate the radio consumes data at 200MS/s so we need a 
+   // decent amount of buffering at the input. With 4k samples we have 20us.
+   localparam RADIO_INPUT_BUFF_SIZE  = 8'd12;
+   // The radio needs a larger output buffer compared to other blocks because it is a finite
+   // rate producer i.e. the input is not backpressured. 
+   // Here, we allocate enough room from 2 MTU sized packets. This buffer serves as a 
+   // packet gate so we need room for an additional packet if the first one is held due to
+   // contention on the crossbar. Any additional buffering will be largely a waste.
+   localparam RADIO_OUTPUT_BUFF_SIZE = 8'd11;
 
    // Daughter board I/O
    wire [31:0] leds[0:3];
@@ -562,13 +567,17 @@ module x300_core (
    reg  [31:0] misc_ins[0:3];
    wire [7:0]  sen[0:3];
    wire        sclk[0:3], mosi[0:3], miso[0:3];
+   wire        rx_running[0:3], tx_running[0:3];
 
    // Data
    wire [31:0] rx_data_in[0:3], rx_data[0:3], tx_data[0:3], tx_data_out[0:3];
    wire        rx_stb[0:3], tx_stb[0:3];
-   wire        ext_set_stb[0:3];
-   wire [7:0]  ext_set_addr[0:3];
-   wire [31:0] ext_set_data[0:3];
+   wire        db_fe_set_stb[0:3];
+   wire [7:0]  db_fe_set_addr[0:3];
+   wire [31:0] db_fe_set_data[0:3];
+   wire        db_fe_rb_stb[0:3];
+   wire [7:0]  db_fe_rb_addr[0:3];
+   wire [64:0] db_fe_rb_data[0:3];
 
    wire [NUM_RADIO_CORES-1:0] sync_out;
 
@@ -578,10 +587,9 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
-      .MTU(13),
-      .USE_SPI_CLK(0))
-   noc_block_radio_core_i0 (
+      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .MTU(RADIO_OUTPUT_BUFF_SIZE)
+   ) noc_block_radio_core_i0 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .ce_clk(radio_clk), .ce_rst(radio_rst),
@@ -591,16 +599,16 @@ module x300_core (
       // Data ports connected to radio front end
       .rx({rx_data[1],rx_data[0]}), .rx_stb({rx_stb[1],rx_stb[0]}),
       .tx({tx_data[1],tx_data[0]}), .tx_stb({tx_stb[1],tx_stb[0]}),
-      // Ctrl ports connected to radio front end
-      .ext_set_stb({ext_set_stb[1],ext_set_stb[0]}), .ext_set_addr({ext_set_addr[1],ext_set_addr[0]}), .ext_set_data({ext_set_data[1],ext_set_data[0]}),
-      // Interfaces to front panel and daughter board
+      // Timing and sync
       .pps(pps_rclk), .sync_in(time_sync_r), .sync_out(sync_out[0]),
-      .misc_ins({misc_ins[1], misc_ins[0]}), .misc_outs({misc_outs[1], misc_outs[0]}),
-      .fp_gpio_in({fp_gpio_r_in[1],fp_gpio_r_in[0]}), .fp_gpio_out({fp_gpio_r_out[1],fp_gpio_r_out[0]}), .fp_gpio_ddr({fp_gpio_r_ddr[1],fp_gpio_r_ddr[0]}),
-      .db_gpio_in({db_gpio_in[1],db_gpio_in[0]}), .db_gpio_out({db_gpio_out[1],db_gpio_out[0]}), .db_gpio_ddr({db_gpio_ddr[1],db_gpio_ddr[0]}),
-      .leds({leds[1],leds[0]}),
-      .spi_clk(radio_clk), .spi_rst(radio_rst),
-      .sen({sen[1],sen[0]}), .sclk({sclk[1],sclk[0]}), .mosi({mosi[1],mosi[0]}), .miso({miso[1],miso[0]}),
+      .rx_running({rx_running[1], rx_running[0]}), .tx_running({tx_running[1], tx_running[0]}), 
+      // Ctrl ports connected to radio dboard and front end core
+      .db_fe_set_stb({db_fe_set_stb[1],db_fe_set_stb[0]}),
+      .db_fe_set_addr({db_fe_set_addr[1],db_fe_set_addr[0]}),
+      .db_fe_set_data({db_fe_set_data[1],db_fe_set_data[0]}),
+      .db_fe_rb_stb({db_fe_rb_stb[1],db_fe_rb_stb[0]}),
+      .db_fe_rb_addr({db_fe_rb_addr[1],db_fe_rb_addr[0]}),
+      .db_fe_rb_data({db_fe_rb_data[1],db_fe_rb_data[0]}),
       //Debug
       .debug()
    );
@@ -611,10 +619,9 @@ module x300_core (
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5,RADIO_STR_FIFO_SIZE}),
-      .MTU(13),
-      .USE_SPI_CLK(0))
-   noc_block_radio_core_i1 (
+      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .MTU(RADIO_OUTPUT_BUFF_SIZE)
+   ) noc_block_radio_core_i1 (
       //Clocks
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .ce_clk(radio_clk), .ce_rst(radio_rst),
@@ -624,16 +631,16 @@ module x300_core (
       // Ports connected to radio front end
       .rx({rx_data[3],rx_data[2]}), .rx_stb({rx_stb[3],rx_stb[2]}),
       .tx({tx_data[3],tx_data[2]}), .tx_stb({tx_stb[3],tx_stb[2]}),
-      // Ctrl ports connected to radio front end
-      .ext_set_stb({ext_set_stb[3],ext_set_stb[2]}), .ext_set_addr({ext_set_addr[3],ext_set_addr[2]}), .ext_set_data({ext_set_data[3],ext_set_data[2]}),
-      // Interfaces to front panel and daughter board
+      // Timing and sync
       .pps(pps_rclk), .sync_in(time_sync_r), .sync_out(sync_out[1]),
-      .misc_ins({misc_ins[3], misc_ins[2]}), .misc_outs({misc_outs[3], misc_outs[2]}),
-      .fp_gpio_in({fp_gpio_r_in[3],fp_gpio_r_in[2]}), .fp_gpio_out({fp_gpio_r_out[3],fp_gpio_r_out[2]}), .fp_gpio_ddr({fp_gpio_r_ddr[3],fp_gpio_r_ddr[2]}),
-      .db_gpio_in({db_gpio_in[3],db_gpio_in[2]}), .db_gpio_out({db_gpio_out[3],db_gpio_out[2]}), .db_gpio_ddr({db_gpio_ddr[3],db_gpio_ddr[2]}),
-      .leds({leds[3],leds[2]}),
-      .spi_clk(radio_clk), .spi_rst(radio_rst),
-      .sen({sen[3],sen[2]}), .sclk({sclk[3],sclk[2]}), .mosi({mosi[3],mosi[2]}), .miso({miso[3],miso[2]}),
+      .rx_running({rx_running[3], rx_running[2]}), .tx_running({tx_running[3], tx_running[2]}), 
+      // Ctrl ports connected to radio dboard and front end core
+      .db_fe_set_stb({db_fe_set_stb[3],db_fe_set_stb[2]}),
+      .db_fe_set_addr({db_fe_set_addr[3],db_fe_set_addr[2]}),
+      .db_fe_set_data({db_fe_set_data[3],db_fe_set_data[2]}),
+      .db_fe_rb_stb({db_fe_rb_stb[3],db_fe_rb_stb[2]}),
+      .db_fe_rb_addr({db_fe_rb_addr[3],db_fe_rb_addr[2]}),
+      .db_fe_rb_data({db_fe_rb_data[3],db_fe_rb_data[2]}),
       //Debug
       .debug()
    );
@@ -642,32 +649,21 @@ module x300_core (
    // Frontend Correction
    //------------------------------------
 
-   localparam SET_TX_FE_BASE = 224;
-   localparam SET_RX_FE_BASE = 232;
    genvar i;
    generate for (i=0; i<4; i=i+1) begin
-      tx_frontend_gen3 #(
-         .SR_OFFSET_I(SET_TX_FE_BASE + 0), .SR_OFFSET_Q(SET_TX_FE_BASE + 1),.SR_MAG_CORRECTION(SET_TX_FE_BASE + 2),
-         .SR_PHASE_CORRECTION(SET_TX_FE_BASE + 3), .SR_MUX(SET_TX_FE_BASE + 4),
-         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0),
-         .DEVICE("7SERIES")
-      ) tx_fe_corr_i (
+      x300_db_fe_core #( .USE_SPI_CLK(0) ) db_fe_core_i (
          .clk(radio_clk), .reset(radio_rst),
-         .set_stb(ext_set_stb[i]), .set_addr(ext_set_addr[i]), .set_data(ext_set_data[i]),
-         .tx_stb(tx_stb[i]), .tx_i(tx_data[i][31:16]), .tx_q(tx_data[i][15:0]),
-         .dac_stb(), .dac_i(tx_data_out[i][31:16]), .dac_q(tx_data_out[i][15:0])
-      );
-
-      rx_frontend_gen3 #(
-         .SR_MAG_CORRECTION(SET_RX_FE_BASE + 0), .SR_PHASE_CORRECTION(SET_RX_FE_BASE + 1), .SR_OFFSET_I(SET_RX_FE_BASE + 2),
-         .SR_OFFSET_Q(SET_RX_FE_BASE + 3), .SR_IQ_MAPPING(SET_RX_FE_BASE + 4), .SR_HET_PHASE_INCR(SET_RX_FE_BASE + 5),
-         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0), .BYPASS_REALMODE_DSP(0),
-         .DEVICE("7SERIES")
-      ) rx_fe_corr_i (
-         .clk(radio_clk), .reset(radio_rst), .sync_in(sync_out[i < 2 ? 0 : 1]),
-         .set_stb(ext_set_stb[i]), .set_addr(ext_set_addr[i]), .set_data(ext_set_data[i]),
-         .adc_stb(1'b1), .adc_i(rx_data_in[i][31:16]), .adc_q(rx_data_in[i][15:0]),
-         .rx_stb(rx_stb[i]), .rx_i(rx_data[i][31:16]), .rx_q(rx_data[i][15:0])
+         .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i]), .set_data(db_fe_set_data[i]),
+         .rb_stb(db_fe_rb_stb[i]),  .rb_addr(db_fe_rb_addr[i]), .rb_data(db_fe_rb_data[i]),
+         .time_sync(sync_out[i < 2 ? 0 : 1]),
+         .tx_stb(tx_stb[i]), .tx_data_in(tx_data[i]), .tx_data_out(tx_data_out[i]), .tx_running(tx_running[i]), 
+         .rx_stb(rx_stb[i]), .rx_data_in(rx_data_in[i]), .rx_data_out(rx_data[i]), .rx_running(rx_running[i]),
+         .misc_ins(misc_ins[i]), .misc_outs(misc_outs[i]),
+         .fp_gpio_in(fp_gpio_r_in[i]), .fp_gpio_out(fp_gpio_r_out[i]), .fp_gpio_ddr(fp_gpio_r_ddr[i]), .fp_gpio_fab(),
+         .db_gpio_in(db_gpio_in[i]), .db_gpio_out(db_gpio_out[i]), .db_gpio_ddr(db_gpio_ddr[i]), .db_gpio_fab(),
+         .leds(leds[i]),
+         .spi_clk(radio_clk), .spi_rst(radio_rst),
+         .sen(sen[i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i])
       );
    end endgenerate
 

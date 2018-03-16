@@ -1,0 +1,2313 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <style type="text/css">
+
+      body {
+        margin: 5px;
+        font-family: verdana, "Trebuchet MS", arial, helvetica, sans-serif;
+        font-size: 80%;
+        line-height: 1.3;
+      }
+
+      @media print {
+        body {
+          margin: 0px;
+          font-family: arial, helvetica, sans-serif;
+          font-size: 80%;
+          line-height: 1;
+        }
+      }        a, a:link, a:visited, a:hover, a:active {
+          text-decoration: none;
+          color: #0000E0;
+        }
+        
+        @media print {
+          a, a:link, a:visited, a:hover, a:active {
+            color: #000000;
+          }
+        }
+        
+        div.regmap {
+          margin: 0px;
+          padding: 0px 0px 0px 10px;
+          border-top: 5px solid #A0A0C0;
+        }
+        
+        @media print {
+          div.regmap {
+            border-top: 3px solid #A4A4A4;
+          }
+        }
+        
+        h1.regmap {
+          font-size: 160%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px;
+          color: #404080;
+        }
+        
+        @media print {
+          h1.regmap {
+            font-size: 140%;
+            color: black;
+          }
+        }
+        
+        p.rbmfooter {
+          font-weight: bold;
+          font-size: 120%;
+          color: #A04080;
+          padding: 0px 0px 15px 10px;
+          margin: 0px;
+        }
+        
+        @media print {
+          p.rbmfooter {
+            font-size: 100%;
+            color: black;
+            padding: 0px 0px 0px 10px;
+          }
+        }
+        
+        div.group {
+          border-top: 3px solid #A0C0A0;
+          margin: 10px 0px 0px 0px;
+          padding: 0px 0px 0px 10px;
+        }
+        
+        @media print {
+          div.group {
+            border-top: 2px solid #A4A4A4;
+          }
+        }
+        
+        h2.group {
+          font-size: 140%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px 5px 0px;
+          color: #407040;
+        }
+        
+        p.groupsource {
+          font-size: 100%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 5px 0px 0px 10px;
+          color: #407040;
+        }
+        
+        @media print {
+          h2.group {
+            font-size: 120%;
+            color: black;
+          }
+        }
+        
+        div.info {
+          margin: 5px 0px;
+        }
+        
+        div.info p {
+          margin: 5px 0px;
+          padding: 0px;
+        }
+        
+        div.info h3 {
+          font-size: 120%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px;
+          color: #804080;
+        }
+        
+        @media print {
+          div.info h3 {
+            font-size: 95%;
+            color: black;
+          }
+        }
+        
+        div.info h4 {
+          font-size: 110%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px;
+          color: #A04040;
+        }
+        
+        @media print {
+          div.info h4 {
+            font-size: 90%;
+            font-weight: bold
+          }
+        }
+        
+        h5 {
+          font-size: 100%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px;
+          color: #A04040;
+        }
+        
+        
+        @media print {
+          h5 {
+            font-size: 80%;
+            font-weight: bol
+          }
+        }
+        
+        div.register, div.enum {
+          /* border-top: 2px solid #C0C0C0; */
+          margin: 10px;
+        }
+        
+        div.register h3 {
+          font-size: 120%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px 5px 0px;
+          color: #004040;
+        }
+        
+        @media print {
+          div.register h3 {
+            font-size: 100%;
+            color: black;
+            padding: 5px 0px 5px 0px;
+          }
+        }
+        
+        div.register h3 .addrlsb {
+          font-size: 70%;
+          font-weight: lighter;
+          color: LightGray;
+        }
+        
+        a.sh_addrs {
+          font-weight: normal;
+          font-size: 70%;
+          padding-left: 5px;
+        }
+        
+        @media print {
+          a.sh_addrs {
+            display: none;
+          }
+        }
+        
+        div.register div.sh_addrs {
+          color: #000080;
+          margin: 0px;
+          padding: 0px 0px 0px 10px;
+          display: none;
+        }
+        
+        div.register div.sh_addrs table {
+          padding: 0px;
+          margin: 0px 0px 5px 10px;
+        }
+        
+        div.register div.sh_addrs table td {
+          /* top right bottom left */
+          padding: 3px 5px 0px 0px;
+        }
+        
+        div.register div.sh_addrs table td.l {
+          padding-left: 5px;
+          font-weight: bold;
+        }
+        
+        div.enum h3 {
+          font-size: 120%;
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          padding: 10px 0px 5px 0px;
+          color: #800000;
+        }
+        
+        @media print {
+          div.enum h3 {
+            font-size: 100%;
+            color: black;
+            padding: 5px 0px 5px 0px;
+          }
+        }
+        
+        a.sh_enum {
+          font-size: 85%;
+        }
+        
+        @media print {
+          a.sh_enum {
+            display: none;
+          }
+        }
+        
+        div.sh_enum {
+          display: none;
+        }
+        
+        table {
+          font-size: 100%;
+        }
+        
+        @media print {
+          table {
+            font-size: 75%;
+          }
+        
+          table table {
+            font-size: 100%;
+          }
+        }
+        
+        table.bitfields, table.enum {
+          border: 1px solid #C0C0C0;
+          margin-left: 20px;
+        }
+        
+        table.enum {
+          margin-top: 5px;
+        }
+        
+        table.bitfields td, table.enum td {
+          padding: 3px 8px;
+        }
+        
+        table.enum td {
+          border-top: 1px solid #D8D8D8;
+        }
+        
+        table.bitfields tr.byte td {
+          border-top: 1px solid #D8D8D8;
+        }
+        
+        table.bitfields tr.header td, table.enum tr.header td,
+        table.enum tr.header2 td {
+          font-weight: bold;
+          color: #004080;
+          background-color: #F0F0F0;
+          padding-top: 1px;
+          padding-bottom: 1px;
+        }
+        
+        @media print {
+          table.bitfields tr.header td, table.enum tr.header td,
+          table.enum tr.header2 td {
+            color: black;
+          }
+        }
+        
+        table.bitfields tr.header td {
+          text-align: left;
+          border-bottom: 1px solid #C0C0C0;
+        }
+        
+        table.bitfields tr.header td.bits {
+          text-align: center;
+        }
+        
+        table.enum tr.header td {
+          text-align: center;
+          border-top: none;
+          border-bottom: none;
+        }
+        
+        table.enum tr.header2 td {
+          text-align: center;
+        }
+        
+        table.bitfields td.bits, table.enum td.value, table.enum td.value2 {
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        table.enum td.value2 {
+          border-left: 1px solid #C0C0C0;
+        }
+        
+        table.enum td.l {
+          text-align: center;
+          border-left: 1px solid #E0E0E0;
+        }
+        
+        table.bitfields td p, table.enum td p {
+          margin: 0px;
+          padding: 3px 0px 0px 0px;
+        }
+        
+        table.bitfields td p.name, table.bitfields td p span.name, table.enum td p.name {
+          font-weight: bold;
+          padding-top: 0px;
+        }
+        
+        table.bitfields td p span.attr {
+          color: #606060;
+          padding-top: 0px;
+        }
+        
+        table.extended_info {
+          border: 1px solid #D8D8D8;
+          border-collapse: collapse;
+          padding: 0px;
+        }
+        
+        table.extended_info td.outercell {
+          border: 1px solid #D8D8D8;
+          padding: 0px;
+        }
+        
+        
+        p.reg_info, p.enum_info {
+          color: #606060;
+          margin: 0px;
+          padding: 5px 0px 0px 20px;
+        }
+        
+        p.offset_info, td.offset_info {
+          text-align: left;
+          font-weight: bold;
+          margin: 0px;
+          /* top right bottom left*/
+          padding: 0px 0px 5px 0px;
+          color: #006060;
+        }
+        
+        @media print {
+          p.reg_info, p.enum_info {
+            font-size: 70%;
+            color: black;
+            padding: 5px 0px 0px 15px;
+          }
+        }      
+      </style>
+      <script type="text/javascript">
+      
+        function toggleText( id, sign ) {
+          if (sign == "nochange") return;
+          if ( document.getElementById )
+            elem = document.getElementById( id );
+          else if ( document.all )
+            elem = eval( "document.all." + id );
+          if (elem) {
+            elemStyle = elem.style;
+            if (sign=="+") {
+              elemStyle.display = "block"
+            } else {
+              elemStyle.display = "none"
+            }
+            /*if ( elemStyle.display == "block" ) {
+              elemStyle.display = "none"
+            } else {
+              elemStyle.display = "block"
+            }*/
+          }
+        }        
+        function changeSh( id ) {
+          if ( document.getElementById )
+            elem = document.getElementById( id );
+          else if ( document.all )
+            elem = eval( "document.all." + id );
+          else
+            return "nochange";
+          val = "-";
+          if (elem.innerHTML == "show here") {
+            val = "+";
+            elem.innerHTML = "hide";
+          } else {
+            elem.innerHTML = "show here";
+          }
+          return val;
+        }
+        
+        function sb( id ) {
+          var sign = changeSh("show_" + id);
+          toggleText("div_" + id, sign);
+        }
+        
+        function changeSh2( id ) {
+          if ( document.getElementById )
+            elem = document.getElementById( id );
+          else if ( document.all )
+            elem = eval( "document.all." + id );
+          else
+            return "nochange";
+          val = "-";
+          if (elem.innerHTML == "show") {
+            val = "+";
+            elem.innerHTML = "hide";
+          } else {
+            elem.innerHTML = "show";
+          }
+          return val;
+        }
+        
+        function sa( id ) {
+          var sign = changeSh2("show_" + id);
+          toggleText("div_" + id, sign);
+        }  
+    </script>
+  </head>
+  <body>    
+    <div class="regmap">
+      <a name="MgCpld"></a>
+      <h1 class="regmap">MgCpld</h1>    
+    <p>The top is defined in HDL source file TopCpld.vhd.</p>      
+      <div class="group"><a name="P5 Content"></a><h2 class="group">P5 Content</h2>        <div class="register"><h3 class="register">Register map supplied for open-source projects</h3>
+                    <i><BR/><BR/>"All content provided is Copyright 2018 National Instruments Corporation.
+        For information on NI trademark guidelines, please see <a href="http://www.ni.com/legal/trademarks/">http://www.ni.com/legal/trademarks/</a>. For the NI Patent Notice, please see <a href="http://www.ni.com/legal/patents/">http://www.ni.com/legal/patents/</a>."
+                    </i></div><BR/>      
+      </div>    
+    </div>    
+    <div class="regmap">
+      <a name="MgCpld"></a>
+      <h1 class="regmap">MgCpld</h1>    <p>This regmap has readablestrobes="true", so all strobe bits are readable by
+    default. This attribute should only be used for older regmaps to maintain
+    compatibility with previous versions of XmlParse. New regmaps should either
+    use the 'clearable' attribute or should explicitly define readable bits
+    in the same bit position as the strobe bits.</p>      
+      <div class="group"><a name="MgCpld|PsSpi_CpldRegisters"></a><h2 class="group">PsSpi_CpldRegisters</h2>        These registers are accessed via the PS SPI interface to the CPLD. They are all
+        internal to the CPLD. The SPI format is 24 bits total. On MOSI, shift (msb first)
+        Rd/!Wt | Addr(6:0) | Data(15:0) (lsb). The SPI clock <b>MUST</b> idle LOW before
+        and after the transaction. CPOL=CPHA=0. To access these registers, use the chip
+        select line named "CPLD-PS-SPI-SLE-33" as an active-low select.        
+        <div class="register">
+          <a name="MgCpld|SignatureReg"></a>          
+          <h3 class="register">Offset 0x0000: SignatureReg Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|SignatureReg_in')">(<span id="show_MgCpld|SignatureReg_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|SignatureReg_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">SignatureReg</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0000</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            This register contains the device signature.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+                        <tr  valign="top">
+                          <td class="bits">15..0</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|SignatureReg|ProductSignature"></a>ProductSignature</span><span class="attr"> </span></p>
+                            <p>Represents the product family name/number. This field reads back as
+            0xCAFE.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|MinorRevReg"></a>          
+          <h3 class="register">Offset 0x0001: MinorRevReg Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|MinorRevReg_in')">(<span id="show_MgCpld|MinorRevReg_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|MinorRevReg_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">MinorRevReg</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0001</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            This register contains the device revision numeric code.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|MinorRevReg|CpldMinorRevision"></a>CpldMinorRevision</span><span class="attr"> </span></p>
+                <p>Contains minor revision code (0,1,2,...).</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|MajorRevReg"></a>          
+          <h3 class="register">Offset 0x0002: MajorRevReg Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|MajorRevReg_in')">(<span id="show_MgCpld|MajorRevReg_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|MajorRevReg_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">MajorRevReg</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0002</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            This register contains the major revision value.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|MajorRevReg|CpldMajorRevision"></a>CpldMajorRevision</span><span class="attr"> </span></p>
+                <p>Contains major revision code.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|BuildCodeLSB"></a>          
+          <h3 class="register">Offset 0x0003: BuildCodeLSB Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|BuildCodeLSB_in')">(<span id="show_MgCpld|BuildCodeLSB_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|BuildCodeLSB_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">BuildCodeLSB</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0003</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Build code... right now it's the date it was built. LSB in this register.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|BuildCodeLSB|BuildCodeDD"></a>BuildCodeDD</span><span class="attr"> </span></p>
+                <p>Contains build code day code.</p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|BuildCodeLSB|BuildCodeHH"></a>BuildCodeHH</span><span class="attr"> </span></p>
+                <p>Contains build code hour code.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|BuildCodeMSB"></a>          
+          <h3 class="register">Offset 0x0004: BuildCodeMSB Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|BuildCodeMSB_in')">(<span id="show_MgCpld|BuildCodeMSB_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|BuildCodeMSB_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">BuildCodeMSB</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0004</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Build code... right now it's the date it was built. MSB in this register.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|BuildCodeMSB|BuildCodeYY"></a>BuildCodeYY</span><span class="attr"> </span></p>
+                <p>Contains build code revision year code.</p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|BuildCodeMSB|BuildCodeMM"></a>BuildCodeMM</span><span class="attr"> </span></p>
+                <p>Contains build code month code.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|Scratch"></a>          
+          <h3 class="register">Offset 0x0005: Scratch Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|Scratch_in')">(<span id="show_MgCpld|Scratch_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|Scratch_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">Scratch</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0005</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+                        <tr  valign="top">
+                          <td class="bits">15..0</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|Scratch|ScratchVal"></a>ScratchVal</span><span class="attr"> </span></p>
+                            <p>Contains scratch value for testing. The state of this register has
+            no effect on any other operation in the CPLD.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|CpldControl"></a>          
+          <h3 class="register">Offset 0x0010: CpldControl Register (W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|CpldControl_in')">(<span id="show_MgCpld|CpldControl_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|CpldControl_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">CpldControl</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0010</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..1</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">0w</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|CpldControl|CpldReset"></a>CpldReset</span><span class="attr"> </span></p>
+                            <p>Asserting this bit resets all the CPLD logic.
+            This reset will return all registers on the PS SPI interface to their default
+            state! To use this reset correctly, first write CpldReset to '1', then write
+            it to '0'. Registers will be reset on the _falling_ edge of CpldReset.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|LmkControl"></a>          
+          <h3 class="register">Offset 0x0011: LmkControl Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|LmkControl_in')">(<span id="show_MgCpld|LmkControl_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|LmkControl_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">LmkControl</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0011</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..5</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">4</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|LmkControl|VcxoControl"></a>VcxoControl</span><span class="attr"> </span></p>
+                            <p>Setting this bit to '0' will allow the Phase DAC to exclusively control the
+            VCXO voltage. Defaults to '1', which allows the Phase DAC to adjust the
+            voltage (but the LMK still has control as well).</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">3..0</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|LoStatus"></a>          
+          <h3 class="register">Offset 0x0012: LoStatus Register (R)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|LoStatus_in')">(<span id="show_MgCpld|LoStatus_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|LoStatus_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">LoStatus</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0012</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..5</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">4</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|LoStatus|TxLoLockDetect"></a>TxLoLockDetect</span><span class="attr"> </span></p>
+                <p>Live lock detect status from the TX LO.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">3..1</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|LoStatus|RxLoLockDetect"></a>RxLoLockDetect</span><span class="attr"> </span></p>
+                <p>Live lock detect status from the RX LO.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|MykonosControl"></a>          
+          <h3 class="register">Offset 0x0013: MykonosControl Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|MykonosControl_in')">(<span id="show_MgCpld|MykonosControl_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|MykonosControl_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">MykonosControl</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0013</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..1</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">0</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|MykonosControl|MykonosReset"></a>MykonosReset</span><span class="attr"> </span></p>
+                            <p>Drives the Mykonos hard reset line. Defaults to de-asserted. Write a '1' to
+            assert the reset, and a '0' to de-assert.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>      
+      </div>      
+      <div class="group"><a name="MgCpld|PlSpi_FrontEndControl"></a><h2 class="group">PlSpi_FrontEndControl</h2>        These registers are accessed via the PL SPI interface to the CPLD. They are all
+        internal to the CPLD. The SPI format is 24 bits total. On MOSI, shift (msb first)
+        Rd/!Wt | Addr(6:0) | Data(15:0) (lsb). The SPI clock <b>MUST</b> idle LOW before
+        and after the transaction. CPOL=CPHA=0. To access these registers, use the chip
+        select line named "CPLD-PL-SPI-LE-25" as an active-low select. <br><br>
+        The ATR bits ultimately control which of these registers actually control
+        the RF front end.        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch1"></a>          
+          <h3 class="enum">Rx1Switch1 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch1|TxRxInput'></a>TxRxInput</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch1|RxLoCalInput'></a>RxLoCalInput</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch1|TrxSwitchOutput'></a>TrxSwitchOutput</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>3</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch1|Rx2Input'></a>Rx2Input</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch2"></a>          
+          <h3 class="enum">Rx1Switch2 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch2|ShutdownSw2'></a>ShutdownSw2</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch2|LowerFilterBankToSwitch3'></a>LowerFilterBankToSwitch3</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch2|BypassPathToSwitch6'></a>BypassPathToSwitch6</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>3</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch2|UpperFilterBankToSwitch4'></a>UpperFilterBankToSwitch4</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch3"></a>          
+          <h3 class="enum">Rx1Switch3 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter2100x2850MHz'></a>Filter2100x2850MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter0490LpMHz'></a>Filter0490LpMHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter1600x2250MHz'></a>Filter1600x2250MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>4</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter0440x0530MHz'></a>Filter0440x0530MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>5</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter0650x1000MHz'></a>Filter0650x1000MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>6</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|Filter1100x1575MHz'></a>Filter1100x1575MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>7</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch3|ShutdownSw3'></a>ShutdownSw3</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch4"></a>          
+          <h3 class="enum">Rx1Switch4 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch4|Filter2100x2850MHzFrom'></a>Filter2100x2850MHzFrom</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch4|Filter1600x2250MHzFrom'></a>Filter1600x2250MHzFrom</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>4</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch4|Filter2700HpMHz'></a>Filter2700HpMHz</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch5"></a>          
+          <h3 class="enum">Rx1Switch5 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch5|Filter0440x0530MHzFrom'></a>Filter0440x0530MHzFrom</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch5|Filter1100x1575MHzFrom'></a>Filter1100x1575MHzFrom</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>4</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch5|Filter0490LpMHzFrom'></a>Filter0490LpMHzFrom</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>8</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch5|Filter0650x1000MHzFrom'></a>Filter0650x1000MHzFrom</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|Rx1Switch6"></a>          
+          <h3 class="enum">Rx1Switch6 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch6|LowerFilterBankFromSwitch5'></a>LowerFilterBankFromSwitch5</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch6|UpperFilterBankFromSwitch4'></a>UpperFilterBankFromSwitch4</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>4</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|Rx1Switch6|BypassPathFromSwitch2'></a>BypassPathFromSwitch2</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|TrxSwitch"></a>          
+          <h3 class="enum">TrxSwitch Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TrxSwitch|FromLowerFilterBankTxSw1'></a>FromLowerFilterBankTxSw1</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TrxSwitch|FromTxUpperFilterBankLp6400MHz'></a>FromTxUpperFilterBankLp6400MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TrxSwitch|RxChannelPath'></a>RxChannelPath</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>3</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TrxSwitch|BypassPathToTxSw3'></a>BypassPathToTxSw3</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|TxSwitch1"></a>          
+          <h3 class="enum">TxSwitch1 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch1|ShutdownTxSw1'></a>ShutdownTxSw1</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp1700MHz'></a>FromTxFilterLp1700MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp3400MHz'></a>FromTxFilterLp3400MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>3</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp0800MHz'></a>FromTxFilterLp0800MHz</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|TxSwitch2"></a>          
+          <h3 class="enum">TxSwitch2 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp3400MHz'></a>ToTxFilterLp3400MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>2</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp1700MHz'></a>ToTxFilterLp1700MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>4</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp0800MHz'></a>ToTxFilterLp0800MHz</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>8</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp6400MHz'></a>ToTxFilterLp6400MHz</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="enum">
+          <a name="MgCpld|TxSwitch3"></a>          
+          <h3 class="enum">TxSwitch3 Enumeration</h3>          
+          <table class="enum" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header" valign="center">              
+              <td class='value' > Value </td>
+              <td class="l"   colspan='1'> Name </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>0</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch3|ToTxFilterBanks'></a>ToTxFilterBanks</p>              
+              </td>            
+            </tr>            
+            <tr valign="top">              
+              <td class='value'>1</td>              
+              <td class="l" style="text-align: left;">
+                <p class="name"><a name='MgCpld|TxSwitch3|BypassPathToTrxSw'></a>BypassPathToTrxSw</p>              
+              </td>            
+            </tr>          
+          </table>          
+          <p class="enum_info">
+            This enumerated type is defined in HDL source file TopCpld.vhd.
+          </p>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|PlScratch"></a>          
+          <h3 class="register">Offset 0x0040: PlScratch Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|PlScratch_in')">(<span id="show_MgCpld|PlScratch_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|PlScratch_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">PlScratch</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0040</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+                        <tr  valign="top">
+                          <td class="bits">15..0</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|PlScratch|PlScratchVal"></a>PlScratchVal</span><span class="attr"> </span></p>
+                            <p>Contains scratch value for testing. The state of this register has no effect
+            on any other operation in the CPLD.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|PlCpldControl"></a>          
+          <h3 class="register">Offset 0x0041: PlCpldControl Register (W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|PlCpldControl_in')">(<span id="show_MgCpld|PlCpldControl_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|PlCpldControl_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">PlCpldControl</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0041</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..8</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7..1</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">0w</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|PlCpldControl|PlCpldReset"></a>PlCpldReset</span><span class="attr"> </span></p>
+                            <p>Asserting this bit resets all the CPLD logic on the PL SPI interface.
+            This reset will return all registers to their default state! To use this
+            reset correctly, first write PlCpldReset to '1', then write it to '0'.
+            Registers will be reset on the _falling_ edge of PlCpldReset.</p>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|TxCh1_Idle"></a>          
+          <h3 class="register">Offset 0x0050: TxCh1_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|TxCh1_Idle_in')">(<span id="show_MgCpld|TxCh1_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|TxCh1_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">TxCh1_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0050</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel TX 1 when the
+            ATR bits are configured: TX = 0, RX = don't-care.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">14</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1MykEnTx"></a>Ch1MykEnTx</span><span class="attr"> </span></p>
+                <p>Drives the Mykonos input port TX1_ENABLE.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">13</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxLed"></a>Ch1TxLed</span><span class="attr"> </span></p>
+                <p>Red/Green combo LED for the TRX channel.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">12..11</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1SwTrx"></a>Ch1SwTrx</span><span class="attr"> </span></p>
+                <p>TRX switch control.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|TrxSwitch">TrxSwitch</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|TxCh1_Idle|Ch1SwTrx')">(<span id="show_MgCpld|TxCh1_Idle|Ch1SwTrx">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|TxCh1_Idle|Ch1SwTrx">                  
+                  <div class="enum">
+                    <a name="MgCpld|TrxSwitch"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TrxSwitch|FromLowerFilterBankTxSw1'></a>FromLowerFilterBankTxSw1</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TrxSwitch|FromTxUpperFilterBankLp6400MHz'></a>FromTxUpperFilterBankLp6400MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TrxSwitch|RxChannelPath'></a>RxChannelPath</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>3</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TrxSwitch|BypassPathToTxSw3'></a>BypassPathToTxSw3</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">10</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxPaEn"></a>Ch1TxPaEn</span><span class="attr"> </span></p>
+                <p>Write a '1' to enable the TX path PA in between TX switches 2 and 3.</p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">9</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxAmpEn"></a>Ch1TxAmpEn</span><span class="attr"> </span></p>
+                            <p>Write a '1' to enable the TX path Amp in between TX switches 3 and 4. The path
+            (from Mykonos) is: TxSw4 -> Amp -> DSA -> TxSw3.</p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">8</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxMixerEn"></a>Ch1TxMixerEn</span><span class="attr"> </span></p>
+                            <p>Write a '1' to enable the lowband mixer. Note that Ch1TxLowbandMixerPathSelect
+            must be properly configured to select the mixer path.</p>            
+              </td>
+            </tr>            
+                        <tr class='byte' valign="top">
+                          <td class="bits">7</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxLowbandMixerPathSelect"></a>Ch1TxLowbandMixerPathSelect</span><span class="attr"> </span></p>
+                            <p>Controls Switches 4 and 5. Write a '1' to select the Lowband Mixer path.
+            Writing '0' will select the bypass path around the mixer. Default is '0'. Note:
+            Individual control over these switches was removed as an optimization to
+            allow all TX controls to fit in one 16 bit register.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">6</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxSw3"></a>Ch1TxSw3</span><span class="attr"> </span></p>
+                <p>Controls Switch 3. Bypasses the filter bank and PA, or doesn't.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|TxSwitch3">TxSwitch3</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|TxCh1_Idle|Ch1TxSw3')">(<span id="show_MgCpld|TxCh1_Idle|Ch1TxSw3">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|TxCh1_Idle|Ch1TxSw3">                  
+                  <div class="enum">
+                    <a name="MgCpld|TxSwitch3"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch3|ToTxFilterBanks'></a>ToTxFilterBanks</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch3|BypassPathToTrxSw'></a>BypassPathToTrxSw</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">5..2</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxSw2"></a>Ch1TxSw2</span><span class="attr"> </span></p>
+                <p>Controls Switch 2. Filter bank distribution switch.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|TxSwitch2">TxSwitch2</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|TxCh1_Idle|Ch1TxSw2')">(<span id="show_MgCpld|TxCh1_Idle|Ch1TxSw2">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|TxCh1_Idle|Ch1TxSw2">                  
+                  <div class="enum">
+                    <a name="MgCpld|TxSwitch2"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp3400MHz'></a>ToTxFilterLp3400MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp1700MHz'></a>ToTxFilterLp1700MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>4</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp0800MHz'></a>ToTxFilterLp0800MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>8</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch2|ToTxFilterLp6400MHz'></a>ToTxFilterLp6400MHz</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">1..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|TxCh1_Idle|Ch1TxSw1"></a>Ch1TxSw1</span><span class="attr"> </span></p>
+                <p>Controls Switch 1. Filter bank receive switch.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|TxSwitch1">TxSwitch1</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|TxCh1_Idle|Ch1TxSw1')">(<span id="show_MgCpld|TxCh1_Idle|Ch1TxSw1">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|TxCh1_Idle|Ch1TxSw1">                  
+                  <div class="enum">
+                    <a name="MgCpld|TxSwitch1"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch1|ShutdownTxSw1'></a>ShutdownTxSw1</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp1700MHz'></a>FromTxFilterLp1700MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp3400MHz'></a>FromTxFilterLp3400MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>3</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|TxSwitch1|FromTxFilterLp0800MHz'></a>FromTxFilterLp0800MHz</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh1_0_Idle"></a>          
+          <h3 class="register">Offset 0x0051: RxCh1_0_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh1_0_Idle_in')">(<span id="show_MgCpld|RxCh1_0_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh1_0_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh1_0_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0051</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 1 when the
+            ATR bits are configured: TX = don't-care, RX = 0.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..14</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">13..10</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_0_Idle|Ch1RxSw5"></a>Ch1RxSw5</span><span class="attr"> </span></p>
+                <p>Controls Switch 5. Lower filter bank receive switch.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch5">Rx1Switch5</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_0_Idle|Ch1RxSw5')">(<span id="show_MgCpld|RxCh1_0_Idle|Ch1RxSw5">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_0_Idle|Ch1RxSw5">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch5"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch5|Filter0440x0530MHzFrom'></a>Filter0440x0530MHzFrom</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch5|Filter1100x1575MHzFrom'></a>Filter1100x1575MHzFrom</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>4</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch5|Filter0490LpMHzFrom'></a>Filter0490LpMHzFrom</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>8</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch5|Filter0650x1000MHzFrom'></a>Filter0650x1000MHzFrom</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">9..7</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_0_Idle|Ch1RxSw4"></a>Ch1RxSw4</span><span class="attr"> </span></p>
+                <p>Controls Switch 4. Upper filter bank receive switch.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch4">Rx1Switch4</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_0_Idle|Ch1RxSw4')">(<span id="show_MgCpld|RxCh1_0_Idle|Ch1RxSw4">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_0_Idle|Ch1RxSw4">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch4"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch4|Filter2100x2850MHzFrom'></a>Filter2100x2850MHzFrom</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch4|Filter1600x2250MHzFrom'></a>Filter1600x2250MHzFrom</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>4</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch4|Filter2700HpMHz'></a>Filter2700HpMHz</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">6..4</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_0_Idle|Ch1RxSw3"></a>Ch1RxSw3</span><span class="attr"> </span></p>
+                <p>Controls Switch 3. Lower filter bank transmit switch.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch3">Rx1Switch3</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_0_Idle|Ch1RxSw3')">(<span id="show_MgCpld|RxCh1_0_Idle|Ch1RxSw3">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_0_Idle|Ch1RxSw3">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch3"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter2100x2850MHz'></a>Filter2100x2850MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter0490LpMHz'></a>Filter0490LpMHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter1600x2250MHz'></a>Filter1600x2250MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>4</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter0440x0530MHz'></a>Filter0440x0530MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>5</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter0650x1000MHz'></a>Filter0650x1000MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>6</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|Filter1100x1575MHz'></a>Filter1100x1575MHz</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>7</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch3|ShutdownSw3'></a>ShutdownSw3</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">3..2</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|RxCh1_0_Idle|Ch1RxSw2"></a>Ch1RxSw2</span><span class="attr"> </span></p>
+                            <p>Controls Switch 2. First filter switch. Selects between bypass path and
+            the upper/lower filter banks.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch2">Rx1Switch2</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_0_Idle|Ch1RxSw2')">(<span id="show_MgCpld|RxCh1_0_Idle|Ch1RxSw2">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_0_Idle|Ch1RxSw2">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch2"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch2|ShutdownSw2'></a>ShutdownSw2</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch2|LowerFilterBankToSwitch3'></a>LowerFilterBankToSwitch3</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch2|BypassPathToSwitch6'></a>BypassPathToSwitch6</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>3</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch2|UpperFilterBankToSwitch4'></a>UpperFilterBankToSwitch4</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">1..0</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_0_Idle|Ch1RxSw1"></a>Ch1RxSw1</span><span class="attr"> </span></p>
+                <p>Controls Switch 1. Selects between the cal, bypass, RX2, and TRX paths.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch1">Rx1Switch1</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_0_Idle|Ch1RxSw1')">(<span id="show_MgCpld|RxCh1_0_Idle|Ch1RxSw1">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_0_Idle|Ch1RxSw1">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch1"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>0</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch1|TxRxInput'></a>TxRxInput</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch1|RxLoCalInput'></a>RxLoCalInput</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch1|TrxSwitchOutput'></a>TrxSwitchOutput</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>3</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch1|Rx2Input'></a>Rx2Input</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh1_1_Idle"></a>          
+          <h3 class="register">Offset 0x0052: RxCh1_1_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh1_1_Idle_in')">(<span id="show_MgCpld|RxCh1_1_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh1_1_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh1_1_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0052</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 1 when the
+            ATR bits are configured: TX = don't-care, RX = 0.          
+          </div>          
+          <table class="bitfields" border="0" cellspacing="0" cellpadding="0">
+            <tr class="header"><td class="bits">Bits</td><td>Name</td></tr>            
+            <tr  valign="top">
+              <td class="bits">15..11</td>
+              <td>
+                <p><span class="name">Reserved</span><span class="attr"> </span></p>
+                <p></p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">10</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1MykEnRx"></a>Ch1MykEnRx</span><span class="attr"> </span></p>
+                <p>Drives the Mykonos input port RX1_ENABLE.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">9</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxLed"></a>Ch1RxLed</span><span class="attr"> </span></p>
+                <p>Red/Green combo LED for the TRX channel.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">8</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1Rx2Led"></a>Ch1Rx2Led</span><span class="attr"> </span></p>
+                <p>Green LED for RX2 channel.</p>            
+              </td>
+            </tr>            
+            <tr class='byte' valign="top">
+              <td class="bits">7</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxLna2En"></a>Ch1RxLna2En</span><span class="attr"> </span></p>
+                <p>Write a '1' to enable the RX path LNA2 between RxSw5 and RxSw6.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">6</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxLna1En"></a>Ch1RxLna1En</span><span class="attr"> </span></p>
+                <p>Write a '1' to enable the RX path LNA1 between RxSw4 and RxSw6.</p>            
+              </td>
+            </tr>            
+            <tr  valign="top">
+              <td class="bits">5</td>
+              <td>
+                <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxAmpEn"></a>Ch1RxAmpEn</span><span class="attr"> </span></p>
+                <p>Write a '1' to enable the RX path Amp directly before the Mykonos inputs.</p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">4</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxMixerEn"></a>Ch1RxMixerEn</span><span class="attr"> </span></p>
+                            <p>Write a '1' to enable the lowband mixer. Note that Ch1RxLowbandMixerPathSelect
+            must be properly configured to select the mixer path.</p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">3</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxLowbandMixerPathSelect"></a>Ch1RxLowbandMixerPathSelect</span><span class="attr"> </span></p>
+                            <p>Controls Switches 7 and 8. Write a '1' to select the Lowband Mixer path.
+            Writing '0' will select the bypass path around the mixer. Default is '0'. Note:
+            Individual control over these switches was removed as an optimization to
+            allow all TX controls to fit in one 16 bit register... so the same was done
+            for the RX path for continuity.</p>            
+              </td>
+            </tr>            
+                        <tr  valign="top">
+                          <td class="bits">2..0</td>
+                          <td>
+                            <p><span class="name"><a name="MgCpld|RxCh1_1_Idle|Ch1RxSw6"></a>Ch1RxSw6</span><span class="attr"> </span></p>
+                            <p>Controls Switch 6. Selects between the upper and lower filter banks and
+            bypass path.</p>                
+                <p>
+                  The values for this bitfield are in the <a href="#MgCpld|Rx1Switch6">Rx1Switch6</a> table.
+                  <a class="sh_enum" href="javascript:sb('MgCpld|RxCh1_1_Idle|Ch1RxSw6')">(<span id="show_MgCpld|RxCh1_1_Idle|Ch1RxSw6">show here</span>)</a>
+                </p>
+                <div class="sh_enum" id="div_MgCpld|RxCh1_1_Idle|Ch1RxSw6">                  
+                  <div class="enum">
+                    <a name="MgCpld|Rx1Switch6"></a>                    
+                    <table class="enum" border="0" cellspacing="0" cellpadding="0">
+                      <tr class="header" valign="center">                        
+                        <td class='value' > Value </td>
+                        <td class="l"   colspan='1'> Name </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>1</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch6|LowerFilterBankFromSwitch5'></a>LowerFilterBankFromSwitch5</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>2</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch6|UpperFilterBankFromSwitch4'></a>UpperFilterBankFromSwitch4</p>                        
+                        </td>                      
+                      </tr>                      
+                      <tr valign="top">                        
+                        <td class='value'>4</td>                        
+                        <td class="l" style="text-align: left;">
+                          <p class="name"><a name='MgCpld|Rx1Switch6|BypassPathFromSwitch2'></a>BypassPathFromSwitch2</p>                        
+                        </td>                      
+                      </tr>                    
+                    </table>                    
+                    <p class="enum_info">
+                      This enumerated type is defined in HDL source file TopCpld.vhd.
+                    </p>                  
+                  </div>                
+                </div>            
+              </td>
+            </tr>          
+          </table>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|TxCh1_TxOn"></a>          
+          <h3 class="register">Offset 0x0053: TxCh1_TxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|TxCh1_TxOn_in')">(<span id="show_MgCpld|TxCh1_TxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|TxCh1_TxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">TxCh1_TxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0053</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel TX 1 when the
+            ATR bits are configured: TX = 1, RX = don't-care. The bitfields are the same
+            as for the Tx1_Off register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh1_0_RxOn"></a>          
+          <h3 class="register">Offset 0x0054: RxCh1_0_RxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh1_0_RxOn_in')">(<span id="show_MgCpld|RxCh1_0_RxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh1_0_RxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh1_0_RxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0054</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 1 when the
+            ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+            as for the RxCh1_0_Idle register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh1_1_RxOn"></a>          
+          <h3 class="register">Offset 0x0055: RxCh1_1_RxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh1_1_RxOn_in')">(<span id="show_MgCpld|RxCh1_1_RxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh1_1_RxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh1_1_RxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0055</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 1 when the
+            ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+            as for the RxCh1_1_Idle register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|TxCh2_Idle"></a>          
+          <h3 class="register">Offset 0x0060: TxCh2_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|TxCh2_Idle_in')">(<span id="show_MgCpld|TxCh2_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|TxCh2_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">TxCh2_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0060</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel TX 2 when the
+            ATR bits are configured: TX = 0, RX = don't-care. The bitfields are the same
+            as for the Tx1_Off register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh2_0_Idle"></a>          
+          <h3 class="register">Offset 0x0061: RxCh2_0_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh2_0_Idle_in')">(<span id="show_MgCpld|RxCh2_0_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh2_0_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh2_0_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0061</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 2 when the
+            ATR bits are configured: TX = don't-care, RX = 0. The bitfields are the same
+            as for the RxCh1_0_Idle register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh2_1_Idle"></a>          
+          <h3 class="register">Offset 0x0062: RxCh2_1_Idle Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh2_1_Idle_in')">(<span id="show_MgCpld|RxCh2_1_Idle_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh2_1_Idle_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh2_1_Idle</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0062</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 2 when the
+            ATR bits are configured: TX = don't-care, RX = 0. The bitfields are the same
+            as for the RxCh1_1_Idle register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|TxCh2_TxOn"></a>          
+          <h3 class="register">Offset 0x0063: TxCh2_TxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|TxCh2_TxOn_in')">(<span id="show_MgCpld|TxCh2_TxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|TxCh2_TxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">TxCh2_TxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0063</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel TX 2 when the
+            ATR bits are configured: TX = 1, RX = don't-care. The bitfields are the same
+            as for the Tx1_Off register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh2_0_RxOn"></a>          
+          <h3 class="register">Offset 0x0064: RxCh2_0_RxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh2_0_RxOn_in')">(<span id="show_MgCpld|RxCh2_0_RxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh2_0_RxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh2_0_RxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0064</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 2 when the
+            ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+            as for the RxCh1_0_Idle register.          
+          </div>        
+        </div>        
+        <div class="register">
+          <a name="MgCpld|RxCh2_1_RxOn"></a>          
+          <h3 class="register">Offset 0x0065: RxCh2_1_RxOn Register (R|W)</h3>
+          </h3>          
+          <a class="sh_addrs" href="javascript:sa('MgCpld|RxCh2_1_RxOn_in')">(<span id="show_MgCpld|RxCh2_1_RxOn_in">show</span> extended info)</a>
+          <div class="sh_addrs" id="div_MgCpld|RxCh2_1_RxOn_in">            
+            <table class="extended_info">              
+              <tr>                
+                <td class="outercell" rowspan="1">                  
+                  <table border="0" cellspacing="0" cellpadding="0">
+                    <tr><td class="offset_info" align="right">RxCh2_1_RxOn</td></tr>
+                    <tr><td class="offset_info" align="right">&nbsp;&nbsp;offset=0x0065</td></tr>
+                  </table>                
+                </td>              
+              </tr>            
+            </table><p/>          
+          <p class="reg_info">Initial Value not specified
+          </p>          
+          <p class="reg_info">This register is defined in HDL source file TopCpld.vhd.</p>          
+          </div>          
+          <div class="info">            
+            Load this register with the front-end configuration for channel RX 2 when the
+            ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+            as for the RxCh1_1_Idle register.          
+          </div>        
+        </div>      
+      </div>    
+    </div>
+  </body>
+</HTML>

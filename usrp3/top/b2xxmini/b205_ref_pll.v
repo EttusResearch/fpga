@@ -131,11 +131,11 @@ module b205_ref_pll(
     always @(posedge clk) begin
         if (reset | ~valid_ref) begin
             r_period_cnt <= 28'd0;
-				freq_err <= 29'sd0;
+            freq_err <= 29'sd0;
         end
         else if (r_rising) begin
             r_period_cnt <= 28'd1;
-				freq_err <= period - r_period_cnt;
+            freq_err <= period - r_period_cnt;
         end
         else
             r_period_cnt <= r_period_cnt + 28'd1;
@@ -144,48 +144,50 @@ module b205_ref_pll(
     // Phase Counter
     reg signed [28:0] lead_cnt;
     reg lead_cnt_ena;
-	 reg signed [28:0] lead;
+    reg signed [28:0] lead;
     always @(posedge clk) begin
-			// Count how much N leads R
-			// The count is negative because it measures
-			// how much the VCTCXO must be slowed down.
-			if (~valid_ref | n_rising) begin
-				 lead_cnt <= 29'sd0;
-				 lead_cnt_ena <= 1'b1;
-				 if (r_rising)
-				     lead <= 29'sd0;
-			end
-			else if (r_rising) begin
-				 if (lead_cnt_ena)
-					  lead <= lead_cnt - 29'sd1;
-				 else begin
-					  // R rising with no preceding N rising.
-					  // N has changed from leading to lagging R,
-					  // but we don't yet know by how much so
-					  // assume 1.
-					  lead <= 29'sd1;
-				 end
-				 lead_cnt_ena <= 1'b0;
-			end
-			else if (lead_cnt_ena)
-				 lead_cnt <= lead_cnt - 29'sd1;
-	 end
+        // Count how much N leads R
+        // The count is negative because it measures
+        // how much the VCTCXO must be slowed down.
+        if (~valid_ref | n_rising) begin
+            lead_cnt <= 29'sd0;
+            lead_cnt_ena <= 1'b1;
+            if (r_rising)
+                lead <= 29'sd0;
+        end
+        else if (r_rising) begin
+            if (lead_cnt_ena)
+                lead <= lead_cnt - 29'sd1;
+            else begin
+                // R rising with no preceding N rising.
+                // N has changed from leading to lagging R,
+                // but we don't yet know by how much so
+                // assume 1.
+                lead <= 29'sd1;
+            end
+            lead_cnt_ena <= 1'b0;
+        end
+        else if (lead_cnt_ena)
+            lead_cnt <= lead_cnt - 29'sd1;
+    end
 
     // PFD State Machine
-    localparam MEASURE=3'd0;
-    localparam CAPTURE=3'd1;
-    localparam CALCULATE_ERROR=3'd2;
-	 localparam CALCULATE_10M_GAIN=3'd3;
-    localparam CALCULATE_ADJUSTMENT=3'd4;
-    localparam CALCULATE_OUTPUT_VALUE=3'd5;
-    localparam APPLY_OUTPUT_VALUE=3'd6;
-    reg [2:0] state;
+    localparam MEASURE=4'd0;
+    localparam CAPTURE=4'd1;
+    localparam CAPTURE_LAG=4'd2;
+    localparam CAPTURE_LEAD=4'd3;
+    localparam CALCULATE_ERROR=4'd4;
+    localparam CALCULATE_10M_GAIN=4'd5;
+    localparam CALCULATE_ADJUSTMENT=4'd6;
+    localparam CALCULATE_OUTPUT_VALUE=4'd7;
+    localparam APPLY_OUTPUT_VALUE=4'd8;
+    reg [3:0] state;
     reg [15:0] daco = 16'd32767;
     wire signed [28:0] lock_margin = ref_is_10M ? LOCK_MARGIN_10MHZ : LOCK_MARGIN_PPS;
     wire signed [28:0] lag = lead + period;
     reg signed [28:0] phase_err;
     reg signed [28:0] err;
-	 reg signed [28:0] shift;
+    reg signed [28:0] shift;
     reg signed [28:0] adj;
     wire signed [28:0] dacv = {13'd0, daco};
     reg signed [28:0] sum;
@@ -195,7 +197,7 @@ module b205_ref_pll(
             state <= MEASURE;
             daco <= 16'd32767;
             err <= 29'sd0;
-				shift <= 29'sd0;
+            shift <= 29'sd0;
             adj <= 29'sd0;
             ld <= 3'd0;
         end
@@ -206,14 +208,19 @@ module b205_ref_pll(
                         state <= CAPTURE;
                 end
                 CAPTURE: begin
-					     if (lag < -lead) begin
-						      phase_err <= lag;
-								ld <= {ld[1:0], (lag <= lock_margin)};
-                    end
-						  else begin
-						      phase_err <= lead;
-								ld <= {ld[1:0], (-lead <= lock_margin)};
-						  end
+                    if (lag < -lead)
+                        state <= CAPTURE_LAG;
+                    else
+                        state <= CAPTURE_LEAD;
+                end
+                CAPTURE_LAG: begin
+                    phase_err <= lag;
+                    ld <= {ld[1:0], (lag <= lock_margin)};
+                    state <= CALCULATE_ERROR;
+                end
+                CAPTURE_LEAD: begin
+                    phase_err <= lead;
+                    ld <= {ld[1:0], (-lead <= lock_margin)};
                     state <= CALCULATE_ERROR;
                 end
                 CALCULATE_ERROR: begin
@@ -221,9 +228,9 @@ module b205_ref_pll(
                     state <= ref_is_10M ? CALCULATE_10M_GAIN : CALCULATE_ADJUSTMENT;
                 end
                 CALCULATE_10M_GAIN: begin
-					     shift <= (err < -7 || err > 7) ? 7 : (err < 0 ? -err : err);
+                    shift <= (err < -7 || err > 7) ? 7 : (err < 0 ? -err : err);
                     state <= CALCULATE_ADJUSTMENT;
-					 end
+                end
                 CALCULATE_ADJUSTMENT: begin
                     // The VCTCXO is +/-5 ppm from 0.3V to 1.5V and the DAC is 16 bits,
                     // which works out to 0.000228885 ppm per DAC unit.
@@ -231,10 +238,10 @@ module b205_ref_pll(
                     // which works out to 21.845 DAC units to correct each unit of error.
                     // Theory is nice, but the proportional and integral gains used here
                     // were determined through manual tuning.
-						  if (ref_is_10M)
-						      adj <= (err <<< shift);
-						  else
-						      adj <= (err <<< 4) - err;
+                    if (ref_is_10M)
+                        adj <= (err <<< shift);
+                    else
+                        adj <= (err <<< 4) - err;
                     state <= CALCULATE_OUTPUT_VALUE;
                 end
                 CALCULATE_OUTPUT_VALUE: begin
@@ -242,7 +249,7 @@ module b205_ref_pll(
                     state <= APPLY_OUTPUT_VALUE;
                 end
                 APPLY_OUTPUT_VALUE: begin
-					     // Clip and apply
+                    // Clip and apply
                     if (sum < 29'sd0)
                         daco <= 16'd0;
                     else if (sum > 29'sd65535)

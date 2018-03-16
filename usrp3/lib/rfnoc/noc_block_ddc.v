@@ -3,9 +3,14 @@
 //
 
 module noc_block_ddc #(
-  parameter NOC_ID = 64'hDDC0_0000_0000_0000,
-  parameter STR_SINK_FIFOSIZE = 12,
-  parameter NUM_CHAINS = 2
+  parameter NOC_ID            = 64'hDDC0_0000_0000_0000,
+  parameter STR_SINK_FIFOSIZE = 11,     //Log2 of input buffer size in 8-byte words (must hold at least 2 MTU packets)
+  parameter MTU               = 10,     //Log2 of output buffer size in 8-byte words (must hold at least 1 MTU packet)
+  parameter NUM_CHAINS        = 2,
+  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MINOR  = 32'h0,
+  parameter NUM_HB            = 3,
+  parameter CIC_MAX_DECIM     = 255
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -26,7 +31,7 @@ module noc_block_ddc #(
   wire [NUM_CHAINS-1:0]         set_has_time;
   wire [NUM_CHAINS-1:0]         rb_stb;
   wire [8*NUM_CHAINS-1:0]       rb_addr;
-  wire [64*NUM_CHAINS-1:0]      rb_data;
+  reg [64*NUM_CHAINS-1:0]       rb_data;
 
   wire [63:0]                   cmdout_tdata, ackin_tdata;
   wire                          cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
@@ -84,6 +89,10 @@ module noc_block_ddc #(
   localparam SR_DECIM_ADDR    = 134;
   localparam SR_MUX_ADDR      = 135;
   localparam SR_COEFFS_ADDR   = 136;
+  localparam RB_COMPAT_NUM    = 0;
+  localparam RB_NUM_HB        = 1;
+  localparam RB_CIC_MAX_DECIM = 2;
+  localparam COMPAT_NUM       = {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
 
   genvar i;
   generate
@@ -114,9 +123,19 @@ module noc_block_ddc #(
       wire [63:0] set_time_int     = set_time[64*i+63:64*i];
       wire        set_has_time_int = set_has_time[i];
 
+      // TODO Readback register for number of FIR filter taps
+      always @*
+        case(rb_addr[8*i+7:8*i])
+          RB_COMPAT_NUM    : rb_data[64*i+63:64*i] <= {COMPAT_NUM};
+          RB_NUM_HB        : rb_data[64*i+63:64*i] <= {NUM_HB};
+          RB_CIC_MAX_DECIM : rb_data[64*i+63:64*i] <= {CIC_MAX_DECIM};
+          default          : rb_data[64*i+63:64*i] <= 64'h0BADC0DE0BADC0DE;
+        endcase
+
       axi_wrapper #(
-        .SIMPLE_MODE(0))
+        .SIMPLE_MODE(0), .MTU(MTU))
       axi_wrapper (
+        .bus_clk(bus_clk), .bus_rst(bus_rst),
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[i]),
         .next_dst(next_dst_sid[16*i+15:16*i]),
@@ -195,7 +214,6 @@ module noc_block_ddc #(
       wire sample_in_tvalid, sample_in_tready;
       wire sample_out_tvalid, sample_out_tready;
       wire nc;
-      wire warning_header_fifo_full;
       wire warning_long_throttle;
       wire error_extra_outputs;
       wire error_drop_pkt_lockup;
@@ -219,7 +237,6 @@ module noc_block_ddc #(
         .m_axis_data_tvalid(sample_in_tvalid), .m_axis_data_tready(sample_in_tready),
         .s_axis_data_tdata({1'b0,sample_out_tdata}), .s_axis_data_tlast(1'b0),
         .s_axis_data_tvalid(sample_out_tvalid), .s_axis_data_tready(sample_out_tready),
-        .warning_header_fifo_full(warning_header_fifo_full),
         .warning_long_throttle(warning_long_throttle),
         .error_extra_outputs(error_extra_outputs),
         .error_drop_pkt_lockup(error_drop_pkt_lockup));
@@ -234,10 +251,12 @@ module noc_block_ddc #(
         .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR),
         .SR_DECIM_ADDR(SR_DECIM_ADDR),
         .SR_MUX_ADDR(SR_MUX_ADDR),
-        .SR_COEFFS_ADDR(SR_COEFFS_ADDR))
+        .SR_COEFFS_ADDR(SR_COEFFS_ADDR),
+        .NUM_HB(NUM_HB),
+        .CIC_MAX_DECIM(CIC_MAX_DECIM))
       ddc (
-        .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum[i]),
-        .clear(clear_user), // Use AXI Rate Change's clear user to reset block to initial state after EOB
+        .clk(ce_clk), .reset(ce_rst),
+        .clear(clear_user | clear_tx_seqnum[i]), // Use AXI Rate Change's clear user to reset block to initial state after EOB
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),
         .sample_in_tdata(sample_in_tdata), .sample_in_tlast(1'b0),

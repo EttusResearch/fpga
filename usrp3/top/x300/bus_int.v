@@ -2,25 +2,10 @@
 // Copyright 2013 Ettus Research LLC
 //
 
-`ifndef LOG2
-`define LOG2(N) (\
-                 N < 2    ? 0 : \
-                 N < 4    ? 1 : \
-                 N < 8    ? 2 : \
-                 N < 16   ? 3 : \
-                 N < 32   ? 4 : \
-                 N < 64   ? 5 : \
-                 N < 128  ? 6 : \
-                 N < 256  ? 7 : \
-                 N < 512  ? 8 : \
-                 N < 1024 ? 9 : 10)
-`endif
-
-module bus_int
-  #(
+module bus_int #(
     parameter NUM_CE = 3          // Number of computation engines
-   )
-   (input clk, input clk_div2, input reset, input reset_div2,
+)( 
+    input clk, input clk_div2, input reset, input reset_div2,
     output sen, output sclk, output mosi, input miso,
     inout scl0, inout sda0,
     inout scl1, inout sda1,
@@ -41,21 +26,6 @@ module bus_int
     // SFP+ 1 data stream
     output [63:0] sfp1_tx_tdata, output [3:0] sfp1_tx_tuser, output sfp1_tx_tlast, output sfp1_tx_tvalid, input sfp1_tx_tready,
     input [63:0] sfp1_rx_tdata, input [3:0] sfp1_rx_tuser, input sfp1_rx_tlast, input sfp1_rx_tvalid, output sfp1_rx_tready,
-    // Radio0
-    output [63:0] r0o_tdata, output r0o_tlast, output r0o_tvalid, input r0o_tready,
-    input [63:0] r0i_tdata, input r0i_tlast, input r0i_tvalid, output r0i_tready,
-    // Radio1
-    output [63:0] r1o_tdata, output r1o_tlast, output r1o_tvalid, input r1o_tready,
-    input [63:0] r1i_tdata, input r1i_tlast, input r1i_tvalid, output r1i_tready,
-    // CE0
-    output [63:0] ce0o_tdata, output ce0o_tlast, output ce0o_tvalid, input ce0o_tready,
-    input [63:0] ce0i_tdata, input ce0i_tlast, input ce0i_tvalid, output ce0i_tready,
-    // CE1
-    output [63:0] ce1o_tdata, output ce1o_tlast, output ce1o_tvalid, input ce1o_tready,
-    input [63:0] ce1i_tdata, input ce1i_tlast, input ce1i_tvalid, output ce1i_tready,
-    // CE2
-    output [63:0] ce2o_tdata, output ce2o_tlast, output ce2o_tvalid, input ce2o_tready,
-    input [63:0] ce2i_tdata, input ce2i_tlast, input ce2i_tvalid, output ce2i_tready,
     // PCIe
     output [63:0] pcio_tdata, output pcio_tlast, output pcio_tvalid, input pcio_tready,
     input [63:0] pcii_tdata, input pcii_tlast, input pcii_tvalid, output pcii_tready,
@@ -90,6 +60,7 @@ module bus_int
 
     input [15:0] sfp0_phy_status,
     input [15:0] sfp1_phy_status,
+    input [31:0] xadc_readback,
 
    // Debug
     output [31:0] debug0,
@@ -124,9 +95,10 @@ module bus_int
    localparam RB_SFPP_STATUS0 = 8'd08;
    localparam RB_SFPP_STATUS1 = 8'd09;
    localparam RB_GIT_HASH     = 8'd10;
+   localparam RB_XADC_VALS    = 8'd11;
    localparam RB_CROSSBAR     = 8'd128;
 
-   localparam COMPAT_MAJOR    = 16'h0021;
+   localparam COMPAT_MAJOR    = 16'h0023;
    localparam COMPAT_MINOR    = 16'h0000;
 
    wire [31:0] 	  set_data;
@@ -303,7 +275,7 @@ module bus_int
    always @*
      casex (rb_addr)
        RB_NUM_CE: rb_data = NUM_CE;
-       RB_COMPAT_NUM: rb_data = {COMPAT_MAJOR, COMPAT_MINOR};
+       RB_COMPAT_NUM: rb_data = {32'h0, COMPAT_MAJOR, COMPAT_MINOR};
        RB_COUNTER: rb_data = counter;
        RB_SPI_RDY: rb_data = {31'b0, spi_ready};
        RB_SPI_DATA: rb_data = rb_spi_data;
@@ -336,9 +308,9 @@ module bus_int
        RB_ETH_TYPE1: rb_data = {32'h0};
    `endif
 `endif
-       RB_GIT_HASH: rb_data = 32'h`GIT_HASH;
-
-       RB_CROSSBAR: rb_data = rb_data_crossbar;
+       RB_GIT_HASH:  rb_data = 32'h`GIT_HASH;
+       RB_XADC_VALS: rb_data = xadc_readback;
+       RB_CROSSBAR:  rb_data = rb_data_crossbar;
 
        default: rb_data = 32'h0;
      endcase // case (rb_addr)
@@ -526,13 +498,13 @@ module bus_int
    
    wire [7:0] local_addr;
    // Dedicated address space readback of xbar stats (up to 16x16)
-   wire [`LOG2(XBAR_NUM_PORTS)+`LOG2(XBAR_NUM_PORTS)-1:0] rb_addr_xbar;
+   wire [$clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS)-1:0] rb_addr_xbar;
 
    setting_reg #(.my_addr(SR_XB_LOCAL), .awidth(SR_AWIDTH), .width(8)) sr_local_addr
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(local_addr),.changed());
 
-   setting_reg #(.my_addr(SR_RB_ADDR_XBAR), .awidth(SR_AWIDTH), .width(`LOG2(XBAR_NUM_PORTS)+`LOG2(XBAR_NUM_PORTS))) sr_rb_addr_xbar
+   setting_reg #(.my_addr(SR_RB_ADDR_XBAR), .awidth(SR_AWIDTH), .width($clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS))) sr_rb_addr_xbar
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(rb_addr_xbar),.changed());
   

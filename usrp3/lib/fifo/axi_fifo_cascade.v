@@ -24,7 +24,7 @@ module axi_fifo_cascade
    wire [WIDTH-1:0]   int1_tdata, int2_tdata;
    wire 	      int1_tvalid, int1_tready, int2_tvalid, int2_tready;
    
-   axi_fifo_short #(.WIDTH(WIDTH)) pre_fifo
+   axi_fifo_flop2 #(.WIDTH(WIDTH)) pre_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(int1_tdata), .o_tvalid(int1_tvalid), .o_tready(int1_tready),
@@ -36,7 +36,7 @@ module axi_fifo_cascade
       .o_tdata(int2_tdata), .o_tvalid(int2_tvalid), .o_tready(int2_tready),
       .space(space), .occupied(occupied));   // May change unexpectedly, but are always conservative
   
-   axi_fifo_short #(.WIDTH(WIDTH)) post_fifo
+   axi_fifo_flop2 #(.WIDTH(WIDTH)) post_fifo
      (.clk(clk), .reset(reset), .clear(clear),
       .i_tdata(int2_tdata), .i_tvalid(int2_tvalid), .i_tready(int2_tready),
       .o_tdata(o_tdata), .o_tvalid(o_tvalid), .o_tready(o_tready),

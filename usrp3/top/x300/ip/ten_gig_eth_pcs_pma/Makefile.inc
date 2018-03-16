@@ -9,12 +9,12 @@ $(IP_DIR)/ten_gig_eth_pcs_pma/ten_gige_phy_clk_gen.v \
 $(IP_DIR)/ten_gig_eth_pcs_pma/ten_gige_phy.v \
 $(IP_TEN_GIG_ETH_PCS_PMA_EXAMPLE_SRCS)
 
-IP_TEN_GIG_ETH_PCS_PMA_EXAMPLE_SRCS = $(addprefix $(IP_BUILD_DIR)/ten_gig_eth_pcs_pma_example/ten_gig_eth_pcs_pma_example.srcs/, \
-sources_1/imports/example_design/ten_gig_eth_pcs_pma_example_design.v \
-sources_1/imports/example_design/support/ten_gig_eth_pcs_pma_ff_synchronizer_rst2.v \
-sources_1/imports/example_design/support/ten_gig_eth_pcs_pma_gt_common.v \
-sources_1/imports/example_design/support/ten_gig_eth_pcs_pma_shared_clock_and_reset.v \
-sources_1/imports/example_design/support/ten_gig_eth_pcs_pma_support.v \
+IP_TEN_GIG_ETH_PCS_PMA_EXAMPLE_SRCS = $(addprefix $(IP_BUILD_DIR)/ten_gig_eth_pcs_pma_ex/imports/, \
+ten_gig_eth_pcs_pma_example_design.v \
+ten_gig_eth_pcs_pma_ff_synchronizer_rst2.v \
+ten_gig_eth_pcs_pma_gt_common.v \
+ten_gig_eth_pcs_pma_shared_clock_and_reset.v \
+ten_gig_eth_pcs_pma_support.v \
 ) 
 
 IP_TEN_GIG_ETH_PCS_PMA_SRCS = $(IP_BUILD_DIR)/ten_gig_eth_pcs_pma/ten_gig_eth_pcs_pma.xci

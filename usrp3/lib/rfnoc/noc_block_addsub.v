@@ -37,9 +37,13 @@ module noc_block_addsub #(
   wire [127:0]  out_tuser[0:1], out_tuser_pre[0:1];
   wire [1:0]    out_tlast, out_tvalid, out_tready;
 
-  wire [1:0]    clear_tx_seqnum;
+  wire [1:0]    clear_tx_seqnum, clear_tx_seqnum_bclk;
   wire [15:0]   src_sid[0:1], next_dst_sid[0:1];
 
+  synchronizer #(.INITIAL_VAL(1'b0), .WIDTH(2)) clear_tx_sync_i (
+    .clk(bus_clk), .rst(1'b0), .in(clear_tx_seqnum), .out(clear_tx_seqnum_bclk));
+
+  // FIXME this needs an axi_wrapper, it talks 32bit data
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE({2{STR_SINK_FIFOSIZE[7:0]}}),
@@ -52,7 +56,7 @@ module noc_block_addsub #(
     // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(), .set_addr(), .set_stb(),
+    .set_data(), .set_addr(), .set_stb(), .set_time(), .set_has_time(),
     .rb_stb(2'b11), .rb_data(128'd0), .rb_addr(),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -68,8 +72,9 @@ module noc_block_addsub #(
   genvar     i;
   generate
   for (i=0; i<2; i=i+1)
-    chdr_deframer deframer (
-      .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
+    chdr_deframer_2clk deframer (
+      .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk[i]),
+      .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[i]),
       .i_tdata(str_sink_tdata[i*64+63:i*64]), .i_tlast(str_sink_tlast[i]), .i_tvalid(str_sink_tvalid[i]), .i_tready(str_sink_tready[i]),
       .o_tdata(in_tdata[i]), .o_tuser(in_tuser[i]), .o_tlast(in_tlast[i]), .o_tvalid(in_tvalid[i]), .o_tready(in_tready[i]));
   endgenerate
@@ -115,10 +120,11 @@ module noc_block_addsub #(
   genvar   j;
   generate
   for (j=0; j<2; j=j+1)
-    chdr_framer #(
+    chdr_framer_2clk #(
       .SIZE(MTU))
     framer (
-      .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[j]),
+      .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk[j]),
+      .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[j]),
       .i_tdata(out_tdata[j]), .i_tuser(out_tuser[j]), .i_tlast(out_tlast[j]), .i_tvalid(out_tvalid[j]), .i_tready(out_tready[j]),
       .o_tdata(str_src_tdata[j*64+63:j*64]), .o_tlast(str_src_tlast[j]), .o_tvalid(str_src_tvalid[j]), .o_tready(str_src_tready[j]));
   endgenerate

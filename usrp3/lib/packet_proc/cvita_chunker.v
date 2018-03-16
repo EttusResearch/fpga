@@ -8,25 +8,27 @@
 // this module. error is asserted if a packet is larger than the quantum
 // error can be reset by asserting reset or clear.
 
+`default_nettype none
 module cvita_chunker # (
-   parameter PAD_VALUE = 64'hFFFFFFFF_FFFFFFFF
+   parameter PAD_VALUE = 64'hFFFFFFFF_FFFFFFFF,
+             HOLD_ERROR = 1'b1 // If high, hold error until reset, else pulse
 ) (
-   input          clk,
-   input          reset,
-   input          clear,
-   input [15:0]   frame_size,
+   input wire          clk,
+   input wire          reset,
+   input wire          clear,
+   input wire [15:0]   frame_size,
 
-   input [63:0]   i_tdata,
-   input          i_tlast,
-   input          i_tvalid,
-   output         i_tready,
+   input wire [63:0]   i_tdata,
+   input wire          i_tlast,
+   input wire          i_tvalid,
+   output reg          i_tready,
    
-   output [63:0]  o_tdata,
-   output         o_tlast,
-   output         o_tvalid,
-   input          o_tready,
+   output wire [63:0]  o_tdata,
+   output wire         o_tlast,
+   output reg          o_tvalid,
+   input  wire         o_tready,
    
-   output         error
+   output wire         error
 );
 
    localparam ST_HEADER  = 2'd0;
@@ -37,33 +39,40 @@ module cvita_chunker # (
    reg [1:0]   state;
    reg [15:0]  frame_rem;
 
-   wire [15:0] cvita_len_ceil = i_tdata[47:32] + 7;
+   wire [15:0] cvita_len_ceil = i_tdata[47:32] + 16'd7;
    wire [15:0] axi_len = {3'b000, cvita_len_ceil[15:3]};
 
    always @(posedge clk) begin
       if (reset | clear) begin
          state <= ST_HEADER;
          frame_rem <= 16'd0;
-      end else if (o_tvalid & o_tready) begin
+      end else if ((state == ST_ERROR) & i_tlast & i_tvalid & !HOLD_ERROR) begin
+         state <= ST_HEADER;
+         frame_rem <= 16'd0;
+      end else if (o_tready) begin
          case (state)
             ST_HEADER: begin
-               if (axi_len > frame_size)
-                  state <= ST_ERROR;
-               else if (i_tlast)
-                  state <= ST_PADDING;
-               else
-                  state <= ST_DATA;
-                  
-               frame_rem <= frame_size - 16'd1;
+               if (i_tvalid) begin
+                  if ((axi_len > frame_size) | (axi_len == 16'd0))
+                     state <= ST_ERROR;
+                  else if (i_tlast)
+                     state <= ST_PADDING;
+                  else
+                     state <= ST_DATA;
+                     
+                  frame_rem <= frame_size - 16'd1;
+               end
             end
 
             ST_DATA: begin
-               if (i_tlast) begin
-                  state   <= o_tlast ? ST_HEADER : ST_PADDING;
-                  frame_rem <= o_tlast ? 16'd0 : (frame_rem - 16'd1);
-               end else begin
-                  state <= ST_DATA;
-                  frame_rem <= frame_rem - 16'd1;
+               if (i_tvalid) begin
+                  if (i_tlast) begin
+                     state   <= o_tlast ? ST_HEADER : ST_PADDING;
+                     frame_rem <= o_tlast ? 16'd0 : (frame_rem - 16'd1);
+                  end else begin
+                     state <= ST_DATA;
+                     frame_rem <= frame_rem - 16'd1;
+                  end
                end
             end
 
@@ -76,16 +85,46 @@ module cvita_chunker # (
                   frame_rem <= frame_rem - 16'd1;
                end
             end
+
          endcase
       end
    end
 
-   assign i_tready = o_tready & (state != ST_PADDING);
-   
-   assign o_tvalid = i_tvalid | (state == ST_PADDING);
-   assign o_tlast = (frame_rem != 0) ? (frame_rem == 16'd1) : (axi_len == 16'd1);
+   always @(*) begin
+      case (state)
+         ST_HEADER: begin
+            i_tready = o_tready;
+            o_tvalid = (axi_len <= frame_size) & (axi_len > 16'd0) & i_tvalid;
+         end
+
+         ST_DATA: begin
+            i_tready = o_tready;
+            o_tvalid = i_tvalid;
+         end
+
+         ST_PADDING: begin
+            i_tready = 1'b0;
+            o_tvalid = 1'b1;
+         end
+
+         ST_ERROR: begin
+            i_tready = 1'b1;
+            o_tvalid = 1'b0;
+         end
+
+         default: begin
+            i_tready = 1'b0;
+            o_tvalid = 1'b0;
+         end
+      endcase
+   end
+
+   assign o_tlast = (frame_rem != 16'd0) ? (frame_rem == 16'd1) : (axi_len == 16'd1);
    assign o_tdata = (state == ST_PADDING) ? PAD_VALUE : i_tdata;
 
    assign error = (state == ST_ERROR);
 
 endmodule // cvita_chunker
+
+`default_nettype wire
+

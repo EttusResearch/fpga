@@ -19,6 +19,26 @@
       #((1.000*period)*(1.0-(1.0*duty_cycle/100))); \
     end
 
+// Generates a persistent clock that starts at t=0 and runs forever
+//
+// Usage: `DEFINE_CLK(clk_name,period,duty_cycle)
+// where
+//  - clk_name:   The clock net to be generated
+//  - period:     Period of the clock in simulator ticks
+//  - duty_cycle: Percentage duty cycle
+//
+`define DEFINE_DIFF_CLK(clk_name_p, clk_name_n, period, duty_cycle) \
+    reg clk_name_p = 0; \
+    reg clk_name_n = 1; \
+    always begin \
+      clk_name_p = 1; \
+      clk_name_n = 0; \
+      #((1.0*period)*(1.0*duty_cycle/100)); \
+      clk_name_p = 0; \
+      clk_name_n = 1; \
+      #((1.000*period)*(1.0-(1.0*duty_cycle/100))); \
+    end
+
 // Generates a clock that starts at the specified time and runs forever
 //
 // Usage: `DEFINE_LATE_START_CLK(clk_name,period,duty_cycle,start_time,start_time_res)

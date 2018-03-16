@@ -4,7 +4,7 @@
 
 `timescale 1ns/1ps
 
-module axis_dram_fifo_single 
+module axis_dram_fifo_single
 #(
   parameter USE_SRAM_MEMORY = 0,
   parameter USE_BD_INTERCON = 0,
@@ -13,8 +13,8 @@ module axis_dram_fifo_single
   input         bus_clk,
   input         bus_rst,
   input         sys_clk,
-  input         sys_rst_n,
-  
+  input         sys_rst,
+
   input [63:0]  i_tdata,
   input         i_tlast,
   input         i_tvalid,
@@ -36,10 +36,10 @@ module axis_dram_fifo_single
 );
 
   // Misc declarations
-  axi4_rd_t #(.DWIDTH(64), .AWIDTH(30), .IDWIDTH(4)) dma_axi_rd(.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(64), .AWIDTH(30), .IDWIDTH(4)) dma_axi_wr(.clk(sys_clk));
-  axi4_rd_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_rd(.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_wr(.clk(sys_clk));
+  axi4_rd_t #(.DWIDTH(64), .AWIDTH(32), .IDWIDTH(1)) dma_axi_rd(.clk(sys_clk));
+  axi4_wr_t #(.DWIDTH(64), .AWIDTH(32), .IDWIDTH(1)) dma_axi_wr(.clk(sys_clk));
+  axi4_rd_t #(.DWIDTH(256), .AWIDTH(32), .IDWIDTH(1)) mig_axi_rd(.clk(sys_clk));
+  axi4_wr_t #(.DWIDTH(256), .AWIDTH(32), .IDWIDTH(1)) mig_axi_wr(.clk(sys_clk));
 
   wire [31:0]   ddr3_dq;      // Data pins. Input for Reads; Output for Writes.
   wire [3:0]    ddr3_dqs_n;   // Data Strobes. Input for Reads; Output for Writes.
@@ -66,11 +66,12 @@ module axis_dram_fifo_single
     ddr3_axi_rst_reg_n <= ~ddr3_axi_rst;
 
   axi_dma_fifo #(
-    .DEFAULT_BASE(30'h00040000),
-    .DEFAULT_MASK(30'hFFFC0000),
+    .DEFAULT_BASE(30'h00010000),
+    .DEFAULT_MASK(30'hFFFF0000),
     .DEFAULT_TIMEOUT(280),
     .SR_BASE(SR_BASE),
-    .EXT_BIST(1)
+    .EXT_BIST(1),
+    .SIMULATION(1)
   ) axi_dma_fifo_i0 (
     //
     // Clocks and reset
@@ -201,10 +202,6 @@ module axis_dram_fifo_single
     if (USE_BD_INTERCON) begin
     // Vivado Block Diagram interconnect.
     axi_intercon_2x64_128_bd_wrapper axi_intercon_2x64_128_i (
-      .INTERCONNECT_ACLK(ddr3_axi_clk_x2), // input INTERCONNECT_ACLK
-      .INTERCONNECT_ARESETN(~ddr3_axi_rst), // input INTERCONNECT_ARESETN
-      //
-      //.S00_AXI_ARESET_OUT_N                 (), // output S00_AXI_ARESET_OUT_N
       .S00_AXI_ACLK                         (ddr3_axi_clk_x2), // input S00_AXI_ACLK
       .S00_AXI_ARESETN                      (~ddr3_axi_rst), // input S00_AXI_ARESETN
       .S00_AXI_AWID                         (dma_axi_wr.addr.id), // input [0 : 0] S00_AXI_AWID
@@ -453,11 +450,13 @@ module axis_dram_fifo_single
       .M00_AXI_RVALID                       (mig_axi_rd.data.valid), // input M00_AXI_RVALID
       .M00_AXI_RREADY                       (mig_axi_rd.data.ready) // output M00_AXI_RREADY
     );
-    end 
-  
+    end
+
     //---------------------------------------------------
     // MIG
     //---------------------------------------------------
+    wire ddr3_idelay_refclk;
+
     ddr3_32bit ddr_mig_i (
       // Memory interface ports
       .ddr3_addr                      (ddr3_addr),
@@ -473,14 +472,18 @@ module axis_dram_fifo_single
       .ddr3_dqs_n                     (ddr3_dqs_n),
       .ddr3_dqs_p                     (ddr3_dqs_p),
       .init_calib_complete            (init_calib_complete),
-  
+
       .ddr3_cs_n                      (ddr3_cs_n),
       .ddr3_dm                        (ddr3_dm),
       .ddr3_odt                       (ddr3_odt),
       // Application interface ports
-      .ui_clk                         (ddr3_axi_clk),  // 150MHz clock out
-      .ui_clk_x2                      (ddr3_axi_clk_x2),  // 300MHz clock out
-      .ui_clk_div2                      (),  // 75MHz clock out
+      .ui_clk                         (ddr3_axi_clk),    // 150MHz clock out
+      .ui_addn_clk_0                  (ddr3_axi_clk_x2), // 300MHz clock out
+      .ui_addn_clk_1                  (ddr3_idelay_refclk),
+      .ui_addn_clk_2                  (),
+      .ui_addn_clk_3                  (),
+      .ui_addn_clk_4                  (),
+      .clk_ref_i                      (ddr3_idelay_refclk),
       .ui_clk_sync_rst                (ddr3_axi_rst),  // Active high Reset signal synchronised to 150MHz
       .aresetn                        (ddr3_axi_rst_reg_n),
       .app_sr_req                     (1'b0),
@@ -489,7 +492,7 @@ module axis_dram_fifo_single
       .app_ref_ack                    (),
       .app_zq_req                     (1'b0),
       .app_zq_ack                     (),
-  
+      .device_temp_i                  (12'd0),
       // Slave Interface Write Address Ports
       .s_axi_awid                     (mig_axi_wr.addr.id),
       .s_axi_awaddr                   (mig_axi_wr.addr.addr),
@@ -534,9 +537,9 @@ module axis_dram_fifo_single
       .s_axi_rready                   (mig_axi_rd.data.ready),
       // System Clock Ports
       .sys_clk_i                      (sys_clk),  // From external 100MHz source.
-      .sys_rst                        (sys_rst_n) // IJB. Poorly named active low. Should change RST_ACT_LOW.
+      .sys_rst                        (sys_rst)
     );
-  
+
     //---------------------------------------------------
     // DDR3 SDRAM Models
     //---------------------------------------------------
@@ -544,38 +547,38 @@ module axis_dram_fifo_single
       .DEBUG(0)   //Disable verbose prints
     ) sdram_i0 (
       .rst_n    (ddr3_reset_n),
-      .ck       (ddr3_ck_p), 
+      .ck       (ddr3_ck_p),
       .ck_n     (ddr3_ck_n),
-      .cke      (ddr3_cke), 
+      .cke      (ddr3_cke),
       .cs_n     (ddr3_cs_n),
-      .ras_n    (ddr3_ras_n), 
-      .cas_n    (ddr3_cas_n), 
-      .we_n     (ddr3_we_n), 
-      .dm_tdqs  (ddr3_dm[1:0]), 
-      .ba       (ddr3_ba), 
-      .addr     (ddr3_addr), 
-      .dq       (ddr3_dq[15:0]), 
+      .ras_n    (ddr3_ras_n),
+      .cas_n    (ddr3_cas_n),
+      .we_n     (ddr3_we_n),
+      .dm_tdqs  (ddr3_dm[1:0]),
+      .ba       (ddr3_ba),
+      .addr     (ddr3_addr),
+      .dq       (ddr3_dq[15:0]),
       .dqs      (ddr3_dqs_p[1:0]),
       .dqs_n    (ddr3_dqs_n[1:0]),
       .tdqs_n   (), // Unused on x16
-      .odt      (ddr3_odt)  
+      .odt      (ddr3_odt)
     );
-  
+
     ddr3_model #(
       .DEBUG(0)   //Disable verbose prints
     ) sdram_i1 (
       .rst_n    (ddr3_reset_n),
-      .ck       (ddr3_ck_p), 
+      .ck       (ddr3_ck_p),
       .ck_n     (ddr3_ck_n),
-      .cke      (ddr3_cke), 
+      .cke      (ddr3_cke),
       .cs_n     (ddr3_cs_n),
-      .ras_n    (ddr3_ras_n), 
-      .cas_n    (ddr3_cas_n), 
-      .we_n     (ddr3_we_n), 
-      .dm_tdqs  (ddr3_dm[3:2]), 
-      .ba       (ddr3_ba), 
-      .addr     (ddr3_addr), 
-      .dq       (ddr3_dq[31:16]), 
+      .ras_n    (ddr3_ras_n),
+      .cas_n    (ddr3_cas_n),
+      .we_n     (ddr3_we_n),
+      .dm_tdqs  (ddr3_dm[3:2]),
+      .ba       (ddr3_ba),
+      .addr     (ddr3_addr),
+      .dq       (ddr3_dq[31:16]),
       .dqs      (ddr3_dqs_p[3:2]),
       .dqs_n    (ddr3_dqs_n[3:2]),
       .tdqs_n   (), // Unused on x16

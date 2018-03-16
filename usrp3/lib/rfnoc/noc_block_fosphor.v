@@ -32,8 +32,11 @@ module noc_block_fosphor #(
   wire [127:0] str_src_tdata;
   wire   [1:0] str_src_tlast, str_src_tvalid, str_src_tready;
 
-  wire [1:0]  clear_tx_seqnum;
+  wire [1:0]  clear_tx_seqnum, clear_tx_seqnum_bclk;
   wire [15:0] src_sid[0:1], next_dst_sid[0:1];
+
+  synchronizer #(.INITIAL_VAL(1'b0), .WIDTH(2)) clear_tx_sync_i (
+    .clk(bus_clk), .rst(1'b0), .in(clear_tx_seqnum), .out(clear_tx_seqnum_bclk));
 
   // Shell instance
   noc_shell #(
@@ -49,7 +52,7 @@ module noc_block_fosphor #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data_f), .set_addr(set_addr_f), .set_stb(set_stb_f), .set_time(),
+    .set_data(set_data_f), .set_addr(set_addr_f), .set_stb(set_stb_f), .set_time(), .set_has_time(),
     .rb_stb(2'b11), .rb_addr(), .rb_data(128'd0),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -88,8 +91,8 @@ module noc_block_fosphor #(
   wire         in_tready;
   wire [127:0] in_tuser;
 
-  chdr_deframer deframer (
-    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
+  chdr_deframer_2clk deframer (
+    .samp_clk(ce_clk), .samp_rst(ce_rst), .pkt_clk(bus_clk), .pkt_rst(bus_rst),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(in_tdata), .o_tuser(in_tuser), .o_tlast(in_tlast), .o_tvalid(in_tvalid), .o_tready(in_tready)
   );
@@ -133,10 +136,10 @@ module noc_block_fosphor #(
 
   assign hist_tdatas = { hist_tdata[7:0], hist_tdata[15:8], hist_tdata[23:16], hist_tdata[31:24] };
 
-  chdr_framer #(
+  chdr_framer_2clk #(
     .SIZE(MTU)
   ) framer_hist (
-    .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[0]),
+    .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[0]), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk[0]),
     .i_tdata(hist_tdatas), .i_tuser(hist_tuser), .i_tlast(hist_tlast), .i_tvalid(hist_tvalid), .i_tready(hist_tready),
     .o_tdata(str_src_tdata[63:0]), .o_tlast(str_src_tlast[0]), .o_tvalid(str_src_tvalid[0]), .o_tready(str_src_tready[0])
   );
@@ -160,10 +163,10 @@ module noc_block_fosphor #(
 
   assign wf_tdatas = { wf_tdata[7:0], wf_tdata[15:8], wf_tdata[23:16], wf_tdata[31:24] };
 
-  chdr_framer #(
+  chdr_framer_2clk #(
     .SIZE(MTU)
   ) framer_wf (
-    .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[1]),
+    .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[1]), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk[1]),
     .i_tdata(wf_tdatas), .i_tuser(wf_tuser), .i_tlast(wf_tlast), .i_tvalid(wf_tvalid), .i_tready(wf_tready),
     .o_tdata(str_src_tdata[127:64]), .o_tlast(str_src_tlast[1]), .o_tvalid(str_src_tvalid[1]), .o_tready(str_src_tready[1])
   );

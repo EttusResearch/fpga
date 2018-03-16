@@ -1,0 +1,518 @@
+<?xml version="1.0" ?>
+<root>
+  <privilege value="5"/>
+  <top name="MgCpld">
+    <source name="TopCpld.vhd"/>
+  </top>
+  <regmap name="MgCpld" readablestrobes="true">
+    <group name="PsSpi_CpldRegisters" order="1">
+      <info>
+These registers are accessed via the PS SPI interface to the CPLD. They are all
+internal to the CPLD. The SPI format is 24 bits total. On MOSI, shift (msb first)
+Rd/!Wt | Addr(6:0) | Data(15:0) (lsb). The SPI clock {b}MUST{/b} idle LOW before
+and after the transaction. CPOL=CPHA=0. To access these registers, use the chip
+select line named &quot;CPLD-PS-SPI-SLE-33&quot; as an active-low select.
+</info>
+      <register name="SignatureReg" offset="0x00" readable="true" size="16" writable="false">
+        <info>
+This register contains the device signature.
+</info>
+        <bitfield name="ProductSignature" range="15-0">
+          <info>
+Represents the product family name/number. This field reads back as
+0xCAFE.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="MinorRevReg" offset="0x01" readable="true" size="16" writable="false">
+        <info>
+This register contains the device revision numeric code.
+</info>
+        <bitfield name="CpldMinorRevision" range="15-0">
+          <info>
+Contains minor revision code (0,1,2,...).
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="MajorRevReg" offset="0x02" readable="true" size="16" writable="false">
+        <info>
+This register contains the major revision value.
+</info>
+        <bitfield name="CpldMajorRevision" range="15-0">
+          <info>
+Contains major revision code.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="BuildCodeLSB" offset="0x03" readable="true" size="16" writable="false">
+        <info>
+Build code... right now it's the date it was built. LSB in this register.
+</info>
+        <bitfield name="BuildCodeHH" range="7-0">
+          <info>
+Contains build code hour code.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="BuildCodeDD" range="15-8">
+          <info>
+Contains build code day code.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="BuildCodeMSB" offset="0x04" readable="true" size="16" writable="false">
+        <info>
+Build code... right now it's the date it was built. MSB in this register.
+</info>
+        <bitfield name="BuildCodeMM" range="7-0">
+          <info>
+Contains build code month code.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="BuildCodeYY" range="15-8">
+          <info>
+Contains build code revision year code.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="Scratch" offset="0x05" readable="true" size="16" writable="true">
+        <info>
+</info>
+        <bitfield name="ScratchVal" range="15-0">
+          <info>
+Contains scratch value for testing. The state of this register has
+no effect on any other operation in the CPLD.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="CpldControl" offset="0x10" readable="false" size="16" writable="true">
+        <info>
+</info>
+        <bitfield name="CpldReset" range="0">
+          <info>
+Asserting this bit resets all the CPLD logic.
+This reset will return all registers on the PS SPI interface to their default
+state! To use this reset correctly, first write CpldReset to '1', then write
+it to '0'. Registers will be reset on the _falling_ edge of CpldReset.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="LmkControl" offset="0x11" readable="true" size="16" writable="true">
+        <info>
+</info>
+        <bitfield name="VcxoControl" range="4">
+          <info>
+Setting this bit to '0' will allow the Phase DAC to exclusively control the
+VCXO voltage. Defaults to '1', which allows the Phase DAC to adjust the
+voltage (but the LMK still has control as well).
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="LoStatus" offset="0x12" readable="true" size="16" writable="false">
+        <info>
+</info>
+        <bitfield attributes="Readable" name="RxLoLockDetect" range="0">
+          <info>
+Live lock detect status from the RX LO.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield attributes="Readable" name="TxLoLockDetect" range="4">
+          <info>
+Live lock detect status from the TX LO.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="MykonosControl" offset="0x13" readable="true" size="16" writable="true">
+        <info>
+</info>
+        <bitfield name="MykonosReset" range="0">
+          <info>
+Drives the Mykonos hard reset line. Defaults to de-asserted. Write a '1' to
+assert the reset, and a '0' to de-assert.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <source name="TopCpld.vhd"/>
+    </group>
+    <group name="PlSpi_FrontEndControl" order="2">
+      <info>
+These registers are accessed via the PL SPI interface to the CPLD. They are all
+internal to the CPLD. The SPI format is 24 bits total. On MOSI, shift (msb first)
+Rd/!Wt | Addr(6:0) | Data(15:0) (lsb). The SPI clock {b}MUST{/b} idle LOW before
+and after the transaction. CPOL=CPHA=0. To access these registers, use the chip
+select line named &quot;CPLD-PL-SPI-LE-25&quot; as an active-low select. {br}{br}
+The ATR bits ultimately control which of these registers actually control
+the RF front end.
+</info>
+      <register name="PlScratch" offset="0x40" readable="true" size="16" writable="true">
+        <bitfield name="PlScratchVal" range="15-0">
+          <info>
+Contains scratch value for testing. The state of this register has no effect
+on any other operation in the CPLD.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="PlCpldControl" offset="0x41" readable="false" size="16" writable="true">
+        <info>
+</info>
+        <bitfield name="PlCpldReset" range="0">
+          <info>
+Asserting this bit resets all the CPLD logic on the PL SPI interface.
+This reset will return all registers to their default state! To use this
+reset correctly, first write PlCpldReset to '1', then write it to '0'.
+Registers will be reset on the _falling_ edge of PlCpldReset.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <enumeratedtype name="TrxSwitch">
+        <value integer="0" name="FromLowerFilterBankTxSw1"/>
+        <value integer="1" name="FromTxUpperFilterBankLp6400MHz"/>
+        <value integer="2" name="RxChannelPath"/>
+        <value integer="3" name="BypassPathToTxSw3"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="TxSwitch1">
+        <value integer="0" name="ShutdownTxSw1"/>
+        <value integer="1" name="FromTxFilterLp1700MHz"/>
+        <value integer="2" name="FromTxFilterLp3400MHz"/>
+        <value integer="3" name="FromTxFilterLp0800MHz"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="TxSwitch2">
+        <value integer="1" name="ToTxFilterLp3400MHz"/>
+        <value integer="2" name="ToTxFilterLp1700MHz"/>
+        <value integer="4" name="ToTxFilterLp0800MHz"/>
+        <value integer="8" name="ToTxFilterLp6400MHz"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="TxSwitch3">
+        <value integer="0" name="ToTxFilterBanks"/>
+        <value integer="1" name="BypassPathToTrxSw"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <register name="TxCh1_Idle" offset="0x50" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel TX 1 when the
+ATR bits are configured: TX = 0, RX = don't-care.
+</info>
+        <bitfield name="Ch1TxSw1" range="1-0" type="TxSwitch1">
+          <info>
+Controls Switch 1. Filter bank receive switch.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxSw2" range="5-2" type="TxSwitch2">
+          <info>
+Controls Switch 2. Filter bank distribution switch.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxSw3" range="6" type="TxSwitch3">
+          <info>
+Controls Switch 3. Bypasses the filter bank and PA, or doesn't.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxLowbandMixerPathSelect" range="7">
+          <info>
+Controls Switches 4 and 5. Write a '1' to select the Lowband Mixer path.
+Writing '0' will select the bypass path around the mixer. Default is '0'. Note:
+Individual control over these switches was removed as an optimization to
+allow all TX controls to fit in one 16 bit register.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxMixerEn" range="8">
+          <info>
+Write a '1' to enable the lowband mixer. Note that Ch1TxLowbandMixerPathSelect
+must be properly configured to select the mixer path.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxAmpEn" range="9">
+          <info>
+Write a '1' to enable the TX path Amp in between TX switches 3 and 4. The path
+(from Mykonos) is: TxSw4 -&gt; Amp -&gt; DSA -&gt; TxSw3.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxPaEn" range="10">
+          <info>
+Write a '1' to enable the TX path PA in between TX switches 2 and 3.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1SwTrx" range="12-11" type="TrxSwitch">
+          <info>
+TRX switch control.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1TxLed" range="13">
+          <info>
+Red/Green combo LED for the TRX channel.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1MykEnTx" range="14">
+          <info>
+Drives the Mykonos input port TX1_ENABLE.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="TxCh1_TxOn" offset="0x53" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel TX 1 when the
+ATR bits are configured: TX = 1, RX = don't-care. The bitfields are the same
+as for the Tx1_Off register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="TxCh2_Idle" offset="0x60" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel TX 2 when the
+ATR bits are configured: TX = 0, RX = don't-care. The bitfields are the same
+as for the Tx1_Off register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="TxCh2_TxOn" offset="0x63" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel TX 2 when the
+ATR bits are configured: TX = 1, RX = don't-care. The bitfields are the same
+as for the Tx1_Off register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <enumeratedtype name="Rx1Switch1">
+        <value integer="0" name="TxRxInput"/>
+        <value integer="1" name="RxLoCalInput"/>
+        <value integer="2" name="TrxSwitchOutput"/>
+        <value integer="3" name="Rx2Input"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="Rx1Switch2">
+        <value integer="0" name="ShutdownSw2"/>
+        <value integer="1" name="LowerFilterBankToSwitch3"/>
+        <value integer="2" name="BypassPathToSwitch6"/>
+        <value integer="3" name="UpperFilterBankToSwitch4"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="Rx1Switch3">
+        <value integer="0" name="Filter2100x2850MHz"/>
+        <value integer="1" name="Filter0490LpMHz"/>
+        <value integer="2" name="Filter1600x2250MHz"/>
+        <value integer="4" name="Filter0440x0530MHz"/>
+        <value integer="5" name="Filter0650x1000MHz"/>
+        <value integer="6" name="Filter1100x1575MHz"/>
+        <value integer="7" name="ShutdownSw3"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="Rx1Switch4">
+        <value integer="1" name="Filter2100x2850MHzFrom"/>
+        <value integer="2" name="Filter1600x2250MHzFrom"/>
+        <value integer="4" name="Filter2700HpMHz"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="Rx1Switch5">
+        <value integer="1" name="Filter0440x0530MHzFrom"/>
+        <value integer="2" name="Filter1100x1575MHzFrom"/>
+        <value integer="4" name="Filter0490LpMHzFrom"/>
+        <value integer="8" name="Filter0650x1000MHzFrom"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <enumeratedtype name="Rx1Switch6">
+        <value integer="1" name="LowerFilterBankFromSwitch5"/>
+        <value integer="2" name="UpperFilterBankFromSwitch4"/>
+        <value integer="4" name="BypassPathFromSwitch2"/>
+        <source name="TopCpld.vhd"/>
+      </enumeratedtype>
+      <register name="RxCh1_0_Idle" offset="0x51" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 1 when the
+ATR bits are configured: TX = don't-care, RX = 0.
+</info>
+        <bitfield name="Ch1RxSw1" range="1-0" type="Rx1Switch1">
+          <info>
+Controls Switch 1. Selects between the cal, bypass, RX2, and TRX paths.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxSw2" range="3-2" type="Rx1Switch2">
+          <info>
+Controls Switch 2. First filter switch. Selects between bypass path and
+the upper/lower filter banks.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxSw3" range="6-4" type="Rx1Switch3">
+          <info>
+Controls Switch 3. Lower filter bank transmit switch.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxSw4" range="9-7" type="Rx1Switch4">
+          <info>
+Controls Switch 4. Upper filter bank receive switch.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxSw5" range="13-10" type="Rx1Switch5">
+          <info>
+Controls Switch 5. Lower filter bank receive switch.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh1_1_Idle" offset="0x52" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 1 when the
+ATR bits are configured: TX = don't-care, RX = 0.
+</info>
+        <bitfield name="Ch1RxSw6" range="2-0" type="Rx1Switch6">
+          <info>
+Controls Switch 6. Selects between the upper and lower filter banks and
+bypass path.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxLowbandMixerPathSelect" range="3">
+          <info>
+Controls Switches 7 and 8. Write a '1' to select the Lowband Mixer path.
+Writing '0' will select the bypass path around the mixer. Default is '0'. Note:
+Individual control over these switches was removed as an optimization to
+allow all TX controls to fit in one 16 bit register... so the same was done
+for the RX path for continuity.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxMixerEn" range="4">
+          <info>
+Write a '1' to enable the lowband mixer. Note that Ch1RxLowbandMixerPathSelect
+must be properly configured to select the mixer path.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxAmpEn" range="5">
+          <info>
+Write a '1' to enable the RX path Amp directly before the Mykonos inputs.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxLna1En" range="6">
+          <info>
+Write a '1' to enable the RX path LNA1 between RxSw4 and RxSw6.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxLna2En" range="7">
+          <info>
+Write a '1' to enable the RX path LNA2 between RxSw5 and RxSw6.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1Rx2Led" range="8">
+          <info>
+Green LED for RX2 channel.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1RxLed" range="9">
+          <info>
+Red/Green combo LED for the TRX channel.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <bitfield name="Ch1MykEnRx" range="10">
+          <info>
+Drives the Mykonos input port RX1_ENABLE.
+</info>
+          <source name="TopCpld.vhd"/>
+        </bitfield>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh1_0_RxOn" offset="0x54" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 1 when the
+ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+as for the RxCh1_0_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh1_1_RxOn" offset="0x55" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 1 when the
+ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+as for the RxCh1_1_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh2_0_Idle" offset="0x61" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 2 when the
+ATR bits are configured: TX = don't-care, RX = 0. The bitfields are the same
+as for the RxCh1_0_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh2_1_Idle" offset="0x62" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 2 when the
+ATR bits are configured: TX = don't-care, RX = 0. The bitfields are the same
+as for the RxCh1_1_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh2_0_RxOn" offset="0x64" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 2 when the
+ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+as for the RxCh1_0_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <register name="RxCh2_1_RxOn" offset="0x65" readable="true" size="16" writable="true">
+        <info>
+Load this register with the front-end configuration for channel RX 2 when the
+ATR bits are configured: TX = don't-care, RX = 1. The bitfields are the same
+as for the RxCh1_1_Idle register.
+</info>
+        <source name="TopCpld.vhd"/>
+      </register>
+      <source name="TopCpld.vhd"/>
+    </group>
+    <source name="TopCpld.vhd"/>
+    <files>
+      <file name="topcpld.vhd" path="./Source/TempVHDL/TopCpld.vhd"/>
+    </files>
+  </regmap>
+</root>

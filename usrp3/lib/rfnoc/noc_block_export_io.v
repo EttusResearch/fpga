@@ -16,8 +16,8 @@ module noc_block_export_io
                              //             which could break flow control / cause a lockup
                              // 1: Recalculate automatically, generally use this option
 )(
-  input bus_clk, bus_rst,
-  input ce_clk, ce_rst,
+  input bus_clk, input bus_rst,
+  input ce_clk, input ce_rst,
   // Interface to crossbar
   input  [63:0] i_tdata, input  i_tlast, input  i_tvalid, output i_tready,
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input  o_tready,
@@ -47,11 +47,13 @@ module noc_block_export_io
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire [NUM_PORTS*64-1:0]      str_sink_tdata, str_src_tdata;
-  wire [NUM_PORTS-1:0]         str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [NUM_PORTS*64-1:0] str_sink_tdata, str_src_tdata;
+  wire [NUM_PORTS-1:0]    str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
+  wire [NUM_PORTS*64-1:0] str_sink_tdata_bclk, str_src_tdata_bclk;
+  wire [NUM_PORTS-1:0]    str_sink_tlast_bclk, str_sink_tvalid_bclk, str_sink_tready_bclk, str_src_tlast_bclk, str_src_tvalid_bclk, str_src_tready_bclk;
 
   wire [NUM_PORTS-1:0]         clear_tx_seqnum;
-  wire [NUM_PORTS*16-1:0]      src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid;
+  wire [NUM_PORTS*16-1:0]      src_sid, next_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
@@ -66,15 +68,15 @@ module noc_block_export_io
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
     .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(s_cvita_cmd_tdata), .cmdout_tlast(s_cvita_cmd_tlast), .cmdout_tvalid(s_cvita_cmd_tvalid), .cmdout_tready(s_cvita_cmd_tready),
     .ackin_tdata(m_cvita_ack_tdata), .ackin_tlast(m_cvita_ack_tlast), .ackin_tvalid(m_cvita_ack_tvalid), .ackin_tready(m_cvita_ack_tready),
     // Stream Sink
-    .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
+    .str_sink_tdata(str_sink_tdata_bclk), .str_sink_tlast(str_sink_tlast_bclk), .str_sink_tvalid(str_sink_tvalid_bclk), .str_sink_tready(str_sink_tready_bclk),
     // Stream Source
-    .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
+    .str_src_tdata(str_src_tdata_bclk), .str_src_tlast(str_src_tlast_bclk), .str_src_tvalid(str_src_tvalid_bclk), .str_src_tready(str_src_tready_bclk),
     // Misc
     .vita_time(64'd0), .clear_tx_seqnum(clear_tx_seqnum),
     .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
@@ -88,6 +90,24 @@ module noc_block_export_io
   genvar i;
   generate
     for (i = 0; i < NUM_PORTS; i = i + 1) begin
+      axi_fifo_2clk #(
+        .WIDTH(65), .SIZE(5)
+      ) str_sink_2clk_i (
+        .reset(bus_rst), .i_aclk(bus_clk),
+        .i_tdata({str_sink_tlast_bclk[i], str_sink_tdata_bclk[64*i+63:64*i]}), .i_tvalid(str_sink_tvalid_bclk[i]), .i_tready(str_sink_tready_bclk[i]),
+        .o_aclk(ce_clk),
+        .o_tdata({str_sink_tlast[i], str_sink_tdata[64*i+63:64*i]}), .o_tvalid(str_sink_tvalid[i]), .o_tready(str_sink_tready[i])
+      );
+    
+      axi_fifo_2clk #(
+        .WIDTH(65), .SIZE(5)
+      ) str_src_2clk_i (
+        .reset(ce_rst), .i_aclk(ce_clk),
+        .i_tdata({str_src_tlast[i], str_src_tdata[64*i+63:64*i]}), .i_tvalid(str_src_tvalid[i]), .i_tready(str_src_tready[i]),
+        .o_aclk(bus_clk),
+        .o_tdata({str_src_tlast_bclk[i], str_src_tdata_bclk[64*i+63:64*i]}), .o_tvalid(str_src_tvalid_bclk[i]), .o_tready(str_src_tready_bclk[i])
+      );
+
       wire [63:0] aw_i_tdata, aw_o_tdata;
       wire        aw_i_tlast, aw_i_tvalid, aw_i_tready, aw_o_tlast, aw_o_tvalid, aw_o_tready;
 
@@ -100,6 +120,7 @@ module noc_block_export_io
         .NUM_AXI_CONFIG_BUS(1),
         .SIMPLE_MODE(0))
       axi_wrapper (
+        .bus_clk(ce_clk), .bus_rst(ce_rst),
         .clk(ce_clk), .reset(ce_rst),
         .clear_tx_seqnum(clear_tx_seqnum[0]),
         .next_dst(),
@@ -180,7 +201,7 @@ module noc_block_export_io
       wire [1:0] pkt_type;
       wire eob, has_time;
       wire [15:0] payload_length;
-      wire [15:0] src_sid;
+      wire [15:0] src_sid_x;
       wire [15:0] dst_sid;
       wire [63:0] vita_time;
       wire [63:0] str_src_tdata_int, str_src_tdata_mux;
@@ -202,7 +223,7 @@ module noc_block_export_io
         .hdr_stb(hdr_stb),
         .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
         .seqnum(), .length(), .payload_length(payload_length),
-        .src_sid(src_sid), .dst_sid(dst_sid),
+        .src_sid(src_sid_x), .dst_sid(dst_sid),
         .vita_time_stb(vita_time_stb), .vita_time(vita_time),
         .i_tdata(str_src_tdata_mux), .i_tlast(str_src_tlast_mux), .i_tvalid(str_src_tvalid_mux), .i_tready(str_src_tready_mux),
         .o_tdata(str_src_tdata_int), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
@@ -211,7 +232,7 @@ module noc_block_export_io
       cvita_hdr_encoder cvita_hdr_encoder (
         .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
         .seqnum(tx_seqnum_cnt), .payload_length(payload_length),
-        .src_sid(src_sid), .dst_sid(dst_sid),
+        .src_sid(src_sid_x), .dst_sid(dst_sid),
         .vita_time(vita_time),
         .header(modified_header));
 

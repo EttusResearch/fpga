@@ -5,7 +5,7 @@
 ##################################################
 # Project Setup
 ##################################################
-TOP_MODULE = e300
+# TOP_MODULE = <Input arg>
 # NAME = <Input arg>
 # PART_ID = <Input arg>
 
@@ -19,6 +19,7 @@ include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 
 include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
+include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/ip/Makefile.inc
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/hls/Makefile.inc
@@ -41,8 +42,7 @@ include $(BASE_DIR)/e300/Makefile.OOT.inc
 TOP_SRCS = e3xx_ps.v \
            ppsloop.v \
            spi_slave.v \
-           axi_pmu.v \
-           axi_dummy.v
+           axi_pmu.v
 
 ifeq (E310,$(findstring E310, $(EXTRA_DEFS)))
 TOP_SRCS += e310.v
@@ -56,9 +56,9 @@ TOP_SRCS += e3xx_idle.xdc
 endif
 
 ifdef HLS
-HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
+HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
 else
-HLS_IP_GEN_SRCS =
+HLS_IP_TARGETS =
 endif
 
 # Vivado seems somewhat unhappy when adding above
@@ -72,6 +72,7 @@ PS7_SRCS = $(IP_PS7_3_SRCS)
 endif
 
 DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
+          $(AXI_SRCS) \
           $(ZYNQ_FIFO_SRCS) \
           $(FIFO_SRCS) \
           $(VITA_SRCS) \
@@ -88,7 +89,7 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(RFNOC_SRCS) \
           $(RFNOC_OOT_SRCS) \
           $(LIB_IP_XCI_SRCS) \
-          $(HLS_IP_GEN_SRCS)
+          $(HLS_IP_TARGETS)
 
 ##################################################
 # Git Hash
@@ -106,6 +107,7 @@ VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
 bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
-hls: .prereqs hls_ip bin
+rtl: .prereqs $$(DESIGN_SRCS) ip
+	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
 
-.PHONY: bin hls
+.PHONY: bin rtl

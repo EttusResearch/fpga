@@ -10,9 +10,7 @@
 `timescale 1 ps / 1 ps
 
 module axi_intercon_2x64_128_bd_wrapper
-   (INTERCONNECT_ACLK,
-    INTERCONNECT_ARESETN,
-    M00_AXI_ACLK,
+   (M00_AXI_ACLK,
     M00_AXI_ARESETN,
     M00_AXI_ARADDR,
     M00_AXI_ARBURST,
@@ -135,8 +133,6 @@ module axi_intercon_2x64_128_bd_wrapper
     S01_AXI_WREADY,
     S01_AXI_WSTRB,
     S01_AXI_WVALID);
-  input INTERCONNECT_ACLK;
-  input INTERCONNECT_ARESETN;
   input M00_AXI_ACLK;
   input M00_AXI_ARESETN;
   output [31:0]M00_AXI_ARADDR;
@@ -261,8 +257,6 @@ module axi_intercon_2x64_128_bd_wrapper
   input [7:0]S01_AXI_WSTRB;
   input S01_AXI_WVALID;
 
-  wire INTERCONNECT_ACLK;
-  wire INTERCONNECT_ARESETN;
   wire M00_AXI_ACLK;
   wire M00_AXI_ARESETN;
   wire [31:0]M00_AXI_ARADDR;
@@ -388,9 +382,7 @@ module axi_intercon_2x64_128_bd_wrapper
   wire S01_AXI_WVALID;
 
   axi_intercon_2x64_128_bd axi_intercon_2x64_128_bd_i
-       (.INTERCONNECT_ACLK(INTERCONNECT_ACLK),
-        .INTERCONNECT_ARESETN(INTERCONNECT_ARESETN),
-        .M00_AXI_ACLK(M00_AXI_ACLK),
+       (.M00_AXI_ACLK(M00_AXI_ACLK),
         .M00_AXI_ARESETN(M00_AXI_ARESETN),
         .M00_AXI_araddr(M00_AXI_ARADDR),
         .M00_AXI_arburst(M00_AXI_ARBURST),

@@ -12,6 +12,7 @@ module cvita_chunker_tb();
    reg reset  = 1;
    reg clear  = 0;
    reg [15:0] quantum;
+   reg stats_reset = 0;
 
    // Check vars
    reg [31:0] o_xfer_count = 0, i_xfer_count = 0;
@@ -23,20 +24,21 @@ module cvita_chunker_tb();
    initial $dumpfile("cvita_chunker_tb.vcd");
    initial $dumpvars(0,cvita_chunker_tb);
 
-   function check_result;
+   task check_result;
       input [31:0]   o_xfer_count_arg;
       input [31:0]   i_xfer_count_arg;
       input [63:0]   o_last_tdata_arg;
       input          error_arg;
-      begin
+      begin:checkres
          //Check vars
-         check_result = 1;
-         check_result = check_result & ((o_xfer_count_arg == o_xfer_count) !== 0);
-         check_result = check_result & ((i_xfer_count_arg == i_xfer_count) !== 0);
-         check_result = check_result & ((o_last_tdata_arg == o_last_tdata) !== 0);
-         check_result = check_result & ((error_arg == error) != 0);
+         automatic reg result;
+         result = 1;
+         result = result & ((o_xfer_count_arg == o_xfer_count) !== 0);
+         result = result & ((i_xfer_count_arg == i_xfer_count) !== 0);
+         result = result & ((o_last_tdata_arg == o_last_tdata) !== 0);
+         result = result & ((error_arg == error) != 0);
          
-         if (check_result) begin
+         if (result) begin
             $display ("... Passed");
          end else begin
             $display ("... FAILED!!!");
@@ -46,12 +48,11 @@ module cvita_chunker_tb();
             $display ("error = %d  (Expected %d)",error,error_arg);
          end
 
-         //Reset vars
-         o_xfer_count = 0;
-         i_xfer_count = 0;
-         o_last_tdata = 64'h0;
-      end
-   endfunction
+         stats_reset = 1'b1;
+         @(posedge clk);
+         stats_reset = 1'b0;
+      end:checkres
+   endtask
 
    task send_packet;
       input [63:0] data_start;
@@ -177,11 +178,18 @@ module cvita_chunker_tb();
    assign o_tready = 1;
   
    always @(posedge clk) begin
-      if (o_tvalid & o_tready) begin
-         o_xfer_count <= o_xfer_count + 1;
-         o_last_tdata <= o_tdata;
+      if (stats_reset) begin
+         //Reset vars
+         o_xfer_count <= 0;
+         i_xfer_count <= 0;
+         o_last_tdata <= 64'h0;
+      end else begin
+         if (o_tvalid & o_tready) begin
+            o_xfer_count <= o_xfer_count + 1;
+            o_last_tdata <= o_tdata;
+         end
+         if (i_tvalid & i_tready) i_xfer_count <= i_xfer_count + 1;
       end
-      if (i_tvalid & i_tready) i_xfer_count <= i_xfer_count + 1;
    end
 
 endmodule // cvita_chunker_tb

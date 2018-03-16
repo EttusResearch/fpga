@@ -1,6 +1,13 @@
 //
-// Copyright 2016 Ettus Research LLC
+// Copyright 2016-2017 Ettus Research LLC
 //
+// sfpp_io_core
+// - mdio_master
+// - One Gige phy + MAC
+// - Ten Gige phy + MAC
+// - Aurora phy + MAC
+//
+//////////////////////////////////////////////////////////////////////
 
 module x300_sfpp_io_core #(
    parameter PROTOCOL = "10GbE",    // Must be {10GbE, 1GbE, Aurora}
@@ -24,13 +31,13 @@ module x300_sfpp_io_core #(
    input             sfpp_rxlos,
    input             sfpp_tx_fault,
    output            sfpp_tx_disable,
-   
+
    input  [63:0]     s_axis_tdata,
    input  [3:0]      s_axis_tuser,
    input             s_axis_tlast,
    input             s_axis_tvalid,
    output            s_axis_tready,
-   
+
    output [63:0]     m_axis_tdata,
    output [3:0]      m_axis_tuser,
    output            m_axis_tlast,
@@ -41,7 +48,7 @@ module x300_sfpp_io_core #(
    input             wb_cyc_i,
    input  [31:0]     wb_dat_i,
    input             wb_stb_i,
-   input             wb_we_i, 
+   input             wb_we_i,
    output            wb_ack_o,
    output [31:0]     wb_dat_o,
    output            wb_int_o,
@@ -62,7 +69,7 @@ generate
       wire [7:0]  xgmii_rxc;
       wire [7:0]  xgmii_status;
       wire        xge_phy_resetdone;
-   
+
       ten_gige_phy ten_gige_phy_i
       (
          // Clocks and Reset
@@ -94,9 +101,11 @@ generate
          .tx_fault(sfpp_tx_fault),
          .tx_disable(sfpp_tx_disable)
       );
-      
-      xge_mac_wrapper #(.PORTNUM(PORTNUM)) xge_mac_wrapper_i
-      (
+
+      xge_mac_wrapper #(
+        .PORTNUM(PORTNUM),
+        .WISHBONE(1)
+      ) xge_mac_wrapper_i (
          // XGMII
          .xgmii_clk(gb_refclk),
          .xgmii_txd(xgmii_txd),
@@ -108,19 +117,19 @@ generate
          .mdio_in(mdio_in),
          .mdio_out(mdio_out),
          // Wishbone I/F
-         .wb_clk_i(bus_clk_div2),      
-         .wb_rst_i(bus_rst_div2),      
-         .wb_adr_i(wb_adr_i),  
-         .wb_cyc_i(wb_cyc_i),  
+         .wb_clk_i(bus_clk_div2),
+         .wb_rst_i(bus_rst_div2),
+         .wb_adr_i(wb_adr_i),
+         .wb_cyc_i(wb_cyc_i),
          .wb_dat_i(wb_dat_i),
-         .wb_stb_i(wb_stb_i),  
-         .wb_we_i(wb_we_i),    
-         .wb_ack_o(wb_ack_o),  
+         .wb_stb_i(wb_stb_i),
+         .wb_we_i(wb_we_i),
+         .wb_ack_o(wb_ack_o),
          .wb_dat_o(wb_dat_o),
-         .wb_int_o(wb_int_o),  
+         .wb_int_o(wb_int_o),
          // Client FIFO Interfaces
          .sys_clk(bus_clk),
-         .reset(bus_rst),
+         .sys_rst(bus_rst),
          .rx_tdata(m_axis_tdata),
          .rx_tuser(m_axis_tuser),
          .rx_tlast(m_axis_tlast),
@@ -132,14 +141,11 @@ generate
          .tx_tvalid(s_axis_tvalid),
          .tx_tready(s_axis_tready),
          // Other
-         .phy_ready(xge_phy_resetdone),
-         // Debug
-         .debug_rx(),
-         .debug_tx()
+         .phy_ready(xge_phy_resetdone)
       );
 
       assign phy_status  = {8'h00, xgmii_status};
-   
+
    end else if (PROTOCOL == "1GbE") begin
 
       //-----------------------------------------------------------------
@@ -148,9 +154,9 @@ generate
       wire [7:0]  gmii_txd, gmii_rxd;
       wire        gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er;
       wire        gmii_clk;
-   
+
       assign sfpp_tx_disable = 1'b0; // Always on.
-   
+
       one_gige_phy one_gige_phy_i
       (
          .reset(areset),                  // Asynchronous reset for entire core.
@@ -181,7 +187,7 @@ generate
          .status_vector(phy_status),    // Core status.
          .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
       );
-   
+
       simple_gemac_wrapper #(.RX_FLOW_CTRL(0), .PORTNUM(PORTNUM)) simple_gemac_wrapper_i
       (
          .clk125(gmii_clk),
@@ -325,6 +331,7 @@ generate
          .overruns(overruns),
          .soft_errors(),
          .checksum_errors(checksum_errors),
+         .critical_err(mac_crit_err),
          // BIST Interface (Synchronous to sys_clk)
          .bist_gen_en(bist_gen_en),
          .bist_gen_rate(bist_gen_rate),
@@ -334,6 +341,16 @@ generate
          .bist_checker_samps(bist_checker_samps),
          .bist_checker_errors(bist_checker_errors)
       );
+
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
 
       assign m_axis_tuser = 4'd0;
 
@@ -361,13 +378,15 @@ generate
          .out({mac_clear, phy_areset, bist_gen_rate, bist_loopback_en, bist_gen_en, bist_checker_en}), .changed()
       );
 
-      wire channel_up_bclk, hard_err_bclk, soft_err_bclk;
+      wire channel_up_bclk, hard_err_bclk, soft_err_bclk, mac_crit_err_bclk;
       synchronizer #(.INITIAL_VAL(1'b0)) channel_up_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(channel_up), .out(channel_up_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) hard_err_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(hard_err), .out(hard_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) soft_err_sync (
          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
+      synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
+        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk));
 
       reg [19:0]  bist_lock_latency;
       always @(posedge bus_clk) begin
@@ -377,8 +396,24 @@ generate
             bist_lock_latency <= bist_lock_latency + 20'd1;
       end
 
+       reg mac_crit_err_latch;
+       always @(posedge bus_clk) begin
+          if (bus_rst | mac_clear) begin
+             mac_crit_err_latch <= 1'b0;
+          end else begin
+             if (mac_crit_err_bclk)
+                mac_crit_err_latch <= 1'b1;
+          end
+       end
+
       wire [31:0] core_status = {
-         12'h0,                     //[31:20]
+         6'h0,                      //[31:26]
+         mac_crit_err_latch,        //[25]
+         1,                         //[24] mmcm_locked_bclk
+         1,                         //[23] gt_pll_locked_bclk
+         0,                         //[22] qpll_refclklost_bclk
+         1,                         //[21] qpll_lock_bclk
+         0,                         //[20] qpll_reset_bclk
          bist_lock_latency[19:4],   //[19:4]
          bist_checker_locked,       //[3]
          soft_err_bclk,             //[2]

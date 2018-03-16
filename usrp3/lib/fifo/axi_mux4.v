@@ -102,7 +102,7 @@ module axi_mux4
 	   assign o_tready_int = o_tready;
 	end
       else
-	axi_fifo_short #(.WIDTH(WIDTH+1)) axi_fifo_short
+	axi_fifo_flop2 #(.WIDTH(WIDTH+1)) axi_fifo_flop2
 	  (.clk(clk), .reset(reset), .clear(clear),
 	   .i_tdata({o_tlast_int,o_tdata_int}), .i_tvalid(o_tvalid_int), .i_tready(o_tready_int),
 	   .o_tdata({o_tlast,o_tdata}), .o_tvalid(o_tvalid), .o_tready(o_tready),
