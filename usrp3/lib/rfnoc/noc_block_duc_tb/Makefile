@@ -23,12 +23,16 @@ IP_DIR = $(LIB_IP_DIR)
 include $(LIB_IP_DIR)/axi_hb47/Makefile.inc
 include $(LIB_IP_DIR)/cordic_rotator24/Makefile.inc
 include $(LIB_IP_DIR)/complex_to_magphase/Makefile.inc
+include $(LIB_IP_DIR)/complex_multiplier_dds/Makefile.inc
+include $(LIB_IP_DIR)/dds_sin_cos_lut_only/Makefile.inc
 include $(LIB_IP_DIR)/axi_fft/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(LIB_IP_AXI_HB47_SRCS) \
 $(LIB_IP_CORDIC_ROTATOR24_SRCS) \
 $(LIB_IP_COMPLEX_TO_MAGPHASE_SRCS) \
+$(LIB_IP_COMPLEX_MULTIPLIER_DDS_SRCS) \
+$(LIB_IP_DDS_SIN_COS_LUT_ONLY_SRCS) \
 $(LIB_IP_AXI_FFT_SRCS) \
 )
 

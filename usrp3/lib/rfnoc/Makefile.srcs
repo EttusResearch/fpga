@@ -45,6 +45,7 @@ conj.v \
 delay_fifo.v \
 delay_type2.v \
 delay_type3.v \
+delay_type4.v \
 complex_to_magsq.v \
 phase_accum.v \
 complex_invert.v \
@@ -142,4 +143,6 @@ sine_tone.v \
 axi_fir_filter.v \
 fir_filter_slice.v \
 addsub.vhd \
+dds_freq_tune.v \
+dds_timed.v \
 ))

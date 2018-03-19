@@ -7,7 +7,7 @@ module noc_block_duc #(
   parameter STR_SINK_FIFOSIZE = 11,     //Log2 of input buffer size in 8-byte words (must hold at least 2 MTU packets)
   parameter MTU               = 10,     //Log2 of output buffer size in 8-byte words (must hold at least 1 MTU packet)
   parameter NUM_CHAINS        = 1,
-  parameter COMPAT_NUM_MAJOR  = 32'h1,
+  parameter COMPAT_NUM_MAJOR  = 32'h2,
   parameter COMPAT_NUM_MINOR  = 32'h0,
   parameter NUM_HB            = 2,
   parameter CIC_MAX_INTERP    = 128
@@ -174,10 +174,10 @@ module noc_block_duc #(
       wire         m_axis_rc_tready;
       wire [127:0] m_axis_rc_tuser;
 
-      cordic_timed #(
+      dds_timed #(
         .SR_FREQ_ADDR(SR_FREQ_ADDR),
         .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR))
-      cordic_timed (
+      dds_timed (
         .clk(ce_clk), .reset(ce_rst), .clear(clear_tx_seqnum[i]),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .set_time(set_time_int), .set_has_time(set_has_time_int),
@@ -185,7 +185,6 @@ module noc_block_duc #(
         .i_tready(m_axis_rc_tready), .i_tuser(m_axis_rc_tuser),
         .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid),
         .o_tready(s_axis_data_tready), .o_tuser(s_axis_data_tuser));
-
       ////////////////////////////////////////////////////////////
       //
       // Increase Rate
