@@ -23,7 +23,7 @@ endif
 TOP ?= e300
 
 # vivado_build($1=Device, $2=SG, $3=Definitions)
-vivado_build = make -f Makefile.e300.inc $(TARGET) NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 EXTRA_DEFS="$3"
+vivado_build = make -f Makefile.e300.inc $(TARGET) NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 TOP_MODULE=$(TOP) EXTRA_DEFS="$3"
 
 # post_build($1=Device, $2=TYPE, $3=SG)
 post_build = @\

@@ -97,6 +97,6 @@ bin: .prereqs $$(DESIGN_SRCS) ip
 	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_e300.tcl),$(TOP_MODULE),$(PART_ID))
 
 rtl: .prereqs $$(DESIGN_SRCS) ip
-  $(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
+	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
 
 .PHONY: bin
