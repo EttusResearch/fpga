@@ -118,7 +118,7 @@ module noc_block_radio_core #(
     .DWIDTH(32),
     .NUM_BUSES(NUM_CHANNELS))
   settings_bus_mux (
-    .clk(ce_clk), .reset(ce_rst), .clear(|clear_tx_seqnum),
+    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
     .in_set_stb(set_stb), .in_set_addr(set_addr), .in_set_data(set_data),
     .out_set_stb(set_stb_mux), .out_set_addr(set_addr_mux), .out_set_data(set_data_mux), .ready(1'b1)
   );
