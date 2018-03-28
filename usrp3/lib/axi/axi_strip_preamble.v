@@ -170,8 +170,14 @@ module axi_strip_preamble #(
       endcase
    end 
 
-    assign mem_tvalid = (state == PASS || state == CHECK_HDR) ? (i_tvalid && ~pkt_dropped) : 1'b0;
-    assign i_tready = (state == PASS || state == CHECK_HDR) ?  buf_tready : 1'b1;
+   wire [WIDTH-1:0] buf_tdata;
+   wire buf_tlast, buf_tvalid, buf_tready, buf_empty;
+   reg buf_full = 1'b0;
+   wire [$clog2(MAX_PKT_SIZE)-1:0] valid_rd_addr;
+   reg buf_empty_r;
+
+   assign mem_tvalid = (state == PASS || state == CHECK_HDR) ? (i_tvalid && ~pkt_dropped) : 1'b0;
+   assign i_tready = (state == PASS || state == CHECK_HDR) ?  buf_tready : 1'b1;
    
    assign crit_error = buf_full && buf_empty; //This should never happen, if it does that indicates poor BER over Aurora or packet size too large
    
@@ -184,7 +190,6 @@ module axi_strip_preamble #(
 
    reg [$clog2(MAX_PKT_SIZE)-1:0] wr_addr, prev_wr_addr, rd_addr, old_rd_addr;
    reg [$clog2(MAX_PKT_SIZE):0] in_pkt_cnt, out_pkt_cnt;
-   reg buf_full = 1'b0;
    wire read         = ~buf_empty && (int_tready || buf_empty_r); //Read from buffer if its no longer empty to prime output reg
    wire almost_full  = (wr_addr == valid_rd_addr-1'b1); //We need to look at the masked rd_addr in case its 1 ahead
 
@@ -239,13 +244,8 @@ module axi_strip_preamble #(
    end
 
    // Read logic. Hold data if pkt_count is equal
-   wire buf_empty = in_pkt_cnt == out_pkt_cnt;
-   reg buf_empty_r;
+   assign buf_empty = in_pkt_cnt == out_pkt_cnt;
    reg last_word;
-   wire [WIDTH-1:0] buf_tdata;
-   wire buf_tlast;
-   wire buf_tvalid;
-   wire [$clog2(MAX_PKT_SIZE)-1:0] valid_rd_addr;
    
    //Use current read addr only if read is enabled
    assign valid_rd_addr = (read) ? rd_addr : old_rd_addr;
