@@ -5,10 +5,10 @@ if [[ $(command -v git) = "" ]]; then
 else
     if (git diff --quiet); then
         #Clean
-        short_hash="0$(git rev-parse --verify HEAD --short)"
+        short_hash="0$(git rev-parse --verify HEAD --short=7)"
     else
         #Dirty
-        short_hash="F$(git rev-parse --verify HEAD --short)"
+        short_hash="F$(git rev-parse --verify HEAD --short=7)"
     fi
 fi
 echo ${short_hash^^}
