@@ -49,7 +49,7 @@ module chdr_16sc_to_8sc
    
    setting_reg #(.my_addr(BASE), .width(17)) new_destination
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({set_sid, my_newhome[15:0]}));
+      .out({set_sid, my_newhome[15:0]}), .changed());
 
    localparam HEADER        = 2'd0;//IDLE
    localparam TIME          = 2'd1;
@@ -109,55 +109,62 @@ module chdr_16sc_to_8sc
 	   .bits_out(8))
    round_i2
      (.in(i_tdata[63:48]), 
-      .out(rounded_i2[7:0])
+      .out(rounded_i2[7:0]),
+      .err()
 	    );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_q2
      (.in(i_tdata[47:32]),
-      .out(rounded_q2[7:0])
+      .out(rounded_q2[7:0]),
+      .err()
       );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_i3
      (.in(i_tdata[31:16]),
-      .out(rounded_i3[7:0])
+      .out(rounded_i3[7:0]),
+      .err()
       );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_q3
      (.in(i_tdata[15:0]),
-      .out(rounded_q3[7:0])
+      .out(rounded_q3[7:0]),
+      .err()
       );
 
    // old data processing 
    round #(.bits_in(16),
 	   .bits_out(8))
-   round_i0(.in(hold_tdata[63:48]), .out(rounded_i0[7:0])
+   round_i0(.in(hold_tdata[63:48]), .out(rounded_i0[7:0]), .err()
 	    );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_q0
      (.in(hold_tdata[47:32]),
-      .out(rounded_q0[7:0])
+      .out(rounded_q0[7:0]),
+      .err()
       );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_i1
      (.in(hold_tdata[31:16]),
-      .out(rounded_i1[7:0])
+      .out(rounded_i1[7:0]),
+      .err()
       );
 
    round #(.bits_in(16),
            .bits_out(8))
    round_q1
      (.in(hold_tdata[15:0]),
-      .out(rounded_q1[7:0])
+      .out(rounded_q1[7:0]),
+      .err()
       );
    
    // main mux

@@ -225,9 +225,9 @@ module duc_chain
    // Cordic rotation coupled with a saturated input signal can cause overflow
    // so we clip here rather than allow a wrap.
    clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_i
-     (.clk(clk), .in(prod_i[35:0]), .strobe_in(1'b1), .out(i_clip), .strobe_out());
+     (.clk(clk), .reset(rst), .in(prod_i[35:0]), .strobe_in(1'b1), .out(i_clip), .strobe_out());
    clip_reg #(.bits_in(36), .bits_out(33), .STROBED(1)) clip_q
-     (.clk(clk), .in(prod_q[35:0]), .strobe_in(1'b1), .out(q_clip), .strobe_out());
+     (.clk(clk), .reset(rst), .in(prod_q[35:0]), .strobe_in(1'b1), .out(q_clip), .strobe_out());
 
    assign tx_fe_i = i_clip[32:33-WIDTH];
    assign tx_fe_q = q_clip[32:33-WIDTH];

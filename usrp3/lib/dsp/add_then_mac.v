@@ -37,8 +37,8 @@ module add_then_mac
    localparam  B0REG_IN = 1;
 
    // Sign extend inputs
-   assign      a_in = (a[17] == 1'b1) ? {7'hff, a} : {7'h00, a};
-   assign      d_in = (d[17] == 1'b1) ? {7'hff, d} : {7'h00, d};
+   assign      a_in = (a[17] == 1'b1) ? {7'h7f, a} : {7'h00, a};
+   assign      d_in = (d[17] == 1'b1) ? {7'h7f, d} : {7'h00, d};
 
    generate
       case(DEVICE)
@@ -110,7 +110,7 @@ module add_then_mac
 	"SPARTAN6" :
 	  begin
 	     // DSP48A1 has 18b+18b=18b pre-adder, must discard LSB of A and D and compensate by shifting ACC.
-	     wire discard;;
+	     wire discard;
 	     assign acc[0] = 1'b0;
 	     
 	     DSP48A1 #(

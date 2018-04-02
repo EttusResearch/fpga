@@ -204,7 +204,7 @@ generate
       */
 
    end else begin    //for USER_SETTINGS == 1
-      always @* rb_data_user <= 64'd0;
+      always rb_data_user <= 64'd0;
    end
 endgenerate
 

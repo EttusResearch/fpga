@@ -57,7 +57,7 @@ module chdr_32f_to_16sc
 
    setting_reg #(.my_addr(BASE), .width(17)) new_destination
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({set_sid, my_newhome[15:0]}));
+      .out({set_sid, my_newhome[15:0]}), .changed());
 
  
 

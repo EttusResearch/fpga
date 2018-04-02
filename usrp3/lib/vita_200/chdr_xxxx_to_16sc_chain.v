@@ -60,24 +60,27 @@ module chdr_xxxx_to_16sc_chain
     chdr_12sc_to_16sc
     #(.BASE(89)) convert_12sc_to_16sc
     
-    (.clk(clk), .reset(reset),.set_data(0), .set_stb(0), .set_addr(0),
+    (.clk(clk), .reset(reset),.set_data(32'h0), .set_stb(1'h0), .set_addr(8'h0),
     .i_tdata(i1_tdata), .i_tlast(i1_tlast), .i_tvalid(i1_tvalid), .i_tready(i1_tready),
-    .o_tdata(o1_tdata), .o_tlast(o1_tlast), .o_tvalid(o1_tvalid), .o_tready(o1_tready)
+    .o_tdata(o1_tdata), .o_tlast(o1_tlast), .o_tvalid(o1_tvalid), .o_tready(o1_tready),
+    .debug()
     );
 
     chdr_32f_to_16sc
     #(.BASE(89)) convert_32f_to_16sc
     
-    (.clk(clk), .reset(reset),.set_data(0), .set_stb(0), .set_addr(0),
+    (.clk(clk), .reset(reset),.set_data(32'h0), .set_stb(1'h0), .set_addr(8'h0),
     .i_tdata(i2_tdata), .i_tlast(i2_tlast), .i_tvalid(i2_tvalid), .i_tready(i2_tready),
-    .o_tdata(o2_tdata), .o_tlast(o2_tlast), .o_tvalid(o2_tvalid), .o_tready(o2_tready)
+    .o_tdata(o2_tdata), .o_tlast(o2_tlast), .o_tvalid(o2_tvalid), .o_tready(o2_tready),
+    .debug()
     );
 
     
    chdr_8sc_to_16sc #(.BASE(89)) convert_8sc_to_16sc
-     (.clk(clk), .reset(reset),.set_data(0), .set_stb(0), .set_addr(0),
+     (.clk(clk), .reset(reset),.set_data(32'h0), .set_stb(1'h0), .set_addr(8'h0),
       .i_tdata(i3_tdata), .i_tlast(i3_tlast), .i_tvalid(i3_tvalid), .i_tready(i3_tready),
-      .o_tdata(o3_tdata), .o_tlast(o3_tlast), .o_tvalid(o3_tvalid), .o_tready(o3_tready)
+      .o_tdata(o3_tdata), .o_tlast(o3_tlast), .o_tvalid(o3_tvalid), .o_tready(o3_tready),
+      .debug()
       );
    
 

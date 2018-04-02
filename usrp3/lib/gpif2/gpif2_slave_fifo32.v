@@ -71,6 +71,7 @@ module gpif2_slave_fifo32
     // GPIF input and output data lines, tristate
     //
     reg [31:0] gpif_data_in, gpif_data_out;
+    reg slrd1, slrd2, slrd3, slrd4, slrd5;
 
     always @(posedge gpif_clk)
       if (~slrd2)
@@ -111,7 +112,6 @@ module gpif2_slave_fifo32
     reg [15:0] transfer_size;
 
     // Read strobe pipeline.
-    reg slrd1, slrd2, slrd3, slrd4, slrd5;
 
    always @(posedge gpif_clk)
      if (gpif_rst) begin
@@ -403,7 +403,7 @@ module gpif2_slave_fifo32
 	     slwr <= 1'b1;
 	     sloe <= 1'b1;
 	     idle_cycles <= idle_cycles + 1'b1;
-             if (idle_cycles == 3'h001) begin
+             if (idle_cycles == 3'h1) begin
 		// FX3 should now be in internal ZLP state
 		state <= STATE_WRITE_FLUSH;
 		pktend <= 1'b0;

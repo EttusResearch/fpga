@@ -43,6 +43,8 @@ module new_rx_framer
    wire [15:0] 	  maxlen;
    reg [31:0] 	  holding;
 
+   wire 	  hdr_tready;
+
 
    // FIXME need to handle case where hdr fifo is full (i.e. too many tiny packets)
    assign full = (sample_space == 16'd0) | (sample_space == 16'd1) | ~hdr_tready;
@@ -63,6 +65,9 @@ module new_rx_framer
    reg [1:0] 	  instate;
    reg [15:0] 	  numsamps;
    reg 		  nearly_eop;
+
+   wire 	  eop = eob | nearly_eop | full;
+   wire 	  sample_tlast = eop;
 
 
    always @(posedge clk)
@@ -161,16 +166,13 @@ module new_rx_framer
 
 
 
-   wire 	  eop = eob | nearly_eop | full;
 
    wire [63:0] 	  sample_tdata = (instate == SECOND) ? {holding, sample} : {sample, 32'h0};
-   wire 	  sample_tlast = eop;
    wire 	  sample_tvalid = run & strobe & ( (instate == SECOND) | eop );
    wire 	  sample_tready;
 
    wire [80:0] 	  hdr_tdata = {eob,len[13:0],2'b0,(instate == START) ? vita_time : hold_time};
    wire 	  hdr_tvalid = sample_tlast && sample_tvalid && sample_tready;
-   wire 	  hdr_tready;
 
    wire [80:0] 	  hfifo_tdata_tmp;
    wire 	  hfifo_tvalid_tmp, hfifo_tready_tmp;
