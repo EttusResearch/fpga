@@ -308,7 +308,7 @@ module bus_int #(
        RB_ETH_TYPE1: rb_data = {32'h0};
    `endif
 `endif
-       RB_GIT_HASH:  rb_data = 32'h`GIT_HASH;
+       RB_GIT_HASH:  rb_data = `GIT_HASH;
        RB_XADC_VALS: rb_data = xadc_readback;
        RB_CROSSBAR:  rb_data = rb_data_crossbar;
 
