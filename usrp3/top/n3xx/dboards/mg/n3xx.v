@@ -83,6 +83,7 @@ module n3xx (
   input FPGA_PL_RESETN, // TODO:  Add to reset logic
   // output reg [1:0] FPGA_TEST,
   //input PWR_CLK_FPGA, // TODO: check direction
+  input FPGA_PUDC_B,
 
   //White Rabbit
   //input WB_20MHZ_P,
@@ -3263,5 +3264,24 @@ module n3xx (
    assign PANEL_LED_LINK = ps_gpio_out[45];
    assign PANEL_LED_REF  = ps_gpio_out[46];
    assign PANEL_LED_GPS  = ps_gpio_out[47];
+
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // PUDC Workaround
+  //
+  //////////////////////////////////////////////////////////////////////
+  // This is a workaround for a silicon bug in Series 7 FPGA where a
+  // race condition with the reading of PUDC during the erase of the FPGA
+  // image cause glitches on output IO pins.
+  //
+  // Workaround:
+  // - Define the PUDC pin in the XDC file with a pullup.
+  // - Implements an IBUF on the PUDC input and make sure that it does
+  //   not get optimized out.
+  (* dont_touch = "true" *) wire fpga_pudc_b_buf;
+  IBUF pudc_ibuf_i (
+    .I(FPGA_PUDC_B),
+    .O(fpga_pudc_b_buf));
 
 endmodule
