@@ -380,7 +380,7 @@ module n3xx_core #(
           reg_rd_data_glob <= build_datestamp;
 
         REG_GIT_HASH:
-          reg_rd_data_glob <= 32'h`GIT_HASH;
+          reg_rd_data_glob <= `GIT_HASH;
 
         REG_FP_GPIO_MASTER:
           reg_rd_data_glob <= fp_gpio_master_reg;

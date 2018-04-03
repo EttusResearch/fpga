@@ -583,7 +583,7 @@ module zpu_subsystem #(
          // GIT HASH of RTL Source
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.
-         RB_ZPU_GIT_HASH: rb_data = 32'h`GIT_HASH;
+         RB_ZPU_GIT_HASH: rb_data = `GIT_HASH;
          RB_ZPU_ETH0_PKT_CNT: rb_data = eth0_pkt_count;
          RB_ZPU_ETH1_PKT_CNT: rb_data = eth1_pkt_count;
 

@@ -532,7 +532,7 @@ module n230_core (
          // GIT HASH of RTL Source
          // [31:28] = 0xf - Unclean build
          // [27:0] - Abrieviated git hash for RTL.
-         RB_CORE_GIT_HASH : rb_data <= {32'h0,32'h`GIT_HASH};
+         RB_CORE_GIT_HASH : rb_data <= {32'h0, `GIT_HASH};
          
          RB_CORE_MS0_GPIO : rb_data <= ms0_gpio_rb;
          RB_CORE_MS1_GPIO : rb_data <= ms1_gpio_rb;

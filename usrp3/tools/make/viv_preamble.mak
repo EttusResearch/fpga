@@ -32,6 +32,12 @@ endif
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
 
 # -------------------------------------------------------------------
+# Git Hash Retrieval
+# -------------------------------------------------------------------
+GIT_HASH=$(shell $(TOOLS_DIR)/scripts/git-hash.sh --hashfile=$(TOOLS_DIR)/../../project.githash)
+GIT_HASH_VERILOG_DEF=$(addprefix GIT_HASH=32'h,$(GIT_HASH))
+
+# -------------------------------------------------------------------
 # GUI Mode switch. Calling with GUI:=1 will launch Vivado GUI for build
 # -------------------------------------------------------------------
 ifeq ($(GUI),1)
