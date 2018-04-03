@@ -283,8 +283,8 @@ set_property IOSTANDARD    LVCMOS33         [get_ports SFP_1_TXFAULT]
 
 # This port must be always enabled due to a Xilinx bug in the silicon.
 # https://www.xilinx.com/support/answers/63950.html
-# set_property PACKAGE_PIN   A8               [get_ports PUDC_N]
-# set_property IOSTANDARD    LVDCI_15         [get_ports PUDC_N]
+set_property PACKAGE_PIN   A8               [get_ports FPGA_PUDC_B]
+set_property IOSTANDARD    LVDCI_15         [get_ports FPGA_PUDC_B]
 
 set_property PACKAGE_PIN   D8               [get_ports {ddr3_addr[0]}]
 set_property PACKAGE_PIN   A7               [get_ports {ddr3_addr[1]}]
