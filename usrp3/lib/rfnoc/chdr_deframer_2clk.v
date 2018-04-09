@@ -9,13 +9,12 @@
 //  - Takes a sample stream in and uses the tuser input to frame
 //   a CHDR packet which is output by the module
 //   samples at the output
-//  - FIXME Currently only 32-bit input widths are supported.
 //
 /////////////////////////////////////////////////////////////////////
 
 
 module chdr_deframer_2clk #(
-  parameter WIDTH = 32
+  parameter WIDTH = 32      // 32 and 64 bits supported
 ) (
   input samp_clk, input samp_rst, input pkt_clk, input pkt_rst,
   input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
@@ -40,7 +39,7 @@ module chdr_deframer_2clk #(
   wire          has_time = i_tdata[61];
   reg [63:0]    held_i_tdata;
   reg           second_half;
-  
+
   assign body_i_tdata = i_tdata;
   assign body_i_tlast = i_tlast;
   assign body_i_tvalid = (chdr_state == ST_BODY) ? i_tvalid : 1'b0;
@@ -90,25 +89,43 @@ module chdr_deframer_2clk #(
 
   wire odd_len = hdr_o_tuser[98] ^ |hdr_o_tuser[97:96];
 
-  always @(posedge samp_clk) begin
-    if(samp_rst) begin
-      second_half <= 1'b0;
-    end else begin
-      if(o_tvalid & o_tready) begin
-        if(o_tlast)
+  generate
+    if (WIDTH == 32) begin : gen_32bit_output
+      // 32-bit Output
+
+      always @(posedge samp_clk) begin
+        if(samp_rst) begin
           second_half <= 1'b0;
-        else
-          second_half <= ~second_half;
+        end else begin
+          if(o_tvalid & o_tready) begin
+            if(o_tlast)
+              second_half <= 1'b0;
+            else
+              second_half <= ~second_half;
+          end
+        end
       end
+      
+      assign o_tdata = second_half ? body_o_tdata[WIDTH-1:0] : body_o_tdata[(2*WIDTH)-1:WIDTH];
+      assign o_tlast = body_o_tlast & (second_half | odd_len);
+      assign o_tuser = hdr_o_tuser;
+      assign o_tvalid = hdr_o_tvalid & body_o_tvalid;
+      
+      assign hdr_o_tready = o_tvalid & o_tready & o_tlast;
+      assign body_o_tready = o_tvalid & o_tready & (o_tlast | second_half);
+
+    end else begin : gen_64bit_output
+      // 64-bit Output
+
+      assign o_tdata  = body_o_tdata;
+      assign o_tlast  = body_o_tlast;
+      assign o_tuser  = hdr_o_tuser;
+      assign o_tvalid = hdr_o_tvalid & body_o_tvalid;
+      
+      assign hdr_o_tready  = o_tvalid & o_tready & o_tlast;
+      assign body_o_tready = o_tvalid & o_tready;
+
     end
-  end
-
-  assign o_tdata = second_half ? body_o_tdata[WIDTH-1:0] : body_o_tdata[(2*WIDTH)-1:WIDTH];
-  assign o_tlast = body_o_tlast & (second_half | odd_len);
-  assign o_tuser = hdr_o_tuser;
-  assign o_tvalid = hdr_o_tvalid & body_o_tvalid;
-
-  assign hdr_o_tready = o_tvalid & o_tready & o_tlast;
-  assign body_o_tready = o_tvalid & o_tready & (o_tlast | second_half);
+  endgenerate
 
 endmodule

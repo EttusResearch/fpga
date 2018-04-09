@@ -31,7 +31,8 @@ package PkgMgPersonality is
   -- DB Regs ...
   --
   -- Clocking             Offset: 0x 000    Width: 0x 200
-  -- Sync                 Offset: 0x 200    Width: 0x 200
+  -- Tdco0                Offset: 0x 200    Width: 0x 200
+  -- Tdco1                Offset: 0x 400    Width: 0x 200
   -- Daughterboard Ctrl   Offset: 0x 600    Width: 0x 200
   --                                        Total: 0x2000
   -- JESD 2x - A          Offset: 0x2000    Width: 0x1000
@@ -47,8 +48,10 @@ package PkgMgPersonality is
   -- DB Regs : --------------------------------------------------------------------------
   constant kClockingOffsetInEndpoint      : RegOffset_t := (kOffset => 16#0000#,   -- 0x0000 to
                                                             kWidth  => 16#0200#);  -- 0x01FF
-  constant kSyncOffsetsInEndpoint         : RegOffset_t := (kOffset => 16#0200#,   -- 0x0200 to
+  constant kTdc0OffsetsInEndpoint         : RegOffset_t := (kOffset => 16#0200#,   -- 0x0200 to
                                                             kWidth  => 16#0200#);  -- 0x03FF
+  constant kTdc1OffsetsInEndpoint         : RegOffset_t := (kOffset => 16#0400#,   -- 0x0400 to
+                                                            kWidth  => 16#0200#);  -- 0x05FF
   constant kDaughterboardOffsetInEndpoint : RegOffset_t := (kOffset => 16#0600#,   -- 0x0600 to
                                                             kWidth  => 16#0200#);  -- 0x07FF
 

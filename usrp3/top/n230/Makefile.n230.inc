@@ -80,15 +80,12 @@ ifeq (1,$(SAFE_MODE))
 EXTRA_DEFS += SAFE_IMAGE
 endif
 
-# Git Hash
-SHORT_HASH=$(addprefix GIT_HASH=,$(shell $(BASE_DIR)/../tools/scripts/git-hash.sh))
-
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(SHORT_HASH)
+VERILOG_DEFS=$(EXTRA_DEFS) $(GIT_HASH_VERILOG_DEF)
 export SAFE_MODE=$(SAFE_MODE)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined

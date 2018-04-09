@@ -13,7 +13,7 @@
 --
 -- Purpose:
 --
--- Wrapper for the TDC VHDL so it works nicely with Verilog types.
+-- Wrapper for the TDC and register control modules.
 --
 -- vreview_group Tdc
 -- vreview_reviewers dabaker sgupta jmarsar
@@ -23,11 +23,15 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
+library work;
+  use work.PkgRegs.all;
+
 entity TdcWrapper is
   port (
     -- Clocks and Resets : --------------------------------------------------------------
-    -- Asynchronous global reset.
-    aReset          : in  std_logic;
+    -- Bus Clock and synchronous bus reset.
+    BusClk          : in  std_logic;
+    bBusReset       : in  std_logic;
     -- Reference Clock
     RefClk          : in  std_logic;
     -- Sample Clock
@@ -37,66 +41,16 @@ entity TdcWrapper is
     MeasClk         : in  std_logic;
 
 
-    -- Controls and Status : ------------------------------------------------------------
-    -- Soft reset for the module. Wait until rResetTdcDone asserts before de-asserting
-    -- the reset.
-    rResetTdc          : in  std_logic;
-    rResetTdcDone      : out std_logic;
-    -- Once enabled, the TDC waits for the next PPS pulse to begin measurements. Leave
-    -- this signal asserted for the measurement duration (there is no need to de-assert
-    -- it unless you want to capture a different PPS edge).
-    rEnableTdc         : in  std_logic;
-    -- Assert this bit to allow the TDC to perform repeated measurements.
-    rReRunEnable       : in  std_logic;
-
-     -- Only required to pulse 1 RefClk cycle.
-    rPpsPulse          : in  std_logic;
-     -- Debug, held asserted when pulse is captured.
-    rPpsPulseCaptured  : out std_logic;
+    -- Register Port: -------------------------------------------------------------------
+    bSyncRegPortOut : out RegPortOut_t;
+    bSyncRegPortIn  : in  RegPortIn_t;
 
 
-    -- Crossing PPS into Sample Clock : -------------------------------------------------
-    -- Enable crossing rPpsPulse into SampleClk domain. This should remain de-asserted
-    -- until the TDC measurements are complete and sPpsClkCrossDelayVal is written.
-    rEnablePpsCrossing   : in  std_logic;
-    -- Programmable delay value for crossing clock domains. This is used to compensate
-    -- for differences in sSpTransfer pulses across modules. This value is typically set once
-    -- after running initial synchronization.
-    sPpsClkCrossDelayVal : in  std_logic_vector(3 downto 0);
+    -- PPS In and Out : -----------------------------------------------------------------
+    -- Only required to pulse 1 RefClk cycle.
+    rPpsPulse       : in  std_logic;
     -- PPS pulse output on the SampleClk domain.
-    sPpsPulse            : out std_logic;
-
-
-    -- FTDC Measurement Results : -------------------------------------------------------
-    -- Final FTDC measurements in MeasClk ticks. Done will assert when Offset
-    -- becomes valid and will remain asserted until aReset or mResetTdc asserts.
-    -- FXP<+40,13> (13 integer bits... determined by the constants below)
-    mRpOffset       : out std_logic_vector(39 downto 0);
-    mSpOffset       : out std_logic_vector(39 downto 0);
-    mOffsetsDone    : out std_logic;
-    mOffsetsValid   : out std_logic;
-
-
-    -- Setup for Sync Pulses : ----------------------------------------------------------
-    -- Only load these counts when rResetTdc is asserted and rEnableTdc is de-asserted!!!
-    -- If both of the above conditions are met, load the counts by pulsing Load
-    -- when the counts are valid. It is not necessary to keep the count values valid
-    -- after pulsing Load.
-    rLoadRePulseCounts      : in std_logic;
-    rRePulsePeriodInRClks   : in std_logic_vector(23 downto 0);
-    rRePulseHighTimeInRClks : in std_logic_vector(23 downto 0);
-    rLoadRpCounts       : in std_logic;
-    rRpPeriodInRClks    : in std_logic_vector(15 downto 0);
-    rRpHighTimeInRClks  : in std_logic_vector(15 downto 0);
-    rLoadRptCounts      : in std_logic;
-    rRptPeriodInRClks   : in std_logic_vector(15 downto 0);
-    rRptHighTimeInRClks : in std_logic_vector(15 downto 0);
-    sLoadSpCounts       : in std_logic;
-    sSpPeriodInSClks    : in std_logic_vector(15 downto 0);
-    sSpHighTimeInSClks  : in std_logic_vector(15 downto 0);
-    sLoadSptCounts      : in std_logic;
-    sSptPeriodInSClks   : in std_logic_vector(15 downto 0);
-    sSptHighTimeInSClks : in std_logic_vector(15 downto 0);
+    sPpsPulse       : out std_logic;
 
 
     -- Sync Pulse Outputs : -------------------------------------------------------------
@@ -113,6 +67,46 @@ end TdcWrapper;
 
 architecture struct of TdcWrapper is
 
+  component SyncRegsIfc
+    port (
+      aBusReset               : in  std_logic;
+      bBusReset               : in  std_logic;
+      BusClk                  : in  std_logic;
+      aTdcReset               : out std_logic;
+      bRegPortInFlat          : in  std_logic_vector(49 downto 0);
+      bRegPortOutFlat         : out std_logic_vector(33 downto 0);
+      RefClk                  : in  std_logic;
+      rResetTdc               : out std_logic;
+      rResetTdcDone           : in  std_logic;
+      rEnableTdc              : out std_logic;
+      rReRunEnable            : out std_logic;
+      rEnablePpsCrossing      : out std_logic;
+      rPpsPulseCaptured       : in  std_logic;
+      rPulserEnableDelayVal   : out std_logic_vector(3 downto 0);
+      SampleClk               : in  std_logic;
+      sPpsClkCrossDelayVal    : out std_logic_vector(3 downto 0);
+      MeasClk                 : in  std_logic;
+      mRpOffset               : in  std_logic_vector(39 downto 0);
+      mSpOffset               : in  std_logic_vector(39 downto 0);
+      mOffsetsDone            : in  std_logic;
+      mOffsetsValid           : in  std_logic;
+      rLoadRePulseCounts      : out std_logic;
+      rRePulsePeriodInRClks   : out std_logic_vector(23 downto 0);
+      rRePulseHighTimeInRClks : out std_logic_vector(23 downto 0);
+      rLoadRpCounts           : out std_logic;
+      rRpPeriodInRClks        : out std_logic_vector(15 downto 0);
+      rRpHighTimeInRClks      : out std_logic_vector(15 downto 0);
+      rLoadRptCounts          : out std_logic;
+      rRptPeriodInRClks       : out std_logic_vector(15 downto 0);
+      rRptHighTimeInRClks     : out std_logic_vector(15 downto 0);
+      sLoadSpCounts           : out std_logic;
+      sSpPeriodInSClks        : out std_logic_vector(15 downto 0);
+      sSpHighTimeInSClks      : out std_logic_vector(15 downto 0);
+      sLoadSptCounts          : out std_logic;
+      sSptPeriodInSClks       : out std_logic_vector(15 downto 0);
+      sSptHighTimeInSClks     : out std_logic_vector(15 downto 0));
+  end component;
+
   -- Generic values for the TdcTop instantiation below. These generics are the maximum
   -- of possible values for all combinations of Sample and Reference clocks for the N3xx
   -- family of devices.
@@ -126,38 +120,43 @@ architecture struct of TdcWrapper is
   constant kSyncPeriodsToStampSize    : integer := 10;
 
   --vhook_sigstart
-  signal aResetBool: boolean;
-  signal mOffsetsDoneBool: boolean;
-  signal mOffsetsValidBool: boolean;
-  signal mRpOffsetUns: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
-  signal mSpOffsetUns: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
-  signal rEnablePpsCrossingBool: boolean;
-  signal rEnableTdcBool: boolean;
-  signal rLoadRePulseCountsBool: boolean;
-  signal rLoadRpCountsBool: boolean;
-  signal rLoadRptCountsBool: boolean;
-  signal rPpsPulseBool: boolean;
-  signal rPpsPulseCapturedBool: boolean;
-  signal rRePulseHighTimeInRClksUns: unsigned(kRClksPerRePulsePeriodBitsMax-1 downto 0);
-  signal rRePulsePeriodInRClksUns: unsigned(kRClksPerRePulsePeriodBitsMax-1 downto 0);
-  signal rReRunEnableBool: boolean;
-  signal rResetTdcBool: boolean;
-  signal rResetTdcDoneBool: boolean;
-  signal rRpHighTimeInRClksUns: unsigned(kRClksPerRpPeriodBitsMax-1 downto 0);
-  signal rRpPeriodInRClksUns: unsigned(kRClksPerRpPeriodBitsMax-1 downto 0);
-  signal rRptHighTimeInRClksUns: unsigned(kRClksPerRpPeriodBitsMax-1 downto 0);
-  signal rRptPeriodInRClksUns: unsigned(kRClksPerRpPeriodBitsMax-1 downto 0);
+  signal aTdcReset: std_logic;
+  signal bSyncRegPortInFlat: std_logic_vector(49 downto 0);
+  signal bSyncRegPortOutFlat: std_logic_vector(33 downto 0);
+  signal mOffsetsDone: boolean;
+  signal mOffsetsValid: boolean;
+  signal mRpOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
+  signal mSpOffset: unsigned(kPulsePeriodCntSize+kSyncPeriodsToStampSize+kFreqRefPeriodsToCheckSize-1 downto 0);
+  signal rEnablePpsCrossing: std_logic;
+  signal rEnableTdc: std_logic;
+  signal rLoadRePulseCounts: std_logic;
+  signal rLoadRpCounts: std_logic;
+  signal rLoadRptCounts: std_logic;
+  signal rPpsPulseCaptured: boolean;
+  signal rPulserEnableDelayVal: std_logic_vector(3 downto 0);
+  signal rRePulseHighTimeInRClks: std_logic_vector(kRClksPerRePulsePeriodBitsMax-1 downto 0);
+  signal rRePulsePeriodInRClks: std_logic_vector(kRClksPerRePulsePeriodBitsMax-1 downto 0);
+  signal rReRunEnable: std_logic;
+  signal rResetTdc: std_logic;
+  signal rResetTdcDone: boolean;
+  signal rRpHighTimeInRClks: std_logic_vector(kRClksPerRpPeriodBitsMax-1 downto 0);
+  signal rRpPeriodInRClks: std_logic_vector(kRClksPerRpPeriodBitsMax-1 downto 0);
+  signal rRptHighTimeInRClks: std_logic_vector(kRClksPerRpPeriodBitsMax-1 downto 0);
+  signal rRptPeriodInRClks: std_logic_vector(kRClksPerRpPeriodBitsMax-1 downto 0);
   signal rRpTransferBool: boolean;
-  signal sLoadSpCountsBool: boolean;
-  signal sLoadSptCountsBool: boolean;
-  signal sPpsClkCrossDelayValUns: unsigned(3 downto 0);
-  signal sPpsPulseBool: boolean;
-  signal sSpHighTimeInSClksUns: unsigned(kSClksPerSpPeriodBitsMax-1 downto 0);
-  signal sSpPeriodInSClksUns: unsigned(kSClksPerSpPeriodBitsMax-1 downto 0);
-  signal sSptHighTimeInSClksUns: unsigned(kSClksPerSpPeriodBitsMax-1 downto 0);
-  signal sSptPeriodInSClksUns: unsigned(kSClksPerSpPeriodBitsMax-1 downto 0);
+  signal sLoadSpCounts: std_logic;
+  signal sLoadSptCounts: std_logic;
+  signal sPpsClkCrossDelayVal: std_logic_vector(3 downto 0);
+  signal sPpsPulseAsyncReset: boolean;
+  signal sSpHighTimeInSClks: std_logic_vector(kSClksPerSpPeriodBitsMax-1 downto 0);
+  signal sSpPeriodInSClks: std_logic_vector(kSClksPerSpPeriodBitsMax-1 downto 0);
+  signal sSptHighTimeInSClks: std_logic_vector(kSClksPerSpPeriodBitsMax-1 downto 0);
+  signal sSptPeriodInSClks: std_logic_vector(kSClksPerSpPeriodBitsMax-1 downto 0);
   signal sSpTransferBool: boolean;
   --vhook_sigend
+
+  signal rPpsPulseAsyncReset_ms, rPpsPulseAsyncReset,
+         sPpsPulseOut_ms,        sPpsPulseOut : std_logic := '0';
 
   function to_StdLogic(b : boolean) return std_ulogic is
   begin
@@ -173,68 +172,69 @@ architecture struct of TdcWrapper is
     return (To_X01(s)='1');
   end to_Boolean;
 
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of rPpsPulseAsyncReset_ms : signal is "true";
+  attribute ASYNC_REG of rPpsPulseAsyncReset    : signal is "true";
+  attribute ASYNC_REG of sPpsPulseOut_ms : signal is "true";
+  attribute ASYNC_REG of sPpsPulseOut    : signal is "true";
+
 begin
 
-  -- Inputs
-  aResetBool             <= to_Boolean(aReset);
-  rResetTdcBool          <= to_Boolean(rResetTdc);
-  rEnableTdcBool         <= to_Boolean(rEnableTdc);
-  rReRunEnableBool       <= to_Boolean(rReRunEnable);
-  rLoadRePulseCountsBool <= to_Boolean(rLoadRePulseCounts);
-  rLoadRpCountsBool      <= to_Boolean(rLoadRpCounts);
-  rLoadRptCountsBool     <= to_Boolean(rLoadRptCounts);
-  sLoadSpCountsBool      <= to_Boolean(sLoadSpCounts);
-  sLoadSptCountsBool     <= to_Boolean(sLoadSptCounts);
-  rPpsPulseBool          <= to_Boolean(rPpsPulse);
-  rEnablePpsCrossingBool <= to_Boolean(rEnablePpsCrossing);
-  rRePulsePeriodInRClksUns   <= unsigned(rRePulsePeriodInRClks);
-  rRePulseHighTimeInRClksUns <= unsigned(rRePulseHighTimeInRClks);
-  rRpPeriodInRClksUns    <= unsigned(rRpPeriodInRClks);
-  rRpHighTimeInRClksUns  <= unsigned(rRpHighTimeInRClks);
-  rRptPeriodInRClksUns   <= unsigned(rRptPeriodInRClks);
-  rRptHighTimeInRClksUns <= unsigned(rRptHighTimeInRClks);
-  sSpPeriodInSClksUns    <= unsigned(sSpPeriodInSClks);
-  sSpHighTimeInSClksUns  <= unsigned(sSpHighTimeInSClks);
-  sSptPeriodInSClksUns   <= unsigned(sSptPeriodInSClks);
-  sSptHighTimeInSClksUns <= unsigned(sSptHighTimeInSClks);
+  -- Cross the PPS from the no-reset domain into the aTdcReset domain since there is a
+  -- reset crossing going into the TdcWrapper (reset by aTdcReset)! No clock domain
+  -- crossing here, so crossing a single-cycle pulse is safe.
+  DoubleSyncToAsyncReset : process (aTdcReset, RefClk)
+  begin
+    if to_boolean(aTdcReset) then
+      rPpsPulseAsyncReset_ms <= '0';
+      rPpsPulseAsyncReset    <= '0';
+    elsif rising_edge(RefClk) then
+      rPpsPulseAsyncReset_ms <= rPpsPulse;
+      rPpsPulseAsyncReset    <= rPpsPulseAsyncReset_ms;
+    end if;
+  end process;
 
-  -- Outputs
-  rResetTdcDone      <= to_stdlogic(rResetTdcDoneBool);
-  rPpsPulseCaptured  <= to_stdlogic(rPpsPulseCapturedBool);
-  mOffsetsDone       <= to_stdlogic(mOffsetsDoneBool);
-  mOffsetsValid      <= to_stdlogic(mOffsetsValidBool);
-  rRpTransfer        <= to_stdlogic(rRpTransferBool);
-  sSpTransfer        <= to_stdlogic(sSpTransferBool);
-  sPpsPulse <= to_stdlogic(sPpsPulseBool);
+  -- In a similar fashion, cross the output PPS trigger from the async aTdcReset domain
+  -- to the no-reset of the rest of the design. The odds of this signal triggering a
+  -- failure are astronomically low (since it only pulses one clock cycle per second),
+  -- but two flops is worth the assurance it won't mess something else up downstream.
+  -- Note this double-sync mainly protects against the reset assertion case, since in the
+  -- de-assertion case sPpsPulseAsyncReset should be zero and not transition for a long
+  -- time afterwards. Again no clock crossing here, so crossing a single-cycle pulse
+  -- is safe.
+  DoubleSyncToNoReset : process (SampleClk)
+  begin
+    if rising_edge(SampleClk) then
+      sPpsPulseOut_ms <= to_stdlogic(sPpsPulseAsyncReset);
+      sPpsPulseOut    <= sPpsPulseOut_ms;
+    end if;
+  end process;
 
-  mRpOffset <= std_logic_vector(mRpOffsetUns);
-  mSpOffset <= std_logic_vector(mSpOffsetUns);
-  sPpsClkCrossDelayValUns <= unsigned(sPpsClkCrossDelayVal);
+  sPpsPulse  <= sPpsPulseOut;
+
+
+  rRpTransfer <= to_stdlogic(rRpTransferBool);
+  sSpTransfer <= to_stdlogic(sSpTransferBool);
 
   --vhook_e TdcTop
-  --vhook_a aReset               aResetBool
-  --vhook_a rResetTdc            rResetTdcBool
-  --vhook_a rResetTdcDone        rResetTdcDoneBool
-  --vhook_a rEnableTdc           rEnableTdcBool
-  --vhook_a rReRunEnable         rReRunEnableBool
-  --vhook_a rPpsPulse            rPpsPulseBool
-  --vhook_a rLoadRePulseCounts   rLoadRePulseCountsBool
-  --vhook_a rLoadRpCounts        rLoadRpCountsBool
-  --vhook_a rLoadRptCounts       rLoadRptCountsBool
-  --vhook_a sLoadSpCounts        sLoadSpCountsBool
-  --vhook_a sLoadSptCounts       sLoadSptCountsBool
-  --vhook_a rPpsPulseCaptured    rPpsPulseCapturedBool
-  --vhook_a rEnablePpsCrossing   rEnablePpsCrossingBool
-  --vhook_a mOffsetsDone         mOffsetsDoneBool
-  --vhook_a mOffsetsValid        mOffsetsValidBool
-  --vhook_a mRpOffset            mRpOffsetUns
-  --vhook_a mSpOffset            mSpOffsetUns
-  --vhook_a sPpsClkCrossDelayVal sPpsClkCrossDelayValUns
+  --vhook_a aReset               to_boolean(aTdcReset)
+  --vhook_a rResetTdc            to_boolean(rResetTdc)
+  --vhook_a rEnableTdc           to_boolean(rEnableTdc)
+  --vhook_a rReRunEnable         to_boolean(rReRunEnable)
+  --vhook_a rPpsPulse            to_boolean(rPpsPulseAsyncReset)
+  --vhook_a rLoadRePulseCounts   to_boolean(rLoadRePulseCounts)
+  --vhook_a rLoadRpCounts        to_boolean(rLoadRpCounts)
+  --vhook_a rLoadRptCounts       to_boolean(rLoadRptCounts)
+  --vhook_a sLoadSpCounts        to_boolean(sLoadSpCounts)
+  --vhook_a sLoadSptCounts       to_boolean(sLoadSptCounts)
+  --vhook_a rEnablePpsCrossing   to_boolean(rEnablePpsCrossing)
+  --vhook_a rPulserEnableDelayVal unsigned(rPulserEnableDelayVal)
+  --vhook_a sPpsClkCrossDelayVal  unsigned(sPpsClkCrossDelayVal)
   --vhook_a rRpTransfer          rRpTransferBool
   --vhook_a sSpTransfer          sSpTransferBool
-  --vhook_a sPpsPulse            sPpsPulseBool
-  --vhook_p {^rR(.*)In(.*)Clks}  rR$1In$2ClksUns
-  --vhook_p {^sS(.*)In(.*)Clks}  sS$1In$2ClksUns
+  --vhook_a sPpsPulse            sPpsPulseAsyncReset
+  --vhook_p {^rR(.*)In(.*)Clks}  unsigned(rR$1In$2Clks)
+  --vhook_p {^sS(.*)In(.*)Clks}  unsigned(sS$1In$2Clks)
   TdcTopx: entity work.TdcTop (struct)
     generic map (
       kRClksPerRePulsePeriodBitsMax => kRClksPerRePulsePeriodBitsMax,  --integer range 3:32 :=24
@@ -244,42 +244,97 @@ begin
       kFreqRefPeriodsToCheckSize    => kFreqRefPeriodsToCheckSize,     --integer:=17
       kSyncPeriodsToStampSize       => kSyncPeriodsToStampSize)        --integer:=10
     port map (
-      aReset                  => aResetBool,                  --in  boolean
-      RefClk                  => RefClk,                      --in  std_logic
-      SampleClk               => SampleClk,                   --in  std_logic
-      MeasClk                 => MeasClk,                     --in  std_logic
-      rResetTdc               => rResetTdcBool,               --in  boolean
-      rResetTdcDone           => rResetTdcDoneBool,           --out boolean
-      rEnableTdc              => rEnableTdcBool,              --in  boolean
-      rReRunEnable            => rReRunEnableBool,            --in  boolean
-      rPpsPulse               => rPpsPulseBool,               --in  boolean
-      rPpsPulseCaptured       => rPpsPulseCapturedBool,       --out boolean
-      rEnablePpsCrossing      => rEnablePpsCrossingBool,      --in  boolean
-      sPpsClkCrossDelayVal    => sPpsClkCrossDelayValUns,     --in  unsigned(3:0)
-      sPpsPulse               => sPpsPulseBool,               --out boolean
-      mRpOffset               => mRpOffsetUns,                --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mSpOffset               => mSpOffsetUns,                --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
-      mOffsetsDone            => mOffsetsDoneBool,            --out boolean
-      mOffsetsValid           => mOffsetsValidBool,           --out boolean
-      rLoadRePulseCounts      => rLoadRePulseCountsBool,      --in  boolean
-      rRePulsePeriodInRClks   => rRePulsePeriodInRClksUns,    --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
-      rRePulseHighTimeInRClks => rRePulseHighTimeInRClksUns,  --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
-      rLoadRpCounts           => rLoadRpCountsBool,           --in  boolean
-      rRpPeriodInRClks        => rRpPeriodInRClksUns,         --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
-      rRpHighTimeInRClks      => rRpHighTimeInRClksUns,       --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
-      rLoadRptCounts          => rLoadRptCountsBool,          --in  boolean
-      rRptPeriodInRClks       => rRptPeriodInRClksUns,        --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
-      rRptHighTimeInRClks     => rRptHighTimeInRClksUns,      --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
-      sLoadSpCounts           => sLoadSpCountsBool,           --in  boolean
-      sSpPeriodInSClks        => sSpPeriodInSClksUns,         --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
-      sSpHighTimeInSClks      => sSpHighTimeInSClksUns,       --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
-      sLoadSptCounts          => sLoadSptCountsBool,          --in  boolean
-      sSptPeriodInSClks       => sSptPeriodInSClksUns,        --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
-      sSptHighTimeInSClks     => sSptHighTimeInSClksUns,      --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
-      rRpTransfer             => rRpTransferBool,             --out boolean
-      sSpTransfer             => sSpTransferBool,             --out boolean
-      rGatedPulseToPin        => rGatedPulseToPin,            --inout std_logic
-      sGatedPulseToPin        => sGatedPulseToPin);           --inout std_logic
+      aReset                  => to_boolean(aTdcReset),              --in  boolean
+      RefClk                  => RefClk,                             --in  std_logic
+      SampleClk               => SampleClk,                          --in  std_logic
+      MeasClk                 => MeasClk,                            --in  std_logic
+      rResetTdc               => to_boolean(rResetTdc),              --in  boolean
+      rResetTdcDone           => rResetTdcDone,                      --out boolean
+      rEnableTdc              => to_boolean(rEnableTdc),             --in  boolean
+      rReRunEnable            => to_boolean(rReRunEnable),           --in  boolean
+      rPpsPulse               => to_boolean(rPpsPulseAsyncReset),    --in  boolean
+      rPpsPulseCaptured       => rPpsPulseCaptured,                  --out boolean
+      rPulserEnableDelayVal   => unsigned(rPulserEnableDelayVal),    --in  unsigned(3:0)
+      rEnablePpsCrossing      => to_boolean(rEnablePpsCrossing),     --in  boolean
+      sPpsClkCrossDelayVal    => unsigned(sPpsClkCrossDelayVal),     --in  unsigned(3:0)
+      sPpsPulse               => sPpsPulseAsyncReset,                --out boolean
+      mRpOffset               => mRpOffset,                          --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mSpOffset               => mSpOffset,                          --out unsigned(kPulsePeriodCntSize+ kSyncPeriodsToStampSize+ kFreqRefPeriodsToCheckSize-1:0)
+      mOffsetsDone            => mOffsetsDone,                       --out boolean
+      mOffsetsValid           => mOffsetsValid,                      --out boolean
+      rLoadRePulseCounts      => to_boolean(rLoadRePulseCounts),     --in  boolean
+      rRePulsePeriodInRClks   => unsigned(rRePulsePeriodInRClks),    --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
+      rRePulseHighTimeInRClks => unsigned(rRePulseHighTimeInRClks),  --in  unsigned(kRClksPerRePulsePeriodBitsMax-1:0)
+      rLoadRpCounts           => to_boolean(rLoadRpCounts),          --in  boolean
+      rRpPeriodInRClks        => unsigned(rRpPeriodInRClks),         --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rRpHighTimeInRClks      => unsigned(rRpHighTimeInRClks),       --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rLoadRptCounts          => to_boolean(rLoadRptCounts),         --in  boolean
+      rRptPeriodInRClks       => unsigned(rRptPeriodInRClks),        --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      rRptHighTimeInRClks     => unsigned(rRptHighTimeInRClks),      --in  unsigned(kRClksPerRpPeriodBitsMax-1:0)
+      sLoadSpCounts           => to_boolean(sLoadSpCounts),          --in  boolean
+      sSpPeriodInSClks        => unsigned(sSpPeriodInSClks),         --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sSpHighTimeInSClks      => unsigned(sSpHighTimeInSClks),       --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sLoadSptCounts          => to_boolean(sLoadSptCounts),         --in  boolean
+      sSptPeriodInSClks       => unsigned(sSptPeriodInSClks),        --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      sSptHighTimeInSClks     => unsigned(sSptHighTimeInSClks),      --in  unsigned(kSClksPerSpPeriodBitsMax-1:0)
+      rRpTransfer             => rRpTransferBool,                    --out boolean
+      sSpTransfer             => sSpTransferBool,                    --out boolean
+      rGatedPulseToPin        => rGatedPulseToPin,                   --inout std_logic
+      sGatedPulseToPin        => sGatedPulseToPin);                  --inout std_logic
+
+  -- Expand/compress the RegPort for moving through the netlist boundary.
+  bSyncRegPortOut <= Unflatten(bSyncRegPortOutFlat);
+  bSyncRegPortInFlat <= Flatten(bSyncRegPortIn);
+
+  --vhook   SyncRegsIfc
+  --vhook_# Tying this low is safe because the sync reset is used inside SyncRegsIfc.
+  --vhook_a aBusReset '0'
+  --vhook_a bRegPortInFlat  bSyncRegPortInFlat
+  --vhook_a bRegPortOutFlat bSyncRegPortOutFlat
+  --vhook_a rResetTdcDone     to_stdlogic(rResetTdcDone)
+  --vhook_a rPpsPulseCaptured to_stdlogic(rPpsPulseCaptured)
+  --vhook_a mOffsetsDone  to_stdlogic(mOffsetsDone)
+  --vhook_a mOffsetsValid to_stdlogic(mOffsetsValid)
+  --vhook_a mRpOffset std_logic_vector(mRpOffset)
+  --vhook_a mSpOffset std_logic_vector(mSpOffset)
+  SyncRegsIfcx: SyncRegsIfc
+    port map (
+      aBusReset               => '0',                             --in  std_logic
+      bBusReset               => bBusReset,                       --in  std_logic
+      BusClk                  => BusClk,                          --in  std_logic
+      aTdcReset               => aTdcReset,                       --out std_logic
+      bRegPortInFlat          => bSyncRegPortInFlat,              --in  std_logic_vector(49:0)
+      bRegPortOutFlat         => bSyncRegPortOutFlat,             --out std_logic_vector(33:0)
+      RefClk                  => RefClk,                          --in  std_logic
+      rResetTdc               => rResetTdc,                       --out std_logic
+      rResetTdcDone           => to_stdlogic(rResetTdcDone),      --in  std_logic
+      rEnableTdc              => rEnableTdc,                      --out std_logic
+      rReRunEnable            => rReRunEnable,                    --out std_logic
+      rEnablePpsCrossing      => rEnablePpsCrossing,              --out std_logic
+      rPpsPulseCaptured       => to_stdlogic(rPpsPulseCaptured),  --in  std_logic
+      rPulserEnableDelayVal   => rPulserEnableDelayVal,           --out std_logic_vector(3:0)
+      SampleClk               => SampleClk,                       --in  std_logic
+      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,            --out std_logic_vector(3:0)
+      MeasClk                 => MeasClk,                         --in  std_logic
+      mRpOffset               => std_logic_vector(mRpOffset),     --in  std_logic_vector(39:0)
+      mSpOffset               => std_logic_vector(mSpOffset),     --in  std_logic_vector(39:0)
+      mOffsetsDone            => to_stdlogic(mOffsetsDone),       --in  std_logic
+      mOffsetsValid           => to_stdlogic(mOffsetsValid),      --in  std_logic
+      rLoadRePulseCounts      => rLoadRePulseCounts,              --out std_logic
+      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,           --out std_logic_vector(23:0)
+      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,         --out std_logic_vector(23:0)
+      rLoadRpCounts           => rLoadRpCounts,                   --out std_logic
+      rRpPeriodInRClks        => rRpPeriodInRClks,                --out std_logic_vector(15:0)
+      rRpHighTimeInRClks      => rRpHighTimeInRClks,              --out std_logic_vector(15:0)
+      rLoadRptCounts          => rLoadRptCounts,                  --out std_logic
+      rRptPeriodInRClks       => rRptPeriodInRClks,               --out std_logic_vector(15:0)
+      rRptHighTimeInRClks     => rRptHighTimeInRClks,             --out std_logic_vector(15:0)
+      sLoadSpCounts           => sLoadSpCounts,                   --out std_logic
+      sSpPeriodInSClks        => sSpPeriodInSClks,                --out std_logic_vector(15:0)
+      sSpHighTimeInSClks      => sSpHighTimeInSClks,              --out std_logic_vector(15:0)
+      sLoadSptCounts          => sLoadSptCounts,                  --out std_logic
+      sSptPeriodInSClks       => sSptPeriodInSClks,               --out std_logic_vector(15:0)
+      sSptHighTimeInSClks     => sSptHighTimeInSClks);            --out std_logic_vector(15:0)
 
 
 end struct;
@@ -294,46 +349,26 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
+library work;
+  use work.PkgRegs.all;
+
 entity tb_TdcWrapper is end tb_TdcWrapper;
 
 architecture test of tb_TdcWrapper is
 
   --vhook_sigstart
-  signal aReset: std_logic;
+  signal bBusReset: std_logic;
+  signal bSyncRegPortIn: RegPortIn_t;
+  signal bSyncRegPortOut: RegPortOut_t;
+  signal BusClk: std_logic := '0';
   signal MeasClk: std_logic := '0';
-  signal mOffsetsDone: std_logic;
-  signal mOffsetsValid: std_logic;
-  signal mRpOffset: std_logic_vector(39 downto 0);
-  signal mSpOffset: std_logic_vector(39 downto 0);
   signal RefClk: std_logic := '0';
-  signal rEnablePpsCrossing: std_logic;
-  signal rEnableTdc: std_logic;
   signal rGatedPulseToPin: std_logic;
-  signal rLoadRePulseCounts: std_logic;
-  signal rLoadRpCounts: std_logic;
-  signal rLoadRptCounts: std_logic;
   signal rPpsPulse: std_logic;
-  signal rPpsPulseCaptured: std_logic;
-  signal rRePulseHighTimeInRClks: std_logic_vector(23 downto 0);
-  signal rRePulsePeriodInRClks: std_logic_vector(23 downto 0);
-  signal rReRunEnable: std_logic;
-  signal rResetTdc: std_logic;
-  signal rResetTdcDone: std_logic;
-  signal rRpHighTimeInRClks: std_logic_vector(15 downto 0);
-  signal rRpPeriodInRClks: std_logic_vector(15 downto 0);
-  signal rRptHighTimeInRClks: std_logic_vector(15 downto 0);
-  signal rRptPeriodInRClks: std_logic_vector(15 downto 0);
   signal rRpTransfer: std_logic;
   signal SampleClk: std_logic := '0';
   signal sGatedPulseToPin: std_logic;
-  signal sLoadSpCounts: std_logic;
-  signal sLoadSptCounts: std_logic;
-  signal sPpsClkCrossDelayVal: std_logic_vector(3 downto 0);
   signal sPpsPulse: std_logic;
-  signal sSpHighTimeInSClks: std_logic_vector(15 downto 0);
-  signal sSpPeriodInSClks: std_logic_vector(15 downto 0);
-  signal sSptHighTimeInSClks: std_logic_vector(15 downto 0);
-  signal sSptPeriodInSClks: std_logic_vector(15 downto 0);
   signal sSpTransfer: std_logic;
   --vhook_sigend
 
@@ -342,42 +377,19 @@ begin
   --vhook_e TdcWrapper dutx
   dutx: entity work.TdcWrapper (struct)
     port map (
-      aReset                  => aReset,                   --in  std_logic
-      RefClk                  => RefClk,                   --in  std_logic
-      SampleClk               => SampleClk,                --in  std_logic
-      MeasClk                 => MeasClk,                  --in  std_logic
-      rResetTdc               => rResetTdc,                --in  std_logic
-      rResetTdcDone           => rResetTdcDone,            --out std_logic
-      rEnableTdc              => rEnableTdc,               --in  std_logic
-      rReRunEnable            => rReRunEnable,             --in  std_logic
-      rPpsPulse               => rPpsPulse,                --in  std_logic
-      rPpsPulseCaptured       => rPpsPulseCaptured,        --out std_logic
-      rEnablePpsCrossing      => rEnablePpsCrossing,       --in  std_logic
-      sPpsClkCrossDelayVal    => sPpsClkCrossDelayVal,     --in  std_logic_vector(3:0)
-      sPpsPulse               => sPpsPulse,                --out std_logic
-      mRpOffset               => mRpOffset,                --out std_logic_vector(39:0)
-      mSpOffset               => mSpOffset,                --out std_logic_vector(39:0)
-      mOffsetsDone            => mOffsetsDone,             --out std_logic
-      mOffsetsValid           => mOffsetsValid,            --out std_logic
-      rLoadRePulseCounts      => rLoadRePulseCounts,       --in  std_logic
-      rRePulsePeriodInRClks   => rRePulsePeriodInRClks,    --in  std_logic_vector(23:0)
-      rRePulseHighTimeInRClks => rRePulseHighTimeInRClks,  --in  std_logic_vector(23:0)
-      rLoadRpCounts           => rLoadRpCounts,            --in  std_logic
-      rRpPeriodInRClks        => rRpPeriodInRClks,         --in  std_logic_vector(15:0)
-      rRpHighTimeInRClks      => rRpHighTimeInRClks,       --in  std_logic_vector(15:0)
-      rLoadRptCounts          => rLoadRptCounts,           --in  std_logic
-      rRptPeriodInRClks       => rRptPeriodInRClks,        --in  std_logic_vector(15:0)
-      rRptHighTimeInRClks     => rRptHighTimeInRClks,      --in  std_logic_vector(15:0)
-      sLoadSpCounts           => sLoadSpCounts,            --in  std_logic
-      sSpPeriodInSClks        => sSpPeriodInSClks,         --in  std_logic_vector(15:0)
-      sSpHighTimeInSClks      => sSpHighTimeInSClks,       --in  std_logic_vector(15:0)
-      sLoadSptCounts          => sLoadSptCounts,           --in  std_logic
-      sSptPeriodInSClks       => sSptPeriodInSClks,        --in  std_logic_vector(15:0)
-      sSptHighTimeInSClks     => sSptHighTimeInSClks,      --in  std_logic_vector(15:0)
-      rRpTransfer             => rRpTransfer,              --out std_logic
-      sSpTransfer             => sSpTransfer,              --out std_logic
-      rGatedPulseToPin        => rGatedPulseToPin,         --inout std_logic
-      sGatedPulseToPin        => sGatedPulseToPin);        --inout std_logic
+      BusClk           => BusClk,            --in  std_logic
+      bBusReset        => bBusReset,         --in  std_logic
+      RefClk           => RefClk,            --in  std_logic
+      SampleClk        => SampleClk,         --in  std_logic
+      MeasClk          => MeasClk,           --in  std_logic
+      bSyncRegPortOut  => bSyncRegPortOut,   --out RegPortOut_t
+      bSyncRegPortIn   => bSyncRegPortIn,    --in  RegPortIn_t
+      rPpsPulse        => rPpsPulse,         --in  std_logic
+      sPpsPulse        => sPpsPulse,         --out std_logic
+      rRpTransfer      => rRpTransfer,       --out std_logic
+      sSpTransfer      => sSpTransfer,       --out std_logic
+      rGatedPulseToPin => rGatedPulseToPin,  --inout std_logic
+      sGatedPulseToPin => sGatedPulseToPin); --inout std_logic
 
   main: process
 

@@ -64,6 +64,7 @@ module n3xx_sfp_wrapper #(
   input         rxn,
 
   // SFP low-speed IO
+  input         sfpp_present_n,
   input         sfpp_rxlos,
   input         sfpp_tx_fault,
   output        sfpp_tx_disable,
@@ -119,6 +120,51 @@ module n3xx_sfp_wrapper #(
 
   // MISC
   output [31:0]   port_info,
+
+  // Timebase Outputs
+  output          sfp_pps,
+  output          sfp_refclk,
+
+  // Sideband White Rabbit Control
+  input           wr_reset_n,
+  input           wr_refclk,
+
+  output          wr_dac_sclk,
+  output          wr_dac_din,
+  output          wr_dac_clr_n,
+  output          wr_dac_cs_n,
+  output          wr_dac_ldac_n,
+
+  output          wr_eeprom_scl_o,
+  input           wr_eeprom_scl_i,
+  output          wr_eeprom_sda_o,
+  input           wr_eeprom_sda_i,
+
+  input           wr_uart_rx,
+  output          wr_uart_tx,
+
+  // WR AXI Control
+  output               wr_axi_aclk,
+  input                wr_axi_aresetn,
+  input [31:0]         wr_axi_awaddr,
+  input                wr_axi_awvalid,
+  output               wr_axi_awready,
+  input [DWIDTH-1:0]   wr_axi_wdata,
+  input [DWIDTH/8-1:0] wr_axi_wstrb,
+  input                wr_axi_wvalid,
+  output               wr_axi_wready,
+  output [1:0]         wr_axi_bresp,
+  output               wr_axi_bvalid,
+  input                wr_axi_bready,
+  input [31:0]         wr_axi_araddr,
+  input                wr_axi_arvalid,
+  output               wr_axi_arready,
+  output [DWIDTH-1:0]  wr_axi_rdata,
+  output [1:0]         wr_axi_rresp,
+  output               wr_axi_rvalid,
+  input                wr_axi_rready,
+  output               wr_axi_rlast,
+
   output          link_up,
   output          activity
 
@@ -196,73 +242,169 @@ module n3xx_sfp_wrapper #(
   wire [3:0]  sfpo_tuser, sfpi_tuser;
   wire        sfpo_tlast, sfpi_tlast, sfpo_tvalid, sfpi_tvalid, sfpo_tready, sfpi_tready;
 
-  n3xx_mgt_io_core #(
-    .PROTOCOL       (PROTOCOL),
-    .REG_BASE       (REG_BASE_SFP_IO),
-    .REG_DWIDTH     (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)
-    .REG_AWIDTH     (AWIDTH),   // Width of the address bus
-    .MDIO_EN        (MDIO_EN),
-    .MDIO_PHYADDR   (MDIO_PHYADDR),
-    .PORTNUM        (PORTNUM)
-  ) mgt_io_i (
-    //must reset all channels on quad when sfp1 gtx core is reset
-    .areset         (areset),
-    .gt_refclk      (gt_refclk),
-    .gb_refclk      (gb_refclk),
-    .misc_clk       (misc_clk),
-    .user_clk       (user_clk),
-    .sync_clk       (sync_clk),
-    .gt_tx_out_clk_unbuf(gt_tx_out_clk_unbuf),
+  generate
+    if (PROTOCOL != "WhiteRabbit") begin
+      n3xx_mgt_io_core #(
+        .PROTOCOL       (PROTOCOL),
+        .REG_BASE       (REG_BASE_SFP_IO),
+        .REG_DWIDTH     (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)
+        .REG_AWIDTH     (AWIDTH),   // Width of the address bus
+        .MDIO_EN        (MDIO_EN),
+        .MDIO_PHYADDR   (MDIO_PHYADDR),
+        .PORTNUM        (PORTNUM)
+      ) mgt_io_i (
+        //must reset all channels on quad when sfp1 gtx core is reset
+        .areset         (areset),
+        .gt_refclk      (gt_refclk),
+        .gb_refclk      (gb_refclk),
+        .misc_clk       (misc_clk),
+        .user_clk       (user_clk),
+        .sync_clk       (sync_clk),
+        .gt_tx_out_clk_unbuf(gt_tx_out_clk_unbuf),
 
-    .bus_rst        (bus_rst),
-    .bus_clk        (bus_clk),
-    .qpllreset      (qpllreset),
-    .qplllock       (qplllock),
-    .qplloutclk     (qplloutclk),
-    .qplloutrefclk  (qplloutrefclk),
-    .qpllrefclklost (qpllrefclklost),
-    .mmcm_locked    (mmcm_locked),
-    .gt_pll_lock    (gt_pll_lock),
+        .bus_rst        (bus_rst),
+        .bus_clk        (bus_clk),
+        .qpllreset      (qpllreset),
+        .qplllock       (qplllock),
+        .qplloutclk     (qplloutclk),
+        .qplloutrefclk  (qplloutrefclk),
+        .qpllrefclklost (qpllrefclklost),
+        .mmcm_locked    (mmcm_locked),
+        .gt_pll_lock    (gt_pll_lock),
 
-    .txp            (txp),
-    .txn            (txn),
-    .rxp            (rxp),
-    .rxn            (rxn),
+        .txp            (txp),
+        .txn            (txn),
+        .rxp            (rxp),
+        .rxn            (rxn),
 
-    .sfpp_rxlos     (sfpp_rxlos),
-    .sfpp_tx_fault  (sfpp_tx_fault),
-    .sfpp_tx_disable(sfpp_tx_disable),
+        .sfpp_rxlos     (sfpp_rxlos),
+        .sfpp_tx_fault  (sfpp_tx_fault),
+        .sfpp_tx_disable(sfpp_tx_disable),
 
-    //RegPort
-    .reg_wr_req     (reg_wr_req),
-    .reg_wr_addr    (reg_wr_addr),
-    .reg_wr_data    (reg_wr_data),
-    .reg_rd_req     (reg_rd_req),
-    .reg_rd_addr    (reg_rd_addr),
-    .reg_rd_resp    (reg_rd_resp_io),
-    .reg_rd_data    (reg_rd_data_io),
+        //RegPort
+        .reg_wr_req     (reg_wr_req),
+        .reg_wr_addr    (reg_wr_addr),
+        .reg_wr_data    (reg_wr_data),
+        .reg_rd_req     (reg_rd_req),
+        .reg_rd_addr    (reg_rd_addr),
+        .reg_rd_resp    (reg_rd_resp_io),
+        .reg_rd_data    (reg_rd_data_io),
 
-    // Vita to Ethernet
-    .s_axis_tdata   (sfpi_tdata),
-    .s_axis_tuser   (sfpi_tuser),
-    .s_axis_tlast   (sfpi_tlast),
-    .s_axis_tvalid  (sfpi_tvalid),
-    .s_axis_tready  (sfpi_tready),
+        // Vita to Ethernet
+        .s_axis_tdata   (sfpi_tdata),
+        .s_axis_tuser   (sfpi_tuser),
+        .s_axis_tlast   (sfpi_tlast),
+        .s_axis_tvalid  (sfpi_tvalid),
+        .s_axis_tready  (sfpi_tready),
 
-    // Ethernet to Vita
-    .m_axis_tdata   (sfpo_tdata),
-    .m_axis_tuser   (sfpo_tuser),
-    .m_axis_tlast   (sfpo_tlast),
-    .m_axis_tvalid  (sfpo_tvalid),
-    .m_axis_tready  (sfpo_tready),
+        // Ethernet to Vita
+        .m_axis_tdata   (sfpo_tdata),
+        .m_axis_tuser   (sfpo_tuser),
+        .m_axis_tlast   (sfpo_tlast),
+        .m_axis_tvalid  (sfpo_tvalid),
+        .m_axis_tready  (sfpo_tready),
 
-    .port_info      (port_info),
-    .link_up        (link_up),
-    .activity       (activity)
-  );
+        .port_info      (port_info),
+        .link_up        (link_up),
+        .activity       (activity)
+      );
+
+    end else begin
+      //---------------------------------------------------------------------------------
+      // White Rabbit
+      //---------------------------------------------------------------------------------
+
+      wire wr_sfp_scl, wr_sfp_sda_o, wr_sfp_sda_i;
+
+      n3xx_wr_top #(
+        .g_simulation(1'b0),                // in std_logic
+        .g_dpram_size(131072/4),
+        .g_dpram_initf("../../../../bin/wrpc/wrc_phy16.bram")
+      ) wr_inst (
+        .areset_n_i        (wr_reset_n),      // in std_logic;   -- active low reset, optional
+        .wr_refclk_buf_i   (wr_refclk),       // in std_logic;   -- 20MHz VCXO after IBUFGDS
+        .gige_refclk_buf_i (gt_refclk),       // in std_logic;   -- 125 MHz MGT Ref after IBUFDS_GTE2
+        .dac_sclk_o        (wr_dac_sclk),     // out std_logic;  -- N3xx cWB-DAC-SCLK
+        .dac_din_o         (wr_dac_din),      // out std_logic;  -- N3xx cWB-DAC-DIN
+        .dac_clr_n_o       (wr_dac_clr_n),    // out std_logic;  -- N3xx cWB-DAC-nCLR
+        .dac_cs_n_o        (wr_dac_cs_n),     // out std_logic;  -- N3xx cWB-DAC-nSYNC
+        .dac_ldac_n_o      (wr_dac_ldac_n),   // out std_logic;  -- N3xx cWB-DAC-nLDAC
+        .LED_ACT           (activity),        // out std_logic;  -- connect to SFP+ ACT
+        .LED_LINK          (link_up),         // out std_logic;  -- connect to SFP+ LINK
+        .sfp_txp_o         (txp),             // out std_logic;
+        .sfp_txn_o         (txn),             // out std_logic;
+        .sfp_rxp_i         (rxp),             // in  std_logic;
+        .sfp_rxn_i         (rxn),             // in  std_logic;
+        .sfp_mod_def0_b    (sfpp_present_n),  // in std_logic;   - sfp detect
+        .eeprom_scl_o      (wr_eeprom_scl_o),
+        .eeprom_scl_i      (wr_eeprom_scl_i),
+        .eeprom_sda_o      (wr_eeprom_sda_o),
+        .eeprom_sda_i      (wr_eeprom_sda_i),
+        .sfp_scl_o         (wr_sfp_scl),
+        .sfp_scl_i         (wr_sfp_scl),
+        .sfp_sda_o         (wr_sfp_sda_o),
+        .sfp_sda_i         (wr_sfp_sda_i),
+        .sfp_tx_fault_i    (sfpp_tx_fault),   // in  std_logic;
+        .sfp_tx_disable_o  (sfpp_tx_disable), // out std_logic;
+        .sfp_los_i         (sfpp_rxlos),      // in  std_logic;
+        .wr_uart_rxd       (wr_uart_rx),      // in std_logic;
+        .wr_uart_txd       (wr_uart_tx),      // out std_logic;
+
+        .s00_axi_aclk_o    (wr_axi_aclk),
+        .s00_axi_aresetn   (wr_axi_aresetn),
+        .s00_axi_awaddr    (wr_axi_awaddr),
+        .s00_axi_awprot    (3'b0),
+        .s00_axi_awvalid   (wr_axi_awvalid),
+        .s00_axi_awready   (wr_axi_awready),
+        .s00_axi_wdata     (wr_axi_wdata),
+        .s00_axi_wstrb     (wr_axi_wstrb),
+        .s00_axi_wvalid    (wr_axi_wvalid),
+        .s00_axi_wready    (wr_axi_wready),
+        .s00_axi_bresp     (wr_axi_bresp),
+        .s00_axi_bvalid    (wr_axi_bvalid),
+        .s00_axi_bready    (wr_axi_bready),
+        .s00_axi_araddr    (wr_axi_araddr),
+        .s00_axi_arprot    (3'b0),
+        .s00_axi_arvalid   (wr_axi_arvalid),
+        .s00_axi_arready   (wr_axi_arready),
+        .s00_axi_rdata     (wr_axi_rdata),
+        .s00_axi_rresp     (wr_axi_rresp),
+        .s00_axi_rvalid    (wr_axi_rvalid),
+        .s00_axi_rready    (wr_axi_rready),
+        .s00_axi_rlast     (wr_axi_rlast),
+        .axi_int_o         (),
+
+        .pps_o             (sfp_pps),    // out    std_logic;
+        .clk_pps_o         (sfp_refclk), // out    std_logic;
+        .link_ok_o         (),           // out    std_logic;
+        .clk_sys_locked_o  (),           // out    std_logic;
+        .clk_dmtd_locked_o (),           // out    std_logic);
+        .wr_debug0_o       (),
+        .wr_debug1_o       ()
+      );
+
+      // TEMPORARY mimic the AXGE SFP EEROM
+      sfp_eeprom sfp_eeprom_i (
+        .clk_i(bus_clk),
+        .sfp_scl(wr_sfp_scl),
+        .sfp_sda_i(wr_sfp_sda_o),
+        .sfp_sda_o(wr_sfp_sda_i));
+
+      // Assign the port_info vector similarly to mgt_io_core
+      localparam [7:0] COMPAT_NUM         = 8'd2;
+      localparam [7:0] MGT_PROTOCOL       = 8'd4;
+      assign port_info = {COMPAT_NUM, 6'h0, activity, link_up, MGT_PROTOCOL, PORTNUM};
+
+      // Tie off unused outputs.
+      assign gt_pll_lock = 1'b0;
+      assign gt_tx_out_clk_unbuf = 1'b0;
+    end
+  endgenerate
+
 
   generate
-    if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled") begin
+    // Tie off the Ethernet switch for these protocols that do not use it.
+    if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled" || PROTOCOL == "WhiteRabbit") begin
 
       //set unused wires to default value
       assign xo_tdata       = 64'h0;

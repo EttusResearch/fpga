@@ -16,8 +16,6 @@ module n3xx (
   input FPGA_REFCLK_P,
   input FPGA_REFCLK_N,
   input REF_1PPS_IN,
-  input WB_20MHz_P,
-  input WB_20MHz_N,
   input NETCLK_REF_P,
   input NETCLK_REF_N,
   //input REF_1PPS_IN_MGMT,
@@ -26,8 +24,12 @@ module n3xx (
   //TDC
   inout UNUSED_PIN_TDCA_0,
   inout UNUSED_PIN_TDCA_1,
+  inout UNUSED_PIN_TDCA_2,
+  inout UNUSED_PIN_TDCA_3,
   inout UNUSED_PIN_TDCB_0,
   inout UNUSED_PIN_TDCB_1,
+  inout UNUSED_PIN_TDCB_2,
+  inout UNUSED_PIN_TDCB_3,
 
 `ifdef NPIO_LANES
   input  NPIO_RX0_P,
@@ -83,16 +85,16 @@ module n3xx (
   input FPGA_PL_RESETN, // TODO:  Add to reset logic
   // output reg [1:0] FPGA_TEST,
   //input PWR_CLK_FPGA, // TODO: check direction
+  input FPGA_PUDC_B,
 
   //White Rabbit
-  //input WB_20MHZ_P,
-  //input WB_20MHZ_N,
-  //output WB_DAC_DIN,
-  //output WB_DAC_NCLR,
-  //output WB_DAC_NLDAC,
-  //output WB_DAC_NSYNC,
-  //output WB_DAC_SCLK,
-  //output PWREN_CLK_WB_20MHZ,
+  input WB_20MHZ_P,
+  input WB_20MHZ_N,
+  output WB_DAC_DIN,
+  output WB_DAC_NCLR,
+  output WB_DAC_NLDAC,
+  output WB_DAC_NSYNC,
+  output WB_DAC_SCLK,
 
   //LEDS
   output PANEL_LED_GPS,
@@ -177,7 +179,7 @@ module n3xx (
   ///////////////////////////////////
 
   //SFP+ 0, Slow Speed, Bank 13 3.3V
-  //input SFP_0_I2C_NPRESENT,
+  input SFP_0_I2C_NPRESENT,
   output SFP_0_LED_A,
   output SFP_0_LED_B,
   input SFP_0_LOS,
@@ -644,6 +646,36 @@ module n3xx (
   wire [1:0]  M_AXI_JESD1_RRESP;
   wire [31:0] M_AXI_JESD1_RDATA;
 
+  // White Rabbit
+  wire wr_uart_txd;
+  wire wr_uart_rxd;
+  wire pps_wr_refclk;
+  wire wr_ref_clk;
+
+  // AXI bus from PS to WR Core
+  wire m_axi_wr_clk;
+  wire [31:0] m_axi_wr_araddr;
+  wire [0:0]  m_axi_wr_arready;
+  wire [0:0]  m_axi_wr_arvalid;
+  wire [31:0] m_axi_wr_awaddr;
+  wire [0:0]  m_axi_wr_awready;
+  wire [0:0]  m_axi_wr_awvalid;
+  wire [0:0]  m_axi_wr_bready;
+  wire [1:0]  m_axi_wr_bresp;
+  wire [0:0]  m_axi_wr_bvalid;
+  wire [31:0] m_axi_wr_rdata;
+  wire [0:0]  m_axi_wr_rready;
+  wire [1:0]  m_axi_wr_rresp;
+  wire [0:0]  m_axi_wr_rvalid;
+  wire [31:0] m_axi_wr_wdata;
+  wire [0:0]  m_axi_wr_wready;
+  wire [3:0]  m_axi_wr_wstrb;
+  wire [0:0]  m_axi_wr_wvalid;
+
+  wire [63:0] ps_gpio_out;
+  wire [63:0] ps_gpio_in;
+  wire [63:0] ps_gpio_tri;
+
   wire [15:0] IRQ_F2P;
   wire        FCLK_CLK0;
   wire        FCLK_CLK1;
@@ -677,11 +709,13 @@ module n3xx (
   wire        ddr3_dma_clk;
   wire        meas_clk_reset;
   wire        meas_clk_locked;
-  reg         pps_out_refclk;
+  wire        pps_radioclk1x_iob;
+  wire        pps_radioclk1x;
   wire [3:0]  pps_select;
   wire        pps_out_enb;
+  wire [1:0]  pps_select_sfp;
   wire        pps_refclk;
-  wire        export_pps_refclk;
+  wire        export_pps_radioclk;
   wire        radio_clk;
   wire        radio_clk_2x;
 
@@ -748,8 +782,8 @@ module n3xx (
     .FPGA_REFCLK_P(FPGA_REFCLK_P),
     .FPGA_REFCLK_N(FPGA_REFCLK_N),
     .ref_clk(ref_clk),
-    .WB_20MHz_P(WB_20MHz_P),
-    .WB_20MHz_N(WB_20MHz_N),
+    .WB_20MHz_P(WB_20MHZ_P),
+    .WB_20MHz_N(WB_20MHZ_N),
     .wr_refclk_buf(wr_refclk_buf),
     .NETCLK_REF_P(NETCLK_REF_P),
     .NETCLK_REF_N(NETCLK_REF_N),
@@ -771,27 +805,48 @@ module n3xx (
     .pps_refclk(pps_refclk)
   );
 
-  // Drive the LED with the post-mux copy of the PPS in order for visual feedback that
-  // the selected PPS source is valid. No need for IOB packing on an LED.
-  assign PANEL_LED_PPS = pps_refclk;
-
-  // Drive the rear panel connector with another controllable copy of the post-mux PPS
+  // Drive the rear panel connector with another controllable copy of the post-TDC PPS
   // that SW can enable/disable. The user is free to hack this to be whatever
   // they desire. Flop the PPS signal one more time in order that it can be packed into
-  // an IOB.
+  // an IOB. This extra flop stage matches the additional flop inside DbCore to allow
+  // pps_radioclk1x and pps_out_radioclk to be in sync with one another.
   synchronizer #(
     .FALSE_PATH_TO_IN(0)
   ) pps_export_dsync (
-    .clk(ref_clk), .rst(1'b0), .in(pps_out_enb), .out(export_pps_refclk)
+    .clk(radio_clk), .rst(1'b0), .in(pps_out_enb), .out(export_pps_radioclk)
   );
-  always @(posedge ref_clk) begin
-    if(export_pps_refclk)
-      pps_out_refclk <= pps_refclk;
-    else
-      pps_out_refclk <= 1'b0;
+
+  // The radio_clk rate is between [122.88M, 250M] for all known N3xx variants,
+  // resulting in approximately [8ns, 4ns] periods. To pulse-extend the PPS output,
+  // we create a 25 bit-wide counter, creating ~[.262s, .131s] long output high pulses,
+  // variable depending on our radio_clk rate. Create two of the same output signal
+  // in order that the PPS_OUT gets packed into an IOB for tight timing.
+  reg [24:0] pps_out_count = 'b0;
+  reg        pps_out_radioclk = 1'b0;
+  reg        pps_led_radioclk = 1'b0;
+
+  always @(posedge radio_clk) begin
+    if (export_pps_radioclk) begin
+      if (pps_radioclk1x_iob) begin
+        pps_out_radioclk <= 1'b1;
+        pps_led_radioclk <= 1'b1;
+        pps_out_count <= {25{1'b1}};
+      end else begin
+        if (pps_out_count > 0) begin
+          pps_out_count <= pps_out_count - 1'b1;
+        end else begin
+          pps_out_radioclk <= 1'b0;
+          pps_led_radioclk <= 1'b0;
+        end
+      end
+    end else begin
+      pps_out_radioclk <= 1'b0;
+      pps_led_radioclk <= 1'b0;
+    end
   end
   // Local to output.
-  assign REF_1PPS_OUT  = pps_out_refclk;
+  assign REF_1PPS_OUT  = pps_out_radioclk;
+  assign PANEL_LED_PPS = pps_led_radioclk;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -860,8 +915,16 @@ module n3xx (
   wire aurora_clk156 = xgige_clk156;
   wire aurora_init_clk = xgige_dclk;
 
+  // White Rabbit and 1GbE both use the same clocking
 `ifdef SFP0_1GBE
-  // If we are building the HG target then we need the 125MHz clock
+  `define SFP0_WR_1GBE
+`endif
+`ifdef SFP0_WR
+  `define SFP0_WR_1GBE
+`endif
+
+`ifdef SFP0_WR_1GBE
+  // HG and WX targets require the 1GbE clock support
   BUFG bufg_gige_refclk_i (
     .I(gige_refclk),
     .O(gige_refclk_bufg)
@@ -873,6 +936,7 @@ module n3xx (
   assign SFP_0_RS1  = 1'b1;
 `endif
 
+  // SFP 1 is always set to run at ~10Gbps rates.
   assign SFP_1_RS0  = 1'b1;
   assign SFP_1_RS1  = 1'b1;
 
@@ -886,7 +950,7 @@ module n3xx (
   assign sfp0_gb_refclk = xgige_clk156;
   assign sfp0_misc_clk  = xgige_dclk;
 `endif
-`ifdef SFP0_1GBE
+`ifdef SFP0_WR_1GBE
   assign sfp0_gt_refclk = gige_refclk;
   assign sfp0_gb_refclk = gige_refclk_bufg;
   assign sfp0_misc_clk  = gige_refclk_bufg;
@@ -896,6 +960,7 @@ module n3xx (
   assign sfp0_gb_refclk = aurora_clk156;
   assign sfp0_misc_clk  = aurora_init_clk;
 `endif
+
 `ifdef SFP1_10GBE
   assign sfp1_gt_refclk = xgige_refclk;
   assign sfp1_gb_refclk = xgige_clk156;
@@ -1273,6 +1338,9 @@ module n3xx (
     .PROTOCOL("1GbE"),
     .MDIO_EN(1'b1),
     .MDIO_PHYADDR(5'd4), // PHYADDR must match the "reg" property for PHY in DTS file
+  `elsif SFP0_WR
+    .PROTOCOL("WhiteRabbit"),
+    .MDIO_EN(1'b0),
   `endif
     .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
     .AWIDTH(REG_AWIDTH),     // Width of the address bus
@@ -1303,6 +1371,7 @@ module n3xx (
      .rxp(SFP_0_RX_P),
      .rxn(SFP_0_RX_N),
 
+     .sfpp_present_n(SFP_0_I2C_NPRESENT),
      .sfpp_rxlos(SFP_0_LOS),
      .sfpp_tx_fault(SFP_0_TXFAULT),
      .sfpp_tx_disable(SFP_0_TXDISABLE),
@@ -1371,6 +1440,52 @@ module n3xx (
      .c2e_tvalid(arm_eth0_tx_tvalid_b),
      .c2e_tready(arm_eth0_tx_tready_b),
 
+      // White Rabbit Specific
+`ifdef SFP0_WR
+     .wr_reset_n   (~ps_gpio_out[48]), // reset for WR only
+     .wr_refclk    (wr_refclk_buf),
+     .wr_dac_sclk  (WB_DAC_SCLK),
+     .wr_dac_din   (WB_DAC_DIN),
+     .wr_dac_clr_n (WB_DAC_NCLR),
+     .wr_dac_cs_n  (WB_DAC_NSYNC),
+     .wr_dac_ldac_n(WB_DAC_NLDAC),
+     .wr_eeprom_scl_o(), // storage for delay characterization
+     .wr_eeprom_scl_i(1'b0), // temp
+     .wr_eeprom_sda_o(),
+     .wr_eeprom_sda_i(1'b0), // temp
+     .wr_uart_rx(wr_uart_rxd), // to/from PS
+     .wr_uart_tx(wr_uart_txd),
+     .sfp_pps(pps_wr_refclk), // out, reference clock and pps
+     .sfp_refclk(wr_ref_clk),
+     // WR Slave Port to PS
+     .wr_axi_aclk(m_axi_wr_clk), // out to PS
+     .wr_axi_aresetn(1'b1), // in
+     .wr_axi_awaddr(m_axi_wr_awaddr),
+     .wr_axi_awvalid(m_axi_wr_awvalid),
+     .wr_axi_awready(m_axi_wr_awready),
+     .wr_axi_wdata(m_axi_wr_wdata),
+     .wr_axi_wstrb(m_axi_wr_wstrb),
+     .wr_axi_wvalid(m_axi_wr_wvalid),
+     .wr_axi_wready(m_axi_wr_wready),
+     .wr_axi_bresp(m_axi_wr_bresp),
+     .wr_axi_bvalid(m_axi_wr_bvalid),
+     .wr_axi_bready(m_axi_wr_bready),
+     .wr_axi_araddr(m_axi_wr_araddr),
+     .wr_axi_arvalid(m_axi_wr_arvalid),
+     .wr_axi_arready(m_axi_wr_arready),
+     .wr_axi_rdata(m_axi_wr_rdata),
+     .wr_axi_rresp(m_axi_wr_rresp),
+     .wr_axi_rvalid(m_axi_wr_rvalid),
+     .wr_axi_rready(m_axi_wr_rready),
+     .wr_axi_rlast(),
+`else
+     .wr_reset_n(1'b1),
+     .wr_refclk(1'b0),
+     .wr_eeprom_scl_i(1'b0),
+     .wr_eeprom_sda_i(1'b0),
+     .wr_uart_rx(1'b0),
+`endif
+
      // Misc
      .port_info(sfp_port0_info),
 
@@ -1378,6 +1493,17 @@ module n3xx (
      .link_up(SFP_0_LED_B),
      .activity(SFP_0_LED_A)
    );
+
+`ifndef SFP0_WR
+  assign WB_DAC_SCLK  = 1'b0;
+  assign WB_DAC_DIN   = 1'b0;
+  assign WB_DAC_NCLR  = 1'b1;
+  assign WB_DAC_NSYNC = 1'b1;
+  assign WB_DAC_NLDAC = 1'b1;
+  assign pps_wr_refclk = 1'b0;
+  assign wr_ref_clk = 1'b0;
+`endif
+
 
    /////////////////////////////////////////////////////////////////////
    //
@@ -1513,6 +1639,12 @@ module n3xx (
   assign {S_AXI_GP0_AWID, S_AXI_GP0_ARID} = 10'd0;
 
 `ifdef SFP0_AURORA
+  `define NO_ETH_DMA_0
+`elsif SFP0_WR
+  `define NO_ETH_DMA_0
+`endif
+
+`ifdef NO_ETH_DMA_0
   //If inst Aurora, tie off each axi/axi-lite interface
   axi_dummy #(
     .DEC_ERR(1'b0)
@@ -2009,10 +2141,6 @@ module n3xx (
   wire spi1_ss1;
   wire spi1_ss2;
 
-  wire [63:0] ps_gpio_out;
-  wire [63:0] ps_gpio_in;
-  wire [63:0] ps_gpio_tri;
-
   assign ps_gpio_in[10] = DBA_MYK_INTRQ;
 `ifndef N300
   assign ps_gpio_in[11] = DBB_MYK_INTRQ;
@@ -2217,6 +2345,26 @@ module n3xx (
     .M_AXI_NET1_wready(M_AXI_NET1_WREADY),
     .M_AXI_NET1_wstrb(M_AXI_NET1_WSTRB),
     .M_AXI_NET1_wvalid(M_AXI_NET1_WVALID),
+
+    .M_AXI_WR_CLK(m_axi_wr_clk),
+    .M_AXI_WR_RSTn(1'b1),
+    .M_AXI_WR_araddr(m_axi_wr_araddr),
+    .M_AXI_WR_arready(m_axi_wr_arready),
+    .M_AXI_WR_arvalid(m_axi_wr_arvalid),
+    .M_AXI_WR_awaddr(m_axi_wr_awaddr),
+    .M_AXI_WR_awready(m_axi_wr_awready),
+    .M_AXI_WR_awvalid(m_axi_wr_awvalid),
+    .M_AXI_WR_bready(m_axi_wr_bready),
+    .M_AXI_WR_bresp(m_axi_wr_bresp),
+    .M_AXI_WR_bvalid(m_axi_wr_bvalid),
+    .M_AXI_WR_rdata(m_axi_wr_rdata),
+    .M_AXI_WR_rready(m_axi_wr_rready),
+    .M_AXI_WR_rresp(m_axi_wr_rresp),
+    .M_AXI_WR_rvalid(m_axi_wr_rvalid),
+    .M_AXI_WR_wdata(m_axi_wr_wdata),
+    .M_AXI_WR_wready(m_axi_wr_wready),
+    .M_AXI_WR_wstrb(m_axi_wr_wstrb),
+    .M_AXI_WR_wvalid(m_axi_wr_wvalid),
 
     .M_AXI_XBAR_araddr(M_AXI_XBAR_ARADDR),
     .M_AXI_XBAR_arprot(),
@@ -2447,6 +2595,9 @@ module n3xx (
     .FCLK_RESET2_N(),
     .FCLK_CLK3(FCLK_CLK3),
     .FCLK_RESET3_N(),
+
+    .WR_UART_txd(wr_uart_rxd), // rx <-> tx
+    .WR_UART_rxd(wr_uart_txd), // rx <-> tx
 
     .USBIND_0_port_indctl(),
     .USBIND_0_vbus_pwrfault(),
@@ -2792,7 +2943,6 @@ module n3xx (
   wire [NUM_CHANNELS-1:0] rx_stb;
   wire [NUM_CHANNELS-1:0] tx_stb;
 
-  wire pps_radioclk1x;
   wire [31:0] build_datestamp;
 
   genvar i;
@@ -2833,6 +2983,7 @@ module n3xx (
     .pps(pps_radioclk1x),
     .pps_select(pps_select),
     .pps_out_enb(pps_out_enb),
+    .pps_select_sfp(pps_select_sfp),
     .ref_clk_reset(),
     .meas_clk_reset(meas_clk_reset),
     .ref_clk_locked(1'b1),
@@ -3016,6 +3167,12 @@ module n3xx (
   wire tx_b_rfi;
 `endif
 
+`ifdef BUILD_WR
+  localparam INCL_WR_TDC = 1'b1;
+`else
+  localparam INCL_WR_TDC = 1'b0;
+`endif
+
   wire          reg_portA_rd;
   wire          reg_portA_wr;
   wire [14-1:0] reg_portA_addr;
@@ -3027,7 +3184,9 @@ module n3xx (
   assign bRegPortInFlatA = {2'b0, reg_portA_addr, reg_portA_wr_data, reg_portA_rd, reg_portA_wr};
   assign {reg_portA_rd_data, validA_unused, reg_portA_ready} = bRegPortOutFlatA;
 
-  DbCore dba_core (
+  DbCore #(
+    .kInclWhiteRabbitTdc(INCL_WR_TDC)
+  ) dba_core (
     .bBusReset(clk40_rst),                   //in  std_logic
     .BusClk(clk40),                          //in  std_logic
     .Clk40(clk40),                           //in  std_logic
@@ -3067,11 +3226,19 @@ module n3xx (
     .rGatedPulseToPin(UNUSED_PIN_TDCA_0),    //inout std_logic
     .sGatedPulseToPin(UNUSED_PIN_TDCA_1),    //inout std_logic
     .sPps(pps_radioclk1x),                   //out std_logic
+    .sPpsToIob(pps_radioclk1x_iob),          //out std_logic
+    .WrRefClk(wr_ref_clk),                   //in  std_logic
+    .rWrPpsPulse(pps_wr_refclk),             //in  std_logic
+    .rWrGatedPulseToPin(UNUSED_PIN_TDCA_2),  //inout std_logic
+    .sWrGatedPulseToPin(UNUSED_PIN_TDCA_3),  //inout std_logic
+    .aPpsSfpSel(pps_select_sfp),             //out std_logic_vector(1:0)
     .sAdcSync(),                             //out std_logic
     .sDacSync(),                             //out std_logic
     .sSysRef(),                              //out std_logic
     .rRpTransfer(),                          //out std_logic
-    .sSpTransfer()                           //out std_logic
+    .sSpTransfer(),                          //out std_logic
+    .rWrRpTransfer(),                        //out std_logic
+    .sWrSpTransfer()                         //out std_logic
   );
 
   assign rx_stb[0] = rx_a_valid;
@@ -3130,7 +3297,9 @@ module n3xx (
   assign bRegPortInFlatB = {2'b0, reg_portB_addr, reg_portB_wr_data, reg_portB_rd, reg_portB_wr};
   assign {reg_portB_rd_data, validB_unused, reg_portB_ready} = bRegPortOutFlatB;
 
-  DbCore dbb_core (
+  DbCore #(
+    .kInclWhiteRabbitTdc(INCL_WR_TDC)
+  ) dbb_core (
     .bBusReset(clk40_rst),                   //in  std_logic
     .BusClk(clk40),                          //in  std_logic
     .Clk40(clk40),                           //in  std_logic
@@ -3170,11 +3339,19 @@ module n3xx (
     .rGatedPulseToPin(UNUSED_PIN_TDCB_0),    //inout std_logic
     .sGatedPulseToPin(UNUSED_PIN_TDCB_1),    //inout std_logic
     .sPps(),                                 //out std_logic
+    .sPpsToIob(),                            //out std_logic
+    .WrRefClk(wr_ref_clk),                   //in  std_logic
+    .rWrPpsPulse(pps_wr_refclk),             //in  std_logic
+    .rWrGatedPulseToPin(UNUSED_PIN_TDCB_2),  //inout std_logic
+    .sWrGatedPulseToPin(UNUSED_PIN_TDCB_3),  //inout std_logic
+    .aPpsSfpSel(2'b0),                       //out std_logic_vector(1:0)
     .sAdcSync(),                             //out std_logic
     .sDacSync(),                             //out std_logic
     .sSysRef(),                              //out std_logic
     .rRpTransfer(),                          //out std_logic
-    .sSpTransfer()                           //out std_logic
+    .sSpTransfer(),                          //out std_logic
+    .rWrRpTransfer(),                        //out std_logic
+    .sWrSpTransfer()                         //out std_logic
   );
 
   assign rx_stb[2] = rx_b_valid;
@@ -3263,5 +3440,24 @@ module n3xx (
    assign PANEL_LED_LINK = ps_gpio_out[45];
    assign PANEL_LED_REF  = ps_gpio_out[46];
    assign PANEL_LED_GPS  = ps_gpio_out[47];
+
+
+  /////////////////////////////////////////////////////////////////////
+  //
+  // PUDC Workaround
+  //
+  //////////////////////////////////////////////////////////////////////
+  // This is a workaround for a silicon bug in Series 7 FPGA where a
+  // race condition with the reading of PUDC during the erase of the FPGA
+  // image cause glitches on output IO pins.
+  //
+  // Workaround:
+  // - Define the PUDC pin in the XDC file with a pullup.
+  // - Implements an IBUF on the PUDC input and make sure that it does
+  //   not get optimized out.
+  (* dont_touch = "true" *) wire fpga_pudc_b_buf;
+  IBUF pudc_ibuf_i (
+    .I(FPGA_PUDC_B),
+    .O(fpga_pudc_b_buf));
 
 endmodule

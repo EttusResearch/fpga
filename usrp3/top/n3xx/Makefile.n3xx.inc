@@ -35,6 +35,7 @@ include $(LIB_DIR)/xge_interface/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/white_rabbit/wr_cores_v4_2/Makefile.srcs
 #include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(BASE_DIR)/n3xx/Makefile.srcs
@@ -60,6 +61,14 @@ MB_XDC = \
 mb_timing.xdc \
 mb_pins.xdc
 
+ifdef BUILD_WR
+MB_XDC += $(abspath n3xx_wr.xdc)
+TOP_SRCS += \
+n3xx_wr_top.vhd \
+n3xx_serial_dac.vhd \
+n3xx_serial_dac_arb.vhd
+endif
+
 ifdef BUILD_10G
 MB_XDC += $(abspath n310_10ge.xdc)
 endif
@@ -70,14 +79,6 @@ endif
 
 ifdef BUILD_AURORA
 MB_XDC += $(abspath n310_aurora.xdc)
-endif
-
-ifdef SFP0_10GBE
-MB_XDC += $(abspath n310_10ge_port0.xdc)
-endif
-
-ifdef SFP1_10GBE
-MB_XDC += $(abspath n310_10ge_port1.xdc)
 endif
 
 ifndef NO_DRAM_FIFOS
@@ -116,16 +117,14 @@ $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS) \
-$(MAGNESIUM_DB_SRCS) $(DB_COMMON_SRCS) $(HLS_IP_TARGETS)
-
-SHORT_HASH=$(addprefix GIT_HASH=,$(shell ../../tools/scripts/git-hash.sh))
+$(MAGNESIUM_DB_SRCS) $(DB_COMMON_SRCS) $(WHITE_RABBIT_SRCS)
 
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(SHORT_HASH)
+VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip

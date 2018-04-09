@@ -183,7 +183,7 @@ module e310_core
       RB32_CORE_TEST    : rb_data <= rb_test;
       RB32_CORE_MISC    : rb_data <= {26'd0, tcxo_status, pps_select};
       RB32_CORE_COMPAT  : rb_data <= {8'hAC, 8'h0, COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR};
-      RB32_CORE_GITHASH : rb_data <= 32'h`GIT_HASH;
+      RB32_CORE_GITHASH : rb_data <= `GIT_HASH;
       RB32_CORE_PLL     : rb_data <= {30'h0, lock_state_r};
       RB32_CORE_NUMCE   : rb_data <= {28'h0, NUM_CE+4'd1}; // +1 for radio core
 `ifdef DRAM_TEST

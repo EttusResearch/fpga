@@ -15,7 +15,6 @@ if [[ $VIV_PLATFORM = "Cygwin" ]]; then
     else
         VIVADO_BASE_PATH="/cygdrive/c/Xilinx/Vivado"
     fi
-    VIVADO_HLS_BASE_PATH="/cygdrive/c/Xilinx/Vivado_HLS"
     MODELSIM_BASE_PATH="/cygdrive/c/mentor/modelsim"
 else
     if [[ -d "/opt/Xilinx/Vivado_Lab" ]]; then
@@ -23,7 +22,6 @@ else
     else
         VIVADO_BASE_PATH="/opt/Xilinx/Vivado"
     fi
-    VIVADO_HLS_BASE_PATH="/opt/Xilinx/Vivado_HLS"
     MODELSIM_BASE_PATH="/opt/mentor/modelsim"
 fi
 
@@ -39,21 +37,21 @@ function resolve_viv_path {
 # Validate prerequisites
 #----------------------------------------------------------------------------
 # Ensure required variables
-if [ -z "$REPO_BASE_PATH" ]; then 
+if [ -z "$REPO_BASE_PATH" ]; then
     echo "ERROR: Please define the variable REPO_BASE_PATH before calling this script"
-    return 
+    return
 fi
-if [ -z "$VIVADO_VER" ]; then 
+if [ -z "$VIVADO_VER" ]; then
     echo "ERROR: Please define the variable VIVADO_VER before calling this script"
-    return 
+    return
 fi
-if [ -z "$DISPLAY_NAME" ]; then 
+if [ -z "$DISPLAY_NAME" ]; then
     echo "ERROR: Please define the variable DISPLAY_NAME before calling this script"
-    return 
+    return
 fi
-if [ ${#PRODUCT_ID_MAP[@]} -eq 0 ]; then 
+if [ ${#PRODUCT_ID_MAP[@]} -eq 0 ]; then
     echo "ERROR: Please define the variable PRODUCT_ID_MAP before calling this script"
-    return 
+    return
 fi
 
 # Ensure that the script is sourced
@@ -73,8 +71,6 @@ Usage: source setupenv.sh [--help|-h] [--vivado-path=<PATH>] [--modelsim-path=<P
 
 --vivado-path     : Path to the base install directory for Xilinx Vivado
                     (Default: /opt/Xilinx/Vivado or /opt/Xilinx/Vivado_Lab)
---vivado-hls-path : Path to the base install directory for Xilinx Vivado
-                    (Default: /opt/Xilinx/Vivado_HLS)
 --modelsim-path   : Path to the base install directory for Modelsim (optional simulation tool)
                     (Default: /opt/mentor/modelsim)
 --help -h         : Shows this message.
@@ -84,8 +80,7 @@ ${DISPLAY_NAME}. It will also optionally set up the the environment to run the
 Modelsim simulator (although this tool is not required).
 
 Required tools: Xilinx Vivado $VIVADO_VER (Synthesis and Simulation)
-Optional tools: Xilinx Vivado HLS $VIVADO_VER (High-Level Synthesis)
-                Mentor Graphics Modelsim (Simulation)
+Optional tools: Mentor Graphics Modelsim (Simulation)
 
 EOHELP
 }
@@ -117,13 +112,6 @@ for i in "$@"; do
         --vivado-path)
             PARSE_STATE="vivado-path"
         ;;
-        --vivado-hls-path=*)
-            VIVADO_HLS_BASE_PATH="${i#*=}"
-            PARSE_STATE=""
-        ;;
-        --vivado-hls-path)
-            PARSE_STATE="vivado-hls-path"
-        ;;
         --vivado-version=*)
             VIVADO_USER_VER="${i#*=}"
             PARSE_STATE=""
@@ -143,10 +131,6 @@ for i in "$@"; do
             case $PARSE_STATE in
                 vivado-path)
                     VIVADO_BASE_PATH="$i"
-                    PARSE_STATE=""
-                ;;
-                vivado-hls-path)
-                    VIVADO_HLS_BASE_PATH="$i"
                     PARSE_STATE=""
                 ;;
                 vivado-version)
@@ -178,7 +162,6 @@ if [[ ${VIVADO_VER^^} = "CMDLINE_ARG" ]]; then
     fi
 fi
 export VIVADO_PATH=$VIVADO_BASE_PATH/$VIVADO_VER
-export VIVADO_HLS_PATH=$VIVADO_HLS_BASE_PATH/$VIVADO_VER
 
 echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}..."
 #----------------------------------------------------------------------------
@@ -186,11 +169,6 @@ echo "Setting up a ${BITNESS}-bit FPGA build environment for the ${DISPLAY_NAME}
 #----------------------------------------------------------------------------
 if [ -d "$VIVADO_PATH/bin" ]; then
     echo "- Vivado: Found ($VIVADO_PATH/bin)"
-    if [ -d "$VIVADO_HLS_PATH/bin" ]; then
-        echo "- Vivado HLS: Found ($VIVADO_HLS_PATH/bin)"
-    else
-        echo "- Vivado HLS: Not found in $VIVADO_HLS_BASE_PATH (WARNING.. HLS build targets will not work)"
-    fi
 else
     echo "- Vivado: Version $VIVADO_VER not found in $VIVADO_BASE_PATH (ERROR.. Builds and simulations will not work)"
     if [[ -z $VIVADO_USER_VER ]]; then
@@ -207,9 +185,6 @@ if [[ -e $VIVADO_PATH/.settings${BITNESS}-Vivado_Lab.sh ]]; then
     $VIVADO_PATH/.settings${BITNESS}-Vivado_Lab.sh
 else
     $VIVADO_PATH/.settings${BITNESS}-Vivado.sh
-fi
-if [[ -e $VIVADO_HLS_PATH/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh ]]; then
-    $VIVADO_HLS_PATH/.settings${BITNESS}-Vivado_High_Level_Synthesis.sh
 fi
 if [[ -e $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh ]]; then
     $(readlink -f $VIVADO_BASE_PATH/..)/DocNav/.settings${BITNESS}-DocNav.sh
@@ -231,8 +206,8 @@ if [[ -d $MODELSIM_BASE_PATH ]]; then
     fi
 fi
 if [[ $VSIM_PATH ]]; then
-    if [[ $($VSIM_PATH -version) =~ .*ModelSim[[:space:]](.+)[[:space:]]vsim.* ]]; then 
-        MODELSIM_VER=${BASH_REMATCH[1]} 
+    if [[ $($VSIM_PATH -version) =~ .*ModelSim[[:space:]](.+)[[:space:]]vsim.* ]]; then
+        MODELSIM_VER=${BASH_REMATCH[1]}
         MODELSIM_PATH=$(dirname $VSIM_PATH)
     fi
     case $MODELSIM_VER in
@@ -284,12 +259,12 @@ export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$VIVADO_HLS_PATH:$VIVADO_HLS_P
 
 for prod in "${!PRODUCT_ID_MAP[@]}"; do
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$prod]}"
-    if [ ${#prod_tokens[@]} -eq 4 ]; then 
+    if [ ${#prod_tokens[@]} -eq 4 ]; then
         export XIL_ARCH_${prod}=${prod_tokens[0]}
         export XIL_PART_ID_${prod}=${prod_tokens[1]}/${prod_tokens[2]}/${prod_tokens[3]}
     else
         echo "ERROR: Invalid PRODUCT_ID_MAP entry: \"${PRODUCT_ID_MAP[$prod]}\". Must be <arch>/<part>/<pkg>/<sg>."
-        return 1 
+        return 1
     fi
 done
 
@@ -303,19 +278,19 @@ function viv_create_ip {
     if [[ -z $1 || -z $2 || -z $3 || -z $4 ]]; then
         echo "Create a new Vivado IP instance and a Makefile for it"
         echo ""
-        echo "Usage: viv_create_new_ip <IP Name> <IP Location> <IP VLNV> <Product>" 
+        echo "Usage: viv_create_new_ip <IP Name> <IP Location> <IP VLNV> <Product>"
         echo "- <IP Name>: Name of the IP instance"
         echo "- <IP Location>: Base location for IP"
         echo "- <IP VLNV>: The vendor, library, name, and version (VLNV) string for the IP as defined by Xilinx"
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
-    
+
     ip_name=$1
     ip_dir=$(readlink -f $2)
     ip_vlnv=$3
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$4]}"
-    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]}
     if [[ -z $part_name ]]; then
         echo "ERROR: Invalid product name $4. Supported: ${!PRODUCT_ID_MAP[@]}"
         return 1
@@ -325,7 +300,7 @@ function viv_create_ip {
         return 1
     fi
 
-    $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs create $part_name $ip_name $(resolve_viv_path $ip_dir) $ip_vlnv 
+    $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs create $part_name $ip_name $(resolve_viv_path $ip_dir) $ip_vlnv
     echo "Generating Makefile..."
     python $REPO_BASE_PATH/tools/scripts/viv_gen_ip_makefile.py --ip_name=$ip_name --dest=$ip_dir/$ip_name
     echo "Done generating IP in $ip_dir/$ip_name"
@@ -335,7 +310,7 @@ function viv_modify_ip {
     if [[ -z $1 ]]; then
         echo "Modify an existing Vivado IP instance"
         echo ""
-        echo "Usage: viv_modify_ip <IP XCI Path>" 
+        echo "Usage: viv_modify_ip <IP XCI Path>"
         echo "- <IP XCI Path>: Path to the IP XCI file."
         return 1
     fi
@@ -358,7 +333,7 @@ function viv_modify_bd {
     if [[ -z $1 || -z $2 ]]; then
         echo "Modify an existing Vivado Block Design instance"
         echo ""
-        echo "Usage: viv_modify_ip <BD Path> <Product>" 
+        echo "Usage: viv_modify_ip <BD Path> <Product>"
         echo "- <BD Path>: Path to the BD file."
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
@@ -366,7 +341,7 @@ function viv_modify_bd {
 
     bd_path=$(readlink -f $1)
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$2]}"
-    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]}
     if [[ -f $bd_path ]]; then
         $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify $part_name $(resolve_viv_path $bd_path)
     else
@@ -379,13 +354,13 @@ function viv_ls_ip {
     if [[ -z $1 ]]; then
         echo "List the items in the Vivado IP catalog"
         echo ""
-        echo "Usage: viv_ls_ip <Product>" 
+        echo "Usage: viv_ls_ip <Product>"
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
     fi
 
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$1]}"
-    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]} 
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]}
     if [[ -z $part_name ]]; then
         echo "ERROR: Invalid product name $1. Supported: ${!PRODUCT_ID_MAP[@]}"
         return 1
@@ -398,7 +373,7 @@ function viv_upgrade_ip {
     if [[ -z $1 ]]; then
         echo "Upgrade one or more Xilinx IP targets"
         echo ""
-        echo "Usage: viv_upgrade_ip <IP Directory> [--recursive]" 
+        echo "Usage: viv_upgrade_ip <IP Directory> [--recursive]"
         echo "- <IP Directory>: Path to the IP XCI file."
         return 1
     fi
