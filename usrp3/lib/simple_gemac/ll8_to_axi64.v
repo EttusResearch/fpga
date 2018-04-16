@@ -1,3 +1,8 @@
+//
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 
 // Takes 8-bit wide data on a Local-link fifo interface and converts to 64-bit wide axi
 //  Parameter START_BYTE controls which byte of the 8 the first incoming byte goes into

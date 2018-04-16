@@ -1,21 +1,9 @@
 #
 # Copyright 2008 Ettus Research LLC
-# 
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
-# 
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
-# 
+# Copyright 2015 Ettus Research, a National Instruments Company
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
 
 proc set_props {process options} {
 	if ![string compare $options ""] {
@@ -27,13 +15,13 @@ proc set_props {process options} {
 			set key $opt
 			set state 0
 		} else {
-			puts ">>> Setting: $process\[$key\] = $opt" 
+			puts ">>> Setting: $process\[$key\] = $opt"
 			if ![string compare $process "Project"] {
 				project set $key $opt
 			} else {
 				project set $key $opt -process $process
 			}
-			set state 1	
+			set state 1
 		}
 	}
 }
@@ -41,7 +29,7 @@ proc set_props {process options} {
 if [file isfile $env(ISE_FILE)] {
 	puts ">>> Opening project: $env(ISE_FILE)"
 	project open $env(ISE_FILE)
-} else {	
+} else {
 	puts ">>> Creating project: $env(ISE_FILE)"
 	project new $env(ISE_FILE)
 	

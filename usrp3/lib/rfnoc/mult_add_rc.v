@@ -1,5 +1,8 @@
 
 // Copyright 2014 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Complex times real.  Complex number is on port B (18I, 18Q), real is on A (25 bits)
 
 module mult_add_rc

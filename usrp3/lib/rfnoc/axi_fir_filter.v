@@ -1,5 +1,8 @@
 //
 // Copyright 2017 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Parameterized FIR filter with AXI stream interface.
 // Has several optimizations to resource utilization such as

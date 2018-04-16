@@ -1,5 +1,8 @@
 //
 // Copyright 2015 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Assumes 32-bit elements (such as sc16) carried over AXI-Stream
 // SIMPLE_MODE          -- Automatically handle header (s_axis_data_tuser), packets must be consumed / produced 1-to-1

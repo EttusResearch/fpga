@@ -2,7 +2,7 @@
 //
 // Copyright 2013-2016 Ettus Research, A National Instruments Company
 //
-// SPDX-License-Identifier: LGPL-3.0
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Module: xge_mac_wrapper
 // Description:

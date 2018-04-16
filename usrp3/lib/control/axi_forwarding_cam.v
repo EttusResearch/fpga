@@ -1,5 +1,8 @@
 //
 // Copyright 2013 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // This module implements a highly customized content-addressable memory (CAM)
 // that enables forwarding decisions to be made on a 16 bit field from a stream ID (SID) field.

@@ -1,5 +1,8 @@
 
 // Copyright 2014, Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 // Module to join a complex stream to I and Q outputs.  NOTE -- ONLY works when you can guarantee upstream paths match!
 

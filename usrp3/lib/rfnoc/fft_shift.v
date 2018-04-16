@@ -1,5 +1,8 @@
 //
-// Copyright 2015 Ettus Research
+// Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Arranges FFT output AXI stream packets so zero frequency bin is centered. Expects i_tuser to have FFT index.
 // Intended to complement Xilinx Coregen AXI-stream FFT, but should work with any core with similar output.

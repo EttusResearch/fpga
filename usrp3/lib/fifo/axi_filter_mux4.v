@@ -1,4 +1,8 @@
-// Copyright 2014 Ettus Research LLC
+//
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // axi_filter_mux -- takes 4 64-bit AXI stream of CHDR data, merges them to 1 output channel
 // Round-robin if PRIO=0, priority if PRIO=1 (lower number ports get priority)
 // Bubble cycles are inserted after each packet in PRIO mode, or on wraparound in Round Robin mode.

@@ -1,5 +1,8 @@
 //
 // Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Simple counter, reset by i_tlast on input side.  i_tdata not connected
 //  Most useful for indexing a RAM, creating a ramp, etc.

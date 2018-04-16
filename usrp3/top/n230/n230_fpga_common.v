@@ -1,3 +1,9 @@
+//
+// Copyright 2014-2016 Ettus Research LLC
+// Copyright 2015 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 /*******************************************************************
  * Seting Register Base addresses
  *******************************************************************/

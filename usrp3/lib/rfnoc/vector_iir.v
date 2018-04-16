@@ -1,5 +1,8 @@
 //
 // Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // H(z) = alpha/(1 - beta*z^-1)
 // Typically beta = 1 - alpha

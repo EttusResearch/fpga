@@ -1,5 +1,8 @@
 //
 // Copyright 2014 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // This delay doesn't use a fifo, and solves pipeline bubble issues.  
 // FIXME -- issues are that it will generate output without input, and you can't reduce delay, only increase

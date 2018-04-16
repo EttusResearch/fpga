@@ -1,5 +1,8 @@
 //
 // Copyright 2017 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Multiply-accumulate with preadder for use as a computation unit
 // in FIR filters. Designed to infer a DSP48 for all registers

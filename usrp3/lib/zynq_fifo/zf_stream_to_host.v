@@ -1,5 +1,10 @@
 //////////////////////////////////////////////////////////////////////////////////
+//
 // Copyright Ettus Research LLC
+// Copyright 2014 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 // The ZYNQ FIFO - read FIFO and write to DDR:
 //  - implements write state machine for AXI master on DDR
 //  - provides input fifos from external fabric

@@ -1,5 +1,8 @@
 
 // Copyright 2012 Ettus Research LLC
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // axi_demux -- takes one AXI stream, sends to one of 8 output channels
 //   Choice of output channel is by external logic based on first line of packet ("header" port)
 //   If compressed vita data, this line contains vita header and streamid.

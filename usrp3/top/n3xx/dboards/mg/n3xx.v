@@ -2,7 +2,7 @@
 ///
 // Copyright 2016-2018 Ettus Research, A National Instruments Company
 //
-// SPDX-License-Identifier: LGPL-3.0
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Module: n3xx
 // Description:

@@ -1,5 +1,8 @@
 //
 // Copyright 2015 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Parses CVITA packet header and outputs discrete signals.
 

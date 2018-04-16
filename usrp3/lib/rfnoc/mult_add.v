@@ -1,5 +1,8 @@
 
 // Copyright 2014 Ettus Research
+// Copyright 2018 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Write xilinx DSP48E1 primitive for mult-add with AXI interfaces
 
 module mult_add

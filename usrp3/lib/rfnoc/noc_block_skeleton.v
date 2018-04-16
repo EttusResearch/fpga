@@ -1,3 +1,8 @@
+//
+// Copyright 2016 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 module noc_block_skeleton #(
   parameter NOC_ID = 64'h1234_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)

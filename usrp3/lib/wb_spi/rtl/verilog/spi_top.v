@@ -17,6 +17,8 @@
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
 //// Copyright (C) 2002 Authors                                   ////
+////
+//// SPDX-License-Identifier: LGPL-3.0-or-later
 ////                                                              ////
 //// This source file may be used and distributed without         ////
 //// restriction provided that this copyright statement is not    ////

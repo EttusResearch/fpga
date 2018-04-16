@@ -1,3 +1,8 @@
+//
+// Copyright 2013 Ettus Research, a National Instruments Company
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
 `timescale 1ns/1ps
 
 module cvita_insert_tlast_tb();
