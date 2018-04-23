@@ -22,6 +22,7 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - USRP X300: Kintex 7 XC7K325T (7 Series)
 - USRP X310: Kintex 7 XC7K410T (7 Series)
 - USRP E310: Zynq-7000 XC7Z020 (7 Series)
+- USRP N310: Zynq-7100 XC7Z100 (7 Series)
 
 ### Requirements
 
