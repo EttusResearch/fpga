@@ -259,11 +259,17 @@ export PATH=${PATH}:$VIVADO_PATH:$VIVADO_PATH/bin:$VIVADO_HLS_PATH:$VIVADO_HLS_P
 
 for prod in "${!PRODUCT_ID_MAP[@]}"; do
     IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$prod]}"
-    if [ ${#prod_tokens[@]} -eq 4 ]; then
+    if [ ${#prod_tokens[@]} -eq 6 ]; then
+        export XIL_ARCH_${prod}=${prod_tokens[0]}
+        export XIL_PART_ID_${prod}=${prod_tokens[1]}/${prod_tokens[2]}/${prod_tokens[3]}/${prod_tokens[4]}/${prod_tokens[5]}
+    elif [ ${#prod_tokens[@]} -eq 5 ]; then
+        export XIL_ARCH_${prod}=${prod_tokens[0]}
+        export XIL_PART_ID_${prod}=${prod_tokens[1]}/${prod_tokens[2]}/${prod_tokens[3]}/${prod_tokens[4]}
+    elif [ ${#prod_tokens[@]} -eq 4 ]; then
         export XIL_ARCH_${prod}=${prod_tokens[0]}
         export XIL_PART_ID_${prod}=${prod_tokens[1]}/${prod_tokens[2]}/${prod_tokens[3]}
     else
-        echo "ERROR: Invalid PRODUCT_ID_MAP entry: \"${PRODUCT_ID_MAP[$prod]}\". Must be <arch>/<part>/<pkg>/<sg>."
+        echo "ERROR: Invalid PRODUCT_ID_MAP entry: \"${PRODUCT_ID_MAP[$prod]}\". Must be <arch>/<part>/<pkg>/<sg>[/<tg>[/<rev>]]."
         return 1
     fi
 done
