@@ -13,4 +13,5 @@ time_compare.v \
 timekeeper.v \
 pps_generator.v \
 pps_synchronizer.v \
+pulse_generator.v \
 ))
