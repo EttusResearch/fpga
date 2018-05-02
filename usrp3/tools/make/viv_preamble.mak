@@ -24,11 +24,14 @@ SIMLIB_DIR = $(abspath $(BASE_DIR)/../sim)
 LIB_IP_DIR = $(abspath $(LIB_DIR)/ip)
 HLS_IP_DIR = $(abspath $(LIB_DIR)/hls)
 
+O ?= .
+
 ifdef NAME
-BUILD_DIR = $(abspath ./build-$(NAME))
+BUILD_DIR = $(abspath $(O)/build-$(NAME))
 else
-BUILD_DIR = $(abspath ./build)
+BUILD_DIR = $(abspath $(O)/build)
 endif
+
 IP_BUILD_DIR = $(abspath ./build-ip/$(subst /,,$(PART_ID)))
 
 # -------------------------------------------------------------------
