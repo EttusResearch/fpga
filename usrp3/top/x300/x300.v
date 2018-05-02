@@ -321,9 +321,9 @@ module x300
    // 10MHz Reference clock
    //
    //////////////////////////////////////////////////////////////////////
-   wire ref_clk_10mhz;
-   IBUFDS IBUFDS_10_MHz (
-        .O(ref_clk_10mhz),
+   wire ref_clk;
+   IBUFDS IBUFDS_ref_clk (
+        .O(ref_clk),
         .I(FPGA_REFCLK_10MHz_p),
         .IB(FPGA_REFCLK_10MHz_n)
     );
@@ -432,12 +432,48 @@ module x300
    // input and outputs to support daisy-chaining the signal.
    ////////////////////////////////////////////////////////////////////
 
-   // Generate an internal PPS signal with a 25% duty cycle
    wire int_pps;
-   pps_generator #(
-      .CLK_FREQ(32'd10_000_000), .DUTY_CYCLE(25)
-   ) pps_gen (
-      .clk(ref_clk_10mhz), .reset(1'b0), .pps(int_pps)
+   wire [31:0] ref_freq;
+   wire ref_freq_changed;
+   wire ref_freq_sync_empty;
+   wire [71:0] ref_freq_sync_out;
+   reg new_ref_freq = 0;
+   reg [31:0] ref_freq_refclk = 10_000_000;   // Default to 10 MHz reference
+
+   // Synchronize ref_freq to ref_clk
+   fifo_short_2clk ref_freq_sync
+   (
+     .rst(bus_rst),
+     .wr_clk(bus_clk),
+     .rd_clk(ref_clk),
+     .din({40'd0,ref_freq}),
+     .wr_en(ref_freq_changed),
+     .rd_en(new_ref_freq),
+     .dout(ref_freq_sync_out),
+     .full( /* unused */ ),
+     .empty(ref_freq_sync_empty),
+     .rd_data_count( /* unused */ ),
+     .wr_data_count( /* unused */ )
+   );
+
+   // Capture the new reference frequency
+   always @(posedge ref_clk) begin
+     if (~ref_freq_sync_empty) begin
+       ref_freq_refclk <= ref_freq_sync_out[31:0];
+       new_ref_freq <= 1'b1;
+     end else
+       new_ref_freq <= 1'b0;
+   end
+
+   // Generate an internal PPS signal with a 25% duty cycle
+   pulse_generator #(.WIDTH(32)) pps_gen
+   (
+      .clk(ref_clk),
+      .reset(new_ref_freq),
+      .period(ref_freq_refclk),
+      //shift frequency by 2 bits (divide by 4) for a 25% duty cycle
+      .pulse_width({2'b00,ref_freq_refclk[31:2]}),
+      .pulse(int_pps)
    );
 
    // PPS MUX - selects internal, external, or gpsdo PPS
@@ -1294,7 +1330,7 @@ module x300
       // I2C bus
       .db_scl(DB_SCL), .db_sda(DB_SDA),
       // External clock gen
-      .ext_ref_clk(ref_clk_10mhz),
+      .ext_ref_clk(ref_clk),
       .clock_ref_sel(ClockRefSelect),
       .clock_misc_opt({GPSDO_PWR_ENA, TCXO_ENA}),
       .LMK_Status({LMK_Status1_sync, LMK_Status0_sync}), .LMK_Holdover(LMK_Holdover_sync), .LMK_Lock(LMK_Lock_sync), .LMK_Sync(LMK_Sync_sync),
@@ -1327,6 +1363,7 @@ module x300
       .sfp1_wb_cyc(sfp1_wb_cyc), .sfp1_wb_we(sfp1_wb_we), .sfp1_wb_int(sfp1_wb_int),
       // Time
       .pps(pps),.pps_select(pps_select), .pps_out_enb(pps_out_enb),
+      .ref_freq(ref_freq), .ref_freq_changed(ref_freq_changed),
       // GPS Signals
       .gps_txd(GPS_SER_IN), .gps_rxd(GPS_SER_OUT),
       // Debug UART

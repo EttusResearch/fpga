@@ -117,6 +117,8 @@ module x300_core #(
    input pps,
    output [1:0] pps_select,
    output pps_out_enb,
+   output [31:0] ref_freq,
+   output ref_freq_changed,
    output gps_txd,
    input gps_rxd,
    // Debug UART
@@ -277,6 +279,7 @@ module x300_core #(
       //clocky locky misc
       .clock_status({misc_clock_status, pps_detect, LMK_Holdover, LMK_Lock, LMK_Status}),
       .clock_control({time_sync, clock_misc_opt[1:0], pps_out_enb, pps_select[1:0], clock_ref_sel[1:0]}),
+      .ref_freq(ref_freq), .ref_freq_changed(ref_freq_changed),
       // Eth0
       .sfp0_tx_tdata(sfp0_tx_tdata), .sfp0_tx_tuser(sfp0_tx_tuser), .sfp0_tx_tlast(sfp0_tx_tlast),
       .sfp0_tx_tvalid(sfp0_tx_tvalid), .sfp0_tx_tready(sfp0_tx_tready),

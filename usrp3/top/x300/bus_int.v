@@ -7,7 +7,7 @@
 
 module bus_int #(
     parameter NUM_CE = 3          // Number of computation engines
-)( 
+)(
     input clk, input clk_div2, input reset, input reset_div2,
     output sen, output sclk, output mosi, input miso,
     inout scl0, inout sda0,
@@ -22,7 +22,7 @@ module bus_int #(
     // SFP+ 1
     input SFPP1_ModAbs, input SFPP1_TxFault, input SFPP1_RxLOS, inout SFPP1_RS0, inout SFPP1_RS1,
     // Clock control and status
-    input [7:0] clock_status, output [7:0] clock_control,
+    input [7:0] clock_status, output [7:0] clock_control, output [31:0] ref_freq, output ref_freq_changed,
     // SFP+ 0 data stream
     output [63:0] sfp0_tx_tdata, output [3:0] sfp0_tx_tuser, output sfp0_tx_tlast, output sfp0_tx_tvalid, input sfp0_tx_tready,
     input [63:0] sfp0_rx_tdata, input [3:0] sfp0_rx_tuser, input sfp0_rx_tlast, input sfp0_rx_tvalid, output sfp0_rx_tready,
@@ -77,6 +77,7 @@ module bus_int #(
    localparam SR_SW_RST       = 8'd01;
    localparam SR_CLOCK_CTRL   = 8'd02;
    localparam SR_XB_LOCAL     = 8'd03;
+   localparam SR_REF_FREQ     = 8'd04;
    localparam SR_SFPP_CTRL0   = 8'd08;
    localparam SR_SFPP_CTRL1   = 8'd09;
    localparam SR_SPI          = 8'd32;
@@ -102,7 +103,7 @@ module bus_int #(
    localparam RB_CROSSBAR     = 8'd128;
 
    localparam COMPAT_MAJOR    = 16'h0023;
-   localparam COMPAT_MINOR    = 16'h0000;
+   localparam COMPAT_MINOR    = 16'h0001;
 
    wire [31:0] 	  set_data;
    wire [7:0] 	  set_addr;
@@ -262,6 +263,13 @@ module bus_int #(
      (.clk(clk), .rst(reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(clock_control));
+
+   setting_reg #(.my_addr(SR_REF_FREQ), .awidth(SR_AWIDTH), .width(32),
+        .at_reset(32'd10_000_000) //default to 10 MHz reference clock
+    ) set_ref_freq
+     (.clk(clk), .rst(reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(ref_freq), .changed(ref_freq_changed));
 
    simple_spi_core #(.BASE(SR_SPI), .WIDTH(1), .CLK_IDLE(0), .SEN_IDLE(1'b1)) misc_spi
      (.clock(clk), .reset(reset),
@@ -494,11 +502,11 @@ module bus_int #(
    // 3  - CE0
    // ...
    // 15 - CE13
-   
+
   // Base width of crossbar based on fixed components (ethernet, PCIE)
    localparam XBAR_FIXED_PORTS = 3;
    localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
-   
+
    wire [7:0] local_addr;
    // Dedicated address space readback of xbar stats (up to 16x16)
    wire [$clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS)-1:0] rb_addr_xbar;
@@ -510,7 +518,7 @@ module bus_int #(
    setting_reg #(.my_addr(SR_RB_ADDR_XBAR), .awidth(SR_AWIDTH), .width($clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS))) sr_rb_addr_xbar
      (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
       .in(set_data),.out(rb_addr_xbar),.changed());
-  
+
    // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
    axi_crossbar #(
       .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))

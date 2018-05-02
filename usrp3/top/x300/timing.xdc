@@ -7,7 +7,7 @@
 
 # Define clocks
 create_clock -name FPGA_CLK            -period   5.000 -waveform {0.000 2.500}   [get_ports FPGA_CLK_p]
-create_clock -name FPGA_REFCLK_10MHz   -period 100.000 -waveform {0.000 50.000}  [get_ports FPGA_REFCLK_10MHz_p]
+create_clock -name FPGA_REFCLK         -period  32.563 -waveform {0.000 16.281}  [get_ports FPGA_REFCLK_10MHz_p]
 create_clock -name FPGA_125MHz_CLK     -period   8.000 -waveform {0.000 4.000}   [get_ports FPGA_125MHz_CLK]
 create_clock -name DB0_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}   [get_ports DB0_ADC_DCLK_P]
 create_clock -name DB1_ADC_DCLK        -period   5.000 -waveform {0.000 2.500}   [get_ports DB1_ADC_DCLK_P]
@@ -74,7 +74,7 @@ set_clock_groups -asynchronous -group [get_clocks ioport2_clk]  -group [get_cloc
 set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks radio_clk]
 set_clock_groups -asynchronous -group [get_clocks bus_clk_div2] -group [get_clocks radio_clk]
 set_clock_groups -asynchronous -group [get_clocks ioport2_clk]  -group [get_clocks IoPort2Wrapperx/RxLowSpeedClk]
-set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks FPGA_REFCLK_10MHz]
+set_clock_groups -asynchronous -group [get_clocks bus_clk]      -group [get_clocks FPGA_REFCLK]
 set_clock_groups -asynchronous -group [get_clocks ce_clk]       -group [get_clocks bus_clk]
 set_clock_groups -asynchronous -group [get_clocks ce_clk]       -group [get_clocks radio_clk]
 
