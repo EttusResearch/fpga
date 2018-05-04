@@ -82,9 +82,6 @@ module noc_shell
   wire cmdout_tvalid_bclk, ackout_tvalid_bclk, ackin_tvalid_bclk, cmdin_tvalid_bclk;
   wire cmdout_tready_bclk, ackout_tready_bclk, ackin_tready_bclk, cmdin_tready_bclk;
 
-   wire [OUTPUT_PORTS*64-1:0] str_src_throttle_tdata;
-   wire [OUTPUT_PORTS-1:0] str_src_throttle_tlast, str_src_throttle_tvalid, str_src_throttle_tready;
-
    ///////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos get cmd/ack ports into ce_clk domain
    ///////////////////////////////////////////////////////////////////////////////////////
@@ -141,11 +138,7 @@ module noc_shell
       .o3_tdata(ackin_tdata_bclk), .o3_tlast(ackin_tlast_bclk), .o3_tvalid(ackin_tvalid_bclk), .o3_tready(ackin_tready_bclk));
 
    wire [INPUT_PORTS-1:0] clear_rx_stb, clear_rx_stb_bclk;
-   reg [OUTPUT_PORTS-1:0] clear_tx_fc;
    wire [OUTPUT_PORTS-1:0] clear_tx_stb, clear_tx_stb_bclk;
-
-   wire [OUTPUT_PORTS-1:0] next_dst_sid_stb, next_dst_sid_stb_bclk;
-   reg [OUTPUT_PORTS-1:0] next_dst_sid_set;
 
    wire [64*BLOCK_PORTS-1:0] cmdin_ports_tdata;
    wire [BLOCK_PORTS-1:0]    cmdin_ports_tvalid, cmdin_ports_tready, cmdin_ports_tlast;
@@ -255,7 +248,7 @@ module noc_shell
          // Destination Stream ID of the next RFNoC block
          setting_reg #(.my_addr(SR_NEXT_DST_SID), .width(16), .at_reset(0)) sr_next_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(next_dst_sid[16*k+15:16*k]),.changed(next_dst_sid_stb[k]));
+            .in(set_data[32*k+31:32*k]),.out(next_dst_sid[16*k+15:16*k]),.changed());
          setting_reg #(.my_addr(SR_RESP_OUT_DST_SID), .width(16), .at_reset(0)) sr_resp_out_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
             .in(set_data[32*k+31:32*k]),.out(resp_out_dst_sid[16*k+15:16*k]),.changed());
@@ -263,9 +256,7 @@ module noc_shell
          pulse_synchronizer clear_tx_stb_sync_i
            (.clk_a(clk), .rst_a(reset), .pulse_a(clear_tx_stb[k]), .busy_a(/*Ignored: Pulses from SW are slow*/),
             .clk_b(bus_clk), .pulse_b(clear_tx_stb_bclk[k]));
-         pulse_synchronizer next_dst_sid_stb_sync_i
-           (.clk_a(clk), .rst_a(reset), .pulse_a(next_dst_sid_stb[k]), .busy_a(/*Ignored: Pulses from SW are slow*/),
-            .clk_b(bus_clk), .pulse_b(next_dst_sid_stb_bclk[k]));
+         assign clear_tx_seqnum[k] = clear_tx_stb[k];
 
        end
      end
@@ -281,63 +272,23 @@ module noc_shell
    wire [OUTPUT_PORTS-1:0]    fcin_ports_tvalid, fcin_ports_tready, fcin_ports_tlast;
 
    wire [63:0]               header_fcin;
-   reg [OUTPUT_PORTS-1:0]    throttle_src;
-   wire [OUTPUT_PORTS-1:0]   throttle_src_active;
 
    genvar i;
    generate
      for (i=0 ; i < OUTPUT_PORTS ; i = i + 1) begin : gen_noc_output_port
-       // If a clear is issued, throttle output until
-       // next_dst_sid has been programmed.
-       always @(posedge bus_clk) begin
-         if (bus_rst) begin
-           clear_tx_fc[i]        <= 1'b1;
-           throttle_src[i]       <= 1'b1;
-           next_dst_sid_set[i]   <= 1'b0;
-         end else begin
-           if (next_dst_sid_stb_bclk[i]) begin
-             next_dst_sid_set[i] <= 1'b1;
-           end
-           if (clear_tx_stb_bclk[i]) begin
-             throttle_src[i]     <= 1'b1;
-             next_dst_sid_set[i] <= 1'b0;
-           end else if (clear_tx_fc[i] & next_dst_sid_set[i]) begin
-             clear_tx_fc[i]      <= 1'b0;
-             throttle_src[i]     <= 1'b0;
-           end else if (throttle_src[i] & throttle_src_active[i]) begin
-             clear_tx_fc[i]      <= 1'b1;
-           end
-         end
-       end
-
-       synchronizer #(.INITIAL_VAL(1'b0)) clear_tx_sync_i (
-         .clk(clk), .rst(1'b0), .in(clear_tx_fc[i]), .out(clear_tx_seqnum[i]));
-
-       axi_throttle #(
-         .INITIAL_STATE(1),
-         .WAIT_FOR_LAST(1), // Do not throttle mid-packet
-         .WIDTH(64))
-       axi_throttle_src (
-         .clk(bus_clk), .reset(bus_rst),
-         .enable(throttle_src[i]), .active(throttle_src_active[i]),
-         .i_tdata(str_src_tdata[64*i+63:64*i]), .i_tlast(str_src_tlast[i]),
-         .i_tvalid(str_src_tvalid[i]), .i_tready(str_src_tready[i]),
-         .o_tdata(str_src_throttle_tdata[64*i+63:64*i]), .o_tlast(str_src_throttle_tlast[i]),
-         .o_tvalid(str_src_throttle_tvalid[i]), .o_tready(str_src_throttle_tready[i]));
-
        noc_output_port #(
          .SR_FLOW_CTRL_WINDOW_SIZE(SR_FLOW_CTRL_WINDOW_SIZE),
          .SR_FLOW_CTRL_WINDOW_EN(SR_FLOW_CTRL_WINDOW_EN),
          .PORT_NUM(i), .MTU(MTU[8*i+7:8*i]), .USE_GATE(USE_GATE_MASK[i]))
        noc_output_port (
-         .clk(bus_clk), .reset(bus_rst), .clear(clear_tx_fc[i]),
+         .clk(bus_clk), .reset(bus_rst), .clear(clear_tx_stb_bclk[i]),
          .set_stb(set_stb_bclk[i]), .set_addr(set_addr_bclk[8*i+7:8*i]), .set_data(set_data_bclk[32*i+31:32*i]),
          .dataout_tdata(dataout_ports_tdata[64*i+63:64*i]), .dataout_tlast(dataout_ports_tlast[i]),
          .dataout_tvalid(dataout_ports_tvalid[i]), .dataout_tready(dataout_ports_tready[i]),
          .fcin_tdata(fcin_ports_tdata[64*i+63:64*i]), .fcin_tlast(fcin_ports_tlast[i]),
          .fcin_tvalid(fcin_ports_tvalid[i]), .fcin_tready(fcin_ports_tready[i]),
-         .str_src_tdata(str_src_throttle_tdata[64*i+63:64*i]), .str_src_tlast(str_src_throttle_tlast[i]),
-         .str_src_tvalid(str_src_throttle_tvalid[i]), .str_src_tready(str_src_throttle_tready[i]));
+         .str_src_tdata(str_src_tdata[64*i+63:64*i]), .str_src_tlast(str_src_tlast[i]),
+         .str_src_tvalid(str_src_tvalid[i]), .str_src_tready(str_src_tready[i]));
      end
 
      if (OUTPUT_PORTS == 1) begin
