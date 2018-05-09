@@ -6,8 +6,8 @@
 //
 
 module noc_block_fft #(
-  parameter EN_MAGNITUDE_OUT = 1,        // CORDIC based magnitude calculation
-  parameter EN_MAGNITUDE_APPROX_OUT = 0, // Multiplier-less, lower resource usage
+  parameter EN_MAGNITUDE_OUT = 0,        // CORDIC based magnitude calculation
+  parameter EN_MAGNITUDE_APPROX_OUT = 1, // Multiplier-less, lower resource usage
   parameter EN_MAGNITUDE_SQ_OUT = 1,     // Magnitude squared
   parameter EN_FFT_SHIFT = 1,            // Center zero frequency bin
   parameter NOC_ID = 64'hFF70_0000_0000_0000,
@@ -70,35 +70,24 @@ module noc_block_fft #(
   // Convert RFNoC Shell interface into AXI stream interface
   //
   ////////////////////////////////////////////////////////////
-  localparam NUM_AXI_CONFIG_BUS = 1;
-  
   wire [31:0] m_axis_data_tdata;
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
   wire        m_axis_data_tready;
-  
+
   wire [31:0] s_axis_data_tdata;
   wire        s_axis_data_tlast;
   wire        s_axis_data_tvalid;
   wire        s_axis_data_tready;
-  
-  wire [31:0] m_axis_config_tdata;
-  wire        m_axis_config_tvalid;
-  wire        m_axis_config_tready;
-  
-  localparam AXI_WRAPPER_BASE    = 128;
-  localparam SR_AXI_CONFIG_BASE  = AXI_WRAPPER_BASE + 1;
 
   axi_wrapper #(
-    .SIMPLE_MODE(1),
-    .SR_AXI_CONFIG_BASE(SR_AXI_CONFIG_BASE),
-    .NUM_AXI_CONFIG_BUS(NUM_AXI_CONFIG_BUS))
+    .SIMPLE_MODE(1))
   inst_axi_wrapper (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(next_dst_sid),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .set_stb(), .set_addr(), .set_data(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),
@@ -111,10 +100,10 @@ module noc_block_fft #(
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
     .s_axis_data_tuser(),
-    .m_axis_config_tdata(m_axis_config_tdata),
+    .m_axis_config_tdata(),
     .m_axis_config_tlast(),
-    .m_axis_config_tvalid(m_axis_config_tvalid),
-    .m_axis_config_tready(m_axis_config_tready),
+    .m_axis_config_tvalid(),
+    .m_axis_config_tready(),
     .m_axis_pkt_len_tdata(),
     .m_axis_pkt_len_tvalid(),
     .m_axis_pkt_len_tready());
@@ -131,14 +120,23 @@ module noc_block_fft #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready  = 1'b1;
 
-  localparam [7:0] SR_FFT_RESET     = 131;
-  localparam [7:0] SR_FFT_SIZE_LOG2 = 132;
-  localparam [7:0] SR_MAGNITUDE_OUT = 133;
-  localparam MAX_FFT_SIZE_LOG2      = 11;
+  localparam MAX_FFT_SIZE_LOG2          = 11;
 
+  localparam [31:0] SR_FFT_RESET        = 131;
+  localparam [31:0] SR_FFT_SIZE_LOG2    = 132;
+  localparam [31:0] SR_MAGNITUDE_OUT    = 133;
+  localparam [31:0] SR_FFT_DIRECTION    = 134;
+  localparam [31:0] SR_FFT_SCALING      = 135;
+  localparam [31:0] SR_FFT_SHIFT_CONFIG = 136;
+
+  // FFT Output
   localparam [1:0] COMPLEX_OUT = 0;
   localparam [1:0] MAG_OUT     = 1;
   localparam [1:0] MAG_SQ_OUT  = 2;
+
+  // FFT Direction
+  localparam [0:0] FFT_REVERSE = 0;
+  localparam [0:0] FFT_FORWARD = 1;
 
   wire [1:0]  magnitude_out;
   wire [31:0] fft_data_o_tdata;
@@ -163,6 +161,7 @@ module noc_block_fft #(
   wire        fft_mag_round_i_tvalid, fft_mag_round_o_tvalid;
   wire        fft_mag_round_i_tready, fft_mag_round_o_tready;
 
+  // Settings Registers
   wire fft_reset;
   setting_reg #(
     .my_addr(SR_FFT_RESET), .awidth(8), .width(1))
@@ -170,29 +169,89 @@ module noc_block_fft #(
     .clk(ce_clk), .rst(ce_rst),
     .strobe(set_stb), .addr(set_addr), .in(set_data), .out(fft_reset), .changed());
 
-  wire [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata;
+  // Two instances of FFT size register, one for FFT core and one for FFT shift
+  localparam DEFAULT_FFT_SIZE = 8; // 256
+  wire [7:0] fft_size_log2_tdata ,fft_core_size_log2_tdata;
+  wire fft_size_log2_tvalid, fft_core_size_log2_tvalid, fft_size_log2_tready, fft_core_size_log2_tready;
   axi_setting_reg #(
-    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH($clog2(MAX_FFT_SIZE_LOG2)))
+    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH(8), .DATA_AT_RESET(DEFAULT_FFT_SIZE), .VALID_AT_RESET(1))
   sr_fft_size_log2 (
-    .clk(ce_clk), .reset(ce_rst), .error_stb(),
+    .clk(ce_clk), .reset(ce_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(fft_size_log2_tdata), .o_tlast(), .o_tvalid(fft_size_log2_tvalid), .o_tready(fft_size_log2_tready));
 
+  axi_setting_reg #(
+    .ADDR(SR_FFT_SIZE_LOG2), .AWIDTH(8), .WIDTH(8), .DATA_AT_RESET(DEFAULT_FFT_SIZE), .VALID_AT_RESET(1))
+  sr_fft_size_log2_2 (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(fft_core_size_log2_tdata), .o_tlast(), .o_tvalid(fft_core_size_log2_tvalid), .o_tready(fft_core_size_log2_tready));
+
+  // Forward = 0, Reverse = 1
+  localparam DEFAULT_FFT_DIRECTION = 0;
+  wire fft_direction_tdata;
+  wire fft_direction_tvalid, fft_direction_tready;
+  axi_setting_reg #(
+    .ADDR(SR_FFT_DIRECTION), .AWIDTH(8), .WIDTH(1), .DATA_AT_RESET(DEFAULT_FFT_DIRECTION), .VALID_AT_RESET(1))
+  sr_fft_direction (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(fft_direction_tdata), .o_tlast(), .o_tvalid(fft_direction_tvalid), .o_tready(fft_direction_tready));
+
+  localparam [11:0] DEFAULT_FFT_SCALING = 12'b011010101010; // Conservative 1/N scaling
+  wire [11:0] fft_scaling_tdata;
+  wire fft_scaling_tvalid, fft_scaling_tready;
+  axi_setting_reg #(
+    .ADDR(SR_FFT_SCALING), .AWIDTH(8), .WIDTH(12), .DATA_AT_RESET(DEFAULT_FFT_SCALING), .VALID_AT_RESET(1))
+  sr_fft_scaling (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(fft_scaling_tdata), .o_tlast(), .o_tvalid(fft_scaling_tvalid), .o_tready(fft_scaling_tready));
+
+  wire [1:0] fft_shift_config_tdata;
+  wire fft_shift_config_tvalid, fft_shift_config_tready;
+  axi_setting_reg #(
+    .ADDR(SR_FFT_SHIFT_CONFIG), .AWIDTH(8), .WIDTH(2))
+  sr_fft_shift_config (
+    .clk(ce_clk), .reset(ce_rst),
+    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .o_tdata(fft_shift_config_tdata), .o_tlast(), .o_tvalid(fft_shift_config_tvalid), .o_tready(fft_shift_config_tready));
+
+  // Synchronize writing configuration to the FFT core
+  reg fft_config_ready;
+  wire fft_config_write = fft_config_ready & m_axis_data_tvalid & m_axis_data_tready;
+  always @(posedge ce_clk) begin
+    if (ce_rst | fft_reset) begin
+      fft_config_ready   <= 1'b1;
+    end else begin
+      if (fft_config_write) begin
+        fft_config_ready <= 1'b0;
+      end else if (m_axis_data_tlast) begin
+        fft_config_ready <= 1'b1;
+      end
+    end
+  end
+
+  wire [23:0] fft_config_tdata     = {3'd0, fft_scaling_tdata, fft_direction_tdata, fft_core_size_log2_tdata};
+  wire fft_config_tvalid           = fft_config_write & (fft_scaling_tvalid | fft_direction_tvalid | fft_core_size_log2_tvalid);
+  wire fft_config_tready;
+  assign fft_core_size_log2_tready = fft_config_tready & fft_config_write;
+  assign fft_direction_tready      = fft_config_tready & fft_config_write;
+  assign fft_scaling_tready        = fft_config_tready & fft_config_write;
   axi_fft inst_axi_fft (
     .aclk(ce_clk), .aresetn(~(ce_rst | fft_reset)),
     .s_axis_data_tvalid(m_axis_data_tvalid),
     .s_axis_data_tready(m_axis_data_tready),
     .s_axis_data_tlast(m_axis_data_tlast),
-    .s_axis_data_tdata(m_axis_data_tdata),
+    .s_axis_data_tdata({m_axis_data_tdata[15:0],m_axis_data_tdata[31:16]}),
     .m_axis_data_tvalid(fft_data_o_tvalid),
     .m_axis_data_tready(fft_data_o_tready),
     .m_axis_data_tlast(fft_data_o_tlast),
-    .m_axis_data_tdata(fft_data_o_tdata),
+    .m_axis_data_tdata({fft_data_o_tdata[15:0],fft_data_o_tdata[31:16]}),
     .m_axis_data_tuser(fft_data_o_tuser), // FFT index
-    .s_axis_config_tdata(m_axis_config_tdata[23:0]),
-    .s_axis_config_tvalid(m_axis_config_tvalid),
-    .s_axis_config_tready(m_axis_config_tready),
-    // Unused
+    .s_axis_config_tdata(fft_config_tdata),
+    .s_axis_config_tvalid(fft_config_tvalid),
+    .s_axis_config_tready(fft_config_tready),
     .event_frame_started(),
     .event_tlast_unexpected(),
     .event_tlast_missing(),
@@ -240,7 +299,10 @@ module noc_block_fft #(
         .WIDTH(32))
       inst_fft_shift (
         .clk(ce_clk), .reset(ce_rst | fft_reset),
-        .fft_size_log2_tdata(fft_size_log2_tdata),
+        .config_tdata(fft_shift_config_tdata),
+        .config_tvalid(fft_shift_config_tvalid),
+        .config_tready(fft_shift_config_tready),
+        .fft_size_log2_tdata(fft_size_log2_tdata[$clog2(MAX_FFT_SIZE_LOG2)-1:0]),
         .fft_size_log2_tvalid(fft_size_log2_tvalid),
         .fft_size_log2_tready(fft_size_log2_tready),
         .i_tdata(fft_data_o_tdata),
@@ -340,8 +402,12 @@ module noc_block_fft #(
   // Readback registers
   always @*
     case(rb_addr)
-      8'd0    : rb_data <= {63'd0, fft_reset};
-      8'd1    : rb_data <= {62'd0, magnitude_out};
+      3'd0    : rb_data <= {63'd0, fft_reset};
+      3'd1    : rb_data <= {62'd0, magnitude_out};
+      3'd2    : rb_data <= {fft_size_log2_tdata};
+      3'd3    : rb_data <= {63'd0, fft_direction_tdata};
+      3'd4    : rb_data <= {52'd0, fft_scaling_tdata};
+      3'd5    : rb_data <= {62'd0, fft_shift_config_tdata};
       default : rb_data <= 64'h0BADC0DE0BADC0DE;
   endcase
 

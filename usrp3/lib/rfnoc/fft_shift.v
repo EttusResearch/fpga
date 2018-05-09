@@ -9,13 +9,18 @@
 // Works with natural and bit/digit reversed order. 
 //
 // When using Xilinx FFT core, use bit/digit reversed order (versus natural order) to save resources
+//
+// Config bits:
+//   0: Reverse output so positive frequencies are sent first
+//   1: Bypass fft shift
 
 module fft_shift #(
   parameter MAX_FFT_SIZE_LOG2 = 11,
   parameter WIDTH = 32)
 (
   input clk, input reset,
-  input [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_tdata, input fft_size_log2_tvalid, output fft_size_log2_tready,
+  input [1:0] config_tdata, input config_tvalid, output config_tready,
+  input [$clog2(MAX_FFT_SIZE_LOG2+1)-1:0] fft_size_log2_tdata, input fft_size_log2_tvalid, output fft_size_log2_tready,
   input [WIDTH-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready, input [MAX_FFT_SIZE_LOG2-1:0] i_tuser,
   output [WIDTH-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready
 );
@@ -23,8 +28,10 @@ module fft_shift #(
   reg ping_pong;
   reg loading_pkt;
   reg [2:0] reconfig_stall;
-  reg [$clog2(MAX_FFT_SIZE_LOG2)-1:0] fft_size_log2_latch;
-  reg [MAX_FFT_SIZE_LOG2-1:0] fft_size, fft_size_minus_1, fft_shift_mask;
+  reg reverse, bypass;
+  reg [$clog2(MAX_FFT_SIZE_LOG2+1)-1:0] fft_size_log2_reg;
+  reg [MAX_FFT_SIZE_LOG2:0] fft_size;
+  reg [MAX_FFT_SIZE_LOG2-1:0] fft_size_minus_1, fft_shift_mask;
   wire [WIDTH-1:0] ping_rd_data, pong_rd_data;
   reg [MAX_FFT_SIZE_LOG2-1:0] ping_rd_addr, pong_rd_addr;
   // t_user is the FFT index, this XOR is how the natural order FFT output is flipped to
@@ -47,10 +54,11 @@ module fft_shift #(
   assign o_tlast = ping_pong ? pong_tlast           : ping_tlast;
   assign o_tdata = ping_pong ? pong_rd_data         : ping_rd_data;
 
-  // Prevent fft size from changing except at valid times. If the user violates tvalid rules
+  // Prevent reconfiguration from occurring except at valid times. If the user violates tvalid rules
   // (i.e. deasserts tvalid during the middle of a packet), could cause next output packet to have
   // the wrong size.
-  assign fft_size_log2_tready = ~ping_loaded & ~pong_loaded & ~loading_pkt;
+  assign config_tready        = ~ping_loaded & ~pong_loaded & ~loading_pkt;
+  assign fft_size_log2_tready = config_tready;
 
   ram_2port #(
     .DWIDTH(WIDTH),
@@ -78,31 +86,49 @@ module fft_shift #(
       fft_shift_mask        <= 0;
       fft_size_minus_1      <= 0;
       fft_size              <= 0;
-      fft_size_log2_latch   <= 0;
+      fft_size_log2_reg     <= 0;
+      bypass                <= 1'b0;
+      reverse               <= 1'b0;
       reconfig_stall        <= 3'd0;
       loading_pkt           <= 1'b0;
     end else begin
-      fft_shift_mask <= fft_size/2;
-      fft_size_minus_1 <= fft_size-1;
-      fft_size <= 1 << fft_size_log2_latch;
-      // Restrict updating fft size to valid times
-      // Also, deassert i_tready until updated fft size has propogated through
-      if (fft_size_log2_tready & fft_size_log2_tvalid) begin
-        fft_size_log2_latch <= fft_size_log2_tdata;
-        reconfig_stall <= 3'b111;
+      fft_size_minus_1   <= fft_size-1;
+      fft_size           <= 1 << fft_size_log2_reg;
+      // Configure FFT shift mask such that the output order is either
+      // unaffected (bypass), positive frequencies first (reverse), or
+      // negative frequencies first
+      if (bypass) begin
+        fft_shift_mask   <= 'd0;
+      end else if (reverse) begin
+        fft_shift_mask   <= (fft_size-1) >> 1;
       end else begin
+        fft_shift_mask   <= fft_size >> 1;
+      end
+
+      // Restrict updating 
+      if (config_tready & config_tvalid) begin
+        reverse           <= config_tdata[0];
+        bypass            <= config_tdata[1];
+        reconfig_stall    <= 3'b100;
+      end
+      // Restrict updating FFT size to valid times
+      // Also, deassert i_tready until updated fft size has propagated through
+      if (fft_size_log2_tready & fft_size_log2_tvalid) begin
+        fft_size_log2_reg <= fft_size_log2_tdata[$clog2(MAX_FFT_SIZE_LOG2)-1:0];
+        reconfig_stall    <= 3'b111;
+      end
+      if (~(config_tready & config_tvalid) & ~(fft_size_log2_tready & fft_size_log2_tvalid)) begin
         reconfig_stall[0] <= 1'b0;
         reconfig_stall[2:1] <= reconfig_stall[1:0];
       end
-      
-      // Used to disable fft size configuration AXI-stream bus
-      // when we are receiving a packet
+
+      // Used to disable reconfiguration when we are receiving a packet
       if (i_tvalid & i_tready & ~i_tlast & ~loading_pkt) begin
         loading_pkt <= 1'b1;
       end else if (i_tvalid & i_tready & i_tlast & loading_pkt) begin
         loading_pkt <= 1'b0;
       end
-      
+
       // Logic to simultaneously load ping RAM and unload pong RAM. Note, write address for ping RAM handled with i_tuser, 
       // so we only look for i_tlast instead of maintaining a write address counter.
       if (ping_pong) begin
@@ -114,8 +140,8 @@ module fft_shift #(
             if (ping_loaded | (i_tvalid & i_tready & i_tlast)) begin
               ping_pong <= ~ping_pong;
             end
-            pong_tlast <= 1'b0;
-            pong_loaded <= 1'b0;
+            pong_tlast   <= 1'b0;
+            pong_loaded  <= 1'b0;
             pong_rd_addr <= 0;
           end else begin
             pong_rd_addr <= pong_rd_addr + 1;
@@ -128,7 +154,7 @@ module fft_shift #(
         if (i_tvalid & i_tready & i_tlast) begin
           // Value at addr 0 already loaded (see first word fall through and avoiding a bubble state comment above)
           ping_rd_addr <= 1;
-          ping_loaded <= 1'b1;
+          ping_loaded  <= 1'b1;
           // We can switch to the pong RAM only if it is empty (or about to be empty)
           if (~pong_loaded) begin
             ping_pong <= ~ping_pong;
@@ -145,8 +171,8 @@ module fft_shift #(
             if (pong_loaded | (i_tvalid & i_tready & i_tlast)) begin
               ping_pong <= ~ping_pong;
             end
-            ping_tlast <= 1'b0;
-            ping_loaded <= 1'b0;
+            ping_tlast   <= 1'b0;
+            ping_loaded  <= 1'b0;
             ping_rd_addr <= 0;
           end else begin
             ping_rd_addr <= ping_rd_addr + 1;
@@ -157,7 +183,7 @@ module fft_shift #(
         end
         if (i_tvalid & i_tready & i_tlast) begin
           pong_rd_addr <= 1;
-          pong_loaded <= 1'b1;
+          pong_loaded  <= 1'b1;
           if (~ping_loaded | (ping_loaded & o_tvalid & o_tlast)) begin
             ping_pong <= ~ping_pong;
           end
