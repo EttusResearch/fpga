@@ -19,10 +19,10 @@ void addsub_hls (axis_cplx &a, axis_cplx &b, axis_cplx &add, axis_cplx &sub) {
     // Remove ap ctrl ports (ap_start, ap_ready, ap_idle, etc) since we only use the AXI-Stream ports
     #pragma HLS INTERFACE ap_ctrl_none port=return
     // Set ports as AXI-Stream
-    #pragma HLS INTERFACE axis register port=sub
-    #pragma HLS INTERFACE axis register port=add
-    #pragma HLS INTERFACE axis register port=a
-    #pragma HLS INTERFACE axis register port=b
+    #pragma HLS INTERFACE axis port=sub
+    #pragma HLS INTERFACE axis port=add
+    #pragma HLS INTERFACE axis port=a
+    #pragma HLS INTERFACE axis port=b
     // Need to pack our complex<short int> into a 32-bit word
     // Otherwise, compiler complains that our AXI-Stream interfaces have two data fields (i.e. data.real, data.imag)
     #pragma HLS DATA_PACK variable=sub.data
@@ -31,8 +31,10 @@ void addsub_hls (axis_cplx &a, axis_cplx &b, axis_cplx &add, axis_cplx &sub) {
     #pragma HLS DATA_PACK variable=b.data
 
     // Complex add / subtract
-    add.data = a.data + b.data;
-    sub.data = a.data - b.data;
+    add.data.real() = a.data.real() + b.data.real();
+    add.data.imag() = a.data.imag() + b.data.imag();
+    sub.data.real() = a.data.real() - b.data.real();
+    sub.data.imag() = a.data.imag() - b.data.imag();
     // Pass through tlast
     add.last = a.last;
     sub.last = a.last;
