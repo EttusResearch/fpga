@@ -1,12 +1,14 @@
 //
-// Copyright 2014 Ettus Research LLC
-// Copyright 2018 Ettus Research, a National Instruments Company
-//
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright 2017
 //
 
-module noc_block_schmidl_cox #(
-  parameter NOC_ID = 64'h5CC0_0000_0000_0000,
+module noc_block_ofdm_constellation_demapper #(
+  parameter NUM_SUBCARRIERS        = 64,
+  // Bit mask of subcarriers to exclude, such as guard bands, pilot subcarriers, DC bin, etc. Neg freq -> Pos freq.
+  parameter EXCLUDE_SUBCARRIERS    = 64'b1111_1100_0001_0000_0000_0000_0100_0000_1000_0001_0000_0000_0000_0100_0001_1111,
+  parameter MAX_MODULATION_ORDER   = 6,  // Must be a power of 4, default QAM-64
+  parameter BYTE_REVERSE           = 1,  // Reverse output bytes
+  parameter NOC_ID = 64'h0FCD_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
@@ -46,7 +48,7 @@ module noc_block_schmidl_cox #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -76,15 +78,16 @@ module noc_block_schmidl_cox #(
   wire         s_axis_data_tlast;
   wire         s_axis_data_tvalid;
   wire         s_axis_data_tready;
+  wire [127:0] s_axis_data_tuser;
 
   axi_wrapper #(
-    .SIMPLE_MODE(0))
-  axi_wrapper (
+    .SIMPLE_MODE(0),
+    .RESIZE_OUTPUT_PACKET(1))
+  inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
-    .next_dst(next_dst),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .next_dst(),
+    .set_stb(), .set_addr(), .set_data(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),
@@ -96,10 +99,7 @@ module noc_block_schmidl_cox #(
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
-    // Packet type, sequence number, and length will be automatically filled
-    // Using EOB bit to indicate start of frame
-    .s_axis_data_tuser({2'd0,1'd0,sof,12'd0,16'd0,{src_sid,next_dst_sid},64'd0}),
-    // Unused
+    .s_axis_data_tuser(s_axis_data_tuser),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
     .m_axis_config_tvalid(),
@@ -107,29 +107,65 @@ module noc_block_schmidl_cox #(
     .m_axis_pkt_len_tdata(),
     .m_axis_pkt_len_tvalid(),
     .m_axis_pkt_len_tready());
-  
-  ////////////////////////////////////////////////////////////
-  //
-  // User code
-  //
-  ////////////////////////////////////////////////////////////
-  localparam [7:0] BASE = 129;
 
-  schmidl_cox #(
-    .WINDOW_LEN(64),
-    .PREAMBLE_LEN(160),
-    .SR_FRAME_LEN(BASE+0),
-    .SR_GAP_LEN(BASE+1),
-    .SR_OFFSET(BASE+2),
-    .SR_NUMBER_SYMBOLS_MAX(BASE+3),
-    .SR_NUMBER_SYMBOLS_SHORT(BASE+4),
-    .SR_THRESHOLD(BASE+5),
-    .SR_AGC_REF_LEVEL(BASE+6))
-  schmidl_cox (
-    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
+  localparam SR_MODULATION_ORDER = 129;
+  localparam SR_SCALING          = 130;
+  localparam SR_OUTPUT_SYMBOLS   = 131;
+  localparam SR_PKT_LEN          = 132;
+  localparam SR_SET_EOB          = 133;
+
+  wire [15:0] pkt_len;
+  setting_reg #(
+    .my_addr(SR_PKT_LEN), .width(16), .at_reset(16'd256))
+  setting_reg_pkt_len (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(pkt_len), .changed());
+
+  wire set_eob;
+  setting_reg #(
+    .my_addr(SR_SET_EOB), .width(1), .at_reset(1'b1))
+  setting_reg_set_eob (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data), .out(set_eob), .changed());
+
+  // Register src sid
+  reg [15:0] src_sid;
+  reg src_sid_hold;
+  always @(posedge ce_clk) begin
+    if (ce_rst) begin
+      src_sid       <= 16'd0;
+      src_sid_hold  <= 1'b0;
+    end else begin
+      if (m_axis_data_tvalid & ~src_sid_hold) begin
+        src_sid       <= m_axis_data_tuser[79:64];
+        src_sid_hold  <= 1'b1;
+      end
+    end
+  end
+
+  // Setup header
+  assign s_axis_data_tuser = {
+    2'b00,        // Data Packet type
+    1'b0,         // No time
+    set_eob,      // EOB
+    12'd0,        // Sequence number, don't care handled by AXI wrapper
+    pkt_len+8,    // Packet length
+    src_sid,      // SRC SID
+    next_dst_sid, // DST SID
+    64'd0};       // VITA time
+
+  ofdm_constellation_demapper #(
+    .NUM_SUBCARRIERS(NUM_SUBCARRIERS),
+    .EXCLUDE_SUBCARRIERS(EXCLUDE_SUBCARRIERS),
+    .MAX_MODULATION_ORDER(MAX_MODULATION_ORDER),
+    .BYTE_REVERSE(BYTE_REVERSE),
+    .SR_MODULATION_ORDER(SR_MODULATION_ORDER),
+    .SR_SCALING(SR_SCALING),
+    .SR_OUTPUT_SYMBOLS(SR_OUTPUT_SYMBOLS))
+  ofdm_constellation_demapper (
+    .clk(ce_clk), .reset(ce_rst), .clear(),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready),
-    .sof(sof), .eof());
+    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));
 
 endmodule

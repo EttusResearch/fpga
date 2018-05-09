@@ -1,12 +1,9 @@
 //
-// Copyright 2014 Ettus Research LLC
-// Copyright 2018 Ettus Research, a National Instruments Company
-//
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright 2017 Ettus Research
 //
 
-module noc_block_schmidl_cox #(
-  parameter NOC_ID = 64'h5CC0_0000_0000_0000,
+module noc_block_eq #(
+  parameter NOC_ID = 64'hFF42_0000_0000_0000,
   parameter STR_SINK_FIFOSIZE = 11)
 (
   input bus_clk, input bus_rst,
@@ -46,7 +43,7 @@ module noc_block_schmidl_cox #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -78,13 +75,12 @@ module noc_block_schmidl_cox #(
   wire         s_axis_data_tready;
 
   axi_wrapper #(
-    .SIMPLE_MODE(0))
-  axi_wrapper (
+    .SIMPLE_MODE(1))
+  inst_axi_wrapper (
     .clk(ce_clk), .reset(ce_rst),
-    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
-    .next_dst(next_dst),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .next_dst(),
+    .set_stb(), .set_addr(), .set_data(),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready),
     .m_axis_data_tdata(m_axis_data_tdata),
@@ -96,10 +92,7 @@ module noc_block_schmidl_cox #(
     .s_axis_data_tlast(s_axis_data_tlast),
     .s_axis_data_tvalid(s_axis_data_tvalid),
     .s_axis_data_tready(s_axis_data_tready),
-    // Packet type, sequence number, and length will be automatically filled
-    // Using EOB bit to indicate start of frame
-    .s_axis_data_tuser({2'd0,1'd0,sof,12'd0,16'd0,{src_sid,next_dst_sid},64'd0}),
-    // Unused
+    .s_axis_data_tuser(),
     .m_axis_config_tdata(),
     .m_axis_config_tlast(),
     .m_axis_config_tvalid(),
@@ -107,29 +100,33 @@ module noc_block_schmidl_cox #(
     .m_axis_pkt_len_tdata(),
     .m_axis_pkt_len_tvalid(),
     .m_axis_pkt_len_tready());
-  
-  ////////////////////////////////////////////////////////////
-  //
-  // User code
-  //
-  ////////////////////////////////////////////////////////////
-  localparam [7:0] BASE = 129;
 
-  schmidl_cox #(
-    .WINDOW_LEN(64),
-    .PREAMBLE_LEN(160),
-    .SR_FRAME_LEN(BASE+0),
-    .SR_GAP_LEN(BASE+1),
-    .SR_OFFSET(BASE+2),
-    .SR_NUMBER_SYMBOLS_MAX(BASE+3),
-    .SR_NUMBER_SYMBOLS_SHORT(BASE+4),
-    .SR_THRESHOLD(BASE+5),
-    .SR_AGC_REF_LEVEL(BASE+6))
-  schmidl_cox (
-    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-    .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready),
-    .sof(sof), .eof());
+  // 1-Tap Equalizer
+  one_tap_equalizer one_tap_equalizer_inst (
+    .clk_i(ce_clk),
+    .rst_i(ce_rst),
+    .sof_i(eob), // Use the EOB flag to indicate the start of a frame - for now
+    .i_tdata(m_axis_data_tdata),
+    .i_tlast(m_axis_data_tlast),
+    .i_tvalid(m_axis_data_tvalid),
+    .i_tready(m_axis_data_tready),
+    .o_tdata(s_axis_data_tdata),
+    .o_tlast(s_axis_data_tlast),
+    .o_tvalid(s_axis_data_tvalid),
+    .o_tready(s_axis_data_tready));
+
+  //----------------------------------------------------------------------------
+  // Combinational Logic
+  //----------------------------------------------------------------------------
+
+  // Readback register values
+  always @*
+    case(rb_addr)
+      1'd0    : rb_data <= 64'd0;
+      default : rb_data <= 64'h0BADC0DE0BADC0DE;
+    endcase
+
+  // Extract the EOB flag from CHDR
+  assign eob = m_axis_data_tuser[124];
 
 endmodule
