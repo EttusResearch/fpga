@@ -9,7 +9,7 @@ module axi_round_and_clip_complex
   #(parameter WIDTH_IN=24,
     parameter WIDTH_OUT=16,
     parameter CLIP_BITS=3,
-    parameter FIFOSIZE=0)  // leave at 0 for a normal single flop
+    parameter FIFOSIZE=1)  // FIFOSIZE = 1, single output register
    (input clk, input reset,
     input [2*WIDTH_IN-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
     output [2*WIDTH_OUT-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
