@@ -34,6 +34,7 @@ noc_block_pfb.v \
 noc_block_export_io.v \
 noc_block_conv_encoder_qpsk.v \
 noc_block_siggen.v \
+noc_block_debug.v \
 pfb.v \
 pfb_stage.v \
 null_source.v \
