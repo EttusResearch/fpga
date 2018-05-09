@@ -38,7 +38,7 @@ include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(BASE_DIR)/x300/Makefile.srcs
+include $(BASE_DIR)/x300/Makefile.OOT.inc
 
 ##################################################
 # Sources
@@ -84,9 +84,9 @@ DRAM_SRCS =
 endif
 
 ifdef HLS
-HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
+HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
 else
-HLS_IP_GEN_SRCS =
+HLS_IP_TARGETS =
 endif
 
 DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
@@ -97,7 +97,7 @@ $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(SFP_SERDES_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
-$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
+$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_TARGETS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS)
 
 ##################################################
 # Dependency Targets
@@ -113,6 +113,4 @@ bin: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-hls: .prereqs hls_ip bin
-
-.PHONY: bin hls
+.PHONY: bin rtl

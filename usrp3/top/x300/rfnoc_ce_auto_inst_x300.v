@@ -1,4 +1,4 @@
-  localparam NUM_CE = 10;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
+  localparam NUM_CE = 7;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
 
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
@@ -14,14 +14,14 @@
     end
   endgenerate
 
-  noc_block_siggen inst_noc_block_siggen (
+  noc_block_ddc #(.NUM_CHAINS(1), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
     .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
     .debug(ce_debug[0]));
 
-  noc_block_fir_filter inst_noc_block_fir_filter (
+  noc_block_duc inst_noc_block_duc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
