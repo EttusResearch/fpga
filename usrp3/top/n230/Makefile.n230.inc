@@ -8,6 +8,7 @@
 # TOP_MODULE = <Input arg>
 # NAME = <Input arg> 
 # PART_ID = <Input arg> 
+# ARCH = <Input arg> 
 
 ##################################################
 # Include other makefiles
@@ -90,9 +91,9 @@ export SAFE_MODE=$(SAFE_MODE)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
-	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_n230.tcl),$(TOP_MODULE),$(PART_ID))
+	$(call BUILD_VIVADO_DESIGN,$(abspath ./build_n230.tcl),$(TOP_MODULE),$(ARCH),$(PART_ID))
 
 rtl: .prereqs $$(DESIGN_SRCS) ip
-	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(PART_ID))
+	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
 .PHONY: bin
