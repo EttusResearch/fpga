@@ -21,7 +21,6 @@ axi_slave_mux.v \
 axi_test_vfifo.v \
 bin2gray.v \
 binary_encoder.v \
-dram_2port.v \
 filter_bad_sid.v \
 gpio_atr_io.v \
 gpio_atr.v \
