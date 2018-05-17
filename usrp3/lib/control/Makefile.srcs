@@ -49,4 +49,10 @@ regport_to_xbar_settingsbus.v \
 regport_to_settingsbus.v \
 pulse_stretch.v \
 mdio_master.v \
+map/cam_priority_encoder.v \
+map/cam_bram.v \
+map/cam_srl.v \
+map/cam.v \
+map/kv_map.v \
+map/axis_muxed_kv_map.v \
 ))
