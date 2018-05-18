@@ -15,6 +15,7 @@ CAT_CAP_GEN_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/io_cap_gen/, \
 ./cat_input_lvds.v \
 ./cat_output_lvds.v \
 ./cat_io_lvds.v \
+./cat_io_lvds_dual_mode.v \
 ))
 
 CAP_GEN_GENERIC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/io_cap_gen/, \

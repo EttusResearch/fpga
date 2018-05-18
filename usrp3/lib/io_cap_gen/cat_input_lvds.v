@@ -21,24 +21,36 @@
 // In SISO mode, every cycle of the radio_clk supplies a new RX sample which
 // is routed to both radios, even if only one is actively receiving.
 //
-// In MIMO mode, every other cycle of the radio clock supplies a pair of
+// In MIMO mode, every cycle of the radio clock supplies a pair of
 // time aligned MIMO samples which are routed to different radios.
+//
+// The frame_sample signal controls the expected frame signal timing. When 
+// frame_sample is 0, the period of the ddr_frame signal is expected to equal 
+// two samples (e.g., one from each channel). When frame_sample is 1, the frame 
+// period is expected to equal the length of one sample. This allows the module 
+// to be used for 2R2T (frame_sample = 1) or 1R1T mode (frame_sample = 0).
 //
 
 
 module cat_input_lvds #(
-  parameter INVERT_FRAME_RX = 0,
-  parameter INVERT_DATA_RX  = 6'b00_0000,
-  parameter USE_CLOCK_DELAY = 1,
-  parameter USE_DATA_DELAY  = 1,
-  parameter CLOCK_DELAY     = 0,
-  parameter DATA_DELAY      = 0,
-  parameter WIDTH           = 6,
-  parameter GROUP           = "DEFAULT"
+  parameter INVERT_FRAME_RX  = 0,
+  parameter INVERT_DATA_RX   = 6'b00_0000,
+  parameter USE_CLOCK_DELAY  = 1,
+  parameter USE_DATA_DELAY   = 1,
+  parameter CLOCK_DELAY_MODE = "VAR_LOAD",
+  parameter DATA_DELAY_MODE  = "VAR_LOAD",
+  parameter CLOCK_DELAY      = 0,
+  parameter DATA_DELAY       = 0,
+  parameter WIDTH            = 6,
+  parameter GROUP            = "DEFAULT",
+  parameter USE_BUFG         = 1
 ) (
   input clk200,
   input rst,
-  input mimo,
+
+  // Data and frame timing (synchronous to radio_clk)
+  input mimo,          // Output one channel (MIMO=0) or two (MIMO=1)
+  input frame_sample,  // Two samples per frame period (frame_sample=0) or one sample per frame (frame_sample=1)
 
   // Region local Clocks for I/O cells.
   output ddr_clk,
@@ -123,7 +135,7 @@ module cat_input_lvds #(
         .CINVCTRL_SEL          ("FALSE"),     // Enable dynamic clock inversion (FALSE, TRUE)
         .DELAY_SRC             ("IDATAIN"),   // Delay input (IDATAIN, DATAIN)
         .HIGH_PERFORMANCE_MODE ("FALSE"),     // Reduced jitter ("TRUE"), Reduced power ("FALSE")
-        .IDELAY_TYPE           ("VAR_LOAD"),
+        .IDELAY_TYPE           (CLOCK_DELAY_MODE),
         .IDELAY_VALUE          (CLOCK_DELAY),
         .PIPE_SEL              ("FALSE"),
         .REFCLK_FREQUENCY      (200.0),
@@ -178,12 +190,20 @@ module cat_input_lvds #(
     .I(ddr_clk_dly)
   );
 
-  // radio_clock is sdr_clk re-buffered with BUFG, and radio_clk_2x is
-  // sdr_clk_2x re-buffered, so both can be used globally. This introduces skew
-  // between sdr_clk -> radio_clock so we must hand data between them carefully
-  // even though they have a fixed phase relationship.
-  BUFG radio_clk_1x_bufg (.O(radio_clk), .I(sdr_clk));
-  BUFG radio_clk_2x_bufg (.O(radio_clk_2x), .I(sdr_clk_2x));
+  generate
+    if (USE_BUFG) begin : gen_BUFG
+      // radio_clock is sdr_clk re-buffered with BUFG, and radio_clk_2x is
+      // sdr_clk_2x re-buffered, so both can be used globally. This introduces skew
+      // between sdr_clk -> radio_clock so we must hand data between them carefully
+      // even though they have a fixed phase relationship.
+      BUFG radio_clk_1x_bufg (.O(radio_clk), .I(sdr_clk));
+      BUFG radio_clk_2x_bufg (.O(radio_clk_2x), .I(sdr_clk_2x));  
+    end else begin
+      assign radio_clk = sdr_clk;
+      assign radio_clk_2x = sdr_clk_2x;
+    end
+  endgenerate
+
 
 
   //------------------------------------------------------------------
@@ -219,7 +239,11 @@ module cat_input_lvds #(
   // Each time we assert bitslip we then have to wait 2 cycles before we can
   // examine the results.
   //
-  wire frame_is_aligned = (des_frame[7:0] == (INVERT_FRAME_RX ? 8'h0F : 8'hF0));
+  // Checking for 0xF0 and 0xCC allows us to support 1R1T and 2R2T timing, 
+  // which have different frame periods.
+  wire frame_is_aligned = 
+          (!frame_sample && (des_frame[7:0] == (INVERT_FRAME_RX ? 8'h0F : 8'hF0))) ||
+          ( frame_sample && (des_frame[7:0] == (INVERT_FRAME_RX ? 8'h33 : 8'hCC)));
 
   reg [5:0] sync_delay;
   reg       run_sync;
@@ -316,7 +340,7 @@ module cat_input_lvds #(
         .CINVCTRL_SEL          ("FALSE"),    // Enable dynamic clock inversion (FALSE, TRUE)
         .DELAY_SRC             ("IDATAIN"),  // Delay input (IDATAIN, DATAIN)
         .HIGH_PERFORMANCE_MODE ("FALSE"),    // Reduced jitter ("TRUE"), Reduced power ("FALSE")
-        .IDELAY_TYPE           ("VAR_LOAD"),
+        .IDELAY_TYPE           (DATA_DELAY_MODE),
         .IDELAY_VALUE          (DATA_DELAY),
         .PIPE_SEL              ("FALSE"),
         .REFCLK_FREQUENCY      (200.0),
@@ -431,7 +455,7 @@ module cat_input_lvds #(
           .CINVCTRL_SEL          ("FALSE"),    // Enable dynamic clock inversion (FALSE, TRUE)
           .DELAY_SRC             ("IDATAIN"),  // Delay input (IDATAIN, DATAIN)
           .HIGH_PERFORMANCE_MODE ("FALSE"),    // Reduced jitter ("TRUE"), Reduced power ("FALSE")
-          .IDELAY_TYPE           ("VAR_LOAD"),
+          .IDELAY_TYPE           (DATA_DELAY_MODE),
           .IDELAY_VALUE          (DATA_DELAY),
           .PIPE_SEL              ("FALSE"),
           .REFCLK_FREQUENCY      (200.0),
