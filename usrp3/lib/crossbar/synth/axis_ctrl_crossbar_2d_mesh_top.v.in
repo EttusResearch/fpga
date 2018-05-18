@@ -4,18 +4,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
-module ctrl_crossbar_top(
+module axis_ctrl_crossbar_2d_mesh_top(
   input clk,
   input rst
 );
   // Router global config
-  localparam IMPL        = {top};
+  localparam IMPL        = "{top}";
   localparam NPORTS_SQRT = {dimw};
   localparam NPORTS      = NPORTS_SQRT * NPORTS_SQRT;
   localparam DWIDTH      = {dataw};
   localparam MTU         = {mtu};
-  localparam ROUTING     = {ralloc};
-  localparam SWITCHING   = {salloc};
+  localparam ROUTING     = "{ralloc}";
 
   (* dont_touch = "true"*) wire [(DWIDTH*NPORTS)-1:0] s_axis_tdata , m_axis_tdata ;
   (* dont_touch = "true"*) wire [NPORTS-1:0]          s_axis_tlast , m_axis_tlast ;
@@ -30,7 +29,7 @@ module ctrl_crossbar_top(
     .INGRESS_BUFF_SIZE(MTU),
     .ROUTER_BUFF_SIZE (MTU),
     .ROUTING_ALLOC    (ROUTING),
-    .SWITCH_ALLOC     (SWITCHING)
+    .SWITCH_ALLOC     ("ROUND-ROBIN")
   ) router_dut_i (
     .clk              (clk),
     .reset            (rst),
