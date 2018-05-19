@@ -33,11 +33,12 @@ $(XBAR_SRCS) \
 #-------------------------------------------------
 # Define only one toplevel module
 SIM_TOP = crossbar_tb
+TB_TOP_FILE ?= crossbar_tb.sv
 
 SIM_SRCS = \
 $(abspath chdr_traffic_source_sim.sv) \
 $(abspath chdr_traffic_sink_sim.sv) \
-$(abspath crossbar_tb.sv)
+$(abspath $(TB_TOP_FILE))
 
 #-------------------------------------------------
 # Bottom-of-Makefile

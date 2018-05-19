@@ -1,6 +1,7 @@
 //
-// Copyright 2013 Ettus Research LLC
+// Copyright 2018 Ettus Research, A National Instruments Company
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 
 `timescale 1ns/1ps
@@ -12,15 +13,14 @@
 `include "sim_set_rb_lib.svh"
 `include "sim_axis_lib.svh"
 
-//`ifndef WORKING_DIR
-//  `define WORKING_DIR "."
-//`endif
-
 `define SIM_TIMEOUT_US 1000000 // Default: 1s
-`define SKIP_LOAD_LATENCY_FILES
 
 module crossbar_tb();
   `TEST_BENCH_INIT("crossbar_tb",`NUM_TEST_CASES,`NS_PER_TICK)
+
+  //----------------------------------------------------
+  // General test setup
+  //----------------------------------------------------
 
   // Clocks and reset
   `DEFINE_CLK(clk, 5.000, 50)
@@ -37,18 +37,38 @@ module crossbar_tb();
     end
   end
 
-  // Router global config
-  localparam ROUTER_IMPL        = "axis_ctrl_2d_torus";
-  localparam ROUTER_PORTS_SQRT  = 5;
-  localparam ROUTER_PORTS       = ROUTER_PORTS_SQRT * ROUTER_PORTS_SQRT;
-  localparam ROUTER_DWIDTH      = 64;
-  localparam MTU_LOG2           = 5;
-  localparam FILE_PATH          = {`WORKING_DIR, "/data/", ROUTER_IMPL};
-  localparam NUM_MASTERS        = ROUTER_PORTS;
+  //----------------------------------------------------
+  // Parameters
+  //----------------------------------------------------
+  //<PARAMS_BLOCK_AUTOGEN>
+  // Router parameters
+  localparam ROUTER_IMPL        = "chdr_crossbar_nxn";    // Router implementation
+  localparam ROUTER_PORTS_SQRT  = 4;                      // Square root of the # router ports
+  localparam ROUTER_PORTS       = ROUTER_PORTS_SQRT ** 2; // # Router ports
+  localparam ROUTER_DWIDTH      = 64;                     // Router datapath width
+  localparam MTU_LOG2           = 7;                      // log2 of max packet size for router
+  localparam NUM_MASTERS        = ROUTER_PORTS;           // Number of data generators in test
+  // Test parameters
+  localparam TEST_MAX_PACKETS   = 100;    // How many packets to stream per test case?
+  localparam TEST_LPP           = 100;    // Lines per packet
+  localparam TEST_MIN_INJ_RATE  = 30;     // Minimum injection rate to test
+  localparam TEST_MAX_INJ_RATE  = 100;    // Maximum injection rate to test
+  localparam TEST_INJ_RATE_INCR = 10;     // Injection rate increment
+  localparam TEST_GEN_LL_FILES  = 0;      // Generate files to produce load-latency graphs?
+  //</PARAMS_BLOCK_AUTOGEN>
 
+  //----------------------------------------------------
+  // Instantiate traffic generators, checkers, buses
+  //----------------------------------------------------
+  localparam FILE_PATH = {`WORKING_DIR, "/data/", ROUTER_IMPL};
+
+  // Data buses
   axis_t #(.DWIDTH(ROUTER_DWIDTH), .NUM_STREAMS(ROUTER_PORTS)) src2rtr_axis (.clk(clk));
   axis_t #(.DWIDTH(ROUTER_DWIDTH), .NUM_STREAMS(ROUTER_PORTS)) rtr2snk_axis (.clk(clk));
+  
+  // Control buses
   settings_bus_master #(.SR_AWIDTH(16), .SR_DWIDTH(32)) rtr_sb (.clk(clk));
+  axis_master #(.DWIDTH(32), .NUM_STREAMS(1)) mgmt_axis (.clk(clk));
 
   // Test vector source and sink instantiation
   logic [7:0]   set_injection_rate;
@@ -105,11 +125,7 @@ module crossbar_tb();
       .MTU              (MTU_LOG2),
       .NODE_ID          (i),
       .NUM_NODES        (ROUTER_PORTS),
-`ifndef SKIP_LOAD_LATENCY_FILES
-      .FILE_PATH        (FILE_PATH)
-`else
-      .FILE_PATH        ("")
-`endif
+      .FILE_PATH        (TEST_GEN_LL_FILES==1 ? FILE_PATH : "")
     ) traffic_sink (    
       .clk              (clk),
       .rst              (rst),
@@ -130,7 +146,9 @@ module crossbar_tb();
     );
   end endgenerate
 
-  // Router instantiation
+  //----------------------------------------------------
+  // Instantiate DUT
+  //----------------------------------------------------
   generate if (ROUTER_IMPL == "FIFO") begin
     for (i = 0; i < ROUTER_PORTS; i=i+1) begin
       axi_fifo #(
@@ -182,6 +200,37 @@ module crossbar_tb();
       .rb_addr      ({(2*$clog2(ROUTER_PORTS)){1'b0}}),
       .rb_data      ()
     );
+  end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
+    chdr_crossbar_nxn #(
+      .WIDTH              (ROUTER_DWIDTH),
+      .NPORTS             (ROUTER_PORTS),
+      .DEFAULT_PORT       (0),
+      .INGRESS_BUFF_SIZE  (MTU_LOG2),
+      .SID_OFFSET         (0),
+      .SID_WIDTH          (16),
+      .ROUTE_TBL_SIZE     (6),
+      .MUX_ALLOC          ("ROUND-ROBIN"),
+      .OPTIMIZE           ("AREA"),
+      .MGMT_RTCFG_PORT    (1)
+    ) router_dut_i (
+       // General         
+      .clk                (clk),
+      .reset              (rst),
+      // Inputs           
+      .s_axis_tdata       (src2rtr_axis.tdata),
+      .s_axis_tlast       (src2rtr_axis.tlast),
+      .s_axis_tvalid      (src2rtr_axis.tvalid),
+      .s_axis_tready      (src2rtr_axis.tready),
+      // Output           
+      .m_axis_tdata       (rtr2snk_axis.tdata),
+      .m_axis_tlast       (rtr2snk_axis.tlast),
+      .m_axis_tvalid      (rtr2snk_axis.tvalid),
+      .m_axis_tready      (rtr2snk_axis.tready),
+
+      .s_axis_mgmt_tdata  (mgmt_axis.axis.tdata),
+      .s_axis_mgmt_tvalid (mgmt_axis.axis.tvalid),
+      .s_axis_mgmt_tready (mgmt_axis.axis.tready)
+    );
   end else begin
     axis_ctrl_crossbar_2d_mesh #(
       .WIDTH            (ROUTER_DWIDTH),
@@ -209,6 +258,10 @@ module crossbar_tb();
       .deadlock_detected(deadlock_detected)
     );
   end endgenerate
+
+  //----------------------------------------------------
+  // Test routine. Runs tests and writes metrics to file
+  //----------------------------------------------------
 
   // Constants
   localparam [7:0] TRAFFIC_PATT_LOOPBACK       = 8'd76;  //L
@@ -274,13 +327,13 @@ module crossbar_tb();
     // Record summary to file and print to console
     $sformat(filename, "%s/info_inj%03d_lpp%05d_traffic%c_sess%04d.csv",
       FILE_PATH, injection_rate, lines_per_pkt, traffic_patt, session);
-`ifndef SKIP_LOAD_LATENCY_FILES
-    handle = $fopen(filename, "w");
-    if (handle == 0) begin
-      $error("Could not open file: %s", filename);
-      $finish();
+    if (TEST_GEN_LL_FILES == 1) begin
+      handle = $fopen(filename, "w");
+      if (handle == 0) begin
+        $error("Could not open file: %s", filename);
+        $finish();
+      end
     end
-`endif
     if (handle != 0) $fdisplay(handle, "Impl,Node,TxPkts,RxPkts,Duration,ErrRoute,ErrData");
     total_pkts_sent = 0;
     total_pkts_recvd = 0;
@@ -304,11 +357,15 @@ module crossbar_tb();
   end
   endtask
 
-  logic [31:0] MAX_PACKETS    = 100;
-  logic [15:0] LPP            = 16'd10;
-  integer      MIN_INJ_RATE   = 10;
-  integer      MAX_INJ_RATE   = 50;
-  integer      INJ_RATE_INCR  = 10;
+  //----------------------------------------------------
+  // Main test loop
+  //----------------------------------------------------
+
+  logic [31:0] MAX_PACKETS    = TEST_MAX_PACKETS;
+  logic [15:0] LPP            = TEST_LPP;
+  integer      MIN_INJ_RATE   = TEST_MIN_INJ_RATE;
+  integer      MAX_INJ_RATE   = TEST_MAX_INJ_RATE;
+  integer      INJ_RATE_INCR  = TEST_INJ_RATE_INCR;
 
   integer inj_rate = 0;
   initial begin : tb_main
@@ -320,8 +377,14 @@ module crossbar_tb();
     repeat (10) @(posedge clk);
 
     `TEST_CASE_START("Set up crossbar");
-      for (node = 0; node < ROUTER_PORTS; node=node+1) begin
-        rtr_sb.write(16'd256 + node[15:0], {16'h0, node[15:0]});
+      if (ROUTER_IMPL == "axi_crossbar") begin
+        for (node = 0; node < ROUTER_PORTS; node=node+1) begin
+          rtr_sb.write(16'd256 + node[15:0], {16'h0, node[15:0]});
+        end
+      end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
+        for (node = 0; node < ROUTER_PORTS; node=node+1) begin
+          mgmt_axis.push_word({node[15:0], node[15:0]});
+        end
       end
     `TEST_CASE_DONE(1)
 
@@ -339,13 +402,13 @@ module crossbar_tb();
 
      `TEST_CASE_START("Simulate UNIFORM Traffic Pattern");
        for (inj_rate = MIN_INJ_RATE; inj_rate <= MAX_INJ_RATE; inj_rate = inj_rate + INJ_RATE_INCR) begin
-         sim_dataflow(inj_rate, TRAFFIC_PATT_UNIFORM, LPP, MAX_PACKETS * 2);  // Simulate more random pkts
+         sim_dataflow(inj_rate, TRAFFIC_PATT_UNIFORM, LPP, MAX_PACKETS);
        end
      `TEST_CASE_DONE(1)
 
      `TEST_CASE_START("Simulate UNIFORM_OTHERS Traffic Pattern");
        for (inj_rate = MIN_INJ_RATE; inj_rate <= MAX_INJ_RATE; inj_rate = inj_rate + INJ_RATE_INCR) begin
-         sim_dataflow(inj_rate, TRAFFIC_PATT_UNIFORM_OTHERS, LPP, MAX_PACKETS * 2); // Simulate more random pkts
+         sim_dataflow(inj_rate, TRAFFIC_PATT_UNIFORM_OTHERS, LPP, MAX_PACKETS);
        end
      `TEST_CASE_DONE(1)
 
