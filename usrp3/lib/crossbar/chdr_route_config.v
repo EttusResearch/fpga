@@ -3,8 +3,12 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: chdr_ingress_buff
+// Module: chdr_route_config
 // Description:
+//  Check if we have a route configuration packet arriving. 
+//  If so, the top config commands are extrated, sent to the
+//  routing table for configuration, and the rest of the packet is forwarded
+//  down to the router.
 
 module chdr_route_config #(
   parameter CHDR_W     = 64,
@@ -13,17 +17,17 @@ module chdr_route_config #(
 ) (
   input  wire                 clk,
   input  wire                 reset,
-                              
+  // CHDR input port
   input  wire [CHDR_W-1:0]    s_axis_chdr_tdata,
   input  wire                 s_axis_chdr_tlast,
   input  wire                 s_axis_chdr_tvalid,
   output wire                 s_axis_chdr_tready,
-                              
+  // CHDR output port
   output wire [CHDR_W-1:0]    m_axis_chdr_tdata,
   output wire                 m_axis_chdr_tlast,
   output wire                 m_axis_chdr_tvalid,
   input  wire                 m_axis_chdr_tready,
-                              
+  // Routing table config bus
   output wire [CFG_DATAW-1:0] m_axis_rtcfg_tdata,
   output wire [CFG_DESTW-1:0] m_axis_rtcfg_tdest,
   output wire [31:0]          m_axis_rtcfg_tuser,

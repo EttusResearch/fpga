@@ -4,6 +4,9 @@
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
+# Description
+#   Run the crossbar testbench (crossbar_tb) for varios parameter
+#   configurations and generates load-latency graphs for each run.
 
 import argparse
 import math

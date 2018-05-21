@@ -5,6 +5,39 @@
 //
 // Module: chdr_crossbar_nxn
 // Description: 
+//   This module implements a full-bandwidth NxN crossbar with N input and output ports
+//   for CHDR traffic. It supports multiple optimization strategies for performance,
+//   area and timing tradeoffs. It uses AXI-Stream for all of its links. The crossbar
+//   has a dynamic routing table based on a Content Addressable Memory (CAM). The SID
+//   is used to determine the destination of a packet and the routing table contains
+//   a re-programmable SID to crossbar port mapping. The table is programmed using
+//   special route config packets on the data input ports or using an optional
+//   management port.
+//   The topology, routing algorithms and the router architecture is 
+//   described in README.md in this directory. 
+// Parameters:
+//   - WIDTH: Width of the AXI-Stream data bus
+//   - NPORTS: Number of ports to instantiate
+//   - DEFAULT_PORT: The failsafe port to forward a packet to is SID mapping is missing
+//   - INGRESS_BUFF_SIZE: log2 of the ingress buffer size (in words)
+//   - SID_OFFSET: The SID is assumed to be in the first line of a packet.
+//     This is its starting bit position. 
+//   - SID_WIDTH: Width of the SID
+//   - ROUTE_TBL_SIZE: log2 of the number of mappings that the routing table can hold 
+//     at any time. Mapping values are maintained in a FIFO fashion.
+//   - MUX_ALLOC: Algorithm to allocate the egress MUX
+//     * PRIO: Priority based. Lower port numbers have a higher priority
+//     * ROUND-ROBIN: Round robin input port allocation
+//   - OPTIMIZE: Optimization strategy for performance vs area vs timing tradeoffs
+//     * AREA: Attempt to minimize area at the cost of performance (throughput) and/or timing
+//     * PERFORMANCE: Attempt to maximize performance at the cost of area and/or timing
+//     * TIMING: Attempt to maximize Fmax at the cost of area and/or performance
+//   - MGMT_RTCFG_PORT: Enable a side-channel AXI-Stream management port to configure the
+//     routing table
+// Signals:
+//   - s_axis_*: Slave port for router (flattened)
+//   - m_axis_*: Master port for router (flattened)
+//   - s_axis_mgmt_*: Management slave port
 //
 
 module chdr_crossbar_nxn #(
@@ -80,6 +113,10 @@ module chdr_crossbar_nxn #(
   wire [CFG_PORTS-1:0]          rtcfg_tvalid;
   wire [CFG_PORTS-1:0]          rtcfg_tready;
 
+  // Instantiate a single CAM-based routing table that will be shared between all
+  // input ports. Configuration and lookup is performed using an AXI-Stream iface.
+  // If multiple packets arrive simultaneously, only the headers of those packets will
+  // be serialized in order to arbitrate this map. Selection is done round-robin.
   axis_muxed_kv_map #(
     .KEY_WIDTH(SID_WIDTH),
     .VAL_WIDTH(NPORTS_W),
@@ -110,6 +147,7 @@ module chdr_crossbar_nxn #(
     .o_tdata({insert_tdata, insert_tdest}), .o_tlast(), .o_tvalid(insert_tvalid), .o_tready(insert_tready)
   );
 
+  // Instantiate an additional input for the MUX if the config port is instantiated. 
   generate if (MGMT_RTCFG_PORT == 1) begin
     assign rtcfg_tdata[NPORTS*CFG_W+:CFG_W] = s_axis_mgmt_tdata[CFG_W-1:0];
     assign rtcfg_tvalid[NPORTS] = s_axis_mgmt_tvalid;
@@ -141,6 +179,12 @@ module chdr_crossbar_nxn #(
   genvar n, i, j;
   generate
     for (n = 0; n < NPORTS; n = n + 1) begin: i_ports
+      // For each input port, first check if we have a route configuration packet
+      // arriving. If it arrives, the top config commands are extrated, sent to the
+      // routing table for configuration, and the rest of the packet is forwarded
+      // down to the router.
+      // NOTE: We assume that the configuration is done before the packet is sent to
+      // the router.
       chdr_route_config #(
         .CHDR_W(WIDTH), .CFG_DESTW(8), .CFG_DATAW(CFG_W)
       ) rt_cfg_i (
@@ -160,7 +204,10 @@ module chdr_crossbar_nxn #(
         .m_axis_rtcfg_tvalid (rtcfg_tvalid [n]               ),
         .m_axis_rtcfg_tready (rtcfg_tready [n]               )
       );
-    
+
+      // Ingress buffer module that does the following:
+      // - Stores and gates an incoming packet
+      // - Looks up destination in routing table and attaches a tdest for the packet
       chdr_xb_ingress_buff #(
         .WIDTH(WIDTH), .SIZE(INGRESS_BUFF_SIZE),
         .XB_NPORTS(NPORTS), .SID_OFFSET(SID_OFFSET), .SID_WIDTH(SID_WIDTH)
@@ -187,6 +234,7 @@ module chdr_crossbar_nxn #(
       );
       assign buf_tdest[n] = buf_tkeep[n] ? buf_tdest_tmp[n] : DEFAULT_PORT[NPORTS_W-1:0];
 
+      // Pipeline state
       axi_fifo #(
         .WIDTH(WIDTH+1+NPORTS_W), .SIZE(1)
       ) pipe_i (
@@ -203,6 +251,7 @@ module chdr_crossbar_nxn #(
         .occupied ()
       );
 
+      // Ingress demux. Use the tdest field to determine packet destination
       axis_switch #(
         .DATA_W(WIDTH), .DEST_W(1), .IN_PORTS(1), .OUT_PORTS(NPORTS), .PIPELINE(1)
       ) demux_i (

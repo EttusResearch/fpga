@@ -5,6 +5,9 @@
 //
 // Module: chdr_ingress_buff
 // Description:
+//   Ingress buffer module that does the following:
+//   - Stores and gates an incoming packet
+//   - Looks up destination in routing table and attaches a tdest for the packet
 
 module chdr_xb_ingress_buff #(
   parameter WIDTH       = 64,
@@ -15,23 +18,23 @@ module chdr_xb_ingress_buff #(
 ) (
   input  wire                         clk,
   input  wire                         reset,
-
+  // CHDR input port
   input  wire [WIDTH-1:0]             s_axis_chdr_tdata,
   input  wire                         s_axis_chdr_tlast,
   input  wire                         s_axis_chdr_tvalid,
   output wire                         s_axis_chdr_tready,
-
+  // CHDR output port (with a tdest and tkeep)
   output wire [WIDTH-1:0]             m_axis_chdr_tdata,
   output wire [$clog2(XB_NPORTS)-1:0] m_axis_chdr_tdest,
   output wire                         m_axis_chdr_tkeep,
   output wire                         m_axis_chdr_tlast,
   output wire                         m_axis_chdr_tvalid,
   input  wire                         m_axis_chdr_tready,
-
+  // Find port going to routing table
   output wire [SID_WIDTH-1:0]         m_axis_find_tdata,
   output wire                         m_axis_find_tvalid,
   input  wire                         m_axis_find_tready,
-
+  // Result port from routing table
   input  wire [$clog2(XB_NPORTS)-1:0] s_axis_result_tdata,
   input  wire                         s_axis_result_tkeep,
   input  wire                         s_axis_result_tvalid,
@@ -80,7 +83,7 @@ module chdr_xb_ingress_buff #(
     .clear    (1'b0),
     .i_tdata  (s_axis_chdr_tdata),
     .i_tlast  (s_axis_chdr_tlast),
-    .i_tvalid (s_axis_chdr_tvalid & s_axis_chdr_tready),  //FIXME: Violates AXIS but OK since FIFO downstream
+    .i_tvalid (s_axis_chdr_tvalid & s_axis_chdr_tready),  //NOTE: Violates AXIS but OK since FIFO downstream
     .i_tready (pkt_gate_i_tready),
     .i_terror (1'b0),
     .o_tdata  (m_axis_chdr_tdata),
@@ -94,7 +97,7 @@ module chdr_xb_ingress_buff #(
     .reset    (reset), 
     .clear    (1'b0),
     .i_tdata  (s_axis_chdr_tdata[SID_OFFSET+:SID_WIDTH]),
-    .i_tvalid ((in_state == ST_HEAD) & s_axis_chdr_tvalid & s_axis_chdr_tready),  //FIXME: Violates AXIS but OK since FIFO downstream
+    .i_tvalid ((in_state == ST_HEAD) & s_axis_chdr_tvalid & s_axis_chdr_tready),  //NOTE: Violates AXIS but OK since FIFO downstream
     .i_tready (find_fifo_i_tready),
     .o_tdata  (m_axis_find_tdata),
     .o_tvalid (m_axis_find_tvalid),

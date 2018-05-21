@@ -1,15 +1,17 @@
-///////////////////////////////////////////////////////////////////
 //
 // Copyright 2018 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: chdr_traffic_gen_sim
+// Module: chdr_traffic_sink_sim
 // Description:
-//   A traffic generator for CHDR traffic. Simulation only.
-//
-//////////////////////////////////////////////////////////////////////
-
+//   A sink for CHDR traffic. Simulation only.
+//   Accepts packets and computes the following metrics:
+//   - Data integrity errors
+//   - Packet latency
+//   - Throughput counts
+//   All metrics can optionally be written to a file to
+//   generate load-latency graphs.
 
 `timescale 1ns/1ps
 

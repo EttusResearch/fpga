@@ -1,47 +1,54 @@
-///////////////////////////////////////////////////////////////////
 //
 // Copyright 2018 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: chdr_traffic_gen_sim
+// Module: chdr_traffic_source_sim
 // Description:
 //   A traffic generator for CHDR traffic. Simulation only.
+//   Supports multiple traffic pattern and injection rates.
 //
-//////////////////////////////////////////////////////////////////////
-
 
 `timescale 1ns/1ps
 
 `include "sim_cvita_lib.svh"
 
 module chdr_traffic_source_sim #(
-  parameter        WIDTH        = 64,
-  parameter        MTU          = 5,
-  parameter [15:0] NODE_ID      = 'd0,
-  parameter [15:0] NUM_NODES    = 'd16
+  parameter        WIDTH        = 64,   // Width of the AXI-Stream data bus
+  parameter        MTU          = 5,    // log2 of the max number of lines in a packet
+  parameter [15:0] NODE_ID      = 'd0,  // Node ID for this generator
+  parameter [15:0] NUM_NODES    = 'd16  // Total number of generators in the application
 ) (
   // Clocks and resets
-  input               clk,
-  input               rst,
+  input               clk,              // AXI-Stream clock
+  input               rst,              // AXI-Stream reset
   // Settings         
-  input [63:0]        current_time,
-  input               start_stb,
-  input [7:0]         injection_rate,
-  input [15:0]        lines_per_pkt,
-  input [7:0]         traffic_patt,
-  input [31:0]        num_pkts_to_send,
+  input [63:0]        current_time,     // The current value of the global timebase (synch to clk)
+  input               start_stb,        // A strobe that indicates the start of a generation session
+  input [7:0]         injection_rate,   // The inject rate (in percent) to simulate
+  input [15:0]        lines_per_pkt,    // Number of lines per packet to generate
+  input [7:0]         traffic_patt,     // The traffic pattern (see localparams below for values)
+  input [31:0]        num_pkts_to_send, // Number of packets to send
   // CHDR master interface
-  output [WIDTH-1:0]  m_axis_tdata,
-  output              m_axis_tlast,
-  output              m_axis_tvalid,
-  input               m_axis_tready,
+  output [WIDTH-1:0]  m_axis_tdata,     // AXI-Stream master tdata
+  output              m_axis_tlast,     // AXI-Stream master tlast
+  output              m_axis_tvalid,    // AXI-Stream master tvalid
+  input               m_axis_tready,    // AXI-Stream master tready
   // Metrics          
-  output              session_active,
-  output [63:0]       session_duration,
-  output [31:0]       xfer_count,
-  output [31:0]       pkt_count
+  output              session_active,   // Signal indicating if generation session is active
+  output [63:0]       session_duration, // Session duration (only valid after session ends)
+  output [31:0]       xfer_count,       // Number of lines transferred (only valid after session ends)
+  output [31:0]       pkt_count         // Number of packets transferred (only valid after session ends)
 );
+  // **** Supported Traffic Patters ****
+  localparam [7:0] TRAFFIC_PATT_LOOPBACK       = 8'd76;  //L
+  localparam [7:0] TRAFFIC_PATT_NEIGHBOR       = 8'd78;  //N
+  localparam [7:0] TRAFFIC_PATT_BIT_COMPLEMENT = 8'd67;  //C
+  localparam [7:0] TRAFFIC_PATT_SEQUENTIAL     = 8'd83;  //S
+  localparam [7:0] TRAFFIC_PATT_UNIFORM        = 8'd85;  //U
+  localparam [7:0] TRAFFIC_PATT_UNIFORM_OTHERS = 8'd79;  //O
+  localparam [7:0] TRAFFIC_PATT_RANDOM_PERM    = 8'd82;  //R
+
   cvita_master  #(.DWIDTH(WIDTH)) m_chdr (.clk(clk));
   axis_t        #(.DWIDTH(WIDTH)) post_fifo (.clk(clk));
   axis_t        #(.DWIDTH(WIDTH)) pre_gate (.clk(clk));
@@ -59,15 +66,6 @@ module chdr_traffic_source_sim #(
   assign pkt_count = curr_pkt_num;
   assign session_duration = (stop_time - start_time);
   assign session_active = running;
-
-  // Constants
-  localparam [7:0] TRAFFIC_PATT_LOOPBACK       = 8'd76;  //L
-  localparam [7:0] TRAFFIC_PATT_NEIGHBOR       = 8'd78;  //N
-  localparam [7:0] TRAFFIC_PATT_BIT_COMPLEMENT = 8'd67;  //C
-  localparam [7:0] TRAFFIC_PATT_SEQUENTIAL     = 8'd83;  //S
-  localparam [7:0] TRAFFIC_PATT_UNIFORM        = 8'd85;  //U
-  localparam [7:0] TRAFFIC_PATT_UNIFORM_OTHERS = 8'd79;  //O
-  localparam [7:0] TRAFFIC_PATT_RANDOM_PERM    = 8'd82;  //R
 
   // Utility function to assign SIDs based on traffic pattern
   function [15:0] gen_dst_sid;
