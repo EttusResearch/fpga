@@ -55,7 +55,7 @@ module arm_deframer (
   end
   // holding last 48 bits from input tdata on every valid_beat.
   always @(posedge clk)begin
-    if (s_axis_tvalid) begin
+    if (s_axis_tvalid & s_axis_tready) begin
       // Register the last 6 bytes of data for one cycle
       holding_reg  <= s_axis_tdata[47:0];
       // Register the tuser in case there is a new line
