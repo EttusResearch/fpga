@@ -183,7 +183,7 @@ module e320_core #(
   //
   /////////////////////////////////////////////////////////////////////////////////
 
-  localparam [15:0] COMPAT_MAJOR = 16'd2;
+  localparam [15:0] COMPAT_MAJOR = 16'd3;
   localparam [15:0] COMPAT_MINOR = 16'd0;
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -324,6 +324,7 @@ module e320_core #(
       ref_select     <= 1'b0;  // Default to internal
       fp_gpio_ctrl   <= 32'h9; // Default to OFF - 4'b1001
       gps_ctrl       <= 32'h3; // Default to gps_en, out of reset
+      dboard_ctrl    <= 32'h1; // Default to mimo
     end else if (reg_wr_req) begin
       case (reg_wr_addr)
         REG_FP_GPIO_MASTER: begin
@@ -344,6 +345,9 @@ module e320_core #(
         end
         REG_GPS_CTRL: begin
           gps_ctrl    <= reg_wr_data;
+        end
+        REG_DBOARD_CTRL: begin
+          dboard_ctrl <= reg_wr_data;
         end
       endcase
     end
