@@ -85,8 +85,8 @@ set_clock_groups -asynchronous -group [get_clocks meas_clk_ref -include_generate
 # be at 10 MHz. Given [setup, hold] of [5ns, 5ns] at the rear panel inputs of the N310,
 # we have an adequate data valid window at the FPGA. However, since we overconstrain the
 # reference clock to 25 MHz, we use the alternative period here for setup analysis.
-set_input_delay -clock ref_clk -min  5.181                           [get_ports REF_1PPS_IN]
-set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 1.235}] [get_ports REF_1PPS_IN]
+set_input_delay -clock ref_clk -min  4.651                           [get_ports REF_1PPS_IN]
+set_input_delay -clock ref_clk -max [expr {$REF_CLK_PERIOD - 0.235}] [get_ports REF_1PPS_IN]
 
 # The GPS PPS is also synchronous to the external reference clock (since there is a
 # switch on the clock input outside the FPGA). Again, use the overconstrained period.
