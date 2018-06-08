@@ -105,7 +105,8 @@ SYNTHESIZE_PROPERTIES = \
 "Use Clock Enable" Auto \
 "Use Synchronous Reset" Auto \
 "Use Synchronous Set" Auto \
-"Verilog Macros" "SPARTAN6=1 $(EXTRA_DEFS) $(CUSTOM_DEFS)"
+"Verilog Macros" "SPARTAN6=1 $(EXTRA_DEFS) $(CUSTOM_DEFS)" \
+"Other XST Command Line Options" "-loop_iteration_limit 16385"
 
 #"Number of Clock Buffers" 8 \
 
