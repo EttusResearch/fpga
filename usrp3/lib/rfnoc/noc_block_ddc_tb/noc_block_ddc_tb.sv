@@ -27,8 +27,7 @@ module noc_block_ddc_tb();
   wire [7:0] fft_size_log2   = $clog2(FFT_SIZE);        // Set FFT size
   wire fft_direction         = 0;                       // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
   wire [11:0] fft_scale      = 12'b011010101010;        // Conservative scaling of 1/N
-  // Padding of the control word depends on the FFT options enabled
-  wire [20:0] fft_ctrl_word  = {fft_scale, fft_direction, fft_size_log2};
+  wire [1:0] fft_shift       = 2'b00;                   // FFT shift + don't reverse
   int num_hb; //default 3
   int cic_max_decim; //default 255
 
@@ -167,9 +166,11 @@ module noc_block_ddc_tb();
       tb_streamer.write_reg(sid_noc_block_ddc, SR_FREQ_ADDR, 32'd0);                // CORDIC phase increment
       tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14)); // Scaling, set to 1
       // Setup FFT
-      tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
+      tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_DIRECTION, fft_direction);             // Configure FFT direction (fwd/rev)
+      tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SCALING, fft_scale);                   // Configure FFT scaling
       tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
       tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable complex out
+      tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SHIFT_CONFIG, fft_shift);              // Configure fft shift settings
 
       for (int k = 0; k < decim_rate.size(); k++) begin
         set_decim_rate(decim_rate[k]);
@@ -284,9 +285,12 @@ module noc_block_ddc_tb();
     tb_streamer.write_reg(sid_noc_block_ddc, SR_CONFIG_ADDR, 32'd1);              // Enable clear EOB
     tb_streamer.write_reg(sid_noc_block_ddc, SR_SCALE_IQ_ADDR, (1 << 14)); // Scaling, set to 1
     // Configure FFT
-    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_AXI_CONFIG_BASE, {11'd0, fft_ctrl_word});  // Configure FFT core
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_DIRECTION, fft_direction);             // Configure FFT direction (fwd/rev)
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SCALING, fft_scale);                   // Configure FFT scaling
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SIZE_LOG2, fft_size_log2);             // Set FFT size register
     tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_MAGNITUDE_OUT, noc_block_fft.COMPLEX_OUT); // Enable complex out
+    tb_streamer.write_reg(sid_noc_block_fft, noc_block_fft.SR_FFT_SHIFT_CONFIG, fft_shift);              // Configure fft shift settings
+
     // Test description:
     // - Send three packets to DDC, each set to a constant value
     // - Setup a timed tune for the last two packets
