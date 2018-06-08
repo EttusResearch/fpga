@@ -116,7 +116,7 @@ module axi_drop_partial_packet #(
       assign i_terror    = i_tlast & i_tvalid & (small_pkt | large_pkt);
 
       // FIFO with ability to rewind write pointer back if input packet is flagged as bad
-      axi_drop_packet #(.WIDTH(WIDTH+1), .MAX_PKT_SIZE(MAX_PKT_SIZE)) axi_drop_packet (
+      axi_packet_gate #(.WIDTH(WIDTH+1), .SIZE($clog2(MAX_PKT_SIZE+1))) pkt_gate_i (
         .clk(clk), .reset(reset), .clear(clear),
         .i_tdata({i_tlast,i_tdata}), .i_tvalid(i_tvalid), .i_tlast(i_tlast_int), .i_terror(i_terror), .i_tready(i_tready),
         .o_tdata({int_tlast,int_tdata}), .o_tvalid(int_tvalid), .o_tlast(), .o_tready(int_tready & ~(hold_last_sample & int_tlast)));
