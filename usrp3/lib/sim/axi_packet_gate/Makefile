@@ -6,24 +6,34 @@
 # Top-of-Makefile
 #-------------------------------------------------
 # Define BASE_DIR to point to the "top" dir
-BASE_DIR = $(abspath ../../../../top)
+BASE_DIR = $(abspath ../../../top)
 # Include viv_sim_preample after defining BASE_DIR
 include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
+
+#-------------------------------------------------
+# Design Specific
+#-------------------------------------------------
+# Include makefiles and sources for the DUT and its dependencies
+include $(BASE_DIR)/../lib/control/Makefile.srcs
+
+DESIGN_SRCS = $(abspath \
+$(CONTROL_LIB_SRCS) \
+$(LIB_DIR)/fifo/axi_packet_gate.v \
+)
 
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
-SIM_TOP = axi_drop_packet_tb
+SIM_TOP = axi_packet_gate_tb
 
 # Add test bench, user design under test, and
 # additional user created files
 SIM_SRCS = $(abspath \
-axi_drop_packet_tb.sv \
-$(LIB_DIR)/rfnoc/axi_drop_packet.v \
+axi_packet_gate_tb.sv \
 )
 
-MODELSIM_USER_DO = $(abspath wave.do)
+# MODELSIM_USER_DO = $(abspath wave.do)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

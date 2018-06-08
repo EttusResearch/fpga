@@ -6,8 +6,8 @@
 `include "sim_clks_rsts.vh"
 `include "sim_axis_lib.svh"
 
-module axi_drop_packet_tb();
-  `TEST_BENCH_INIT("axi_drop_packet",`NUM_TEST_CASES,`NS_PER_TICK);
+module axi_packet_gate_tb();
+  `TEST_BENCH_INIT("axi_packet_gate_tb", `NUM_TEST_CASES, `NS_PER_TICK);
   localparam CLK_PERIOD = $ceil(1e9/166.67e6);
   `DEFINE_CLK(clk, CLK_PERIOD, 50);
   `DEFINE_RESET(reset, 0, 100);
@@ -18,9 +18,10 @@ module axi_drop_packet_tb();
   axis_master #(.DWIDTH(32+1)) m_axis (.clk(clk));
   axis_slave #(.DWIDTH(32)) s_axis (.clk(clk));
 
-  axi_drop_packet #(
-    .MAX_PKT_SIZE(MAX_PKT_SIZE))
-  axi_drop_packet (
+  axi_packet_gate #(
+    .WIDTH(32),
+    .SIZE($clog2(MAX_PKT_SIZE))
+  ) dut (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(m_axis.axis.tdata[31:0]),
     .i_tvalid(m_axis.axis.tvalid),
@@ -30,7 +31,8 @@ module axi_drop_packet_tb();
     .o_tdata(s_axis.axis.tdata),
     .o_tvalid(s_axis.axis.tvalid),
     .o_tlast(s_axis.axis.tlast),
-    .o_tready(s_axis.axis.tready));
+    .o_tready(s_axis.axis.tready)
+  );
 
   /********************************************************
   ** Verification

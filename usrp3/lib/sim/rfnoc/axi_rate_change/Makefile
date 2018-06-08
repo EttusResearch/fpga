@@ -20,8 +20,9 @@ SIM_TOP = axi_rate_change_tb
 # additional user created files
 SIM_SRCS = $(abspath \
 axi_rate_change_tb.sv \
+$(LIB_DIR)/control/ram_2port.v \
+$(LIB_DIR)/fifo/axi_packet_gate.v \
 $(LIB_DIR)/rfnoc/axi_rate_change.v \
-$(LIB_DIR)/rfnoc/axi_drop_packet.v \
 $(LIB_DIR)/rfnoc/axi_drop_partial_packet.v \
 )
 
