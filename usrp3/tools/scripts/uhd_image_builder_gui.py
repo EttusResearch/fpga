@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import os
+import re
 import sys
 import signal
 import threading
@@ -133,6 +134,7 @@ class MainWindow(QtWidgets.QWidget):
         self.targets.setModel(self.model_targets)
         self.populate_target('x300')
         self.populate_target('e300')
+        self.populate_target('n3xx')
         grid.addWidget(self.targets, 0, 0, 8, 1)
 
         ### Central Panel: Available blocks
@@ -385,6 +387,9 @@ class MainWindow(QtWidgets.QWidget):
         elif self.device == 'E310':
             self.target = 'e300'
             self.max_allowed_blocks = 6
+        if self.device == 'N310' or self.device == 'N300':
+            self.target = 'n3xx'
+            self.max_allowed_blocks = 10
         oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
             self.target, 'Makefile.srcs')
         self.show_list(self.oot, self.target, oot_sources)
@@ -566,16 +571,13 @@ class MainWindow(QtWidgets.QWidget):
         """
         Parses the Makefile available and lists the build targets into the left pannel
         """
-        suffix = '0_RFNOC'
+        pattern = "^(?!\#)^\S*_RFNOC[^:]*"
         build_targets = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',
                                      selected_target, 'Makefile')
-        with open(build_targets, 'r') as fil:
-            text = fil.readlines()
-            for lines in text:
-                lines = lines.partition(':')[0]
-                if suffix in lines:
-                    target = QtGui.QStandardItem(lines)
-                    self.model_targets.appendRow(target)
+        with open(build_targets) as fil:
+            targets = re.findall(pattern, fil.read(), re.MULTILINE)
+            for target in targets:
+                self.model_targets.appendRow(QtGui.QStandardItem(target))
 
     def check_blk_not_in_sources(self):
         """
