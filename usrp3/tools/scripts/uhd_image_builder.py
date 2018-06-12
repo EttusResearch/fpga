@@ -81,6 +81,7 @@ OOT_SRCS_FILE_HDR = """##################################################
 # Include OOT makefiles
 ##################################################\n"""
 
+
 def setup_parser():
     """
     Create argument parser
@@ -115,7 +116,7 @@ def setup_parser():
         default=None)
     parser.add_argument(
         "-d", "--device",
-        help="Device to be programmed [x300, x310, e310]",
+        help="Device to be programmed [x300, x310, e310, n300, n310]",
         default="x310")
     parser.add_argument(
         "-t", "--target",
@@ -418,7 +419,14 @@ def device_dict(args):
     """
     helps selecting the device building folder based on the targeted device
     """
-    build_dir = {'x300':'x300', 'x310':'x300', 'e300':'e300', 'e310':'e300'}
+    build_dir = {
+        'x300':'x300',
+        'x310':'x300',
+        'e300':'e300',
+        'e310':'e300',
+        'n300':'n3xx',
+        'n310':'n3xx'
+    }
     return build_dir[args]
 
 def dtarget(args):
@@ -427,8 +435,13 @@ def dtarget(args):
     targeted device
     """
     if args.target is None:
-        default_trgt = {'x300':'X300_RFNOC_HG', 'x310':'X310_RFNOC_HG',\
-                'e310':'E310_RFNOC_HLS'}
+        default_trgt = {
+            'x300':'X300_RFNOC_HG',
+            'x310':'X310_RFNOC_HG',
+            'e310':'E310_RFNOC_HLS',
+            'n300':'N300_RFNOC_HG',
+            'n310':'N310_RFNOC_HG'
+        }
         return default_trgt[args.device.lower()]
     else:
         return args.target

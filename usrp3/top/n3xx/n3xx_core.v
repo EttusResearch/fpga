@@ -739,7 +739,7 @@ module n3xx_core #(
         .bus_rst (bus_rst),
         .ce_clk  (ddr3_axi_clk_x2),
         .ce_rst  (ddr3_axi_rst),
-        
+
         .i_tdata  (ioce_o_tdata[0]),
         .i_tlast  (ioce_o_tlast[0]),
         .i_tvalid (ioce_o_tvalid[0]),
@@ -748,7 +748,7 @@ module n3xx_core #(
         .o_tlast  (ioce_i_tlast[0]),
         .o_tvalid (ioce_i_tvalid[0]),
         .o_tready (ioce_i_tready[0]),
-        
+
         .m_axi_awid     ({fifo_axi_awid    [3], fifo_axi_awid    [2], fifo_axi_awid    [1], fifo_axi_awid    [0]}),
         .m_axi_awaddr   ({fifo_axi_awaddr  [3], fifo_axi_awaddr  [2], fifo_axi_awaddr  [1], fifo_axi_awaddr  [0]}),
         .m_axi_awlen    ({fifo_axi_awlen   [3], fifo_axi_awlen   [2], fifo_axi_awlen   [1], fifo_axi_awlen   [0]}),
@@ -793,10 +793,10 @@ module n3xx_core #(
         .m_axi_ruser    ({fifo_axi_ruser   [3], fifo_axi_ruser   [2], fifo_axi_ruser   [1], fifo_axi_ruser   [0]}),
         .m_axi_rvalid   ({fifo_axi_rvalid  [3], fifo_axi_rvalid  [2], fifo_axi_rvalid  [1], fifo_axi_rvalid  [0]}),
         .m_axi_rready   ({fifo_axi_rready  [3], fifo_axi_rready  [2], fifo_axi_rready  [1], fifo_axi_rready  [0]}),
-        
+
         .debug ()
       );
-        
+
     end else begin
 
       noc_block_axi_dma_fifo #(
@@ -1059,11 +1059,19 @@ module n3xx_core #(
   /////////////////////////////////////////////////////////////////////////////////
 
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
+`ifdef RFNOC
+  `ifdef N310
+    `include "rfnoc_ce_auto_inst_n310.v"
+  `elsif N300
+    `include "rfnoc_ce_auto_inst_n300.v"
+  `endif
+`else
   `ifdef N310
     `include "rfnoc_ce_default_inst_n310.v"
   `elsif N300
     `include "rfnoc_ce_default_inst_n300.v"
   `endif
+`endif
 
   wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_o_tdata;
   wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tlast;
