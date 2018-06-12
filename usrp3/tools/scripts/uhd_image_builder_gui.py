@@ -115,13 +115,26 @@ class MainWindow(QtWidgets.QWidget):
         ##################################################
         label_cmd_display = QtWidgets.QLabel(self)
         label_cmd_display.setText("uhd_image_builder command:")
-        label_cmd_display.setAlignment(QtCore.Qt.AlignRight)
+        label_cmd_display.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        label_cmd_display.setStyleSheet(" QLabel {font-weight: bold; color: black}")
         grid.addWidget(label_cmd_display, 10, 0)
         self.cmd_display = QtWidgets.QTextEdit(self)
         self.cmd_display.setMaximumHeight(label_cmd_display.sizeHint().height() * 3)
         self.cmd_display.setReadOnly(True)
         self.cmd_display.setText("".join(self.cmd_name))
         grid.addWidget(self.cmd_display, 10, 1, 1, 3)
+
+        ##################################################
+        # uhd_image_builder target help display
+        ##################################################
+        self.help_display = QtWidgets.QLabel(self)
+        grid.addWidget(self.help_display, 11, 1, 1, 3)
+        self.help_display.setWordWrap(True)
+        help_description = QtWidgets.QLabel(self)
+        grid.addWidget(help_description, 11, 0)
+        help_description.setText("Target description: ")
+        help_description.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        help_description.setStyleSheet(" QLabel {font-weight: bold; color: black}")
 
         ##################################################
         # Panels - QTreeModels
@@ -393,6 +406,14 @@ class MainWindow(QtWidgets.QWidget):
         oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
             self.target, 'Makefile.srcs')
         self.show_list(self.oot, self.target, oot_sources)
+
+        # Show the help string for a selected target
+        selected_makefile = os.path.join(uhd_image_builder.get_scriptpath(),
+                                         '..', '..', 'top', self.target, 'Makefile')
+        pattern = "^\#\S*{}.*".format(self.build_target)
+        with open(selected_makefile) as fil:
+            help_string = re.findall(pattern, fil.read(), re.MULTILINE)[0].replace("##","")
+            self.help_display.setText(help_string)
 
     @pyqtSlot()
     def file_dialog(self):
