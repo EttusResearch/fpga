@@ -5,7 +5,7 @@
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
   wire [63:0]          ce_debug[0:NUM_CE-1];
 
-  // Flattern CE tdata arrays
+  // Flatten CE tdata arrays
   genvar k;
   generate
     for (k = 0; k < NUM_CE; k = k + 1) begin
