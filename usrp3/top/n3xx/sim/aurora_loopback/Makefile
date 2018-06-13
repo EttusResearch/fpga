@@ -28,6 +28,8 @@ $(FIFO_SRCS) \
 $(AXI_SRCS) \
 $(CONTROL_LIB_SRCS) \
 $(RFNOC_SRCS) \
+../../n3xx_npio_qsfp_wrapper.v \
+../../n3xx_mgt_io_core.v \
 )
 
 #-------------------------------------------------

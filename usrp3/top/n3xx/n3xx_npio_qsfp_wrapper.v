@@ -163,8 +163,8 @@ module n3xx_npio_qsfp_wrapper #(
         .reg_wr_data    (reg_wr_data),
         .reg_rd_req     (reg_rd_req),
         .reg_rd_addr    (reg_rd_addr),
-        .reg_rd_resp    (reg_rd_data_flat[((l+1)*REG_DWIDTH)-1:l*REG_DWIDTH]),
-        .reg_rd_data    (reg_rd_resp_flat[l]),
+        .reg_rd_resp    (reg_rd_resp_flat[l]),
+        .reg_rd_data    (reg_rd_data_flat[((l+1)*REG_DWIDTH)-1:l*REG_DWIDTH]),
 
         // User Interface (Synchronous to sys_clk)
         .s_axis_tdata   (s_axis_tdata[((l+1)*64)-1:l*64]),
