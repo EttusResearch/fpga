@@ -4,7 +4,7 @@
 
 module aurora_phy_clk_gen 
 (
-   output refclk_ibuf,
+   input refclk_ibuf,
    output clk156,
    output init_clk
 );

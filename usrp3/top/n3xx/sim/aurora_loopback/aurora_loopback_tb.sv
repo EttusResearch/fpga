@@ -1,6 +1,11 @@
+/////////////////////////////////////////////////////////////////
 //
-// Copyright 2016 Ettus Research LLC
+// Copyright 2018 Ettus Research, A National Instruments Company
 //
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+/////////////////////////////////////////////////////////////////
+
 
 
 `timescale 1ns/1ps
@@ -18,6 +23,7 @@ module aurora_loopback_tb();
 
   // Define all clocks and resets
   `DEFINE_CLK(XG_CLK_P, 1000/156.25, 50)  //156.25MHz GT transceiver clock
+  `DEFINE_CLK(bus_clk, 1000/200, 50)      //define 200 MHz bus clk
   `DEFINE_RESET(GSR, 0, 100)              //100ns for GSR to deassert
 
   wire XG_CLK_N = ~XG_CLK_P;
@@ -31,36 +37,47 @@ module aurora_loopback_tb();
   //                  | Aurora MAC | <===> | Aurora PCS/PMA | <====>||
   // TB Checker <==== |------------|       |----------------|       || Loopback through
   //                                                                ||
+  //
+  //                  |-------------------------------------|
+  //                  |      n3xx_npio_qsfp_wrapper         |
   //            ====> |------------|       |----------------|       || perfect serial channel
   // Loopback   |     | Aurora MAC | <===> | Aurora PCS/PMA | <====>||
   //            <==== |------------|       |----------------|
+  //                  |-------------------------------------|
 
   // Initialize DUT
   wire aurora_refclk, aurora_init_clk;
+  wire aurora_clk156;
   wire m_user_rst, s_user_rst;
   wire m_channel_up, s_channel_up;
   wire m_hard_err, s_hard_err;
   wire m_soft_err, s_soft_err;
+  wire s_link_up;
 
+(* dont_touch = "true" *) IBUFDS_GTE2 aurora_refclk_ibuf (
+    .ODIV2(),
+    .CEB  (1'b0),
+    .I (XG_CLK_P),
+    .IB(XG_CLK_N),
+    .O (aurora_refclk)
+  );
+  
   aurora_phy_clk_gen aurora_clk_gen_i (
-    .areset(GSR),
-    .refclk_p(XG_CLK_P),
-    .refclk_n(XG_CLK_N),
-    .refclk(aurora_refclk),
-    .clk156(),
+    .refclk_ibuf(aurora_refclk),
+    .clk156(aurora_clk156),
     .init_clk(aurora_init_clk)
   );
-  wire               qpllreset;
-  wire               qplllock;
-  wire               qplloutclk;
-  wire               qplloutrefclk;
-  wire               qpllrefclklost;
+  wire               qpllreset, qpllreset_slave;
+  wire               qplllock, qplllock_slave;
+  wire               qplloutclk, qplloutclk_slave;
+  wire               qplloutrefclk, qplloutrefclk_slave;
+  wire               qpllrefclklost, qpllrefclklost_slave;
   wire    [7:0]      qpll_drpaddr_in_i = 8'h0;
   wire    [15:0]     qpll_drpdi_in_i = 16'h0;
   wire               qpll_drpen_in_i =  1'b0;
   wire               qpll_drpwe_in_i =  1'b0;
-  wire    [15:0]     qpll_drpdo_out_i;
-  wire               qpll_drprdy_out_i;
+  wire    [15:0]     qpll_drpdo_out_i, qpll_drpdo_out_s_i;
+  wire               qpll_drprdy_out_i, qpll_drprdy_out_s_i;
 
   aurora_64b66b_pcs_pma_gt_common_wrapper gt_common_support (
     .gt_qpllclk_quad1_out      (qplloutclk), //to sfp
@@ -80,28 +97,29 @@ module aurora_loopback_tb();
     .qpll_drpen_in             (qpll_drpen_in_i),
     .qpll_drpwe_in             (qpll_drpwe_in_i)
   );
-
+  
   wire au_master_tx_out_clk, au_slave_tx_out_clk;
   wire au_master_gt_pll_lock, au_slave_gt_pll_lock;
   wire au_user_clk, au_sync_clk, au_mmcm_locked;
+  wire au_s_user_clk, au_s_sync_clk, au_s_mmcm_locked;
   wire au_master_phy_reset;
 
   aurora_phy_mmcm aurora_phy_mmcm_0 (
-    .aurora_tx_clk(au_master_tx_out_clk),
+    .aurora_tx_clk_unbuf(au_master_tx_out_clk),
     .mmcm_reset(!au_master_gt_pll_lock),
     .user_clk(au_user_clk),
     .sync_clk(au_sync_clk),
     .mmcm_locked(au_mmcm_locked)
   );
-
-
+  
   wire [63:0] m_i_tdata, m_o_tdata;
   wire        m_i_tvalid, m_i_tready, m_o_tvalid;
   wire [63:0] s_i_tdata, s_o_tdata;
   wire        s_i_tvalid, s_i_tready, s_o_tvalid;
   wire [63:0] loop_tdata;
   wire        loop_tlast, loop_tvalid, loop_tready;
-  wire [31:0] m_overruns, s_overruns;
+  wire [31:0] m_overruns;
+  reg  [31:0] s_overruns;
   wire [31:0] m_soft_errors, s_soft_errors;
   reg         m_bist_gen, m_bist_check, s_bist_loopback;
   reg  [5:0]  m_bist_rate;
@@ -140,7 +158,7 @@ module aurora_loopback_tb();
     .qplllock(qplllock),
     .qpllreset(qpllreset),
     .qpllrefclklost(qpllrefclklost),
-    .tx_out_clk_bufg(au_master_tx_out_clk),
+    .tx_out_clk(au_master_tx_out_clk),
     .gt_pll_lock(au_master_gt_pll_lock),
     .mmcm_locked(au_mmcm_locked)
   );
@@ -166,59 +184,55 @@ module aurora_loopback_tb();
     .bist_checker_locked(m_bist_locked), .bist_checker_samps(m_bist_samps), .bist_checker_errors(m_bist_errors)
   );
 
-  aurora_phy_x1 #(.SIMULATION(1)) aurora_phy_slave_i (
-    // Resets
-    .areset(GSR),
-    // Clocks
-    .refclk(aurora_refclk),
-    .qpllclk(qplloutclk),
-    .qpllrefclk(qplloutrefclk),
-    .user_clk(au_user_clk),
-    .sync_clk(au_sync_clk),
-    .init_clk(aurora_init_clk),
-    .user_rst(s_user_rst),
-    // GTX Serial I/O
-    .tx_p(SFP_LN1_P), .tx_n(SFP_LN1_N),
-    .rx_p(SFP_LN0_P), .rx_n(SFP_LN0_N),
-    // AXI4-Stream TX Interface
-    .s_axis_tdata(s_i_tdata), .s_axis_tvalid(s_i_tvalid), .s_axis_tready(s_i_tready),
-    // AXI4-Stream RX Interface
-    .m_axis_tdata(s_o_tdata), .m_axis_tvalid(s_o_tvalid),
-    // AXI4-Lite Config Interface
-    // AXI4-Lite Config Interface
-    .s_axi_awaddr(32'h0), .s_axi_araddr(32'h0), .s_axi_awvalid(1'b0), .s_axi_awready(),
-    .s_axi_wdata(32'h0), .s_axi_wvalid(1'b0), .s_axi_wstrb(1'b0), .s_axi_wready(),
-    .s_axi_bvalid(), .s_axi_bresp(), .s_axi_bready(1'b1),
-    .s_axi_arready(), .s_axi_arvalid(1'b0),
-    .s_axi_rdata(), .s_axi_rvalid(), .s_axi_rresp(), .s_axi_rready(1'b1),
-    // Status and Error Reporting Interface
-    .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err),
-    .qplllock(qplllock),
-    .qpllreset(),
-    .qpllrefclklost(),
-    .mmcm_locked(au_mmcm_locked)
-  );
+reg         reg_wr_req_s;
+reg  [13:0] reg_wr_addr_s;
+reg  [31:0] reg_wr_data_s;
+reg         reg_rd_req_s;
+reg  [13:0] reg_rd_addr_s;
+wire        reg_rd_resp_s;
+wire [31:0] reg_rd_data_s;
 
-  aurora_axis_mac #(.PACKET_MODE(PACKET_MODE), .BIST_ENABLED(1)) aurora_mac_slave_i (
-    // Clocks and resets
-    .phy_clk(au_user_clk), .phy_rst(s_user_rst),
-    .sys_clk(au_user_clk), .sys_rst(s_user_rst),
-    .clear(1'b0),
-    // PHY Interface
-    .phy_s_axis_tdata(s_o_tdata), .phy_s_axis_tvalid(s_o_tvalid),
-    .phy_m_axis_tdata(s_i_tdata), .phy_m_axis_tvalid(s_i_tvalid), .phy_m_axis_tready(s_i_tready),
-    // User Interface
-    .s_axis_tdata(loop_tdata), .s_axis_tlast(loop_tlast),
-    .s_axis_tvalid(~s_bist_loopback & loop_tvalid), .s_axis_tready(loop_tready),
-    .m_axis_tdata(loop_tdata), .m_axis_tlast(loop_tlast),
-    .m_axis_tvalid(loop_tvalid), .m_axis_tready(~s_bist_loopback & loop_tready),
-    // Misc PHY
-    .channel_up(s_channel_up), .hard_err(s_hard_err), .soft_err(s_soft_err),
-    .overruns(s_overruns), .soft_errors(s_soft_errors),
-    //BIST
-    .bist_gen_en(1'b0), .bist_checker_en(1'b0), .bist_loopback_en(s_bist_loopback), .bist_gen_rate(6'd0),
-    .bist_checker_locked(), .bist_checker_samps(), .bist_checker_errors()
-  );
+n3xx_npio_qsfp_wrapper #(
+   .LANES(1),      // Number of lanes of Aurora to instantiate (Supported = {1,2,3,4})
+   .REG_BASE(32'h0),  // Base register address
+   .PORTNUM_BASE(4),      // Base port number for discovery
+   .REG_DWIDTH(32),     // Width of regport address bus
+   .REG_AWIDTH(14)      // Width of regport data bus
+) qsfp_wrapper_inst (
+  // Clocks and Resets
+  .areset(GSR),
+  .bus_clk(bus_clk),
+  .misc_clk(aurora_init_clk),
+  .bus_rst(GSR),
+  .gt_refclk(aurora_refclk),
+  .gt_clk156(aurora_clk156),
+  // Serial lanes
+  .txp(SFP_LN1_P),
+  .txn(SFP_LN1_N),
+  .rxp(SFP_LN0_P),
+  .rxn(SFP_LN0_N),
+  // AXIS input interface
+  .s_axis_tdata(loop_tdata),
+  .s_axis_tlast(loop_tlast),
+  .s_axis_tvalid(~s_bist_loopback & loop_tvalid),
+  .s_axis_tready(loop_tready),
+  // AXIS output interface
+  .m_axis_tdata(loop_tdata),
+  .m_axis_tlast(loop_tlast),
+  .m_axis_tvalid(loop_tvalid),
+  .m_axis_tready(~s_bist_loopback & loop_tready),
+  // Register ports
+  .reg_wr_req(reg_wr_req_s),  //input                   reg_wr_req,
+  .reg_wr_addr(reg_wr_addr_s), //input  [REG_AWIDTH-1:0] reg_wr_addr,
+  .reg_wr_data(reg_wr_data_s), //input  [REG_DWIDTH-1:0] reg_wr_data,
+  .reg_rd_req(reg_rd_req_s),  //input                   reg_rd_req,
+  .reg_rd_addr(reg_rd_addr_s), //input  [REG_AWIDTH-1:0] reg_rd_addr,
+  .reg_rd_resp(reg_rd_resp_s), //output                  reg_rd_resp,
+  .reg_rd_data(reg_rd_data_s), //output [REG_DWIDTH-1:0] reg_rd_data,
+
+  .link_up(s_link_up),
+  .activity()
+);
 
   //Testbench variables
   cvita_hdr_t   header, header_out;
@@ -230,7 +244,7 @@ module aurora_loopback_tb();
   //------------------------------------------
   initial begin : tb_main
     `TEST_CASE_START("Wait for reset");
-    while (GSR) @(posedge XG_CLK_P);
+    while (GSR) @(posedge aurora_refclk);
     `TEST_CASE_DONE((~GSR));
 
     m_bist_gen <= 1'b0;
@@ -244,13 +258,19 @@ module aurora_loopback_tb();
     while (m_channel_up !== 1'b1) @(posedge au_user_clk);
     `TEST_CASE_DONE(1'b1);
 
-    `TEST_CASE_START("Wait for slave channel to come up");
-    while (s_channel_up !== 1'b1) @(posedge au_user_clk);
+    `TEST_CASE_START("Wait for slave channel to come up. Uses QSFP Wrapper");
+    while (s_link_up !== 1'b1) @(posedge bus_clk);
     `TEST_CASE_DONE(1'b1);
 
     `TEST_CASE_START("Run PRBS BIST");
     s_bist_loopback <= PACKET_MODE;
-    @(posedge au_user_clk);
+    $display("Need to interact with regport to set s_bist_loopback.");
+    reg_wr_req_s <= 1;
+    reg_wr_addr_s <= 4;
+    reg_wr_data_s <= 4;
+    @(posedge bus_clk);
+    repeat (3) @(posedge au_user_clk);
+    reg_wr_req_s <= 0;
     m_bist_rate <= 6'd60;
     m_bist_gen <= 1'b1;
     m_bist_check <= 1'b1;
@@ -331,6 +351,11 @@ module aurora_loopback_tb();
     `TEST_CASE_DONE((m_overruns === 32'd0));
 
     `TEST_CASE_START("Validate no drops (slave)");
+    reg_rd_req_s <= 1;
+    reg_rd_addr_s <= 'h20;
+    @(posedge reg_rd_resp_s)
+    reg_rd_req_s <= 0;  
+    s_overruns <= reg_rd_data_s;
     `TEST_CASE_DONE((s_overruns === 32'd0));
 
     s_bist_loopback <= 1'b1;
@@ -357,6 +382,11 @@ module aurora_loopback_tb();
     `TEST_CASE_DONE((m_overruns === 32'd0));
 
     `TEST_CASE_START("Validate no drops (slave)");
+    reg_rd_req_s <= 1;
+    reg_rd_addr_s <= 'h20;
+    @(posedge reg_rd_resp_s)
+    reg_rd_req_s <= 0;  
+    s_overruns <= reg_rd_data_s;
     `TEST_CASE_DONE((s_overruns === 32'd0));
 
     `TEST_BENCH_DONE;

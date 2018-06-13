@@ -978,7 +978,7 @@ module n3xx (
 `endif
 
   // Instantiate Aurora MMCM if either of the SFPs
-  // of NPIOs are Aurora
+  // or NPIOs are Aurora
   wire au_tx_clk;
   wire au_mmcm_reset;
   wire au_user_clk;
@@ -989,6 +989,8 @@ module n3xx (
   wire npio0_tx_out_clk, npio1_tx_out_clk;
   wire npio0_gt_pll_lock, npio1_gt_pll_lock;
 
+  //NOTE: need to declare one of these defines in order to enable Aurora on
+  //any SFP or NPIO lane. 
 `ifdef SFP1_AURORA
   `define SFP_AU_MMCM
   assign au_tx_clk     = sfp1_tx_out_clk;
@@ -1099,7 +1101,7 @@ module n3xx (
     .misc_clk       (aurora_init_clk),
     .user_clk       (au_user_clk),
     .sync_clk       (au_sync_clk),
-    .gt_tx_out_clk_unbuf(),
+    .gt_tx_out_clk_unbuf(npio0_tx_out_clk),
 
     .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
     .bus_rst        (bus_rst),
@@ -1156,7 +1158,7 @@ module n3xx (
     .misc_clk       (aurora_init_clk),
     .user_clk       (au_user_clk),
     .sync_clk       (au_sync_clk),
-    .gt_tx_out_clk_unbuf(),
+    .gt_tx_out_clk_unbuf(npio1_tx_out_clk),
 
     .bus_clk        (bus_clk),//clk for status reg reads to mdio interface
     .bus_rst        (bus_rst),
