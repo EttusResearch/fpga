@@ -28,7 +28,7 @@ helpful move for the team and future maintainability of the UHD FPGA codebase.
 //
 // Copyright <YEAR> Ettus Research, A National Instruments Company
 //
-// SPDX-License-Identifier: LGPL-3.0
+// SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Module: <MODULE_NAME>
 // Description:
