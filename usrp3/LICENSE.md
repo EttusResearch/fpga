@@ -1,8 +1,11 @@
 # Ettus Research USRP3 FPGA Repository: Licenses
 
 All code written by Ettus Research within this usrp3 subdirectory of the FPGA
-repository is licensed as LGPL. This repository also contains code from other
+repository is licensed as LGPLv3. This repository also contains code from other
 sources, which is marked appropriately and may be licensed differently.
+
+If you wish to obtain an alternative license on the components owned by Ettus
+Research / National Instruments, please contact info@ettus.com.
 
 ## LGPL License Text
 
