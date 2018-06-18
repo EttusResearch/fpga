@@ -24,7 +24,7 @@ module axi_mux
    wire [WIDTH-1:0] o_tdata_int;
    wire o_tlast_int, o_tvalid_int, o_tready_int;
 
-   reg [3:0] 	       st_port;
+   reg [$clog2(SIZE)-1:0] 	       st_port;
    reg 		       st_active;
 
   genvar n;

@@ -132,7 +132,6 @@ cvita_hdr_modify.v \
 axi_async_stream.v \
 axi_rate_change.v \
 axi_tag_time.v \
-axi_drop_packet.v \
 axi_drop_partial_packet.v \
 cordic.v \
 cordic_timed.v \

@@ -9,7 +9,8 @@ SIMULATION = 0
 # Usage: BUILD_VIVADO_DESIGN
 # Args: $1 = TCL_SCRIPT_NAME
 #       $2 = TOP_MODULE
-#       $3 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = ARCH (zynq, kintex7, etc)
+#       $4 = PART_ID (<device>/<package>/<speedgrade>[/<temperaturegrade>[/<silicon_revision>]])
 # Prereqs:
 # - TOOLS_DIR must be defined globally
 # - BUILD_DIR must be defined globally
@@ -21,7 +22,7 @@ BUILD_VIVADO_DESIGN = \
 	export VIV_TOOLS_DIR=$(call RESOLVE_PATH,$(TOOLS_DIR)); \
 	export VIV_OUTPUT_DIR=$(call RESOLVE_PATH,$(BUILD_DIR)); \
 	export VIV_TOP_MODULE=$(2); \
-	export VIV_PART_NAME=$(subst /,,$(3)); \
+	export VIV_PART_NAME=`python $(TOOLS_DIR)/scripts/viv_gen_part_id.py $(3)/$(4)`; \
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_DESIGN_SRCS=$(call RESOLVE_PATHS,$(DESIGN_SRCS)); \
 	export VIV_VERILOG_DEFS="$(VERILOG_DEFS)"; \
@@ -33,7 +34,8 @@ BUILD_VIVADO_DESIGN = \
 # Usage: CHECK_VIVADO_DESIGN
 # Args: $1 = TCL_SCRIPT_NAME
 #       $2 = TOP_MODULE
-#       $3 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = ARCH (zynq, kintex7, etc)
+#       $4 = PART_ID (<device>/<package>/<speedgrade>[/<temperaturegrade>[/<silicon_revision>]])
 # Prereqs:
 # - TOOLS_DIR must be defined globally
 # - BUILD_DIR must be defined globally
@@ -45,7 +47,7 @@ CHECK_VIVADO_DESIGN = \
 	export VIV_TOOLS_DIR=$(call RESOLVE_PATH,$(TOOLS_DIR)); \
 	export VIV_OUTPUT_DIR=$(call RESOLVE_PATH,$(BUILD_DIR)); \
 	export VIV_TOP_MODULE=$(2); \
-	export VIV_PART_NAME=$(subst /,,$(3)); \
+	export VIV_PART_NAME=`python $(TOOLS_DIR)/scripts/viv_gen_part_id.py $(3)/$(4)`; \
 	export VIV_MODE=$(VIVADO_MODE); \
 	export VIV_DESIGN_SRCS=$(call RESOLVE_PATHS,$(DESIGN_SRCS)); \
 	export VIV_VERILOG_DEFS="$(VERILOG_DEFS)"; \

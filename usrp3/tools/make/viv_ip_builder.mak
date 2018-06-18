@@ -12,7 +12,7 @@ endif
 # Usage: BUILD_VIVADO_IP
 # Args: $1 = IP_NAME (IP name)
 #       $2 = ARCH (zynq, kintex7, etc)
-#       $3 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = PART_ID (<device>/<package>/<speedgrade>[/<tempgrade>[/<silicon revision>]])
 #       $4 = IP_SRC_DIR (Absolute path to the top level ip src dir)
 #       $5 = IP_BUILD_DIR (Absolute path to the top level ip build dir)
 #       $6 = GENERATE_EXAMPLE (0 or 1)
@@ -25,7 +25,7 @@ BUILD_VIVADO_IP = \
 	echo "BUILDER: Building IP $(1)"; \
 	echo "========================================================"; \
 	export XCI_FILE=$(call RESOLVE_PATH,$(5)/$(1)/$(1).xci); \
-	export PART_NAME=$(subst /,,$(3)); \
+	export PART_NAME=`python $(TOOLS_DIR)/scripts/viv_gen_part_id.py $(2)/$(3)`; \
 	export GEN_EXAMPLE=$(6); \
 	export SYNTH_IP=$(SYNTH_IP); \
 	echo "BUILDER: Staging IP in build directory..."; \
@@ -45,7 +45,7 @@ BUILD_VIVADO_IP = \
 # Usage: BUILD_VIVADO_BD
 # Args: $1 = BD_NAME (IP name)
 #       $2 = ARCH (zynq, kintex7, etc)
-#       $3 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = PART_ID (<device>/<package>/<speedgrade>[/<tempgrade>[/<silicon revision>]])
 #       $4 = BD_SRC_DIR (Absolute path to the top level ip src dir)
 #       $5 = BD_BUILD_DIR (Absolute path to the top level ip build dir)
 # Prereqs: 
@@ -57,7 +57,7 @@ BUILD_VIVADO_BD = \
 	echo "BUILDER: Building BD $(1)"; \
 	echo "========================================================"; \
 	export BD_FILE=$(call RESOLVE_PATH,$(5)/$(1)/$(1).bd); \
-	export PART_NAME=$(subst /,,$(3)); \
+	export PART_NAME=`python $(TOOLS_DIR)/scripts/viv_gen_part_id.py $(2)/$(3)`; \
 	echo "BUILDER: Staging BD in build directory..."; \
 	rm $(5)/$(1)/* -rf; \
 	$(TOOLS_DIR)/scripts/shared-ip-loc-manage.sh --path=$(5)/$(1) reserve; \
@@ -74,7 +74,7 @@ BUILD_VIVADO_BD = \
 # Usage: BUILD_VIVADO_BDTCL
 # Args: $1 = BD_NAME (IP name)
 #       $2 = ARCH (zynq, kintex7, etc)
-#       $3 = PART_ID (<device>/<package>/<speedgrade>)
+#       $3 = PART_ID (<device>/<package>/<speedgrade>[/<tempgrade>[/<silicon revision>]])
 #       $4 = BDTCL_SRC_DIR (Absolute path to the top level ip src dir)
 #       $5 = BDTCL_BUILD_DIR (Absolute path to the top level ip build dir)
 #       $6 = BD_IP_REPOS (space-separated list of absolute paths to IP repos)
@@ -87,7 +87,7 @@ BUILD_VIVADO_BDTCL = \
 	echo "BUILDER: Generating BD from Tcl $(1)"; \
 	echo "========================================================"; \
 	export BD_FILE=$(call RESOLVE_PATH,$(5)/$(1)/$(1).tcl); \
-	export PART_NAME=$(subst /,,$(3)); \
+	export PART_NAME=`python $(TOOLS_DIR)/scripts/viv_gen_part_id.py $(2)/$(3)`; \
 	export BD_IP_REPOS=$(call RESOLVE_PATH,$(6)); \
 	echo "BUILDER: Staging BD Tcl in build directory..."; \
 	rm $(5)/$(1)/* -rf; \
