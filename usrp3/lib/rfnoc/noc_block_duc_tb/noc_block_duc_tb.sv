@@ -8,7 +8,7 @@
 //       that the DUC has the correct output
 
 `timescale 1ns/1ps
-`define SIM_RUNTIME_US 100000000
+`define SIM_RUNTIME_US 10000
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 4
 

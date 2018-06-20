@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 `timescale 1ns/1ps
-`define SIM_RUNTIME_US 100000000
+`define SIM_RUNTIME_US 10000
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 5
 
@@ -21,6 +21,8 @@ module noc_block_ddc_tb();
   `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   `RFNOC_ADD_BLOCK(noc_block_ddc, 0 /* xbar port 0 */);
   `RFNOC_ADD_BLOCK(noc_block_fft, 1 /* xbar port 1 */);
+
+  localparam EXTENDED_TEST = 0;
 
   // FFT specific settings
   localparam [15:0] FFT_SIZE = 256;
@@ -260,16 +262,16 @@ module noc_block_ddc_tb();
     send_ramp(2);    // HBs enabled: 1, CIC rate: 1
     send_ramp(3);    // HBs enabled: 0, CIC rate: 3
     send_ramp(4);    // HBs enabled: 2, CIC rate: 1
-    send_ramp(6);    // HBs enabled: 1, CIC rate: 3
+    if (EXTENDED_TEST) send_ramp(6);    // HBs enabled: 1, CIC rate: 3
     send_ramp(8);    // HBs enabled: 3, CIC rate: 1
     send_ramp(12);   // HBs enabled: 2, CIC rate: 3
     send_ramp(13);   // HBs enabled: 0, CIC rate: 13
-    send_ramp(16);   // HBs enabled: 3, CIC rate: 2
-    send_ramp(24);   // HBs enabled: 3, CIC rate: 3
+    if (EXTENDED_TEST) send_ramp(16);   // HBs enabled: 3, CIC rate: 2
+    if (EXTENDED_TEST) send_ramp(24);   // HBs enabled: 3, CIC rate: 3
     send_ramp(40);   // HBs enabled: 3, CIC rate: 5
-    send_ramp(200); // HBs enabled: 3, CIC rate: 25
+    if (EXTENDED_TEST) send_ramp(200); // HBs enabled: 3, CIC rate: 25
     send_ramp(255);  // HBs enabled: 0, CIC rate: 255
-    send_ramp(2040); // HBs enabled: 3, CIC rate: 255
+    if (EXTENDED_TEST) send_ramp(2040); // HBs enabled: 3, CIC rate: 255
     `TEST_CASE_DONE(1);
 
     /********************************************************

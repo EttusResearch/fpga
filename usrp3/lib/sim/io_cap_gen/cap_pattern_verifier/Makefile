@@ -27,7 +27,7 @@ $(CONTROL_LIB_SRCS) \
 )
 
 DESIGN_SRCS += $(abspath \
-../../cap_pattern_verifier.v \
+../../../io_cap_gen/cap_pattern_verifier.v \
 )
 
 #-------------------------------------------------
@@ -38,8 +38,6 @@ include $(BASE_DIR)/../sim/axi/Makefile.srcs
 
 # Define only one toplevel module
 SIM_TOP = cap_pattern_verifier_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 1000
 
 SIM_SRCS = \
 $(abspath cap_pattern_verifier_tb.sv) \

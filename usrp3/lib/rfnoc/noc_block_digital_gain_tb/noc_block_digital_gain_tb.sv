@@ -2,6 +2,8 @@
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 5
 
+`define SIM_TIMEOUT_US 1000 // 1ms
+
 `include "sim_exec_report.vh"
 `include "sim_clks_rsts.vh"
 `include "sim_rfnoc_lib.svh"

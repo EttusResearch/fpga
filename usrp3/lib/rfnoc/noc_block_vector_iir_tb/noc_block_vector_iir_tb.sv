@@ -99,7 +99,7 @@ module noc_block_vector_iir_tb();
           expected_payload[k][31:16] = expected_payload[k][31:16] + 2*k;
           expected_payload[k][15: 0] = expected_payload[k][15: 0] + 2*k+1;
           $sformat(s, "Vector IIR output incorrect! Received: %08x Expected: %08x", received_payload, expected_payload[k]);
-          `ASSERT_FATAL(expected_payload[k] == received_payload, s);
+          `ASSERT_ERROR(expected_payload[k] == received_payload, s);
           `ASSERT_FATAL((k != VECTOR_SIZE-1) == (last == 1'b0), "Detected early tlast!");
           `ASSERT_FATAL((k == VECTOR_SIZE-1) == (last == 1'b1), "Detected late tlast!")
         end

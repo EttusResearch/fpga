@@ -58,6 +58,7 @@ SIM_RUNTIME_US = 10000
 SIM_SRCS = \
 $(abspath dram_test_tb.sv) \
 $(IP_MIG_7SERIES_0_SIM_OUTS) \
+$(IP_MIG_7SERIES_TG_SRCS) \
 $(SIM_GENERAL_SRCS) \
 $(SIM_AXI_SRCS)
 
