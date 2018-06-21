@@ -155,7 +155,6 @@ def run_sim(path, simulator, basedir, setupenv):
         A environment script can be run optionally
     """
     try:
-        os.chdir(os.path.join(basedir, path))
         # Optionally run an environment setup script
         if setupenv is None:
             setupenv = ''
@@ -167,7 +166,8 @@ def run_sim(path, simulator, basedir, setupenv):
         # Run the simulation
         return parse_output(
             subprocess.check_output(
-                '{setupenv} make {simulator} 2>&1'.format(setupenv=setupenv, simulator=simulator), shell=True))
+                'cd {workingdir}; {setupenv} make {simulator} 2>&1'.format(
+                    workingdir=os.path.join(basedir, path), setupenv=setupenv, simulator=simulator), shell=True))
     except subprocess.CalledProcessError as e:
         return {'retcode': int(abs(e.returncode)), 'passed':False, 'stdout':e.output}
     except Exception as e:
@@ -184,11 +184,11 @@ def run_sim_queue(run_queue, out_queue, simulator, basedir, setupenv):
     """
     while not run_queue.empty():
         (name, path) = run_queue.get()
-        result = {}
         try:
-            _LOG.info('Running simulation: %s', name)
-            out_queue.put((name, run_sim(path, simulator, basedir, setupenv)))
-            _LOG.info('DONE: %s', name)
+            _LOG.info('Starting: %s', name)
+            result = run_sim(path, simulator, basedir, setupenv)
+            out_queue.put((name, result))
+            _LOG.info('FINISHED: %s (%s, %s)', name, retcode_to_str(result['retcode']), 'PASS' if result['passed'] else 'FAIL!')
         except KeyboardInterrupt:
             _LOG.warning('Target ' + name + ' received SIGINT. Aborting...')
             out_queue.put((name, {'retcode': RETCODE_EXEC_ERR, 'passed':False, 'stdout':bytes('Aborted by user', 'utf-8')}))
@@ -222,7 +222,7 @@ def do_run(args):
     # Spawn tasks to run builds
     num_sims = run_queue.qsize()
     num_jobs = min(num_sims, int(args.jobs))
-    _LOG.info('Starting ' + str(num_jobs) + ' job(s) to process queue...')
+    _LOG.info('Started ' + str(num_jobs) + ' job(s) to process queue...')
     results = {}
     for i in range(num_jobs):
         worker = Thread(target=run_sim_queue, args=(run_queue, out_queue, args.simulator, args.basedir, args.setupenv))
@@ -250,7 +250,9 @@ def do_run(args):
         if not result['passed']:
             result_all += 1
 
-    log_with_header('RESULTS', 40)
+    summary_line = 'SUMMARY: %d/%d tests failed. Time elapsed was %s'%(
+        result_all, num_sims, str(datetime.datetime.now() - start).split('.', 2)[0])
+    log_with_header('RESULTS', len(summary_line))
     for name in results:
         r = results[name]
         if 'module' in r:
@@ -259,6 +261,8 @@ def do_run(args):
         else:
             _LOG.info('* %s : %s (Status=%s)', ('PASS' if r['passed'] else 'FAIL'), 
                 name, retcode_to_str(r['retcode']))
+    _LOG.info('#'*len(summary_line))
+    _LOG.info(summary_line)   
     return result_all
 
 
