@@ -54,7 +54,7 @@ class SimulatorCore:
         self.__edge_render_db = list()
 
     def register(self, comp, tick_aware):
-        if not self.__all_comps.has_key(comp.name):
+        if comp.name not in self.__all_comps:
             self.__all_comps[comp.name] = comp
         else:
             raise RuntimeError('Duplicate component ' + comp.name)
@@ -106,10 +106,10 @@ class SimulatorCore:
 
     def list_components(self, comptype='', name_filt=''):
         if not comptype:
-            return sorted([c for c in self.__all_comps.keys()
+            return sorted([c for c in list(self.__all_comps.keys())
                 if (re.match(name_filt, self.__all_comps[c].name))])
         else:
-            return sorted([c for c in self.__all_comps.keys()
+            return sorted([c for c in list(self.__all_comps.keys())
                 if (self.__all_comps[c].type == comptype and
                     re.match(name_filt, self.__all_comps[c].name))])
 
@@ -138,7 +138,7 @@ class SimulatorCore:
         for edgeinfo in self.__edge_render_db:
             for i in range(2):
                 node = edgeinfo[i]
-                if not node_ids.has_key(node):
+                if node not in node_ids:
                     node_id = next_node_id
                     node_ids[node] = node_id
                     dot.node(str(node_id), node)
@@ -188,7 +188,7 @@ class HwRsrcs():
         self.__rsrcs = dict()
 
     def get(self, what):
-        if self.__rsrcs.has_key(what):
+        if what in self.__rsrcs:
             return self.__rsrcs[what]
         else:
             return 0.0
@@ -197,7 +197,7 @@ class HwRsrcs():
         self.__rsrcs[what] = float(value)
 
     def add(self, what, value):
-        if self.__rsrcs.has_key(what):
+        if what in self.__rsrcs:
             self.__rsrcs[what] += float(value)
         else:
             self.__rsrcs[what] = float(value)
@@ -207,11 +207,11 @@ class HwRsrcs():
             self.add(attr, other_rsrcs.get(attr))
 
     def get_attrs(self):
-        return self.__rsrcs.keys()
+        return list(self.__rsrcs.keys())
 
     def reset(self, what = None):
         if what is not None:
-            if self.__rsrcs.has_key(what):
+            if what in self.__rsrcs:
                 self.__rsrcs[what] = 0.0
         else:
             self.__rsrcs = dict()
@@ -393,7 +393,7 @@ class Consumer(SimComp):
         self.__byte_count += data.get_bytes()
 
     def get_items(self):
-        return self.__item_db.keys()
+        return list(self.__item_db.keys())
 
     def get_bytes(self):
         return self.__byte_count
@@ -569,7 +569,7 @@ class Function(SimComp):
     def notify(self, arg_i):
         self.__in_args_pushed[arg_i] = True
         # Wait for all input args to come in
-        if (sorted(self.__in_args_pushed.keys()) == range(len(self.__in_args))):
+        if (sorted(self.__in_args_pushed.keys()) == list(range(len(self.__in_args)))):
             # Pop data out of each input arg
             max_in_latency = 0
             self.__max_latency_input = None
@@ -617,23 +617,23 @@ class Visualizer():
 
     def dump_consumed_streams(self, consumer_filt='.*'):
         comps = self.__sim_core.list_components(comptype.consumer, consumer_filt)
-        print '================================================================='
-        print 'Streams Received by Consumers matching (%s) at Tick = %04d'%(consumer_filt,self.__sim_core.get_ticks())
-        print '================================================================='
+        print('=================================================================')
+        print('Streams Received by Consumers matching (%s) at Tick = %04d'%(consumer_filt,self.__sim_core.get_ticks()))
+        print('=================================================================')
         for c in sorted(comps):
             comp = self.__sim_core.lookup(c)
             for s in sorted(comp.get_items()):
-                print ' - %s: (%s) Latency = %gs'%(s,c,comp.get_latency(s))
-        print '================================================================='
+                print(' - %s: (%s) Latency = %gs'%(s,c,comp.get_latency(s)))
+        print('=================================================================')
 
     def dump_debug_audit_log(self, ctype, name_filt='.*'):
         if ctype != comptype.channel:
             raise NotImplementedError('Component type not yet supported: ' + ctype)
 
         comps = self.__sim_core.list_components(ctype, name_filt)
-        print '================================================================='
-        print 'Debug Audit for all %s Components matching (%s)'%(ctype,name_filt)
-        print '================================================================='
+        print('=================================================================')
+        print('Debug Audit for all %s Components matching (%s)'%(ctype,name_filt))
+        print('=================================================================')
         for c in sorted(comps):
             comp = self.__sim_core.lookup(c)
             status = 'Unknown'
@@ -645,11 +645,11 @@ class Visualizer():
                 status = 'WARNING (Used but Undriven)'
             else:
                 status = 'Unused'
-            print ' - %s: Status = %s'%(c,status)
-        print '================================================================='
+            print(' - %s: Status = %s'%(c,status))
+        print('=================================================================')
 
-    def new_figure(self, grid_dims=[1,1], fignum=1):
-        self.__figure = plt.figure(fignum)
+    def new_figure(self, grid_dims=[1,1], fignum=1, figsize=(16, 9), dpi=72):
+        self.__figure = plt.figure(num=fignum, figsize=figsize, dpi=dpi)
         self.__fig_dims = grid_dims
 
     def show_figure(self):
@@ -671,7 +671,7 @@ class Visualizer():
             show = False
         self.__figure.subplots_adjust(bottom=0.25)
         ax = self.__figure.add_subplot(*(self.__fig_dims + [grid_pos]))
-        title = 'Resource utilization for all %s components matching \"%s\"' % \
+        title = 'Resource utilization for all %s\ncomponents matching \"%s\"' % \
             (ctype, name_filt)
         ax.set_title(title)
         ax.set_ylabel('Resource Utilization (%)')
@@ -681,11 +681,11 @@ class Visualizer():
             rects = []
             ymax = 100
             for i in range(len(attrs)):
-                utilz = map(lambda c: self.__sim_core.lookup(c).get_utilization(attrs[i]) * 100, comps)
+                utilz = [self.__sim_core.lookup(c).get_utilization(attrs[i]) * 100 for c in comps]
                 rects.append(ax.bar(ind + width*i, utilz, width, color=colors[i%len(colors)]))
                 ymax = max(ymax, int(math.ceil(max(utilz) / 100.0)) * 100)
             ax.set_ylim([0,ymax])
-            ax.set_yticks(range(0,ymax,10))
+            ax.set_yticks(list(range(0,ymax,10)))
             ax.set_xticks(ind + 0.5)
             ax.set_xticklabels(comps, rotation=90)
             ax.legend(rects, attrs)
@@ -708,16 +708,16 @@ class Visualizer():
             show = False
         self.__figure.subplots_adjust(bottom=0.25)
         ax = self.__figure.add_subplot(*(self.__fig_dims + [grid_pos]))
-        title = 'Latency of maximal path terminating in stream(s) matching \"%s\"\n(Consumer Filter = \"%s\")' % \
+        title = 'Latency of Maximal Path Terminating in\nStream(s) matching \"%s\"\n(Consumer Filter = \"%s\")' % \
             (stream_filt, consumer_filt)
         ax.set_title(title)
         ax.set_ylabel('Maximal Source-to-Sink Latency (s)')
         if streams:
             ind = np.arange(len(streams))
-            latency = map(lambda (c,s,d): self.__sim_core.lookup(c).get_latency(s), streams)
+            latency = [self.__sim_core.lookup(c_s_d1[0]).get_latency(c_s_d1[1]) for c_s_d1 in streams]
             rects = [ax.bar(ind, latency, 1.0, color='b')]
             ax.set_xticks(ind + 0.5)
-            ax.set_xticklabels(map(lambda (c,s,d): d, streams), rotation=90)
+            ax.set_xticklabels([c_s_d[2] for c_s_d in streams], rotation=90)
             attrs = ['latency']
             ax.legend(rects, attrs)
             ax.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.2e'))
@@ -742,7 +742,7 @@ class Visualizer():
             show = False
         self.__figure.subplots_adjust(bottom=0.25)
         ax = self.__figure.add_subplot(*(self.__fig_dims + [grid_pos]))
-        title = 'Incremental Latency per Hop for Stream \"%s\"\n(Consumer Filter = \"%s\")' % \
+        title = 'Accumulated Latency per Hop for Stream \"%s\"\n(Consumer Filter = \"%s\")' % \
             (stream_id, consumer_filt)
         ax.set_title(title)
         ax.set_ylabel('Maximal Source-to-Sink Latency (s)')

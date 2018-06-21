@@ -48,7 +48,7 @@ class PartialContribComputer(rfnocsim.Function):
     """
     def __init__(self, sim_core, name, size, dst_chans, items_per_stream, app_settings):
         ticks_per_exec = 1      # This function will run once every tick. No multi-cycle paths here.
-        rfnocsim.Function.__init__(self, sim_core, name, size, len(dst_chans)/items_per_stream, ticks_per_exec)
+        rfnocsim.Function.__init__(self, sim_core, name, size, int(len(dst_chans)/items_per_stream), ticks_per_exec)
         self.items_per_stream = items_per_stream  # Each stream contains data from n radio chans
         self.dst_chans = dst_chans              # Where should the individual products go?
         # This block has to buffer enough data to ensure
@@ -196,24 +196,24 @@ class PartialContribCombiner(rfnocsim.Function):
                     raise self.SimCompError('Incorrect items. Expecting partial produts (pp) but got ' + sid)
                 if len(coords[1]) != 1:
                     raise self.SimCompError('Incorrect partial product. Target must be a single channel')
-                if out_chans.has_key(coords[1][0]):
+                if coords[1][0] in out_chans:
                     out_chans[coords[1][0]].extend(coords[0])
                 else:
                     out_chans[coords[1][0]] = coords[0]
         # Check if keys (targets) for partial products == items_per_stream
-        if len(out_chans.keys()) != self.items_per_stream:
+        if len(list(out_chans.keys())) != self.items_per_stream:
             raise self.SimCompError('Inconsistent partial products. Too many targets.')
         # Verify that all influencers for each target are consistent
-        if not all(x == out_chans.values()[0] for x in out_chans.values()):
+        if not all(x == list(out_chans.values())[0] for x in list(out_chans.values())):
             raise self.SimCompError('Inconsistent partial products. Influencers dont match.')
-        contrib_chans = out_chans.values()[0]
+        contrib_chans = list(out_chans.values())[0]
         # Combine partial products and return
         out_items = []
-        for ch in out_chans.keys():
+        for ch in list(out_chans.keys()):
             if sorted(self.reducer_filter[0]) == sorted(contrib_chans):
                 out_items.append(rfnocsim.DataStream.submatrix_gen(self.reducer_filter[1], [ch]))
             else:
-                out_items.append(rfnocsim.DataStream.submatrix_gen('pp', [out_chans.values()[0], ch]))
+                out_items.append(rfnocsim.DataStream.submatrix_gen('pp', [list(out_chans.values())[0], ch]))
         return self.create_outdata_stream(in_data[0].bpi, out_items, in_data[0].count)
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -257,7 +257,7 @@ class Topology_2D_4x4_Torus:
         for i in range(GRP_LEN):
             func = PartialContribCombiner(
                 sim_core=bee7fpga.sim_core, name=bee7fpga.name + '/pp_combiner_%d/' % (i),
-                radix=2, app_settings=app_settings, reducer_filter=(range(total_num_chans), 'tx'))
+                radix=2, app_settings=app_settings, reducer_filter=(list(range(total_num_chans)), 'tx'))
             # Partial products generated internally have to be added to a partial
             # sum coming from outside
             bee7fpga.sim_core.connect(bee7fpga.serdes_i[bee7fpga.EXT_IO_LANES[bee7fpga.FP_BASE+i]], 0, func, 0)
@@ -291,7 +291,7 @@ class Topology_2D_4x4_Torus:
             bee7row = []
             for c in range(4):
                 blade = bee7blades[4*r + c]
-                pp_chans = range(64*c,64*(c+1))
+                pp_chans = list(range(64*c,64*(c+1)))
                 for i in range(4):
                     Topology_2D_4x4_Torus.config_bitstream(
                         blade.fpgas[i], app_settings, pp_chans, pp_chans[i*16:(i+1)*16], 256, (r==c))
@@ -319,12 +319,12 @@ class Topology_2D_4x4_Torus:
                     pp_out_base = len(hw.Bee7Fpga.EXT_IO_LANES)*f + hw.Bee7Fpga.FP_BASE+8
                     if r != c:
                         sim_core.connect_multi_bidir(
-                            bee7grid[r][(c+3)%4], range(samp_out_base,samp_out_base+8),
-                            bee7grid[r][c], range(samp_in_base,samp_in_base+8),
+                            bee7grid[r][(c+3)%4], list(range(samp_out_base,samp_out_base+8)),
+                            bee7grid[r][c], list(range(samp_in_base,samp_in_base+8)),
                             'SAMP_O2I', ['black','blue'])
                         sim_core.connect_multi_bidir(
-                            bee7grid[r][c], range(pp_out_base,pp_out_base+8),
-                            bee7grid[(r+1)%4][c], range(pp_in_base,pp_in_base+8),
+                            bee7grid[r][c], list(range(pp_out_base,pp_out_base+8)),
+                            bee7grid[(r+1)%4][c], list(range(pp_in_base,pp_in_base+8)),
                             'PP_O2I', ['black','blue'])
                     else:
                         for i in range(8):
@@ -372,7 +372,7 @@ class Topology_3D_4x4_FLB:
         # then build a list of other addresses (neighbors) in each dimension
         DIM_SIZE = 4
         for dim in ['X','Y','Z']:
-            all_addrs = range(DIM_SIZE)
+            all_addrs = list(range(DIM_SIZE))
             all_addrs.remove(node_addr[dim])
             router_map[dim] = dict()
             for dst in all_addrs:
@@ -440,7 +440,7 @@ class Topology_3D_4x4_FLB:
         MAX_USRPS = 4       # Max USRPs that can possibly be connected to each FPGA
         NUM_USRPS = 2       # Number of USRPs actually connected to each FPGA
         CHANS_PER_USRP = 2  # How many radio channels does each USRP have
-        ALL_CHANS = range(pow(DIM_WIDTH, 3) * NUM_USRPS * CHANS_PER_USRP)
+        ALL_CHANS = list(range(pow(DIM_WIDTH, 3) * NUM_USRPS * CHANS_PER_USRP))
 
         # Each FPGA will forward the sample stream from each USRP to all of its
         # X-axis neighbors
@@ -570,17 +570,17 @@ class Topology_3D_4x4_FLB:
                             (dst_map, t) = cls.get_portmap({'X':dst,'Y':fpga,'Z':col})
                             sim_core.connect_multi(
                                 bee7grid[row][col],
-                                range(hw.Bee7Blade.io_lane(fpga, src_map['X'][dst]), hw.Bee7Blade.io_lane(fpga, src_map['X'][dst]+4)),
+                                list(range(hw.Bee7Blade.io_lane(fpga, src_map['X'][dst]), hw.Bee7Blade.io_lane(fpga, src_map['X'][dst]+4))),
                                 bee7grid[dst][col],
-                                range(hw.Bee7Blade.io_lane(fpga, dst_map['X'][row]), hw.Bee7Blade.io_lane(fpga, dst_map['X'][row]+4)),
+                                list(range(hw.Bee7Blade.io_lane(fpga, dst_map['X'][row]), hw.Bee7Blade.io_lane(fpga, dst_map['X'][row]+4))),
                                 'SAMP')
                         if col != dst:
                             (dst_map, t) = cls.get_portmap({'X':row,'Y':fpga,'Z':dst})
                             sim_core.connect_multi(
                                 bee7grid[row][col],
-                                range(hw.Bee7Blade.io_lane(fpga, src_map['Z'][dst]), hw.Bee7Blade.io_lane(fpga, src_map['Z'][dst]+4)),
+                                list(range(hw.Bee7Blade.io_lane(fpga, src_map['Z'][dst]), hw.Bee7Blade.io_lane(fpga, src_map['Z'][dst]+4))),
                                 bee7grid[row][dst],
-                                range(hw.Bee7Blade.io_lane(fpga, dst_map['Z'][col]), hw.Bee7Blade.io_lane(fpga, dst_map['Z'][col]+4)),
+                                list(range(hw.Bee7Blade.io_lane(fpga, dst_map['Z'][col]), hw.Bee7Blade.io_lane(fpga, dst_map['Z'][col]+4))),
                                 'PP', 'blue')
 
         # Host connection

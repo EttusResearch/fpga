@@ -53,7 +53,7 @@ def main():
         app_settings['fir_taps'] = args.fir_taps
         app_settings['fir_dly_line'] = args.fir_dly_line
 
-    print '[INFO] Instantiating hardware resources...'
+    print('[INFO] Instantiating hardware resources...')
     # Create USRPs
     usrps = []
     for i in range(NUM_USRPS):
@@ -69,7 +69,7 @@ def main():
             num_coeffs=pow(NUM_CHANS,2)/NUM_HOSTS, switch_ports=16, app_settings=app_settings))
 
     # Build topology
-    print '[INFO] Building topology...'
+    print('[INFO] Building topology...')
     if args.topology == 'torus':
         colosseum_models.Topology_2D_4x4_Torus.connect(sim_core, usrps, bee7blades, hosts, app_settings)
     elif args.topology == 'flb':
@@ -77,20 +77,20 @@ def main():
     else:
         raise RuntimeError('Invalid topology: ' + args.topology)
 
-    print '[INFO] Running simulation...'
+    print('[INFO] Running simulation...')
     sim_core.run(16e-9)
 
     # Sanity checks
-    print '[INFO] Validating correctness...'
+    print('[INFO] Validating correctness...')
     for u in sim_core.list_components(rfnocsim.comptype.hardware, 'USRP.*'):
         sim_core.lookup(u).validate(0)
-    print '[INFO] Validating feasibility...'
+    print('[INFO] Validating feasibility...')
     for u in sim_core.list_components('', '.*'):
         c = sim_core.lookup(u)
         for a in c.get_util_attrs():
             if c.get_utilization(a) > 1.0:
-                print '[WARN] %s: %s overutilized by %.1f%%' % (u,a,(c.get_utilization(a)-1)*100)
-    print '[INFO] Validating BEE7 FPGA image IO consistency...'
+                print('[WARN] %s: %s overutilized by %.1f%%' % (u,a,(c.get_utilization(a)-1)*100))
+    print('[INFO] Validating BEE7 FPGA image IO consistency...')
     master_fpga = 'BEE7_000/FPGA_NE'
     master_stats = dict()
     for u in sim_core.list_components('', master_fpga + '/.*SER_.*'):
@@ -102,7 +102,7 @@ def main():
             c = sim_core.lookup(u)
             m = re.match('(.+)/(SER_.*)', u)
             if (c.get_utilization('bandwidth') != master_stats[ln]):
-                print '[WARN] Data flowing over ' + ln + ' is probably different between ' + master_fpga + ' and ' + m.group(1)
+                print('[WARN] Data flowing over ' + ln + ' is probably different between ' + master_fpga + ' and ' + m.group(1))
 
     # Visualize various metrics
     vis = rfnocsim.Visualizer(sim_core)

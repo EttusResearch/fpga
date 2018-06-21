@@ -100,10 +100,10 @@ class Bee7Fpga(rfnocsim.SimComp):
       FPGAs and 32 lanes going outside
     """
     # IO lanes (How the various IO lanes in an FPGA are allocated)
-    EW_IO_LANES  = range(0,16)
-    NS_IO_LANES  = range(16,32)
-    XX_IO_LANES  = range(32,48)
-    EXT_IO_LANES = range(48,80)
+    EW_IO_LANES  = list(range(0,16))
+    NS_IO_LANES  = list(range(16,32))
+    XX_IO_LANES  = list(range(32,48))
+    EXT_IO_LANES = list(range(48,80))
     # External IO lane connections
     FP_BASE  = 0    # Front panel FMC
     FP_LANES = 16
@@ -163,7 +163,7 @@ class Bee7Fpga(rfnocsim.SimComp):
         self.name = name
 
     def add_function(self, func):
-        if not self.functions.has_key(func.name):
+        if func.name not in self.functions:
             self.functions[func.name] = func
         else:
             raise RuntimeError('Function ' + self.name + ' already defined in ' + self.name)
@@ -216,11 +216,11 @@ class Bee7Blade(rfnocsim.SimComp):
 
     def inputs(self, i, bind=False):
         IO_PER_FPGA = len(Bee7Fpga.EXT_IO_LANES)
-        return self.fpgas[int(i)/IO_PER_FPGA].inputs(Bee7Fpga.EXT_IO_LANES[i%IO_PER_FPGA], bind)
+        return self.fpgas[int(i/IO_PER_FPGA)].inputs(Bee7Fpga.EXT_IO_LANES[i%IO_PER_FPGA], bind)
 
     def connect(self, i, dest):
         IO_PER_FPGA = len(Bee7Fpga.EXT_IO_LANES)
-        self.fpgas[int(i)/IO_PER_FPGA].connect(Bee7Fpga.EXT_IO_LANES[i%IO_PER_FPGA], dest)
+        self.fpgas[int(i/IO_PER_FPGA)].connect(Bee7Fpga.EXT_IO_LANES[i%IO_PER_FPGA], dest)
 
     @staticmethod
     def io_lane(fpga, fpga_lane):
