@@ -90,7 +90,7 @@ module gpif2_to_fifo64
    wire 	    o32_tlast;
    wire 	    o32_tvalid, o32_tready;
 
-   gpif2_error_checker #(.SIZE(FIFO_SIZE)) checker
+   gpif2_error_checker #(.SIZE(FIFO_SIZE)) error_checker
      (
       .clk(fifo_clk), .reset(fifo_rst), .clear(1'b0),
       .i_tdata(chk_tdata), .i_tlast(chk_tlast), .i_tvalid(chk_tvalid), .i_tready(chk_tready),
