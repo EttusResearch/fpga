@@ -52,7 +52,7 @@ module noc_block_invert #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data({set_data[1],set_data[0]}), .set_addr({set_addr[1],set_addr[0]}), .set_stb({set_stb[1],set_stb[0]}), .set_time(),
+    .set_data({set_data[1],set_data[0]}), .set_addr({set_addr[1],set_addr[0]}), .set_stb({set_stb[1],set_stb[0]}), .set_time(), .set_has_time(),
     .rb_stb(2'b11), .rb_addr({rb_addr[1],rb_addr[0]}), .rb_data({rb_data[1],rb_data[0]}),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -77,7 +77,7 @@ module noc_block_invert #(
   wire        m_axis_data_tlast;
   wire        m_axis_data_tvalid;
   wire        m_axis_data_tready;
-  wire [127:0] m_axis_data_tuser;
+  wire [127:0] m_axis_data_tuser, pass_thru_tuser, invert_tuser;
 
   wire [31:0]  s_axis_data_tdata[0:1];
   wire [1:0]   s_axis_data_tlast;
@@ -146,7 +146,7 @@ module noc_block_invert #(
 
   // Handle headers
   cvita_hdr_modify cvita_hdr_modify_0 (
-    .header_in(m_axis_data_tuser),
+    .header_in(pass_thru_tuser),
     .header_out(s_axis_data_tuser[0]),
     .use_pkt_type(1'b0),       .pkt_type(),
     .use_has_time(1'b0),       .has_time(),
@@ -159,7 +159,7 @@ module noc_block_invert #(
     .use_vita_time(1'b0),      .vita_time());
 
   cvita_hdr_modify cvita_hdr_modify_1 (
-    .header_in(m_axis_data_tuser),
+    .header_in(invert_tuser),
     .header_out(s_axis_data_tuser[1]),
     .use_pkt_type(1'b0),       .pkt_type(),
     .use_has_time(1'b0),       .has_time(),
@@ -215,8 +215,8 @@ module noc_block_invert #(
   /* Invert */
   pass_thru_and_invert pass_thru_and_invert (
   .clk(ce_clk), .reset(ce_rst),
-  .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-  .pass_thru_tdata(s_axis_data_tdata[0]), .pass_thru_tlast(s_axis_data_tlast[0]), .pass_thru_tvalid(s_axis_data_tvalid[0]), .pass_thru_tready(s_axis_data_tready[0]),
-  .invert_tdata(s_axis_data_tdata[1]), .invert_tlast(s_axis_data_tlast[1]), .invert_tvalid(s_axis_data_tvalid[1]), .invert_tready(s_axis_data_tready[1]));
+  .i_tdata(m_axis_data_tdata), .i_tuser(m_axis_data_tuser), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
+  .pass_thru_tdata(s_axis_data_tdata[0]), .pass_thru_tuser(pass_thru_tuser), .pass_thru_tlast(s_axis_data_tlast[0]), .pass_thru_tvalid(s_axis_data_tvalid[0]), .pass_thru_tready(s_axis_data_tready[0]),
+  .invert_tdata(s_axis_data_tdata[1]), .invert_tuser(invert_tuser), .invert_tlast(s_axis_data_tlast[1]), .invert_tvalid(s_axis_data_tvalid[1]), .invert_tready(s_axis_data_tready[1]));
 
 endmodule
