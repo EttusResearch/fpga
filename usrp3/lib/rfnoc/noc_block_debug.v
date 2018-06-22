@@ -97,6 +97,7 @@ module noc_block_debug #(
   axi_wrapper #(
     .SIMPLE_MODE(0))
   axi_wrapper_0 (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum[0]),
     .next_dst(next_dst_sid[0]),
@@ -144,6 +145,7 @@ module noc_block_debug #(
   axi_wrapper #(
     .SIMPLE_MODE(0))
   axi_wrapper_1 (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum[1]),
     .next_dst(next_dst_sid[1]),

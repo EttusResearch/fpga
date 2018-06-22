@@ -66,8 +66,8 @@ module noc_block_debug_tb();
     random_word = $random();
     tb_streamer.write_user_reg(sid_noc_block_debug, noc_block_debug.SR_CONFIG, 2'b10);
     tb_streamer.read_user_reg(sid_noc_block_debug, noc_block_debug.RB_CONFIG, readback);
-    $sformat(s, "Configuration word incorrect readback! Expected: %0d, Actual %0d", readback[1:0], 2'b0);
-    `ASSERT_ERROR(readback[1:0] == 2'b0, s);
+    $sformat(s, "Configuration word incorrect readback! Expected: %0d, Actual %0d", 2'b10, readback[1:0]);
+    `ASSERT_ERROR(readback[1:0] == 2'b10, s);
     random_word = $random();
     tb_streamer.write_user_reg(sid_noc_block_debug, noc_block_debug.SR_PAYLOAD_LEN, SPP);
     tb_streamer.read_user_reg(sid_noc_block_debug, noc_block_debug.RB_PAYLOAD_LEN, readback);
@@ -78,9 +78,9 @@ module noc_block_debug_tb();
     /********************************************************
     ** Test 5 -- Test sequence
     ********************************************************/
-    // Skeleton's user code is a loopback, so we should receive
-    // back exactly what we send
     `TEST_CASE_START("Test sequence");
+    // Put the block in loopback, so we should receive back exactly what we send
+    tb_streamer.write_user_reg(sid_noc_block_debug, noc_block_debug.SR_CONFIG, 2'b00);
     fork
       begin
         cvita_payload_t send_payload;

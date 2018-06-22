@@ -38,8 +38,8 @@ module noc_block_ofdm_constellation_demapper_tb();
 
     `TEST_CASE_START("Receive & check data");
       // Test bench -> OFDM Constellation Demapper -> Test bench
-      `RFNOC_CONNECT(noc_block_tb,noc_block_ofdm_constellation_demapper,SC16,OFDM_SYMBOL_SIZE*16);
-      `RFNOC_CONNECT(noc_block_ofdm_constellation_demapper,noc_block_tb,SC16,OFDM_SYMBOL_SIZE*16);
+      `RFNOC_CONNECT(noc_block_tb,noc_block_ofdm_constellation_demapper,SC16,OFDM_SYMBOL_SIZE*4);
+      `RFNOC_CONNECT(noc_block_ofdm_constellation_demapper,noc_block_tb,SC16,OFDM_SYMBOL_SIZE*4);
   
       // Setup OFDM constellation demapper
       $display("Setup noc_block_ofdm_constellation_demapper");
@@ -51,23 +51,17 @@ module noc_block_ofdm_constellation_demapper_tb();
       $display("Send samples");
       fork 
         for (int n = 0; n < NUM_SYMBOLS; n = n + 1) begin
-          cvita_payload_t send_payload;
-          cvita_metadata_t md;
           for (int i = 0; i < OFDM_SYMBOL_SIZE; i = i + 1) begin
             symbol_i <= $floor((2**15)*(7 - 2*($random % 7))/8);
             symbol_q <= $floor((2**15)*(7 - 2*($random % 7))/8);
-            send_payload.push_back({symbol_i,symbol_q});
+            tb_streamer.push_word({symbol_i,symbol_q},(i == OFDM_SYMBOL_SIZE-1));
           end
-          md.eob = 1;
-          md.has_time = 0;
-          tb_streamer.send(send_payload, md);
         end
-        for (int n = 0; n < NUM_SYMBOLS; n = n + 1) begin
-          for (int k = 0; k < OFDM_SYMBOL_SIZE; k = k + 1) begin
-            cvita_payload_t recv_payload;
-            cvita_metadata_t md;
-            tb_streamer.recv(recv_payload, md);
-          end
+        for (int n = 0; n < 2; n = n + 1) begin
+          cvita_payload_t recv_payload;
+          cvita_metadata_t md;
+          tb_streamer.recv(recv_payload, md);
+          //TODO: Add self-checking code here
         end
       join
     `TEST_CASE_DONE(1);

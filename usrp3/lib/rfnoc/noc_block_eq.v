@@ -77,6 +77,7 @@ module noc_block_eq #(
   axi_wrapper #(
     .SIMPLE_MODE(1))
   inst_axi_wrapper (
+    .bus_clk(bus_clk), .bus_rst(bus_rst),
     .clk(ce_clk), .reset(ce_rst),
     .clear_tx_seqnum(clear_tx_seqnum),
     .next_dst(),
