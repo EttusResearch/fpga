@@ -58,7 +58,7 @@ module e320_core #(
   input                    s_axi_rready,
 
   // PPS and Clock Control
-  input            pps,
+  input            pps_refclk,
   input            refclk_locked,
   output reg [1:0] pps_select,
   output reg       ref_select,
@@ -462,6 +462,13 @@ module e320_core #(
   // Radio
   //
   /////////////////////////////////////////////////////////////////////////////
+  
+  wire pps_radioclk;
+
+  // Synchronize the PPS signal to the radio clock domain
+  synchronizer pps_radio_sync (
+    .clk(radio_clk), .rst(1'b0), .in(pps_refclk), .out(pps_radioclk)
+  );
 
   // We need enough input buffering for 4 MTU sized packets.
   // Regardless of the sample rate the radio consumes data at a max
@@ -519,7 +526,7 @@ module e320_core #(
     .tx({tx_data[1], tx_data[0]}),
     .tx_stb({tx_stb[1], tx_stb[0]}),
     // Timing and sync
-    .pps(pps), //FIXME
+    .pps(pps_radioclk),
     .sync_in(1'b0),
     .sync_out(sync_out),
     .rx_running({rx_running[1], rx_running[0]}),

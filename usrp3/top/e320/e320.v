@@ -108,11 +108,11 @@ module e320 (
   output LED_ACT1,
 
   // PPS, REFCLK
-  input  CLK_SYNC_INT,
-  input  CLK_SYNC_INT_RAW,
-  input  CLK_SYNC_EXT,
-  input  CLK_REF_RAW,
-  output CLK_REF_SEL,
+  input  CLK_SYNC_INT,      // PPS from GPS
+  input  CLK_SYNC_INT_RAW,  // PPS_RAW from GPS (Unused)
+  input  CLK_SYNC_EXT,      // PPS from external connector
+  input  CLK_REF_RAW,       // FPGA reference clock (GPS or external)
+  output CLK_REF_SEL,       // Select for GPS or external reference clock
 
   // RF LVDS Data Interface
   //
@@ -469,7 +469,7 @@ module e320 (
   //
   /////////////////////////////////////////////////////////////////////
 
-  wire pps;
+  wire pps_refclk;
   wire [1:0] pps_select;
   wire ref_select;
   wire refclk_locked;
@@ -488,7 +488,7 @@ module e320 (
     .ext_pps_from_pin(CLK_SYNC_EXT),
     .gps_pps_from_pin(CLK_SYNC_INT),
     .pps_select(pps_select),
-    .pps_refclk(pps)
+    .pps_refclk(pps_refclk)
   );
 
   assign CLK_REF_SEL = ref_select;
@@ -1591,7 +1591,7 @@ module e320 (
     .ddr3_dma_clk(ddr3_dma_clk),
 
     // Clocking and PPS Controls/Indicators
-    .pps(pps), // FIXME
+    .pps_refclk(pps_refclk),
     .refclk_locked(refclk_locked),
     .pps_select(pps_select),
     .ref_select(ref_select),

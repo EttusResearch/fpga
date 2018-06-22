@@ -10,6 +10,10 @@
 # Input Clocks
 ###############################################################################
 
+# External Reference Clock
+set REF_CLK_PERIOD 40.00
+create_clock -name ref_clk -period $REF_CLK_PERIOD  [get_ports CLK_REF_RAW]
+
 # Radio clock from AD9361
 set rx_clk_period 8.138
 create_clock -name rx_clk -period $rx_clk_period [get_ports RX_CLK_P]
@@ -20,10 +24,25 @@ create_clock -name ge_clk  -period 8.000 [get_ports CLK_MGT_125M_P]
 # 10 Gigabit and Aurora Reference Clock
 create_clock -name xge_clk -period 6.400 [get_ports CLK_MGT_156_25M_P]
 
+# Derived radio clocks (two mutually-exclusive clocks using a BUFGMUX)
+create_generated_clock -name radio_clk_1x \
+                       -divide_by 4 \
+                       -add \
+                       -master_clock rx_clk \
+                       -source [get_pins cat_io_lvds_dual_mode_i0/cat_io_lvds_i0/cat_input_lvds_i0/sdr_clk_2x_bufr/O] \
+                       [get_pins cat_io_lvds_dual_mode_i0/BUFGCTRL_radio_clk/O]
+create_generated_clock -name radio_clk_2x \
+                       -divide_by 2 \
+                       -add \
+                       -master_clock rx_clk \
+                       -source [get_pins cat_io_lvds_dual_mode_i0/cat_io_lvds_i0/cat_input_lvds_i0/sdr_clk_bufr/O] \
+                       [get_pins cat_io_lvds_dual_mode_i0/BUFGCTRL_radio_clk/O]
+set_clock_groups -physically_exclusive -group radio_clk_1x -group radio_clk_2x
+
 
 
 ###############################################################################
-# Rename Generated Clocks
+# Rename Clocks
 ###############################################################################
 
 create_clock -name clk100 \
@@ -46,36 +65,40 @@ create_clock -name bus_clk \
              [get_pins [get_property SOURCE_PINS [get_clocks clk_fpga_3]]]
 set_input_jitter bus_clk 0.15
 
-create_clock -name ddr3_clk_ref \
-             -period   [get_property PERIOD      [get_clocks sys_clk_p]] \
-             [get_ports sys_clk_p]
-
-# MIG User Interface Clock
-create_generated_clock -name ddr3_ui_clk \
-  [get_pins {u_ddr3_32bit/u_ddr3_32bit_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT}]
-
-# MIG User Interface Clock, twice the frequency
-create_generated_clock -name ddr3_ui_clk_2x \
-  [get_pins {u_ddr3_32bit/u_ddr3_32bit_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0}]
+# DMA Clock
+create_generated_clock -name ddr3_dma_clk \
+  [get_pins {e320_clocking_i/mmcm_adv_inst/CLKOUT0}]
 
 
 
 ###############################################################################
-# Asynchronous Clock Groups
+# Clock Crossings
 ###############################################################################
-             
-# All the clocks from the PS are asynchronous to everything else except clocks 
-# generated from themselves.
-set_clock_groups -asynchronous -group [get_clocks clk100       -include_generated_clocks]
-set_clock_groups -asynchronous -group [get_clocks clk40        -include_generated_clocks]
-set_clock_groups -asynchronous -group [get_clocks bus_clk      -include_generated_clocks]
-set_clock_groups -asynchronous -group [get_clocks meas_clk_ref -include_generated_clocks]
 
-# All the clocks from the PL are asynchronous to everything else except clocks 
-# generated from themselves.
-set_clock_groups -asynchronous -group [get_clocks rx_clk  -include_generated_clocks]
-set_clock_groups -asynchronous -group [get_clocks ge_clk  -include_generated_clocks]
-set_clock_groups -asynchronous -group [get_clocks xge_clk -include_generated_clocks]
+set DDR3_UI_CLK_PERIOD  [get_property period [get_clocks ddr3_ui_clk]]
+set RADIO_CLK_1X_PERIOD [get_property period [get_clocks radio_clk_1x]]
+set RADIO_CLK_2X_PERIOD [get_property period [get_clocks radio_clk_2x]]
+set XGE_CLK_PERIOD      [get_property period [get_clocks xge_clk]]
+
+# XADC temperature
+set_max_delay -from [get_pins tempmon_i/device_temp_r_reg[*]/C] -to [get_clocks ddr3_ui_clk] $DDR3_UI_CLK_PERIOD -datapath_only
+
+# GPIO muxing
+set_max_delay -from [get_pins e320_core_i/fp_gpio_src_reg_reg[*]/C] -to [get_clocks radio_clk_1x] $RADIO_CLK_1X_PERIOD -datapath_only
+set_max_delay -from [get_pins e320_core_i/fp_gpio_src_reg_reg[*]/C] -to [get_clocks radio_clk_2x] $RADIO_CLK_2X_PERIOD -datapath_only
+
+# Codec reset
+set_max_delay -from [get_pins e320_core_i/dboard_ctrl_reg[2]/C] -to [get_clocks radio_clk_1x_1] $RADIO_CLK_1X_PERIOD -datapath_only
+
+# Power-on reset
+set_max_delay -from [get_pins por_gen/por_rst_reg/C] -to [get_clocks xge_clk] $XGE_CLK_PERIOD -datapath_only
+
+# SFP MDIO data and clock signal crossings. These are double synchronized in
+# the Xilinx MDIO IP.
+set_max_delay -from [get_pins sfp_wrapper_i/mgt_io_i/mdio_master_i/mdio_out_reg/C] \
+              -to [get_clocks xge_clk] $XGE_CLK_PERIOD -datapath_only
+set_max_delay -from [get_pins sfp_wrapper_i/mgt_io_i/mdio_master_i/mdc_reg/C] \
+              -to [get_clocks xge_clk] $XGE_CLK_PERIOD -datapath_only
 
 
 
@@ -83,8 +106,54 @@ set_clock_groups -asynchronous -group [get_clocks xge_clk -include_generated_clo
 # False Paths
 ###############################################################################
 
-# DMA reset double synchronizer
-set_false_path -through [get_pins e320_core_i/ddr3_dma_rst_sync_i/synchronizer_false_path/ui_clk_sync_rst]
+# Synchronizer core false paths
+set_false_path -from [all_ffs] -to [get_pins -hierarchical -filter {NAME =~ */synchronizer_false_path/stages[0].value_reg[0][*]/D}]
+
+# MIG core reset
+# According to Xilinx AR 61112, it is safe to make sys_rst a false path.
+set_false_path -from [get_pins bus_reset_gen/reset_double_sync/synchronizer_false_path/stages[9].value_reg[9][0]/C] \
+               -to   [get_clocks ddr3_ui_clk]
+set_false_path -from [get_pins bus_reset_gen/reset_double_sync/synchronizer_false_path/stages[9].value_reg[9][0]/C] \
+               -to   [get_clocks ddr3_ui_clk_2x]
+
+# USR_ACCESS build date
+set_false_path -through [get_pins usr_access_i/DATA[*]]
+
+
+
+###############################################################################
+# PPS Input Timing
+###############################################################################
+
+# The external PPS is synchronous to the external reference clock. We want to
+# allow for 5 ns of setup and 5 ns of hold at the external connectors of the
+# device.
+set t_ext_setup 5.0
+set t_ext_hold  5.0
+
+# Board delays for external REF/PPS
+set t_ext_pps_to_fpga(min) 1.673 ; # Delay from external pin of PPS to FPGA
+set t_ext_pps_to_fpga(max) 5.011
+set t_ext_ref_to_fpga(min) 1.452 ; # Delay from external pin of reference clock to FPGA
+set t_ext_ref_to_fpga(max) 2.806
+
+# Calculate the needed setup and hold at FPGA for external PPS, taking into
+# account worst-case clock and data path skew.
+set t_ext_fpga_setup [expr $t_ext_setup + ($t_ext_ref_to_fpga(min) - $t_ext_pps_to_fpga(max))]
+set t_ext_fpga_hold  [expr $t_ext_hold  + ($t_ext_pps_to_fpga(min) - $t_ext_ref_to_fpga(max))]
+
+set_input_delay -clock ref_clk -max [expr $REF_CLK_PERIOD - $t_ext_fpga_setup] [get_ports CLK_SYNC_EXT]
+set_input_delay -clock ref_clk -min $t_ext_fpga_hold                           [get_ports CLK_SYNC_EXT]
+
+
+# Board delays for internal REF/PPS
+set t_int_pps_to_fpga(min) 2.398 ; # Delay from GPS PPS to FPGA
+set t_int_pps_to_fpga(max) 2.930
+set t_int_ref_to_fpga(min) 5.113 ; # Delay from GPS reference clock to FPGA
+set t_int_ref_to_fpga(max) 7.281
+
+set_input_delay -clock ref_clk -max [expr $t_int_pps_to_fpga(max) - $t_int_ref_to_fpga(min)] [get_ports CLK_SYNC_INT]
+set_input_delay -clock ref_clk -min [expr $t_int_pps_to_fpga(min) - $t_int_ref_to_fpga(max)] [get_ports CLK_SYNC_INT]
 
 
 
@@ -190,9 +259,12 @@ set_min_delay -to [get_ports CLK_GPS_PWR_EN] 0.0
 set_max_delay -from [all_fanin -only_cells -startpoints_only -flat [get_ports CLK_REF_SEL]] \
               -to   [get_ports CLK_REF_SEL] 8.0 -datapath_only
 set_min_delay -to   [get_ports CLK_REF_SEL] 0.0
+<<<<<<< HEAD
 #
 set_max_delay -from [get_ports CLK_MUX_OUT] 5.0 -datapath_only
 set_min_delay -from [get_ports CLK_MUX_OUT] 0.0
+=======
+>>>>>>> f23627c... e320: Add timing constraints and fix PPS clock crossing
 
 # DDR3
 set_max_delay -to [get_ports ddr3_reset_n] 50.0
@@ -233,3 +305,8 @@ set_max_delay -from [all_fanin -only_cells -startpoints_only -flat [get_ports TX
 set_max_delay -from [all_fanin -only_cells -startpoints_only -flat [get_ports TX_LFAMP*_ENA]] \
               -to   [get_ports TX_LFAMP*_ENA] 10.0 -datapath_only
 
+# SFP
+set_max_delay -from [get_ports SFP1_RXLOS] 50.0
+set_min_delay -from [get_ports SFP1_RXLOS] 0.0
+set_max_delay -to   [get_ports SFP1_TXDISABLE] 50.0
+set_min_delay -to   [get_ports SFP1_TXDISABLE] 0.0
