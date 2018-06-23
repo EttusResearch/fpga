@@ -328,10 +328,10 @@ module noc_block_ddc_tb();
           if (i == FFT_SIZE/2) begin
             $sformat(s, "Invalid CORDIC shift! Did not detect DC component! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
             `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
-          end else if (i == SPP+FFT_SIZE/2+FFT_SIZE/8) begin
+          end else if (i == SPP+FFT_SIZE/2-FFT_SIZE/8) begin
             $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/8! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
             `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
-          end else if (i == 2*SPP+FFT_SIZE/2+FFT_SIZE/4) begin
+          end else if (i == 2*SPP+FFT_SIZE/2-FFT_SIZE/4) begin
             $sformat(s, "Invalid CORDIC shift! Did not detect tone at Fs/4! Expected: {5000,0}, Received: {%d,%d}", recv_word[31:16], recv_word[15:0]);
             `ASSERT_WARN(recv_word == {16'd5000,16'd0}, s);
           end else begin
@@ -355,9 +355,9 @@ module noc_block_ddc_tb();
     send_ramp(2,0,4);
     send_ramp(3,0,4);
     send_ramp(4,0,4);
-    send_ramp(8,0,4);
+    if (EXTENDED_TEST) send_ramp(8,0,4);
     send_ramp(13,0,4);
-    send_ramp(24,0,4);
+    if (EXTENDED_TEST) send_ramp(24,0,4);
     `TEST_CASE_DONE(1);
 
     // Calculate frequency response of filters
