@@ -71,7 +71,7 @@ module cap_pattern_verifier_tb();
   //Main thread for testbench execution
   //------------------------------------------
   initial begin : tb_main
-    localparam ASYNC_RST_LEN  = 2;
+    localparam ASYNC_RST_LEN  = 10;
     localparam OUTPUT_LATENCY = 2;
 
     `TEST_CASE_START("Wait for reset");
