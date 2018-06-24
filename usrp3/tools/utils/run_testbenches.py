@@ -64,26 +64,34 @@ def log_with_header(what, minlen = 0, ch = '#'):
 # Simulation Functions
 #-------------------------------------------------------
 
-def find_sims_on_fs(basedir):
+def read_excludes_file(excludes_fname):
+    if excludes_fname:
+        return [ l.strip() for l in open(excludes_fname) if (l.strip() and '#' not in l)]
+    else:
+        return []
+
+def find_sims_on_fs(basedir, excludes):
     """ Find all testbenches in the specific basedir
         Testbenches are defined as directories with a
         Makefile that includes viv_sim_preamble.mak
     """
     sims = {}
     for root, _, files in os.walk(basedir):
+        name = os.path.relpath(root, basedir)
         if 'Makefile' in files:
             with open(os.path.join(root, 'Makefile'), 'r') as mfile:
                 for l in mfile.readlines():
                     if re.match('.*include.*viv_sim_preamble.mak.*', l) is not None:
-                        sims.update({os.path.relpath(root, basedir): root})
-                        break
+                        if name not in excludes:
+                            sims.update({name: root})
+                            break
     return sims
 
-def gather_target_sims(basedir, targets):
+def gather_target_sims(basedir, targets, excludes):
     """ Parse the specified targets and gather simulations to run
         Remove duplicates and sort alphabetically
     """
-    fs_sims = find_sims_on_fs(basedir)
+    fs_sims = find_sims_on_fs(basedir, excludes)
     if not isinstance(targets, list):
         targets = [targets]
     sim_names = set()
@@ -205,7 +213,8 @@ def run_sim_queue(run_queue, out_queue, simulator, basedir, setupenv):
 def do_list(args):
     """ List all simulations that can be run
     """
-    for (name, path) in gather_target_sims(args.basedir, args.target):
+    excludes = read_excludes_file(args.excludes)
+    for (name, path) in gather_target_sims(args.basedir, args.target, excludes):
         print(name)
     return 0
 
@@ -216,7 +225,8 @@ def do_run(args):
     run_queue = Queue(maxsize=0)
     out_queue = Queue(maxsize=0)
     _LOG.info('Queueing the following targets to simulate:')
-    for (name, path) in gather_target_sims(args.basedir, args.target):
+    excludes = read_excludes_file(args.excludes)
+    for (name, path) in gather_target_sims(args.basedir, args.target, excludes):
         run_queue.put((name, path))
         _LOG.info('* ' + name)
     # Spawn tasks to run builds
@@ -277,7 +287,8 @@ def do_cleanup(args):
             raise RuntimeError('Simulation environment was uninitialized') 
     else:
         setupenv = '. ' + os.path.realpath(setupenv) + ';'
-    for (name, path) in gather_target_sims(args.basedir, args.target):
+    excludes = read_excludes_file(args.excludes)
+    for (name, path) in gather_target_sims(args.basedir, args.target, excludes):
         _LOG.info('Cleaning up %s', name)
         os.chdir(os.path.join(args.basedir, path))
         subprocess.Popen('{setupenv} make cleanall'.format(setupenv=setupenv), shell=True).wait()
@@ -288,9 +299,10 @@ def do_report(args):
     """
     keys = ['module', 'status', 'retcode', 'start_time', 'wall_time',
             'sim_time_ns', 'tc_expected', 'tc_run', 'tc_passed']
-    with open(args.repfile, 'w') as repfile:
+    with open(args.report, 'w') as repfile:
         repfile.write((','.join([x.upper() for x in keys])) + '\n')
-        for (name, path) in gather_target_sims(args.basedir, args.target):
+        excludes = read_excludes_file(args.excludes)
+        for (name, path) in gather_target_sims(args.basedir, args.target, excludes):
             results = {'module': str(name), 'status':'NOT_RUN', 'retcode':'<unknown>', 
                        'start_time':'<unknown>', 'wall_time':'<unknown>', 'sim_time_ns':0,
                        'tc_expected':0, 'tc_run':0, 'tc_passed':0}
@@ -308,7 +320,7 @@ def do_report(args):
                         results['status'] = 'PASSED' if r['passed'] else 'FAILED'
                         results['retcode'] = retcode_to_str(r['retcode'])
             repfile.write((','.join([str(results[x]) for x in keys])) + '\n')
-    _LOG.info('Testbench report written to ' + args.repfile)
+    _LOG.info('Testbench report written to ' + args.report)
     return 0
 
 # Parse command line options
@@ -317,8 +329,9 @@ def get_options():
     parser.add_argument('--basedir', default=BASE_DIR, help='Base directory for the usrp3 codebase')
     parser.add_argument('--simulator', choices=['xsim', 'vsim'], default='xsim', help='Simulator name')
     parser.add_argument('--setupenv', default=None, help='Optional environment setup script to run for each TB')
+    parser.add_argument('--report', default='testbench_report.csv', help='Name of the output report file')
+    parser.add_argument('--excludes', default=None, help='Name of the excludes file. It contains all targets to exlude.')
     parser.add_argument('-j', '--jobs', default=1, help='Number of parallel simulation jobs to run')
-    parser.add_argument('--repfile', default='testbench_report.csv', help='Name of the output report file')
     parser.add_argument('action', choices=['run', 'cleanup', 'list', 'report'], default='list', help='What to do?')
     parser.add_argument('target', nargs='*', default='.*', help='Space separated simulation target regexes')
     return parser.parse_args()
