@@ -150,7 +150,7 @@ module axi_pmu
 
   wire is_spi_cmd = (addr[7:0] == 8'h00) || (addr[7:0] > 8'h04);
 
-  axi_fifo_short #(.WIDTH(32)) axi_fifo_short_inst
+  axi_fifo_bram #(.WIDTH(32), .SIZE(5)) axi_fifo_short_inst
   (
     .clk(s_axi_aclk),
     .reset(s_axi_areset),

@@ -22,8 +22,15 @@ TARGET = bin
 endif
 TOP ?= e300
 
+# Additional HLS options
+ifdef HLS
+HLS_DEFS = HLS=1
+else
+HLS_DEFS =
+endif
+
 # vivado_build($1=Device, $2=SG, $3=Definitions)
-vivado_build = make -f Makefile.e300.inc $(TARGET) NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 TOP_MODULE=$(TOP) EXTRA_DEFS="$3"
+vivado_build = make -f Makefile.e300.inc $(TARGET) NAME=$@ ARCH=zynq PART_ID=$1/clg484/-$2 TOP_MODULE=$(TOP) $3 $(HLS_DEFS) EXTRA_DEFS="$3 $(HLS_DEFS)"
 
 # post_build($1=Device, $2=TYPE, $3=SG)
 post_build = @\
@@ -38,30 +45,46 @@ post_build = @\
 ##
 ##Supported Targets
 ##-----------------
-all: E3XX_idle E3XX_idle_sg3 E310 E310_sg3 ##(Default target)
+all: E3XX_idle E3XX_idle_sg3 E310_RFNOC E310_RFNOC_sg3 ##(Default target)
 
-E3XX_idle: ##Build USRP E3XX idle design.
+##Build USRP E3XX idle design.
+E3XX_idle:
 	$(call vivado_build,xc7z020,1,E3XX_IDLE_IMAGE=1)
 	$(call post_build,E3XX,_idle,)
 
-E3XX_idle_sg3: ##Build USRP E3XX idle design.
-	$(call vivado_build,xc7z020,3,E3XX_IDLE_IMAGE=1 E3XX_SG3)
+##Build USRP E3XX idle design.
+E3XX_idle_sg3:
+	$(call vivado_build,xc7z020,3,E3XX_IDLE_IMAGE=1 E3XX_SG3=1)
 	$(call post_build,E3XX,_idle_,sg3)
 
-E310: ##Build USRP E310 design for SG1 device.
-	$(call vivado_build,xc7z020,1,E310)
+##Build USRP E310 design for SG1 device.
+E310:
+	$(call vivado_build,xc7z020,1,E310=1)
 	$(call post_build,E310,,)
 
-E310_sg3: ##Build USRP E310 design for SG3 device.
-	$(call vivado_build,xc7z020,3,E310 E3XX_SG3)
+##Build USRP E310 design for SG3 device.
+E310_sg3:
+	$(call vivado_build,xc7z020,3,E310=1 E3XX_SG3=1)
 	$(call post_build,E310,_,sg3)
 
-E310_dram_test: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,xc7z020,1,E310 DRAM_TEST)
+##E310_RFNOC: Build USRP E310 with RFNoC enabled. (Use HLS=1 to build HLS IP)
+E310_RFNOC:
+	$(call vivado_build,xc7z020,1,RFNOC=1 E310=1)
+	$(call post_build,E310,_RFNOC,)
+
+##E310_RFNOC_sg3: Build USRP E310 with RFNoC enabled. (Use HLS=1 to build HLS IP)
+E310_RFNOC_sg3:
+	$(call vivado_build,xc7z020,3,RFNOC=1 E310=1)
+	$(call post_build,E310,_RFNOC,_sg3)
+
+##Build USRP E310 design with DRAM test.
+E310_dram_test:
+	$(call vivado_build,xc7z020,1,E310 DRAM_TEST=1)
 	$(call post_build,E310,_dram_test,)
 
-E310_dram_test_sg3: ##Build USRP E310 design with DRAM test.
-	$(call vivado_build,xc7z020,3,E310 DRAM_TEST E3XX_SG3)
+##Build USRP E310 design with DRAM test.
+E310_dram_test_sg3:
+	$(call vivado_build,xc7z020,3,E310 DRAM_TEST=1 E3XX_SG3=1)
 	$(call post_build,E310,_dram_test_,sg3)
 
 clean: ##Clean up all itarget build outputs.
@@ -83,6 +106,7 @@ help: ## Show this help message.
 ##-----------------
 ##GUI=1        Launch the build in the Vivado GUI.
 ##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##HLS=1        Build HLS IP
 ##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
-.PHONY: all clean cleanall E310 E310_sg3 E3XX_idle E3XX_idle_SG3 help
+.PHONY: all clean cleanall E310 E310_sg3 E310_RFNOC E310_RFNOC_sg3 E3XX_idle E3XX_idle_sg3 help

@@ -21,18 +21,21 @@ include $(BASE_DIR)/../tools/make/viv_design_builder.mak
 include $(IP_DIR)/Makefile.inc
 include coregen_dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
+include $(LIB_DIR)/ip/Makefile.inc
+include $(LIB_DIR)/axi/Makefile.srcs
+include $(LIB_DIR)/hls/Makefile.inc
 include $(LIB_DIR)/control/Makefile.srcs
 include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/zynq_fifo/Makefile.srcs
 include $(LIB_DIR)/control/Makefile.srcs
-include $(LIB_DIR)/control_200/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
-include $(LIB_DIR)/packet_proc_200/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
-include $(LIB_DIR)/vita_200/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
+include $(LIB_DIR)/radio/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
+include $(BASE_DIR)/e300/Makefile.OOT.inc
 
 ##################################################
 # Sources
@@ -40,18 +43,23 @@ include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 TOP_SRCS = e3xx_ps.v \
            ppsloop.v \
            spi_slave.v \
-           axi_pmu.v \
-	   radio.v \
-           ddc_chain_e300.v
+           axi_pmu.v
 
 ifeq (E310,$(findstring E310, $(EXTRA_DEFS)))
 TOP_SRCS += e310.v
 TOP_SRCS += e310_core.v
+TOP_SRCS += e310_io.v
 TOP_SRCS += e310.xdc
 TOP_SRCS += e310_timing.xdc
 else
 TOP_SRCS += e3xx_idle.v
 TOP_SRCS += e3xx_idle.xdc
+endif
+
+ifdef HLS
+HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
+else
+HLS_IP_TARGETS =
 endif
 
 # Vivado seems somewhat unhappy when adding above
@@ -69,17 +77,20 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(ZYNQ_FIFO_SRCS) \
           $(FIFO_SRCS) \
           $(VITA_SRCS) \
-          $(VITA_200_SRCS) \
           $(TIMING_SRCS) \
           $(DSP_SRCS) \
           $(PACKET_PROC_SRCS) \
-          $(PACKET_PROC_200_SRCS) \
           $(CONTROL_LIB_SRCS) \
-          $(CONTROL_LIB_200_SRCS) \
+          $(RADIO_SRCS) \
           $(CAT_CAP_GEN_SRCS) \
           $(COREGEN_DSP_SRCS) \
           $(IP_XCI_SRCS) \
-          $(PS7_SRCS)
+          $(PS7_SRCS) \
+          $(AXI_SRCS) \
+          $(RFNOC_SRCS) \
+          $(RFNOC_OOT_SRCS) \
+          $(LIB_IP_XCI_SRCS) \
+          $(HLS_IP_TARGETS)
 
 ##################################################
 # Dependency Targets
@@ -95,4 +106,4 @@ bin: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-.PHONY: bin
+.PHONY: bin rtl
