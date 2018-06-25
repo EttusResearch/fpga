@@ -6,7 +6,7 @@
 `timescale 1ns/1ps
 `define SIM_RUNTIME_US  3000
 `define NS_PER_TICK     1
-`define NUM_TEST_CASES  25
+`define NUM_TEST_CASES  8
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
@@ -23,6 +23,8 @@ module dram_fifo_bist_tb();
   `DEFINE_CLK(dma_engine_clk, 1000/300, 50)       //300MHz dma_engine_clk
   `DEFINE_RESET(bus_rst, 0, 100)          //100ns for GSR to deassert
   `DEFINE_RESET_N(sys_rst_n, 0, 100)      //100ns for GSR to deassert
+
+  localparam EXTENDED_TEST = 0;
 
   // Initialize DUT
   wire            calib_complete;
@@ -164,179 +166,182 @@ module dram_fifo_bist_tb();
     @(posedge bus_clk);
     `TEST_CASE_DONE(done & ~running);
 
-    `TEST_CASE_START("Setup BIST: 8000 x 40byte ramping packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'h01234567);
-    tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
-    tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd40, 18'd8000});
-    `TEST_CASE_DONE(~done & ~running);
+    if (EXTENDED_TEST) begin // Extended test mode
+      `TEST_CASE_START("Setup BIST: 8000 x 40byte ramping packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'h01234567);
+      tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
+      tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd40, 18'd8000});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      `TEST_CASE_START("Run BIST");
+      tst_set.write(SR_BIST_BASE + 0, {2'd3, 2'd0, 1'b0, 1'b1});
+      while (~done) @(posedge bus_clk);
+      `ASSERT_ERROR(error==2'b00, "BIST failed!");
+      @(posedge bus_clk);
+      `TEST_CASE_DONE(done & ~running);
+  
+      `TEST_CASE_START("Setup BIST: 256 x 1000byte packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
+      tst_set.write(SR_BIST_BASE + 2, {8'd4, 16'd256});
+      tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd1000, 18'd256});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      `TEST_CASE_START("Run BIST");
+      tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
+      while (~done) @(negedge bus_clk);
+      `ASSERT_ERROR(error==2'b00, "BIST failed!");
+      @(posedge bus_clk);
+      `TEST_CASE_DONE(done & ~running);
+  
+      `TEST_CASE_START("User Data: Concurrent read and write");
+      cvita_fifo_out.axis.tready = 1;
+      fork
+        begin
+          cvita_fifo_in.push_ramp_pkt(20, 64'd0, 64'h100, header);
+        end
+        begin
+          cvita_fifo_out.pull_pkt(pkt_out);
+        end
+      join
+      $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",20,pkt_out.payload.size());
+      `ASSERT_ERROR(pkt_out.payload.size()==20, s);
+      `TEST_CASE_DONE(1);
+  
+      `TEST_CASE_START("Setup BIST: 256 x 600byte ramping packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'h01234567);
+      tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
+      tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd600, 18'd256});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      `TEST_CASE_START("Run BIST");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b1});
+      while (~done) @(posedge bus_clk);
+      `ASSERT_ERROR(error==2'b00, "BIST failed!");
+      @(posedge bus_clk);
+      `TEST_CASE_DONE(done & ~running);
+  
+      `TEST_CASE_START("Setup BIST: 30 x 8000byte packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
+      tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
+      tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd8000, 18'd30});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      `TEST_CASE_START("Run BIST");
+      tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
+      while (~done) @(negedge bus_clk);
+      `ASSERT_ERROR(error==2'b00, "BIST failed!");
+      @(posedge bus_clk);
+      `TEST_CASE_DONE(done & ~running);
+  
+      `TEST_CASE_START("Setup BIST: 100 x 8000byte ramping packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
+      tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
+      tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd8000, 18'd100});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      `TEST_CASE_START("Run BIST");
+      tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
+      while (~done) @(negedge bus_clk);
+      `ASSERT_ERROR(error==2'b00, "BIST failed!");
+      @(posedge bus_clk);
+      `TEST_CASE_DONE(done & ~running);
+      
+      `TEST_CASE_START("Validate Throughput");
+      tst_set.write(SR_FIFO_BASE + 0, 3'd2);
+      xfer_cnt = rb_data;
+      tst_set.write(SR_FIFO_BASE + 0, 3'd3);
+      cyc_cnt = rb_data;
+      `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
+      `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
+      $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
+      `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
+      tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
+      `TEST_CASE_DONE(done & ~running);
+  
+      `TEST_CASE_START("Setup BIST: 10 x 256byte packets");
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      tst_set.write(SR_BIST_BASE + 3, 32'hFFFFFFFF);
+      tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
+      tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd256, 18'd30});
+      `TEST_CASE_DONE(~done & ~running);
+  
+      fork
+        begin
+          integer curr_time = $time;
+          `TEST_CASE_START("Run BIST Continuous (Early interrupt)");
+          tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+          tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
+          while (~done) @(negedge bus_clk);
+          `ASSERT_ERROR(error==2'b00, "BIST failed!");
+          @(posedge bus_clk);
+          single_run_time = $time - curr_time;
+          `TEST_CASE_DONE(done & ~running);
+        end
+        begin
+          //Wait then clear
+          #2000;
+          tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+        end
+      join
+  
+      fork
+        begin
+          `TEST_CASE_START("Run BIST Continuous (Force error)");
+          tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+          tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
+          while (~done) @(negedge bus_clk);
+          `ASSERT_ERROR(error==2'b01, "BIST passed when it should have failed!");
+          @(posedge bus_clk);
+          `TEST_CASE_DONE(done & ~running);
+        end
+        begin
+          //Wait then force error
+          #10000;
+          forced_bit_err <= 64'h1;
+        end
+      join
+      //Recover from failure
+      forced_bit_err <= 64'h0;
+      tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+      repeat (2000) @(posedge bus_clk);
+  
+      fork
+        begin
+          integer curr_time = $time;
+          `TEST_CASE_START("Run BIST Continuous");
+          tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+          tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
+          while (~done) @(negedge bus_clk);
+          `ASSERT_ERROR(error==2'b00, "BIST failed!");
+          @(posedge bus_clk);
+          `ASSERT_ERROR((($time - curr_time) > 2 * single_run_time), "Continuous test most likely stopped early!");
+          `TEST_CASE_DONE(done & ~running);
+        end
+        begin
+          //Wait then clear
+          #100000;
+          tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
+        end
+      join
+  
+      `TEST_CASE_START("Validate Throughput");
+      tst_set.write(SR_FIFO_BASE + 0, 3'd2);
+      xfer_cnt = rb_data;
+      tst_set.write(SR_FIFO_BASE + 0, 3'd3);
+      cyc_cnt = rb_data;
+      `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
+      `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
+      $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
+      `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
+      tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
+      `TEST_CASE_DONE(done & ~running);
+    end
 
-    `TEST_CASE_START("Run BIST");
-    tst_set.write(SR_BIST_BASE + 0, {2'd3, 2'd0, 1'b0, 1'b1});
-    while (~done) @(posedge bus_clk);
-    `ASSERT_ERROR(error==2'b00, "BIST failed!");
-    @(posedge bus_clk);
-    `TEST_CASE_DONE(done & ~running);
-
-    `TEST_CASE_START("Setup BIST: 256 x 1000byte packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
-    tst_set.write(SR_BIST_BASE + 2, {8'd4, 16'd256});
-    tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd1000, 18'd256});
-    `TEST_CASE_DONE(~done & ~running);
-
-    `TEST_CASE_START("Run BIST");
-    tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
-    while (~done) @(negedge bus_clk);
-    `ASSERT_ERROR(error==2'b00, "BIST failed!");
-    @(posedge bus_clk);
-    `TEST_CASE_DONE(done & ~running);
-
-    `TEST_CASE_START("User Data: Concurrent read and write");
-    cvita_fifo_out.axis.tready = 1;
-    fork
-      begin
-        cvita_fifo_in.push_ramp_pkt(20, 64'd0, 64'h100, header);
-      end
-      begin
-        cvita_fifo_out.pull_pkt(pkt_out);
-      end
-    join
-    $sformat(s, "Bad packet: Length mismatch. Expected: %0d, Actual: %0d",20,pkt_out.payload.size());
-    `ASSERT_ERROR(pkt_out.payload.size()==20, s);
-    `TEST_CASE_DONE(1);
-
-    `TEST_CASE_START("Setup BIST: 256 x 600byte ramping packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'h01234567);
-    tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
-    tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd600, 18'd256});
-    `TEST_CASE_DONE(~done & ~running);
-
-    `TEST_CASE_START("Run BIST");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b1});
-    while (~done) @(posedge bus_clk);
-    `ASSERT_ERROR(error==2'b00, "BIST failed!");
-    @(posedge bus_clk);
-    `TEST_CASE_DONE(done & ~running);
-
-    `TEST_CASE_START("Setup BIST: 30 x 8000byte packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
-    tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
-    tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd8000, 18'd30});
-    `TEST_CASE_DONE(~done & ~running);
-
-    `TEST_CASE_START("Run BIST");
-    tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
-    while (~done) @(negedge bus_clk);
-    `ASSERT_ERROR(error==2'b00, "BIST failed!");
-    @(posedge bus_clk);
-    `TEST_CASE_DONE(done & ~running);
-
-    `TEST_CASE_START("Setup BIST: 100 x 8000byte ramping packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'h0ABCDEF0);
-    tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
-    tst_set.write(SR_BIST_BASE + 1, {1'b1, 13'd8000, 18'd100});
-    `TEST_CASE_DONE(~done & ~running);
-
-    `TEST_CASE_START("Run BIST");
-    tst_set.write(SR_BIST_BASE + 0, {2'd1, 2'd0, 1'b0, 1'b1});
-    while (~done) @(negedge bus_clk);
-    `ASSERT_ERROR(error==2'b00, "BIST failed!");
-    @(posedge bus_clk);
-    `TEST_CASE_DONE(done & ~running);
-    
-    `TEST_CASE_START("Validate Throughput");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd2);
-    xfer_cnt = rb_data;
-    tst_set.write(SR_FIFO_BASE + 0, 3'd3);
-    cyc_cnt = rb_data;
-    `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
-    `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
-    $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
-    `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
-    `TEST_CASE_DONE(done & ~running);
-
-    `TEST_CASE_START("Setup BIST: 10 x 256byte packets");
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    tst_set.write(SR_BIST_BASE + 3, 32'hFFFFFFFF);
-    tst_set.write(SR_BIST_BASE + 2, {8'd0, 16'd0});
-    tst_set.write(SR_BIST_BASE + 1, {1'b0, 13'd256, 18'd30});
-    `TEST_CASE_DONE(~done & ~running);
-
-    fork
-      begin
-        integer curr_time = $time;
-        `TEST_CASE_START("Run BIST Continuous (Early interrupt)");
-        tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-        tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
-        while (~done) @(negedge bus_clk);
-        `ASSERT_ERROR(error==2'b00, "BIST failed!");
-        @(posedge bus_clk);
-        single_run_time = $time - curr_time;
-        `TEST_CASE_DONE(done & ~running);
-      end
-      begin
-        //Wait then clear
-        #2000;
-        tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-      end
-    join
-
-    fork
-      begin
-        `TEST_CASE_START("Run BIST Continuous (Force error)");
-        tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-        tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
-        while (~done) @(negedge bus_clk);
-        `ASSERT_ERROR(error==2'b01, "BIST passed when it should have failed!");
-        @(posedge bus_clk);
-        `TEST_CASE_DONE(done & ~running);
-      end
-      begin
-        //Wait then force error
-        #10000;
-        forced_bit_err <= 64'h1;
-      end
-    join
-    //Recover from failure
-    forced_bit_err <= 64'h0;
-    tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-    repeat (2000) @(posedge bus_clk);
-
-    fork
-      begin
-        integer curr_time = $time;
-        `TEST_CASE_START("Run BIST Continuous");
-        tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-        tst_set.write(SR_BIST_BASE + 0, {2'd2, 2'd0, 1'b1, 1'b1});
-        while (~done) @(negedge bus_clk);
-        `ASSERT_ERROR(error==2'b00, "BIST failed!");
-        @(posedge bus_clk);
-        `ASSERT_ERROR((($time - curr_time) > 2 * single_run_time), "Continuous test most likely stopped early!");
-        `TEST_CASE_DONE(done & ~running);
-      end
-      begin
-        //Wait then clear
-        #100000;
-        tst_set.write(SR_BIST_BASE + 0, {2'd0, 2'd0, 1'b0, 1'b0});
-      end
-    join
-
-    `TEST_CASE_START("Validate Throughput");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd2);
-    xfer_cnt = rb_data;
-    tst_set.write(SR_FIFO_BASE + 0, 3'd3);
-    cyc_cnt = rb_data;
-    `ASSERT_ERROR(xfer_cnt>0, "Transfer count was not >0");
-    `ASSERT_ERROR(cyc_cnt>0, "Cycle count was not >0");
-    $display("Measured Throughput = %0d%% of bus_clk throughput", ((xfer_cnt*100)/cyc_cnt));
-    `ASSERT_ERROR(((xfer_cnt*100)/cyc_cnt)>80, "Throughput was less than 80%%");
-    tst_set.write(SR_FIFO_BASE + 0, 3'd1);  //Restore
-    `TEST_CASE_DONE(done & ~running);
     `TEST_BENCH_DONE;
 
   end

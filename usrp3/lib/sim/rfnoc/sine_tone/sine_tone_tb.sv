@@ -5,6 +5,8 @@
 `define SIM_RUNTIME_US 5
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 2
+`define SIM_TIMEOUT_US 1000 // 1ms
+
 `include "sim_exec_report.vh"
 `include "sim_rfnoc_lib.svh"
 `include "sim_set_rb_lib.svh"
@@ -116,6 +118,8 @@ module sine_tone_tb();
     `TEST_CASE_DONE(1);
 
      repeat (10) @(posedge clk);
+    `TEST_BENCH_DONE;
+
    end
 
 endmodule

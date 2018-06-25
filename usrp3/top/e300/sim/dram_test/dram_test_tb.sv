@@ -8,6 +8,8 @@
 `define NS_PER_TICK 1
 `define NUM_TEST_CASES 3
 
+`define SIM_RUNTIME_US  100
+
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
 

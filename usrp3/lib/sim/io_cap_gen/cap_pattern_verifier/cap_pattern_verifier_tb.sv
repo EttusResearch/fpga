@@ -13,7 +13,7 @@
 
 `include "sim_clks_rsts.vh"
 `include "sim_exec_report.vh"
-`include "sim_axi4_lib.svh"
+`include "sim_axis_lib.svh"
 
 
 module cap_pattern_verifier_tb();
@@ -25,8 +25,8 @@ module cap_pattern_verifier_tb();
 
   axis_master data0 (.clk(clk));
   axis_master data1 (.clk(clk));
-  assign data0.tready = 1;
-  assign data1.tready = 1;
+  assign data0.axis.tready = 1;
+  assign data1.axis.tready = 1;
 
   wire [31:0] count0, errors0, count1, errors1;
   wire        locked0, failed0, locked1, failed1;
@@ -41,8 +41,8 @@ module cap_pattern_verifier_tb();
   ) dut0 (
     .clk(clk),
     .rst(rst),
-    .valid(data0.tvalid),
-    .data(data0.tdata[13:0]),
+    .valid(data0.axis.tvalid),
+    .data(data0.axis.tdata[13:0]),
     .count(count0),
     .errors(errors0),
     .locked(locked0),
@@ -59,8 +59,8 @@ module cap_pattern_verifier_tb();
   ) dut1 (
     .clk(clk),
     .rst(rst),
-    .valid(data1.tvalid),
-    .data(data1.tdata[13:0]),
+    .valid(data1.axis.tvalid),
+    .data(data1.axis.tdata[13:0]),
     .count(count1),
     .errors(errors1),
     .locked(locked1),
@@ -71,7 +71,7 @@ module cap_pattern_verifier_tb();
   //Main thread for testbench execution
   //------------------------------------------
   initial begin : tb_main
-    localparam ASYNC_RST_LEN  = 2;
+    localparam ASYNC_RST_LEN  = 10;
     localparam OUTPUT_LATENCY = 2;
 
     `TEST_CASE_START("Wait for reset");
@@ -191,6 +191,8 @@ module cap_pattern_verifier_tb();
     `ASSERT_ERROR(locked0,"Invalid state: locked");
     `ASSERT_ERROR(failed0,"Invalid state: failed");
     `TEST_CASE_DONE(1);
+
+    `TEST_BENCH_DONE;
 
   end
 

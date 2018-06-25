@@ -106,7 +106,8 @@
   assert(cond) else begin \
     tc_failed = 1; \
     $error(msg); \
-    $stop(); \
+    tc_all_done = 1; \
+    #(sim_time_increment); \
   end
 
 // Wrapper around a an assert.

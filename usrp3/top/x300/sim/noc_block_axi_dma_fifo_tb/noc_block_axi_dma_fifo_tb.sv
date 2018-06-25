@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 8
+`define NUM_TEST_CASES 9
+`define SIM_RUNTIME_US 2000
 
 `include "sim_exec_report.vh"
 `include "sim_clks_rsts.vh"
@@ -8,7 +9,7 @@
 
 module noc_block_axi_dma_fifo_tb();
   `TEST_BENCH_INIT("noc_block_axi_dma_fifo_tb",`NUM_TEST_CASES,`NS_PER_TICK);
-  localparam BUS_CLK_PERIOD = $ceil(1e9/166.67e6);
+  localparam BUS_CLK_PERIOD = $ceil(1e9/200e6);
   localparam CE_CLK_PERIOD  = $ceil(1e9/300e6);
   localparam NUM_CE         = 1;  // Number of Computation Engines / User RFNoC blocks to simulate
   localparam NUM_STREAMS    = 2;  // Number of test bench streams
@@ -18,9 +19,12 @@ module noc_block_axi_dma_fifo_tb();
   `RFNOC_ADD_BLOCK_CUSTOM(noc_block_axi_dma_fifo, 0);
 
   localparam SPP = 128; // Samples per packet
+  localparam NUM_PKTS = 10;
 
   wire calib_complete;
-  axis_dram_fifo_dual #( .USE_SRAM_MEMORY(0)) inst_noc_block_dram_fifo_dut (
+  axis_dram_fifo_dual #(
+    .USE_SRAM_MEMORY(1) // For speed. sim/dram_fifo is already testing with the DRAM backing store.
+  ) inst_noc_block_dram_fifo_dut (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .sys_clk(sys_clk), .sys_rst_n(sys_rst_n),
     //AXIS
@@ -99,59 +103,120 @@ module noc_block_axi_dma_fifo_tb();
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 7 -- Test sequence
+    ** Test 7 -- Test sequence (isolated)
     ********************************************************/
-    `TEST_CASE_START("Test FIFO 0");
+    `TEST_CASE_START("Test FIFO 0 Only");
     fork
       begin
-        cvita_payload_t send_payload;
-        cvita_metadata_t md;
-        for (int i = 0; i < SPP/2; i++) begin
-          send_payload.push_back(64'(i));
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t send_payload;
+          cvita_metadata_t md;
+          for (int i = 0; i < SPP/2; i++) begin
+            send_payload.push_back(64'(i));
+          end
+          tb_streamer.send(send_payload, md, 0);
         end
-        tb_streamer.send(send_payload, md, 0);
       end
       begin
-        cvita_payload_t recv_payload;
-        cvita_metadata_t md;
-        logic [63:0] expected_value;
-        tb_streamer.recv(recv_payload, md, 0);
-        for (int i = 0; i < SPP/2; i++) begin
-          expected_value = i;
-          $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
-          `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t recv_payload;
+          cvita_metadata_t md;
+          logic [63:0] expected_value;
+          tb_streamer.recv(recv_payload, md, 0);
+          for (int i = 0; i < SPP/2; i++) begin
+            expected_value = i;
+            $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
+            `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+          end
         end
       end
     join
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 8 -- Test sequence
+    ** Test 8 -- Test sequence (isolated)
     ********************************************************/
-    `TEST_CASE_START("Test FIFO 1");
+    `TEST_CASE_START("Test FIFO 1 Only");
     fork
       begin
-        cvita_payload_t send_payload;
-        cvita_metadata_t md;
-        for (int i = 0; i < SPP/2; i++) begin
-          send_payload.push_back(64'(i));
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t send_payload;
+          cvita_metadata_t md;
+          for (int i = 0; i < SPP/2; i++) begin
+            send_payload.push_back(64'(i));
+          end
+          tb_streamer.send(send_payload, md, 1);
         end
-        tb_streamer.send(send_payload, md, 1);
       end
       begin
-        cvita_payload_t recv_payload;
-        cvita_metadata_t md;
-        logic [63:0] expected_value;
-        tb_streamer.recv(recv_payload, md, 1);
-        for (int i = 0; i < SPP/2; i++) begin
-          expected_value = i;
-          $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
-          `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t recv_payload;
+          cvita_metadata_t md;
+          logic [63:0] expected_value;
+          tb_streamer.recv(recv_payload, md, 1);
+          for (int i = 0; i < SPP/2; i++) begin
+            expected_value = i;
+            $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
+            `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+          end
         end
       end
     join
     `TEST_CASE_DONE(1);
 
+    /********************************************************
+    ** Test 9 -- Test sequence (simultaneous)
+    ********************************************************/
+    `TEST_CASE_START("Test FIFO 0 and 1 Together");
+    fork
+      begin
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t send_payload;
+          cvita_metadata_t md;
+          for (int i = 0; i < SPP/2; i++) begin
+            send_payload.push_back(64'(i));
+          end
+          tb_streamer.send(send_payload, md, 0);
+        end
+      end
+      begin
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t send_payload;
+          cvita_metadata_t md;
+          for (int i = 0; i < SPP/2; i++) begin
+            send_payload.push_back(64'(i));
+          end
+          tb_streamer.send(send_payload, md, 1);
+        end
+      end
+      begin
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t recv_payload;
+          cvita_metadata_t md;
+          logic [63:0] expected_value;
+          tb_streamer.recv(recv_payload, md, 0);
+          for (int i = 0; i < SPP/2; i++) begin
+            expected_value = i;
+            $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
+            `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+          end
+        end
+      end
+      begin
+        for (int p = 0; p < NUM_PKTS; p++) begin
+          cvita_payload_t recv_payload;
+          cvita_metadata_t md;
+          logic [63:0] expected_value;
+          tb_streamer.recv(recv_payload, md, 1);
+          for (int i = 0; i < SPP/2; i++) begin
+            expected_value = i;
+            $sformat(s, "Incorrect value received! Expected: %0d, Received: %0d", expected_value, recv_payload[i]);
+            `ASSERT_ERROR(recv_payload[i] == expected_value, s);
+          end
+        end
+      end
+    join
+    `TEST_CASE_DONE(1);
 
     `TEST_BENCH_DONE;
   end

@@ -80,7 +80,7 @@ module noc_block_file_io #(
     .FILE_LENGTH(SRC_FILE_LENGTH),
     .FILENAME(SRC_FILENAME))
   file_source (
-    .clk(ce_clk), .reset(ce_rst),
+    .clk(bus_clk), .reset(bus_rst),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
 
@@ -91,8 +91,8 @@ module noc_block_file_io #(
     .DEFAULT_ENDIANNESS(SINK_ENDIANNESS),
     .FILENAME(SINK_FILENAME))
   file_sink (
-    .clk_i(ce_clk),
-    .rst_i(ce_rst),
+    .clk_i(bus_clk),
+    .rst_i(bus_rst),
     .set_stb_i(set_stb),
     .set_addr_i(set_addr),
     .set_data_i(set_data),

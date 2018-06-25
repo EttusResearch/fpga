@@ -250,7 +250,7 @@ module aurora_loopback_tb();
         end
       join
     crc_cache = stats.crc;    //Cache CRC for future test cases
-    `ASSERT_ERROR(stats.count==201, "Bad packet: Length mismatch");
+    `ASSERT_ERROR(stats.count==200, "Bad packet: Length mismatch");
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Concurrent read and write (multiple packets)");
@@ -265,7 +265,7 @@ module aurora_loopback_tb();
         begin
           repeat (20) begin
             m_rx_chdr.wait_for_pkt_get_info(header_out, stats);
-            `ASSERT_ERROR(stats.count==21,      "Bad packet: Length mismatch");
+            `ASSERT_ERROR(stats.count==20,      "Bad packet: Length mismatch");
             `ASSERT_ERROR(crc_cache==stats.crc, "Bad packet: Wrong CRC");
           end
         end

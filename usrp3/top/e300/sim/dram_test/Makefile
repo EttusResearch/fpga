@@ -41,8 +41,6 @@ include $(IP_DIR)/mig_7series_0/Makefile.inc
 
 DESIGN_SRCS += $(abspath \
 $(IP_MIG_7SERIES_0_SRCS) \
-$(IP_MIG_7SERIES_TG_SRCS) \
-$(IP_MIG_7SERIES_0_SIM_OUTS) \
 )
 
 #-------------------------------------------------
@@ -52,8 +50,11 @@ $(IP_MIG_7SERIES_0_SIM_OUTS) \
 SIM_TOP = dram_test_tb
 
 SIM_SRCS = \
-$(abspath dram_test_tb.sv \
-)
+$(abspath dram_test_tb.sv) \
+$(IP_MIG_7SERIES_0_SIM_OUTS) \
+$(IP_MIG_7SERIES_TG_SRCS) \
+$(SIM_GENERAL_SRCS) \
+$(SIM_AXI_SRCS)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

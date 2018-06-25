@@ -65,8 +65,6 @@ include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
 
 # Define only one toplevel module
 SIM_TOP = noc_block_ofdm_constellation_demapper_tb
-# Simulation runtime in microseconds
-SIM_RUNTIME_US = 1000
 
 SIM_SRCS = \
 $(abspath noc_block_ofdm_constellation_demapper_tb.sv) \

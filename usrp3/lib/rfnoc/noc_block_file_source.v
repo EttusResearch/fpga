@@ -33,7 +33,7 @@ module noc_block_file_source #(
   wire        str_sink_tlast, str_sink_tvalid, str_sink_tready, str_src_tlast, str_src_tvalid, str_src_tready;
 
   wire        clear_tx_seqnum;
-  wire [15:0] next_dst_sid;
+  wire [15:0] src_sid, next_dst_sid;
 
   noc_shell #(
     .NOC_ID(NOC_ID),
@@ -45,7 +45,7 @@ module noc_block_file_source #(
     // Computer Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(),
+    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
     .rb_stb(1'b1), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
@@ -56,7 +56,7 @@ module noc_block_file_source #(
     .str_src_tdata(str_src_tdata), .str_src_tlast(str_src_tlast), .str_src_tvalid(str_src_tvalid), .str_src_tready(str_src_tready),
     // Misc
     .vita_time(64'd0), .clear_tx_seqnum(clear_tx_seqnum),
-    .src_sid(), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
+    .src_sid(src_sid), .next_dst_sid(next_dst_sid), .resp_in_dst_sid(), .resp_out_dst_sid(),
     .debug(debug));
 
   // Control Source Unused
@@ -83,7 +83,7 @@ module noc_block_file_source #(
     .FILENAME(FILENAME),
     .FILE_LENGTH(FILE_LENGTH))
   file_source (
-    .clk(ce_clk), .reset(ce_rst), .sid({src_sid,next_dst_sid}),
+    .clk(bus_clk), .reset(bus_rst), .sid({src_sid,next_dst_sid}),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .o_tdata(str_src_tdata), .o_tlast(str_src_tlast), .o_tvalid(str_src_tvalid), .o_tready(str_src_tready));
 

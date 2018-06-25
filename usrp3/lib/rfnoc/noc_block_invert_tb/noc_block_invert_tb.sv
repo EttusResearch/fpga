@@ -105,10 +105,10 @@ module noc_block_invert_tb();
         tb_streamer.recv(recv_payload,rx_md,0);
         `ASSERT_FATAL(rx_md.eob == 1, "Incorrect EOB value!");
         for (int i = 0; i < SPP/2; i++) begin
-          `ASSERT_FATAL(recv_payload[i] == {16'(4*i),16'(4*i+1),16'(4*i+2),16'(4*i+3)},
-                        "Incorrect non-inverted ramp data!");
+          if (recv_payload[i] != {16'(4*i),16'(4*i+1),16'(4*i+2),16'(4*i+3)}) begin
+          `ASSERT_ERROR(0, "Incorrect non-inverted ramp data!");
+          end
         end
-        $display("Non-inverted ramp data correct!");
       end
       begin
         cvita_payload_t recv_payload;
@@ -116,10 +116,10 @@ module noc_block_invert_tb();
         tb_streamer.recv(recv_payload,rx_md,1);
         `ASSERT_FATAL(rx_md.eob == 1, "Incorrect EOB value!");
         for (int i = 0; i < SPP/2; i++) begin
-          `ASSERT_FATAL(~recv_payload[i] == {16'(4*i),16'(4*i+1),16'(4*i+2),16'(4*i+3)},
-                        "Incorrect inverted ramp data!");
+          if (~recv_payload[i] != {16'(4*i),16'(4*i+1),16'(4*i+2),16'(4*i+3)}) begin
+          `ASSERT_ERROR(0, "Incorrect inverted ramp data!");
+          end
         end
-        $display("Inverted ramp data correct!");
       end
     join
 
