@@ -113,6 +113,7 @@ module e320 (
   input  CLK_SYNC_EXT,      // PPS from external connector
   input  CLK_REF_RAW,       // FPGA reference clock (GPS or external)
   output CLK_REF_SEL,       // Select for GPS or external reference clock
+  input  CLK_MUX_OUT,       // RF clock locked status
 
   // RF LVDS Data Interface
   //
@@ -154,6 +155,7 @@ module e320 (
   output XCVR_TXNRX,
   output XCVR_ENA_AGC,
   output XCVR_RESET_N,
+  input [7:0] XCVR_CTRL_OUT,
 
   // Amplifiers
   output TX_HFAMP1_ENA,
@@ -472,7 +474,7 @@ module e320 (
   wire pps_refclk;
   wire [1:0] pps_select;
   wire ref_select;
-  wire refclk_locked;
+  wire refclk_locked_busclk;
 
   assign clk40   = FCLK_CLK1;   // 40 MHz
   assign bus_clk = FCLK_CLK3;   // 200 MHz
@@ -493,9 +495,9 @@ module e320 (
 
   assign CLK_REF_SEL = ref_select;
 
-  //TODO: Connect it to input on REV B
-  //assign refclk_locked = CLK_MUX_OUT;
-  assign refclk_locked = 1'b1;
+  synchronizer synchronize_rf_clk_lock (
+    .clk(bus_clk), .rst(1'b0), .in(CLK_MUX_OUT), .out(refclk_locked_busclk)
+  );
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -770,7 +772,7 @@ module e320 (
 
   /////////////////////////////////////////////////////////////////////
   //
-  // AD9361 LVDS Interface
+  // AD9361 Interface
   //
   /////////////////////////////////////////////////////////////////////
 
@@ -1592,7 +1594,7 @@ module e320 (
 
     // Clocking and PPS Controls/Indicators
     .pps_refclk(pps_refclk),
-    .refclk_locked(refclk_locked),
+    .refclk_locked(refclk_locked_busclk),
     .pps_select(pps_select),
     .ref_select(ref_select),
 

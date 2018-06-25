@@ -148,6 +148,21 @@ set_property PACKAGE_PIN   N29              [get_ports {TX_LFAMP1_ENA}]
 set_property PACKAGE_PIN   T29              [get_ports {TX_LFAMP2_ENA}]
 set_property IOSTANDARD    LVCMOS18         [get_ports {TX_LFAMP*_ENA}]
 
+# CTRL_OUT, Bank 13, 1.8 V
+set_property PACKAGE_PIN   V28              [get_ports {XCVR_CTRL_OUT[0]}]
+set_property PACKAGE_PIN   V29              [get_ports {XCVR_CTRL_OUT[1]}]
+set_property PACKAGE_PIN   W29              [get_ports {XCVR_CTRL_OUT[2]}]
+set_property PACKAGE_PIN   W30              [get_ports {XCVR_CTRL_OUT[3]}]
+set_property PACKAGE_PIN   V27              [get_ports {XCVR_CTRL_OUT[4]}]
+set_property PACKAGE_PIN   W28              [get_ports {XCVR_CTRL_OUT[5]}]
+set_property PACKAGE_PIN   W25              [get_ports {XCVR_CTRL_OUT[6]}]
+set_property PACKAGE_PIN   W26              [get_ports {XCVR_CTRL_OUT[7]}]
+set_property IOSTANDARD    LVCMOS18         [get_ports {XCVR_CTRL_OUT[*]}]
+# Set pull-up on bits 6 and 7 to make the bitstream compatible with Rev A,
+# where the signals don't exist.
+set_property PULLUP        TRUE             [get_ports {XCVR_CTRL_OUT[6]}]
+set_property PULLUP        TRUE             [get_ports {XCVR_CTRL_OUT[7]}]
+
 ## RX/TX LEDs, Bank 10, 3.3 V
 set_property PACKAGE_PIN   AG14             [get_ports {RX1_GRN_ENA}]
 set_property PACKAGE_PIN   AG17             [get_ports {RX2_GRN_ENA}]
@@ -370,7 +385,12 @@ set_property PACKAGE_PIN   AE15             [get_ports {CLK_PLL_SCLK}]
 set_property PACKAGE_PIN   AE16             [get_ports {CLK_PLL_SDATA}]
 set_property PACKAGE_PIN   AE18             [get_ports {CLK_PLL_SLE}]
 set_property IOSTANDARD    LVCMOS33         [get_ports {CLK_PLL_*}]
-
+#
+# Set pull-up on CLK_MUX_OUT to make the bitstream compatible with Rev A, where
+# the signal doesn't exist.
+set_property PACKAGE_PIN   AH18             [get_ports {CLK_MUX_OUT}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {CLK_MUX_OUT}]
+set_property PULLUP        TRUE             [get_ports {CLK_MUX_OUT}]
 
 
 ############################################################################

@@ -259,12 +259,9 @@ set_min_delay -to [get_ports CLK_GPS_PWR_EN] 0.0
 set_max_delay -from [all_fanin -only_cells -startpoints_only -flat [get_ports CLK_REF_SEL]] \
               -to   [get_ports CLK_REF_SEL] 8.0 -datapath_only
 set_min_delay -to   [get_ports CLK_REF_SEL] 0.0
-<<<<<<< HEAD
 #
 set_max_delay -from [get_ports CLK_MUX_OUT] 5.0 -datapath_only
 set_min_delay -from [get_ports CLK_MUX_OUT] 0.0
-=======
->>>>>>> f23627c... e320: Add timing constraints and fix PPS clock crossing
 
 # DDR3
 set_max_delay -to [get_ports ddr3_reset_n] 50.0
