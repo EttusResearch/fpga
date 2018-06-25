@@ -45,7 +45,6 @@ $(IP_AXI4_BRAM_SRCS) \
 #-------------------------------------------------
 # Define only one toplevel module
 SIM_TOP = noc_block_axi_dma_fifo_tb
-SIM_RUNTIME_US = 150000
 
 # Add test bench, user design under test, and
 # additional user created files
