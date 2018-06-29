@@ -12,5 +12,4 @@ zf_host_to_stream.v \
 zf_slave_readback.v \
 zf_slave_settings.v \
 zynq_fifo_top.v \
-zynq_fifo_top_legacy.v \
 ))
