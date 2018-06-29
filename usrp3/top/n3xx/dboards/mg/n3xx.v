@@ -1342,6 +1342,7 @@ module n3xx (
     .PROTOCOL("WhiteRabbit"),
     .MDIO_EN(1'b0),
   `endif
+    .GT_COMMON(1),
     .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
     .AWIDTH(REG_AWIDTH),     // Width of the address bus
     .PORTNUM(8'd0)
@@ -1520,6 +1521,7 @@ module n3xx (
     .PROTOCOL("Aurora"),
     .MDIO_EN(1'b0),
   `endif
+    .GT_COMMON(1),
     .DWIDTH(REG_DWIDTH),     // Width of the AXI4-Lite data bus (must be 32 or 64)
     .AWIDTH(REG_AWIDTH),     // Width of the address bus
     .PORTNUM(8'd1)

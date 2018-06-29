@@ -16,6 +16,7 @@ module n3xx_mgt_io_core #(
   parameter [13:0] REG_BASE     = 14'h0,
   parameter        REG_DWIDTH   = 32,
   parameter        REG_AWIDTH   = 14,
+  parameter        GT_COMMON    = 1,
   parameter [7:0]  PORTNUM      = 8'd0,
   parameter        MDIO_EN      = 0,
   parameter [4:0]  MDIO_PHYADDR = 5'd0
@@ -255,42 +256,77 @@ module n3xx_mgt_io_core #(
       wire [7:0]  xgmii_rxc;
       wire        xge_phy_resetdone;
 
-      ten_gige_phy ten_gige_phy_i
-      (
-        // Clocks and Reset
-        .areset(areset | phy_ctrl_reg[0]), // Asynchronous reset for entire core.
-        .refclk(gt_refclk),              // Transciever reference clock: 156.25MHz
-        .clk156(gb_refclk),              // Globally buffered core clock: 156.25MHz
-        .dclk(misc_clk),                 // Management/DRP clock: 78.125MHz
-        .sim_speedup_control(1'b0),
-        // GMII Interface (client MAC <=> PCS)
-        .xgmii_txd(xgmii_txd),          // Transmit data from client MAC.
-        .xgmii_txc(xgmii_txc),          // Transmit control signal from client MAC.
-        .xgmii_rxd(xgmii_rxd),          // Received Data to client MAC.
-        .xgmii_rxc(xgmii_rxc),          // Received control signal to client MAC.
-        // Tranceiver Interface
-        .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
-        .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
-        .rxp(rxp),                       // Differential +ve for serial reception from PMD to PMA.
-        .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
-        // Management: MDIO Interface
-        .mdc(mdc),                       // Management Data Clock
-        .mdio_in(mdio_m2s),              // Management Data In
-        .mdio_out(mdio_s2m),             // Management Data Out
-        .mdio_tri(),                     // Management Data Tristate
-        .prtad(MDIO_PHYADDR),            // MDIO address
-        // General IO's
-        .core_status(phy_status[7:0]),      // Core status
-        .resetdone(xge_phy_resetdone),
-        .signal_detect(~sfpp_rxlos),     // Input from PMD to indicate presence of optical input.   (Undocumented, but it seems Xilinx expect this to be inverted.)
-        .tx_fault(sfpp_tx_fault),
-        .tx_disable(sfpp_tx_disable),
-        .qpllreset(qpllreset),
-        .qplllock(qplllock),
-        .qplloutclk(qplloutclk),
-        .qplloutrefclk(qplloutrefclk),
-        .tx_out_clk(gt_tx_out_clk_unbuf)
-      );
+      if (GT_COMMON == 1) begin
+        ten_gige_phy ten_gige_phy_i (
+          // Clocks and Reset
+          .areset(areset | phy_ctrl_reg[0]), // Asynchronous reset for entire core.
+          .refclk(gt_refclk),              // Transciever reference clock: 156.25MHz
+          .clk156(gb_refclk),              // Globally buffered core clock: 156.25MHz
+          .dclk(misc_clk),                 // Management/DRP clock: 78.125MHz
+          .sim_speedup_control(1'b0),
+          // GMII Interface (client MAC <=> PCS)
+          .xgmii_txd(xgmii_txd),          // Transmit data from client MAC.
+          .xgmii_txc(xgmii_txc),          // Transmit control signal from client MAC.
+          .xgmii_rxd(xgmii_rxd),          // Received Data to client MAC.
+          .xgmii_rxc(xgmii_rxc),          // Received control signal to client MAC.
+          // Tranceiver Interface
+          .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
+          .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
+          .rxp(rxp),                       // Differential +ve for serial reception from PMD to PMA.
+          .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
+          // Management: MDIO Interface
+          .mdc(mdc),                       // Management Data Clock
+          .mdio_in(mdio_m2s),              // Management Data In
+          .mdio_out(mdio_s2m),             // Management Data Out
+          .mdio_tri(),                     // Management Data Tristate
+          .prtad(MDIO_PHYADDR),            // MDIO address
+          // General IO's
+          .core_status(phy_status[7:0]),      // Core status
+          .resetdone(xge_phy_resetdone),
+          .signal_detect(~sfpp_rxlos),     // Input from PMD to indicate presence of optical input.   (Undocumented, but it seems Xilinx expect this to be inverted.)
+          .tx_fault(sfpp_tx_fault),
+          .tx_disable(sfpp_tx_disable),
+          .qpllreset(qpllreset),
+          .qplllock(qplllock),
+          .qplloutclk(qplloutclk),
+          .qplloutrefclk(qplloutrefclk),
+          .tx_out_clk(gt_tx_out_clk_unbuf)
+        );
+      end else begin
+        ten_gige_phy ten_gige_phy_i (
+          // Clocks and Reset
+          .areset(areset | phy_ctrl_reg[0]), // Asynchronous reset for entire core.
+          .refclk(gt_refclk),              // Transciever reference clock: 156.25MHz
+          .clk156(gb_refclk),              // Globally buffered core clock: 156.25MHz
+          .dclk(misc_clk),                 // Management/DRP clock: 78.125MHz
+          .sim_speedup_control(1'b0),
+          // GMII Interface (client MAC <=> PCS)
+          .xgmii_txd(xgmii_txd),          // Transmit data from client MAC.
+          .xgmii_txc(xgmii_txc),          // Transmit control signal from client MAC.
+          .xgmii_rxd(xgmii_rxd),          // Received Data to client MAC.
+          .xgmii_rxc(xgmii_rxc),          // Received control signal to client MAC.
+          // Tranceiver Interface
+          .txp(txp),                       // Differential +ve of serial transmission from PMA to PMD.
+          .txn(txn),                       // Differential -ve of serial transmission from PMA to PMD.
+          .rxp(rxp),                       // Differential +ve for serial reception from PMD to PMA.
+          .rxn(rxn),                       // Differential -ve for serial reception from PMD to PMA.
+          // Management: MDIO Interface
+          .mdc(mdc),                       // Management Data Clock
+          .mdio_in(mdio_m2s),              // Management Data In
+          .mdio_out(mdio_s2m),             // Management Data Out
+          .mdio_tri(),                     // Management Data Tristate
+          .prtad(MDIO_PHYADDR),            // MDIO address
+          // General IO's
+          .core_status(phy_status[7:0]),      // Core status
+          .resetdone(xge_phy_resetdone),
+          .signal_detect(~sfpp_rxlos),     // Input from PMD to indicate presence of optical input.   (Undocumented, but it seems Xilinx expect this to be inverted.)
+          .tx_fault(sfpp_tx_fault),
+          .tx_disable(sfpp_tx_disable)
+        );
+        assign qpllreset = 1'b0;
+        assign gt_pll_lock = 1'b0;
+        assign gt_tx_out_clk_unbuf = 1'b0;
+      end
 
       xge_mac_wrapper #(
         .PORTNUM(PORTNUM),
@@ -357,40 +393,75 @@ module n3xx_mgt_io_core #(
       assign gt0_qplloutrefclk = 1'b0;
       assign sfpp_tx_disable = 1'b0; // Always on.
 
-      one_gige_phy one_gige_phy_i
-      (
-        .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
-        .pma_reset_out(/*unused*/),
-        .independent_clock(bus_clk),
-        .gt0_qplloutclk_in(gt0_qplloutclk),
-        .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
-        // Tranceiver Interface
-        .gtrefclk(gt_refclk),           // Reference clock for MGT: 125MHz, very high quality.
-        .gtrefclk_bufg(gb_refclk),      // Reference clock routed through a BUFG
-        .txp(txp),                      // Differential +ve of serial transmission from PMA to PMD.
-        .txn(txn),                      // Differential -ve of serial transmission from PMA to PMD.
-        .rxp(rxp),                      // Differential +ve for serial reception from PMD to PMA.
-        .rxn(rxn),                      // Differential -ve for serial reception from PMD to PMA.
-        // GMII Interface (client MAC <=> PCS)
-        .gmii_clk(gmii_clk),            // Clock to client MAC.
-        .gmii_txd(gmii_txd),            // Transmit data from client MAC.
-        .gmii_tx_en(gmii_tx_en),        // Transmit control signal from client MAC.
-        .gmii_tx_er(gmii_tx_er),        // Transmit control signal from client MAC.
-        .gmii_rxd(gmii_rxd),            // Received Data to client MAC.
-        .gmii_rx_dv(gmii_rx_dv),        // Received control signal to client MAC.
-        .gmii_rx_er(gmii_rx_er),        // Received control signal to client MAC.
-        // Management: MDIO Interface
-        .mdc(mdc),                      // Management Data Clock
-        .mdio_i(mdio_m2s),              // Management Data In
-        .mdio_o(mdio_s2m),              // Management Data Out
-        .mdio_t(),                      // Management Data Tristate
-        .phyaddr(MDIO_PHYADDR),         // MDIO address
-        .configuration_vector(5'd0),    // Alternative to MDIO interface.
-        .configuration_valid(1'b1),     // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
-        // General IO's
-        .status_vector(phy_status[15:0]),    // Core status.
-        .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
-      );
+      if (GT_COMMON == 1) begin
+        one_gige_phy one_gige_phy_i (
+          .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
+          .independent_clock(bus_clk),
+          .pma_reset_out(/*unused*/),
+          .gt0_qplloutclk_in(gt0_qplloutclk),
+          .gt0_qplloutrefclk_in(gt0_qplloutrefclk),
+          // Tranceiver Interface
+          .gtrefclk(gt_refclk),           // Reference clock for MGT: 125MHz, very high quality.
+          .gtrefclk_bufg(gb_refclk),      // Reference clock routed through a BUFG
+          .txp(txp),                      // Differential +ve of serial transmission from PMA to PMD.
+          .txn(txn),                      // Differential -ve of serial transmission from PMA to PMD.
+          .rxp(rxp),                      // Differential +ve for serial reception from PMD to PMA.
+          .rxn(rxn),                      // Differential -ve for serial reception from PMD to PMA.
+          // GMII Interface (client MAC <=> PCS)
+          .gmii_clk(gmii_clk),            // Clock to client MAC.
+          .gmii_txd(gmii_txd),            // Transmit data from client MAC.
+          .gmii_tx_en(gmii_tx_en),        // Transmit control signal from client MAC.
+          .gmii_tx_er(gmii_tx_er),        // Transmit control signal from client MAC.
+          .gmii_rxd(gmii_rxd),            // Received Data to client MAC.
+          .gmii_rx_dv(gmii_rx_dv),        // Received control signal to client MAC.
+          .gmii_rx_er(gmii_rx_er),        // Received control signal to client MAC.
+          // Management: MDIO Interface
+          .mdc(mdc),                      // Management Data Clock
+          .mdio_i(mdio_m2s),              // Management Data In
+          .mdio_o(mdio_s2m),              // Management Data Out
+          .mdio_t(),                      // Management Data Tristate
+          .phyaddr(MDIO_PHYADDR),         // MDIO address
+          .configuration_vector(5'd0),    // Alternative to MDIO interface.
+          .configuration_valid(1'b1),     // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
+          // General IO's
+          .status_vector(phy_status[15:0]),    // Core status.
+          .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
+        );
+      end else begin
+        one_gige_phy one_gige_phy_i (
+          .reset(areset | phy_ctrl_reg[0]),                  // Asynchronous reset for entire core.
+          .independent_clock(bus_clk),
+          // Tranceiver Interface
+          .gtrefclk(gt_refclk),           // Reference clock for MGT: 125MHz, very high quality.
+          .gtrefclk_bufg(gb_refclk),      // Reference clock routed through a BUFG
+          .txp(txp),                      // Differential +ve of serial transmission from PMA to PMD.
+          .txn(txn),                      // Differential -ve of serial transmission from PMA to PMD.
+          .rxp(rxp),                      // Differential +ve for serial reception from PMD to PMA.
+          .rxn(rxn),                      // Differential -ve for serial reception from PMD to PMA.
+          // GMII Interface (client MAC <=> PCS)
+          .gmii_clk(gmii_clk),            // Clock to client MAC.
+          .gmii_txd(gmii_txd),            // Transmit data from client MAC.
+          .gmii_tx_en(gmii_tx_en),        // Transmit control signal from client MAC.
+          .gmii_tx_er(gmii_tx_er),        // Transmit control signal from client MAC.
+          .gmii_rxd(gmii_rxd),            // Received Data to client MAC.
+          .gmii_rx_dv(gmii_rx_dv),        // Received control signal to client MAC.
+          .gmii_rx_er(gmii_rx_er),        // Received control signal to client MAC.
+          // Management: MDIO Interface
+          .mdc(mdc),                      // Management Data Clock
+          .mdio_i(mdio_m2s),              // Management Data In
+          .mdio_o(mdio_s2m),              // Management Data Out
+          .mdio_t(),                      // Management Data Tristate
+          .phyaddr(MDIO_PHYADDR),         // MDIO address
+          .configuration_vector(5'd0),    // Alternative to MDIO interface.
+          .configuration_valid(1'b1),     // Validation signal for Config vector (MUST be 1 for proper functionality...undocumented)
+          // General IO's
+          .status_vector(phy_status[15:0]),    // Core status.
+          .signal_detect(1'b1 /*Optical module not supported*/) // Input from PMD to indicate presence of optical input.
+        );
+        assign qpllreset = 1'b0;
+        assign gt_pll_lock = 1'b0;
+        assign gt_tx_out_clk_unbuf = 1'b0;
+      end
 
       simple_gemac_wrapper #(.RX_FLOW_CTRL(0), .PORTNUM(PORTNUM)) simple_gemac_wrapper_i
       (
@@ -462,58 +533,107 @@ module n3xx_mgt_io_core #(
 
       assign sfpp_tx_disable = 1'b0; // Always on.
 
-      aurora_phy_x1 aurora_phy_i (
-        // Resets
-        .areset(areset | phy_areset),
-        // Clocks
-        .refclk(gt_refclk),
-        .init_clk(misc_clk),
-        .user_clk(user_clk),
-        .sync_clk(sync_clk),
-        .user_rst(user_rst),
-        .qpllclk(qplloutclk),
-        .qpllrefclk(qplloutrefclk),
-        // GTX Serial I/O
-        .tx_p(txp),
-        .tx_n(txn),
-        .rx_p(rxp),
-        .rx_n(rxn),
-        // AXI4-Stream TX Interface
-        .s_axis_tdata(m2p_tdata),
-        .s_axis_tvalid(m2p_tvalid),
-        .s_axis_tready(m2p_tready),
-        // AXI4-Stream RX Interface
-        .m_axis_tdata(p2m_tdata),
-        .m_axis_tvalid(p2m_tvalid),
-        // AXI4-Lite Config Interface (unused)
-        .s_axi_awaddr(32'h0),
-        .s_axi_araddr(32'h0),
-        .s_axi_awvalid(1'b0),
-        .s_axi_awready(),
-        .s_axi_wdata(32'h0),
-        .s_axi_wvalid(1'b0),
-        .s_axi_wstrb(1'b0),
-        .s_axi_wready(),
-        .s_axi_bvalid(),
-        .s_axi_bresp(),
-        .s_axi_bready(1'b1),
-        .s_axi_arready(),
-        .s_axi_arvalid(1'b0),
-        .s_axi_rdata(),
-        .s_axi_rvalid(),
-        .s_axi_rresp(),
-        .s_axi_rready(1'b1),
-        // Status and Error Reporting Interface
-        .channel_up(channel_up),
-        .hard_err(hard_err),
-        .soft_err(soft_err),
-        .qplllock(qplllock),
-        .qpllreset(qpllreset),
-        .qpllrefclklost(qpllrefclklost),
-        .tx_out_clk(gt_tx_out_clk_unbuf),
-        .gt_pll_lock(gt_pll_lock),
-        .mmcm_locked(mmcm_locked)
-      );
+      if (GT_COMMON == 1) begin
+        aurora_phy_x1 aurora_phy_i (
+          // Resets
+          .areset(areset | phy_areset),
+          // Clocks
+          .refclk(gt_refclk),
+          .init_clk(misc_clk),
+          .user_clk(user_clk),
+          .user_rst(user_rst),
+          .sync_clk(sync_clk),
+          .qpllclk(qplloutclk),
+          .qpllrefclk(qplloutrefclk),
+          // GTX Serial I/O
+          .tx_p(txp),
+          .tx_n(txn),
+          .rx_p(rxp),
+          .rx_n(rxn),
+          // AXI4-Stream TX Interface
+          .s_axis_tdata(m2p_tdata),
+          .s_axis_tvalid(m2p_tvalid),
+          .s_axis_tready(m2p_tready),
+          // AXI4-Stream RX Interface
+          .m_axis_tdata(p2m_tdata),
+          .m_axis_tvalid(p2m_tvalid),
+          // AXI4-Lite Config Interface (unused)
+          .s_axi_awaddr(32'h0),
+          .s_axi_araddr(32'h0),
+          .s_axi_awvalid(1'b0),
+          .s_axi_awready(),
+          .s_axi_wdata(32'h0),
+          .s_axi_wvalid(1'b0),
+          .s_axi_wstrb(1'b0),
+          .s_axi_wready(),
+          .s_axi_bvalid(),
+          .s_axi_bresp(),
+          .s_axi_bready(1'b1),
+          .s_axi_arready(),
+          .s_axi_arvalid(1'b0),
+          .s_axi_rdata(),
+          .s_axi_rvalid(),
+          .s_axi_rresp(),
+          .s_axi_rready(1'b1),
+          // Status and Error Reporting Interface
+          .channel_up(channel_up),
+          .hard_err(hard_err),
+          .soft_err(soft_err),
+          .qplllock(qplllock),
+          .qpllreset(qpllreset),
+          .qpllrefclklost(qpllrefclklost),
+          .tx_out_clk(gt_tx_out_clk_unbuf),
+          .gt_pll_lock(gt_pll_lock),
+          .mmcm_locked(mmcm_locked)
+        );
+      end else begin
+        aurora_phy_x1 aurora_phy_i (
+          // Resets
+          .areset(areset | phy_areset),
+          // Clocks
+          .refclk(gt_refclk),
+          .init_clk(misc_clk),
+          .user_clk(user_clk),
+          .user_rst(user_rst),
+          // GTX Serial I/O
+          .tx_p(txp),
+          .tx_n(txn),
+          .rx_p(rxp),
+          .rx_n(rxn),
+          // AXI4-Stream TX Interface
+          .s_axis_tdata(m2p_tdata),
+          .s_axis_tvalid(m2p_tvalid),
+          .s_axis_tready(m2p_tready),
+          // AXI4-Stream RX Interface
+          .m_axis_tdata(p2m_tdata),
+          .m_axis_tvalid(p2m_tvalid),
+          // AXI4-Lite Config Interface (unused)
+          .s_axi_awaddr(32'h0),
+          .s_axi_araddr(32'h0),
+          .s_axi_awvalid(1'b0),
+          .s_axi_awready(),
+          .s_axi_wdata(32'h0),
+          .s_axi_wvalid(1'b0),
+          .s_axi_wstrb(1'b0),
+          .s_axi_wready(),
+          .s_axi_bvalid(),
+          .s_axi_bresp(),
+          .s_axi_bready(1'b1),
+          .s_axi_arready(),
+          .s_axi_arvalid(1'b0),
+          .s_axi_rdata(),
+          .s_axi_rvalid(),
+          .s_axi_rresp(),
+          .s_axi_rready(1'b1),
+          // Status and Error Reporting Interface
+          .channel_up(channel_up),
+          .hard_err(hard_err),
+          .soft_err(soft_err)
+        );
+        assign qpllreset = 1'b0;
+        assign gt_pll_lock = 1'b0;
+        assign gt_tx_out_clk_unbuf = 1'b0;
+      end
 
       aurora_axis_mac #(
         .PHY_ENDIANNESS ("LITTLE"),
@@ -570,8 +690,13 @@ module n3xx_mgt_io_core #(
         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(soft_err), .out(soft_err_bclk));
       synchronizer #(.INITIAL_VAL(1'b0)) mac_crit_err_sync (
         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(mac_crit_err), .out(mac_crit_err_bclk));
-      synchronizer #(.INITIAL_VAL(1'b0)) gt_pll_lock_sync (
-        .clk(bus_clk), .rst(1'b0 /* no reset */), .in(gt_pll_lock), .out(gt_pll_lock_bclk));
+
+      if (GT_COMMON == 1) begin
+        synchronizer #(.INITIAL_VAL(1'b0)) gt_pll_lock_sync (
+          .clk(bus_clk), .rst(1'b0 /* no reset */), .in(gt_pll_lock), .out(gt_pll_lock_bclk));
+      end else begin
+        assign gt_pll_lock_bclk = 1'b0;
+      end
 
       reg [19:0]  bist_lock_latency;
       always @(posedge bus_clk) begin

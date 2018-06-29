@@ -16,6 +16,7 @@ module n3xx_sfp_wrapper #(
   parameter       PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
   parameter       DWIDTH       = 32,
   parameter       AWIDTH       = 14,
+  parameter       GT_COMMON    = 1,
   parameter [7:0] PORTNUM      = 8'd0,
   parameter       MDIO_EN      = 0,
   parameter [4:0] MDIO_PHYADDR = 5'd0
@@ -249,6 +250,7 @@ module n3xx_sfp_wrapper #(
         .REG_BASE       (REG_BASE_SFP_IO),
         .REG_DWIDTH     (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)
         .REG_AWIDTH     (AWIDTH),   // Width of the address bus
+        .GT_COMMON      (GT_COMMON),
         .MDIO_EN        (MDIO_EN),
         .MDIO_PHYADDR   (MDIO_PHYADDR),
         .PORTNUM        (PORTNUM)
