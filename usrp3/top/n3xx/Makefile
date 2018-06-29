@@ -37,8 +37,15 @@ TARGET = bin
 endif
 TOP ?= n3xx
 
+# Additional HLS options
+ifdef HLS
+HLS_DEFS = HLS=1
+else
+HLS_DEFS =
+endif
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.n3xx.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.n3xx.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 $(HLS_DEFS) TOP_MODULE=$(TOP) EXTRA_DEFS="$2 $(HLS_DEFS)"
 
 # vivado_build($1=Device, $2=Option)
 post_build = @\

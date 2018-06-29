@@ -100,6 +100,12 @@ else
 MAGNESIUM_DB_XDC = $(MAGNESIUM_DB_TIMING_XDC) $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC)
 endif
 
+ifdef HLS
+HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
+else
+HLS_IP_TARGETS =
+endif
+
 # The XDC files must be read in a specific order, motherboard first and then daughterboard.
 # Outside of that, all the other sources can be read in any order desired.
 DESIGN_SRCS = $(abspath $(MB_XDC)) $(MAGNESIUM_DB_XDC) $(MAGNESIUM_TOP_SRCS) \
