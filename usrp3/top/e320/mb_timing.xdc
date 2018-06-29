@@ -214,6 +214,46 @@ set_output_delay -clock [get_clocks tx_clk] -min [expr -$tHoldOut] [get_ports {T
 
 
 ###############################################################################
+# SPI
+###############################################################################
+
+# Xilinx doesn't allow you to fully constrain EMIO because the internal SPI
+# clock is not accessible. So delay constraints are used to limit the delays to
+# compatible values.
+
+# Transceiver SPI
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI0MO] \
+              -to [get_ports XCVR_SPI_MOSI] 6.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_MOSI] 0.0
+#
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI0SCLKO] \
+              -to [get_ports XCVR_SPI_CLK] 6.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_CLK] 0.0
+#
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI0SSON[0]] \
+              -to [get_ports XCVR_SPI_CS_N] 6.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_CS_N] 0.0
+#
+set_max_delay -from [get_ports XCVR_SPI_MISO] \
+              -to [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI0MI] 4.0 -datapath_only
+set_min_delay -from [get_ports XCVR_SPI_MISO] -to [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI0MI] 0.0
+
+# Clock synthesizer SPI
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI1MO] \
+              -to [get_ports CLK_PLL_SDATA] 9.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_MOSI] 0.0
+#
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI1SCLKO] \
+              -to [get_ports CLK_PLL_SCLK] 9.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_CLK] 0.0
+#
+set_max_delay -from [get_pins e320_ps_bd_i/processing_system7_0/inst/PS7_i/EMIOSPI1SSON[0]] \
+              -to [get_ports CLK_PLL_SLE] 9.0 -datapath_only
+set_min_delay -to [get_ports XCVR_SPI_CS_N] 0.0
+
+
+
+###############################################################################
 # Miscellaneous I/O Constraints
 ###############################################################################
 
