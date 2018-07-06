@@ -96,10 +96,9 @@ module gpif2_slave_fifo32
     localparam STATE_READ  = 2;
     localparam STATE_WRITE = 3;
     localparam STATE_WAIT = 4;
-    localparam STATE_ZLP = 5;
-    localparam STATE_READ_FLUSH = 6;
-    localparam STATE_WRITE_FLUSH = 7;
-    localparam STATE_READ_SINGLE = 8;
+    localparam STATE_READ_FLUSH = 5;
+    localparam STATE_WRITE_FLUSH = 6;
+    localparam STATE_READ_SINGLE = 7;
 
 
     // General purpose pseudo-state counter.
@@ -147,7 +146,7 @@ module gpif2_slave_fifo32
      end
 
    reg first_read;
-
+    reg pad = 0;
 
    // //////////////////////////////////////////////////////////////
    // FX2 slave FIFO bus master state machine
@@ -166,6 +165,7 @@ module gpif2_slave_fifo32
         last_addr <= 2'b0;
         rx_eop <= 1'b0;
         transfer_size <= 1;
+        pad <= 0;
 
     end
     else if (gpif_enb) begin
@@ -228,16 +228,15 @@ module gpif2_slave_fifo32
 	    end else if (fx3_ready1 && write_ready_go && wr_fifo_eop && (transfer_size[7:0] == 0)) begin // remember that write_ready_go shows 1 cycle old status.
 	       // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
 	       // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
-	       // indicated when the watermark will terminate the transfer in this case) then we must send an immediate ZLP
-	       // before going idle so that the FX3 recognises that the packet has ended. (Page 57 AN65974).
-	       state <= STATE_ZLP;
-	       idle_cycles <= 3'd0; // Clear ready for ZLP state use.
-	       pktend <= 1'b0; // Active low - Asserted,
-	       slwr <= 1'b0; // Active low - Asserted, write to FX3
+	       // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
+           // for one more cycle to ensure it does not get stuck in the FX3.
+           pktend <= 1'b1; // Active low - De-asserted
+           slwr <= 1'b0; //Active low - Asserted, write to FX3.
 	       sloe <= 1; // FPGA drives the data bus
-	       transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
+	       transfer_size <= transfer_size + 1; // Increment transfer_size.
 	       gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
-	    end else if (fx3_ready1 && write_ready_go && wr_fifo_eop) begin  // remember that write_ready_go shows 1 cycle old status.
+           pad <= 1;
+	    end else if ((fx3_ready1 && write_ready_go && wr_fifo_eop) | pad) begin  // remember that write_ready_go shows 1 cycle old status.
 	       // Its the end of a CHDR packet and we are not on a FX3 corner case size.
 	       // Go IDLE with pktend and slwr asserted to write the last data.
 	       pktend <= 1'b0; // Active low - Asserted,
@@ -247,6 +246,7 @@ module gpif2_slave_fifo32
 	       sloe <= 1; // FPGA drives the data bus
 	       transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
 	       gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
+           pad <= 0; // Reset pad
             end else if (fx3_ready1 && write_ready_go) begin // remember that write_ready_go shows 1 cycle old status.
 	       // There is (an unknown amount of) data ready to send to FX from local FIFO.
                state <= STATE_WRITE;
@@ -339,22 +339,22 @@ module gpif2_slave_fifo32
 
 	  // Now in potential write burst. Exit this sate immediately if we are only doing a single beat write.
 	  // Can exit this state in several ways:
-	  // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must send a ZLP in
+	  // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must pad packet for 1 clock cycle in 
 	  // addition to simply asserting pktend.
 	  // Otherwise at EOP just send a short packet.
 	  // If local FIFO goes empty then we terminatethe burst without asserting pktend.
         STATE_WRITE: begin
 	   if (wr_fifo_eop && wr_fifo_xfer && (transfer_size[7:0] == 0)) begin
+
 	      // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
 	      // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
-	      // indicated when the watermark will terminate the transfer in this case) then we must send an immediate ZLP
-	      // before going idle so that the FX3 recognises that the packet has ended. (Page 57 AN65974).
-	      state <= STATE_ZLP;
-	      idle_cycles <= 3'd0; // Clear ready for ZLP state use.
-	      pktend <= 1'b0; // Active low - Asserted,
-	      slwr <= 1'b0; // Active low - Asserted, write to FX3
-	      transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
-	   end else if (wr_fifo_eop && wr_fifo_xfer) begin
+	      // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
+          // for one more cycle to ensure it does not get stuck in the FX3.
+          pktend <= 1'b1; // Active low - De-asserted,
+          slwr <= 1'b0; // Active low - Asserted, write to FX3
+          transfer_size <= transfer_size + 1; // Increment transfer_size.
+          pad <= 1;
+	   end else if ((wr_fifo_eop && wr_fifo_xfer) | pad) begin
 	      // Its the end of a CHDR packet and we are not on a FX3 corner case size.
 	      // Go IDLE with pktend and slwr asserted to write the last data.
 	      pktend <= 1'b0; // Active low - Asserted,
@@ -362,6 +362,7 @@ module gpif2_slave_fifo32
 	      idle_cycles <= 3'd5; // Stay in flush 3 cycles
 	      slwr <= 1'b0; // Active low - Asserted, write to FX3
 	      transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
+          pad <= 0; //Reset pad
 	   end else if (wr_fifo_xfer) begin
 	      // Regular write beat as part of a burst.
 	      pktend <= 1'b1; // Active low - De-asserted,
@@ -394,28 +395,6 @@ module gpif2_slave_fifo32
 		state <= STATE_IDLE;
 	     end
         end
-
-	  //
-	  // AN65974 Page57:
-	  // "To send a ZLP immediately after writing data that is multiples of the packet size,
-	  // the FPGA needs to assert the PKTEND# signal for at least two clock cycles after the
-	  // SLWR# signal is de-asserted. This is because the GPIF II state machine requires two clock
-	  // cycles to move from the “Write” state to the “ZLP” state.
-	  //
-	  STATE_ZLP: begin
-	     slwr <= 1'b1;
-	     sloe <= 1'b1;
-	     idle_cycles <= idle_cycles + 1'b1;
-             if (idle_cycles == 3'h001) begin
-		// FX3 should now be in internal ZLP state
-		state <= STATE_WRITE_FLUSH;
-		pktend <= 1'b0;
-		idle_cycles <= 3'd5; // Stay in flush 3 cycles.
-	     end else begin
-		// FX3 should now be transitioning through inetrnal IDLE state
-		pktend <= 1'b0;
-	     end
-	  end // case: STATE_ZLP
 
 
         default: state <= STATE_IDLE;
@@ -470,7 +449,7 @@ module gpif2_slave_fifo32
 
     //fifo xfer enable
     wire data_rx_tready = (
-			   ((state == STATE_WRITE) && fx3_wmark1) || // Sustain burst
+			   ((state == STATE_WRITE) && fx3_wmark1 && ~pad) || // Sustain burst
 			   ((state == STATE_THINK) && fx3_ready1)    // First beat
 			   ) && (fifoadr == ADDR_DATA_RX) ;
 
