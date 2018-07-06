@@ -16,9 +16,11 @@ module simple_uart_tx
    wire 	  read, empty;
    wire [7:0] 	  char_to_send;
    wire 	  i_tready, o_tvalid;
+   wire [15:0]    fifo_space;
 
    assign fifo_full = ~i_tready;
    assign empty = ~o_tvalid;
+   assign fifo_level = fifo_space[5:0];
 
    axi_fifo #(.WIDTH(8), .SIZE(SIZE)) fifo
      (.clk(clk),.reset(rst), .clear(1'b0),

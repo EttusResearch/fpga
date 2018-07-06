@@ -50,7 +50,7 @@ module simple_uart
    simple_uart_tx simple_uart_tx
      (.clk(clk_i),.rst(rst_i),
       .fifo_in(dat_i[7:0]),.fifo_write(ack_o && wb_wr && (adr_i == SUART_TXCHAR)),
-      .fifo_level(tx_fifo_level),.fifo_full(tx_fifo_full),
+      .fifo_level(tx_fifo_level[5:0]),.fifo_full(tx_fifo_full),
       .clkdiv(clkdiv),.baudclk(baud_o),.tx(tx_o));
 
    simple_uart_rx simple_uart_rx
