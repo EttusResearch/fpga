@@ -127,7 +127,7 @@ module hb47_int
 
    wire [34:17] 	 result_clip;
    clip_reg #(.bits_in(31),.bits_out(18)) final_clip
-     (.clk(clk),.in(result_rnd[47:17]),.strobe_in(1'b1), .out(result_clip[34:17]), .strobe_out());
+     (.clk(clk), .reset(rst), .in(result_rnd[47:17]),.strobe_in(1'b1), .out(result_clip[34:17]), .strobe_out());
 
    //
    // Data enters the sample pipeline when stb_in is asserted.

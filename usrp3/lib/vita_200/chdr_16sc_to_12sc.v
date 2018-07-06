@@ -69,7 +69,7 @@ module chdr_16sc_to_12sc
 
    setting_reg #(.my_addr(BASE), .width(17)) new_destination
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({set_sid, new_sid_dst[15:0]}));
+      .out({set_sid, new_sid_dst[15:0]}), .changed());
    // state machine
 
    localparam 		HEADER  = 3'd0;

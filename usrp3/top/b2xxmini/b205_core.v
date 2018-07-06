@@ -89,7 +89,7 @@ module b205_core
     // Generate an internal PPS signal
     wire int_pps;
     pps_generator #(.CLK_FREQ(100000000)) pps_gen
-    (.clk(bus_clk), .pps(int_pps));
+    (.clk(bus_clk), .reset(1'b0), .pps(int_pps));
 
     // Flop PPS signals into radio clock domain
     reg [1:0] 	 ext_pps_del, int_pps_del;
@@ -201,7 +201,7 @@ module b205_core
     (
         .clock(bus_clk), .reset(bus_rst),
         .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-        .readback(spi_readback), .ready(spi_ready),
+        .readback(spi_readback), .readback_stb(), .ready(spi_ready),
         .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
         .debug()
     );
@@ -243,7 +243,7 @@ module b205_core
         .rx_tdata(rx_tdata), .rx_tlast(rx_tlast),  .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
         .ctrl_tdata(r0_ctrl_tdata), .ctrl_tlast(r0_ctrl_tlast),  .ctrl_tvalid(r0_ctrl_tvalid), .ctrl_tready(r0_ctrl_tready),
         .resp_tdata(r0_resp_tdata), .resp_tlast(r0_resp_tlast),  .resp_tvalid(r0_resp_tvalid), .resp_tready(r0_resp_tready),
-        .debug()
+        .vita_time_b(), .debug()
     );
 
 

@@ -48,6 +48,7 @@ module b200_io
    //
    //------------------------------------------------------------------
    reg 		   mimo_sync, mimo_sync2;
+   wire            siso_clk;
 
    always @(posedge siso_clk) begin
       mimo_sync <= mimo_sync2;
@@ -398,6 +399,7 @@ module b200_io
    // even if it works in the real world depending on how well the STA tool can do automatic case analysis.
    //
    //------------------------------------------------------------------
+   wire tx_strobe;
    // This code lock only relevent in MIMO mode.
    always @(negedge siso_clk)
      if (tx_strobe)
@@ -462,7 +464,6 @@ module b200_io
    // Mux I & Q, Ch A & B onto fullrate clockTX bus to AD9361
    //
    //------------------------------------------------------------------
-   wire tx_strobe;
    reg [11:0] tx_i_del, tx_q_del;
 
    reg 	      find_radio_clk_phase = 1'b0;

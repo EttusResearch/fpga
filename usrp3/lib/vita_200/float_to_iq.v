@@ -64,7 +64,7 @@ module float_to_iq
    
    
 
-   assign out = (pos_inf)?{1'b0,15'h7FFF}:(neg_inf)?{1'b1,15'h8000}:(denorm || tiny_exp)? 16'b0: final_val;
+   assign out = (pos_inf)?{1'b0,15'h7FFF}:(neg_inf)?{1'b1,15'h0}:(denorm || tiny_exp)? 16'b0: final_val;
    
 
 

@@ -164,7 +164,7 @@ module radio_legacy
       .ready(1'b1), .readback(rb_data),
       .debug(debug_radio_ctrl_proc));
 
-   reg [63:0]     rb_data_user;
+   wire [63:0]     rb_data_user;
 generate
    if (USER_SETTINGS == 1) begin
       wire           set_stb_user;
@@ -198,16 +198,12 @@ generate
         (.clk(radio_clk), .rst(radio_rst), .strobe(set_stb_user), .addr(set_addr_user), .in(set_data_user),
          .out(user_reg_1_value), .changed());
 
-      always @* begin
-         case(rb_addr_user)
-            8'd0 : rb_data_user <= {user_reg_1_value, user_reg_0_value};
-            default : rb_data_user <= 64'd0;
-         endcase
-      end
+      assign rb_data_user = (rb_addr_user == 8'd0) ?
+                            {user_reg_1_value, user_reg_0_value} : 64'd0;
       */
 
    end else begin    //for USER_SETTINGS == 1
-      always @* rb_data_user <= 64'd0;
+      assign rb_data_user = 64'd0;
    end
 endgenerate
 

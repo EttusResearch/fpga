@@ -51,8 +51,8 @@ module axi_mux8 #(
       .clk(clk), .reset(reset), .clear(clear),
       .i0_tdata(o_tdata_int0), .i0_tlast(o_tlast_int0), .i0_tvalid(o_tvalid_int0), .i0_tready(o_tready_int0),
       .i1_tdata(o_tdata_int1), .i1_tlast(o_tlast_int1), .i1_tvalid(o_tvalid_int1), .i1_tready(o_tready_int1),
-      .i2_tdata(0), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
-      .i3_tdata(0), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
+      .i2_tdata({WIDTH{1'b0}}), .i2_tlast(1'b0), .i2_tvalid(1'b0), .i2_tready(),
+      .i3_tdata({WIDTH{1'b0}}), .i3_tlast(1'b0), .i3_tvalid(1'b0), .i3_tready(),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready)
    );
 

@@ -153,7 +153,7 @@ module b205 (
         .reset(ref_pll_rst),
         .clk(ref_pll_clk),
         .refclk(int_40mhz),
-        .ref(ext_ref),
+        .extref(ext_ref),
         .locked(ext_ref_locked),
         .sclk(CLK_40M_DAC_SCLK),
         .mosi(CLK_40M_DAC_DIN),
