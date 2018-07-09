@@ -79,7 +79,7 @@ module gpif2_slave_fifo32
       if (~slrd2)
 	// Update data register only when something useful is read.
 	// Hold values until we know if they are end of packets for single beat reads.
-	gpif_data_in <= gpif_d;
+    gpif_data_in <= gpif_d;
 
     assign gpif_d = sloe ? gpif_data_out[31:0] : 32'bz;
 
@@ -115,13 +115,13 @@ module gpif2_slave_fifo32
     // Read strobe pipeline.
     reg slrd1, slrd2, slrd3, slrd4, slrd5;
 
-   always @(posedge gpif_clk)
+    always @(posedge gpif_clk)
      if (gpif_rst) begin
         slrd1 <= 1'b1;
         slrd2 <= 1'b1;
         slrd3 <= 1'b1;
-	slrd4 <= 1'b1;
-	slrd5 <= 1'b1;
+        slrd4 <= 1'b1;
+        slrd5 <= 1'b1;
      end else begin
         slrd1 <= slrd;
         slrd2 <= slrd1;
@@ -136,17 +136,17 @@ module gpif2_slave_fifo32
    // This pipeline tracks the end of a CHDR TX packet seperately from the local FIFO becoming full.
    // This is because a true packet end causes a tlast assertion to the FIFO, where as a full local FIFO only requires
    // the GPIF transaction to be ended before local FIFO overflow occurs.
-   always @(posedge gpif_clk)
-     if (gpif_rst) begin
-	rx_eop1 <= 1;
-	rx_eop2 <= 1;
-     end else begin
-	rx_eop2 <= rx_eop1;
-	rx_eop1 <= rx_eop;
-     end
+    always @(posedge gpif_clk)
+      if (gpif_rst) begin
+        rx_eop1 <= 1;
+        rx_eop2 <= 1;
+      end else begin
+        rx_eop2 <= rx_eop1;
+        rx_eop1 <= rx_eop;
+    end
 
    reg first_read;
-    reg pad = 0;
+   reg pad = 0;
 
    // //////////////////////////////////////////////////////////////
    // FX2 slave FIFO bus master state machine
@@ -169,232 +169,233 @@ module gpif2_slave_fifo32
 
     end
     else if (gpif_enb) begin
-        case (state)
+      case (state)
 
-	  //
-	  // Increment fifoadr to point at next thread, set all strobes to idle,
-	  //
+      //
+      // Increment fifoadr to point at next thread, set all strobes to idle,
+      //
         STATE_IDLE: begin
-            sloe <= 1;
-            slrd <= 1;
-            slwr <= 1;
-            pktend <= 1;
-            gpif_data_out <= 32'b0;
-            fifoadr <= next_addr;
-            state <= STATE_WAIT;
-            idle_cycles <= 3'h0;
-       	    rx_eop <= 1'b0;
-	    first_read <= 1'b0;
+          sloe <= 1;
+          slrd <= 1;
+          slwr <= 1;
+          pktend <= 1;
+          gpif_data_out <= 32'b0;
+          fifoadr <= next_addr;
+          state <= STATE_WAIT;
+          idle_cycles <= 3'h0;
+       	  rx_eop <= 1'b0;
+          first_read <= 1'b0;
         end
 
-	  //
-	  // If the current thread we are pointing at (fifoadr) can not immediately proceed
-	  // then quickly move to the next thread. Once we are pointing at a thread that can proceed locally
-	  // wait for 8 clock cycles to allow fifoadr to propogate to FX3, and corresponding flag state to
-	  // propogate back to FPGA and through resampling flops. At this point transition to STATE_THINK
-	  // to evaluate remote flag.
-	  //
+      //
+      // If the current thread we are pointing at (fifoadr) can not immediately proceed
+      // then quickly move to the next thread. Once we are pointing at a thread that can proceed locally
+      // wait for 8 clock cycles to allow fifoadr to propogate to FX3, and corresponding flag state to
+      // propogate back to FPGA and through resampling flops. At this point transition to STATE_THINK
+      // to evaluate remote flag.
+      //
         STATE_WAIT: begin
-	   // Current thread can proceed locally
-            if (local_fifo_ready) begin
-                idle_cycles <= idle_cycles + 1'b1;
-                if (idle_cycles == 3'b111) state <= STATE_THINK; // Could shortedn this delay, flags now stable for several clocks.
-            end
-	   // ....move onto next thread.
-            else begin
-                idle_cycles <= 3'b0;
-                //fifoadr <= fifoadr + 2'b1;
-	       fifoadr <= next_addr;
+       // Current thread can proceed locally
+          if (local_fifo_ready) begin
+            idle_cycles <= idle_cycles + 1'b1;
+          if (idle_cycles == 3'b111) state <= STATE_THINK; // Could shortedn this delay, flags now stable for several clocks.
+          end
+       // ....move onto next thread.
+          else begin
+            idle_cycles <= 3'b0;
+            //fifoadr <= fifoadr + 2'b1;
+            fifoadr <= next_addr;
 
-            end
+          end
         end
 
-	  //
-	  // Flags from FX3 now stable. Make a decision about what type of transaction to start.
-	  //
+      //
+      // Flags from FX3 now stable. Make a decision about what type of transaction to start.
+      //
         STATE_THINK: begin
-	   // This is written like a priority encoder but in reality read_ready_go and
-	   // write_ready_go are mutually exclusive by design.
-            if (fx3_ready1 && fx3_wmark1 && read_ready_go) begin
-                state <= STATE_READ;
-                slrd <= 0;
-	        rx_eop <= 1'b0;
-                first_read <= 1'b1; // Set unconditional read flag to kick off transaction
-	        sloe <= 0; // FX3 drives the data bus.
-            end else if (fx3_ready1 && ~fx3_wmark1 && read_ready_go) begin
-                state <= STATE_READ_SINGLE;
-                slrd <= 0;
-	        sloe <= 0; // FX3 drives the data bus.
-	    end else if (fx3_ready1 && write_ready_go && wr_fifo_eop && (transfer_size[7:0] == 0)) begin // remember that write_ready_go shows 1 cycle old status.
-	       // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
-	       // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
-	       // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
-           // for one more cycle to ensure it does not get stuck in the FX3.
-           pktend <= 1'b1; // Active low - De-asserted
-           slwr <= 1'b0; //Active low - Asserted, write to FX3.
-	       sloe <= 1; // FPGA drives the data bus
-	       transfer_size <= transfer_size + 1; // Increment transfer_size.
-	       gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
-           pad <= 1;
-	    end else if ((fx3_ready1 && write_ready_go && wr_fifo_eop) | pad) begin  // remember that write_ready_go shows 1 cycle old status.
-	       // Its the end of a CHDR packet and we are not on a FX3 corner case size.
-	       // Go IDLE with pktend and slwr asserted to write the last data.
-	       pktend <= 1'b0; // Active low - Asserted,
-	       state <= STATE_WRITE_FLUSH;
-	       idle_cycles <= 3'd5; // Stay in flush 3 cycles
-	       slwr <= 1'b0; // Active low - Asserted, write to FX3
-	       sloe <= 1; // FPGA drives the data bus
-	       transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
-	       gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
-           pad <= 0; // Reset pad
-            end else if (fx3_ready1 && write_ready_go) begin // remember that write_ready_go shows 1 cycle old status.
-	       // There is (an unknown amount of) data ready to send to FX from local FIFO.
-               state <= STATE_WRITE;
-	       slwr <= 1'b0;  // Active low - Write strobe active
-               sloe <= 1; // FPGA drives the data bus
-	       gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
-	       transfer_size <= transfer_size + 1; // Account for current cycles transfer
-            end
-            else begin
-	        sloe <= 1;
-                state <= STATE_IDLE;
-            end
+        // This is written like a priority encoder but in reality read_ready_go and
+        // write_ready_go are mutually exclusive by design.
+          if (fx3_ready1 && fx3_wmark1 && read_ready_go) begin
+            state <= STATE_READ;
+            slrd <= 0;
+            rx_eop <= 1'b0;
+            first_read <= 1'b1; // Set unconditional read flag to kick off transaction
+            sloe <= 0; // FX3 drives the data bus.
+          end else if (fx3_ready1 && ~fx3_wmark1 && read_ready_go) begin
+            state <= STATE_READ_SINGLE;
+            slrd <= 0;
+            sloe <= 0; // FX3 drives the data bus.
+          end else if (fx3_ready1 && write_ready_go && wr_fifo_eop && (transfer_size[7:0] == 0)) begin // remember that write_ready_go shows 1 cycle old status.
+            // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
+            // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
+            // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
+            // for one more cycle to ensure it does not get stuck in the FX3.
+            pktend <= 1'b1; // Active low - De-asserted
+            slwr <= 1'b0; //Active low - Asserted, write to FX3.
+            sloe <= 1; // FPGA drives the data bus
+            transfer_size <= transfer_size + 1; // Increment transfer_size.
+            gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
+            pad <= 1;
+          end else if ((fx3_ready1 && write_ready_go && wr_fifo_eop) | pad) begin  // remember that write_ready_go shows 1 cycle old status.
+            // Its the end of a CHDR packet and we are not on a FX3 corner case size.
+            // Go IDLE with pktend and slwr asserted to write the last data.
+            pktend <= 1'b0; // Active low - Asserted,
+            state <= STATE_WRITE_FLUSH;
+            idle_cycles <= 3'd5; // Stay in flush 3 cycles
+            slwr <= 1'b0; // Active low - Asserted, write to FX3
+            sloe <= 1; // FPGA drives the data bus
+            transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
+            gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
+            pad <= 0; // Reset pad
+          end else if (fx3_ready1 && write_ready_go) begin // remember that write_ready_go shows 1 cycle old status.
+           // There is (an unknown amount of) data ready to send to FX from local FIFO.
+            state <= STATE_WRITE;
+            slwr <= 1'b0;  // Active low - Write strobe active
+            sloe <= 1; // FPGA drives the data bus
+            gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
+            transfer_size <= transfer_size + 1; // Account for current cycles transfer
+          end
+          else begin
+            sloe <= 1;
+            state <= STATE_IDLE;
+          end
 
             idle_cycles <= 3'h0;
             last_addr <= fifoadr;
         end // case: STATE_THINK
 
-	  // Got here because READY flag asserted but watermark deaaserted...QED there's less than the watermarks
-	  // worth of data to read from FX remaining in this DMA page. Need to do that with single beat reads
-	  // followed by rechecking the READY flag to see if it deassserted indicating that the page emptied.
-	  // Since we have the read data from FX3 earlier than we have a flag to inspect we keep the data in
-	  // gpif_data_in until we know if we are commiting it to the FIFO with or without an asserted TLAST.
-	  //
-	  STATE_READ_SINGLE: begin
-	     if (idle_cycles == 0) begin
-		// Deassert read strobe after reading single 32bit word
-		slrd <= 1'b1;		idle_cycles <= idle_cycles + 1;
-		sloe <= 1'b0; // FX3 drives the data bus
-	     end else if (idle_cycles == 5) begin
+      // Got here because READY flag asserted but watermark deaaserted...QED there's less than the watermarks
+      // worth of data to read from FX remaining in this DMA page. Need to do that with single beat reads
+      // followed by rechecking the READY flag to see if it deassserted indicating that the page emptied.
+      // Since we have the read data from FX3 earlier than we have a flag to inspect we keep the data in
+      // gpif_data_in until we know if we are commiting it to the FIFO with or without an asserted TLAST.
+      //
+      STATE_READ_SINGLE: begin
+        if (idle_cycles == 0) begin
+    	// Deassert read strobe after reading single 32bit word
+          slrd <= 1'b1;
+          idle_cycles <= idle_cycles + 1;
+	        sloe <= 1'b0; // FX3 drives the data bus
+	      end else if (idle_cycles == 5) begin
 		// READY1 flag now reflect effects of last read.
-		if (!fx3_ready1) begin
-		   state <= STATE_IDLE;
-		   sloe <= 1'b1;
-		end else begin
-		   // Initiate another READ beat.
-		   state <= STATE_READ_SINGLE;
-		   slrd <= 1'b0;
-		end
-		idle_cycles <= 0;
-	     end else begin
-		// All other idle_cycles counts.
-		sloe <= 1'b0; // FX3 drives the data bus
-		idle_cycles <= idle_cycles + 1;
-	     end
-	  end // case: STATE_READ_SINGLE
+        if (!fx3_ready1) begin
+           state <= STATE_IDLE;
+		       sloe <= 1'b1;
+        end else begin
+        // Initiate another READ beat.
+           state <= STATE_READ_SINGLE;
+           slrd <= 1'b0;
+        end
+        idle_cycles <= 0;
+        end else begin
+          // All other idle_cycles counts.
+          sloe <= 1'b0; // FX3 drives the data bus
+          idle_cycles <= idle_cycles + 1;
+        end
+      end // case: STATE_READ_SINGLE
 
 
-	  // If flag first_read and ~slrd3 have gone deasserted
-	  // (meaning that the watermark deasserted 5 clock cycles ago or local FIFO full) transition to STATE_IDLE.
-	  // If watermark deasserted 2 cycles ago de-assert slrd ...read data is still traveling in the pipeline.
-	  // Whilst ~slrd3 stays asserted keep the first_read flag armed.
-	  // Trigger TLAST only for transfer ended by watermark (Which indicates a true packet end), not local full FIFO.
-        STATE_READ: begin
-           sloe <= 1'b0; // FX3 drives the data bus
+      // If flag first_read and ~slrd3 have gone deasserted
+      // (meaning that the watermark deasserted 5 clock cycles ago or local FIFO full) transition to STATE_IDLE.
+      // If watermark deasserted 2 cycles ago de-assert slrd ...read data is still traveling in the pipeline.
+      // Whilst ~slrd3 stays asserted keep the first_read flag armed.
+      // Trigger TLAST only for transfer ended by watermark (Which indicates a true packet end), not local full FIFO.
+      STATE_READ: begin
+        sloe <= 1'b0; // FX3 drives the data bus
 
-            if (~fx3_wmark1 | fifo_nearly_full) begin
-	       // Either end of packet or local FIFO full is imminent, start shuting down this read burst.
-	       slrd <= 1'b1;  // Active low - Take read strobe inactive
-	       state <= STATE_READ_FLUSH;
-	    end else begin
-	       slrd <= 1'b0; // Active low - Keep read strobe active.
-	    end
-
-	    if (~fx3_wmark1)
-	      // Put TLAST into pipepline to mark end of packet
-	      rx_eop <= 1'b1;
-
-            if (~slrd3)
-	      // Reset first_read flag as slrd assertion progresses down pipeline
-	      first_read <= 1'b0;
-        end // case: STATE_READ
-
-	  // SLRD has been deasserted but data continues to flow from FX3 into FPGA until pipeline empties.
-        STATE_READ_FLUSH: begin
-	   slrd <= 1'b1; // Active low - Keep read strobe inactive.
-	   rx_eop <= 1'b0; // EOP indication can be reset now - Already travelling in the pipeline if it was active.
-	   if (~slrd3)
-	     // Reset first_read flag as slrd assertion progresses down pipeline
-	     first_read <= 1'b0;
-	   if (!first_read && slrd3) begin // Active low signal
-	       // Last data of burst will be written to FIFO next clock edge so transition to IDLE also.
-	       state <= STATE_IDLE;
-	       sloe <= 1'b1; // Active low - Resume parking bus with FPGA driving.
-	   end else begin
-	       // Still data traveling through the pipeline.
-	       sloe <= 1'b0; // Active low -  FX3 drives the bus
-	    end
+        if (~fx3_wmark1 | fifo_nearly_full) begin
+          // Either end of packet or local FIFO full is imminent, start shuting down this read burst.
+          slrd <= 1'b1;  // Active low - Take read strobe inactive
+          state <= STATE_READ_FLUSH;
+        end else begin
+           slrd <= 1'b0; // Active low - Keep read strobe active.
         end
 
+        if (~fx3_wmark1)
+          // Put TLAST into pipepline to mark end of packet
+          rx_eop <= 1'b1;
 
-	  // Now in potential write burst. Exit this sate immediately if we are only doing a single beat write.
-	  // Can exit this state in several ways:
-	  // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must pad packet for 1 clock cycle in 
-	  // addition to simply asserting pktend.
-	  // Otherwise at EOP just send a short packet.
-	  // If local FIFO goes empty then we terminatethe burst without asserting pktend.
-        STATE_WRITE: begin
-	   if (wr_fifo_eop && wr_fifo_xfer && (transfer_size[7:0] == 0)) begin
+        if (~slrd3)
+          // Reset first_read flag as slrd assertion progresses down pipeline
+         first_read <= 1'b0;
+      end // case: STATE_READ
 
-	      // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
-	      // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
-	      // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
+      // SLRD has been deasserted but data continues to flow from FX3 into FPGA until pipeline empties.
+      STATE_READ_FLUSH: begin
+        slrd <= 1'b1; // Active low - Keep read strobe inactive.
+        rx_eop <= 1'b0; // EOP indication can be reset now - Already travelling in the pipeline if it was active.
+        if (~slrd3)
+          // Reset first_read flag as slrd assertion progresses down pipeline
+          first_read <= 1'b0;
+        if (!first_read && slrd3) begin // Active low signal
+          // Last data of burst will be written to FIFO next clock edge so transition to IDLE also.
+          state <= STATE_IDLE;
+          sloe <= 1'b1; // Active low - Resume parking bus with FPGA driving.
+        end else begin
+	        // Still data traveling through the pipeline.
+          sloe <= 1'b0; // Active low -  FX3 drives the bus
+        end
+      end
+
+
+      // Now in potential write burst. Exit this sate immediately if we are only doing a single beat write.
+      // Can exit this state in several ways:
+      // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must pad packet for 1 clock cycle in 
+      // addition to simply asserting pktend.
+      // Otherwise at EOP just send a short packet.
+      // If local FIFO goes empty then we terminatethe burst without asserting pktend.
+      STATE_WRITE: begin
+        if (wr_fifo_eop && wr_fifo_xfer && (transfer_size[7:0] == 0)) begin
+
+          // If an exact multiple of the native USB packet size (1K USB3, 512B USB2) has been transfered
+          // and TLAST is asserted (but the transfer is less than a full FX3 DMA buffer - this is
+          // indicated when the watermark will terminate the transfer in this case) then we will pad the packet
           // for one more cycle to ensure it does not get stuck in the FX3.
           pktend <= 1'b1; // Active low - De-asserted,
           slwr <= 1'b0; // Active low - Asserted, write to FX3
           transfer_size <= transfer_size + 1; // Increment transfer_size.
           pad <= 1;
-	   end else if ((wr_fifo_eop && wr_fifo_xfer) | pad) begin
-	      // Its the end of a CHDR packet and we are not on a FX3 corner case size.
-	      // Go IDLE with pktend and slwr asserted to write the last data.
-	      pktend <= 1'b0; // Active low - Asserted,
-	      state <= STATE_WRITE_FLUSH;
-	      idle_cycles <= 3'd5; // Stay in flush 3 cycles
-	      slwr <= 1'b0; // Active low - Asserted, write to FX3
-	      transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
+       end else if ((wr_fifo_eop && wr_fifo_xfer) | pad) begin
+          // Its the end of a CHDR packet and we are not on a FX3 corner case size.
+          // Go IDLE with pktend and slwr asserted to write the last data.
+          pktend <= 1'b0; // Active low - Asserted,
+          state <= STATE_WRITE_FLUSH;
+          idle_cycles <= 3'd5; // Stay in flush 3 cycles
+          slwr <= 1'b0; // Active low - Asserted, write to FX3
+          transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
           pad <= 0; //Reset pad
-	   end else if (wr_fifo_xfer) begin
-	      // Regular write beat as part of a burst.
-	      pktend <= 1'b1; // Active low - De-asserted,
-	      slwr <= 1'b0; // Active low - Asserted, write to FX3
-	      transfer_size <= transfer_size + 1; // Account for current cycles transfer
-	   end else begin // Implicit if (~wr_fifo_xfer)
-	      // This was either a single beat write (watermark was never asserted)
-	      // or the water mark just deasserted or we ran out of local data to send.
-	      // slwr will be deasserted and we transition to the flush state.
-	      state <= STATE_WRITE_FLUSH;
-	      idle_cycles <= 3'd6; // Stay in flush 2 cycles.
-	      pktend <= 1'b1; // Active low - De-asserted,
-	      slwr <= 1'b1; // Active low - Deasserted, don't write to FX3
-	   end
+       end else if (wr_fifo_xfer) begin
+          // Regular write beat as part of a burst.
+          pktend <= 1'b1; // Active low - De-asserted,
+          slwr <= 1'b0; // Active low - Asserted, write to FX3
+          transfer_size <= transfer_size + 1; // Account for current cycles transfer
+       end else begin // Implicit if (~wr_fifo_xfer)
+          // This was either a single beat write (watermark was never asserted)
+          // or the water mark just deasserted or we ran out of local data to send.
+          // slwr will be deasserted and we transition to the flush state.
+          state <= STATE_WRITE_FLUSH;
+          idle_cycles <= 3'd6; // Stay in flush 2 cycles.
+          pktend <= 1'b1; // Active low - De-asserted,
+          slwr <= 1'b1; // Active low - Deasserted, don't write to FX3
+       end
 
-           gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
+        gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
 
-	   sloe <= 1'b1; // FPGA always masters bus in this state.
-        end // case: STATE_WRITE
+        sloe <= 1'b1; // FPGA always masters bus in this state.
+       end // case: STATE_WRITE
 
-	  // Some FX3 timing diagrams seem to imply address should be held stable after transaction
-	  STATE_WRITE_FLUSH: begin
-	    sloe <= 1;
-            slrd <= 1;
-            slwr <= 1;
-            pktend <= 1;
-            gpif_data_out <= 32'b0;
-	    idle_cycles <= idle_cycles + 1'b1;
-             if (idle_cycles == 3'b111) begin
-		state <= STATE_IDLE;
-	     end
+      // Some FX3 timing diagrams seem to imply address should be held stable after transaction
+      STATE_WRITE_FLUSH: begin
+        sloe <= 1;
+        slrd <= 1;
+        slwr <= 1;
+        pktend <= 1;
+        gpif_data_out <= 32'b0;
+        idle_cycles <= idle_cycles + 1'b1;
+        if (idle_cycles == 3'b111) begin
+          state <= STATE_IDLE;
         end
+      end
 
 
         default: state <= STATE_IDLE;
@@ -449,24 +450,24 @@ module gpif2_slave_fifo32
 
     //fifo xfer enable
     wire data_rx_tready = (
-			   ((state == STATE_WRITE) && fx3_wmark1 && ~pad) || // Sustain burst
-			   ((state == STATE_THINK) && fx3_ready1)    // First beat
-			   ) && (fifoadr == ADDR_DATA_RX) ;
+               ((state == STATE_WRITE) && fx3_wmark1 && ~pad) || // Sustain burst
+               ((state == STATE_THINK) && fx3_ready1)    // First beat
+               ) && (fifoadr == ADDR_DATA_RX) ;
 
     wire ctrl_rx_tready = (
-			   ((state == STATE_WRITE) && fx3_wmark1) || // Sustain burst
-			   ((state == STATE_THINK) && fx3_ready1)    // First beat
-			   ) && (fifoadr == ADDR_CTRL_RX) ;
+               ((state == STATE_WRITE) && fx3_wmark1) || // Sustain burst
+               ((state == STATE_THINK) && fx3_ready1)    // First beat
+               ) && (fifoadr == ADDR_CTRL_RX) ;
 
     // Burst reads tap the read strobe pipeline at stage3, single beat reads at stage5.
     wire data_tx_tvalid = (
-			   (((state == STATE_READ) || (state == STATE_READ_FLUSH)) && ~slrd3) |
-			   ((state == STATE_READ_SINGLE) && ~slrd5)
-			   ) && (fifoadr == ADDR_DATA_TX);
+               (((state == STATE_READ) || (state == STATE_READ_FLUSH)) && ~slrd3) |
+               ((state == STATE_READ_SINGLE) && ~slrd5)
+               ) && (fifoadr == ADDR_DATA_TX);
     wire ctrl_tx_tvalid = (
-			   (((state == STATE_READ) || (state == STATE_READ_FLUSH)) && ~slrd3) |
-			   ((state == STATE_READ_SINGLE) && ~slrd5)
-			   ) && (fifoadr == ADDR_CTRL_TX);
+               (((state == STATE_READ) || (state == STATE_READ_FLUSH)) && ~slrd3) |
+               ((state == STATE_READ_SINGLE) && ~slrd5)
+               ) && (fifoadr == ADDR_CTRL_TX);
 
     // The position of RX TLAST is known well in advance for bursts by monitoring the watermark. However for
     // single beat reads it can only be deduced after a read that causes the ready flag to go inactive.
@@ -509,9 +510,9 @@ module gpif2_slave_fifo32
         .o_tdata(data_rx_tdata), .o_tlast(data_rx_tlast), .o_tvalid(data_rx_tvalid), .o_tready(data_rx_tready)
     );
 
-   // ////////////////////////////////////////////////////////////////////
-   // CTRL path
-   wire [31:0] debug_ctrl_fifo;
+    // ////////////////////////////////////////////////////////////////////
+    // CTRL path
+    wire [31:0] debug_ctrl_fifo;
 
     gpif2_to_fifo64 #(.FIFO_SIZE(CTRL_TX_FIFO_SIZE)) gpif2_to_fifo64_ctrl(
         .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
