@@ -168,7 +168,7 @@ def run_sim(path, simulator, basedir, setupenv):
             setupenv = ''
             # Check if environment was setup
             if 'VIVADO_PATH' not in os.environ:
-                raise RuntimeError('Simulation environment was uninitialized') 
+                raise RuntimeError('Simulation environment was not initialized')
         else:
             setupenv = '. ' + os.path.realpath(setupenv) + ';'
         # Run the simulation
@@ -247,7 +247,10 @@ def do_run(args):
             time.sleep(1.0)
         sys.stdout.write("\n")
     except (KeyboardInterrupt):
-        _LOG.info('Received SIGINT. Aborting...')
+        _LOG.warning('Received SIGINT. Aborting... (waiting for pending jobs to finish)')
+        # Flush run queue
+        while not run_queue.empty():
+            (name, path) = run_queue.get()
         raise SystemExit(1)
 
     results = {}
@@ -284,7 +287,7 @@ def do_cleanup(args):
         setupenv = ''
         # Check if environment was setup
         if 'VIVADO_PATH' not in os.environ:
-            raise RuntimeError('Simulation environment was uninitialized') 
+            raise RuntimeError('Simulation environment was not initialized')
     else:
         setupenv = '. ' + os.path.realpath(setupenv) + ';'
     excludes = read_excludes_file(args.excludes)
