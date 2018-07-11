@@ -40,6 +40,7 @@ module n3xx_core #(
   output reg       meas_clk_reset,
   input            ref_clk_locked,
   input            meas_clk_locked,
+  output reg       enable_ref_clk_async,
 
   // AXI lite interface
   input                    s_axi_aclk,
@@ -333,6 +334,7 @@ module n3xx_core #(
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
+      enable_ref_clk_async <= 1'b1;
     end else if (reg_wr_req) begin
       case (reg_wr_addr)
         REG_FP_GPIO_MASTER: begin
@@ -350,6 +352,9 @@ module n3xx_core #(
           pps_select_sfp <= reg_wr_data[6:5];
           ref_clk_reset  <= reg_wr_data[8];
           meas_clk_reset <= reg_wr_data[12];
+          // This bit is defined as "to disable, write '1' to bit 16" for backwards
+          // compatibility.
+          enable_ref_clk_async <= ~reg_wr_data[16];
         end
       endcase
     end
@@ -409,6 +414,7 @@ module n3xx_core #(
           reg_rd_data_glob[9]   <= b_ref_clk_locked;
           reg_rd_data_glob[12]  <= meas_clk_reset;
           reg_rd_data_glob[13]  <= b_meas_clk_locked;
+          reg_rd_data_glob[16]  <= ~enable_ref_clk_async;
         end
 
         REG_XADC_READBACK:

@@ -709,6 +709,7 @@ module n3xx (
   wire        ddr3_dma_clk;
   wire        meas_clk_reset;
   wire        meas_clk_locked;
+  wire        enable_ref_clk_async;
   wire        pps_radioclk1x_iob;
   wire        pps_radioclk1x;
   wire [3:0]  pps_select;
@@ -779,6 +780,7 @@ module n3xx (
   localparam BUS_CLK_RATE = 32'd200000000; //200 MHz bus_clk rate.
 
   n3xx_clocking n3xx_clocking_i (
+    .enable_ref_clk_async(enable_ref_clk_async),
     .FPGA_REFCLK_P(FPGA_REFCLK_P),
     .FPGA_REFCLK_N(FPGA_REFCLK_N),
     .ref_clk(ref_clk),
@@ -2992,6 +2994,7 @@ module n3xx (
     .meas_clk_reset(meas_clk_reset),
     .ref_clk_locked(1'b1),
     .meas_clk_locked(meas_clk_locked),
+    .enable_ref_clk_async(enable_ref_clk_async),
 
     .s_axi_aclk(clk40),
     .s_axi_aresetn(clk40_rstn),
