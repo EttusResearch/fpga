@@ -122,12 +122,12 @@ module chdr_16sc_to_12sc
 		// We can finish this packet immediately.
 		state <= HEADER;
 		in_extra_line <= 0;
-	     end else if (i_tlast && needs_extra_line && o_tready && i_tvalid) begin
+	     end else if (i_tlast && needs_extra_line && i_tvalid) begin
 		// We still need one more output line to drain all samples into this packet.
 		// (SHOULD NOT BE POSSIBLE TO GET HERE!)
 		state <= SAMPLE2;
 		in_extra_line <= 1;
-	     end else if (o_tready && i_tvalid)
+	     end else if (i_tvalid)
 	       state <= SAMPLE2;
 	  end
 	  //
