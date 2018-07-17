@@ -86,13 +86,17 @@ module chdr_16sc_to_8sc
              end
 
              ODD: begin
-		if (i_tvalid && o_tready) begin
-		   state <= (i_tlast)? HEADER: EVEN;
-		   hold_tdata <= i_tdata;
-
-		end
+    if (i_tvalid) begin
+      if (i_tlast) begin
+        if(o_tready)
+          state <= HEADER;
+      end
+      else begin
+        state <= EVEN;
+		    hold_tdata <= i_tdata;
+		  end
              end
-
+    end
              EVEN: begin
 		if (i_tvalid && o_tready)
 		  state <= (i_tlast) ? HEADER: ODD;
