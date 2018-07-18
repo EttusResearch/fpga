@@ -198,7 +198,7 @@ module gpif2_slave_fifo32
        // Current thread can proceed locally
           if (local_fifo_ready) begin
             idle_cycles <= idle_cycles + 1'b1;
-          if (idle_cycles == 3'b111) state <= STATE_THINK; // Could shortedn this delay, flags now stable for several clocks.
+          if (idle_cycles == 3'b111) state <= STATE_THINK; // Could shorten this delay, flags now stable for several clocks.
           end
        // ....move onto next thread.
           else begin
@@ -232,7 +232,6 @@ module gpif2_slave_fifo32
             // for one more cycle to ensure it does not get stuck in the FX3.
             pktend <= 1'b1; // Active low - De-asserted
             slwr <= 1'b0; //Active low - Asserted, write to FX3.
-            sloe <= 1; // FPGA drives the data bus
             transfer_size <= transfer_size + 1; // Increment transfer_size.
             gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
             pad <= 1;
@@ -243,7 +242,6 @@ module gpif2_slave_fifo32
             state <= STATE_WRITE_FLUSH;
             idle_cycles <= 3'd5; // Stay in flush 3 cycles
             slwr <= 1'b0; // Active low - Asserted, write to FX3
-            sloe <= 1; // FPGA drives the data bus
             transfer_size <= 1; // End of packet will release FX3 DMA buffer, reset transfer size count.
             gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
             pad <= 0; // Reset pad
@@ -251,12 +249,10 @@ module gpif2_slave_fifo32
            // There is (an unknown amount of) data ready to send to FX from local FIFO.
             state <= STATE_WRITE;
             slwr <= 1'b0;  // Active low - Write strobe active
-            sloe <= 1; // FPGA drives the data bus
             gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
             transfer_size <= transfer_size + 1; // Account for current cycles transfer
           end
           else begin
-            sloe <= 1;
             state <= STATE_IDLE;
           end
 
@@ -275,12 +271,11 @@ module gpif2_slave_fifo32
     	// Deassert read strobe after reading single 32bit word
           slrd <= 1'b1;
           idle_cycles <= idle_cycles + 1;
-	        sloe <= 1'b0; // FX3 drives the data bus
 	      end else if (idle_cycles == 5) begin
 		// READY1 flag now reflect effects of last read.
         if (!fx3_ready1) begin
            state <= STATE_IDLE;
-		       sloe <= 1'b1;
+           sloe <= 1'b1;
         end else begin
         // Initiate another READ beat.
            state <= STATE_READ_SINGLE;
@@ -289,7 +284,6 @@ module gpif2_slave_fifo32
         idle_cycles <= 0;
         end else begin
           // All other idle_cycles counts.
-          sloe <= 1'b0; // FX3 drives the data bus
           idle_cycles <= idle_cycles + 1;
         end
       end // case: STATE_READ_SINGLE
@@ -301,10 +295,9 @@ module gpif2_slave_fifo32
       // Whilst ~slrd3 stays asserted keep the first_read flag armed.
       // Trigger TLAST only for transfer ended by watermark (Which indicates a true packet end), not local full FIFO.
       STATE_READ: begin
-        sloe <= 1'b0; // FX3 drives the data bus
 
         if (~fx3_wmark1 | fifo_nearly_full) begin
-          // Either end of packet or local FIFO full is imminent, start shuting down this read burst.
+          // Either end of packet or local FIFO full is imminent, start shutting down this read burst.
           slrd <= 1'b1;  // Active low - Take read strobe inactive
           state <= STATE_READ_FLUSH;
         end else begin
@@ -312,7 +305,7 @@ module gpif2_slave_fifo32
         end
 
         if (~fx3_wmark1)
-          // Put TLAST into pipepline to mark end of packet
+          // Put TLAST into pipeline to mark end of packet
           rx_eop <= 1'b1;
 
         if (~slrd3)
@@ -323,7 +316,7 @@ module gpif2_slave_fifo32
       // SLRD has been deasserted but data continues to flow from FX3 into FPGA until pipeline empties.
       STATE_READ_FLUSH: begin
         slrd <= 1'b1; // Active low - Keep read strobe inactive.
-        rx_eop <= 1'b0; // EOP indication can be reset now - Already travelling in the pipeline if it was active.
+        rx_eop <= 1'b0; // EOP indication can be reset now - Already traveling in the pipeline if it was active.
         if (~slrd3)
           // Reset first_read flag as slrd assertion progresses down pipeline
           first_read <= 1'b0;
@@ -331,16 +324,13 @@ module gpif2_slave_fifo32
           // Last data of burst will be written to FIFO next clock edge so transition to IDLE also.
           state <= STATE_IDLE;
           sloe <= 1'b1; // Active low - Resume parking bus with FPGA driving.
-        end else begin
-	        // Still data traveling through the pipeline.
-          sloe <= 1'b0; // Active low -  FX3 drives the bus
         end
       end
 
 
       // Now in potential write burst. Exit this sate immediately if we are only doing a single beat write.
       // Can exit this state in several ways:
-      // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must pad packet for 1 clock cycle in 
+      // At EOP and on a USB packet boundery (1K for USB3, 512B for USB2) must pad packet for 1 clock cycle in
       // addition to simply asserting pktend.
       // Otherwise at EOP just send a short packet.
       // If local FIFO goes empty then we terminatethe burst without asserting pktend.
@@ -381,12 +371,10 @@ module gpif2_slave_fifo32
 
         gpif_data_out <= wr_fifo_data; // Always latch data from FIFO's into output register
 
-        sloe <= 1'b1; // FPGA always masters bus in this state.
        end // case: STATE_WRITE
 
       // Some FX3 timing diagrams seem to imply address should be held stable after transaction
       STATE_WRITE_FLUSH: begin
-        sloe <= 1;
         slrd <= 1;
         slwr <= 1;
         pktend <= 1;
