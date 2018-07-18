@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 5
+`define NUM_TEST_CASES 7
 
 `include "sim_exec_report.vh"
 `include "sim_clks_rsts.vh"
@@ -93,9 +93,7 @@ module axi_packet_gate_tb();
       $display("Expected FIFO size: %0d, Actual: %0d",MAX_PKT_SIZE,cnt);
     end
     // On the first packet, output is held off until a full packet is received
-    @(posedge clk);
-    @(posedge clk);
-    @(posedge clk);
+    repeat(MAX_PKT_SIZE) @(posedge clk);
     $display("Empty FIFO and check output");
     for (int i = 0; i < cnt; i++) begin
       $sformat(s, "FIFO prematurely empty at %0d (tvalid not asserted!)", i);
@@ -111,10 +109,100 @@ module axi_packet_gate_tb();
     end
     `TEST_CASE_DONE(1);
 
-    #2000; // Delay to make the tests visually distinct in waveform viewer
+    /********************************************************
+    ** Test 3 -- Check gating
+    ********************************************************/
+    `TEST_CASE_START("Check gating");
+    error = 0;
+    last = 0;
+    cnt = 0;
+
+    $display("Write %0d words to FIFO and check out valid", MAX_PKT_SIZE);
+    for (int i = 0; i < MAX_PKT_SIZE/2; i++) begin
+      m_axis.push_word({error,cnt}, 0);
+      cnt++;
+    end
+    // On the first packet, output is held off until a full packet is received
+    repeat(10) @(posedge clk);
+    `ASSERT_FATAL(~s_axis.axis.tvalid, "Saw output before a full packet input");
+    for (int i = MAX_PKT_SIZE/2; i < MAX_PKT_SIZE; i++) begin
+      m_axis.push_word({error,cnt}, i == MAX_PKT_SIZE-1);
+      cnt++;
+    end
+    repeat(10) @(posedge clk);
+    `ASSERT_FATAL(s_axis.axis.tvalid, "Did not see output even after full packet input");
+    $display("Empty FIFO and check output");
+    for (int i = 0; i < cnt; i++) begin
+      $sformat(s, "FIFO prematurely empty at %0d (tvalid not asserted!)", i);
+      `ASSERT_FATAL(s_axis.axis.tvalid, s);
+      s_axis.pull_word(check, last);
+      $sformat(s, "FIFO output incorrect! Expected: %0d, Actual: %0d", i, check);
+      `ASSERT_FATAL(check == i, s);
+      if (i == cnt-1) begin
+        `ASSERT_FATAL(last, "tlast not asserted on final word!");
+      end else begin
+        `ASSERT_FATAL(~last, "tlast asserted prematurely!");
+      end
+    end
+    `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 3 -- Back to back small packets
+    ** Test 4 -- Ensure no bleed
+    ********************************************************/
+    `TEST_CASE_START("Ensure no bleed");
+    error = 0;
+    last = 0;
+    cnt = 0;
+
+    $display("Write %0d words to FIFO (full packet)", MAX_PKT_SIZE/2);
+    for (int i = 0; i < MAX_PKT_SIZE/2; i++) begin
+      m_axis.push_word({error,cnt}, i == (MAX_PKT_SIZE/2)-1);
+      cnt++;
+    end
+    $display("Write %0d words to FIFO (partial packet)", MAX_PKT_SIZE/4);
+    for (int i = 0; i < MAX_PKT_SIZE/4; i++) begin
+      m_axis.push_word({error,cnt}, 0);
+      cnt++;
+    end
+    // On the first packet, output is held off until a full packet is received
+    repeat(10) @(posedge clk);
+    for (int i = 0; i < MAX_PKT_SIZE/2; i++) begin
+      $sformat(s, "FIFO prematurely empty at %0d (tvalid not asserted!)", i);
+      `ASSERT_FATAL(s_axis.axis.tvalid, s);
+      s_axis.pull_word(check, last);
+      $sformat(s, "FIFO output incorrect! Expected: %0d, Actual: %0d", i, check);
+      `ASSERT_FATAL(check == i, s);
+      if (i == (MAX_PKT_SIZE/2)-1) begin
+        `ASSERT_FATAL(last, "tlast not asserted on final word!");
+      end else begin
+        `ASSERT_FATAL(~last, "tlast asserted prematurely!");
+      end
+    end
+    repeat(10) @(posedge clk);
+    `ASSERT_FATAL(~s_axis.axis.tvalid, "Partial packet bled through with full packet");
+    for (int i = MAX_PKT_SIZE/4; i < MAX_PKT_SIZE/2; i++) begin
+      m_axis.push_word({error,cnt}, i == (MAX_PKT_SIZE/2)-1);
+      cnt++;
+    end
+    repeat(10) @(posedge clk);
+    `ASSERT_FATAL(s_axis.axis.tvalid, "Did not see output even after full packet input");
+    $display("Empty FIFO and check output");
+    for (int i = MAX_PKT_SIZE/2; i < cnt; i++) begin
+      $sformat(s, "FIFO prematurely empty at %0d (tvalid not asserted!)", i);
+      `ASSERT_FATAL(s_axis.axis.tvalid, s);
+      s_axis.pull_word(check, last);
+      $sformat(s, "FIFO output incorrect! Expected: %0d, Actual: %0d", i, check);
+      `ASSERT_FATAL(check == i, s);
+      if (i == cnt-1) begin
+        `ASSERT_FATAL(last, "tlast not asserted on final word!");
+      end else begin
+        `ASSERT_FATAL(~last, "tlast asserted prematurely!");
+      end
+    end
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 5 -- Back to back small packets
     ********************************************************/
     `TEST_CASE_START("Back to back small packets");
     error = 0;
@@ -165,7 +253,7 @@ module axi_packet_gate_tb();
     #2000; // Delay to make the tests visually distinct in waveform viewer
 
     /********************************************************
-    ** Test 4 -- Drop error packet
+    ** Test 6 -- Drop error packet
     ** - Send packet, drop a packet, send another packet
     ********************************************************/
     `TEST_CASE_START("Drop error packet");
@@ -223,7 +311,7 @@ module axi_packet_gate_tb();
     #2000;
 
     /********************************************************
-    ** Test 5 -- Random read / writes
+    ** Test 7 -- Random read / writes
     ********************************************************/
     `TEST_CASE_START("Random read / writes");
     error = 0;

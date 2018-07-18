@@ -15,13 +15,19 @@
 //   - The maximum size of a packet that can pass through this module is
 //     2^SIZE lines. If a larger packet is sent, this module will lock up.
 //   - Assuming that upstream is valid and downstream is ready, the maximum 
-//     in to out latency is (2^SIZE + 2) clock cycles. 2^SIZE because this
-//     module gates a packet, 1 cycle for the RAM read and 1 more cycle for
-//     the output register.
+//     in to out latency per packet  is (2^SIZE + 2) clock cycles. 
+//     2^SIZE because this module gates a packet, 1 cycle for the RAM read and
+//     1 more cycle for the output register. This is not guaranteed behavior though.
+//   - The USE_AS_BUFF parameter can be used to treat this packet gate as
+//     a multi-packet buffer. When USE_AS_BUFF=0, the max number of packets 
+//     (regardless of size) that the module can store is 2. When USE_AS_BUFF=1,
+//     the entire storage of this module can be used to buffer packets but at
+//     the cost of some additional RAM.
 
 module axi_packet_gate #(
-  parameter WIDTH = 64,   // Width of datapath
-  parameter SIZE  = 10    // log2 of the buffer size (must be >= MTU of packet)
+  parameter WIDTH       = 64,   // Width of datapath
+  parameter SIZE        = 10,   // log2 of the buffer size (must be >= MTU of packet)
+  parameter USE_AS_BUFF = 1     // Allow the packet gate to be used as a buffer (uses more RAM)
 ) (
   input  wire             clk, 
   input  wire             reset, 
@@ -39,8 +45,6 @@ module axi_packet_gate #(
 
   localparam [SIZE-1:0] ADDR_ZERO = {SIZE{1'b0}};
   localparam [SIZE-1:0] ADDR_ONE  = {{(SIZE-1){1'b0}}, 1'b1};
-  localparam [SIZE:0]   CNT_ZERO  = {(SIZE+1){1'b0}};
-  localparam [SIZE:0]   CNT_ONE   = {{SIZE{1'b0}}, 1'b1};
 
   // -------------------------------------------
   // RAM block that will hold pkts
@@ -101,12 +105,27 @@ module axi_packet_gate #(
   end
 
   // -------------------------------------------
+  // Address FIFO
+  // -------------------------------------------
+  // The address FIFO will hold the write address
+  // for the last line in a non-errant packet
+  
+  wire [SIZE-1:0] afifo_i_tdata, afifo_o_tdata;
+  wire            afifo_i_tvalid, afifo_o_tvalid, afifo_i_tready, afifo_o_tready;
+
+  axi_fifo #(.WIDTH(SIZE), .SIZE(USE_AS_BUFF==1 ? SIZE : 1)) addr_fifo_i (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata(afifo_i_tdata), .i_tvalid(afifo_i_tvalid), .i_tready(afifo_i_tready),
+    .o_tdata(afifo_o_tdata), .o_tvalid(afifo_o_tvalid), .o_tready(afifo_o_tready),
+    .space(), .occupied()
+  );
+
+  // -------------------------------------------
   // Write state machine
   // -------------------------------------------
   reg  [SIZE-1:0] wr_head_addr  = ADDR_ZERO;
-  reg  [SIZE:0]   in_pkt_cnt    = CNT_ZERO;
 
-  assign i_tready = ~ram_full;
+  assign i_tready = ~ram_full & afifo_i_tready;
   assign wr_en    = i_tvalid & i_tready;
   assign wr_data  = {i_tlast, i_tdata};
 
@@ -114,7 +133,6 @@ module axi_packet_gate #(
     if (reset | clear) begin
       wr_addr <= ADDR_ZERO;
       wr_head_addr <= ADDR_ZERO;
-      in_pkt_cnt <= CNT_ZERO;
     end else begin
       if (wr_en) begin
         if (i_tlast) begin
@@ -127,7 +145,6 @@ module axi_packet_gate #(
             // wr_head_addr for the next packet.
             wr_addr <= wr_addr + ADDR_ONE;
             wr_head_addr <= wr_addr + ADDR_ONE;
-            in_pkt_cnt <= in_pkt_cnt + CNT_ONE;
           end
         end else begin
           // Packet is still in progress, only update wr_addr
@@ -137,13 +154,23 @@ module axi_packet_gate #(
     end
   end
 
+  // Push the write address to the address FIFO if
+  // - It is the last one in the packet
+  // - The packet has no errors
+  assign afifo_i_tdata  = wr_addr;
+  assign afifo_i_tvalid = ~ram_full & i_tvalid & i_tlast & ~i_terror;
+
   // -------------------------------------------
   // Read state machine
   // -------------------------------------------
-  reg  [SIZE:0] out_pkt_cnt   = CNT_ZERO;
-  reg           rd_data_valid = 1'b0;
-  wire          update_out_reg;
-  wire          ready_to_read = (~ram_empty) & (in_pkt_cnt != out_pkt_cnt);
+  reg    rd_data_valid = 1'b0;
+  wire   update_out_reg;
+  // Data can be read if there is a valid last address in the
+  // address FIFO (signifying the end of an input packet) and
+  // if there is data available in RAM
+  wire   ready_to_read = (~ram_empty) & afifo_o_tvalid;
+  // Pop from address FIFO once we have see the end of the pkt
+  assign afifo_o_tready = rd_en & (afifo_o_tdata == rd_addr);
 
   // Read from RAM if
   // - A full packet has been written AND
@@ -182,14 +209,5 @@ module axi_packet_gate #(
   // Update the output reg only *after* the downstream
   // block has consumed the current value
   assign update_out_reg = o_tready | ~o_tvalid;
-
-  // Output packet counter
-  always @(posedge clk) begin
-    if (reset | clear) begin
-      out_pkt_cnt <= CNT_ZERO;
-    end else if (o_tvalid & o_tready & o_tlast) begin
-      out_pkt_cnt <= out_pkt_cnt + CNT_ONE;
-    end
-  end
 
 endmodule
