@@ -69,18 +69,23 @@ module noc_shell
    `include "noc_shell_regs.vh"
 
    localparam RB_AWIDTH = 3;
-   localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'd2;
+   localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'd3;
    localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'd0;
 
-   wire [63:0] dataout_tdata, datain_tdata, fcin_tdata, fcout_tdata, cmdin_tdata, ackout_tdata;
-   wire dataout_tlast, datain_tlast, fcin_tlast, fcout_tlast, cmdin_tlast, ackout_tlast;
-   wire dataout_tvalid, datain_tvalid, fcin_tvalid, fcout_tvalid, cmdin_tvalid, ackout_tvalid;
-   wire dataout_tready, datain_tready, fcin_tready, fcout_tready, cmdin_tready, ackout_tready;
+   wire [63:0] fcin_tdata, fcout_tdata, cmdin_tdata, ackout_tdata;
+   wire fcin_tlast, fcout_tlast, cmdin_tlast, ackout_tlast;
+   wire fcin_tvalid, fcout_tvalid, cmdin_tvalid, ackout_tvalid;
+   wire fcin_tready, fcout_tready, cmdin_tready, ackout_tready;
 
-  wire [63:0] cmdout_tdata_bclk, ackout_tdata_bclk, ackin_tdata_bclk, cmdin_tdata_bclk;
-  wire cmdout_tlast_bclk, ackout_tlast_bclk, ackin_tlast_bclk, cmdin_tlast_bclk;
-  wire cmdout_tvalid_bclk, ackout_tvalid_bclk, ackin_tvalid_bclk, cmdin_tvalid_bclk;
-  wire cmdout_tready_bclk, ackout_tready_bclk, ackin_tready_bclk, cmdin_tready_bclk;
+   wire [63:0] dataout_tdata, datain_tdata, dataout_post_tdata, datain_pre_tdata;
+   wire dataout_tlast, datain_tlast, dataout_post_tlast, datain_pre_tlast;
+   wire dataout_tvalid, datain_tvalid, dataout_post_tvalid, datain_pre_tvalid;
+   wire dataout_tready, datain_tready, dataout_post_tready, datain_pre_tready;
+
+   wire [63:0] cmdout_tdata_bclk, ackout_tdata_bclk, ackin_tdata_bclk, cmdin_tdata_bclk;
+   wire cmdout_tlast_bclk, ackout_tlast_bclk, ackin_tlast_bclk, cmdin_tlast_bclk;
+   wire cmdout_tvalid_bclk, ackout_tvalid_bclk, ackin_tvalid_bclk, cmdin_tvalid_bclk;
+   wire cmdout_tready_bclk, ackout_tready_bclk, ackin_tready_bclk, cmdin_tready_bclk;
 
    ///////////////////////////////////////////////////////////////////////////////////////
    // 2-clock fifos get cmd/ack ports into ce_clk domain
@@ -119,7 +124,7 @@ module noc_shell
    ///////////////////////////////////////////////////////////////////////////////////////
    axi_mux4 #(.PRIO(0), .WIDTH(64), .BUFFER(1)) output_mux
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i0_tdata(dataout_tdata), .i0_tlast(dataout_tlast), .i0_tvalid(dataout_tvalid), .i0_tready(dataout_tready),
+      .i0_tdata(dataout_post_tdata), .i0_tlast(dataout_post_tlast), .i0_tvalid(dataout_post_tvalid), .i0_tready(dataout_post_tready),
       .i1_tdata(fcout_tdata), .i1_tlast(fcout_tlast), .i1_tvalid(fcout_tvalid), .i1_tready(fcout_tready),
       .i2_tdata(cmdout_tdata_bclk), .i2_tlast(cmdout_tlast_bclk), .i2_tvalid(cmdout_tvalid_bclk), .i2_tready(cmdout_tready_bclk),
       .i3_tdata(ackout_tdata_bclk), .i3_tlast(ackout_tlast_bclk), .i3_tvalid(ackout_tvalid_bclk), .i3_tready(ackout_tready_bclk),
@@ -132,13 +137,62 @@ module noc_shell
      (.clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .header(vheader), .dest(vdest),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
-      .o0_tdata(datain_tdata), .o0_tlast(datain_tlast), .o0_tvalid(datain_tvalid), .o0_tready(datain_tready),
+      .o0_tdata(datain_pre_tdata), .o0_tlast(datain_pre_tlast), .o0_tvalid(datain_pre_tvalid), .o0_tready(datain_pre_tready),
       .o1_tdata(fcin_tdata), .o1_tlast(fcin_tlast), .o1_tvalid(fcin_tvalid), .o1_tready(fcin_tready),
       .o2_tdata(cmdin_tdata_bclk), .o2_tlast(cmdin_tlast_bclk), .o2_tvalid(cmdin_tvalid_bclk), .o2_tready(cmdin_tready_bclk),
       .o3_tdata(ackin_tdata_bclk), .o3_tlast(ackin_tlast_bclk), .o3_tvalid(ackin_tvalid_bclk), .o3_tready(ackin_tready_bclk));
 
+   ///////////////////////////////////////////////////////////////////////////////////////
+   // Datapath gatekeepers
+   ///////////////////////////////////////////////////////////////////////////////////////
+   wire         flush_datain, flush_dataout, flush_datain_bclk, flush_dataout_bclk;
+   wire [15:0]  datain_pkt_cnt, dataout_pkt_cnt, datain_pkt_cnt_bclk, dataout_pkt_cnt_bclk;
+
+   datapath_gatekeeper #(
+      .WIDTH(64), .COUNT_W(16)
+   ) keeper_in_i (
+      .clk(bus_clk), .reset(bus_rst),
+      .s_axis_tdata(datain_pre_tdata), .s_axis_tlast(datain_pre_tlast),
+      .s_axis_tvalid(datain_pre_tvalid), .s_axis_tready(datain_pre_tready),
+      .m_axis_tdata(datain_tdata), .m_axis_tlast(datain_tlast),
+      .m_axis_tvalid(datain_tvalid), .m_axis_tready(datain_tready),
+      .flush(flush_datain_bclk), .flushing(), .pkt_count(datain_pkt_cnt_bclk)
+   );
+
+   datapath_gatekeeper #(
+      .WIDTH(64), .COUNT_W(16)
+   ) keeper_out_i (
+      .clk(bus_clk), .reset(bus_rst),
+      .s_axis_tdata(dataout_tdata), .s_axis_tlast(dataout_tlast),
+      .s_axis_tvalid(dataout_tvalid), .s_axis_tready(dataout_tready),
+      .m_axis_tdata(dataout_post_tdata), .m_axis_tlast(dataout_post_tlast),
+      .m_axis_tvalid(dataout_post_tvalid), .m_axis_tready(dataout_post_tready),
+      .flush(flush_dataout_bclk), .flushing(), .pkt_count(dataout_pkt_cnt_bclk)
+   );
+
+   synchronizer #( .INITIAL_VAL(0), .WIDTH(2) ) flush_sync_i (
+      .clk(bus_clk), .rst(1'b0),
+      .in({flush_datain, flush_dataout}), .out({flush_datain_bclk, flush_dataout_bclk})
+   );
+
+   axi_fifo_2clk #(.WIDTH(32), .SIZE(5)) data_cnt_2clk_i (.reset(reset),
+      .i_aclk(bus_clk),
+      .i_tvalid(1'b1), .i_tready(), .i_tdata({datain_pkt_cnt_bclk, dataout_pkt_cnt_bclk}),
+      .o_aclk(clk),
+      .o_tvalid(), .o_tready(1'b1), .o_tdata({datain_pkt_cnt, dataout_pkt_cnt})
+   );
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   // Control Sink
+   ///////////////////////////////////////////////////////////////////////////////////////
+
    wire [INPUT_PORTS-1:0] clear_rx_stb, clear_rx_stb_bclk;
    wire [OUTPUT_PORTS-1:0] clear_tx_stb, clear_tx_stb_bclk;
+   wire [INPUT_PORTS-1:0] clear_rx_flush, clear_rx_clear, clear_rx_trig;
+   wire [OUTPUT_PORTS-1:0] clear_tx_flush, clear_tx_clear, clear_tx_trig;
+
+   assign flush_datain = |clear_rx_flush;
+   assign flush_dataout = |clear_tx_flush;
 
    wire [64*BLOCK_PORTS-1:0] cmdin_ports_tdata;
    wire [BLOCK_PORTS-1:0]    cmdin_ports_tvalid, cmdin_ports_tready, cmdin_ports_tlast;
@@ -165,9 +219,6 @@ module noc_shell
        .o_tdata(ackout_tdata), .o_tlast(ackout_tlast), .o_tvalid(ackout_tvalid), .o_tready(ackout_tready));
 
      for (k = 0; k < BLOCK_PORTS; k = k + 1) begin
-       ///////////////////////////////////////////////////////////////////////////////////////
-       // Control Sink (required)
-       ///////////////////////////////////////////////////////////////////////////////////////
        reg rb_stb_int;
        reg [63:0] rb_data_int;
        wire [RB_AWIDTH-1:0] rb_addr_noc_shell;
@@ -205,7 +256,7 @@ module noc_shell
          end else begin
            case(rb_addr_noc_shell)
              RB_NOC_ID               : {rb_stb_int, rb_data_int} <= {     1'b1, NOC_ID};
-             RB_GLOBAL_PARAMS        : {rb_stb_int, rb_data_int} <= {     1'b1, {48'd0, 3'd0, INPUT_PORTS[4:0], 3'd0, OUTPUT_PORTS[4:0]}};
+             RB_GLOBAL_PARAMS        : {rb_stb_int, rb_data_int} <= {     1'b1, {datain_pkt_cnt, dataout_pkt_cnt, 16'd0, 3'd0, INPUT_PORTS[4:0], 3'd0, OUTPUT_PORTS[4:0]}};
              RB_FIFOSIZE             : {rb_stb_int, rb_data_int} <= {     1'b1, {k < INPUT_PORTS ? STR_SINK_FIFOSIZE[8*k+7:8*k] : 64'd0}};
              RB_MTU                  : {rb_stb_int, rb_data_int} <= {     1'b1, {k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0}};
              RB_BLOCK_PORT_SIDS      : {rb_stb_int, rb_data_int} <= {     1'b1, {src_sid[16*k+15:16*k],
@@ -228,9 +279,10 @@ module noc_shell
           .in(set_data[32*k+31:32*k]),.out(src_sid[16*k+15:16*k]),.changed());
 
        if (k < INPUT_PORTS) begin
-         setting_reg #(.my_addr(SR_CLEAR_RX_FC), .at_reset(0)) sr_clear_rx_fc
+         setting_reg #(.my_addr(SR_CLEAR_RX_FC), .width(2), .at_reset(0)) sr_clear_rx_fc
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_rx_stb[k]));
+            .in(set_data[32*k+31:32*k]),.out({clear_rx_flush[k], clear_rx_clear[k]}),.changed(clear_rx_trig[k]));
+         assign clear_rx_stb[k] = clear_rx_clear[k] & clear_rx_trig[k];
          setting_reg #(.my_addr(SR_RESP_IN_DST_SID), .width(16), .at_reset(0)) sr_resp_in_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
             .in(set_data[32*k+31:32*k]),.out(resp_in_dst_sid[16*k+15:16*k]),.changed());
@@ -242,9 +294,10 @@ module noc_shell
 
        if (k < OUTPUT_PORTS) begin
          // Clearing the flow control window can also be used to reset the sequence number
-         setting_reg #(.my_addr(SR_CLEAR_TX_FC), .at_reset(0)) sr_clear_tx_fc
+         setting_reg #(.my_addr(SR_CLEAR_TX_FC), .width(2), .at_reset(0)) sr_clear_tx_fc
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),
-            .in(set_data[32*k+31:32*k]),.out(),.changed(clear_tx_stb[k]));
+            .in(set_data[32*k+31:32*k]),.out({clear_tx_flush[k], clear_tx_clear[k]}),.changed(clear_tx_trig[k]));
+         assign clear_tx_stb[k] = clear_tx_clear[k] & clear_tx_trig[k];
          // Destination Stream ID of the next RFNoC block
          setting_reg #(.my_addr(SR_NEXT_DST_SID), .width(16), .at_reset(0)) sr_next_dst_sid
            (.clk(clk),.rst(reset),.strobe(set_stb[k]),.addr(set_addr[8*k+7:8*k]),

@@ -971,8 +971,10 @@ endinterface
            `"from_noc_block_name`",sid_``from_noc_block_name >> 4,from_block_port, \
            `"to_noc_block_name`",sid_``to_noc_block_name >> 4,to_block_port); \
    // Clear block, write be any value \
-  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'hC1EA12, from_block_port); \
-  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'hC1EA12, to_block_port); \
+  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'h1, from_block_port); \
+  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_TX_FC, 32'h0, from_block_port); \
+  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'h1, to_block_port); \
+  tb_config.write_reg(sid_``from_noc_block_name, SR_CLEAR_RX_FC, 32'h0, to_block_port); \
   // Set block's src_sid, next_dst_sid, resp_in_dst_sid, resp_out_dst_sid \
   // Default response dst in / out SIDs to test bench block \
   tb_config.write_reg(sid_``from_noc_block_name, SR_SRC_SID, sid_``from_noc_block_name + from_block_port, from_block_port); \
