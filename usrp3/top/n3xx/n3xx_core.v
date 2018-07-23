@@ -334,7 +334,7 @@ module n3xx_core #(
       fp_gpio_master_reg <= 32'h0;
       fp_gpio_src_reg <= 32'h0;
       pps_select     <= 4'h1;
-      pps_select_sfp <= 2'h1;
+      pps_select_sfp <= 2'h0;
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
