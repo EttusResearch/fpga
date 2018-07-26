@@ -828,11 +828,8 @@ module e320 (
 
   // Rx is valid whenever the interface is aligned
   assign rx_stb = {rx_aligned, rx_aligned};
-  // Each Tx channel is ready for input whenever the channel is selected
-  assign tx_stb = {
-    mimo_radioclk | tx_chan_sel_radioclk,
-    mimo_radioclk | ~tx_chan_sel_radioclk
-  };
+  // Tx can always accept data
+  assign tx_stb = { 1'b1, 1'b1 };
 
   // These delays depend on the internal clock routing delays of the FPGA.
   // Valid timing constraints are required to confirm that setup/hold are met
