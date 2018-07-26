@@ -168,13 +168,13 @@ def run_sim(path, simulator, basedir, setupenv):
             setupenv = ''
             # Check if environment was setup
             if 'VIVADO_PATH' not in os.environ:
-                raise RuntimeError('Simulation environment was uninitialized') 
+                return {'retcode': RETCODE_EXEC_ERR, 'passed':False, 'stdout':bytes('Simulation environment was not initialized\n', 'utf-8')}
         else:
             setupenv = '. ' + os.path.realpath(setupenv) + ';'
         # Run the simulation
         return parse_output(
             subprocess.check_output(
-                'cd {workingdir}; {setupenv} make {simulator} 2>&1'.format(
+                'cd {workingdir}; /bin/bash -c "{setupenv} make {simulator} 2>&1"'.format(
                     workingdir=os.path.join(basedir, path), setupenv=setupenv, simulator=simulator), shell=True))
     except subprocess.CalledProcessError as e:
         return {'retcode': int(abs(e.returncode)), 'passed':False, 'stdout':e.output}
@@ -247,7 +247,10 @@ def do_run(args):
             time.sleep(1.0)
         sys.stdout.write("\n")
     except (KeyboardInterrupt):
-        _LOG.info('Received SIGINT. Aborting...')
+        _LOG.warning('Received SIGINT. Aborting... (waiting for pending jobs to finish)')
+        # Flush run queue
+        while not run_queue.empty():
+            (name, path) = run_queue.get()
         raise SystemExit(1)
 
     results = {}
@@ -284,7 +287,7 @@ def do_cleanup(args):
         setupenv = ''
         # Check if environment was setup
         if 'VIVADO_PATH' not in os.environ:
-            raise RuntimeError('Simulation environment was uninitialized') 
+            raise RuntimeError('Simulation environment was not initialized')
     else:
         setupenv = '. ' + os.path.realpath(setupenv) + ';'
     excludes = read_excludes_file(args.excludes)
