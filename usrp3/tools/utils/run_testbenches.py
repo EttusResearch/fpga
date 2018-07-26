@@ -168,13 +168,13 @@ def run_sim(path, simulator, basedir, setupenv):
             setupenv = ''
             # Check if environment was setup
             if 'VIVADO_PATH' not in os.environ:
-                raise RuntimeError('Simulation environment was not initialized')
+                return {'retcode': RETCODE_EXEC_ERR, 'passed':False, 'stdout':bytes('Simulation environment was not initialized\n', 'utf-8')}
         else:
             setupenv = '. ' + os.path.realpath(setupenv) + ';'
         # Run the simulation
         return parse_output(
             subprocess.check_output(
-                'cd {workingdir}; {setupenv} make {simulator} 2>&1'.format(
+                'cd {workingdir}; /bin/bash -c "{setupenv} make {simulator} 2>&1"'.format(
                     workingdir=os.path.join(basedir, path), setupenv=setupenv, simulator=simulator), shell=True))
     except subprocess.CalledProcessError as e:
         return {'retcode': int(abs(e.returncode)), 'passed':False, 'stdout':e.output}
