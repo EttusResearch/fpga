@@ -3,6 +3,13 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
+// Description:
+//   A gatekeeper module for data packets entering and leaving
+//   the user logic in an RFNoC block. This module keeps track
+//   of the packet count for software to detect activity and 
+//   provides a mechanism to flush packets from software. Useful
+//   to prevent slow-moving or misbehaving noc blocks from clogging
+//   up the infrastructure.
 
 module datapath_gatekeeper #(
   parameter WIDTH   = 64,
@@ -22,9 +29,9 @@ module datapath_gatekeeper #(
   output wire               m_axis_tvalid,
   input  wire               m_axis_tready,
   // Settings and Status
-  input  wire               flush,
-  output wire               flushing,
-  output wire [COUNT_W-1:0] pkt_count
+  input  wire               flush,          // Drop all packets coming into module
+  output wire               flushing,       // Is the module still dropping packets?
+  output wire [COUNT_W-1:0] pkt_count       // Input packet counter (includes drops)
 );
 
   axis_strm_monitor #(
