@@ -226,8 +226,10 @@ def do_run(args):
     out_queue = Queue(maxsize=0)
     _LOG.info('Queueing the following targets to simulate:')
     excludes = read_excludes_file(args.excludes)
+    name_maxlen = 0
     for (name, path) in gather_target_sims(args.basedir, args.target, excludes):
         run_queue.put((name, path))
+        name_maxlen = max(name_maxlen, len(name))
         _LOG.info('* ' + name)
     # Spawn tasks to run builds
     num_sims = run_queue.qsize()
@@ -262,20 +264,23 @@ def do_run(args):
         sys.stdout.buffer.write(result['stdout'])
         if not result['passed']:
             result_all += 1
+    sys.stdout.write('\n\n\n')
+    sys.stdout.flush()
+    time.sleep(1.0)
 
-    summary_line = 'SUMMARY: %d/%d tests failed. Time elapsed was %s'%(
-        result_all, num_sims, str(datetime.datetime.now() - start).split('.', 2)[0])
-    log_with_header('RESULTS', len(summary_line))
-    for name in results:
+    hdr_len = name_maxlen + 62 # 62 is the report line length
+    log_with_header('RESULTS', hdr_len)
+    for name in sorted(results):
         r = results[name]
         if 'module' in r:
-            _LOG.info('* %s : %s (Expected=%d, Run=%d, Passed=%d, Elapsed=%s)',
-                ('PASS' if r['passed'] else 'FAIL'), name, r['tc_expected'], r['tc_run'], r['tc_passed'], r['wall_time'])
+            _LOG.info('* %s : %s (Expected=%02d, Run=%02d, Passed=%02d, Elapsed=%s)',
+                name.ljust(name_maxlen), ('Passed' if r['passed'] else 'FAILED'), r['tc_expected'], r['tc_run'], r['tc_passed'], r['wall_time'])
         else:
-            _LOG.info('* %s : %s (Status=%s)', ('PASS' if r['passed'] else 'FAIL'), 
-                name, retcode_to_str(r['retcode']))
-    _LOG.info('#'*len(summary_line))
-    _LOG.info(summary_line)   
+            _LOG.info('* %s : %s (Status = %s)', name.ljust(name_maxlen), ('Passed' if r['passed'] else 'FAILED'), 
+                retcode_to_str(r['retcode']))
+    _LOG.info('='*hdr_len)
+    _LOG.info('SUMMARY: %d out of %d tests passed. Time elapsed was %s'%(num_sims - result_all, num_sims, str(datetime.datetime.now() - start).split('.', 2)[0]))   
+    _LOG.info('#'*hdr_len)
     return result_all
 
 
@@ -329,11 +334,11 @@ def do_report(args):
 # Parse command line options
 def get_options():
     parser = argparse.ArgumentParser(description='Batch testbench execution script')
-    parser.add_argument('--basedir', default=BASE_DIR, help='Base directory for the usrp3 codebase')
-    parser.add_argument('--simulator', choices=['xsim', 'vsim'], default='xsim', help='Simulator name')
-    parser.add_argument('--setupenv', default=None, help='Optional environment setup script to run for each TB')
-    parser.add_argument('--report', default='testbench_report.csv', help='Name of the output report file')
-    parser.add_argument('--excludes', default=None, help='Name of the excludes file. It contains all targets to exlude.')
+    parser.add_argument('-d', '--basedir', default=BASE_DIR, help='Base directory for the usrp3 codebase')
+    parser.add_argument('-s', '--simulator', choices=['xsim', 'vsim'], default='xsim', help='Simulator name')
+    parser.add_argument('-e', '--setupenv', default=None, help='Optional environment setup script to run for each TB')
+    parser.add_argument('-r', '--report', default='testbench_report.csv', help='Name of the output report file')
+    parser.add_argument('-x', '--excludes', default=None, help='Name of the excludes file. It contains all targets to exlude.')
     parser.add_argument('-j', '--jobs', default=1, help='Number of parallel simulation jobs to run')
     parser.add_argument('action', choices=['run', 'cleanup', 'list', 'report'], default='list', help='What to do?')
     parser.add_argument('target', nargs='*', default='.*', help='Space separated simulation target regexes')
