@@ -107,7 +107,9 @@ set_max_delay -from [get_pins sfp_wrapper_i/mgt_io_i/mdio_master_i/mdc_reg/C] \
 ###############################################################################
 
 # Synchronizer core false paths
-set_false_path -from [all_ffs] -to [get_pins -hierarchical -filter {NAME =~ */synchronizer_false_path/stages[0].value_reg[0][*]/D}]
+set_false_path -to [get_pins -hierarchical -filter {NAME =~ */synchronizer_false_path/stages[0].value_reg[0][*]/D}]
+set_false_path -to [get_pins -hierarchical -filter {NAME =~ */synchronizer_false_path/stages[0].value_reg[0][*]/S}]
+
 
 # MIG core reset
 # According to Xilinx AR 61112, it is safe to make sys_rst a false path.
