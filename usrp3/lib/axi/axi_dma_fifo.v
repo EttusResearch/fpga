@@ -122,23 +122,25 @@ module axi_dma_fifo
    // Settings and Readback
    //
    wire [2:0]         rb_addr;
-   wire               clear_bclk;
+   wire               clear_bclk, flush_bclk;
    wire               supress_enable_bclk;
    wire [15:0]        supress_threshold_bclk;
    wire [11:0]        timeout_bclk;
    wire [AWIDTH-1:0]  fifo_base_addr_bclk;
    wire [AWIDTH-1:0]  fifo_addr_mask_bclk;
-   wire [1:0]         ctrl_reserved;
+   wire [0:0]         ctrl_reserved;
 
    wire [31:0]  rb_fifo_status;
    wire [3:0]   rb_bist_status;
    wire [95:0]  rb_bist_bw_ratio;
+   reg  [31:0]  out_pkt_count = 32'd0;
 
    localparam RB_FIFO_STATUS    = 3'd0;
    localparam RB_BIST_STATUS    = 3'd1;
    localparam RB_BIST_XFER_CNT  = 3'd2;
    localparam RB_BIST_CYC_CNT   = 3'd3;
    localparam RB_BUS_CLK_RATE   = 3'd4;
+   localparam RB_OUT_PKT_CNT    = 3'd5;
 
    // SETTING: Readback Address Register
    // Fields:
@@ -158,13 +160,14 @@ module axi_dma_fifo
    // Fields:
    // - [0]     : Clear FIFO and discard stored data
    // - [1]     : Enable read suppression to prioritize writes
-   // - [3:2]   : Reserved
+   // - [2]     : Flush all packets from the FIFO
+   // - [3]     : Reserved
    // - [15:4]  : Timeout (in memory clock beats) for issuing smaller than optimal bursts
    // - [31:16] : Read suppression threshold in number of words
-   setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(32), .at_reset({16'h0, DEFAULT_TIMEOUT[11:0], 2'b00, 1'b0, 1'b1})) sr_fifo_ctrl
+   setting_reg #(.my_addr(SR_BASE + 1), .awidth(8), .width(32), .at_reset({16'h0, DEFAULT_TIMEOUT[11:0], 1'b0, 1'b0, 1'b0, 1'b1})) sr_fifo_ctrl
      (.clk(bus_clk), .rst(bus_reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
-      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, supress_enable_bclk, clear_bclk}), .changed());
+      .out({supress_threshold_bclk, timeout_bclk, ctrl_reserved, flush_bclk, supress_enable_bclk, clear_bclk}), .changed());
 
    // SETTING: Base Address for FIFO in memory space
    // Fields:
@@ -191,6 +194,7 @@ module axi_dma_fifo
          RB_BIST_XFER_CNT:    rb_data = rb_bist_bw_ratio[79:48];
          RB_BIST_CYC_CNT:     rb_data = rb_bist_bw_ratio[31:0];
          RB_BUS_CLK_RATE:     rb_data = BUS_CLK_RATE;
+         RB_OUT_PKT_CNT:      rb_data = out_pkt_count;
          default:             rb_data = 32'h0;
       endcase
    end
@@ -295,7 +299,8 @@ module axi_dma_fifo
    wire [DWIDTH-1:0] i_tdata_bist;
    wire       i_tvalid_bist, i_tready_bist, i_tlast_bist;
 
-   wire       o_tvalid_int;
+   wire [DWIDTH-1:0] o_tdata_int;
+   wire       o_tvalid_int, o_tready_int, o_tlast_int;
 
    wire [DWIDTH-1:0] o_tdata_fifo;
    wire       o_tvalid_fifo, o_tready_fifo, o_tlast_fifo;
@@ -325,7 +330,7 @@ module axi_dma_fifo
      .BW_COUNTER(EXT_BIST ? 1 : 0),
      .SR_BASE(SR_BASE + 4)
    ) axi_chdr_test_pattern_i (
-      .clk(bus_clk), .reset(bus_reset),
+      .clk(bus_clk), .reset(bus_reset | clear_bclk),
       .i_tdata(i_tdata_bist), .i_tlast(i_tlast_bist), .i_tvalid(i_tvalid_bist), .i_tready(i_tready_bist),
       .o_tdata(o_tdata_bist), .o_tlast(o_tlast_bist), .o_tvalid(o_tvalid_bist), .o_tready(o_tready_bist),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
@@ -348,9 +353,27 @@ module axi_dma_fifo
       .clk(bus_clk), .reset(bus_reset), .clear(clear_bclk),
       .i_tdata(o_tdata_gate), .i_tlast(o_tlast_gate), .i_tvalid(o_tvalid_gate), .i_tready(o_tready_gate),
       .i_terror(1'b0),
-      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid_int), .o_tready(o_tready | clear_bclk)
+      .o_tdata(o_tdata_int), .o_tlast(o_tlast_int), .o_tvalid(o_tvalid_int), .o_tready(o_tready_int)
    );
-   assign o_tvalid = o_tvalid_int & (~clear_bclk);
+
+   axis_packet_flush #(
+      .WIDTH(DWIDTH), .FLUSH_PARTIAL_PKTS(0)
+   ) flusher_i (
+      .clk(bus_clk), .reset(bus_reset),
+      .enable(clear_bclk | flush_bclk), .flushing(),
+      .s_axis_tdata(o_tdata_int), .s_axis_tlast(o_tlast_int),
+      .s_axis_tvalid(o_tvalid_int), .s_axis_tready(o_tready_int),
+      .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast),
+      .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready)
+   );
+
+   always @(posedge bus_clk) begin
+      if (bus_reset) begin
+        out_pkt_count <= 32'd0;
+      end else if (o_tlast_int & o_tvalid_int & o_tready_int) begin
+        out_pkt_count <= out_pkt_count + 32'd1;
+      end
+   end
 
    //
    // Buffer input in FIFO's. Embeded tlast signal using ESCape code.
