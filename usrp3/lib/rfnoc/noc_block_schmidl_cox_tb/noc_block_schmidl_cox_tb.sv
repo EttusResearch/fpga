@@ -19,7 +19,7 @@ module noc_block_schmidl_cox_tb();
 
   // Instiantiate RFNoC blocks in testbench
   `RFNOC_ADD_BLOCK(noc_block_file_source,0);
-  defparam noc_block_file_source.FILENAME = "../../../../test-sc16.bin";
+  defparam noc_block_file_source.FILENAME = "./test-sc16.bin";
   `RFNOC_ADD_BLOCK(noc_block_schmidl_cox,1);
   `RFNOC_ADD_BLOCK(noc_block_fft,2);
   defparam noc_block_fft.EN_MAGNITUDE_OUT        = 0;
