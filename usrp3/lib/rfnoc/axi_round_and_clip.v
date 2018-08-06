@@ -35,7 +35,7 @@ module axi_round_and_clip
   wire int_tlast, int_tvalid, int_tready;
 
   generate
-    if (CLIP_BITS == WIDTH_OUT) begin
+    if (WIDTH_IN == WIDTH_OUT+CLIP_BITS) begin
        assign int_tdata    = i_tdata;
        assign int_tlast    = i_tlast;
        assign int_tvalid   = i_tvalid;
