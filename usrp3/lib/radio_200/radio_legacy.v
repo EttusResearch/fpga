@@ -185,9 +185,18 @@ generate
       // Enter user settings registers here
       // ----------------------------------
 
-      /*
-      //Example code for 32-bit settings registers and 64-bit readback registers
-
+      // Example code for 32-bit settings registers and 64-bit readback registers
+      //
+      // To test this, modify the *_core.v file for your specific USRP and set
+      // USER_SETTINGS=1 for the parameters for the radio_legacy instantiation.
+      //
+      // You can then use the get_user_settings_iface() like this:
+      //
+      // auto usrp = multi_usrp::make("type=b200,enable_user_regs");
+      // auto regs = usrp->get_user_settings_iface(0);
+      // regs->poke32(0, 0xCAFE);
+      // regs->poke32(4, 0xBEEF);
+      // std::cout << boost::format("0x%016X") % regs->peek64(0) << std::endl;
       wire [31:0] user_reg_0_value, user_reg_1_value;
 
       setting_reg #(.my_addr(8'd0), .awidth(8), .width(32)) user_reg_0
@@ -204,7 +213,6 @@ generate
             default : rb_data_user <= 64'd0;
          endcase
       end
-      */
 
    end else begin    //for USER_SETTINGS == 1
       always @* rb_data_user <= 64'd0;
