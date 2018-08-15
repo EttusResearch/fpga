@@ -9,6 +9,7 @@ module x300_db_fe_core #(
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
   parameter USE_SPI_CLK = 0,
+  parameter CTRL_FP_GPIO_SRC = 0,
   parameter [7:0] SR_DB_FE_BASE = 160,
   parameter [7:0] RB_DB_FE_BASE = 16
 )(
@@ -21,7 +22,7 @@ module x300_db_fe_core #(
   input  tx_stb, input [31:0] tx_data_in, output [31:0] tx_data_out, input tx_running, 
   output rx_stb, input [31:0] rx_data_in, output [31:0] rx_data_out, input rx_running,
   // Frontend / Daughterboard I/O
-  input [31:0] misc_ins, output [31:0] misc_outs,
+  input [31:0] misc_ins, output [31:0] misc_outs, output [31:0] fp_gpio_src,
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr, input [31:0] fp_gpio_fab,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr, input [31:0] db_gpio_fab,
   output [31:0] leds,
@@ -35,13 +36,13 @@ module x300_db_fe_core #(
   ** Common dboard control
   ********************************************************/
   db_control #(
-    .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE)
+    .USE_SPI_CLK(USE_SPI_CLK), .CTRL_FP_GPIO_SRC(CTRL_FP_GPIO_SRC), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE)
   ) db_control_i (
     .clk(clk), .reset(reset),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .rb_stb(rb_stb), .rb_addr(rb_addr), .rb_data(rb_data),
     .run_rx(rx_running), .run_tx(tx_running),
-    .misc_ins(misc_ins), .misc_outs(misc_outs),
+    .misc_ins(misc_ins), .misc_outs(misc_outs), .fp_gpio_src(fp_gpio_src),
     .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr), .fp_gpio_fab(fp_gpio_fab),
     .db_gpio_in(db_gpio_in), .db_gpio_out(db_gpio_out), .db_gpio_ddr(db_gpio_ddr), .db_gpio_fab(db_gpio_fab),
     .leds(leds),

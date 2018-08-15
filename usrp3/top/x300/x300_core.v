@@ -6,7 +6,8 @@
 //
 
 module x300_core #(
-   parameter BUS_CLK_RATE = 32'd166666666
+   parameter BUS_CLK_RATE = 32'd166666666,
+   parameter FP_GPIO_WIDTH = 12
 )(
    //Clocks and resets
    input radio_clk,
@@ -21,7 +22,7 @@ module x300_core #(
    // Radio 0
    input [31:0] rx0, output [31:0] tx0,
    input [31:0] db0_gpio_in, output [31:0] db0_gpio_out, output [31:0] db0_gpio_ddr,
-   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr,
+   input [31:0] fp_gpio_in, output reg [31:0] fp_gpio_out, output reg [31:0] fp_gpio_ddr,
    output [7:0] sen0, output sclk0, output mosi0, input miso0,
    output [2:0] radio_led0,
    output reg [31:0] radio0_misc_out, input [31:0] radio0_misc_in,
@@ -651,6 +652,7 @@ module x300_core #(
    wire [31:0] db_gpio_in[0:3], db_gpio_out[0:3], db_gpio_ddr[0:3];
    wire [31:0] misc_outs[0:3];
    reg  [31:0] misc_ins[0:3];
+   wire [31:0] fp_gpio_src[0:3];
    wire [7:0]  sen[0:3];
    wire        sclk[0:3], mosi[0:3], miso[0:3];
    wire        rx_running[0:3], tx_running[0:3];
@@ -737,14 +739,14 @@ module x300_core #(
 
    genvar i;
    generate for (i=0; i<4; i=i+1) begin
-      x300_db_fe_core #( .USE_SPI_CLK(0) ) db_fe_core_i (
+      x300_db_fe_core #( .USE_SPI_CLK(0), .CTRL_FP_GPIO_SRC(i < 1 ? 1 : 0) ) db_fe_core_i (
          .clk(radio_clk), .reset(radio_rst),
          .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i]), .set_data(db_fe_set_data[i]),
          .rb_stb(db_fe_rb_stb[i]),  .rb_addr(db_fe_rb_addr[i]), .rb_data(db_fe_rb_data[i]),
          .time_sync(sync_out[i < 2 ? 0 : 1]),
          .tx_stb(tx_stb[i]), .tx_data_in(tx_data[i]), .tx_data_out(tx_data_out[i]), .tx_running(tx_running[i]), 
          .rx_stb(rx_stb[i]), .rx_data_in(rx_data_in[i]), .rx_data_out(rx_data[i]), .rx_running(rx_running[i]),
-         .misc_ins(misc_ins[i]), .misc_outs(misc_outs[i]),
+         .misc_ins(misc_ins[i]), .misc_outs(misc_outs[i]), .fp_gpio_src(fp_gpio_src[i]),
          .fp_gpio_in(fp_gpio_r_in[i]), .fp_gpio_out(fp_gpio_r_out[i]), .fp_gpio_ddr(fp_gpio_r_ddr[i]), .fp_gpio_fab(),
          .db_gpio_in(db_gpio_in[i]), .db_gpio_out(db_gpio_out[i]), .db_gpio_ddr(db_gpio_ddr[i]), .db_gpio_fab(),
          .leds(leds[i]),
@@ -752,6 +754,25 @@ module x300_core #(
          .sen(sen[i]), .sclk(sclk[i]), .mosi(mosi[i]), .miso(miso[i])
       );
    end endgenerate
+
+   //------------------------------------
+   // Front-Panel GPIO Source Mux
+   //------------------------------------
+
+   // for each bit in the front-panel GPIO, mux the output
+   // and the direction control bit based on the mux register
+   // (for which radio 0 is the controller); the mux selects
+   // between either radio 0 or radio 2
+   generate for (i=0; i<FP_GPIO_WIDTH; i=i+1) begin
+      always @(posedge radio_clk) begin
+         fp_gpio_out[i] <= fp_gpio_r_out[fp_gpio_src[0][i] == 0 ? 0 : 2][i];
+         fp_gpio_ddr[i] <= fp_gpio_r_ddr[fp_gpio_src[0][i] == 0 ? 0 : 2][i];
+      end
+   end endgenerate
+
+   // non-ATR front-panel GPIO inputs routed to radios 0 and 2
+   assign {fp_gpio_r_in[1], fp_gpio_r_in[0]} = {32'b0, fp_gpio_in};
+   assign {fp_gpio_r_in[3], fp_gpio_r_in[2]} = {32'b0, fp_gpio_in};
 
    //------------------------------------
    // Radio to ADC,DAC and IO Mapping
@@ -775,12 +796,6 @@ module x300_core #(
    assign db1_gpio_out = db_gpio_out[2];  //db_gpio_out[3] unused
    assign db0_gpio_ddr = db_gpio_ddr[0];  //db_gpio_ddr[1] unused
    assign db1_gpio_ddr = db_gpio_ddr[2];  //db_gpio_out[3] unused
-
-   //Front-panel board GPIO
-   assign {fp_gpio_r_in[1], fp_gpio_r_in[0]} = {32'b0, fp_gpio_in};
-   assign {fp_gpio_r_in[3], fp_gpio_r_in[2]} = {32'b0, 32'b0};
-   assign fp_gpio_out = fp_gpio_r_out[0];  //fp_gpio_r_out[1,2,3] unused
-   assign fp_gpio_ddr = fp_gpio_r_ddr[0];  //fp_gpio_ddr[1,2,3] unused
 
    //SPI
    assign {sen0, sclk0, mosi0} = {sen[0], sclk[0], mosi[0]};   //*[1] unused

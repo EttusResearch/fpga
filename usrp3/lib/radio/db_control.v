@@ -8,9 +8,10 @@
 module db_control #(
   // Drive SPI core with input spi_clk instead of ce_clk. This is useful if ce_clk is very slow which
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
-  parameter USE_SPI_CLK = 0,
-  parameter SR_BASE     = 160,
-  parameter RB_BASE     = 16
+  parameter USE_SPI_CLK      = 0,
+  parameter CTRL_FP_GPIO_SRC = 0,
+  parameter SR_BASE          = 160,
+  parameter RB_BASE          = 16
 )(
   // Commands from Radio Core
   input clk, input reset,
@@ -18,24 +19,26 @@ module db_control #(
   output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data,
   input run_rx, input run_tx,
   // Frontend / Daughterboard I/O
-  input [31:0] misc_ins, output [31:0] misc_outs,
+  input [31:0] misc_ins, output [31:0] misc_outs, output [31:0] fp_gpio_src,
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr, input [31:0] fp_gpio_fab,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr, input [31:0] db_gpio_fab,
   output [31:0] leds,
   input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso
 );
 
-  localparam [7:0] SR_MISC_OUTS = SR_BASE + 8'd0;
-  localparam [7:0] SR_SPI       = SR_BASE + 8'd8;
-  localparam [7:0] SR_LEDS      = SR_BASE + 8'd16;
-  localparam [7:0] SR_FP_GPIO   = SR_BASE + 8'd24;
-  localparam [7:0] SR_DB_GPIO   = SR_BASE + 8'd32;
+  localparam [7:0] SR_MISC_OUTS   = SR_BASE + 8'd0;
+  localparam [7:0] SR_SPI         = SR_BASE + 8'd8;
+  localparam [7:0] SR_LEDS        = SR_BASE + 8'd16;
+  localparam [7:0] SR_FP_GPIO     = SR_BASE + 8'd24;
+  localparam [7:0] SR_DB_GPIO     = SR_BASE + 8'd32;
+  localparam [7:0] SR_FP_GPIO_SRC = SR_BASE + 8'd40;
 
-  localparam [7:0] RB_MISC_IO   = RB_BASE + 0;
-  localparam [7:0] RB_SPI       = RB_BASE + 1;
-  localparam [7:0] RB_LEDS      = RB_BASE + 2;
-  localparam [7:0] RB_DB_GPIO   = RB_BASE + 3;
-  localparam [7:0] RB_FP_GPIO   = RB_BASE + 4;
+  localparam [7:0] RB_MISC_IO     = RB_BASE + 0;
+  localparam [7:0] RB_SPI         = RB_BASE + 1;
+  localparam [7:0] RB_LEDS        = RB_BASE + 2;
+  localparam [7:0] RB_DB_GPIO     = RB_BASE + 3;
+  localparam [7:0] RB_FP_GPIO     = RB_BASE + 4;
+  localparam [7:0] RB_FP_GPIO_SRC = RB_BASE + 5;
 
   /********************************************************
   ** Settings registers
@@ -45,6 +48,20 @@ module db_control #(
     .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(misc_outs), .changed());
 
+  generate
+    // front-panel GPIO mux register for architectures without
+    // a top-level settings register map; only one radio should
+    // be designated the controller for the FP GPIO mux
+    if (CTRL_FP_GPIO_SRC) begin
+      setting_reg #(.my_addr(SR_FP_GPIO_SRC), .width(32)) sr_fp_gpio_src (
+        .clk(clk), .rst(reset),
+        .strobe(set_stb), .addr(set_addr), .in(set_data),
+        .out(fp_gpio_src), .changed());
+    end else begin
+      assign fp_gpio_src = 32'b0;
+    end
+  endgenerate
+
   // Readback
   reg spi_readback_stb_hold;
   reg [31:0] spi_readback_hold;
@@ -53,12 +70,13 @@ module db_control #(
   always @* begin
     case(rb_addr)
       // Use a latched spi readback stobe so additional readbacks after a SPI transaction will work
-      RB_MISC_IO  : {rb_stb, rb_data} <= {spi_readback_stb_hold, {misc_ins, misc_outs}};
-      RB_SPI      : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, spi_readback_hold}};
-      RB_LEDS     : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, leds}};
-      RB_DB_GPIO  : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, db_gpio_readback}};
-      RB_FP_GPIO  : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, fp_gpio_readback}};
-      default     : {rb_stb, rb_data} <= {spi_readback_stb_hold, {64'h0BADC0DE0BADC0DE}};
+      RB_MISC_IO     : {rb_stb, rb_data} <= {spi_readback_stb_hold, {misc_ins, misc_outs}};
+      RB_SPI         : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, spi_readback_hold}};
+      RB_LEDS        : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, leds}};
+      RB_DB_GPIO     : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, db_gpio_readback}};
+      RB_FP_GPIO     : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, fp_gpio_readback}};
+      RB_FP_GPIO_SRC : {rb_stb, rb_data} <= {spi_readback_stb_hold, {32'd0, fp_gpio_src}};
+      default        : {rb_stb, rb_data} <= {spi_readback_stb_hold, {64'h0BADC0DE0BADC0DE}};
     endcase
   end
 
