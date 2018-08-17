@@ -117,7 +117,6 @@ entity DbCore is
     -- reset is asserted--preventing any reset crossing issues here between the RX
     -- (internal to the core) reset and the no-reset domain of RFNoC.
     --
-    --vhook_wrn DAC RFI statement is legacy from Magnesium, verify for Rhodium.
     -- The DAC samples should be zeros on reset de-assertion due to RFI being de-asserted
     -- in reset. If they are not zeros, then it is still OK because data is ignored until
     -- RFI is asserted. DAC RFI is double-synchronized to protect against the reset
@@ -184,7 +183,6 @@ architecture RTL of DbCore is
       JesdRefClk_n       : in  STD_LOGIC;
       bJesdRefClkPresent : out STD_LOGIC;
       aLmkSync           : out STD_LOGIC;
-      JesdRefClkBufgOut  : out STD_LOGIC;
       bRegPortInFlat     : in  STD_LOGIC_VECTOR(49 downto 0);
       bRegPortOutFlat    : out STD_LOGIC_VECTOR(33 downto 0);
       CaptureSysRefClk   : in  STD_LOGIC;
@@ -233,7 +231,6 @@ architecture RTL of DbCore is
   signal bRadioClk3xEnabled: std_logic;
   signal bRadioClkMmcmReset: std_logic;
   signal bRadioClksValid: std_logic;
-  signal JesdRefClkBufgOut: STD_LOGIC;
   signal pPsDone: std_logic;
   signal pPsEn: std_logic;
   signal pPsInc: std_logic;
@@ -299,11 +296,7 @@ begin
   --vhook_a RadioClk1x      SampleClk1xOutLcl
   --vhook_a RadioClk2x      SampleClk2xOut
   --vhook_a RadioClk3x      open
-  --vhook_# We need to use the exported MGT Reference Clock for Rev. A.
-  --vhook_g kUseFpgaClk     false
-  --vhook_a ExportedClkTemp JesdRefClkBufgOut
   RadioClockingx: entity work.RadioClocking (rtl)
-    generic map (kUseFpgaClk => false)  --boolean:=true
     port map (
       aReset             => false,                  --in  boolean
       bReset             => to_boolean(bBusReset),  --in  boolean
@@ -319,7 +312,6 @@ begin
       pPsDone            => pPsDone,                --out std_logic
       FpgaClk_n          => FpgaClk_n,              --in  std_logic
       FpgaClk_p          => FpgaClk_p,              --in  std_logic
-      ExportedClkTemp    => JesdRefClkBufgOut,      --in  std_logic
       RadioClk1x         => SampleClk1xOutLcl,      --out std_logic
       RadioClk2x         => SampleClk2xOut,         --out std_logic
       RadioClk3x         => open);                  --out std_logic
@@ -388,7 +380,6 @@ begin
       JesdRefClk_n       => JesdRefClk_n,                 --in  STD_LOGIC
       bJesdRefClkPresent => bJesdRefClkPresent,           --out STD_LOGIC
       aLmkSync           => aLmkSync,                     --out STD_LOGIC
-      JesdRefClkBufgOut  => JesdRefClkBufgOut,            --out STD_LOGIC
       bRegPortInFlat     => bJesdCoreRegPortInFlat,       --in  STD_LOGIC_VECTOR(49:0)
       bRegPortOutFlat    => bJesdCoreRegPortOutFlat,      --out STD_LOGIC_VECTOR(33:0)
       CaptureSysRefClk   => SampleClk1xOutLcl,            --in  STD_LOGIC

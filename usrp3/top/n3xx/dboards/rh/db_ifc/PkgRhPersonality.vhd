@@ -2,8 +2,8 @@
 --
 -- File: PkgRhPersonality.vhd
 -- Author: National Instruments
--- Original Project: N310
--- Date: 13 April 2017
+-- Original Project: N32x
+-- Date: 15 Dec 2017
 --
 -------------------------------------------------------------------------------
 -- Copyright 2017 Ettus Research, A National Instruments Company

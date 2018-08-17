@@ -1,7 +1,7 @@
 -- Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2015.4 (win64) Build 1412921 Wed Nov 18 09:43:45 MST 2015
--- Date        : Wed Mar 21 09:07:25 2018
+-- Date        : Fri Aug 17 07:37:33 2018
 -- Host        : hjimenez running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -mode synth_stub -force -file ./Jesd204bXcvrCore_stub.vhd
 -- Design      : Jesd204bXcvrCore
@@ -23,7 +23,6 @@ entity Jesd204bXcvrCore is
     JesdRefClk_n : in STD_LOGIC;
     bJesdRefClkPresent : out STD_LOGIC;
     aLmkSync : out STD_LOGIC;
-    JesdRefClkBufgOut : out STD_LOGIC;
     bRegPortInFlat : in STD_LOGIC_VECTOR ( 49 downto 0 );
     bRegPortOutFlat : out STD_LOGIC_VECTOR ( 33 downto 0 );
     CaptureSysRefClk : in STD_LOGIC;
@@ -50,6 +49,6 @@ architecture stub of Jesd204bXcvrCore is
 attribute syn_black_box : boolean;
 attribute black_box_pad_pin : string;
 attribute syn_black_box of stub : architecture is true;
-attribute black_box_pad_pin of stub : architecture is "bBusReset,BusClk,ReliableClk40,FpgaClk1x,FpgaClk2x,bFpgaClksStable,JesdRefClk_p,JesdRefClk_n,bJesdRefClkPresent,aLmkSync,JesdRefClkBufgOut,bRegPortInFlat[49:0],bRegPortOutFlat[33:0],CaptureSysRefClk,cSysRefFpgaLvds_p,cSysRefFpgaLvds_n,fSysRef,aAdcRx_p[3:0],aAdcRx_n[3:0],aSyncAdcOut_n,aDacTx_p[3:0],aDacTx_n[3:0],aSyncDacIn_n,fAdcDataFlatter[63:0],fDacDataFlatter[63:0],fAdcDataValid,fDacReadyForInput,aDacSync,aAdcSync";
+attribute black_box_pad_pin of stub : architecture is "bBusReset,BusClk,ReliableClk40,FpgaClk1x,FpgaClk2x,bFpgaClksStable,JesdRefClk_p,JesdRefClk_n,bJesdRefClkPresent,aLmkSync,bRegPortInFlat[49:0],bRegPortOutFlat[33:0],CaptureSysRefClk,cSysRefFpgaLvds_p,cSysRefFpgaLvds_n,fSysRef,aAdcRx_p[3:0],aAdcRx_n[3:0],aSyncAdcOut_n,aDacTx_p[3:0],aDacTx_n[3:0],aSyncDacIn_n,fAdcDataFlatter[63:0],fDacDataFlatter[63:0],fAdcDataValid,fDacReadyForInput,aDacSync,aAdcSync";
 begin
 end;

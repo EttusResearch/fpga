@@ -2,17 +2,20 @@
 --
 -- File: PkgAdcDacInterfaceTypes.vhd
 -- Author: National Instruments
--- Original Project: NI 5644R
--- Date: 21 May 2009
+-- Original Project: USRP N32x
+-- Date: 15 Dec 2017
 --
 -------------------------------------------------------------------------------
--- Copyright 2016-2018 Ettus Research, A National Instruments Company
--- SPDX-License-Identifier: LGPL-3.0
+-- (c) 2018 Copyright National Instruments Corporation
+-- All Rights Reserved
+-- National Instruments Internal Information
 -------------------------------------------------------------------------------
 --
 -- Purpose: Contains types for ADC and DAC data so they can more easily be
 --          passed through the design.
 --
+-- vreview_group JesdCoreN32x
+-- vreview_reviewers djepson wfife
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -75,7 +78,7 @@ package PkgAdcDacInterfaceTypes is
 
   -- Flattened type that converts the ADC data into std_logic_vector types. This type is
   -- not suitable for use in the port maps of components that are presynthesized (into EDF
-  -- or NGC files) but is useful for passing data to LabVIEW FPGA's TheWindow.
+  -- or NGC files) but is useful for passing data to the top level.
   type AdcDataAryFlat_t is record
     DataI  : std_logic_vector(kSamplesPerCycle*kAdcDataWidth - 1 downto 0);
     DataQ  : std_logic_vector(kSamplesPerCycle*kAdcDataWidth - 1 downto 0);
@@ -90,7 +93,7 @@ package PkgAdcDacInterfaceTypes is
 
   -- Flattened type that converts the DAC data into std_logic_vector types. This type is
   -- not suitable for use in the port maps of components that are presynthesized (into EDF
-  -- or NGC files) but is useful for passing data from LabVIEW FPGA's TheWindow.
+  -- or NGC files) but is useful for passing data from the top level.
   type DacDataAryFlat_t is record
     DataI : std_logic_vector(kSamplesPerCycle*kDacDataWidth - 1 downto 0);
     DataQ : std_logic_vector(kSamplesPerCycle*kDacDataWidth - 1 downto 0);
@@ -134,7 +137,7 @@ package body PkgAdcDacInterfaceTypes is
                   CBit1I => (others => '0'),
                   CBit1Q => (others => '0'));
 
-    -- LabVIEW puts the 0th element of an array in the MSBs of its data word
+    -- The upstream logic puts the 0th element of an array in the MSBs of its data word
     for i in 0 to kSamplesPerCycle - 1 loop
       ReturnVar.DataI((kSamplesPerCycle - i)*kAdcDataWidth - 1 downto (kSamplesPerCycle - 1 - i)*kAdcDataWidth) := AdcData(i).Data.I; -- Input Data 0 to MSB
       ReturnVar.DataQ((kSamplesPerCycle - i)*kAdcDataWidth - 1 downto (kSamplesPerCycle - 1 - i)*kAdcDataWidth) := AdcData(i).Data.Q;
@@ -241,7 +244,7 @@ package body PkgAdcDacInterfaceTypes is
   begin
     ReturnVar := (others => (Data  => (others => (others => '0'))));
 
-    -- LabVIEW puts the 0th element of an array in the MSBs of its data word
+    -- The upstream logic puts the 0th element of an array in the MSBs of its data word
     for i in 0 to kSamplesPerCycle - 1 loop
       ReturnVar(kSamplesPerCycle - 1 - i).Data.I := DacData.DataI(kDacDataWidth*(i+1) - 1 downto kDacDataWidth*i);
       ReturnVar(kSamplesPerCycle - 1 - i).Data.Q := DacData.DataQ(kDacDataWidth*(i+1) - 1 downto kDacDataWidth*i);

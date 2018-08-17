@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 --
 -- File: DaughterboardRegs.vhd
--- Author: Daniel Jepson
--- Original Project: N310
+-- Author: Daniel Jepson; mods by Humberto Jimenez
+-- Original Project: N310; N32x
 -- Date: 27 April 2016
 --
 -------------------------------------------------------------------------------

@@ -238,9 +238,8 @@ module n3xx (
   inout         DBA_CPLD_JTAG_TDI,
   input         DBA_CPLD_JTAG_TDO,
 
-//vhook_wrn FIXME: No separate fabric clock for Rh
-//   input         DBA_FPGA_CLK_P,
-//   input         DBA_FPGA_CLK_N,
+  input         DBA_FPGA_CLK_P,
+  input         DBA_FPGA_CLK_N,
 
   input         DBA_FPGA_SYSREF_P,
   input         DBA_FPGA_SYSREF_N,
@@ -295,9 +294,8 @@ module n3xx (
   inout         DBB_CPLD_JTAG_TDI,
   input         DBB_CPLD_JTAG_TDO,
 
-//vhook_wrn FIXME: No separate fabric clock for Rh
-//   input         DBB_FPGA_CLK_P,
-//   input         DBB_FPGA_CLK_N,
+  input         DBB_FPGA_CLK_P,
+  input         DBB_FPGA_CLK_N,
 
   input         DBB_FPGA_SYSREF_P,
   input         DBB_FPGA_SYSREF_N,
@@ -3078,13 +3076,6 @@ module n3xx (
   // Daughterboard Cores
   //
   // //////////////////////////////////////////////////////////////////////
-  //vhook_wrn The vhook_sig* section should be empty (i.e. all signals manually declared).
-  //vhook_sigstart
-  wire DBA_FPGA_CLK_N;
-  wire DBA_FPGA_CLK_P;
-  wire DBB_FPGA_CLK_N;
-  wire DBB_FPGA_CLK_P;
-  //vhook_sigend
 
   wire sAdcSyncUnusedA;
   wire sAdcSyncUnusedB;

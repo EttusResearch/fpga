@@ -2,8 +2,8 @@
 --
 -- File: PkgJesdConfig.vhd
 -- Author: National Instruments
--- Original Project: NI 5840
--- Date: 11 March 2016
+-- Original Project: N32x
+-- Date: 15 Dec 2017
 --
 -------------------------------------------------------------------------------
 -- Copyright 2016-2018 Ettus Research, A National Instruments Company
@@ -13,6 +13,8 @@
 -- Purpose: JESD204B setup constants and functions. These constants are shared
 --          between RX and TX JESD cores.
 --
+-- vreview_group JesdCoreN32x
+-- vreview_reviewers djepson wfife
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -39,12 +41,11 @@ package PkgJesdConfig is
   -- The N310 transceivers use the single rate reference, hence = false.
   constant kDoubleRateUsrClk : boolean := false;
 
-  -- For the N310, all lanes are in one quad and we use the QPLL.
+  -- For the N32x, all lanes are in one quad and we use the QPLL.
   constant kJesdUseQpll : boolean := true;
 
   constant kAdcDataWidth     : integer := 14; -- ADC data width in bits
   constant kDacDataWidth     : integer := 16; -- DAC data width in bits
-  --vhook_wrn Note: SampleClk1x = 245.76 MHz; therefore we have 2 samples p/ cycle (Conv. @ 491.52 MSPS).
   constant kSamplesPerCycle  : integer := 2;  -- Number of samples per SampleClk1x
 
   constant kGtxDrpAddrWidth    : natural := 9;
@@ -65,7 +66,7 @@ package PkgJesdConfig is
   constant kOctetsPerFrame         : natural   := 1;             -- F
   constant kDacJesdSamplesPerCycle : integer   := 1;             -- S
   constant kOctetsPerLane          : natural   := 2;             -- MGT data is kOctetsPerLane*8 = 16 bits wide
-  constant kNumQuads               : natural   := kNumLanes/4;   -- 4 lanes per quad
+  constant kNumQuads               : natural   := kNumLanes / 4; -- 4 lanes per quad
   constant kHighDensity            : boolean   := true;          -- HD
   constant kConvResBits            : positive  := kDacDataWidth; -- Converter resolution in bits
   constant kConvSampleBits         : positive  := 16;            -- Sample Length in bits
@@ -73,21 +74,21 @@ package PkgJesdConfig is
   constant kFramesPerMulti         : natural   := 24;            -- K
 
   -- Rhodium:
-  -- The converters are running at 491.52 MSPS (DeviceClk), and the sampling clock at the
-  -- FPGA (UserClk) is 245.76 MHz (491.52 / 2).
-  --vhook_wrn For Rev. A the frame rate = DeviceClk = 491.52 MSPS
-  -- Therefore, the frame rate is at DeviceClk freq., and the Multiframe rate is
-  -- (frame rate / kFramesPerMulti) = 491.52 MHz / 24 = 20.48 MHz.
-  -- kUserClksPerMulti is the (UsrClk rate / Multiframe rate) = 245.76 / 20.48 = 12
-  constant kUserClksPerMulti : integer := 12;
+  -- The converters are running at 400/491.52/500 MSPS (DeviceClk), and the sampling
+  -- clock at the FPGA (UserClk) is 200/245.76/250 MHz; so UsrClk = (DeviceClk / 2).
+  -- The frame rate = DeviceClk, and the Multiframe rate = (frame rate / kFramesPerMulti)
+  -- Thus, kUserClksPerMulti = (UsrClk / Multiframe rate)
+  --                         = (UsrClk / (DeviceClk / kFramesPerMulti))
+  -- since UsrClk = DeviceClk / 2 then,
+  --       kUserClksPerMulti = ((DeviceClk / 2) / (DeviceClk / kFramesPerMulti))
+  -- therefore,
+  --       kUserClksPerMulti = kFramesPerMulti / 2 
+  constant kUserClksPerMulti : integer := kFramesPerMulti / 2;
 
 
   type NaturalVector is array ( natural range <>) of natural;
 
-
-  --vhook_wrn Update PCB connections between transceivers and devices.
-
-  -- The PCB connections are as follows:
+  -- The PCB connections are are passed trough, any swapping is handled somewhere else.
   --
   --   Transceiver  MGT Channel   ADC Lane    DAC Lane
   --   ***********  ***********   ********    ********
@@ -160,54 +161,5 @@ package PkgJesdConfig is
   -- Option to pipeline stages to improve timing, if needed
   constant kPipelineDetectCharsStage : boolean := false;
   constant kPipelineCharReplStage    : boolean := false;
-  
-
-  -- Data manipulation settings.
-  type DataSettings_t is record
-    InvertA  : std_logic;
-    InvertB  : std_logic;
-    ZeroA    : std_logic;
-    ZeroB    : std_logic;
-    AisI     : std_logic;
-    BisQ     : std_logic;
-  end record;
-
-  constant kDataSettingsSize : integer := 6;
-  subtype DataSettingsFlat_t is std_logic_vector(kDataSettingsSize - 1 downto 0);
-
-  function   Flatten(TypeIn : DataSettings_t)                                   return std_logic_vector;
-  function Unflatten(SlvIn  : std_logic_vector(kDataSettingsSize - 1 downto 0)) return DataSettings_t;
 
 end package;
-
-
-package body PkgJesdConfig is
-
-  -- Data manipulation settings.
-  function   Flatten(TypeIn     : DataSettings_t)   return std_logic_vector
-  is
-    variable ReturnVar : std_logic_vector(kDataSettingsSize - 1 downto 0);
-  begin
-    ReturnVar := (TypeIn.InvertA) &
-                 (TypeIn.InvertB) &
-                 (TypeIn.ZeroA)   &
-                 (TypeIn.ZeroB)   &
-                 (TypeIn.AisI)    &
-                 (TypeIn.BisQ);
-   return ReturnVar;
-  end function Flatten;
-
-  function Unflatten(SlvIn : std_logic_vector(kDataSettingsSize - 1 downto 0)) return DataSettings_t
-  is
-    variable ReturnVar : DataSettings_t;
-  begin
-    ReturnVar.InvertA := (SlvIn(5));
-    ReturnVar.InvertB := (SlvIn(4));
-    ReturnVar.ZeroA   := (SlvIn(3));
-    ReturnVar.ZeroB   := (SlvIn(2));
-    ReturnVar.AisI    := (SlvIn(1));
-    ReturnVar.BisQ    := (SlvIn(0));
-    return ReturnVar;
-  end function Unflatten;
-
-end package body;

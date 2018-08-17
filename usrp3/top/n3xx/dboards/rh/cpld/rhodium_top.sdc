@@ -120,7 +120,7 @@ set_clock_uncertainty -to PlSpiClkR 0.1ns
 # Technically, only one clock can be driven from the FPGA for the PL SPI, so
 # we treat both clocks as logically exclusive to tell the tools to not analyze
 # the paths between them.
-set_clock_groups -logically_exclusive -group [get_clocks {PlSpiClkR}]
+set_clock_groups -logically_exclusive -group [get_clocks {PlSpiClkR}] -group [get_clocks {PlSpiClkW}]
 
 # SDI is both registered in the CPLD and used as a direct passthrough. First constrain
 # the input delay on the local paths inside the CPLD. Passthrough constraints

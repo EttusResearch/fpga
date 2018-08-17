@@ -28,16 +28,6 @@ library unisim;
 
 
 entity RadioClocking is
-  generic (
-    -- For Rhodium Rev. A, the FPGA Device Clock trace was connected to the
-    -- wrong pin. Therefore, a workaround is to use the MGT Reference clock
-    -- which is exported from the Jesd204bXcvrCore module. This exported
-    -- clock already comes from a BUFG.
-    -- Set kUseFpgaClk to false to bypass the IBUFDS buffer that connects
-    -- the FpgaClk differential signal to the logic, therefore, using the
-    -- exported clock from the Jesd204bXcvrCore module.
-    kUseFpgaClk            : boolean := true
-  );
   port (
     -- Async reset. Can be tied low if desired.
     aReset                 : in  boolean;
@@ -66,9 +56,6 @@ entity RadioClocking is
     -- Straight from pins. Buffer included in here.
     FpgaClk_n              : in  std_logic;
     FpgaClk_p              : in  std_logic;
-
-    --vhook_wrn Additional clock input available for exported clock (MgtRefClk).
-    ExportedClkTemp        : in  std_logic;
 
     RadioClk1x             : out std_logic;
     RadioClk2x             : out std_logic;
@@ -112,36 +99,16 @@ begin
   -- Radio Clock Buffering : ------------------------------------------------------------
   --
   -- ------------------------------------------------------------------------------------
-  ----vhook_i IBUFDS FpgaClkIbufg hidegeneric=true
-  ----vhook_a I  FpgaClk_p
-  ----vhook_a IB FpgaClk_n
-  ----vhook_a O  FpgaClkSE
-  --FpgaClkIbufg: IBUFDS
-  --  port map (
-  --    O  => FpgaClkSE,  --out std_ulogic
-  --    I  => FpgaClk_p,  --in  std_ulogic
-  --    IB => FpgaClk_n); --in  std_ulogic
-
-  -- ******************************************************************************
-  -- This logic enables the module to route an exported clock (ExportedClkTemp) to the
-  -- MMCM, instead of using the differential input.
-  -- vhook_wrn Remove additional clock multiplexing logic when board has been fixed.
-  UseFpgaClk : if kUseFpgaClk generate
-    --vhook_i IBUFDS FpgaClkIbufg hidegeneric=true
-    --vhook_a I  FpgaClk_p
-    --vhook_a IB FpgaClk_n
-    --vhook_a O  FpgaClkSE
-    FpgaClkIbufg: IBUFDS
-      port map (
-        O  => FpgaClkSE,  --out std_ulogic
-        I  => FpgaClk_p,  --in  std_ulogic
-        IB => FpgaClk_n); --in  std_ulogic 
-  end generate UseFpgaClk;
-  
-  UseExportedClk : if not kUseFpgaClk generate
-    FpgaClkSE <= ExportedClkTemp;
-  end generate UseExportedClk;
-  -- ******************************************************************************  
+  --vhook_i IBUFDS FpgaClkIbufg hidegeneric=true
+  --vhook_a I  FpgaClk_p
+  --vhook_a IB FpgaClk_n
+  --vhook_a O  FpgaClkSE
+  FpgaClkIbufg: IBUFDS
+    port map (
+      O  => FpgaClkSE,  --out std_ulogic
+      I  => FpgaClk_p,  --in  std_ulogic
+      IB => FpgaClk_n); --in  std_ulogic
+ 
 
   ResetDelay : process(aReset, BusClk)
   begin
