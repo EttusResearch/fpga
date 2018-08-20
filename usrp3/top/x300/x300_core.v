@@ -673,7 +673,7 @@ module x300_core #(
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .STR_SINK_FIFOSIZE({8'd0, RADIO_INPUT_BUFF_SIZE}),
       .MTU(RADIO_OUTPUT_BUFF_SIZE)
    ) noc_block_radio_core_i0 (
       //Clocks
@@ -705,7 +705,7 @@ module x300_core #(
    noc_block_radio_core #(
       .NOC_ID(64'h12AD_1000_0000_0001),
       .NUM_CHANNELS(2),
-      .STR_SINK_FIFOSIZE({8'd5, RADIO_INPUT_BUFF_SIZE}),
+      .STR_SINK_FIFOSIZE({8'd0, RADIO_INPUT_BUFF_SIZE}),
       .MTU(RADIO_OUTPUT_BUFF_SIZE)
    ) noc_block_radio_core_i1 (
       //Clocks
