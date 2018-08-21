@@ -14,7 +14,7 @@
 
 module noc_block_replay #(
   // NOC_ID ("REPLAY")
-  parameter NOC_ID = 64'h4E91_A00_0000_0000,
+  parameter NOC_ID = 64'h4E91_A000_0000_0000,
 
   // Input buffering to tolerate DMA (usually DRAM) latency variation
   parameter STR_SINK_FIFOSIZE = 11,
