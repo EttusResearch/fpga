@@ -27,8 +27,6 @@ include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/simple_gemac/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
-#include $(LIB_DIR)/zpu/Makefile.srcs
-#include $(LIB_DIR)/wishbone/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
 include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
@@ -37,7 +35,6 @@ include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/white_rabbit/wr_cores_v4_2/Makefile.srcs
-#include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(BASE_DIR)/n3xx/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
@@ -88,22 +85,10 @@ else
 DRAM_SRCS =
 endif
 
-ifdef HLS
-HLS_IP_GEN_SRCS = $(HLS_IP_OUTPUT_SRCS)
-else
-HLS_IP_GEN_SRCS =
-endif
-
 ifdef N300
 MAGNESIUM_DB_XDC = $(MAGNESIUM_DB_TIMING_XDC) $(MAGNESIUM_DB0_XDC)
 else
 MAGNESIUM_DB_XDC = $(MAGNESIUM_DB_TIMING_XDC) $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC)
-endif
-
-ifdef HLS
-HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
-else
-HLS_IP_TARGETS =
 endif
 
 # The XDC files must be read in a specific order, motherboard first and then daughterboard.
@@ -117,7 +102,7 @@ $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(AURORA_PHY_SRCS) \
 $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
-$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(HLS_IP_GEN_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS) \
+$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIBCOREGEN_SRCS) \
 $(MAGNESIUM_DB_SRCS) $(DB_COMMON_SRCS) $(WHITE_RABBIT_SRCS)
 
 ##################################################
@@ -134,6 +119,4 @@ bin: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-hls: .prereqs hls_ip bin
-
-.PHONY: bin hls
+.PHONY: bin

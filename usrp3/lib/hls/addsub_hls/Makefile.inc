@@ -5,13 +5,18 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 
-# Set IP name
-HLS_IP_NAME = addsub_hls
-
 # Add C/C++/tcl files relative to usrp3/lib/hls/<ip> directory
-HLS_IP_$(HLS_IP_NAME)_SRCS = \
-$(HLS_IP_NAME).cpp \
-$(HLS_IP_NAME).tcl
+HLS_IP_ADDSUB_HLS_SRCS = \
+addsub_hls.cpp \
+addsub_hls.tcl
 
-# Setup build targets, don't remove this
-$(eval $(call HLS_IP_GEN_TARGETS,$(HLS_IP_NAME),$(PART_ID),$(HLS_IP_$(HLS_IP_NAME)_SRCS),$(HLS_IP_DIR),$(IP_BUILD_DIR)))
+HLS_IP_ADDSUB_HLS_OUTS = $(addprefix $(IP_BUILD_DIR)/addsub_hls/, \
+solution/impl/verilog/addsub_hls.v \
+)
+
+# Sources in lib directory
+HLS_IP_ADDSUB_HLS_LIB_SRCS = $(addprefix $(HLS_IP_DIR)/addsub_hls/, $(HLS_IP_ADDSUB_HLS_SRCS))
+
+# Build with HLS
+$(HLS_IP_ADDSUB_HLS_OUTS) : $(HLS_IP_ADDSUB_HLS_LIB_SRCS)
+	$(call BUILD_VIVADO_HLS_IP,addsub_hls,$(PART_ID),$(HLS_IP_ADDSUB_HLS_LIB_SRCS),$(HLS_IP_DIR),$(IP_BUILD_DIR),)

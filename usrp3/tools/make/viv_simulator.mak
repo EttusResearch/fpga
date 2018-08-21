@@ -50,10 +50,6 @@ SETUP_AND_LAUNCH_SIMULATION = \
 xsim: .check_tool $(DESIGN_SRCS) $(SIM_SRCS) $(INC_SRCS)
 	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
 
-##xsim_hls:       Run the simulation using the Xilinx Vivado Simulator. Also call hls_ip
-xsim_hls: .check_tool hls_ip $(DESIGN_SRCS) $(SIM_SRCS) $(INC_SRCS)
-	$(call SETUP_AND_LAUNCH_SIMULATION,XSim)
-
 ##xclean:     Cleanup Xilinx Vivado Simulator intermediate files
 xclean:
 	@rm -f xsim*.log

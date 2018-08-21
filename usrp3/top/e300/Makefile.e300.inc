@@ -56,12 +56,6 @@ TOP_SRCS += e3xx_idle.v
 TOP_SRCS += e3xx_idle.xdc
 endif
 
-ifdef HLS
-HLS_IP_TARGETS = $(HLS_IP_OUTPUT_SRCS) hls_ip
-else
-HLS_IP_TARGETS =
-endif
-
 # Vivado seems somewhat unhappy when adding above
 TOP_SRCS += e3xx.xdc \
             e3xx_timing.xdc
@@ -89,8 +83,7 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(AXI_SRCS) \
           $(RFNOC_SRCS) \
           $(RFNOC_OOT_SRCS) \
-          $(LIB_IP_XCI_SRCS) \
-          $(HLS_IP_TARGETS)
+          $(LIB_IP_XCI_SRCS)
 
 ##################################################
 # Dependency Targets
