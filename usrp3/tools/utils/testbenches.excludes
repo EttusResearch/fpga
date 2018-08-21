@@ -4,7 +4,6 @@
 
 lib/rfnoc/noc_block_addsub_hls_tb
 lib/rfnoc/noc_block_eq_tb
-lib/rfnoc/noc_block_file_io_tb
 lib/rfnoc/noc_block_ofdm_tb
 lib/rfnoc/noc_block_schmidl_cox_tb
 lib/rfnoc/noc_block_vector_iir_tb

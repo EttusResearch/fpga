@@ -96,9 +96,7 @@ axi_deserializer.v \
 axi_packer.v \
 complex_to_mag_approx.v \
 noc_block_file_source.v \
-noc_block_file_io.v \
 file_source.v \
-file_sink.v \
 ofdm_plateau_detector.v \
 ofdm_peak_detector.v \
 fosphor/delay.v \

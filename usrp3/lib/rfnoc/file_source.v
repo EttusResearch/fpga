@@ -25,13 +25,13 @@ module file_source #(
   output [63:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
 
   reg [63:0] mem[0:FILE_LENGTH/8-1];
-  integer    file, file_length, index;
+  integer    file, file_length;
+  reg [$clog2(FILE_LENGTH/8)-1:0] index;
+  integer i;
 
   initial begin
     if (FILENAME != "") begin
-      file = $fopen(FILENAME, "rb");
-      file_length = $fread(mem,file,0);
-      $display("Read %d lines", file_length);
+      $readmemh(FILENAME, mem);
     end
   end
 
@@ -44,9 +44,9 @@ module file_source #(
   wire [63:0] int_tdata;
   wire        int_tlast, int_tvalid, int_tready;
 
+  wire        enable;
   wire [15:0] len;
   reg  [15:0] count;
-  wire        changed_sid;
   wire        send_time;
   wire [1:0]  swap_samples;
   wire [1:0]  endianness;
@@ -89,6 +89,7 @@ module file_source #(
       state <= IDLE;
       count <= 0;
       index <= 0;
+      seqnum <= 0;
     end else begin
       case (state)
         IDLE : begin
