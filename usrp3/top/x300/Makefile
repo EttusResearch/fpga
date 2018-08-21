@@ -35,15 +35,8 @@ TARGET = bin
 endif
 TOP ?= x300
 
-# Additional HLS options
-ifdef HLS
-HLS_DEFS = HLS=1
-else
-HLS_DEFS =
-endif
-
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.x300.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 $(HLS_DEFS) TOP_MODULE=$(TOP) EXTRA_DEFS="$2 $(HLS_DEFS)"
+vivado_build = make -f Makefile.x300.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
 
 # vivado_build($1=Device, $2=Option)
 post_build = @\
@@ -114,22 +107,22 @@ X300_XA:
 	$(call vivado_build,X300,$(XA_DEFS) X300=1)
 	$(call post_build,X300,XA)
 
-##X310_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled. (Use HLS=1 to build HLS IP)
+##X310_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
 X310_RFNOC_HG:
 	$(call vivado_build,X310,$(HG_DEFS) RFNOC=1 X310=1)
 	$(call post_build,X310,RFNOC_HG)
 
-##X300_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled. (Use HLS=1 to build HLS IP)
+##X300_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
 X300_RFNOC_HG:
 	$(call vivado_build,X300,$(HG_DEFS) RFNOC=1 X300=1)
 	$(call post_build,X300,RFNOC_HG)
 
-##X310_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled. (Use HLS=1 to build HLS IP)
+##X310_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled.
 X310_RFNOC_XG:
 	$(call vivado_build,X310,$(XG_DEFS) RFNOC=1 X310=1)
 	$(call post_build,X310,RFNOC_XG)
 
-##X300_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled. (Use HLS=1 to build HLS IP)
+##X300_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled.
 X300_RFNOC_XG:
 	$(call vivado_build,X300,$(XG_DEFS) RFNOC=1 X300=1)
 	$(call post_build,X300,RFNOC_XG)
@@ -153,7 +146,6 @@ help:     ##Show this help message.
 ##-----------------
 ##GUI=1        Launch the build in the Vivado GUI.
 ##CHECK=1      Launch the syntax checker instead of building a bitfile.
-##HLS=1        Build HLS IP
 ##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall help
