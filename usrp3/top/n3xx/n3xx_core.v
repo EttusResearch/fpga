@@ -738,13 +738,14 @@ module n3xx_core #(
     if (USE_REPLAY) begin
 
       noc_block_replay #(
+        .NOC_ID            (64'h4E91_A000_0000_0004),
         .NUM_REPLAY_BLOCKS (NUM_DRAM_FIFOS),
         .STR_SINK_FIFOSIZE (14)
-      ) inst_noc_block_dram_fifo (
+      ) inst_noc_block_replay (
         .bus_clk (bus_clk),
         .bus_rst (bus_rst),
-        .ce_clk  (ddr3_axi_clk_x2),
-        .ce_rst  (ddr3_axi_rst),
+        .ce_clk  (ddr3_dma_clk),
+        .ce_rst  (ddr3_dma_rst),
 
         .i_tdata  (ioce_o_tdata[0]),
         .i_tlast  (ioce_o_tlast[0]),
