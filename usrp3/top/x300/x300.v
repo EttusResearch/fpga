@@ -642,9 +642,7 @@ module x300
 
 
    wire [7:0] leds;
-   assign { LED_ACT1, LED_ACT2,
-        LED_LINK1, LED_LINK2,
-        LED_LINKSTAT, LED_LINKACT } = ~leds;
+   assign {LED_LINKSTAT, LED_LINKACT} = ~leds;
 
    wire [31:0] debug;
 
@@ -955,6 +953,7 @@ module x300
    wire [15:0] sfp0_wb_adr;
    wire        sfp0_wb_ack, sfp0_wb_stb, sfp0_wb_cyc, sfp0_wb_we, sfp0_wb_int;
 
+   wire        sfp0_link_up, sfp0_activity;
 
    x300_sfpp_io_core #(
 `ifdef SFP0_10GBE
@@ -1008,8 +1007,14 @@ module x300
       .wb_dat_o(sfp0_wb_dat_i),
       .wb_int_o(sfp0_wb_int),
 
-      .phy_status(sfp0_phy_status)
+      .phy_status(sfp0_phy_status),
+      .link_up(sfp0_link_up),
+      .activity(sfp0_activity)
    );
+
+   // LEDs are driven with negative logic.
+   assign LED_LINK2 = ~sfp0_link_up;
+   assign LED_ACT2  = ~sfp0_activity;
 
 
    //////////////////////////////////////////////////////////////////////
@@ -1028,6 +1033,7 @@ module x300
    wire [15:0] sfp1_wb_adr;
    wire        sfp1_wb_ack, sfp1_wb_stb, sfp1_wb_cyc, sfp1_wb_we, sfp1_wb_int;
 
+   wire        sfp1_link_up, sfp1_activity;
 
    x300_sfpp_io_core #(
 `ifdef SFP1_10GBE
@@ -1081,8 +1087,14 @@ module x300
       .wb_dat_o(sfp1_wb_dat_i),
       .wb_int_o(sfp1_wb_int),
 
-      .phy_status(sfp1_phy_status)
+      .phy_status(sfp1_phy_status),
+      .link_up(sfp1_link_up),
+      .activity(sfp1_activity)
    );
+
+   // LEDs are driven with negative logic.
+   assign LED_LINK1 = ~sfp1_link_up;
+   assign LED_ACT1  = ~sfp1_activity;
 
    ///////////////////////////////////////////////////////////////////////////////////
    //
