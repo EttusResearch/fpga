@@ -56,7 +56,9 @@ module x300_sfpp_io_core #(
    output [31:0]     wb_dat_o,
    output            wb_int_o,
 
-   output [15:0]     phy_status
+   output [15:0]     phy_status,
+   output            link_up,
+   output            activity
 );
 
    wire mdc, mdio_in, mdio_out;
@@ -149,6 +151,12 @@ generate
 
       assign phy_status  = {8'h00, xgmii_status};
 
+      // Use the PCS Block Lock signal to drive the link_up LED on the FP.
+      // For further details, see Xilinx' PG068, Table 2-11 (core_status[0] signal).
+      synchronizer #(.INITIAL_VAL(1'b0)) link_up_sync (
+         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(xgmii_status[0]), .out(link_up));
+
+
    end else if (PROTOCOL == "1GbE") begin
 
       //-----------------------------------------------------------------
@@ -235,6 +243,12 @@ generate
          // Debug
          .debug_tx(), .debug_rx()
       );
+
+      // Use the Link Status signal to drive the link_up LED on the FP.
+      // For further details, see Xilinx' PG047, Table 2-76 (status_vector[0]).
+      synchronizer #(.INITIAL_VAL(1'b0)) link_up_sync (
+         .clk(bus_clk), .rst(1'b0 /* no reset */), .in(phy_status[0]), .out(link_up));
+
 
    end else if (PROTOCOL == "Aurora") begin
 
@@ -424,6 +438,8 @@ generate
          channel_up_bclk            //[0]
       };
 
+      assign link_up = channel_up_bclk;
+
       always @(*)
          case (rb_addr)
             4'd0:    rb_data = core_status;
@@ -440,6 +456,17 @@ generate
 
    end
 endgenerate
+
+   //-----------------------------------------------------------------
+   // Activity detector
+   //-----------------------------------------------------------------
+
+   pulse_stretch act_pulse_str_i (
+     .clk(bus_clk),
+     .rst(bus_rst | ~link_up),
+     .pulse((s_axis_tvalid & s_axis_tready) | (m_axis_tvalid & m_axis_tready)),
+     .pulse_stretched(activity)
+   );
 
 endmodule
 
