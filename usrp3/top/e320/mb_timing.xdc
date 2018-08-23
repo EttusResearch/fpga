@@ -11,7 +11,7 @@
 ###############################################################################
 
 # External Reference Clock
-set REF_CLK_PERIOD 40.00
+set REF_CLK_PERIOD 50.00
 create_clock -name ref_clk -period $REF_CLK_PERIOD  [get_ports CLK_REF_RAW]
 
 # Radio clock from AD9361
@@ -137,7 +137,7 @@ set t_ext_hold  5.0
 set t_ext_pps_to_fpga(min) 1.673 ; # Delay from external pin of PPS to FPGA
 set t_ext_pps_to_fpga(max) 5.011
 set t_ext_ref_to_fpga(min) 1.452 ; # Delay from external pin of reference clock to FPGA
-set t_ext_ref_to_fpga(max) 2.806
+set t_ext_ref_to_fpga(max) 4.000
 
 # Calculate the needed setup and hold at FPGA for external PPS, taking into
 # account worst-case clock and data path skew.
@@ -148,14 +148,23 @@ set_input_delay -clock ref_clk -max [expr $REF_CLK_PERIOD - $t_ext_fpga_setup] [
 set_input_delay -clock ref_clk -min $t_ext_fpga_hold                           [get_ports CLK_SYNC_EXT]
 
 
-# Board delays for internal REF/PPS
-set t_int_pps_to_fpga(min) 2.398 ; # Delay from GPS PPS to FPGA
-set t_int_pps_to_fpga(max) 2.930
-set t_int_ref_to_fpga(min) 5.113 ; # Delay from GPS reference clock to FPGA
-set t_int_ref_to_fpga(max) 7.281
+# The GPS provides 2 ns setup and 2 ns of hold around the rising clock edge
+set t_int_setup 2.0
+set t_int_hold  2.0
 
-set_input_delay -clock ref_clk -max [expr $t_int_pps_to_fpga(max) - $t_int_ref_to_fpga(min)] [get_ports CLK_SYNC_INT]
-set_input_delay -clock ref_clk -min [expr $t_int_pps_to_fpga(min) - $t_int_ref_to_fpga(max)] [get_ports CLK_SYNC_INT]
+# Board delays for internal REF/PPS
+set t_int_pps_to_fpga(min) 0.359 ; # Delay from PPS output of GPS to FPGA
+set t_int_pps_to_fpga(max) 0.438
+set t_int_ref_to_fpga(min) 1.699 ; # Delay from reference clock output of GPS to FPGA
+set t_int_ref_to_fpga(max) 3.149
+
+# Calculate the needed setup and hold at FPGA for internal PPS, taking into
+# account worst-case clock and data path skew.
+set t_int_fpga_setup [expr $t_int_setup + ($t_int_ref_to_fpga(min) - $t_int_pps_to_fpga(max))]
+set t_int_fpga_hold  [expr $t_int_hold  + ($t_int_pps_to_fpga(min) - $t_int_ref_to_fpga(max))]
+
+set_input_delay -clock ref_clk -max [expr $REF_CLK_PERIOD - $t_int_fpga_setup] [get_ports CLK_SYNC_INT]
+set_input_delay -clock ref_clk -min $t_int_fpga_hold                           [get_ports CLK_SYNC_INT]
 
 
 
