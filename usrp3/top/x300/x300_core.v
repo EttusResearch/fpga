@@ -196,7 +196,7 @@ module x300_core #(
    output pcii_tready,
 
    // Debug
-   output [7:0] led_misc,
+   output [1:0] led_misc,
    output [31:0] debug0,
    output [31:0] debug1,
    output [127:0] debug2
