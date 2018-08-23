@@ -641,7 +641,7 @@ module x300
       );
 
 
-   wire [7:0] leds;
+   wire [1:0] leds;
    assign {LED_LINKSTAT, LED_LINKACT} = ~leds;
 
    wire [31:0] debug;

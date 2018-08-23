@@ -15,7 +15,7 @@ module bus_int #(
     inout scl2, inout sda2,
     output gps_txd, input gps_rxd,
     output debug_txd, input debug_rxd,
-    output [7:0] leds,
+    output [1:0] leds,
     output [3:0] sw_rst,
     // SFP+ 0
     input SFPP0_ModAbs, input SFPP0_TxFault, input SFPP0_RxLOS, inout SFPP0_RS0, inout SFPP0_RS1,
@@ -240,7 +240,7 @@ module bus_int #(
       .debug1()
    );
 
-   setting_reg #(.my_addr(SR_LEDS), .awidth(SR_AWIDTH), .width(8)) set_leds
+   setting_reg #(.my_addr(SR_LEDS), .awidth(SR_AWIDTH), .width(2)) set_leds
      (.clk(clk), .rst(reset),
       .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(leds));
