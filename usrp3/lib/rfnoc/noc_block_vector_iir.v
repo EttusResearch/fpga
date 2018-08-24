@@ -121,17 +121,49 @@ module noc_block_vector_iir #(
   localparam [7:0] SR_VECTOR_LEN = 129;
   localparam [7:0] SR_ALPHA      = 130;
   localparam [7:0] SR_BETA       = 131;
-  localparam MAX_LOG2_OF_SIZE    = 12;
+
+  localparam MAX_VECTOR_LEN      = 4096;
+  localparam ALPHA_W             = 16;
+  localparam BETA_W              = 16;
+
+  wire [$clog2(MAX_VECTOR_LEN)-1:0] set_vector_len;
+  wire [BETA_W-1:0]                 set_beta;
+  wire [ALPHA_W-1:0]                set_alpha;
+  wire [2:0]                        set_changed;
+
+  setting_reg #(
+    .my_addr(SR_VECTOR_LEN), .width($clog2(MAX_VECTOR_LEN))
+  ) sr_vector_len_inst (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(set_vector_len), .changed(set_changed[0])
+  );
+
+  setting_reg #(
+    .my_addr(SR_ALPHA), .width(ALPHA_W)
+  ) sr_beta_inst (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(set_alpha), .changed(set_changed[1])
+  );
+
+  setting_reg #(
+    .my_addr(SR_BETA), .width(BETA_W)
+  ) sr_alpha_inst (
+    .clk(ce_clk), .rst(ce_rst),
+    .strobe(set_stb), .addr(set_addr), .in(set_data),
+    .out(set_beta), .changed(set_changed[2])
+  );
 
   vector_iir #(
-    .SR_VECTOR_LEN(SR_VECTOR_LEN),
-    .SR_ALPHA(SR_ALPHA),
-    .SR_BETA(SR_BETA),
-    .MAX_LOG2_OF_SIZE(MAX_LOG2_OF_SIZE))
-  inst_vector_iir (
-    .clk(ce_clk), .reset(ce_rst), .clear(1'b0),
-    .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
+    .MAX_VECTOR_LEN(MAX_VECTOR_LEN),
+    .ALPHA_W(ALPHA_W),
+    .BETA_W(BETA_W)
+  ) inst_vector_iir (
+    .clk(ce_clk), .reset(ce_rst | clear_tx_seqnum | (|set_changed)),
+    .set_vector_len(set_vector_len), .set_alpha(set_alpha), .set_beta(set_beta),
     .i_tdata(m_axis_data_tdata), .i_tlast(m_axis_data_tlast), .i_tvalid(m_axis_data_tvalid), .i_tready(m_axis_data_tready),
-    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready));
+    .o_tdata(s_axis_data_tdata), .o_tlast(s_axis_data_tlast), .o_tvalid(s_axis_data_tvalid), .o_tready(s_axis_data_tready)
+  );
 
 endmodule // noc_block_vector_iir

@@ -1,83 +1,178 @@
 //
-// Copyright 2014 Ettus Research LLC
-// Copyright 2018 Ettus Research, a National Instruments Company
+// Copyright 2018 Ettus Research, A National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// H(z) = alpha/(1 - beta*z^-1)
-// Typically beta = 1 - alpha
+// Module: vector_iir
+// Description: 
+//   This module implements an IIR filter with a variable length delay line.
+//   Transfer Function:                 beta
+//                        H(z) = ------------------
+//                               1 - alpha*z^-delay
+//   where:
+//   - beta is the feedforward tap
+//   - alpha is the feedback tap
+//   - delay (aka vector_len) is the feedback tap delay
+//
+// Parameters:
+//   - MAX_VECTOR_LEN: Maximum value for delay (vector_len)
+//   - IN_W: Input sample width for a real sample which includes the sign bit.
+//           The actual input of the module will be 2*IN_W because it handles
+//           complex data.
+//   - OUT_W: Output sample width for a real sample which includes the sign bit.
+//           The actual output of the module will be 2*OUT_W because it handles
+//           complex data.
+//   - ALPHA_W: Width of the alpha parameter (signed)
+//   - BETA_W: Width of the beta parameter (signed)
+//   - FEEDBACK_W: Number of bits in the feedback delay line (optimal = 25)
+//   - ACCUM_HEADROOM: Number of bits of headroom in the feedback accumulator
+// Signals:
+//   - i_*  : Input sample stream (AXI-Stream)
+//   - o_*  : Output sample stream (AXI-Stream)
+//   - set_*: Static settings
+//
 
-module vector_iir
-  #(parameter SR_VECTOR_LEN=0,
-    parameter SR_ALPHA=0,
-    parameter SR_BETA=0,
-    parameter MAX_LOG2_OF_SIZE = 10,
-    parameter IWIDTH=16,
-    parameter OWIDTH=16,
-    parameter ALPHAWIDTH=18,
-    parameter BETAWIDTH=25,
-    parameter PWIDTH=25,
-    parameter DROP_TOP_P=6)
-   (input clk, input reset, input clear,
-    input set_stb, input [7:0] set_addr, input [31:0] set_data,
-    input [IWIDTH*2-1:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-    output [OWIDTH*2-1:0] o_tdata, output o_tlast, output o_tvalid, input o_tready);
+module vector_iir #(
+  parameter MAX_VECTOR_LEN  = 1024,
+  parameter IN_W            = 16,
+  parameter OUT_W           = 16,
+  parameter ALPHA_W         = 16,
+  parameter BETA_W          = 16,
+  parameter FEEDBACK_W      = 25,
+  parameter ACCUM_HEADROOM  = 4
+)(
+  input  wire                               clk,
+  input  wire                               reset,
+  input  wire [$clog2(MAX_VECTOR_LEN)-1:0]  set_vector_len,
+  input  wire [BETA_W-1:0]                  set_beta,
+  input  wire [ALPHA_W-1:0]                 set_alpha,
+  input  wire [IN_W*2-1:0]                  i_tdata,
+  input  wire                               i_tlast,
+  input  wire                               i_tvalid,
+  output wire                               i_tready,
+  output wire [OUT_W*2-1:0]                 o_tdata,
+  output wire                               o_tlast,
+  output wire                               o_tvalid,
+  input  wire                               o_tready
+);
 
-   wire [BETAWIDTH-1:0]   beta_tdata;
-   wire [ALPHAWIDTH-1:0]  alpha_tdata;
-   wire [95:0] 		  n1_tdata, n2_tdata;
-   wire [PWIDTH*2-1:0] 	  n3_tdata, n4_tdata, n6_tdata, n7_tdata;
-   wire                   beta_tlast, n1_tlast, n2_tlast, n3_tlast, n4_tlast, alpha_tlast, n6_tlast, n7_tlast;
-   wire                   beta_tvalid, n1_tvalid, n2_tvalid, n3_tvalid, n4_tvalid, alpha_tvalid, n6_tvalid, n7_tvalid;
-   wire                   beta_tready, n1_tready, n2_tready, n3_tready, n4_tready, alpha_tready, n6_tready, n7_tready;
+  localparam FF_PROD_W = IN_W + BETA_W - 1;
+  localparam FB_PROD_W = FEEDBACK_W + ALPHA_W - 1;
 
-   wire [MAX_LOG2_OF_SIZE-1:0] vector_len;
+  // There are four registers between the input and output
+  // - Input pipeline (in_X_reg)
+  // - Feedforward product (ff_prod_X_reg)
+  // - Feedback sum (fb_sum_X_reg)
+  // - Output pipeline (dsp_data_out)
+  localparam IN_TO_OUT_LATENCY = 4;
 
-   setting_reg #(.my_addr(SR_VECTOR_LEN), .width(MAX_LOG2_OF_SIZE)) reg_len
-     (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data), .out(vector_len));
+  // The feedback path has 4 cycles of delay
+  // - Feedback sum (fb_sum_X_reg)
+  // - variable_delay_line (2 cycles)
+  // - Scaled feedback (fb_sum_scaled_X_reg)
+  localparam MIN_FB_DELAY = 4;
 
-   axi_setting_reg #(.ADDR(SR_BETA), .WIDTH(BETAWIDTH), .REPEATS(1), .MSB_ALIGN(1)) c1
-     (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .o_tdata(beta_tdata), .o_tlast(beta_tlast), .o_tvalid(beta_tvalid), .o_tready(beta_tready));
+  // Pipeline settings for timing
+  reg [$clog2(MAX_VECTOR_LEN)-1:0]  reg_fb_delay;
+  reg signed [BETA_W-1:0]           reg_beta;
+  reg signed [ALPHA_W-1:0]          reg_alpha;
 
-   axi_setting_reg #(.ADDR(SR_ALPHA), .WIDTH(ALPHAWIDTH), .REPEATS(1), .MSB_ALIGN(1)) c2
-     (.clk(clk), .reset(reset), .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
-      .o_tdata(alpha_tdata), .o_tlast(alpha_tlast), .o_tvalid(alpha_tvalid), .o_tready(alpha_tready));
+  always @(posedge clk) begin
+    reg_fb_delay <= set_vector_len - MIN_FB_DELAY - 1;  //Adjust for pipeline delay
+    reg_beta     <= set_beta;
+    reg_alpha    <= set_alpha;
+  end
 
-   mult_rc #(.WIDTH_REAL(BETAWIDTH), .WIDTH_CPLX(IWIDTH), .WIDTH_P(48), .LATENCY(4), .CASCADE_OUT(0)) mul_c1
-     (.clk(clk), .reset(reset),
-      .real_tdata(beta_tdata), .real_tlast(beta_tlast), .real_tvalid(beta_tvalid), .real_tready(beta_tready),
-      .cplx_tdata(i_tdata), .cplx_tlast(i_tlast), .cplx_tvalid(i_tvalid), .cplx_tready(i_tready),
-      .p_tdata(n1_tdata), .p_tlast(n1_tlast), .p_tvalid(n1_tvalid), .p_tready(n1_tready));
+  //-----------------------------------------------------------
+  // AXI-Stream wrapper
+  //-----------------------------------------------------------
+  wire [(IN_W*2)-1:0]   dsp_data_in;
+  reg  [(OUT_W*2)-1:0]  dsp_data_out = 0;
+  wire                  chain_en;
 
-   mult_add_rc #(.WIDTH_REAL(ALPHAWIDTH), .WIDTH_CPLX(PWIDTH), .WIDTH_P(48), .LATENCY(4),
-                 .CASCADE_IN(0), .CASCADE_OUT(0)) mul_add_c2
-     (.clk(clk), .reset(reset),
-      .real_tdata(alpha_tdata), .real_tlast(alpha_tlast), .real_tvalid(alpha_tvalid), .real_tready(alpha_tready),
-      .cplx_tdata(n4_tdata), .cplx_tlast(n4_tlast), .cplx_tvalid(n4_tvalid), .cplx_tready(n4_tready),
-      .c_tdata(n1_tdata), .c_tlast(n1_tlast), .c_tvalid(n1_tvalid), .c_tready(n1_tready),
-      .p_tdata(n2_tdata), .p_tlast(n2_tlast), .p_tvalid(n2_tvalid), .p_tready(n2_tready));
+  // We are implementing an N-cycle DSP operation without AXI-Stream handshaking.
+  // Use an axis_shift_register and the associated strobes to drive clock enables
+  // on the DSP regs to ensure that data/valid/last sync up.
+  wire [IN_TO_OUT_LATENCY-1:0] stage_stb;
+  axis_shift_register #(
+    .WIDTH(IN_W*2), .LATENCY(IN_TO_OUT_LATENCY),
+    .SIDEBAND_DATAPATH(1), .PIPELINE("NONE")
+  ) axis_shreg_i (
+    .clk(clk), .reset(reset),
+    .s_axis_tdata(i_tdata), .s_axis_tlast(i_tlast), .s_axis_tvalid(i_tvalid), .s_axis_tready(i_tready),
+    .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast), .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready),
+    .stage_stb(stage_stb), .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
+  );
+  assign chain_en = stage_stb[0];
 
-   axi_bit_reduce #(.WIDTH_IN(48), .WIDTH_OUT(PWIDTH), .DROP_TOP(DROP_TOP_P), .VECTOR_WIDTH(2)) drop_p_bits
-     (.i_tdata(n2_tdata), .i_tlast(n2_tlast), .i_tvalid(n2_tvalid), .i_tready(n2_tready),
-      .o_tdata(n7_tdata), .o_tlast(n7_tlast), .o_tvalid(n7_tvalid), .o_tready(n7_tready));
+  //-----------------------------------------------------------
+  // DSP datapath
+  //-----------------------------------------------------------
+  reg  signed [IN_W-1:0]        in_i_reg = 0, in_q_reg = 0;
+  reg  signed [FF_PROD_W-1:0]   ff_prod_i_reg = 0, ff_prod_q_reg = 0;
+  reg  signed [FB_PROD_W-1:0]   fb_sum_i_reg = 0, fb_sum_q_reg = 0;
+  wire signed [FB_PROD_W-1:0]   fb_trunc_i, fb_trunc_q;
+  wire signed [FEEDBACK_W-1:0]  fb_sum_del_i, fb_sum_del_q;
+  reg  signed [FB_PROD_W-1:0]   fb_sum_scaled_i_reg = 0, fb_sum_scaled_q_reg = 0;
+  wire signed [OUT_W-1:0]       out_i_rnd, out_q_rnd;
 
-   split_stream_fifo #(.WIDTH(PWIDTH*2), .ACTIVE_MASK(4'b0011)) split_output
-     (.clk(clk), .reset(reset), .clear(clear),
-      .i_tdata(n7_tdata), .i_tlast(n7_tlast), .i_tvalid(n7_tvalid), .i_tready(n7_tready),
-      .o0_tdata(n3_tdata), .o0_tlast(n3_tlast), .o0_tvalid(n3_tvalid), .o0_tready(n3_tready),
-      .o1_tdata(n6_tdata), .o1_tlast(n6_tlast), .o1_tvalid(n6_tvalid), .o1_tready(n6_tready),
-      .o2_tready(1'b0), .o3_tready(1'b0));
+  always @(posedge clk) begin
+    if (reset) begin
+      {in_i_reg, in_q_reg} <= 0;
+      ff_prod_i_reg <= 0;
+      ff_prod_q_reg <= 0;
+      fb_sum_i_reg <= 0;
+      fb_sum_q_reg <= 0;
+      fb_sum_scaled_i_reg <= 0;
+      fb_sum_scaled_q_reg <= 0;
+      dsp_data_out <= 0;
+    end else if (chain_en) begin
+      // Input pipeline register
+      {in_i_reg, in_q_reg} <= dsp_data_in;
+      // Feedforward product (x[n] * beta)
+      ff_prod_i_reg <= in_i_reg * reg_beta;
+      ff_prod_q_reg <= in_q_reg * reg_beta;
+      // Sum of feedforward product and scaled, delayed feedback
+      // y[n] = (alpha * y[n-D]) + (x[n] * beta)
+      fb_sum_i_reg <= fb_sum_scaled_i_reg + (ff_prod_i_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
+      fb_sum_q_reg <= fb_sum_scaled_q_reg + (ff_prod_q_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
+      // Compute scaled, delayed feedback (y[n-D] * alpha)
+      fb_sum_scaled_i_reg <= fb_sum_del_i * reg_alpha;
+      fb_sum_scaled_q_reg <= fb_sum_del_q * reg_alpha;
+      // Output pipeline register
+      dsp_data_out <= {out_i_rnd, out_q_rnd};
+    end
+  end
 
-   delay_type3 #(.FIFOSIZE(MAX_LOG2_OF_SIZE), .MAX_LEN_LOG2(MAX_LOG2_OF_SIZE), .WIDTH(PWIDTH*2)) delay_input
-     (.clk(clk), .reset(reset), .clear(clear),
-      .len(vector_len),
-      .i_tdata(n3_tdata), .i_tlast(n3_tlast), .i_tvalid(n3_tvalid), .i_tready(n3_tready),
-      .o_tdata(n4_tdata), .o_tlast(n4_tlast), .o_tvalid(n4_tvalid), .o_tready(n4_tready));
+  // Truncate feedback to the requested FEEDBACK_W
+  assign fb_trunc_i = (fb_sum_i_reg >>> (FB_PROD_W - FEEDBACK_W));
+  assign fb_trunc_q = (fb_sum_q_reg >>> (FB_PROD_W - FEEDBACK_W));
 
-   axi_round_and_clip_complex #(.WIDTH_IN(PWIDTH), .WIDTH_OUT(OWIDTH), .CLIP_BITS(0), .FIFOSIZE(5)) round_and_clip
-     (.clk(clk), .reset(reset),
-      .i_tdata(n6_tdata), .i_tlast(n6_tlast), .i_tvalid(n6_tvalid), .i_tready(n6_tready),
-      .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready));
+  // A variable delay line will be used to store the feedback
+  // This delay line stores "reg_fb_delay" worth of samples which
+  // allows each element in the vector to have it's own independent state
+  variable_delay_line #(
+    .WIDTH(FEEDBACK_W * 2), .DEPTH(MAX_VECTOR_LEN - MIN_FB_DELAY),
+    .DYNAMIC_DELAY(1), .DEFAULT_DATA(0), .OUT_REG(1)
+  ) delay_line_inst (
+    .clk(clk),
+    .reset(reset),
+    .data_in({fb_trunc_i[FEEDBACK_W-1:0], fb_trunc_q[FEEDBACK_W-1:0]}),
+    .stb_in(chain_en),
+    .delay(reg_fb_delay),
+    .data_out({fb_sum_del_i, fb_sum_del_q})
+  );
+
+  // Round the accumulator output to produce the final output
+  round #(
+    .bits_in(FB_PROD_W-ACCUM_HEADROOM), .bits_out(OUT_W)
+  ) out_round_i_inst (
+    .in(fb_sum_i_reg[FB_PROD_W-ACCUM_HEADROOM-1:0]), .out(out_i_rnd), .err()
+  );
+  round #(
+    .bits_in(FB_PROD_W-ACCUM_HEADROOM), .bits_out(OUT_W)
+  ) out_round_q_inst (
+    .in(fb_sum_q_reg[FB_PROD_W-ACCUM_HEADROOM-1:0]), .out(out_q_rnd), .err()
+  );
 
 endmodule // vector_iir
