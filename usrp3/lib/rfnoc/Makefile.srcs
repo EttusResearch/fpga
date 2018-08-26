@@ -26,6 +26,7 @@ noc_block_fft.v \
 noc_block_null_source_sink.v \
 noc_block_schmidl_cox.v \
 noc_block_packet_resizer.v \
+noc_block_sos_filter.v \
 noc_block_split_stream.v \
 noc_block_vector_iir.v \
 noc_block_addsub.v \
@@ -144,4 +145,5 @@ addsub.vhd \
 dds_freq_tune.v \
 dds_timed.v \
 datapath_gatekeeper.v \
+biquad_filter.v \
 ))
