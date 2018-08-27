@@ -195,7 +195,7 @@ module n3xx_core #(
   // Compatibility Number
   //
   localparam [15:0] COMPAT_MAJOR = 16'd5;
-  localparam [15:0] COMPAT_MINOR = 16'd2;
+  localparam [15:0] COMPAT_MINOR = 16'd3;
   /////////////////////////////////////////////////////////////////////////////////
 
   // Computation engines that need access to IO
@@ -227,6 +227,7 @@ module n3xx_core #(
   localparam REG_SFP_PORT1_INFO    = REG_BASE_MISC + 14'h2C;
   localparam REG_FP_GPIO_MASTER    = REG_BASE_MISC + 14'h30;
   localparam REG_FP_GPIO_RADIO_SRC = REG_BASE_MISC + 14'h34;
+  localparam REG_XBAR_BASEPORT     = REG_BASE_MISC + 14'h38;
 
   reg [31:0] scratch_reg = 32'b0;
   reg [31:0] bus_counter = 32'h0;
@@ -431,6 +432,9 @@ module n3xx_core #(
 
         REG_SFP_PORT1_INFO:
           reg_rd_data_glob <= sfp_ports_info[63:32];
+
+        REG_XBAR_BASEPORT:
+          reg_rd_data_glob <= XBAR_FIXED_PORTS;
 
         default:
           reg_rd_resp_glob <= 1'b0;
