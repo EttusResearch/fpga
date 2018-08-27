@@ -184,7 +184,7 @@ module e320_core #(
   /////////////////////////////////////////////////////////////////////////////////
 
   localparam [15:0] COMPAT_MAJOR = 16'd3;
-  localparam [15:0] COMPAT_MINOR = 16'd0;
+  localparam [15:0] COMPAT_MINOR = 16'd1;
 
   /////////////////////////////////////////////////////////////////////////////////
 
@@ -223,6 +223,7 @@ module e320_core #(
   localparam REG_GPS_STATUS        = REG_BASE_MISC + 14'h3C;
   localparam REG_DBOARD_CTRL       = REG_BASE_MISC + 14'h40;
   localparam REG_DBOARD_STATUS     = REG_BASE_MISC + 14'h44;
+  localparam REG_XBAR_BASEPORT     = REG_BASE_MISC + 14'h48;
 
   reg  [31:0]              fp_gpio_master_reg = 32'h0;
   reg  [31:0]              fp_gpio_src_reg    = 32'h0;
@@ -421,6 +422,9 @@ module e320_core #(
 
         REG_DBOARD_STATUS:
           reg_rd_data_glob <= dboard_status;
+
+        REG_XBAR_BASEPORT:
+          reg_rd_data_glob <= XBAR_FIXED_PORTS;
 
         default:
           reg_rd_resp_glob <= 1'b0;
