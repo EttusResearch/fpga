@@ -9,7 +9,7 @@
     <LowPower_En>ON</LowPower_En>
     <XADC_En>Disabled</XADC_En>
     <TargetFPGA>xc7z100-ffg900/-2</TargetFPGA>
-    <Version>2.4</Version>
+    <Version>4.0</Version>
     <SystemClock>Differential</SystemClock>
     <ReferenceClock>No Buffer</ReferenceClock>
     <SysResetPolarity>ACTIVE LOW</SysResetPolarity>
@@ -38,6 +38,7 @@
         <DataMask>1</DataMask>
         <ECC>Disabled</ECC>
         <Ordering>Normal</Ordering>
+        <BankMachineCnt>4</BankMachineCnt>
         <CustomPart>TRUE</CustomPart>
         <NewPartName>MT41K512M16XX-125</NewPartName>
         <RowAddress>16</RowAddress>
@@ -152,7 +153,7 @@
         <mr2RTTWR name="RTT_WR - Dynamic On Die Termination (ODT)" >Dynamic ODT off</mr2RTTWR>
         <PortInterface>AXI</PortInterface>
         <AXIParameters>
-            <C0_C_RD_WR_ARB_ALGORITHM>ROUND_ROBIN</C0_C_RD_WR_ARB_ALGORITHM>
+            <C0_C_RD_WR_ARB_ALGORITHM>RD_PRI_REG</C0_C_RD_WR_ARB_ALGORITHM>
             <C0_S_AXI_ADDR_WIDTH>31</C0_S_AXI_ADDR_WIDTH>
             <C0_S_AXI_DATA_WIDTH>256</C0_S_AXI_DATA_WIDTH>
             <C0_S_AXI_ID_WIDTH>4</C0_S_AXI_ID_WIDTH>
