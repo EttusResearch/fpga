@@ -1,15 +1,9 @@
 -------------------------------------------------------------------------------
 --
--- File: TdcTop.vhd
--- Author: Daniel Jepson
--- Original Project: N310
--- Date: 15 November 2016
+-- Copyright 2018 Ettus Research, a National Instruments Company
 --
--------------------------------------------------------------------------------
--- (c) 2016 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
--------------------------------------------------------------------------------
+-- SPDX-License-Identifier: LGPL-3.0-or-later
+--
 --
 -- Purpose:
 --

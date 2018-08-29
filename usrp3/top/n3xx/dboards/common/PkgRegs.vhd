@@ -1,21 +1,9 @@
--------------------------------------------------------------------------------
 --
--- File: PkgRegs.vhd
--- Author: National Instruments
--- Original Project: N310
--- Date: 19 May 2017
+-- Copyright 2018 Ettus Research, a National Instruments Company
 --
--------------------------------------------------------------------------------
--- (c) 2017 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
--------------------------------------------------------------------------------
---
--- Purpose:
+-- SPDX-License-Identifier: LGPL-3.0-or-later
 --
 -- This package contains functions for reading and writing N310 registers.
---
--------------------------------------------------------------------------------
 
 library ieee;
   use ieee.std_logic_1164.all;

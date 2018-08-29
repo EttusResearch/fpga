@@ -1,15 +1,9 @@
 -------------------------------------------------------------------------------
 --
--- File: TdcWrapper.vhd
--- Author: Daniel Jepson
--- Original Project: N310
--- Date: 22 June 2017
+-- Copyright 2018 Ettus Research, a National Instruments Company
 --
--------------------------------------------------------------------------------
--- (c) 2017 Copyright National Instruments Corporation
--- All Rights Reserved
--- National Instruments Internal Information
--------------------------------------------------------------------------------
+-- SPDX-License-Identifier: LGPL-3.0-or-later
+--
 --
 -- Purpose:
 --

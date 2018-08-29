@@ -40,6 +40,7 @@ include $(BASE_DIR)/n3xx/Makefile.OOT.inc
 include $(BASE_DIR)/n3xx/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/rh/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
+include $(BASE_DIR)/n3xx/dboards/eiscat/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
 
 ##################################################
@@ -56,16 +57,8 @@ n3xx_chdr_eth_framer.v \
 n3xx_eth_dispatch.v \
 n3xx_eth_switch.v
 
-ifdef N300
+ifndef EISCAT
 TOP_SRCS += n3xx_core.v 
-endif
-
-ifdef N310
-TOP_SRCS += n3xx_core.v
-endif
-
-ifdef N320
-TOP_SRCS += n3xx_core.v
 endif
 
 MB_XDC = \
@@ -98,26 +91,35 @@ else
 DRAM_SRCS =
 endif
 
+ifdef EISCAT
+DB_SRCS = $(EISCAT_DB_XDC) $(EISCAT_DB_TIMING_XDC) \
+$(EISCAT_TOP_SRCS) $(EISCAT_DB_SRCS) $(EISCAT_SYSREF_SRCS) \
+$(IP_DELAY_TAP_BRAM_SRCS)
+else
 ifdef N300
-DESIGN_SRCS = $(abspath $(MB_XDC)) $(MAGNESIUM_DB_TIMING_XDC) \
+DB_SRCS = $(MAGNESIUM_DB_TIMING_XDC) \
 $(MAGNESIUM_DB0_XDC) \
 $(MAGNESIUM_TOP_SRCS) $(MAGNESIUM_DB_SRCS)
 endif
 
 ifdef N310
-DESIGN_SRCS = $(abspath $(MB_XDC)) $(MAGNESIUM_DB_TIMING_XDC) \
+DB_SRCS = $(MAGNESIUM_DB_TIMING_XDC) \
 $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC) \
 $(MAGNESIUM_TOP_SRCS) $(MAGNESIUM_DB_SRCS)
 endif
 
 ifdef N320
-DESIGN_SRCS = $(abspath $(MB_XDC)) $(RHODIUM_DB_XDC) \
+DB_SRCS = $(RHODIUM_DB_XDC) \
 $(RHODIUM_TOP_SRCS) $(RHODIUM_DB_SRCS)
 endif
+endif
+
+DB_SRCS += $(DB_COMMON_SRCS)
 
 # The XDC files must be read in a specific order, motherboard first and then daughterboard.
 # Outside of that, all the other sources can be read in any order desired.
-DESIGN_SRCS += $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
+DESIGN_SRCS = $(abspath $(MB_XDC)) $(DB_SRCS) \
+$(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) $(WISHBONE_SRCS) \
@@ -126,7 +128,7 @@ $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIB_HLS_IP_SRCS) $(LIBCOREGEN_SRCS) \
-$(DB_COMMON_SRCS) $(WHITE_RABBIT_SRCS)
+$(WHITE_RABBIT_SRCS)
 
 ##################################################
 # Dependency Targets

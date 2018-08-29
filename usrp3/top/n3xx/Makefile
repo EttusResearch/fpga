@@ -30,6 +30,7 @@ XA_DEFS=SFP0_10GBE=1  SFP1_AURORA=1 BUILD_10G=1    BUILD_AURORA=1 $(OPTIONS)
 AA_DEFS=SFP0_AURORA=1 SFP1_AURORA=1 BUILD_AURORA=1                $(OPTIONS)
 XQ_DEFS=SFP0_WR=1     QSFP_10GBE=1  BUILD_WR=1     BUILD_10G=1    QSFP_LANES=2 $(OPTIONS)
 AQ_DEFS=SFP0_10GBE=1  SFP1_10GBE=1  QSFP_AURORA=1  BUILD_10G=1    BUILD_AURORA=1    QSFP_LANES=4 $(OPTIONS)
+EISCAT_DEFS=SFP0_10GBE=1 SFP1_10GBE=1 BUILD_10G=1 BUILD_AURORA=1 NPIO0=1 NPIO_LANES=1 $(OPTIONS)
 
 # Option to stop after RTL elaboration. Use this flag as a synthesis check.
 ifdef CHECK
@@ -71,6 +72,11 @@ N310_HG:  build/usrp_n310_fpga_HG.dts
 N310_XG: build/usrp_n310_fpga_XG.dts
 	$(call vivado_build,N310,$(XG_DEFS) N310=1)
 	$(call post_build,N310,XG)
+
+##N310_XG_EISCAT: 10GigE on both SFP+ ports. Enables EISCAT DB support
+EISCAT_XG: build/usrp_eiscat_fpga_XG.dts
+	$(call vivado_build,EISCAT,$(EISCAT_DEFS) N310=1 EISCAT=1)
+	$(call post_build,EISCAT,XG)
 
 ##N310_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
 N310_HA: build/usrp_n310_fpga_HA.dts
