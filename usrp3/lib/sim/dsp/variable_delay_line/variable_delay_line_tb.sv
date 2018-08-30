@@ -20,8 +20,9 @@ module variable_delay_line_tb();
 
   localparam             WIDTH                = 32;
   localparam [WIDTH-1:0] DEFAULT              = 32'hDEADBEEF;
-  localparam integer     NUM_INST             = 12;
-  localparam integer     DELAYS[0:NUM_INST-1] = {3, 14, 15, 16, 17, 30, 31, 32, 33, 127, 256, 511};
+  localparam integer     NUM_INST             = 24;
+  localparam integer     DELAYS[0:NUM_INST-1] = {3, 14, 15, 16, 17, 30, 31, 32, 33, 127, 256, 511,
+                                                 3, 14, 15, 16, 17, 30, 31, 32, 33, 127, 256, 511};
 
   logic             in_stb   [0:NUM_INST-1];
   logic [WIDTH-1:0] in_samp  [0:NUM_INST-1];
@@ -41,8 +42,8 @@ module variable_delay_line_tb();
   task change_delay(logic [31:0] delay, integer inst);
     begin
       out_delay[inst] = delay;
-      @(posedge clk);   // First stage
-      @(posedge clk);   // Pipeline stage
+      @(posedge clk);               // First stage
+      if (inst/(NUM_INST/2) == 1) @(posedge clk); // Pipeline stage
       @(negedge clk);
       //$display("D[%0d]: cd(%0d) = 0x%08x", inst, delay, out_samp[inst]);
     end
@@ -52,9 +53,9 @@ module variable_delay_line_tb();
   generate for (d = 0; d < NUM_INST; d=d+1) begin: inst
     variable_delay_line #(
       .WIDTH(WIDTH), .DEPTH(DELAYS[d]),
-      .DYNAMIC_DELAY(1), .DEFAULT_DATA(DEFAULT), .OUT_REG(1)
+      .DYNAMIC_DELAY(1), .DEFAULT_DATA(DEFAULT), .OUT_REG(d / (NUM_INST/2))
     ) dut (
-      .clk(clk), .reset(reset),
+      .clk(clk), .clk_en(1'b1), .reset(reset),
       .data_in(in_samp[d]), .stb_in(in_stb[d]),
       .delay(out_delay[d]), .data_out(out_samp[d])
     );
@@ -73,7 +74,7 @@ module variable_delay_line_tb();
 
     `TEST_CASE_START("Check startup state of delay line");
       for (int k = 0; k < NUM_INST; k=k+1) begin
-        $display("Validating delay line with DEPTH = %0d...", DELAYS[k]);
+        $display("Validating delay line with DEPTH=%0d, OUT_REG=%0d...", DELAYS[k], k/(NUM_INST/2));
         for (int j = 0; j < DELAYS[k]; j=j+1) begin
           change_delay(j, k);
           `ASSERT_ERROR(out_samp[k] == DEFAULT, "Transient delay value incorrect");
@@ -83,7 +84,7 @@ module variable_delay_line_tb();
 
     `TEST_CASE_START("Check partially filled delay line");
       for (int k = 0; k < NUM_INST; k=k+1) begin
-        $display("Validating delay line with DEPTH = %0d...", DELAYS[k]);
+        $display("Validating delay line with DEPTH=%0d, OUT_REG=%0d...", DELAYS[k], k/(NUM_INST/2));
         for (int i = 0; i < DELAYS[k]; i=i+1) begin
           push_samp(i, k);
           for (int j = 0; j < DELAYS[k]; j=j+1) begin
@@ -97,7 +98,7 @@ module variable_delay_line_tb();
 
     `TEST_CASE_START("Check steady state delay line");
       for (int k = 0; k < NUM_INST; k=k+1) begin
-        $display("Validating delay line with DEPTH = %0d...", DELAYS[k]);
+        $display("Validating delay line with DEPTH=%0d, OUT_REG=%0d...", DELAYS[k], k/(NUM_INST/2));
         for (int i = 0; i < DELAYS[k]; i=i+1) begin
           push_samp(i + DELAYS[k], k);
           for (int j = 0; j < DELAYS[k]; j=j+1) begin

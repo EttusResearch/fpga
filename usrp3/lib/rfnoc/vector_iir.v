@@ -56,9 +56,6 @@ module vector_iir #(
   input  wire                               o_tready
 );
 
-  localparam FF_PROD_W = IN_W + BETA_W - 1;
-  localparam FB_PROD_W = FEEDBACK_W + ALPHA_W - 1;
-
   // There are four registers between the input and output
   // - Input pipeline (in_X_reg)
   // - Feedforward product (ff_prod_X_reg)
@@ -66,9 +63,9 @@ module vector_iir #(
   // - Output pipeline (dsp_data_out)
   localparam IN_TO_OUT_LATENCY = 4;
 
-  // The feedback path has 4 cycles of delay
+  // The feedback path has 3 cycles of delay
   // - Feedback sum (fb_sum_X_reg)
-  // - variable_delay_line (2 cycles)
+  // - variable_delay_line (2 cyc)
   // - Scaled feedback (fb_sum_scaled_X_reg)
   localparam MIN_FB_DELAY = 4;
 
@@ -86,14 +83,13 @@ module vector_iir #(
   //-----------------------------------------------------------
   // AXI-Stream wrapper
   //-----------------------------------------------------------
-  wire [(IN_W*2)-1:0]   dsp_data_in;
-  reg  [(OUT_W*2)-1:0]  dsp_data_out = 0;
-  wire                  chain_en;
+  wire [(IN_W*2)-1:0]           dsp_data_in;
+  reg  [(OUT_W*2)-1:0]          dsp_data_out = 0;
+  wire [IN_TO_OUT_LATENCY-1:0]  chain_en;
 
   // We are implementing an N-cycle DSP operation without AXI-Stream handshaking.
   // Use an axis_shift_register and the associated strobes to drive clock enables
   // on the DSP regs to ensure that data/valid/last sync up.
-  wire [IN_TO_OUT_LATENCY-1:0] stage_stb;
   axis_shift_register #(
     .WIDTH(IN_W*2), .LATENCY(IN_TO_OUT_LATENCY),
     .SIDEBAND_DATAPATH(1), .PIPELINE("NONE")
@@ -101,13 +97,16 @@ module vector_iir #(
     .clk(clk), .reset(reset),
     .s_axis_tdata(i_tdata), .s_axis_tlast(i_tlast), .s_axis_tvalid(i_tvalid), .s_axis_tready(i_tready),
     .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast), .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready),
-    .stage_stb(stage_stb), .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
+    .stage_stb(chain_en), .stage_eop(),
+    .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
   );
-  assign chain_en = stage_stb[0];
 
   //-----------------------------------------------------------
   // DSP datapath
   //-----------------------------------------------------------
+  localparam FF_PROD_W = IN_W + BETA_W - 1;
+  localparam FB_PROD_W = FEEDBACK_W + ALPHA_W - 1;
+
   reg  signed [IN_W-1:0]        in_i_reg = 0, in_q_reg = 0;
   reg  signed [FF_PROD_W-1:0]   ff_prod_i_reg = 0, ff_prod_q_reg = 0;
   reg  signed [FB_PROD_W-1:0]   fb_sum_i_reg = 0, fb_sum_q_reg = 0;
@@ -126,21 +125,29 @@ module vector_iir #(
       fb_sum_scaled_i_reg <= 0;
       fb_sum_scaled_q_reg <= 0;
       dsp_data_out <= 0;
-    end else if (chain_en) begin
-      // Input pipeline register
-      {in_i_reg, in_q_reg} <= dsp_data_in;
-      // Feedforward product (x[n] * beta)
-      ff_prod_i_reg <= in_i_reg * reg_beta;
-      ff_prod_q_reg <= in_q_reg * reg_beta;
-      // Sum of feedforward product and scaled, delayed feedback
-      // y[n] = (alpha * y[n-D]) + (x[n] * beta)
-      fb_sum_i_reg <= fb_sum_scaled_i_reg + (ff_prod_i_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
-      fb_sum_q_reg <= fb_sum_scaled_q_reg + (ff_prod_q_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
-      // Compute scaled, delayed feedback (y[n-D] * alpha)
-      fb_sum_scaled_i_reg <= fb_sum_del_i * reg_alpha;
-      fb_sum_scaled_q_reg <= fb_sum_del_q * reg_alpha;
-      // Output pipeline register
-      dsp_data_out <= {out_i_rnd, out_q_rnd};
+    end else begin
+      if (chain_en[0]) begin
+        // Input pipeline register
+        {in_i_reg, in_q_reg} <= dsp_data_in;
+      end
+      if (chain_en[1]) begin
+        // Feedforward product (x[n] * beta)
+        ff_prod_i_reg <= in_i_reg * reg_beta;
+        ff_prod_q_reg <= in_q_reg * reg_beta;
+        // Compute scaled, delayed feedback (y[n-D] * alpha)
+        fb_sum_scaled_i_reg <= fb_sum_del_i * reg_alpha;
+        fb_sum_scaled_q_reg <= fb_sum_del_q * reg_alpha;
+      end
+      if (chain_en[2]) begin
+        // Sum of feedforward product and scaled, delayed feedback
+        // y[n] = (alpha * y[n-D]) + (x[n] * beta)
+        fb_sum_i_reg <= fb_sum_scaled_i_reg + (ff_prod_i_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
+        fb_sum_q_reg <= fb_sum_scaled_q_reg + (ff_prod_q_reg <<< (FB_PROD_W - FF_PROD_W - ACCUM_HEADROOM));
+      end
+      if (chain_en[3]) begin
+        // Output pipeline register
+        dsp_data_out <= {out_i_rnd, out_q_rnd};
+      end
     end
   end
 
@@ -155,10 +162,9 @@ module vector_iir #(
     .WIDTH(FEEDBACK_W * 2), .DEPTH(MAX_VECTOR_LEN - MIN_FB_DELAY),
     .DYNAMIC_DELAY(1), .DEFAULT_DATA(0), .OUT_REG(1)
   ) delay_line_inst (
-    .clk(clk),
-    .reset(reset),
+    .clk(clk), .clk_en(chain_en[1]), .reset(reset),
+    .stb_in(1'b1),
     .data_in({fb_trunc_i[FEEDBACK_W-1:0], fb_trunc_q[FEEDBACK_W-1:0]}),
-    .stb_in(chain_en),
     .delay(reg_fb_delay),
     .data_out({fb_sum_del_i, fb_sum_del_q})
   );

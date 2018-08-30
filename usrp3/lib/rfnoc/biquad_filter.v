@@ -78,13 +78,12 @@ module biquad_filter #(
   //-----------------------------------------------------------
   // AXI-Stream wrapper
   //-----------------------------------------------------------
-  wire [(DATA_W*2)-1:0] dsp_data_in, dsp_data_out;
-  wire                  chain_en;
+  wire [(DATA_W*2)-1:0]        dsp_data_in, dsp_data_out;
+  wire [IN_TO_OUT_LATENCY-1:0] chain_en;
 
   // We are implementing an N-cycle DSP operation without AXI-Stream handshaking.
   // Use an axis_shift_register and the associated strobes to drive clock enables
   // on the DSP regs to ensure that data/valid/last sync up.
-  wire [IN_TO_OUT_LATENCY-1:0] stage_stb;
   axis_shift_register #(
     .WIDTH(2*DATA_W), .LATENCY(IN_TO_OUT_LATENCY),
     .SIDEBAND_DATAPATH(1), .PIPELINE("OUT")
@@ -92,9 +91,9 @@ module biquad_filter #(
     .clk(clk), .reset(reset),
     .s_axis_tdata(i_tdata), .s_axis_tlast(i_tlast), .s_axis_tvalid(i_tvalid), .s_axis_tready(i_tready),
     .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast), .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready),
-    .stage_stb(stage_stb), .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
+    .stage_stb(chain_en), .stage_eop(),
+    .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
   );
-  assign chain_en = stage_stb[0];
 
   //-----------------------------------------------------------
   // DSP datapath
@@ -131,7 +130,7 @@ module biquad_filter_impl #(
 )(
   input  wire                      clk,
   input  wire                      reset,
-  input  wire                      chain_en,
+  input  wire        [6:0]         chain_en,
   input  wire signed [COEFF_W-1:0] set_b0,
   input  wire signed [COEFF_W-1:0] set_b1,
   input  wire signed [COEFF_W-1:0] set_b2,
@@ -166,22 +165,36 @@ module biquad_filter_impl #(
       reg_fb_sum0 <= 0;
       reg_fb_sum1 <= 0;
       data_out <= 0;
-    end else if (chain_en) begin
-      // Input pipeline register and delay line
-      {reg_x2, reg_x1, reg_x0} <= {reg_x1, reg_x0, data_in};
-      // Feedforward products
-      reg_b0x0 <= reg_x0 * set_b0;
-      reg_b1x1 <= reg_x1 * set_b1;
-      reg_b2x2 <= reg_x2 * set_b2;
-      reg_b2x2_del <= reg_b2x2;
+    end else begin
+      if (chain_en[0]) begin
+        // Input pipeline register and delay line
+        {reg_x2, reg_x1, reg_x0} <= {reg_x1, reg_x0, data_in};
+      end
+      if (chain_en[1]) begin
+        // Feedforward products
+        reg_b0x0 <= reg_x0 * set_b0;
+        reg_b1x1 <= reg_x1 * set_b1;
+        reg_b2x2 <= reg_x2 * set_b2;
+        reg_b2x2_del <= reg_b2x2;
+      end
       // Feedforward sums (in two pipelined stages)
-      reg_ffsum_0 <= reg_b0x0 + reg_b1x1;
-      reg_ffsum_1 <= reg_ffsum_0 + reg_b2x2_del;
+      if (chain_en[2]) begin
+        reg_ffsum_0 <= reg_b0x0 + reg_b1x1;
+      end
+      if (chain_en[3]) begin
+        reg_ffsum_1 <= reg_ffsum_0 + reg_b2x2_del;
+      end
       // Feedback sums (in two pipelined stages)
-      reg_fb_sum0 <= (reg_ffsum_1 <<< (FB_SUM_W-FF_SUM_W-FB_HEADROOM)) + prod_yxa2;
-      reg_fb_sum1 <= reg_fb_sum0 + prod_yxa1;
-      // Output pipeline register
-      data_out <= out_rnd;
+      if (chain_en[4]) begin
+        reg_fb_sum0 <= (reg_ffsum_1 <<< (FB_SUM_W-FF_SUM_W-FB_HEADROOM)) + prod_yxa2;
+      end
+      if (chain_en[5]) begin
+        reg_fb_sum1 <= reg_fb_sum0 + prod_yxa1;
+      end
+      if (chain_en[6]) begin
+        // Output pipeline register
+        data_out <= out_rnd;
+      end
     end
   end
   // Feedback products

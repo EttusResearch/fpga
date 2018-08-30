@@ -27,7 +27,7 @@ module axis_shift_register_tb();
   wire [WIDTH-1:0]  o_tdata[0:NUM_INST-1];
   wire              o_tlast[0:NUM_INST-1], o_tvalid[0:NUM_INST-1];
   logic             o_tready[0:NUM_INST-1];
-  wire [15:0]       stage_stb[0:NUM_INST-1];
+  wire [15:0]       stage_stb[0:NUM_INST-1], stage_eop[0:NUM_INST-1];
   wire [WIDTH-1:0]  sb_dout, sb_din;
   reg  [WIDTH-1:0]  sb_shreg[0:2];
   always @(posedge clk) begin
@@ -49,7 +49,8 @@ module axis_shift_register_tb();
     .s_axis_tvalid(i_tvalid[0]), .s_axis_tready(i_tready[0]),
     .m_axis_tdata(o_tdata[0]), .m_axis_tlast(o_tlast[0]),
     .m_axis_tvalid(o_tvalid[0]), .m_axis_tready(o_tready[0]),
-    .stage_stb(stage_stb[0]), .m_sideband_data(), .s_sideband_data()
+    .stage_stb(stage_stb[0]), .stage_eop(stage_eop[0]),
+    .m_sideband_data(), .s_sideband_data()
   );
 
   axis_shift_register #(
@@ -61,7 +62,8 @@ module axis_shift_register_tb();
     .s_axis_tvalid(i_tvalid[1]), .s_axis_tready(i_tready[1]),
     .m_axis_tdata(o_tdata[1]), .m_axis_tlast(o_tlast[1]),
     .m_axis_tvalid(o_tvalid[1]), .m_axis_tready(o_tready[1]),
-    .stage_stb(stage_stb[1]), .m_sideband_data(), .s_sideband_data()
+    .stage_stb(stage_stb[1]), .stage_eop(stage_eop[1]),
+    .m_sideband_data(), .s_sideband_data()
   );
 
   axis_shift_register #(
@@ -73,7 +75,8 @@ module axis_shift_register_tb();
     .s_axis_tvalid(i_tvalid[2]), .s_axis_tready(i_tready[2]),
     .m_axis_tdata(o_tdata[2]), .m_axis_tlast(o_tlast[2]),
     .m_axis_tvalid(o_tvalid[2]), .m_axis_tready(o_tready[2]),
-    .stage_stb(stage_stb[2]), .m_sideband_data(sb_dout), .s_sideband_data(sb_din)
+    .stage_stb(stage_stb[2]), .stage_eop(stage_eop[2]),
+    .m_sideband_data(sb_dout), .s_sideband_data(sb_din)
   );
 
   logic [15:0] prev_stage_stb[0:NUM_INST-1];
@@ -119,11 +122,12 @@ module axis_shift_register_tb();
       `ASSERT_ERROR(stage_stb[1][1:0] === 0, "Incorrect stage_stb when idle");
       for (int j = 0; j < 9; j=j+1) begin
         i_tdata[1] = j;
-        i_tlast[1] = j % 2;
+        i_tlast[1] = 1'b1;
         i_tvalid[1] = 1'b1;
         @(posedge clk);
         i_tvalid[1] = 1'b0;
         prev_stage_stb[1][8:0] = {prev_stage_stb[1][7:0], 1'b1};
+        `ASSERT_ERROR(stage_eop[1][8:0] == prev_stage_stb[1][8:0], "Incorrect stage_eop");
         `ASSERT_ERROR(stage_stb[1][8:0] == prev_stage_stb[1][8:0], "Incorrect stage_stb");
         `ASSERT_ERROR(i_tready[1] == 1'b1, "Input was not ready during fill-up");
         `ASSERT_ERROR(o_tvalid[1] == 1'b0, "Output incorrectly active during fill-up");
@@ -131,7 +135,7 @@ module axis_shift_register_tb();
       for (int j = 0; j < 9; j=j+1) begin
         @(posedge clk);
         `ASSERT_ERROR(o_tvalid[1] == 1'b1, "Output was not active");
-        `ASSERT_ERROR(o_tlast[1] == j % 2, "Incorrect tlast");
+        `ASSERT_ERROR(o_tlast[1] == 1'b1, "Incorrect tlast");
         `ASSERT_ERROR(o_tdata[1] == j, "Incorrect tdata");
       end
       @(posedge clk);
@@ -145,12 +149,13 @@ module axis_shift_register_tb();
       `ASSERT_ERROR(stage_stb[1][1:0] === 0, "Incorrect stage_stb when idle");
       for (int j = 0; j < 9; j=j+1) begin
         i_tdata[1] = j;
-        i_tlast[1] = j % 2;
+        i_tlast[1] = 1'b1;
         i_tvalid[1] = 1'b1;
         @(posedge clk);
         i_tvalid[1] = 1'b0;
         prev_stage_stb[1][8:0] = {prev_stage_stb[1][7:0], 1'b1};
         `ASSERT_ERROR(stage_stb[1][8:0] == prev_stage_stb[1][8:0], "Incorrect stage_stb");
+        `ASSERT_ERROR(stage_eop[1][8:0] == prev_stage_stb[1][8:0], "Incorrect stage_eop");
         `ASSERT_ERROR(i_tready[1] == 1'b1, "Input was not ready during fill-up");
         `ASSERT_ERROR(o_tvalid[1] == 1'b0, "Output incorrectly active during fill-up");
       end
@@ -158,7 +163,7 @@ module axis_shift_register_tb();
       for (int j = 0; j < 9; j=j+1) begin
         @(posedge clk);
         `ASSERT_ERROR(o_tvalid[1] == 1'b1, "Output was not active");
-        `ASSERT_ERROR(o_tlast[1] == j % 2, "Incorrect tlast");
+        `ASSERT_ERROR(o_tlast[1] == 1'b1, "Incorrect tlast");
         `ASSERT_ERROR(o_tdata[1] == j, "Incorrect tdata");
       end
       @(posedge clk);

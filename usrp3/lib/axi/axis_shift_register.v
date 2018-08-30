@@ -47,7 +47,8 @@ module axis_shift_register #(
   output wire               m_axis_tvalid,    // Output stream tvalid
   input  wire               m_axis_tready,    // Output stream tready
   // Signals for the sideband data path                     
-  output wire [LATENCY-1:0] stage_stb,        // Parallel transfer strobe out
+  output wire [LATENCY-1:0] stage_stb,        // Transfer strobe out. bit[i] = stage[i]
+  output wire [LATENCY-1:0] stage_eop,        // Transfer end-of-packet out. bit[i] = stage[i]
   output wire [WIDTH-1:0]   m_sideband_data,  // Sideband data out for external consumer
   input  wire [WIDTH-1:0]   s_sideband_data   // Sideband data in from external producer
 );
@@ -124,6 +125,7 @@ module axis_shift_register #(
         .occupied(), .space()
       );
       assign stage_stb[i] = stg_tvalid[i] & stg_tready[i];
+      assign stage_eop[i] = stage_stb[i] & stg_tdata[i][SHREG_WIDTH-1];
     end
   endgenerate
 endmodule // axis_shift_register

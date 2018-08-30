@@ -7,7 +7,7 @@
 
 `timescale 1ns/1ps
 `define NS_PER_TICK 1
-`define NUM_TEST_CASES 7
+`define NUM_TEST_CASES 8
 
 `include "sim_exec_report.vh"
 `include "sim_clks_rsts.vh"
@@ -23,7 +23,7 @@ module noc_block_vector_iir_tb();
   `RFNOC_ADD_BLOCK(noc_block_vector_iir, 0);
 
   localparam SPP       = 512; // Samples per packet
-  localparam NUM_PKTS  = 10;
+  localparam NUM_PKTS  = 50;
 
   // Vector IIR settings
   localparam VECTOR_SIZE = SPP;
@@ -162,10 +162,11 @@ module noc_block_vector_iir_tb();
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 6 -- Test quarter rate sine response
+    ** Test 6 -- Test quarter rate sine response (vector stride)
     ********************************************************/
-    `TEST_CASE_START("Check quarter rate complex sine response");
-    // Reset state
+    `TEST_CASE_START("Check quarter rate complex sine response (vector stride)");
+    filt_def.alpha = 0.9;
+    filt_def.beta = 0.1;
     tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_ALPHA, real2fxp(filt_def.alpha));
     tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_BETA, real2fxp(filt_def.beta));
     // Generate input and golden output vector 
@@ -209,10 +210,74 @@ module noc_block_vector_iir_tb();
     `TEST_CASE_DONE(1);
 
     /********************************************************
-    ** Test 7 -- Test test impulse response with gaps
+    ** Test 7 -- Test quarter rate sine response (sample stride)
+    ********************************************************/
+    `TEST_CASE_START("Check quarter rate complex sine response (sample stride)");
+    filt_def.alpha = 0.01;
+    filt_def.beta = 0.99;
+    tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_ALPHA, real2fxp(filt_def.alpha));
+    tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_BETA, real2fxp(filt_def.beta));
+    // Generate input and golden output vector 
+    in_0 = new[NUM_PKTS];
+    in_1 = new[NUM_PKTS];
+    for (int n = 0; n < NUM_PKTS; n++) begin
+      // First half is an impulse, second half is a step
+      in_0[n] = (n % 4 == 1 || n % 4 == 3) ? 0.0 : ((n % 4 == 0) ? 1.0 : -1.0); //cos
+      in_1[n] = (n % 4 == 0 || n % 4 == 2) ? 0.0 : ((n % 4 == 1) ? 1.0 : -1.0); //sin
+    end
+    iir_filter(filt_def, in_0, out_0);
+    iir_filter(filt_def, in_1, out_1);
+    // Send, receive and validate data
+    fork
+      begin
+        logic [31:0] send_word;
+        for (int n = 0; n < NUM_PKTS; n++) begin
+          for (int k = 0; k < VECTOR_SIZE; k++) begin
+            if (k % 4 == 0)
+              tb_streamer.push_word({real2fxp(in_0[n]), real2fxp(in_1[n])}, (k == VECTOR_SIZE-1));
+            else if (k % 4 == 2)
+              tb_streamer.push_word({real2fxp(in_1[n]), real2fxp(in_0[n])}, (k == VECTOR_SIZE-1));
+            else
+              tb_streamer.push_word({real2fxp(0.0), real2fxp(0.0)}, (k == VECTOR_SIZE-1));
+          end
+        end
+      end
+      begin
+        logic [31:0] recv_word;
+        real recv_i, recv_q;
+        logic last;
+        for (int n = 0; n < NUM_PKTS; n++) begin
+          for (int k = 0; k < VECTOR_SIZE; k++) begin
+            tb_streamer.pull_word(recv_word, last);
+            recv_i = fxp2real(recv_word[31:16]);
+            recv_q = fxp2real(recv_word[15:0]);
+            if (k % 4 == 0) begin
+              //$display("[%0d:%0d] Output: %f + %fj (expected %f + %fj)", n, k, recv_i, recv_q, out_0[n], out_1[n]);
+              `ASSERT_ERROR(absval(recv_i - out_0[n]) < 0.01, "Incorrect I value"); //Fudge factor in error because of method
+              `ASSERT_ERROR(absval(recv_q - out_1[n]) < 0.01, "Incorrect Q value");
+            end else if (k % 4 == 2) begin
+              //$display("[%0d:%0d] Output: %f + %fj (expected %f + %fj)", n, k, recv_i, recv_q, out_1[n], out_0[n]);
+              `ASSERT_ERROR(absval(recv_i - out_1[n]) < 0.01, "Incorrect I value");
+              `ASSERT_ERROR(absval(recv_q - out_0[n]) < 0.01, "Incorrect Q value");
+            end else begin
+              //$display("[%0d:%0d] Output: %f + %fj (expected %f + %fj)", n, k, recv_i, recv_q, 0.0, 0.0);
+              `ASSERT_ERROR(absval(recv_i) < 0.01, "Incorrect I value");
+              `ASSERT_ERROR(absval(recv_q) < 0.01, "Incorrect Q value");
+            end 
+            `ASSERT_FATAL((k != VECTOR_SIZE-1) == (last == 1'b0), "Detected early tlast!");
+            `ASSERT_FATAL((k == VECTOR_SIZE-1) == (last == 1'b1), "Detected late tlast!")
+          end
+        end
+      end
+    join
+    `TEST_CASE_DONE(1);
+
+    /********************************************************
+    ** Test 8 -- Test test impulse response with gaps
     ********************************************************/
     `TEST_CASE_START("Check impulse and step response (with gaps in stream)");
-    // Reset state
+    filt_def.alpha = 0.4;
+    filt_def.beta = 0.6;
     tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_ALPHA, real2fxp(filt_def.alpha));
     tb_streamer.write_user_reg(sid_noc_block_vector_iir, noc_block_vector_iir.SR_BETA, real2fxp(filt_def.beta));
     // Generate input and golden output vector 

@@ -24,13 +24,7 @@ module noc_block_sos_filter_tb();
   defparam noc_block_sos_filter.NUM_SOS = 2;
 
   localparam SPP         = 64; // Samples per packet
-  localparam NTAPS       = 128;
-
-  localparam real B0     = 1.0;
-  localparam real B1     = 0.0;
-  localparam real B2     = 0.0;
-  localparam real A1     = 0.5;
-  localparam real A2     = 0.0;
+  localparam NTAPS       = 1024;
   localparam real ERROR  = (2.0 ** -12);  // Target 72dB of dynamic range
 
   // Types
@@ -72,6 +66,33 @@ module noc_block_sos_filter_tb();
   begin
     absval = x > 0.0 ? x : -x;
   end endfunction
+
+  // Generate test data
+  task automatic gen_test_wfm (
+    input integer ntaps,
+    output real wfm_i[],
+    output real wfm_q[]);
+  begin
+    for (int i = 0; i < ntaps; i=i+1) begin
+      if (i < ntaps/4) begin
+        // Impulse
+        wfm_i[i] = (i == 0) ?  1.0 : 0.0;
+        wfm_q[i] = (i == 0) ? -1.0 : 0.0;
+      end else if (i < ntaps/2) begin
+        // Step
+        wfm_i[i] =  1.0;
+        wfm_q[i] = -1.0;
+      end else if (i < 3*ntaps/4) begin
+        // Quarter rate complex sine
+        wfm_i[i] = (i % 4 == 0) ?  1.0 : ((i % 4 == 2) ? -1.0 : 0.0);
+        wfm_q[i] = (i % 4 == 1) ?  1.0 : ((i % 4 == 3) ? -1.0 : 0.0);
+      end else begin
+        // Quarter rate real sine
+        wfm_i[i] = (i % 4 == 1) ?  1.0 : ((i % 4 == 3) ? -1.0 : 0.0);
+        wfm_q[i] = 0.0;
+      end
+    end
+  end endtask
 
   // Golden filter model
   task automatic sos_filter (
@@ -145,14 +166,10 @@ module noc_block_sos_filter_tb();
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Check impulse and step response");
-    // Generate input and golden output vector 
+    // Generate test and golden output vector 
     in_i = new[NTAPS];
     in_q = new[NTAPS];
-    for (int n = 0; n < NTAPS; n++) begin
-      // First half is an impulse, second half is a step
-      in_i[n] = (n == 0 || n >= NTAPS/2) ?  1.0 : 0.0;
-      in_q[n] = (n == 0 || n >= NTAPS/2) ? -1.0 : 0.0;
-    end
+    gen_test_wfm(NTAPS, in_i, in_q);
     sos_filter(sos0, in_i, out_i);
     sos_filter(sos0, in_q, out_q);
     // Input/output process
@@ -205,14 +222,10 @@ module noc_block_sos_filter_tb();
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Check impulse and step response");
-    // Generate input and golden output vector 
+    // Generate test and golden output vector 
     in_i = new[NTAPS];
     in_q = new[NTAPS];
-    for (int n = 0; n < NTAPS; n++) begin
-      // First half is an impulse, second half is a step
-      in_i[n] = (n == 0 || n >= NTAPS/2) ?  1.0 : 0.0;
-      in_q[n] = (n == 0 || n >= NTAPS/2) ? -1.0 : 0.0;
-    end
+    gen_test_wfm(NTAPS, in_i, in_q);
     sos_filter(sos1, in_i, out_i);
     sos_filter(sos1, in_q, out_q);
     // Input/output process
@@ -265,14 +278,10 @@ module noc_block_sos_filter_tb();
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Check impulse and step response");
-    // Generate input and golden output vector 
+    // Generate test and golden output vector 
     in_i = new[NTAPS];
     in_q = new[NTAPS];
-    for (int n = 0; n < NTAPS; n++) begin
-      // First half is an impulse, second half is a step
-      in_i[n] = (n == 0 || n >= NTAPS/2) ? -1.0 : 0.0;
-      in_q[n] = (n == 0 || n >= NTAPS/2) ?  1.0 : 0.0;
-    end
+    gen_test_wfm(NTAPS, in_i, in_q);
     sos_filter(sos0, in_i, out_i);
     sos_filter(sos0, in_q, out_q);
     // Input/output process
@@ -314,14 +323,10 @@ module noc_block_sos_filter_tb();
     `TEST_CASE_DONE(1);
 
     `TEST_CASE_START("Check impulse and step response");
-    // Generate input and golden output vector 
+    // Generate test and golden output vector 
     in_i = new[NTAPS];
     in_q = new[NTAPS];
-    for (int n = 0; n < NTAPS; n++) begin
-      // First half is an impulse, second half is a step
-      in_i[n] = (n == 0 || n >= NTAPS/2) ?  1.0 : 0.0;
-      in_q[n] = (n == 0 || n >= NTAPS/2) ? -1.0 : 0.0;
-    end
+    gen_test_wfm(NTAPS, in_i, in_q);
     sos_filter(sos0, in_i, out_i);
     sos_filter(sos0, in_q, out_q);
     // Input/output process

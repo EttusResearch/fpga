@@ -35,6 +35,7 @@ module variable_delay_line #(
   parameter             DEVICE        = "7SERIES"
 ) (
   input  wire                     clk,
+  input  wire                     clk_en,
   input  wire                     reset,
   input  wire [WIDTH-1:0]         data_in,
   input  wire                     stb_in,
@@ -72,12 +73,12 @@ module variable_delay_line #(
   always @(posedge clk) begin
     if (reset) begin
       use_default <= 2'b11;
-    end else if (occupied != 0) begin
+    end else if (clk_en && (occupied != 0)) begin
       use_default <= {use_default[0], (r_addr >= occupied ? 1'b1 : 1'b0)};
     end
   end
 
-  assign w_en     = stb_in;
+  assign w_en     = stb_in & clk_en;
   assign w_data   = data_in;
   assign r_addr   = (DYNAMIC_DELAY == 0) ? DEPTH : delay;
   assign data_out = use_default[OUT_REG] ? DEFAULT_DATA : r_data;
@@ -89,41 +90,41 @@ module variable_delay_line #(
   // The DEVICE parameter is passed in but SPARTAN6,
   // 7Series, Ultrascale and Ultrascale+ have the same 
   // MACROs for SRLs so we don't use the param quite yet.
+
   genvar i;
   generate
-    if (ADDR_W == 4) begin
-      wire [DATA_W-1:0] r_data_int;
-      reg  [DATA_W-1:0] r_data_reg;
-      always @(posedge clk)
-        r_data_reg <= r_data_int;
-      assign r_data = r_data_reg;
-
-      for (i = 0; i < DATA_W; i = i + 1) begin: bits
-        SRL16E #(
-          .INIT(16'h0000), .IS_CLK_INVERTED(1'b0)
-        ) srl16e_i (
-          .CLK(clk), .CE(w_en),
-          .D(w_data[i]),
-          .A0(r_addr[0]),.A1(r_addr[1]),.A2(r_addr[2]),.A3(r_addr[3]),
-          .Q(r_data_int[i])
-        );
+    if (ADDR_W == 4 || ADDR_W == 5) begin
+      // SRLs don't have an output register to instantiate
+      // that plus the pipeline register manually
+      wire [DATA_W-1:0] r_data_srl;
+      reg  [DATA_W-1:0] r_data_shreg[0:1];
+      always @(posedge clk) begin
+        if (clk_en)
+          {r_data_shreg[1], r_data_shreg[0]} <= {r_data_shreg[0], r_data_srl};
       end
-    end else if (ADDR_W == 5) begin
-      wire [DATA_W-1:0] r_data_int;
-      reg  [DATA_W-1:0] r_data_reg;
-      always @(posedge clk)
-        r_data_reg <= r_data_int;
-      assign r_data = r_data_reg;
+      assign r_data = r_data_shreg[OUT_REG];
 
       for (i = 0; i < DATA_W; i = i + 1) begin: bits
-        SRLC32E #(
-          .INIT(32'h00000000), .IS_CLK_INVERTED(1'b0)
-        ) srlc32e_i (
-          .CLK(clk), .CE(w_en),
-          .D(w_data[i]),
-          .A(r_addr),
-          .Q(r_data_int[i]), .Q31()
-       );
+        // Pick SRL based on address width
+        if (ADDR_W == 4) begin
+          SRL16E #(
+            .INIT(16'h0000), .IS_CLK_INVERTED(1'b0)
+          ) srl16e_i (
+            .CLK(clk), .CE(w_en),
+            .D(w_data[i]),
+            .A0(r_addr[0]),.A1(r_addr[1]),.A2(r_addr[2]),.A3(r_addr[3]),
+            .Q(r_data_srl[i])
+          );
+        end else begin
+          SRLC32E #(
+            .INIT(32'h00000000), .IS_CLK_INVERTED(1'b0)
+          ) srlc32e_i (
+            .CLK(clk), .CE(w_en),
+            .D(w_data[i]),
+            .A(r_addr),
+            .Q(r_data_srl[i]), .Q31()
+         );
+        end
       end
     end else begin
       // For ADDR_W < 4, the RAM should ideally get 
@@ -132,9 +133,9 @@ module variable_delay_line #(
         .DWIDTH (DATA_W), .AWIDTH(ADDR_W),
         .RW_MODE("NO-CHANGE"), .OUT_REG(OUT_REG)
       ) ram_i (
-        .clka (clk), .ena(1'b1), .wea(w_en),
+        .clka (clk), .ena(clk_en), .wea(w_en),
         .addra(w_addr), .dia(w_data), .doa(),
-        .clkb (clk), .enb(1'b1), .web(1'b0),
+        .clkb (clk), .enb(clk_en), .web(1'b0),
         .addrb(w_addr - r_addr - 1), .dib(), .dob(r_data)
       );
     end
