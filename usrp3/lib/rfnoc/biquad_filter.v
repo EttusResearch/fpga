@@ -85,14 +85,17 @@ module biquad_filter #(
   // Use an axis_shift_register and the associated strobes to drive clock enables
   // on the DSP regs to ensure that data/valid/last sync up.
   axis_shift_register #(
-    .WIDTH(2*DATA_W), .LATENCY(IN_TO_OUT_LATENCY),
+    .WIDTH(2*DATA_W), .NSPC(1), .LATENCY(IN_TO_OUT_LATENCY),
     .SIDEBAND_DATAPATH(1), .PIPELINE("OUT")
   ) axis_shreg_i (
     .clk(clk), .reset(reset),
-    .s_axis_tdata(i_tdata), .s_axis_tlast(i_tlast), .s_axis_tvalid(i_tvalid), .s_axis_tready(i_tready),
-    .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast), .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready),
+    .s_axis_tdata(i_tdata), .s_axis_tkeep(1'b1), .s_axis_tlast(i_tlast),
+    .s_axis_tvalid(i_tvalid), .s_axis_tready(i_tready),
+    .m_axis_tdata(o_tdata), .m_axis_tkeep(), .m_axis_tlast(o_tlast),
+    .m_axis_tvalid(o_tvalid), .m_axis_tready(o_tready),
     .stage_stb(chain_en), .stage_eop(),
-    .m_sideband_data(dsp_data_in), .s_sideband_data(dsp_data_out)
+    .m_sideband_data(dsp_data_in), .m_sideband_keep(),
+    .s_sideband_data(dsp_data_out)
   );
 
   //-----------------------------------------------------------
