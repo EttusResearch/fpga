@@ -35,7 +35,6 @@ module dds_freq_tune  #(
   //debug signals
   output [2:0] state_out,
   output phase_valid_hold_out,
-  output [3:0] phase_valid_hold_count_out,
   output [7:0] phase_invalid_wait_count_out,
   output reset_dds_out,
   output m_axis_dds_tlast_out,
@@ -51,7 +50,6 @@ module dds_freq_tune  #(
   wire [SIN_COS_WIDTH*2-1:0] m_axis_dds_tdata; //[31:16] = sin|q [15:0] cos|i
   reg reset_reg;
   reg phase_valid_hold;
-  reg [3:0] phase_valid_hold_count;
   reg [7:0] phase_invalid_wait_count;
   reg [2:0] state;
   reg reset_dds;
@@ -60,13 +58,12 @@ module dds_freq_tune  #(
   wire s_axis_phase_tready_dds;
 
   //when we're holding valid, make ready low so no new data comes in.
-  assign s_axis_phase_tready = s_axis_phase_tready_dds & ~phase_valid_hold; 
+  assign s_axis_phase_tready = s_axis_phase_tready_dds & ~phase_valid_hold;
 
   localparam INIT = 3'b000;
   localparam VALID = 3'b001;
   localparam WAIT = 3'b010;
   localparam HOLD_VALID = 3'b011;
-  localparam RESET_DDS = 3'b111;
 
   //reset needs to be 2 clk cycles minimum for Xilinx DDS IP
   always @(posedge clk) begin
@@ -80,7 +77,6 @@ module dds_freq_tune  #(
     if(reset) begin
       state <= INIT;
       phase_valid_hold <= 1'b0;
-      phase_valid_hold_count <= 4'h0; 
       phase_invalid_wait_count <= 16'h00;
       reset_dds <= 1'b0;
     end
@@ -88,7 +84,6 @@ module dds_freq_tune  #(
       case(state)
         INIT: begin//init case
           phase_valid_hold <= 1'b0;
-          phase_valid_hold_count <= 4'h0;
           phase_invalid_wait_count <= 16'h0000;
           reset_dds <= 1'b0;
           if(s_axis_phase_tvalid) begin
@@ -104,7 +99,7 @@ module dds_freq_tune  #(
           if(m_axis_dds_tready) begin //only increment when the downstream can accept data.
             phase_invalid_wait_count <= phase_invalid_wait_count + 4'b1;
           end
-          if(s_axis_phase_tvalid) begin //if we get valid data shortly after, then don't push data through and reset 
+          if(s_axis_phase_tvalid) begin //if we get valid data shortly after, then don't push data through and reset
             state <= INIT;
           end else begin
             if(eob | (phase_invalid_wait_count >= 16'h40) | rate_changed ) begin //if a valid never comes, aka eob
@@ -114,15 +109,11 @@ module dds_freq_tune  #(
         end
         HOLD_VALID: begin//hold valid to finish pipeline. Apparently the dds IP won't empty without additional valids.
           phase_valid_hold <= 1'b1;
-          if(dds_input_fifo_occupied == 16'h0001) begin
+          // Wait for input FIFO to be empty
+          if (~s_axis_din_tvalid) begin
             state <= INIT;
             reset_dds <= 1'b1;
           end
-        end
-        RESET_DDS: begin //reset to clear the fake valid data we used to push out the real valid data.            
-          phase_valid_hold <= 1'b0;
-          reset_dds <= 1'b1;
-          state <= INIT;
         end
       endcase
     end
@@ -139,7 +130,7 @@ module dds_freq_tune  #(
     .m_axis_data_tvalid(m_axis_dds_tvalid),    // output wire m_axis_data_tvalid
     .m_axis_data_tready(m_axis_dds_tready),    // input wire m_axis_data_tready
     .m_axis_data_tlast(m_axis_dds_tlast),      // input wire m_axis_data_tready
-    .m_axis_data_tdata(m_axis_dds_tdata)      // output wire [31 : 0] m_axis_data_tdata 
+    .m_axis_data_tdata(m_axis_dds_tdata)      // output wire [31 : 0] m_axis_data_tdata
   );
 
   wire [WIDTH*2-1:0] mult_in_a_tdata;
@@ -188,12 +179,11 @@ module dds_freq_tune  #(
   //debug
   assign state_out = state;
   assign phase_valid_hold_out = phase_valid_hold;
-  assign phase_valid_hold_count_out = phase_valid_hold_count;
   assign phase_invalid_wait_count_out = phase_invalid_wait_count;
   assign reset_dds_out = reset_dds;
   assign m_axis_dds_tlast_out = m_axis_dds_tlast;
   assign m_axis_dds_tvalid_out = m_axis_dds_tvalid;
   assign m_axis_dds_tready_out = m_axis_dds_tready;
-  assign m_axis_dds_tdata_out = m_axis_dds_tdata;   
+  assign m_axis_dds_tdata_out = m_axis_dds_tdata;
 
 endmodule
