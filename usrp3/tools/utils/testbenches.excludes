@@ -2,6 +2,7 @@
 # list discovered by run_testbenches.py
 # NOTE: Lines containing "#" are treated as a comment
 
+lib/sim/rfnoc/noc_shell
 lib/rfnoc/noc_block_addsub_hls_tb
 lib/rfnoc/noc_block_eq_tb
 lib/rfnoc/noc_block_file_io_tb
