@@ -83,7 +83,8 @@ DESIGN_SRCS = $(abspath $(TOP_SRCS)) \
           $(AXI_SRCS) \
           $(RFNOC_SRCS) \
           $(RFNOC_OOT_SRCS) \
-          $(LIB_IP_XCI_SRCS)
+          $(LIB_IP_XCI_SRCS) \
+          $(LIB_HLS_IP_SRCS)
 
 ##################################################
 # Dependency Targets
