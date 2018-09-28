@@ -147,4 +147,5 @@ dds_freq_tune.v \
 dds_timed.v \
 datapath_gatekeeper.v \
 biquad_filter.v \
+noc_traffic_counter.v \
 ))
