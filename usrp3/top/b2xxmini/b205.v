@@ -235,11 +235,13 @@ module b205 (
     always @(posedge bus_clk) misc_outs_r <= misc_outs; //register misc ios to ease routing to flop
     assign ref_sel = misc_outs_r[0];
 
+    wire codec_arst = misc_outs_r[2];
+
     assign CAT_CTL_IN = 4'b1;
     assign CAT_EN_AGC = 1'b1;
     assign CAT_TXnRX  = 1'b1;
     assign CAT_EN     = 1'b1;
-    assign CAT_RESETn = ~reset_global;   // Codec Reset // RESETB // Operates active-low
+    assign CAT_RESETn = ~codec_arst;   // Codec Reset // RESETB // Operates active-low
 
     ///////////////////////////////////////////////////////////////////////
     // b205 core

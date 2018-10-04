@@ -69,7 +69,7 @@ module b205_core
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_SYNC      = 8'd48;
-    localparam COMPAT_MAJOR      = 16'h0006;
+    localparam COMPAT_MAJOR      = 16'h0007;
     localparam COMPAT_MINOR      = 16'h0000;
 
     reg [1:0] lock_state;
@@ -223,7 +223,7 @@ module b205_core
     assign fe_gpio_out = fe_gpio_out32[7:0];
     assign fp_gpio_out = fp_gpio_out10[7:0];
     assign fp_gpio_ddr = fp_gpio_ddr10[7:0];
-    
+
     radio_legacy #(
         .RADIO_FIFO_SIZE(RADIO_FIFO_SIZE),
         .SAMPLE_FIFO_SIZE(SAMPLE_FIFO_SIZE),
@@ -236,8 +236,8 @@ module b205_core
     ) radio (
         .radio_clk(radio_clk), .radio_rst(radio_rst),
         .rx(rx0), .tx(tx0), .pps(pps), .time_sync(time_sync_r),
-        .fe_gpio_in(32'h00000000), .fe_gpio_out(fe_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
-        .fp_gpio_in({2'b00, fp_gpio_in}), .fp_gpio_out(fp_gpio_out10), .fp_gpio_ddr(fp_gpio_ddr10),  
+        .fe_gpio_in(32'h00000000), .fe_gpio_out(fe_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),
+        .fp_gpio_in({2'b00, fp_gpio_in}), .fp_gpio_out(fp_gpio_out10), .fp_gpio_ddr(fp_gpio_ddr10),
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .tx_tdata(tx_tdata), .tx_tlast(tx_tlast), .tx_tvalid(tx_tvalid), .tx_tready(tx_tready),
         .rx_tdata(rx_tdata), .rx_tlast(rx_tlast),  .rx_tvalid(rx_tvalid), .rx_tready(rx_tready),
