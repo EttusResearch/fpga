@@ -81,7 +81,7 @@ module b200_core
     localparam SR_CORE_READBACK  = 8'd32;
     localparam SR_CORE_GPSDO_ST  = 8'd40;
     localparam SR_CORE_SYNC      = 8'd48;
-    localparam COMPAT_MAJOR      = 16'h000F;
+    localparam COMPAT_MAJOR      = 16'h0010;
     localparam COMPAT_MINOR      = 16'h0000;
 
     reg [1:0] lock_state;
@@ -311,8 +311,8 @@ module b200_core
    ) radio_0 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx0), .tx(tx0), .pps(pps), .time_sync(time_sync_r),
-      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe0_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
-      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),  
+      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe0_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),
+      .fp_gpio_in(fp_gpio_in), .fp_gpio_out(fp_gpio_out), .fp_gpio_ddr(fp_gpio_ddr),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r0_tx_tdata), .tx_tlast(r0_tx_tlast), .tx_tvalid(r0_tx_tvalid), .tx_tready(r0_tx_tready),
       .rx_tdata(r0_rx_tdata), .rx_tlast(r0_rx_tlast),  .rx_tvalid(r0_rx_tvalid), .rx_tready(r0_rx_tready),
@@ -343,8 +343,8 @@ module b200_core
    ) radio_1 (
       .radio_clk(radio_clk), .radio_rst(radio_rst),
       .rx(rx1), .tx(tx1), .pps(pps), .time_sync(time_sync_r),
-      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe1_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),  
-      .fp_gpio_in(32'h00000000), .fp_gpio_out(), .fp_gpio_ddr(),  
+      .fe_gpio_in(32'h00000000), .fe_gpio_out(fe1_gpio_out32), .fe_gpio_ddr(/* Always assumed to be outputs */),
+      .fp_gpio_in(32'h00000000), .fp_gpio_out(), .fp_gpio_ddr(),
       .bus_clk(bus_clk), .bus_rst(bus_rst),
       .tx_tdata(r1_tx_tdata), .tx_tlast(r1_tx_tlast), .tx_tvalid(r1_tx_tvalid), .tx_tready(r1_tx_tready),
       .rx_tdata(r1_rx_tdata), .rx_tlast(r1_rx_tlast),  .rx_tvalid(r1_rx_tvalid), .rx_tready(r1_rx_tready),
