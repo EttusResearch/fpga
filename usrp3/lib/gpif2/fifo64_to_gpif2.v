@@ -8,7 +8,8 @@
 
 module fifo64_to_gpif2
 #(
-    parameter FIFO_SIZE = 9
+    parameter FIFO_SIZE = 9,
+    parameter MTU = 11
 )
 (
     //input fifo interface
@@ -41,7 +42,7 @@ module fifo64_to_gpif2
     wire gate_tlast;
     wire gate_tvalid, gate_tready;
 
-    axi_fifo_2clk #(.WIDTH(33), .SIZE(0/*SRL*/)) cross_clock_fifo
+    axi_fifo_2clk #(.WIDTH(33), .SIZE(FIFO_SIZE)) cross_clock_fifo
     (
         .reset(fifo_rst | gpif_rst),
         .i_aclk(fifo_clk), .i_tdata({i32_tlast, i32_tdata}), .i_tvalid(i32_tvalid), .i_tready(i32_tready),
@@ -50,14 +51,14 @@ module fifo64_to_gpif2
 
     wire [31:0] int0_tdata; wire int0_tlast, int0_tvalid, int0_tready;
 
-    axi_packet_gate #(.WIDTH(32), .SIZE(FIFO_SIZE)) buffer_whole_pkt
+    axi_packet_gate #(.WIDTH(32), .SIZE(MTU), .USE_AS_BUFF(0)) buffer_whole_pkt
     (
         .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
         .i_tdata(gate_tdata), .i_tlast(gate_tlast), .i_terror(1'b0), .i_tvalid(gate_tvalid), .i_tready(gate_tready),
         .o_tdata(int0_tdata), .o_tlast(int0_tlast), .o_tvalid(int0_tvalid), .o_tready(int0_tready)
     );
 
-    axi_fifo #(.WIDTH(33), .SIZE(5)) outgress_timing_fifo
+    axi_fifo #(.WIDTH(33), .SIZE(1)) outgress_timing_fifo
     (
         .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
         .i_tdata({int0_tlast, int0_tdata}), .i_tvalid(int0_tvalid), .i_tready(int0_tready), .space(),

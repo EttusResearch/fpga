@@ -108,7 +108,7 @@ module gpif2_error_checker
     assign gate_tvalid = i_tvalid && ((state == STATE_HDR)? !obviously_bad_hdr : (state != STATE_WAIT));
     assign i_tready = gate_tready;
 
-    axi_packet_gate #(.WIDTH(32), .SIZE(SIZE)) gate_xfer
+    axi_packet_gate #(.WIDTH(32), .SIZE(SIZE), .USE_AS_BUFF(0)) gate_xfer
     (
         .clk(clk), .reset(reset), .clear(clear),
         .i_tdata(gate_tdata), .i_tlast(gate_tlast), .i_terror(1'b0), .i_tvalid(gate_tvalid), .i_tready(gate_tready),

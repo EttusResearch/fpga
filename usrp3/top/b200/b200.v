@@ -341,7 +341,7 @@ module b200 (
     // GPIF2
     ///////////////////////////////////////////////////////////////////////
 
-   gpif2_slave_fifo32 #(.DATA_RX_FIFO_SIZE(14), .DATA_TX_FIFO_SIZE(14)) slave_fifo32
+   gpif2_slave_fifo32 #(.DATA_RX_FIFO_SIZE(13), .DATA_TX_FIFO_SIZE(13)) slave_fifo32
     (
         .gpif_clk(gpif_clk), .gpif_rst(gpif_rst), .gpif_enb(1'b1),
         .gpif_ctl({GPIF_CTL8, GPIF_CTL6, GPIF_CTL5, GPIF_CTL4}), .fifoadr({GPIF_CTL11,GPIF_CTL12}),
