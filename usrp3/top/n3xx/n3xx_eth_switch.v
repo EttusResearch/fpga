@@ -103,27 +103,27 @@ module n3xx_eth_switch #(
   //---------------------------------------------------------
 
   // Allocate one full page for MAC
-  localparam REG_MAC_LSB        = BASE + 'h0000;
-  localparam REG_MAC_MSB        = BASE + 'h0004;
+  localparam [REG_AWIDTH-1:0] REG_MAC_LSB        = BASE + 'h0000;
+  localparam [REG_AWIDTH-1:0] REG_MAC_MSB        = BASE + 'h0004;
 
   // Source IP address
-  localparam REG_IP             = BASE + 'h1000;
+  localparam [REG_AWIDTH-1:0] REG_IP             = BASE + 'h1000;
   // Source UDP Port
-  localparam REG_UDP            = BASE + 'h1004;
+  localparam [REG_AWIDTH-1:0] REG_UDP            = BASE + 'h1004;
 
   // Base Address for eth_dispatch
-  localparam REG_BASE_DISPATCH  = BASE + 'h1008;
+  localparam [REG_AWIDTH-1:0] REG_BASE_DISPATCH  = BASE + 'h1008;
 
   // Registers for Bridge Network Mode in CPU
-  localparam REG_BRIDGE_MAC_LSB = BASE + 'h1010;
-  localparam REG_BRIDGE_MAC_MSB = BASE + 'h1014;
-  localparam REG_BRIDGE_IP      = BASE + 'h1018;
-  localparam REG_BRIDGE_UDP     = BASE + 'h101c;
-  localparam REG_BRIDGE_ENABLE  = BASE + 'h1020;
+  localparam [REG_AWIDTH-1:0] REG_BRIDGE_MAC_LSB = BASE + 'h1010;
+  localparam [REG_AWIDTH-1:0] REG_BRIDGE_MAC_MSB = BASE + 'h1014;
+  localparam [REG_AWIDTH-1:0] REG_BRIDGE_IP      = BASE + 'h1018;
+  localparam [REG_AWIDTH-1:0] REG_BRIDGE_UDP     = BASE + 'h101c;
+  localparam [REG_AWIDTH-1:0] REG_BRIDGE_ENABLE  = BASE + 'h1020;
 
   // Base address for chdr_eth_framer
-  localparam REG_BASE_FRAMER    = BASE + 'h2000;
-  localparam REG_END_ADDR_FRAMER    = BASE + 'h2FFF;
+  localparam [REG_AWIDTH-1:0] REG_BASE_FRAMER    = BASE + 'h2000;
+  localparam [REG_AWIDTH-1:0] REG_END_ADDR_FRAMER    = BASE + 'h2FFF;
 
   // Setting register width
   localparam SR_AWIDTH = 12;

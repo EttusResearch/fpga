@@ -46,11 +46,11 @@ include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
 ##################################################
 TOP_SRCS = \
 n3xx_core.v \
-n3xx_sfp_wrapper.v \
+n3xx_mgt_channel_wrapper.v \
+n3xx_mgt_wrapper.v \
 n3xx_mgt_io_core.v \
 n3xx_clocking.v \
 n3xx_db_fe_core.v \
-n3xx_npio_qsfp_wrapper.v \
 n3xx_chdr_eth_framer.v \
 n3xx_eth_dispatch.v \
 n3xx_eth_switch.v \
