@@ -8,7 +8,8 @@
 
 module gpif2_to_fifo64
   #(
-    parameter FIFO_SIZE = 9
+    parameter FIFO_SIZE = 9,
+    parameter MTU = 11
     )
     (
      //input interface
@@ -77,7 +78,7 @@ module gpif2_to_fifo64
    wire 	    chk_tlast;
    wire 	    chk_tvalid, chk_tready;
 
-   axi_fifo_2clk #(.WIDTH(33), .SIZE(0/*SRL*/)) cross_clock_fifo
+   axi_fifo_2clk #(.WIDTH(33), .SIZE(FIFO_SIZE)) cross_clock_fifo
      (
       .reset(fifo_rst | gpif_rst),
       .i_aclk(gpif_clk), .i_tdata({int_tlast, int_tdata}), .i_tvalid(int_tvalid), .i_tready(int_tready),
@@ -93,7 +94,7 @@ module gpif2_to_fifo64
    wire 	    o32_tlast;
    wire 	    o32_tvalid, o32_tready;
 
-   gpif2_error_checker #(.SIZE(FIFO_SIZE)) checker
+   gpif2_error_checker #(.SIZE(MTU)) checker
      (
       .clk(fifo_clk), .reset(fifo_rst), .clear(1'b0),
       .i_tdata(chk_tdata), .i_tlast(chk_tlast), .i_tvalid(chk_tvalid), .i_tready(chk_tready),

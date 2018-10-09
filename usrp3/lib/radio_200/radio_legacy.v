@@ -101,12 +101,12 @@ module radio_legacy
       .i_aclk(radio_clk), .i_tvalid(rmux_tvalid_r), .i_tready(rmux_tready_r), .i_tdata({rmux_tlast_r, rmux_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(resp_tvalid), .o_tready(resp_tready), .o_tdata({resp_tlast, resp_tdata}));
 
-   axi_fifo_2clk #(.WIDTH(65), .SIZE(0)) rx_fifo
+   axi_fifo_2clk #(.WIDTH(65), .SIZE(RADIO_FIFO_SIZE)) rx_fifo
      (.reset(radio_rst),
       .i_aclk(radio_clk), .i_tvalid(rx_tvalid_r), .i_tready(rx_tready_r), .i_tdata({rx_tlast_r, rx_tdata_r}),
       .o_aclk(bus_clk), .o_tvalid(rx_tvalid_int), .o_tready(rx_tready_int), .o_tdata({rx_tlast_int, rx_tdata_int}));
 
-   axi_packet_gate #(.WIDTH(64), .SIZE(RADIO_FIFO_SIZE)) buffer_whole_pkt
+   axi_packet_gate #(.WIDTH(64), .SIZE(SAMPLE_FIFO_SIZE), .USE_AS_BUFF(0)) buffer_whole_pkt
      (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata(rx_tdata_int), .i_tlast(rx_tlast_int), .i_terror(1'b0), .i_tvalid(rx_tvalid_int), .i_tready(rx_tready_int),

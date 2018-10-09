@@ -19,7 +19,7 @@ module b200_core
     parameter R1_DATA_SID = 8'h60,
     parameter DEMUX_SID_MASK = 8'hf0,
     parameter EXTRA_BUFF_SIZE = 0,
-    parameter RADIO_FIFO_SIZE = 12,
+    parameter RADIO_FIFO_SIZE = 11,
     parameter SAMPLE_FIFO_SIZE = 11
 
 )
