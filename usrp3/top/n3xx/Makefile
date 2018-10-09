@@ -28,6 +28,8 @@ XG_DEFS=SFP0_10GBE=1  SFP1_10GBE=1  BUILD_10G=1                   $(OPTIONS)
 HA_DEFS=SFP0_1GBE=1   SFP1_AURORA=1 BUILD_1G=1     BUILD_AURORA=1 $(OPTIONS)
 XA_DEFS=SFP0_10GBE=1  SFP1_AURORA=1 BUILD_10G=1    BUILD_AURORA=1 $(OPTIONS)
 AA_DEFS=SFP0_AURORA=1 SFP1_AURORA=1 BUILD_AURORA=1                $(OPTIONS)
+XQ_DEFS=SFP0_WR=1     QSFP_10GBE=1  BUILD_WR=1     BUILD_10G=1    QSFP_LANES=2 $(OPTIONS)
+AQ_DEFS=SFP0_10GBE=1  SFP1_10GBE=1  QSFP_AURORA=1  BUILD_10G=1    BUILD_AURORA=1    QSFP_LANES=4 $(OPTIONS)
 
 # Option to stop after RTL elaboration. Use this flag as a synthesis check.
 ifdef CHECK
@@ -189,6 +191,16 @@ N320_HG: build/usrp_n320_fpga_HG.dts
 N320_XG: build/usrp_n320_fpga_XG.dts
 	$(call vivado_build,N320,$(XG_DEFS) N320=1)
 	$(call post_build,N320,XG)
+
+##N320_XQ:  WR on SFP+ Port0, 10Gig on QSFP+ Port0,1.
+N320_XQ: build/usrp_n320_fpga_XG.dts
+	$(call vivado_build,N320,$(XQ_DEFS) N320=1)
+	$(call post_build,N320,XQ)
+
+##N320_AQ:  10Gig on SFP+ Port0,1 Aurora on QSFP+ Port0,1,2,3.
+N320_AQ: build/usrp_n320_fpga_AQ.dts
+	$(call vivado_build,N320,$(AQ_DEFS) N320=1)
+	$(call post_build,N320,AQ)
 
 ##N320_RFNOC_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
 N320_RFNOC_WX:  build/usrp_n320_fpga_WX.dts
