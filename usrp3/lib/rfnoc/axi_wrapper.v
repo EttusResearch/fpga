@@ -61,9 +61,12 @@ module axi_wrapper
     input [NUM_AXI_CONFIG_BUS-1:0] m_axis_config_tready
     );
 
+
    wire clear_tx_seqnum_bclk;
-   synchronizer #(.INITIAL_VAL(1'b0)) clear_tx_sync_i (
-     .clk(bus_clk), .rst(1'b0), .in(clear_tx_seqnum), .out(clear_tx_seqnum_bclk));
+   pulse_synchronizer clear_tx_seqnum_sync_i (
+     .clk_a(clk), .rst_a(reset), .pulse_a(clear_tx_seqnum), .busy_a(/*Ignored: Pulses from SW are slow*/),
+     .clk_b(bus_clk), .pulse_b(clear_tx_seqnum_bclk)
+   );
 
    // /////////////////////////////////////////////////////////
    // Input side handling, chdr_deframer
