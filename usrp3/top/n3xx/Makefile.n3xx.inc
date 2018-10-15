@@ -36,6 +36,7 @@ include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/white_rabbit/wr_cores_v4_2/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(BASE_DIR)/n3xx/Makefile.OOT.inc
 include $(BASE_DIR)/n3xx/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
