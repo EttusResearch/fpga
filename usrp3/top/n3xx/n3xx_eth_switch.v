@@ -264,7 +264,8 @@ module n3xx_eth_switch #(
 
   axi_packet_gate #(
     .WIDTH(68),
-    .SIZE(11)
+    .SIZE(11),
+    .USE_AS_BUFF(1)
   ) packet_gater (
     .clk(clk),
     .reset(reset),

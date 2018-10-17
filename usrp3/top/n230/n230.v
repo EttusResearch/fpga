@@ -345,8 +345,9 @@ module n230 (
    wire [1:0]  ef_bist_error;
 
    n230_ext_sram_fifo #(
-      .INGRESS_BUF_DEPTH(10),    //Buffer packets after XB
-      .EGRESS_BUF_DEPTH(11),     //16k packet gate FIFO here plus an 8k FIFO in the radio
+      .INGRESS_BUF_DEPTH(10), //Buffer packets after XB
+      .EGRESS_BUF_DEPTH(10),  //16k (8k packet gate + 8k FIFO) here plus an 8k FIFO in the radio
+      .MTU(10),
       .BIST_ENABLED(0), .BIST_REG_BASE(0)
    ) ext_fifo_i (
       //Clocks

@@ -20,7 +20,8 @@ module axi_packet_gate_tb();
 
   axi_packet_gate #(
     .WIDTH(32),
-    .SIZE($clog2(MAX_PKT_SIZE))
+    .SIZE($clog2(MAX_PKT_SIZE)),
+    .USE_AS_BUFF(1)
   ) dut (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(m_axis.axis.tdata[31:0]),
