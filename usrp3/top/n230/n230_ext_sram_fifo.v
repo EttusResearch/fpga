@@ -8,6 +8,7 @@
 module n230_ext_sram_fifo #(
    parameter INGRESS_BUF_DEPTH = 8,
    parameter EGRESS_BUF_DEPTH  = 8,
+   parameter MTU               = 8,
    parameter BIST_ENABLED      = 0,
    parameter BIST_REG_BASE     = 0
 ) (
@@ -247,25 +248,25 @@ module n230_ext_sram_fifo #(
    wire        o1_tlast_gt, o1_tvalid_gt, o1_tready_gt;
    wire        o1_terr_gt;
 
-   axi_fifo_2clk #(.WIDTH(66), .SIZE(0)) egress_fifo_i0 (
+   axi_fifo_2clk #(.WIDTH(66), .SIZE(EGRESS_BUF_DEPTH)) egress_fifo_i0 (
       .reset(bus_rst),
       .i_aclk(ram_ui_clk), .i_tdata({o0_terr_buf, o0_tlast_buf, o0_tdata_buf}), .i_tvalid(o0_tvalid_buf), .i_tready(o0_tready_buf),
       .o_aclk(bus_clk), .o_tdata({o0_terr_gt, o0_tlast_gt, o0_tdata_gt}), .o_tvalid(o0_tvalid_gt), .o_tready(o0_tready_gt)
    );
 
-   axi_packet_gate #(.WIDTH(64), .SIZE(EGRESS_BUF_DEPTH)) egress_pkt_gate_i0 (
+   axi_packet_gate #(.WIDTH(64), .SIZE(MTU)) egress_pkt_gate_i0 (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata(o0_tdata_gt), .i_tlast(o0_tlast_gt), .i_terror(o0_terr_gt), .i_tvalid(o0_tvalid_gt), .i_tready(o0_tready_gt),
       .o_tdata(o0_tdata), .o_tlast(o0_tlast), .o_tvalid(o0_tvalid), .o_tready(o0_tready)
    );
 
-   axi_fifo_2clk #(.WIDTH(66), .SIZE(0)) egress_fifo_i1 (
+   axi_fifo_2clk #(.WIDTH(66), .SIZE(EGRESS_BUF_DEPTH)) egress_fifo_i1 (
       .reset(bus_rst),
       .i_aclk(ram_ui_clk), .i_tdata({o1_terr_buf, o1_tlast_buf, o1_tdata_buf}), .i_tvalid(o1_tvalid_buf), .i_tready(o1_tready_buf),
       .o_aclk(bus_clk), .o_tdata({o1_terr_gt, o1_tlast_gt, o1_tdata_gt}), .o_tvalid(o1_tvalid_gt), .o_tready(o1_tready_gt)
    );
 
-   axi_packet_gate #(.WIDTH(64), .SIZE(EGRESS_BUF_DEPTH)) egress_pkt_gate_i1 (
+   axi_packet_gate #(.WIDTH(64), .SIZE(MTU)) egress_pkt_gate_i1 (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
       .i_tdata(o1_tdata_gt), .i_tlast(o1_tlast_gt), .i_terror(o1_terr_gt), .i_tvalid(o1_tvalid_gt), .i_tready(o1_tready_gt),
       .o_tdata(o1_tdata), .o_tlast(o1_tlast), .o_tvalid(o1_tvalid), .o_tready(o1_tready)

@@ -50,7 +50,7 @@ module eth_interface
    // This gate must be able to hold at least 9900 bytes which is the maximum length between the SOF and EOF
    // as asserted by the 1G and 10G MACs. This is required in case one of the max size packets has an error
    // and needs to be dropped. With SIZE=11, this gate will hold 2 8k packets. 
-   axi_packet_gate #(.WIDTH(68), .SIZE(11)) packet_gater
+   axi_packet_gate #(.WIDTH(68), .SIZE(11), .USE_AS_BUFF(1)) packet_gater
      (.clk(clk), .reset(reset), .clear(clear),
 
       .i_tdata({eth_rx_tuser, eth_rx_tdata}), .i_tlast(eth_rx_tlast),
