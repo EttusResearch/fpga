@@ -124,6 +124,7 @@ one_tap_equalizer.v \
 noc_block_eq.v \
 noc_block_ddc.v \
 noc_block_duc.v \
+noc_block_ducddc.v \
 cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
