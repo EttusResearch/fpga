@@ -14,6 +14,9 @@
     end
   endgenerate
 
+  wire ce_clk = bus_clk;
+  wire ce_rst = bus_rst;
+
   noc_block_ddc #(.NOC_ID(64'hDDC0_0000_0000_0001), .NUM_CHAINS(1)) inst_noc_block_ddc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
