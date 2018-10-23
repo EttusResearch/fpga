@@ -341,8 +341,8 @@ module e310_core
 
   noc_block_radio_core #(
     .NUM_CHANNELS(NUM_CHANNELS),
-    .STR_SINK_FIFOSIZE({8'd11,8'd11}),
-    .MTU(10)
+    .STR_SINK_FIFOSIZE({8'd10,8'd10}),
+    .MTU(9)
   ) noc_block_radio_core_i (
     //Clocks
     .bus_clk(bus_clk), .bus_rst(bus_rst),
