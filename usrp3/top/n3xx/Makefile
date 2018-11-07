@@ -199,7 +199,7 @@ N320_XG: build/usrp_n320_fpga_XG.dts
 	$(call post_build,N320,XG)
 
 ##N320_XQ:  WR on SFP+ Port0, 10Gig on QSFP+ Port0,1.
-N320_XQ: build/usrp_n320_fpga_XG.dts
+N320_XQ: build/usrp_n320_fpga_XQ.dts
 	$(call vivado_build,N320,$(XQ_DEFS) N320=1)
 	$(call post_build,N320,XQ)
 
@@ -224,7 +224,7 @@ N320_RFNOC_XG: build/usrp_n320_fpga_XG.dts
 	$(call post_build,N320,RFNOC_XG)
 
 ##N320_RFNOC_XQ:  WR on SFP+ Port0, 10Gig on QSFP+ Port0,1. RFNoC CEs enabled.
-N320_RFNOC_XQ: build/usrp_n320_fpga_XG.dts
+N320_RFNOC_XQ: build/usrp_n320_fpga_XQ.dts
 	$(call vivado_build,N320,$(XQ_DEFS) RFNOC=1 N320=1)
 	$(call post_build,N320,RFNOC_XQ)
 
