@@ -9,8 +9,6 @@
 // This block implements the state machine and control logic for recording and 
 // playback of AXI-Stream data, using a DMA-accessible memory as a buffer.
 
-//`default_nettype none
-
 
 module axi_replay #(
   parameter DATA_WIDTH  = 64,
@@ -505,7 +503,7 @@ module axi_replay #(
             // Request the write transaction
             write_ctrl_valid <= 1'b1;
             rec_state        <= REC_WAIT_DMA_START;
-          end;
+          end
         end
 
         REC_WAIT_DMA_START : begin
@@ -642,6 +640,9 @@ module axi_replay #(
 
               play_state <= PLAY_WAIT_DATA_READY;
             end
+          end else if (play_halt) begin
+            // In case we get a HALT after a command has finished
+            play_halt_clear <= 1'b1;
           end
         end
 
@@ -755,7 +756,6 @@ module axi_replay #(
             // Check if we need to restart the previous command
             end else if (cmd_reload) begin
               play_words_remaining <= cmd_num_lines;
-              play_addr            <= 0;
               play_state           <= PLAY_WAIT_DATA_READY;
             end
           // Nothing left to do

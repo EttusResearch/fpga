@@ -451,7 +451,7 @@ module noc_block_replay_tb ();
       logic [31:0] cmd;
 
       // Set number of words to test to the smallest size possible
-      static int num_words = 1;
+      int num_words = 1;
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR,  1024, 0);
@@ -511,9 +511,9 @@ module noc_block_replay_tb ();
       logic [31:0] cmd;
 
       // Set number of words to test to the smallest size possible
-      static int buffer_size    = (3 * MEM_BURST_SIZE) / 2 * WORD_SIZE;   // 1.5 memory bursts in size (in bytes)
-      static int num_words_rec  = buffer_size / WORD_SIZE;                // Same as buffer_size (in words)
-      static int num_words_play = 2 * MEM_BURST_SIZE;                     // 2 memory bursts in size (in words)
+      int buffer_size    = (3 * MEM_BURST_SIZE) / 2 * WORD_SIZE;   // 1.5 memory bursts in size (in bytes)
+      int num_words_rec  = buffer_size / WORD_SIZE;                // Same as buffer_size (in words)
+      int num_words_play = 2 * MEM_BURST_SIZE;                     // 2 memory bursts in size (in words)
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR,  0, 0);
@@ -568,7 +568,7 @@ module noc_block_replay_tb ();
 
       logic [31:0] cmd;
 
-      static int num_words = 70;
+      int num_words = 70;
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
@@ -613,7 +613,7 @@ module noc_block_replay_tb ();
 
 
     //-------------------------------------------------------------------------
-    // Test 10 -- Test reload (automatic replay)
+    // Test 10 -- Test chained reload (automatic replay)
     //-------------------------------------------------------------------------
 
     test_step = 10;
@@ -626,7 +626,13 @@ module noc_block_replay_tb ();
 
       logic [31:0] cmd;
 
-      static int num_words = 37;
+      // Buffer size to replay
+      int num_words = 37;
+      
+      // Number of words to replay per command. Make it something different 
+      // form the buffer size (num_words) to verify that the data is continuous 
+      // between reloads of the original command.
+      int replay_words = 27;
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
@@ -646,11 +652,11 @@ module noc_block_replay_tb ();
 
       // Start replay, with chain+reload enabled
       cmd       = 0;
-      cmd[31]   = 1;         // send_imm
-      cmd[30]   = 1;         // chain
-      cmd[29]   = 1;         // reload
-      cmd[28]   = 0;         // stop
-      cmd[27:0] = num_words; // num_lines
+      cmd[31]   = 1;            // send_imm
+      cmd[30]   = 1;            // chain
+      cmd[29]   = 1;            // reload
+      cmd[28]   = 0;            // stop
+      cmd[27:0] = replay_words; // num_lines
       tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
       
       // Check the output, 3 times to make sure it's being repeated
@@ -707,7 +713,7 @@ module noc_block_replay_tb ();
 
       logic [31:0] cmd;
 
-      static int num_words = 23;
+      int num_words = 23;
 
       // Start replay, with chain+reload enabled
       cmd       = 0;
@@ -726,8 +732,13 @@ module noc_block_replay_tb ();
       // Send halt command
       tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, 0);
 
-      // Keep reading frames until we've cleared them all
+      // Keep reading frames until we've cleared them all. If the halt failed 
+      // then this should timeout.
       flush_rx;
+      
+      // Send an extra halt to make sure that it gets properly ignored and 
+      // doesn't break the next command.
+      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, 0);   
     end
 
     `TEST_CASE_DONE(1);
@@ -754,8 +765,8 @@ module noc_block_replay_tb ();
       logic [31:0] cmd;
 
       // Number of words to record (num_words) is larger than buffer size.
-      static int num_words   = 97;
-      static int buffer_size = 43;    // Size in bytes
+      int num_words   = 97;
+      int buffer_size = 43;    // Size in bytes
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
@@ -828,8 +839,8 @@ module noc_block_replay_tb ();
 
       logic [31:0] cmd;
 
-      static int num_words   = 4*MEM_BURST_SIZE; // Multiple of the burst size
-      static int buffer_size = 4*MEM_BURST_SIZE; // Size in bytes
+      int num_words   = 4*MEM_BURST_SIZE; // Multiple of the burst size
+      int buffer_size = 4*MEM_BURST_SIZE; // Size in bytes
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
@@ -884,8 +895,8 @@ module noc_block_replay_tb ();
 
       logic [31:0] cmd;
 
-      static int num_words   = 2*MEM_BURST_SIZE; // Multiple of the burst size
-      static int buffer_size = 4*MEM_BURST_SIZE; // Size in bytes
+      int num_words   = 2*MEM_BURST_SIZE; // Multiple of the burst size
+      int buffer_size = 4*MEM_BURST_SIZE; // Size in bytes
 
       // Update record buffer settings
       tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, AXI_ALIGNMENT-(num_words/2)*WORD_SIZE, 0);
@@ -940,10 +951,10 @@ module noc_block_replay_tb ();
       logic [31:0] cmd;
 
       // Set number of words to test to the smallest size possible
-      static int buffer_size = 2 * MEM_BURST_SIZE / WORD_SIZE;   // 2 memory bursts in size (in bytes)
-      static int num_words   = buffer_size / WORD_SIZE;          // Same as buffer_size (in words)
+      int buffer_size = 2 * MEM_BURST_SIZE / WORD_SIZE;   // 2 memory bursts in size (in bytes)
+      int num_words   = buffer_size / WORD_SIZE;          // Same as buffer_size (in words)
       
-      static int old_packet_size;
+      int old_packet_size;
 
       // Read the current packet size, then change it to a small value
       tb_streamer.read_user_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, old_packet_size, 0);
