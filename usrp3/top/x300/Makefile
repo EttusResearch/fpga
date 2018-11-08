@@ -54,55 +54,55 @@ post_build = @\
 ##
 ##Supported Targets
 ##-----------------
-##(Default target)
+##all:      X300_HG X310_HG X300_XG X310_XG (Default target)
 all:      X300_HG X310_HG X300_XG X310_XG
 
-##USRP X310. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
+##X310_1G:  1GigE on both SFP+ ports.
 X310_1G:
 	$(call vivado_build,X310,$(GIGE_DEFS) X310=1)
 	$(call post_build,X310,1G)
 
-##USRP X300. 1GigE on both SFP+ ports. DRAM TX FIFO (Experimental!).
+##X300_1G:  1GigE on both SFP+ ports.
 X300_1G:
 	$(call vivado_build,X300,$(GIGE_DEFS) X300=1)
 	$(call post_build,X300,1G)
 
-##USRP X310. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
+##X310_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 X310_HG:
 	$(call vivado_build,X310,$(HG_DEFS) X310=1)
 	$(call post_build,X310,HG)
 
-##USRP X300. 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. DRAM TX FIFO.
+##X300_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1.
 X300_HG:
 	$(call vivado_build,X300,$(HG_DEFS) X300=1)
 	$(call post_build,X300,HG)
 
-##USRP X310. 10GigE on both SFP+ ports. DRAM TX FIFO.
+##X310_XG:  10GigE on both SFP+ ports.
 X310_XG:
 	$(call vivado_build,X310,$(XG_DEFS) X310=1)
 	$(call post_build,X310,XG)
 
-##USRP X300. 10GigE on both SFP+ ports. DRAM TX FIFO.
+##X300_XG:  10GigE on both SFP+ ports.
 X300_XG:
 	$(call vivado_build,X300,$(XG_DEFS) X300=1)
 	$(call post_build,X300,XG)
 
-##USRP X310. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##X310_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
 X310_HA:
 	$(call vivado_build,X310,$(HA_DEFS) X310=1)
 	$(call post_build,X310,HA)
 
-##USRP X300. 1Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##X300_HA:  1Gig on SFP+ Port0, Aurora on SFP+ Port1.
 X300_HA:
 	$(call vivado_build,X300,$(HA_DEFS) X300=1)
 	$(call post_build,X300,HA)
 
-##USRP X310. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##X310_XA:  10Gig on SFP+ Port0, Aurora on SFP+ Port1.
 X310_XA:
 	$(call vivado_build,X310,$(XA_DEFS) X310=1)
 	$(call post_build,X310,XA)
 
-##USRP X300. 10Gig on SFP+ Port0, Aurora on SFP+ Port1. DRAM TX FIFO (Experimental!).
+##X300_XA:  10Gig on SFP+ Port0, Aurora on SFP+ Port1.
 X300_XA:
 	$(call vivado_build,X300,$(XA_DEFS) X300=1)
 	$(call post_build,X300,XA)
