@@ -1,7 +1,7 @@
--- Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
+-- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
--- Tool Version: Vivado v.2015.4 (win64) Build 1412921 Wed Nov 18 09:43:45 MST 2015
--- Date        : Fri Aug 17 07:37:33 2018
+-- Tool Version: Vivado v.2017.4 (win64) Build 2086221 Fri Dec 15 20:55:39 MST 2017
+-- Date        : Fri Nov  9 16:19:51 2018
 -- Host        : hjimenez running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -mode synth_stub -force -file ./Jesd204bXcvrCore_stub.vhd
 -- Design      : Jesd204bXcvrCore

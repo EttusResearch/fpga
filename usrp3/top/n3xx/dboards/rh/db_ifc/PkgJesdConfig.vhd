@@ -14,6 +14,7 @@
 --          between RX and TX JESD cores.
 --
 -- vreview_group JesdCoreN32x
+-- vreview_closed http://review-board.natinst.com/r/258500/
 -- vreview_reviewers djepson wfife
 -------------------------------------------------------------------------------
 
