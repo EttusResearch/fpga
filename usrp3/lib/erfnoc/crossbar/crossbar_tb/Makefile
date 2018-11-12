@@ -6,7 +6,7 @@
 # Top-of-Makefile
 #-------------------------------------------------
 # Define BASE_DIR to point to the "top" dir
-BASE_DIR = $(abspath ../../../top)
+BASE_DIR = $(abspath ../../../../top)
 # Include viv_sim_preample after defining BASE_DIR
 include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 
@@ -20,7 +20,7 @@ PART_ID = xc7k410t/ffg900/-2
 # Include makefiles and sources for the DUT and its dependencies
 include $(BASE_DIR)/../lib/control/Makefile.srcs
 include $(BASE_DIR)/../lib/fifo/Makefile.srcs
-include $(BASE_DIR)/../lib/crossbar/Makefile.srcs
+include $(BASE_DIR)/../lib/erfnoc/crossbar/Makefile.srcs
 
 DESIGN_SRCS = $(abspath \
 $(FIFO_SRCS) \

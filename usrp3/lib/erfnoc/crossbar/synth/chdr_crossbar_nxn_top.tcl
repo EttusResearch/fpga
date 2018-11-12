@@ -7,7 +7,7 @@
 
 create_project tmp_proj -part xc7k410tffg900-3 -in_memory
 add_files {chdr_crossbar_nxn_top.v ../chdr_crossbar_nxn.v ../axis_switch.v ../chdr_route_config.v ../chdr_xb_ingress_buff.v}
-add_files {../../fifo/axi_fifo_flop.v ../../fifo/axi_fifo_flop2.v ../../fifo/axi_fifo.v ../../fifo/axi_mux_select.v ../../fifo/axi_fifo_bram.v ../../fifo/axi_fifo_cascade.v ../../fifo/axi_mux.v ../../fifo/axi_fifo_short.v ../../fifo/axi_demux.v ../../fifo/axi_packet_gate.v ../../control/map/cam_priority_encoder.v ../../control/map/cam_srl.v ../../control/map/cam_bram.v ../../control/map/cam.v ../../control/map/kv_map.v ../../control/map/axis_muxed_kv_map.v ../../control/ram_2port.v}
+add_files {../../../fifo/axi_fifo_flop.v ../../../fifo/axi_fifo_flop2.v ../../../fifo/axi_fifo.v ../../../fifo/axi_mux_select.v ../../../fifo/axi_fifo_bram.v ../../../fifo/axi_fifo_cascade.v ../../../fifo/axi_mux.v ../../../fifo/axi_fifo_short.v ../../../fifo/axi_demux.v ../../../fifo/axi_packet_gate.v ../../../control/map/cam_priority_encoder.v ../../../control/map/cam_srl.v ../../../control/map/cam_bram.v ../../../control/map/cam.v ../../../control/map/kv_map.v ../../../control/map/axis_muxed_kv_map.v ../../../control/ram_2port.v}
 set_property top chdr_crossbar_nxn_top [current_fileset]
 synth_design
 create_clock -name clk -period 2.0 [get_ports clk]
