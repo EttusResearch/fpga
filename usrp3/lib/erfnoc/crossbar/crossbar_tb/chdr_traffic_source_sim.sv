@@ -183,7 +183,7 @@ module chdr_traffic_source_sim #(
   // Gate the packet to smooth out throttle-related noise.
   // This also serves as a buffer for the packet in case things are backed up
   axi_packet_gate #(
-    .WIDTH(WIDTH), .SIZE(MTU + 4)
+    .WIDTH(WIDTH), .SIZE(MTU + 4), .USE_AS_BUFF(1)
   ) pkt_gate_i (
     .clk      (clk), 
     .reset    (rst), 

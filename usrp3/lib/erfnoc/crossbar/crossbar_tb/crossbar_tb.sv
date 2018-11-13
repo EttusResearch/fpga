@@ -42,7 +42,7 @@ module crossbar_tb();
   //----------------------------------------------------
   //<PARAMS_BLOCK_AUTOGEN>
   // Router parameters
-  localparam ROUTER_IMPL        = "chdr_crossbar_nxn";    // Router implementation
+  localparam ROUTER_IMPL        = "axi_crossbar";         // Router implementation
   localparam ROUTER_PORTS_SQRT  = 4;                      // Square root of the # router ports
   localparam ROUTER_PORTS       = ROUTER_PORTS_SQRT ** 2; // # Router ports
   localparam ROUTER_DWIDTH      = 64;                     // Router datapath width
@@ -202,16 +202,15 @@ module crossbar_tb();
     );
   end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
     chdr_crossbar_nxn #(
-      .WIDTH              (ROUTER_DWIDTH),
+      .CHDR_W             (ROUTER_DWIDTH),
       .NPORTS             (ROUTER_PORTS),
       .DEFAULT_PORT       (0),
-      .INGRESS_BUFF_SIZE  (MTU_LOG2),
-      .SID_OFFSET         (0),
-      .SID_WIDTH          (16),
+      .MTU                (MTU_LOG2),
       .ROUTE_TBL_SIZE     (6),
       .MUX_ALLOC          ("ROUND-ROBIN"),
       .OPTIMIZE           ("AREA"),
-      .MGMT_RTCFG_PORT    (1)
+      .MGMT_PORT_MASK     (0),
+      .EXT_MGMT_PORT      (1)
     ) router_dut_i (
        // General         
       .clk                (clk),
@@ -287,6 +286,7 @@ module crossbar_tb();
   begin
     session = session + 1;
     $display("--------------- New Simulation ---------------");
+    $display("- Module = %s", ROUTER_IMPL);
     $display("- Nodes = %00d", ROUTER_PORTS);
     $display("- Injection Rate = %00d%%", injection_rate);
     $display("- Traffic Pattern = %c", traffic_patt);

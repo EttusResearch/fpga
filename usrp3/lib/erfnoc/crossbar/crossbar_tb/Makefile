@@ -21,11 +21,13 @@ PART_ID = xc7k410t/ffg900/-2
 include $(BASE_DIR)/../lib/control/Makefile.srcs
 include $(BASE_DIR)/../lib/fifo/Makefile.srcs
 include $(BASE_DIR)/../lib/erfnoc/crossbar/Makefile.srcs
+include $(BASE_DIR)/../lib/erfnoc/core/Makefile.srcs
 
 DESIGN_SRCS = $(abspath \
 $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) \
-$(XBAR_SRCS) \
+$(RFNOC_XBAR_SRCS) \
+$(RFNOC_CORE_SRCS) \
 )
 
 #-------------------------------------------------
