@@ -260,7 +260,8 @@ endfunction
 // 63:0     num_bytes       Transfer count in packets
 
 localparam [3:0] CHDR_STRC_OPCODE_INIT    = 4'd0;
-localparam [3:0] CHDR_STRC_OPCODE_RESYNC  = 4'd1;
+localparam [3:0] CHDR_STRC_OPCODE_PING    = 4'd1;
+localparam [3:0] CHDR_STRC_OPCODE_RESYNC  = 4'd2;
 
 // 64-bit fields
 function [39:0] chdr64_strc_get_num_pkts;
