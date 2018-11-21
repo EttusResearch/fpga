@@ -21,7 +21,7 @@ fragment@1 {
 			compatible = "ni,xge-enet-3.00";
 			reg = <0x40000000 0x4000
 			       0x40020000 0x2000>;
-			reg-names = "dma", "phy";
+			reg-names = "dma", "ctrl";
 
 			clocks = <&clkc 15>;
 			clock-names = "bus_clk";
