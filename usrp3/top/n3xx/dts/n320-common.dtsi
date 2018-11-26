@@ -151,3 +151,16 @@ fragment@6 {
 	};
 };
 
+fragment@7 {
+        target = <&usrpio_i2c0>;
+        reg = <0x0007>;
+        __overlay__ {
+                rhodium_lodist_gpio: rhodium-lodist-gpio@22 {
+                        compatible = "nxp,tca6424";
+                        reg = <0x22>;
+                        gpio-controller;
+                        #gpio-cells = <2>;
+                };
+        };
+};
+
