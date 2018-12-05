@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Copyright 2016-2017 Ettus Research
+Copyright 2016-2018 Ettus Research
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -437,6 +437,9 @@ class MainWindow(QtWidgets.QWidget):
         filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/home/')[0]
         if len(filename) > 0:
             self.grc_populate_list(self.model_in_design, filename)
+            self.set_target_and_device()
+            self.blocks_to_add_slot()
+            self.cmd_display_slot()
 
     def check_no_blocks(self):
         """
