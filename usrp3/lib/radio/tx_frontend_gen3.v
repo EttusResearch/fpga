@@ -26,7 +26,7 @@ module tx_frontend_gen3 #(
   wire [17:0]        mag_corr, phase_corr;
 
   wire [35:0]        corr_i, corr_q;
-  reg                tx_stb_dly;
+  reg  [1:0]         tx_stb_dly;
   reg  [23:0]        tx_i_dly, tx_q_dly;
   wire               tx_comp_stb, tx_ofs_stb;
   wire [23:0]        tx_i_comp, tx_q_comp, tx_i_ofs, tx_q_ofs;
@@ -63,46 +63,56 @@ module tx_frontend_gen3 #(
   generate
     if (BYPASS_IQ_COMP == 0) begin
 
-      MULT_MACRO #(
-        .DEVICE(DEVICE), .LATENCY(1),
-        .WIDTH_A(18), .WIDTH_B(18))
-      mult_i (
-        .CLK(clk), .RST(reset), .CE(tx_stb),
-        .P(corr_i), .A({tx_i,2'd0}), .B(mag_corr));
+      mult_add_clip #(
+        .WIDTH_A(16),
+        .BIN_PT_A(15),
+        .WIDTH_B(18),
+        .BIN_PT_B(17),
+        .WIDTH_C(16),
+        .BIN_PT_C(15),
+        .WIDTH_O(24),
+        .BIN_PT_O(23),
+        .LATENCY(2)
+      ) mult_i (
+        .clk(clk),
+        .reset(reset),
+        .CE(1'b1),
+        .A(tx_i),
+        .B(mag_corr),
+        .C(tx_i),
+        .O(tx_i_comp)
+      );
 
-      MULT_MACRO #(
-        .DEVICE(DEVICE), .LATENCY(1),
-        .WIDTH_A(18), .WIDTH_B(18))
-      mult_q (
-        .CLK(clk), .RST(reset), .CE(tx_stb),
-        .P(corr_q), .A({tx_i,2'd0}), .B(phase_corr));
+      mult_add_clip #(
+        .WIDTH_A(16),
+        .BIN_PT_A(15),
+        .WIDTH_B(18),
+        .BIN_PT_B(17),
+        .WIDTH_C(16),
+        .BIN_PT_C(15),
+        .WIDTH_O(24),
+        .BIN_PT_O(23),
+        .LATENCY(2)
+      ) mult_q (
+        .clk(clk),
+        .reset(reset),
+        .CE(1'b1),
+        .A(tx_q),
+        .B(phase_corr),
+        .C(tx_q),
+        .O(tx_q_comp)
+      );
 
       // Delay to match path latencies
       always @(posedge clk) begin
         if (reset) begin
-          tx_stb_dly <= 1'b0;
-          tx_i_dly   <= 24'd0;
-          tx_q_dly   <= 24'd0;
+          tx_stb_dly <= 2'b0;
         end else begin
-          tx_stb_dly <= tx_stb;
-          if (tx_stb) begin
-            tx_i_dly <= {tx_i, 8'd0};
-            tx_q_dly <= {tx_q, 8'd0};
-          end
+          tx_stb_dly <= {tx_stb_dly[0], tx_stb};
         end
       end
 
-      add2_and_clip_reg #(.WIDTH(24))
-      add_clip_i (
-        .clk(clk), .rst(reset), 
-        .in1(tx_i_dly), .in2(corr_i[35:12]), .strobe_in(tx_stb_dly),
-        .sum(tx_i_comp), .strobe_out(tx_comp_stb));
-
-      add2_and_clip_reg #(.WIDTH(24))
-      add_clip_q (
-        .clk(clk), .rst(reset), 
-        .in1(tx_q_dly), .in2(corr_q[35:12]), .strobe_in(tx_stb_dly),
-        .sum(tx_q_comp), .strobe_out());
+      assign tx_comp_stb = tx_stb_dly[1];
 
     end else begin
       assign tx_comp_stb = tx_stb;
