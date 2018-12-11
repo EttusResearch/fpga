@@ -53,7 +53,7 @@ module n3xx_db_fe_core #(
       tx_frontend_gen3 #(
         .SR_OFFSET_I(SR_TX_FE_BASE + 0), .SR_OFFSET_Q(SR_TX_FE_BASE + 1),.SR_MAG_CORRECTION(SR_TX_FE_BASE + 2),
         .SR_PHASE_CORRECTION(SR_TX_FE_BASE + 3), .SR_MUX(SR_TX_FE_BASE + 4),
-        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(1),
+        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0),
         .DEVICE("7SERIES")
       ) tx_fe_corr_i (
         .clk(clk), .reset(reset),
@@ -65,7 +65,7 @@ module n3xx_db_fe_core #(
       rx_frontend_gen3 #(
         .SR_MAG_CORRECTION(SR_RX_FE_BASE + 0), .SR_PHASE_CORRECTION(SR_RX_FE_BASE + 1), .SR_OFFSET_I(SR_RX_FE_BASE + 2),
         .SR_OFFSET_Q(SR_RX_FE_BASE + 3), .SR_IQ_MAPPING(SR_RX_FE_BASE + 4), .SR_HET_PHASE_INCR(SR_RX_FE_BASE + 5),
-        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(1), .BYPASS_REALMODE_DSP(1),
+        .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0), .BYPASS_REALMODE_DSP(1),
         .DEVICE("7SERIES")
       ) rx_fe_corr_i (
         .clk(clk), .reset(reset), .sync_in(time_sync),
