@@ -73,14 +73,27 @@ module chdr_framer_2clk #(
     else if(i_tvalid & i_tready)
       length <= (WIDTH == 32) ? length + 16'd4 : length + 16'd8;
 
+  // Extended reset signal to ensure longer reset on axi_fifo_2clk
+  // as recommended by Xilinx. It clears all partial packets seen
+  // after clearing the fifos.
+  // This pulse stretch ratio works in this case and may not work
+  // for all clocks.
+  wire samp_rst_stretch;
+  pulse_stretch #(.SCALE('d10)) samp_reset_i (
+    .clk(samp_clk),
+    .rst(1'b0),
+    .pulse(samp_rst),
+    .pulse_stretched(samp_rst_stretch)
+  );
+
   axi_fifo_2clk #(.WIDTH(128), .SIZE(5)) hdr_fifo_i (
-    .i_aclk(samp_clk), .o_aclk(pkt_clk), .reset(samp_rst),
+    .i_aclk(samp_clk), .o_aclk(pkt_clk), .reset(samp_rst_stretch),
     .i_tdata({i_tuser[127:112],length,i_tuser[95:0]}), .i_tvalid(header_i_tvalid), .i_tready(header_i_tready),
     .o_tdata(header_o_tdata), .o_tvalid(header_o_tvalid), .o_tready(header_o_tready)
   );
 
   axi_fifo_2clk #(.WIDTH(65), .SIZE(SIZE)) body_fifo_i (
-    .i_aclk(samp_clk), .o_aclk(pkt_clk), .reset(samp_rst),
+    .i_aclk(samp_clk), .o_aclk(pkt_clk), .reset(samp_rst_stretch),
     .i_tdata({body_i_tlast,body_i_tdata}), .i_tvalid(body_i_tvalid), .i_tready(body_i_tready),
     .o_tdata({body_o_tlast,body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready)
   );
