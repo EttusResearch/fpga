@@ -56,7 +56,7 @@ module noc_block_split_stream #(
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
     .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
     // Compute Engine Clock Domain
-    .clk(bus_clk), .reset(ce_rst),
+    .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
     .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
@@ -78,8 +78,14 @@ module noc_block_split_stream #(
   assign cmdout_tvalid = 1'b0;
   assign ackin_tready  = 1'b1;
 
+  wire clear_tx_seqnum_bclk;
+  pulse_synchronizer clear_tx_seqnum_sync_i (
+    .clk_a(ce_clk), .rst_a(ce_rst), .pulse_a(|clear_tx_seqnum), .busy_a(/*Ignored: Pulses from SW are slow*/),
+    .clk_b(bus_clk), .pulse_b(clear_tx_seqnum_bclk)
+  );
+
   chdr_deframer_2clk chdr_deframer (
-    .samp_clk(ce_clk), .samp_rst(ce_rst), .pkt_clk(bus_clk), .pkt_rst(bus_rst),
+    .samp_clk(ce_clk), .samp_rst(ce_rst | (|clear_tx_seqnum)), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
     .i_tdata(str_sink_tdata), .i_tlast(str_sink_tlast), .i_tvalid(str_sink_tvalid), .i_tready(str_sink_tready),
     .o_tdata(in_tdata), .o_tuser(in_tuser), .o_tlast(in_tlast), .o_tvalid(in_tvalid), .o_tready(in_tready));
 
@@ -99,7 +105,7 @@ module noc_block_split_stream #(
   generate
     for (i=0; i<NUM_OUTPUTS; i=i+1) begin
       chdr_framer_2clk #(.SIZE(MTU)) chdr_framer (
-        .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[i]), .pkt_clk(bus_clk), .pkt_rst(bus_rst),
+        .samp_clk(ce_clk), .samp_rst(ce_rst | clear_tx_seqnum[i]), .pkt_clk(bus_clk), .pkt_rst(bus_rst | clear_tx_seqnum_bclk),
         .i_tdata(out_tdata[i]), .i_tuser(out_tuser[i]), .i_tlast(out_tlast[i]), .i_tvalid(out_tvalid[i]), .i_tready(out_tready[i]),
         .o_tdata(str_src_tdata[i]), .o_tlast(str_src_tlast[i]), .o_tvalid(str_src_tvalid[i]), .o_tready(str_src_tready[i]));
     end
