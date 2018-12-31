@@ -141,6 +141,10 @@ module dds_freq_tune  #(
   wire mult_in_b_tvalid;
   wire mult_in_b_tready;
   wire mult_in_b_tlast; //no connect
+  wire [2*32-1:0] mult_out_tdata;
+  wire mult_out_tvalid;
+  wire mult_out_tready;
+  wire mult_out_tlast;
 
   axi_sync #(
     .SIZE(2),
@@ -170,11 +174,26 @@ module dds_freq_tune  #(
     .s_axis_b_tready(mult_in_b_tready),        // output wire s_axis_b_tready
     .s_axis_b_tlast(mult_in_b_tlast),        // output wire s_axis_b_tlast
     .s_axis_b_tdata(mult_in_b_tdata),          // input wire [31 : 0] s_axis_b_tdata
-    .m_axis_dout_tvalid(m_axis_dout_tvalid),  // output wire m_axis_dout_tvalid
-    .m_axis_dout_tready(m_axis_dout_tready),  // input wire m_axis_dout_tready
-    .m_axis_dout_tlast(m_axis_dout_tlast),    // output wire m_axis_dout_tlast
-    .m_axis_dout_tdata(m_axis_dout_tdata)    // output wire [47 : 0] m_axis_dout_tdata
+    .m_axis_dout_tvalid(mult_out_tvalid),  // output wire m_axis_dout_tvalid
+    .m_axis_dout_tready(mult_out_tready),  // input wire m_axis_dout_tready
+    .m_axis_dout_tlast(mult_out_tlast),    // output wire m_axis_dout_tlast
+    .m_axis_dout_tdata(mult_out_tdata)    // output wire [63 : 0] m_axis_dout_tdata
   );
+
+  axi_round_complex #(
+    .WIDTH_IN(32),
+    .WIDTH_OUT(OUTPUT_WIDTH))
+  axi_round_complex_inst (
+    .clk(clk),
+    .reset(reset | reset_reg),
+    .i_tdata(mult_out_tdata),
+    .i_tlast(mult_out_tlast),
+    .i_tvalid(mult_out_tvalid),
+    .i_tready(mult_out_tready),
+    .o_tdata(m_axis_dout_tdata),
+    .o_tlast(m_axis_dout_tlast),
+    .o_tvalid(m_axis_dout_tvalid),
+    .o_tready(m_axis_dout_tready));
 
   //debug
   assign state_out = state;
