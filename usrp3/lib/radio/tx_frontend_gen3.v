@@ -97,7 +97,7 @@ module tx_frontend_gen3 #(
         .clk(clk),
         .reset(reset),
         .CE(1'b1),
-        .A(tx_q),
+        .A(tx_i),
         .B(phase_corr),
         .C(tx_q),
         .O(tx_q_comp)

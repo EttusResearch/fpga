@@ -146,7 +146,7 @@ module rx_frontend_gen3 #(
         .clk(clk),
         .reset(reset),
         .CE(1'b1),
-        .A(adc_q_ofs[23:6]),
+        .A(adc_i_ofs[23:6]),
         .B(phase_corr),
         .C(adc_q_ofs),
         .O(adc_q_comp)
