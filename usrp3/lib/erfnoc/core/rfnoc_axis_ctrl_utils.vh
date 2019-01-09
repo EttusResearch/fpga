@@ -69,78 +69,71 @@ localparam [3:0] AXIS_CTRL_OPCODE_READ  = 4'd2;
 
 // AXIS-Ctrl Getter Functions
 //
-function [0:0] axis_ctrl_get_is_ack;
-  input [31:0] header;
+function [0:0] axis_ctrl_get_is_ack(input [31:0] header);
   axis_ctrl_get_is_ack = header[31];
 endfunction
 
-function [0:0] axis_ctrl_get_has_time;
-  input [31:0] header;
+function [0:0] axis_ctrl_get_has_time(input [31:0] header);
   axis_ctrl_get_has_time = header[30];
 endfunction
 
-function [2:0] axis_ctrl_get_num_data;
-  input [31:0] header;
+function [2:0] axis_ctrl_get_num_data(input [31:0] header);
   axis_ctrl_get_num_data = header[28:26];
 endfunction
 
-function [5:0] axis_ctrl_get_seq_num;
-  input [31:0] header;
+function [5:0] axis_ctrl_get_seq_num(input [31:0] header);
   axis_ctrl_get_seq_num = header[31:26];
 endfunction
 
-function [15:0] axis_ctrl_get_epid;
-  input [31:0] header;
+function [15:0] axis_ctrl_get_epid(input [31:0] header);
   axis_ctrl_get_epid = header[25:10];
 endfunction
 
-function [9:0] axis_ctrl_get_port;
-  input [31:0] header;
+function [9:0] axis_ctrl_get_port(input [31:0] header);
   axis_ctrl_get_port = header[9:0];
 endfunction
 
-function [1:0] axis_ctrl_get_status;
-  input [31:0] header;
+function [1:0] axis_ctrl_get_status(input [31:0] header);
   axis_ctrl_get_status = header[31:30];
 endfunction
 
-function [3:0] axis_ctrl_get_opcode;
-  input [31:0] header;
+function [3:0] axis_ctrl_get_opcode(input [31:0] header);
   axis_ctrl_get_opcode = header[27:24];
 endfunction
 
-function [3:0] axis_ctrl_get_byte_en;
-  input [31:0] header;
+function [3:0] axis_ctrl_get_byte_en(input [31:0] header);
   axis_ctrl_get_byte_en = header[23:20];
 endfunction
 
-function [19:0] axis_ctrl_get_address;
-  input [31:0] header;
+function [19:0] axis_ctrl_get_address(input [31:0] header);
   axis_ctrl_get_address = header[19:0];
 endfunction
 
 // AXIS-Ctrl Setter Functions
 //
-function [31:0] axis_ctrl_build_hdr_lo;
-  input [0:0]  is_ack;
-  input [0:0]  has_time;
-  input [2:0]  num_data;
-  input [15:0] dst_epid;
-  input [9:0]  dst_port;
+function [31:0] axis_ctrl_build_hdr_lo(
+  input [0:0]  is_ack,
+  input [0:0]  has_time,
+  input [2:0]  num_data,
+  input [15:0] dst_epid,
+  input [9:0]  dst_port
+);
   axis_ctrl_build_hdr_lo = {is_ack, has_time, 1'b0, num_data, dst_epid, dst_port};
 endfunction
 
-function [31:0] axis_ctrl_build_hdr_hi;
-  input [5:0]  seq_num;
-  input [15:0] src_epid;
-  input [9:0]  src_port;
+function [31:0] axis_ctrl_build_hdr_hi(
+  input [5:0]  seq_num,
+  input [15:0] src_epid,
+  input [9:0]  src_port
+);
   axis_ctrl_build_hdr_hi = {seq_num, src_epid, src_port};
 endfunction
 
-function [31:0] axis_ctrl_build_op_word;
-  input [1:0]  status;
-  input [3:0]  opcode;
-  input [3:0]  byte_en;
-  input [19:0] address;
+function [31:0] axis_ctrl_build_op_word(
+  input [1:0]  status,
+  input [3:0]  opcode,
+  input [3:0]  byte_en,
+  input [19:0] address
+);
   axis_ctrl_build_op_word = {status, 2'b00, opcode, byte_en, address};
 endfunction

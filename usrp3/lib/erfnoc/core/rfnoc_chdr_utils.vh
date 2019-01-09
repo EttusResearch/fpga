@@ -69,82 +69,83 @@ localparam [5:0] CHDR_FLAGS_USER3 = 6'b100000;
 
 // CHDR Getter Functions
 //
-function [5:0] chdr_get_flags;
-   input [63:0] header;
-   chdr_get_flags = header[63:58];
+function [5:0] chdr_get_flags(input [63:0] header);
+  chdr_get_flags = header[63:58];
 endfunction
 
-function [2:0] chdr_get_pkt_type;
-   input [63:0] header;
-   chdr_get_pkt_type = header[57:55];
+function [2:0] chdr_get_pkt_type(input [63:0] header);
+  chdr_get_pkt_type = header[57:55];
 endfunction
 
-function [6:0] chdr_get_num_mdata;
-   input [63:0] header;
-   chdr_get_num_mdata = header[54:48];
+function [6:0] chdr_get_num_mdata(input [63:0] header);
+  chdr_get_num_mdata = header[54:48];
 endfunction
 
-function [15:0] chdr_get_seq_num;
-   input [63:0] header;
-   chdr_get_seq_num = header[47:32];
+function [15:0] chdr_get_seq_num(input [63:0] header);
+  chdr_get_seq_num = header[47:32];
 endfunction
 
-function [15:0] chdr_get_length;
-   input [63:0] header;
-   chdr_get_length = header[31:16];
+function [15:0] chdr_get_length(input [63:0] header);
+  chdr_get_length = header[31:16];
 endfunction
 
-function [15:0] chdr_get_dst_epid;
-   input [63:0] header;
-   chdr_get_dst_epid = header[15:0];
+function [15:0] chdr_get_dst_epid(input [63:0] header);
+  chdr_get_dst_epid = header[15:0];
 endfunction
 
 // CHDR Setter Functions
 //
-function [63:0] chdr_build_header;
-   input [5:0]  flags;
-   input [2:0]  pkt_type;
-   input [6:0]  num_mdata;
-   input [15:0] seq_num;
-   input [15:0] length;
-   input [15:0] dst_epid;
-   chdr_build_header = {flags, pkt_type, num_mdata, seq_num, length, dst_epid};
+function [63:0] chdr_build_header(
+  input [5:0]  flags,
+  input [2:0]  pkt_type,
+  input [6:0]  num_mdata,
+  input [15:0] seq_num,
+  input [15:0] length,
+  input [15:0] dst_epid
+);
+  chdr_build_header = {flags, pkt_type, num_mdata, seq_num, length, dst_epid};
 endfunction
 
-function [63:0] chdr_set_flags;
-   input [63:0] base_hdr;
-   input [5:0]  flags;
-   chdr_set_flags = {flags, base_hdr[57:0]};
+function [63:0] chdr_set_flags(
+  input [63:0] base_hdr,
+  input [5:0]  flags
+);
+  chdr_set_flags = {flags, base_hdr[57:0]};
 endfunction
 
-function [63:0] chdr_set_pkt_type;
-   input [63:0] base_hdr;
-   input [2:0]  pkt_type;
-   chdr_set_pkt_type = {base_hdr[63:58], pkt_type, base_hdr[54:0]};
+function [63:0] chdr_set_pkt_type(
+  input [63:0] base_hdr,
+  input [2:0]  pkt_type
+);
+  chdr_set_pkt_type = {base_hdr[63:58], pkt_type, base_hdr[54:0]};
 endfunction
 
-function [63:0] chdr_set_num_mdata;
-   input [63:0] base_hdr;
-   input [6:0]  num_mdata;
-   chdr_set_num_mdata = {base_hdr[63:55], num_mdata, base_hdr[47:0]};
+function [63:0] chdr_set_num_mdata(
+  input [63:0] base_hdr,
+  input [6:0]  num_mdata
+);
+  chdr_set_num_mdata = {base_hdr[63:55], num_mdata, base_hdr[47:0]};
 endfunction
 
-function [63:0] chdr_set_seq_num;
-   input [63:0] base_hdr;
-   input [15:0] seq_num;
-   chdr_set_seq_num = {base_hdr[63:48], seq_num, base_hdr[31:0]};
+function [63:0] chdr_set_seq_num(
+  input [63:0] base_hdr,
+  input [15:0] seq_num
+);
+  chdr_set_seq_num = {base_hdr[63:48], seq_num, base_hdr[31:0]};
 endfunction
 
-function [63:0] chdr_set_length;
-   input [63:0] base_hdr;
-   input [15:0] length;
-   chdr_set_length = {base_hdr[63:32], length, base_hdr[15:0]};
+function [63:0] chdr_set_length(
+  input [63:0] base_hdr,
+  input [15:0] length
+);
+  chdr_set_length = {base_hdr[63:32], length, base_hdr[15:0]};
 endfunction
 
-function [63:0] chdr_set_dst_epid;
-   input [63:0] base_hdr;
-   input [15:0] dst_epid;
-   chdr_set_dst_epid = {base_hdr[63:16], dst_epid};
+function [63:0] chdr_set_dst_epid(
+  input [63:0] base_hdr,
+  input [15:0] dst_epid
+);
+  chdr_set_dst_epid = {base_hdr[63:16], dst_epid};
 endfunction
 
 // =============================================================
@@ -156,8 +157,7 @@ localparam [3:0] CONTEXT_FIELD_HDR_TS = 4'd1;
 localparam [3:0] CONTEXT_FIELD_TS     = 4'd2;
 localparam [3:0] CONTEXT_FIELD_MDATA  = 4'd3;
 
-function [0:0] chdr_get_has_time;
-   input [63:0] header;
-   chdr_get_has_time = (chdr_get_pkt_type(header) == CHDR_PKT_TYPE_DATA_TS);
+function [0:0] chdr_get_has_time(input [63:0] header);
+  chdr_get_has_time = (chdr_get_pkt_type(header) == CHDR_PKT_TYPE_DATA_TS);
 endfunction
 
