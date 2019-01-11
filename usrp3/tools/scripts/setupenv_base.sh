@@ -339,7 +339,7 @@ function viv_modify_bd {
     if [[ -z $1 || -z $2 ]]; then
         echo "Modify an existing Vivado Block Design instance"
         echo ""
-        echo "Usage: viv_modify_ip <BD Path> <Product>"
+        echo "Usage: viv_modify_bd <BD Path> <Product>"
         echo "- <BD Path>: Path to the BD file."
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
