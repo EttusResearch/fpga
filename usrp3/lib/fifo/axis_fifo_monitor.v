@@ -60,7 +60,7 @@ module axis_fifo_monitor #(
 
   // Count packets in FIFO.
   // No protection on counter wrap, 
-  assign occupied      = (o_xfer_count - i_xfer_count);
-  assign occupied_pkts = (o_pkt_count  - i_pkt_count);
+  assign occupied      = (i_xfer_count - o_xfer_count);
+  assign occupied_pkts = (i_pkt_count  - o_pkt_count);
 
  endmodule
