@@ -53,12 +53,16 @@ module axi_packet_gate #(
   wire [WIDTH:0]  wr_data, rd_data;
   reg  [SIZE-1:0] wr_addr = ADDR_ZERO, rd_addr = ADDR_ZERO;
 
+  // Threshold to explicitly instantiate LUTRAM
+  localparam LUTRAM_THRESH = 5;
+
   // We need to instantiate a simple dual-port RAM here so
   // we use the ram_2port module with one read port and one
   // write port and "NO-CHANGE" mode.
   ram_2port #(
     .DWIDTH (WIDTH+1), .AWIDTH(SIZE),
-    .RW_MODE("NO-CHANGE"), .OUT_REG(0)
+    .RW_MODE("NO-CHANGE"), .OUT_REG(0),
+    .RAM_TYPE(SIZE <= LUTRAM_THRESH ? "LUTRAM" : "AUTOMATIC")
   ) ram_i (
     .clka (clk), .ena(1'b1), .wea(wr_en),
     .addra(wr_addr), .dia(wr_data), .doa(),
@@ -110,12 +114,21 @@ module axi_packet_gate #(
   // The address FIFO will hold the write address
   // for the last line in a non-errant packet
   
-  wire [SIZE-1:0] afifo_i_tdata, afifo_o_tdata;
-  wire            afifo_i_tvalid, afifo_o_tvalid, afifo_i_tready, afifo_o_tready;
+  wire [SIZE-1:0] afifo_i_tdata, afifo_o_tdata, afifo_p_tdata;
+  wire            afifo_i_tvalid, afifo_i_tready;
+  wire            afifo_o_tvalid, afifo_o_tready;
+  wire            afifo_p_tvalid, afifo_p_tready;
 
   axi_fifo #(.WIDTH(SIZE), .SIZE(USE_AS_BUFF==1 ? SIZE : 1)) addr_fifo_i (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata(afifo_i_tdata), .i_tvalid(afifo_i_tvalid), .i_tready(afifo_i_tready),
+    .o_tdata(afifo_p_tdata), .o_tvalid(afifo_p_tvalid), .o_tready(afifo_p_tready),
+    .space(), .occupied()
+  );
+
+  axi_fifo #(.WIDTH(SIZE), .SIZE(1)) addr_fifo_pipe_i (
+    .clk(clk), .reset(reset), .clear(clear),
+    .i_tdata(afifo_p_tdata), .i_tvalid(afifo_p_tvalid), .i_tready(afifo_p_tready),
     .o_tdata(afifo_o_tdata), .o_tvalid(afifo_o_tvalid), .o_tready(afifo_o_tready),
     .space(), .occupied()
   );
