@@ -46,11 +46,8 @@ module chdr_16sc_to_12sc
   wire [16:0]   round_q2;
   wire [16:0]   round_i2;
 
-  // Pipeline registers
-  reg [11:0]    q0_out;
-  reg [11:0]    i0_out;
-  reg [11:0]    q1_out;
-  reg [11:0]    i1_out;
+  // Pipeline register
+  reg [63:0]    line_buff;
 
   // CHDR has either 8 bytes of header or 16 if VITA time is included.
   wire [15:0]   chdr_header_lines = chdr_has_time? 16 : 8;
@@ -61,8 +58,7 @@ module chdr_16sc_to_12sc
   // Calculate size of output CHDR packet by adding back header size to new payload size.
   wire [15:0]   output_chdr_pkt_size = sample_byte_count_out + chdr_header_lines;
 
-  reg           needs_extra_line;
-  reg           in_extra_line;
+  reg           odd;
 
   wire          set_sid;
   wire [15:0]   new_sid_dst;
@@ -73,107 +69,109 @@ module chdr_16sc_to_12sc
 
   // state machine
 
-  localparam    HEADER  = 3'd0;
-  localparam    TIME    = 3'd1;
-  localparam    SAMPLE1 = 3'd2;
-  localparam    SAMPLE2 = 3'd3;
-  localparam    SAMPLE3 = 3'd4;
-  localparam    SAMPLE4 = 3'd5;
+  localparam    HEADER    = 3'd0;
+  localparam    TIME      = 3'd1;
+  localparam    SAMPLE1   = 3'd2;
+  localparam    SAMPLE2   = 3'd3;
+  localparam    SAMPLE3   = 3'd4;
+  localparam    SAMPLE4   = 3'd5;
+  localparam    RESIDUAL  = 3'd6;
 
   reg [2:0]     state;
 
   always @(posedge clk)
     if (reset) begin
       state <= HEADER;
-      needs_extra_line <= 0;
-      in_extra_line <= 0;
+      line_buff <= 0;
     end else begin
       case(state)
         //
-        // Process Header line of input packet or idle in this state waiting for new packet.
-        // If the the input packet has SAMPLE_COUNT MODULO 8 == 3 or 4 or 6 then when tlast is asserted we will need one more
-        // output cycle to finish outputing processed samples.
+        // Process header
+        // Check for timestamp.  Byte count conversion is done above.
         //
         HEADER: begin
-          if (o_tready && i_tvalid) begin
-            needs_extra_line <= (sample_byte_count_in[4:2] == 3 || sample_byte_count_in[4:2] == 4 || sample_byte_count_in[4:2] == 6);
+          if (i_tvalid & i_tready) begin
+            odd <= sample_byte_count_in [2];
             // If the input packet had time, then add time to output packet
             state <= (i_tdata[61])? TIME: SAMPLE1;
           end
         end
         //
-        // Process time field of input packet
+        // Process time field
         //
         TIME: begin
-          if (o_tready && i_tvalid) begin
+          if (i_tvalid & i_tready) begin
             // If we get a premature end of line go back to searching for start of new packet.
             state <= (i_tlast) ? HEADER: SAMPLE1;
           end
         end
         //
-        // Process line of sample data from input packet.
-        // Not yet enough data to prepare first of three repeating output lines
-        // unless this the last line of a packet when the lats output line
-        // is composed of data from one or both samples in this input packet.
+        // There are 3 lines of output data for each 4 lines of input data.
+        // The 4 sample states below represent the 4 lines of input.
+        // They are repeatedly cycled until all data is consumed.
+        //
+        // Process first line
+        // The 8 bytes are converted to 6 bytes, so there is not enough for an
+        // 8-byte output line.  Store the data unless this is the last line in
+        // the packet.
         //
         SAMPLE1: begin
-          if ((i_tlast && !needs_extra_line && o_tready && i_tvalid) || (in_extra_line && o_tready)) begin
-            // We can finish this packet immediately.
-            state <= HEADER;
-            in_extra_line <= 0;
-          end else if (i_tlast && needs_extra_line && i_tvalid) begin
-            // We still need one more output line to drain all samples into this packet.
-            // (SHOULD NOT BE POSSIBLE TO GET HERE!)
-            state <= SAMPLE2;
-            in_extra_line <= 1;
-          end else if (i_tvalid)
-            state <= SAMPLE2;
+          if (i_tvalid & i_tready) begin
+            if (i_tlast) begin
+              line_buff <= 0;
+              state <= HEADER;
+            end else begin
+              // Save data to buffer - no output
+              line_buff <= {q0,i0,q1,i1,16'd0};
+              state <= SAMPLE2;
+            end
+          end
         end
         //
-        // First of three repeating output line patterns
+        // Process second line
+        // Output a line comprised of the 6 bytes from the fist line and
+        // 2 bytes from this line.  Store the remaining 4 bytes.
         //
         SAMPLE2: begin
-          if ((i_tlast && !needs_extra_line && o_tready && i_tvalid) || (in_extra_line && o_tready)) begin
-            // We can finish this packet immediately.
-            state <= HEADER;
-            in_extra_line <= 0;
-          end else if (i_tlast && needs_extra_line && o_tready && i_tvalid) begin
-            // We still need one more output line to drain all samples into this packet.
-            state <= SAMPLE3;
-            in_extra_line <= 1;
-          end else if (o_tready && i_tvalid)
-            state <= SAMPLE3;
+          if (i_tvalid & i_tready) begin
+            line_buff <= {i0[7:0],q1,i1,32'd0};
+            state <= i_tlast ? RESIDUAL : SAMPLE3;
+          end
         end
         //
-        // Second of three repeating output line patterns
+        // Process third line
+        // Output line comprised of the 4 remaining bytes from the second line
+        // and 4 bytes from this line.  Store the remaining 2 bytes unless this
+        // is the last line in the packet and the number of samples is odd.
         //
         SAMPLE3: begin
-          if ((i_tlast && !needs_extra_line && o_tready && i_tvalid) || (in_extra_line && o_tready)) begin
-            // We can finish this packet immediately.
-            state <= HEADER;
-            in_extra_line <= 0;
-          end else if (i_tlast && needs_extra_line && o_tready && i_tvalid) begin
-            // We still need one more output line to drain all samples into this packet.
-            state <= SAMPLE4;
-            in_extra_line <= 1;
-          end else if (o_tready && i_tvalid)
-            state <= SAMPLE4;
+          if (i_tvalid & i_tready) begin
+            line_buff <= (i_tlast & odd) ? 0 : {q1[3:0],i1,48'd0};
+            if (i_tlast)
+                state <= odd ? HEADER : RESIDUAL;
+            else
+              state <= SAMPLE4;
+          end
         end
         //
-        // Third of three repeating output line patterns
+        // Process fourth line
+        // Output line comprised of the remaining 2 bytes from the third line
+        // and the 6 bytes from this line.
         //
         SAMPLE4: begin
-          if ((i_tlast && !needs_extra_line && o_tready && i_tvalid) || (in_extra_line && o_tready)) begin
-            // We can finish this packet immediately.
+          if (i_tvalid & i_tready) begin
+            line_buff <= 0;
+            state <= i_tlast ? HEADER : SAMPLE1;
+          end
+        end
+        //
+        // Pause input to output residual data in buffer
+        //
+        RESIDUAL: begin
+          if (o_tvalid & o_tready) begin
+            line_buff <= 0;
             state <= HEADER;
-            in_extra_line <= 0;
-          end else if (i_tlast && needs_extra_line && o_tready && i_tvalid) begin
-            // We still need one more output line to drain all samples into this packet.
-            // (SHOULD NOT BE POSSIBLE TO GET HERE!!)
-            state <= SAMPLE1;
-            in_extra_line <= 1;
-          end else if (o_tready && i_tvalid)
-            state <= SAMPLE1;
+          end
         end
         //
         // Should never get here.
@@ -198,17 +196,6 @@ module chdr_16sc_to_12sc
   assign	i1 = (round_i1[16:15] == 2'b01) ? 12'h3FF : ((round_i1[16:15] == 2'b10) ? 12'h800 : round_i1[15:4]);
 
   //
-  // Keep values from current input line to populate fields in next cycles output line
-  //
-  always @(posedge clk)
-    if (i_tvalid && o_tready) begin
-        q0_out <= q0;
-        i0_out <= i0;
-        q1_out <= q1;
-        i1_out <= i1;
-      end
-
-  //
   // Mux Output data
   //
   always @(*)
@@ -218,32 +205,23 @@ module chdr_16sc_to_12sc
         set_sid ? {i_tdata[15:0], new_sid_dst[15:0]}:i_tdata[31:0]};
       // Add 64bit VITA time to packet
       TIME: o_tdata = i_tdata;
-      // Special ending corner case for input packets with SAMPLE_COUNT MODULO 8 == (1 | 2)
+      // Only output if i_tlast in SAMPLE1 state
       SAMPLE1: o_tdata = {q0,i0,q1, i1, 16'b0};
-      // Line one of repeating 12bit packed data pattern
-      SAMPLE2: o_tdata = {q0_out, i0_out, q1_out, i1_out, q0, i0[11:8]};
-      // Line two of repeating 12bit packed data pattern
-      SAMPLE3: o_tdata = {i0_out[7:0], q1_out, i1_out, q0, i0,q1[11:4]};
-      // Line three of repeating 12bit packed data pattern
-      SAMPLE4: o_tdata = {q1_out[3:0], i1_out, q0, i0, q1, i1};
+      SAMPLE2: o_tdata = {line_buff[63:16], q0, i0[11:8]};
+      SAMPLE3: o_tdata = {line_buff[63:32], q0, i0,q1[11:4]};
+      SAMPLE4: o_tdata = {line_buff[63:48], q0, i0, q1, i1};
+      RESIDUAL: o_tdata = line_buff;
       default : o_tdata = i_tdata;
     endcase // case(state)
 
 
-  assign  o_tvalid =
-    // We are outputing the (extra) last line of a packet
-    in_extra_line ||
-    // When not in the SAMPLE1 state and there's new input data (Unless its the last line....)
-    (state != SAMPLE1 & i_tvalid) ||
-    // Last line of input packet and we can finish this cycle. (Includes when state is SAMPLE1)
-    (i_tlast & i_tvalid & !needs_extra_line);
+  assign  o_tvalid = state == RESIDUAL || (i_tvalid &&
+                        (state != SAMPLE1 || state == SAMPLE1 && i_tlast));
 
-  assign  i_tready =
-    // Downstream is ready and we are not currently outputing last (extra) line of packet.
-    (o_tready && !in_extra_line) ||
-    // We don't create output data in SAMPLE1 unless its last line so don't need downstream ready to proceed.
-    ((state == SAMPLE1) && !i_tlast);
+  assign  i_tready = (o_tready && state != RESIDUAL);
 
-  assign  o_tlast =  (needs_extra_line) ? in_extra_line : i_tlast;
+  wire need_extra_line = state == SAMPLE1 || state == SAMPLE2 ||
+                          (state == SAMPLE3 && ~odd);
+  assign  o_tlast = state == RESIDUAL || (i_tlast & ~need_extra_line);
 
 endmodule
