@@ -1,4 +1,4 @@
-  localparam NUM_CE = 2;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
+  localparam NUM_CE = 2;  // Must be no more than 12 (4 ports taken by transport and IO connected CEs)
 
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
