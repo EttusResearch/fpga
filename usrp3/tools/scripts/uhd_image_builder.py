@@ -117,7 +117,7 @@ def setup_parser():
         default=None)
     parser.add_argument(
         "-d", "--device",
-        help="Device to be programmed [x300, x310, e310, e320, n300, n310]",
+        help="Device to be programmed [x300, x310, e310, e320, n300, n310, n320]",
         default="x310")
     parser.add_argument(
         "-t", "--target",
@@ -443,7 +443,8 @@ def dtarget(args):
             'e310':'E310_RFNOC_HLS',
             'e320':'E320_RFNOC_1G',
             'n300':'N300_RFNOC_HG',
-            'n310':'N310_RFNOC_HG'
+            'n310':'N310_RFNOC_HG',
+            'n320':'N320_RFNOC_XG',
         }
         return default_trgt[args.device.lower()]
     else:
