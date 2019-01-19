@@ -26,6 +26,7 @@ module n3xx_core #(
   parameter NUM_SPI_PER_DBOARD = 8,
   parameter RADIO_NOC_ID = 64'h12AD_1000_0001_1310 + NUM_CHANNELS_PER_RADIO,
   parameter USE_CORRECTION = 0,
+  parameter USE_REPLAY = 0,    // 1 for Replay block instead of DMA FIFO
   parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
@@ -204,9 +205,6 @@ module n3xx_core #(
 
   // Computation engines that need access to IO
   localparam NUM_IO_CE = NUM_RADIO_CORES + 1; // NUM_RADIO_CORES + 1 DMA_FIFO
-
-  // Indicate if we want to use replay block
-  localparam USE_REPLAY = 0;
 
   /////////////////////////////////////////////////////////////////////////////////
   // Motherboard Registers
