@@ -9,7 +9,7 @@
 module gpif2_to_fifo64
   #(
     parameter FIFO_SIZE = 9,
-    parameter MTU = 11
+    parameter MTU = 12
     )
     (
      //input interface
@@ -45,13 +45,12 @@ module gpif2_to_fifo64
    // Generate flags that show if initial FIFO's can accept a maximum sized burst from the FX3
    // or if the FIFO is about to fill.
    //
-   localparam 	    BURST_SIZE = (FIFO_SIZE < 8)? FIFO_SIZE : 8;
    wire [15:0] 	    space;
-   assign 	    fifo_has_space = space >= (1 << BURST_SIZE);
+   assign 	    fifo_has_space = space >= (1 << MTU);
    assign 	    fifo_nearly_full = (space < 6); // 5 spaces left.
 
    //
-   // This FIFO is provdied purely to ease FPGA timing closure as data is comming from I/O pins.
+   // This FIFO is provdied purely to ease FPGA timing closure as data is coming from I/O pins.
    //
    axi_fifo #(.WIDTH(33), .SIZE(5)) ingress_timing_fifo
      (
@@ -63,7 +62,7 @@ module gpif2_to_fifo64
    //
    // This FIFO provides space to accept a single burst from FX3 and it's fullness drives flags to GPIF2 logic
    //
-   axi_fifo_legacy #(.WIDTH(33), .SIZE(BURST_SIZE)) min_read_buff
+   axi_fifo_legacy #(.WIDTH(33), .SIZE(MTU)) min_read_buff
      (
       .clk(gpif_clk), .reset(gpif_rst), .clear(1'b0),
       .i_tdata({int0_tlast, int0_tdata}), .i_tvalid(int0_tvalid), .i_tready(int0_tready), .space(space),
