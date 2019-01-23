@@ -17,7 +17,6 @@
 //   - THIS_PORTID     : The local port-ID of this control port
 //
 // Signals:
-//   - this_epid       : The endpoint ID of this control port
 //   - s_axis_ctrl_*   : Input control stream (AXI-Stream) for responses
 //   - m_axis_ctrl_*   : Output control stream (AXI-Stream) for requests
 //   - ctrlport_req_*  : Control-port master request port
@@ -26,10 +25,9 @@
 module axis_ctrl_master #(
   parameter [9:0] THIS_PORTID = 10'd0
 )(
-  // CHDR Bus (master and slave)
+  // Clock and reset
   input  wire         clk,
   input  wire         rst,
-  input  wire [15:0]  this_epid,
   // AXIS-Control Bus (Response)
   input  wire [31:0]  s_axis_ctrl_tdata,
   input  wire         s_axis_ctrl_tlast,
@@ -44,8 +42,9 @@ module axis_ctrl_master #(
   input  wire         ctrlport_req_wr,
   input  wire         ctrlport_req_rd,
   input  wire [19:0]  ctrlport_req_addr,
-  input  wire [15:0]  ctrlport_req_epid,
   input  wire [9:0]   ctrlport_req_portid,
+  input  wire [15:0]  ctrlport_req_rem_epid,
+  input  wire [9:0]   ctrlport_req_rem_portid,
   input  wire [31:0]  ctrlport_req_data,
   input  wire [3:0]   ctrlport_req_byte_en,
   input  wire         ctrlport_req_has_time,
@@ -87,8 +86,9 @@ module axis_ctrl_master #(
   // Request state
   reg [3:0]   req_opcode;         // Cached opcode for transaction request
   reg [19:0]  req_addr;           // Cached address for transaction request
-  reg [15:0]  req_epid;           // Cached endpoint ID for transaction request
   reg [9:0]   req_portid;         // Cached port ID for transaction request
+  reg [15:0]  req_rem_epid;       // Cached remote endpoint ID for transaction request
+  reg [9:0]   req_rem_portid;     // Cached remote port ID for transaction request
   reg [31:0]  req_data;           // Cached data word for transaction request
   reg [3:0]   req_byte_en;        // Cached byte enable for transaction request
   reg         req_has_time;       // Cached has_time bit for transaction request
@@ -110,18 +110,21 @@ module axis_ctrl_master #(
           if (ctrlport_req_wr | ctrlport_req_rd) begin
             // A transaction was posted on the slave ctrlport...
             // Cache the opcode
-            if (ctrlport_req_wr)
-              req_opcode <= AXIS_CTRL_OPCODE_WRITE;
+            if (ctrlport_req_wr & ctrlport_req_rd)
+              req_opcode   <= AXIS_CTRL_OPCODE_WRITE_READ;
+            else if (ctrlport_req_rd)
+              req_opcode   <= AXIS_CTRL_OPCODE_READ;
             else
-              req_opcode <= AXIS_CTRL_OPCODE_READ;
+              req_opcode   <= AXIS_CTRL_OPCODE_WRITE;
             // Cache transaction info
-            req_addr     <= ctrlport_req_addr;
-            req_epid     <= ctrlport_req_epid;
-            req_portid   <= ctrlport_req_portid;
-            req_data     <= ctrlport_req_data;
-            req_byte_en  <= ctrlport_req_byte_en;
-            req_has_time <= ctrlport_req_has_time;
-            req_time     <= ctrlport_req_time;
+            req_addr       <= ctrlport_req_addr;
+            req_portid     <= ctrlport_req_portid;
+            req_rem_epid   <= ctrlport_req_rem_epid;
+            req_rem_portid <= ctrlport_req_rem_portid;
+            req_data       <= ctrlport_req_data;
+            req_byte_en    <= ctrlport_req_byte_en;
+            req_has_time   <= ctrlport_req_has_time;
+            req_time       <= ctrlport_req_time;
           end
         end
 
@@ -160,12 +163,12 @@ module axis_ctrl_master #(
           if (s_axis_ctrl_tvalid) begin
             // Remeber if the packet is supposed to have a timestamp
             resp_has_time <= axis_ctrl_get_has_time(s_axis_ctrl_tdata);
+            // Check for a sequence error
+            resp_seq_err <= (axis_ctrl_get_seq_num(s_axis_ctrl_tdata) != seq_num);
             // Assert a command error if:
-            // - The endpoint ID does not match
             // - The port ID does not match
             // - The response was too short (the next check)
-            resp_cmd_err <= (axis_ctrl_get_epid(s_axis_ctrl_tdata) != this_epid) ||
-                            (axis_ctrl_get_port(s_axis_ctrl_tdata) != THIS_PORTID);
+            resp_cmd_err <= (axis_ctrl_get_dst_port(s_axis_ctrl_tdata) != THIS_PORTID);
             if (!s_axis_ctrl_tlast) begin
               state <= ST_RESP_HDR_HI;
             end else begin
@@ -177,8 +180,6 @@ module axis_ctrl_master #(
         end
         ST_RESP_HDR_HI: begin
           if (s_axis_ctrl_tvalid) begin
-            // Check for a sequence error
-            resp_seq_err <= (axis_ctrl_get_seq_num(s_axis_ctrl_tdata) != seq_num);
             if (!s_axis_ctrl_tlast) begin
               state <= resp_has_time ? ST_RESP_TS_LO : ST_RESP_OP_WORD;
             end else begin
@@ -257,11 +258,12 @@ module axis_ctrl_master #(
     case (state)
       ST_REQ_HDR_LO: begin
         m_axis_ctrl_tdata = axis_ctrl_build_hdr_lo(
-          1'b0, req_has_time, 3'd1, req_epid, req_portid);
+          1'b0 /* is_ack*/, req_has_time, seq_num,
+          4'd1 /* num_data */, THIS_PORTID, req_portid);
       end
       ST_REQ_HDR_HI: begin
         m_axis_ctrl_tdata = axis_ctrl_build_hdr_hi(
-          seq_num, this_epid, THIS_PORTID);
+          req_rem_portid, req_rem_epid);
       end
       ST_REQ_TS_LO: begin
         m_axis_ctrl_tdata = req_time[31:0];

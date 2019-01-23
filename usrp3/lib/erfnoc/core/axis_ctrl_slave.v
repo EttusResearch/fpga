@@ -143,14 +143,14 @@ module axis_ctrl_slave (
   wire ctrlport_req_sleep;
 
   // Shortcuts (transaction request header)
-  wire [9:0]  dst_port = axis_ctrl_get_port    (in64_tdata[31:0 ]);
-  wire [15:0] dst_epid = axis_ctrl_get_epid    (in64_tdata[31:0 ]);
-  wire [2:0]  num_data = axis_ctrl_get_num_data(in64_tdata[31:0 ]);
-  wire        is_ack   = axis_ctrl_get_is_ack  (in64_tdata[31:0 ]);
-  wire        has_time = axis_ctrl_get_has_time(in64_tdata[31:0 ]);
-  wire [9:0]  src_port = axis_ctrl_get_port    (in64_tdata[63:32]);
-  wire [15:0] src_epid = axis_ctrl_get_epid    (in64_tdata[63:32]);
-  wire [5:0]  seq_num  = axis_ctrl_get_seq_num (in64_tdata[63:32]);
+  wire        is_ack       = axis_ctrl_get_is_ack      (in64_tdata[31:0] );
+  wire        has_time     = axis_ctrl_get_has_time    (in64_tdata[31:0] );
+  wire [5:0]  seq_num      = axis_ctrl_get_seq_num     (in64_tdata[31:0] );
+  wire [3:0]  num_data     = axis_ctrl_get_num_data    (in64_tdata[31:0] );
+  wire [9:0]  src_port     = axis_ctrl_get_src_port    (in64_tdata[31:0] );
+  wire [9:0]  dst_port     = axis_ctrl_get_dst_port    (in64_tdata[31:0] );
+  wire [9:0]  rem_dst_port = axis_ctrl_get_rem_dst_port(in64_tdata[63:32]);
+  wire [15:0] rem_dst_epid = axis_ctrl_get_rem_dst_epid(in64_tdata[63:32]);
   // Shortcuts (transaction request op-word)
   wire [19:0] xact_address = axis_ctrl_get_address(in64_tdata[31:0]);
   wire [3:0]  xact_byte_en = axis_ctrl_get_byte_en(in64_tdata[31:0]);
@@ -267,8 +267,8 @@ module axis_ctrl_slave (
       ST_IN_HDR: begin      // Swap src/dst and add resp flag when passing header
         in64_tready  = out64_tready;
         out64_tdata  = {
-          axis_ctrl_build_hdr_hi(seq_num, dst_epid, dst_port),
-          axis_ctrl_build_hdr_lo(1'b1, has_time, num_data, src_epid, src_port)
+          axis_ctrl_build_hdr_hi(rem_dst_port, rem_dst_epid),
+          axis_ctrl_build_hdr_lo(1'b1, has_time, seq_num, num_data, dst_port, src_port)
         };
         out64_tvalid = in64_tvalid;
       end
@@ -292,12 +292,12 @@ module axis_ctrl_slave (
       end
       ST_DROP: begin        // Consume input but don't produce output
         in64_tready  = 1'b1;
-        out64_tdata  =  'h0;
+        out64_tdata  = 64'h0;
         out64_tvalid = 1'b0;
       end
       default: begin        // State machine is waiting. Don't produce output
         in64_tready  = 1'b0;
-        out64_tdata  =  'h0;
+        out64_tdata  = 64'h0;
         out64_tvalid = 1'b0;
       end
     endcase
@@ -311,9 +311,11 @@ module axis_ctrl_slave (
   assign ctrlport_req_sleep    = in64_tvalid && (state == ST_IN_OP_WORD) &&
                                  (xact_opcode == AXIS_CTRL_OPCODE_SLEEP);
   assign ctrlport_req_wr       = in64_tvalid && (state == ST_IN_OP_WORD) &&
-                                 (xact_opcode == AXIS_CTRL_OPCODE_WRITE);
+                                 (xact_opcode == AXIS_CTRL_OPCODE_WRITE ||
+                                  xact_opcode == AXIS_CTRL_OPCODE_WRITE_READ);
   assign ctrlport_req_rd       = in64_tvalid && (state == ST_IN_OP_WORD) &&
-                                 (xact_opcode == AXIS_CTRL_OPCODE_READ);
+                                 (xact_opcode == AXIS_CTRL_OPCODE_READ ||
+                                  xact_opcode == AXIS_CTRL_OPCODE_WRITE_READ);
   assign ctrlport_req_addr     = xact_address;
   assign ctrlport_req_byte_en  = xact_byte_en;
   assign ctrlport_req_data     = xact_data;

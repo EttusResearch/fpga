@@ -33,7 +33,7 @@ g_localparam_template = """  // Router parameters
 
 g_test_params = {
     'data': {'rtr_mtu':7, 'tst_maxpkts':100, 'tst_lpp':100, 'tst_injrate_min':30, 'tst_injrate_max':100},
-    'ctrl': {'rtr_mtu':5, 'tst_maxpkts':100, 'tst_lpp':10,  'tst_injrate_min':10, 'tst_injrate_max':50},
+    'ctrl': {'rtr_mtu':5, 'tst_maxpkts':100, 'tst_lpp':20,  'tst_injrate_min':10, 'tst_injrate_max':50},
 }
 
 g_xb_types = {

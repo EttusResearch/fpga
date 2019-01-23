@@ -18,8 +18,6 @@
 //   - SLAVE_FIFO_SIZE: FIFO depth for the slave port
 //
 // Signals:
-//   - this_epid      : The endpoint ID of the stream endpoint
-//                      connected to this converter
 //   - *_rfnoc_ctrl_* : Input/output AXIS-Control stream (AXI-Stream)
 //   - *_ctrlport_*   : Input/output control-port bus
 
@@ -35,7 +33,6 @@ module ctrlport_endpoint #(
   input  wire         rfnoc_ctrl_rst,
   input  wire         ctrlport_clk,
   input  wire         ctrlport_rst,
-  input  wire [15:0]  this_epid,
   // AXIS-Control Bus
   input  wire [31:0]  s_rfnoc_ctrl_tdata,
   input  wire         s_rfnoc_ctrl_tlast,
@@ -61,8 +58,9 @@ module ctrlport_endpoint #(
   input  wire         s_ctrlport_req_wr,
   input  wire         s_ctrlport_req_rd,
   input  wire [19:0]  s_ctrlport_req_addr,
-  input  wire [15:0]  s_ctrlport_req_epid,
   input  wire [9:0]   s_ctrlport_req_portid,
+  input  wire [15:0]  s_ctrlport_req_rem_epid,
+  input  wire [9:0]   s_ctrlport_req_rem_portid,
   input  wire [31:0]  s_ctrlport_req_data,
   input  wire [3:0]   s_ctrlport_req_byte_en,
   input  wire         s_ctrlport_req_has_time,
@@ -210,29 +208,29 @@ module ctrlport_endpoint #(
   generate
     if (CTRLPORT_MASTER_EN == 1'b1) begin
       axis_ctrl_master #( .THIS_PORTID(THIS_PORTID) ) axis_ctrl_mst_i (
-        .clk                  (ctrlport_clk),
-        .rst                  (ctrlport_rst),
-        .this_epid            (this_epid),
-        .s_axis_ctrl_tdata    (mst_resp_tdata),
-        .s_axis_ctrl_tlast    (mst_resp_tlast),
-        .s_axis_ctrl_tvalid   (mst_resp_tvalid),
-        .s_axis_ctrl_tready   (mst_resp_tready),
-        .m_axis_ctrl_tdata    (mst_req_tdata),
-        .m_axis_ctrl_tlast    (mst_req_tlast),
-        .m_axis_ctrl_tvalid   (mst_req_tvalid),
-        .m_axis_ctrl_tready   (mst_req_tready),
-        .ctrlport_req_wr      (s_ctrlport_req_wr),
-        .ctrlport_req_rd      (s_ctrlport_req_rd),
-        .ctrlport_req_addr    (s_ctrlport_req_addr),
-        .ctrlport_req_epid    (s_ctrlport_req_epid),
-        .ctrlport_req_portid  (s_ctrlport_req_portid),
-        .ctrlport_req_data    (s_ctrlport_req_data),
-        .ctrlport_req_byte_en (s_ctrlport_req_byte_en),
-        .ctrlport_req_has_time(s_ctrlport_req_has_time),
-        .ctrlport_req_time    (s_ctrlport_req_time),
-        .ctrlport_resp_ack    (s_ctrlport_resp_ack),
-        .ctrlport_resp_status (s_ctrlport_resp_status),
-        .ctrlport_resp_data   (s_ctrlport_resp_data)
+        .clk                    (ctrlport_clk),
+        .rst                    (ctrlport_rst),
+        .s_axis_ctrl_tdata      (mst_resp_tdata),
+        .s_axis_ctrl_tlast      (mst_resp_tlast),
+        .s_axis_ctrl_tvalid     (mst_resp_tvalid),
+        .s_axis_ctrl_tready     (mst_resp_tready),
+        .m_axis_ctrl_tdata      (mst_req_tdata),
+        .m_axis_ctrl_tlast      (mst_req_tlast),
+        .m_axis_ctrl_tvalid     (mst_req_tvalid),
+        .m_axis_ctrl_tready     (mst_req_tready),
+        .ctrlport_req_wr        (s_ctrlport_req_wr),
+        .ctrlport_req_rd        (s_ctrlport_req_rd),
+        .ctrlport_req_addr      (s_ctrlport_req_addr),
+        .ctrlport_req_portid    (s_ctrlport_req_portid),
+        .ctrlport_req_rem_epid  (s_ctrlport_req_rem_epid),
+        .ctrlport_req_rem_portid(s_ctrlport_req_rem_portid),
+        .ctrlport_req_data      (s_ctrlport_req_data),
+        .ctrlport_req_byte_en   (s_ctrlport_req_byte_en),
+        .ctrlport_req_has_time  (s_ctrlport_req_has_time),
+        .ctrlport_req_time      (s_ctrlport_req_time),
+        .ctrlport_resp_ack      (s_ctrlport_resp_ack),
+        .ctrlport_resp_status   (s_ctrlport_resp_status),
+        .ctrlport_resp_data     (s_ctrlport_resp_data)
       );
     end else begin
       assign mst_resp_tready = 1'b1;

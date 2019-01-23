@@ -5,23 +5,31 @@
 //
 // Module: chdr_to_axis_ctrl
 // Description:
-//  Converts from CHDR to AXIS-Control and vice versa
+//  Converts from CHDR to AXIS-Control and vice versa.
+//  This module has to handle remote control transactions
+//  correctly. The CHDR frame has/needs the DstEPID, DstPort
+//  SrcEPID and SrcPort and the AXIS-Ctrl frame has/needs
+//  the DstPort, SrcPort, RemDstEPID and RemDstPort.
 //
 // Parameters:
 //   - CHDR_W: Width of the CHDR bus in bits
+//   - THIS_PORTID: The port number of the control xbar
+//                  that this module is connected to.
 //
 // Signals:
 //   - s_rfnoc_chdr_* : Input CHDR stream (AXI-Stream)
 //   - m_rfnoc_chdr_* : Output CHDR stream (AXI-Stream)
-//   - s_ctrl_chdr_* : Input control stream (AXI-Stream)
-//   - m_ctrl_chdr_* : Output control stream (AXI-Stream)
+//   - s_rfnoc_ctrl_* : Input control stream (AXI-Stream)
+//   - m_rfnoc_ctrl_* : Output control stream (AXI-Stream)
 
 module chdr_to_axis_ctrl #(
-  parameter CHDR_W = 256
+  parameter       CHDR_W      = 256,
+  parameter [9:0] THIS_PORTID = 10'd0
 )(
   // CHDR Bus (master and slave)
   input  wire              rfnoc_chdr_clk,
   input  wire              rfnoc_chdr_rst,
+  input  wire [15:0]       this_epid,
   input  wire [CHDR_W-1:0] s_rfnoc_chdr_tdata,
   input  wire              s_rfnoc_chdr_tlast,
   input  wire              s_rfnoc_chdr_tvalid,
@@ -49,92 +57,127 @@ module chdr_to_axis_ctrl #(
   `include "rfnoc_chdr_utils.vh"
   `include "rfnoc_axis_ctrl_utils.vh"
 
-  localparam [1:0] ST_HEADER   = 2'd0;
-  localparam [1:0] ST_METADATA = 2'd1;
-  localparam [1:0] ST_BODY     = 2'd2;
+  localparam [1:0] ST_HEADER   = 2'd0;  // Processing the CHDR header
+  localparam [1:0] ST_METADATA = 2'd1;  // Processing the CHDR metadata
+  localparam [1:0] ST_BODY     = 2'd2;  // Processing the CHDR payload
 
   // ---------------------------------------------------
   //  Input/output register slices
   // ---------------------------------------------------
-  wire [CHDR_W-1:0] chdr_i_tdata,  chdr_o_tdata;
-  wire              chdr_i_tlast,  chdr_o_tlast;
-  wire              chdr_i_tvalid, chdr_o_tvalid;
-  wire              chdr_i_tready, chdr_o_tready;
+  // - ch2ct: CHDR to Ctrl
+  // - ct2ch: Ctrl to CHDR
 
-  axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) in_reg_i (
+  wire [CHDR_W-1:0] ch2ct_tdata,  ct2ch_tdata;
+  wire              ch2ct_tlast,  ct2ch_tlast;
+  wire              ch2ct_tvalid, ct2ch_tvalid;
+  wire              ch2ct_tready, ct2ch_tready;
+
+  axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) ch2ct_reg_i (
     .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst), .clear(1'b0),
     .i_tdata({s_rfnoc_chdr_tlast, s_rfnoc_chdr_tdata}),
     .i_tvalid(s_rfnoc_chdr_tvalid), .i_tready(s_rfnoc_chdr_tready),
-    .o_tdata({chdr_i_tlast, chdr_i_tdata}),
-    .o_tvalid(chdr_i_tvalid), .o_tready(chdr_i_tready),
+    .o_tdata({ch2ct_tlast, ch2ct_tdata}),
+    .o_tvalid(ch2ct_tvalid), .o_tready(ch2ct_tready),
     .space(), .occupied()
   );
 
-  axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) out_reg_i (
+  axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) ct2ch_reg_i (
     .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst), .clear(1'b0),
-    .i_tdata({chdr_o_tlast, chdr_o_tdata}),
-    .i_tvalid(chdr_o_tvalid), .i_tready(chdr_o_tready),
+    .i_tdata({ct2ch_tlast, ct2ch_tdata}),
+    .i_tvalid(ct2ch_tvalid), .i_tready(ct2ch_tready),
     .o_tdata({m_rfnoc_chdr_tlast, m_rfnoc_chdr_tdata}),
     .o_tvalid(m_rfnoc_chdr_tvalid), .o_tready(m_rfnoc_chdr_tready),
     .space(), .occupied()
   );
 
   // ---------------------------------------------------
-  //  CHDR => Ctrl path
+  //  CH2CT: CHDR => Ctrl path
   // ---------------------------------------------------
-  reg [1:0] chdr_i_state = ST_HEADER;
-  reg [6:0] num_mdata = 7'd0;
+  // When converting CHDR => Ctrl we know we are dealing with
+  // a remote control transaction so we need to perform
+  // the following transformations to ensure that the packet
+  // has all the info to route downstream and has enough info
+  // to return to the master (of the transaction).
+  // - Use the CHDR DstPort as the Ctrl DstPort (forward the master's request)
+  // - Use THIS_PORTID as the Ctrl SrcPort (for the return path back here)
+  // - Use the CHDR SrcEPID as the Ctrl RemDstEPID (return path for CHDR packet)
+  // - Use the CHDR SrcPort as the Ctrl RemDstPort (return path in the downstream EP)
+  // - Ignore the CHDR DstEPID because packet is already here
+
+  reg [1:0]   ch2ct_state = ST_HEADER;
+  reg [6:0]   ch2ct_nmdata = 7'd0;
 
   always @(posedge rfnoc_chdr_clk) begin
     if (rfnoc_chdr_rst) begin
-      chdr_i_state <= ST_HEADER;
-    end else if (chdr_i_tvalid && chdr_i_tready) begin
-      case (chdr_i_state)
+      ch2ct_state <= ST_HEADER;
+    end else if (ch2ct_tvalid && ch2ct_tready) begin
+      case (ch2ct_state)
         ST_HEADER: begin
-          num_mdata <= chdr_get_num_mdata(chdr_i_tdata) - 7'd1;
-          if (!chdr_i_tlast)
-            chdr_i_state <= (chdr_get_num_mdata(chdr_i_tdata) == 7'd0) ? 
+          ch2ct_nmdata <= chdr_get_num_mdata(ch2ct_tdata[63:0]) - 7'd1;
+          if (!ch2ct_tlast)
+            ch2ct_state <= (chdr_get_num_mdata(ch2ct_tdata[63:0]) == 7'd0) ? 
               ST_BODY : ST_METADATA;
           else
-            chdr_i_state <= ST_HEADER;  // Premature termination
+            ch2ct_state <= ST_HEADER;  // Premature termination
         end
         ST_METADATA: begin
-          num_mdata <= num_mdata - 7'd1;
-          if (!chdr_i_tlast)
-            chdr_i_state <= (num_mdata == 7'd0) ? ST_BODY : ST_METADATA;
+          ch2ct_nmdata <= ch2ct_nmdata - 7'd1;
+          if (!ch2ct_tlast)
+            ch2ct_state <= (ch2ct_nmdata == 7'd0) ? ST_BODY : ST_METADATA;
           else
-            chdr_i_state <= ST_HEADER;  // Premature termination
+            ch2ct_state <= ST_HEADER;  // Premature termination
         end
         ST_BODY: begin
-          if (chdr_i_tlast)
-            chdr_i_state <= ST_HEADER;
+          if (ch2ct_tlast)
+            ch2ct_state <= ST_HEADER;
         end
         default: begin
           // We should never get here
-          chdr_i_state <= ST_HEADER;
+          ch2ct_state <= ST_HEADER;
         end
       endcase
     end
   end
 
-  wire [(CHDR_W/8)-1:0] chdr_i_tkeep;
+  wire [(CHDR_W/8)-1:0] ch2ct_tkeep;
   chdr_compute_tkeep #( .CHDR_W(CHDR_W)) chdr_tkeep_gen_i (
     .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
-    .axis_tdata(chdr_i_tdata), .axis_tlast(chdr_i_tlast),
-    .axis_tvalid(chdr_i_tvalid), .axis_tready(chdr_i_tready),
-    .axis_tkeep(chdr_i_tkeep)
+    .axis_tdata(ch2ct_tdata), .axis_tlast(ch2ct_tlast),
+    .axis_tvalid(ch2ct_tvalid), .axis_tready(ch2ct_tready),
+    .axis_tkeep(ch2ct_tkeep)
   );
+
+  // Create the first two lines of the Ctrl word (wide)
+  // using data from CHDR packet 
+  wire [CHDR_W-1:0] ch2ct_wctrl_tdata;
+  assign ch2ct_wctrl_tdata[63:0] = {
+    axis_ctrl_build_hdr_hi(
+      axis_ctrl_get_src_port(ch2ct_tdata[31:0]),
+      axis_ctrl_get_rem_dst_epid(ch2ct_tdata[63:32])
+    ),
+    axis_ctrl_build_hdr_lo(
+      axis_ctrl_get_is_ack  (ch2ct_tdata[31:0]),
+      axis_ctrl_get_has_time(ch2ct_tdata[31:0]),
+      axis_ctrl_get_seq_num (ch2ct_tdata[31:0]),
+      axis_ctrl_get_num_data(ch2ct_tdata[31:0]),
+      THIS_PORTID,
+      axis_ctrl_get_dst_port(ch2ct_tdata[31:0])
+    )
+  };
+  generate if (CHDR_W > 64) begin
+    assign ch2ct_wctrl_tdata[CHDR_W-1:64] = {(CHDR_W-64){1'b0}};
+  end endgenerate
 
   axis_width_conv #(
     .WORD_W(32), .IN_WORDS(CHDR_W/32), .OUT_WORDS(1),
     .SYNC_CLKS(0), .PIPELINE("OUT")
   ) ctrl_downsizer_i (
     .s_axis_aclk(rfnoc_chdr_clk), .s_axis_rst(rfnoc_chdr_rst),
-    .s_axis_tdata(chdr_i_tdata),
-    .s_axis_tkeep(chdr_i_tkeep[(CHDR_W/8)-1:2]),
-    .s_axis_tlast(chdr_i_tlast),
-    .s_axis_tvalid(chdr_i_tvalid && (chdr_i_state == ST_BODY)),
-    .s_axis_tready(chdr_i_tready),
+    .s_axis_tdata(ch2ct_wctrl_tdata),
+    .s_axis_tkeep(ch2ct_tkeep[(CHDR_W/8)-1:2]),
+    .s_axis_tlast(ch2ct_tlast),
+    .s_axis_tvalid(ch2ct_tvalid && (ch2ct_state == ST_BODY)),
+    .s_axis_tready(ch2ct_tready),
     .m_axis_aclk(rfnoc_ctrl_clk), .m_axis_rst(rfnoc_ctrl_rst),
     .m_axis_tdata(m_rfnoc_ctrl_tdata),
     .m_axis_tkeep(/* Unused: OUT_WORDS=1 */),
@@ -144,11 +187,21 @@ module chdr_to_axis_ctrl #(
   );
 
   // ---------------------------------------------------
-  //  Ctrl => CHDR path
+  //  CT2CH: Ctrl => CHDR path
   // ---------------------------------------------------
+  // When converting Ctrl => CHDR we know we are dealing with
+  // a remote control transaction so we need to perform
+  // the following transformations to ensure that the packet
+  // has all the info to route downstream and has enough info
+  // to return to the initiator of the transaction.
+  // - Use the Ctrl RemDstEPID as the CHDR DstEPID (forward the master's request)
+  // - Use the Ctrl RemDstPort as the CHDR DstPort (forward the master's request)
+  // - Use the this_epid as CHDR SrcEPID (return path for the CHDR packet)
+  // - Use the Ctrl SrcPort as the CHDR SrcPort (return path to the master)
+  // - Ignore the Ctrl DstPort because the packet has already been routed 
 
-  wire [CHDR_W-1:0] wide_ctrl_tdata;
-  wire              wide_ctrl_tlast, wide_ctrl_tvalid, wide_ctrl_tready;
+  wire [CHDR_W-1:0] ct2ch_wctrl_tdata;
+  wire              ct2ch_wctrl_tlast, ct2ch_wctrl_tvalid, ct2ch_wctrl_tready;
 
   axis_width_conv #(
     .WORD_W(32), .IN_WORDS(1), .OUT_WORDS(CHDR_W/32),
@@ -161,64 +214,89 @@ module chdr_to_axis_ctrl #(
     .s_axis_tvalid(s_rfnoc_ctrl_tvalid),
     .s_axis_tready(s_rfnoc_ctrl_tready),
     .m_axis_aclk(rfnoc_chdr_clk), .m_axis_rst(rfnoc_chdr_rst),
-    .m_axis_tdata(wide_ctrl_tdata),
+    .m_axis_tdata(ct2ch_wctrl_tdata),
     .m_axis_tkeep(/* Unused: We are updating the CHDR length */),
-    .m_axis_tlast(wide_ctrl_tlast),
-    .m_axis_tvalid(wide_ctrl_tvalid),
-    .m_axis_tready(wide_ctrl_tready)
+    .m_axis_tlast(ct2ch_wctrl_tlast),
+    .m_axis_tvalid(ct2ch_wctrl_tvalid),
+    .m_axis_tready(ct2ch_wctrl_tready)
   );
 
-  // Information to generate CHDR header
-  wire [7:0] num_ctrl_lines = 8'd3 +                                // Header + OpWord
-    (axis_ctrl_get_has_time(wide_ctrl_tdata[31:0]) ? 8'd2 : 8'd0) + // Timestamp
-    ({5'h0, axis_ctrl_get_num_data(wide_ctrl_tdata[31:0])});        // Data words
-
-  wire [15:0] chdr_len = ({8'h0, num_ctrl_lines} << 2) + 16'd8;     // CHDR header + Payload
-  wire [15:0] dst_epid = axis_ctrl_get_epid(wide_ctrl_tdata[31:0]);
-
-  reg [1:0] chdr_o_state = ST_HEADER;
-  reg [15:0] seq_num = 16'd0;
+  reg [1:0] ct2ch_state = ST_HEADER;
+  reg [15:0] ct2ch_seqnum = 16'd0;
 
   always @(posedge rfnoc_chdr_clk) begin
     if (rfnoc_chdr_rst) begin
-      chdr_o_state <= ST_HEADER;
-      seq_num <= 16'd0;
-    end else if (chdr_o_tvalid && chdr_o_tready) begin
-      case (chdr_o_state)
+      ct2ch_state <= ST_HEADER;
+      ct2ch_seqnum <= 16'd0;
+    end else if (ct2ch_tvalid && ct2ch_tready) begin
+      case (ct2ch_state)
         ST_HEADER: begin
-          if (!chdr_o_tlast)
-            chdr_o_state <= ST_BODY;
+          if (!ct2ch_tlast)
+            ct2ch_state <= ST_BODY;
         end
         ST_BODY: begin
-          if (chdr_o_tlast)
-            chdr_o_state <= ST_HEADER;
+          if (ct2ch_tlast)
+            ct2ch_state <= ST_HEADER;
         end
         default: begin
           // We should never get here
-          chdr_o_state <= ST_HEADER;
+          ct2ch_state <= ST_HEADER;
         end
       endcase
-      if (chdr_o_tlast)
-        seq_num <= seq_num + 16'd1;
+      if (ct2ch_tlast)
+        ct2ch_seqnum <= ct2ch_seqnum + 16'd1;
     end
   end
 
-  // Hold the first line to generate info
-  // for the outgoing CHDR header
-  assign wide_ctrl_tready = (chdr_o_state == ST_BODY) ? chdr_o_tready : 1'b0;
+  // Hold the first line to generate info for the outgoing CHDR header
+  assign ct2ch_wctrl_tready = (ct2ch_state == ST_BODY) ? ct2ch_tready : 1'b0;
 
-  // Build a header for the outgoing CHDR packet
-  wire [CHDR_W-1:0] chdr_header;
-  assign chdr_header[63:0] = chdr_build_header(
-    /*flags*/ 6'h0, CHDR_PKT_TYPE_CTRL, /*nmdata*/ 7'd0, seq_num, chdr_len, dst_epid);
-  generate 
-    if (CHDR_W > 64)
-      assign chdr_header[CHDR_W-1:64] = 'h0;
-  endgenerate
+  wire [7:0] ct2ch_len_lines = 8'd3 +                                 // Header + OpWord
+    (axis_ctrl_get_has_time(ct2ch_wctrl_tdata[31:0]) ? 8'd2 : 8'd0) + // Timestamp
+    ({4'h0, axis_ctrl_get_num_data(ct2ch_wctrl_tdata[31:0])});        // Data words
+
+  reg [63:0] ct2ch_chdr_tdata;
+  always @(*) begin
+    case (ct2ch_state)
+      ST_HEADER: begin
+        ct2ch_chdr_tdata = chdr_build_header(
+          CHDR_FLAGS_NONE,
+          CHDR_PKT_TYPE_CTRL,
+          7'd0, /* no metadata */
+          ct2ch_seqnum,
+          ({8'h0, ct2ch_len_lines} << 2) + (CHDR_W/8), /* length */
+          axis_ctrl_get_rem_dst_epid(ct2ch_wctrl_tdata[63:32])
+        );
+      end
+      ST_BODY: begin
+        ct2ch_chdr_tdata = {
+          axis_ctrl_build_hdr_hi(
+            10'd0,        /* Unused in CHDR Control payload */
+            this_epid     /* This is the SrcEPID */
+          ),
+          axis_ctrl_build_hdr_lo(
+            axis_ctrl_get_is_ack  (ct2ch_wctrl_tdata[31:0]),
+            axis_ctrl_get_has_time(ct2ch_wctrl_tdata[31:0]),
+            axis_ctrl_get_seq_num (ct2ch_wctrl_tdata[31:0]),
+            axis_ctrl_get_num_data(ct2ch_wctrl_tdata[31:0]),
+            axis_ctrl_get_src_port(ct2ch_wctrl_tdata[31:0]),
+            axis_ctrl_get_rem_dst_port(ct2ch_wctrl_tdata[63:32])
+          )
+        };
+      end
+      default: begin
+        // We should never get here
+        ct2ch_chdr_tdata = 64'h0;
+      end
+    endcase
+  end
 
   // Output signals
-  assign chdr_o_tdata   = (chdr_o_state == ST_HEADER) ? chdr_header : wide_ctrl_tdata;
-  assign chdr_o_tlast   = wide_ctrl_tlast;
-  assign chdr_o_tvalid  = wide_ctrl_tvalid;
+  assign ct2ch_tdata[63:0] = ct2ch_chdr_tdata;
+  assign ct2ch_tlast       = ct2ch_wctrl_tlast;
+  assign ct2ch_tvalid      = ct2ch_wctrl_tvalid;
+  generate if (CHDR_W > 64) begin
+    assign ct2ch_tdata[CHDR_W-1:64] = {(CHDR_W-64){1'b0}};
+  end endgenerate
 
 endmodule // chdr_to_axis_ctrl
