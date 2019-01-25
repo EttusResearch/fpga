@@ -146,7 +146,7 @@ module chdr_crossbar_nxn #(
 
   axi_mux #(
     .WIDTH(CFG_W), .SIZE(CFG_PORTS),
-    .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0)
+    .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
   ) rtcfg_mux_i (
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(rtcfg_info_flat), .i_tlast({CFG_PORTS{1'b1}}),

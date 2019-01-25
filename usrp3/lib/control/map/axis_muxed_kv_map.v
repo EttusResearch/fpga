@@ -40,9 +40,10 @@ module axis_muxed_kv_map #(
   //---------------------------------------------------------
   // Demux find ports
   //---------------------------------------------------------
-  wire [KEY_WIDTH-1:0]          find_key;
-  wire [$clog2(NUM_PORTS)-1:0]  find_dest;
-  wire                          find_key_valid;
+  wire [KEY_WIDTH-1:0]          find_key, find_key_reg;
+  wire [$clog2(NUM_PORTS)-1:0]  find_dest, find_dest_reg;
+  wire                          find_key_valid, find_key_valid_reg;
+  wire                          find_ready;
   reg                           find_in_progress = 1'b0;
   wire                          insert_busy;
   wire                          find_res_stb;
@@ -62,8 +63,19 @@ module axis_muxed_kv_map #(
     .clk(clk), .reset(reset), .clear(1'b0),
     .i_tdata(mux_tdata), .i_tlast({NUM_PORTS{1'b1}}),
     .i_tvalid(axis_find_tvalid), .i_tready(axis_find_tready),
-    .o_tdata({find_dest, find_key}), .o_tlast(),
-    .o_tvalid(find_key_valid), .o_tready(find_res_stb & find_res_ready)
+    .o_tdata({find_dest_reg, find_key_reg}), .o_tlast(),
+    .o_tvalid(find_key_valid_reg), .o_tready(find_ready)
+  );
+
+  axi_fifo #(
+    .WIDTH(KEY_WIDTH+$clog2(NUM_PORTS)), .SIZE(1)
+  ) mux_reg_i (
+    .clk(clk), .reset(reset), .clear(1'b0),
+    .i_tdata({find_dest_reg, find_key_reg}),
+    .i_tvalid(find_key_valid_reg), .i_tready(find_ready),
+    .o_tdata({find_dest, find_key}),
+    .o_tvalid(find_key_valid), .o_tready(find_res_stb & find_res_ready),
+    .space(), .occupied()
   );
 
   always @(posedge clk) begin
