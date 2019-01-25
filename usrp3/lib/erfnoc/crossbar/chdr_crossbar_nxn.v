@@ -197,7 +197,7 @@ module chdr_crossbar_nxn #(
       if (MGMT_PORT_MASK[n] == 1'b1) begin
         chdr_mgmt_pkt_handler #(
           .PROTOVER(PROTOVER), .CHDR_W(CHDR_W),
-          .NODEINFO(chdr_mgmt_build_nodeinfo(NODE_TYPE_XBAR, n, NPORTS, NPORTS))
+          .NODEINFO(chdr_mgmt_build_node_info(NODE_TYPE_XBAR, n, NPORTS, NPORTS))
         ) mgmt_ep_i (
           .clk                (clk                                  ),
           .rst                (reset                                ),

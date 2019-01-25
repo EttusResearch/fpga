@@ -4,14 +4,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
-module axis_ctrl_crossbar_2d_mesh_top(
+module axis_ctrl_crossbar_nxn_top(
   input clk,
   input rst
 );
   // Router global config
   localparam IMPL        = "{top}";
-  localparam NPORTS_SQRT = {dimw};
-  localparam NPORTS      = NPORTS_SQRT * NPORTS_SQRT;
+  localparam NPORTS      = {ports};
   localparam DWIDTH      = {dataw};
   localparam MTU         = {mtu};
   localparam ROUTING     = "{ralloc}";
@@ -22,9 +21,9 @@ module axis_ctrl_crossbar_2d_mesh_top(
   (* dont_touch = "true"*) wire [NPORTS-1:0]          s_axis_tready, m_axis_tready;
   (* dont_touch = "true"*) wire                       deadlock_detected;
 
-  axis_ctrl_crossbar_2d_mesh #(
+  axis_ctrl_crossbar_nxn #(
     .WIDTH            (DWIDTH),
-    .DIM_SIZE         (NPORTS_SQRT),
+    .NPORTS           (NPORTS),
     .TOPOLOGY         (IMPL),
     .INGRESS_BUFF_SIZE(MTU),
     .ROUTER_BUFF_SIZE (MTU),

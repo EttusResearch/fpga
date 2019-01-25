@@ -9,6 +9,7 @@
 ##################################################
 RFNOC_XBAR_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/crossbar/, \
 axis_ctrl_crossbar_2d_mesh.v \
+axis_ctrl_crossbar_nxn.v \
 torus_2d_dor_router_single_sw.v \
 mesh_2d_dor_router_single_sw.v \
 axis_ingress_vc_buff.v \

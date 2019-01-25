@@ -17,7 +17,6 @@ import subprocess
 
 g_localparam_template = """  // Router parameters
   localparam ROUTER_IMPL        = "{rtr_impl}";
-  localparam ROUTER_PORTS_SQRT  = {rtr_ports_sqrt};
   localparam ROUTER_PORTS       = {rtr_ports};
   localparam ROUTER_DWIDTH      = 64;
   localparam MTU_LOG2           = {rtr_mtu};
@@ -45,13 +44,13 @@ def get_options():
     parser = argparse.ArgumentParser(description='Run correctness sim and generate load-latency plots')
     parser.add_argument('--impl', type=str, default='chdr_crossbar_nxn', help='Implementation (CSV) [%s]'%(','.join(g_xb_types.keys())))
     parser.add_argument('--ports', type=str, default='16', help='Number of ports (CSV)')
-    parser.add_argument('--sources', type=str, default='16', help='Router datapath width (CSV)')
+    parser.add_argument('--sources', type=str, default='16', help='Number of active data sources (masters)')
     return parser.parse_args()
 
 def launch_run(impl, ports, sources):
     run_name = '%s_ports%d_srcs%d'%(impl, ports, sources)
     # Prepare a transform map to autogenerate a TB file
-    transform = {'rtr_impl':impl, 'rtr_ports':ports, 'rtr_ports_sqrt':str(math.ceil(math.sqrt(ports))), 'rtr_sources':sources}
+    transform = {'rtr_impl':impl, 'rtr_ports':ports, 'rtr_sources':sources}
     for k,v in g_test_params[g_xb_types[impl]].items():
         transform[k] = v 
     # Read crossbar_tb.sv and create crossbar_tb_auto.sv with new parameters

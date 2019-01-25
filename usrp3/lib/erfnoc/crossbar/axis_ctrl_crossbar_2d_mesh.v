@@ -42,13 +42,13 @@ module axis_ctrl_crossbar_2d_mesh #(
   input  wire                                 reset,
   // Inputs
   input  wire [(DIM_SIZE*DIM_SIZE*WIDTH)-1:0] s_axis_tdata,
-  input  wire [DIM_SIZE*DIM_SIZE-1:0]         s_axis_tvalid,
   input  wire [DIM_SIZE*DIM_SIZE-1:0]         s_axis_tlast,
+  input  wire [DIM_SIZE*DIM_SIZE-1:0]         s_axis_tvalid,
   output wire [DIM_SIZE*DIM_SIZE-1:0]         s_axis_tready,
   // Output
   output wire [(DIM_SIZE*DIM_SIZE*WIDTH)-1:0] m_axis_tdata,
-  output wire [DIM_SIZE*DIM_SIZE-1:0]         m_axis_tvalid,
   output wire [DIM_SIZE*DIM_SIZE-1:0]         m_axis_tlast,
+  output wire [DIM_SIZE*DIM_SIZE-1:0]         m_axis_tvalid,
   input  wire [DIM_SIZE*DIM_SIZE-1:0]         m_axis_tready,
   // Deadlock alert
   output wire                                 deadlock_detected

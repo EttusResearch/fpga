@@ -34,18 +34,18 @@ def synth_run(modname, keys, transform):
     with open(modname + '.rpt', 'r') as rpt_file:
         rpt = rpt_file.readlines()
     for line in rpt:
-        lm = re.match(r'.*Slice LUTs\*.*\|(.*)\|(.*)\|(.*)\|.*', line)
+        lm = re.match(r'.*Slice LUTs\*.*\|(.*)\|(.*)\|(.*)\|(.*)\|.*', line)
         if lm is not None:
-            lut = float(lm.group(3).strip())
-        rm = re.match(r'.*Slice Registers.*\|(.*)\|(.*)\|(.*)\|.*', line)
+            lut = float(lm.group(1).strip())
+        rm = re.match(r'.*Slice Registers.*\|(.*)\|(.*)\|(.*)\|(.*)\|.*', line)
         if rm is not None:
-            reg = float(rm.group(3).strip())
-        bm = re.match(r'.*Block RAM Tile.*\|(.*)\|(.*)\|(.*)\|.*', line)
+            reg = float(rm.group(1).strip())
+        bm = re.match(r'.*Block RAM Tile.*\|(.*)\|(.*)\|(.*)\|(.*)\|.*', line)
         if bm is not None:
-            bram = float(bm.group(3).strip())
-        dm = re.match(r'.*DSPs.*\|(.*)\|(.*)\|(.*)\|.*', line)
+            bram = float(bm.group(1).strip())
+        dm = re.match(r'.*DSPs.*\|(.*)\|(.*)\|(.*)\|(.*)\|.*', line)
         if dm is not None:
-            dsp = float(dm.group(3).strip())
+            dsp = float(dm.group(1).strip())
         tm = re.match(r'.*clk.*\| clk\s*\|(.*)\|.*\|.*\|.*\|.*\|.*\|.*\|.*\|', line)
         if tm is not None:
             fmax = 1000.0/float(tm.group(1).strip())

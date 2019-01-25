@@ -21,27 +21,30 @@ module chdr_crossbar_nxn_top(
   (* dont_touch = "true"*) wire [NPORTS-1:0]          s_axis_tready, m_axis_tready;
 
   chdr_crossbar_nxn #(
-    .WIDTH              (DWIDTH),
+    .CHDR_W             (DWIDTH),
     .NPORTS             (NPORTS),
     .DEFAULT_PORT       (0),
-    .INGRESS_BUFF_SIZE  (MTU),
-    .SID_OFFSET         (0),
-    .SID_WIDTH          (16),
+    .MTU                (MTU),
     .ROUTE_TBL_SIZE     (RLUT_SIZE),
     .MUX_ALLOC          ("ROUND-ROBIN"),
     .OPTIMIZE           (OPTIMIZE),
-    .MGMT_RTCFG_PORT    (0)
+    .MGMT_PORT_MASK     ({{NPORTS{{1'b1}}}}),
+    .EXT_MGMT_PORT      (1)
   ) router_dut_i (
+     // General         
     .clk                (clk),
     .reset              (rst),
-    .s_axis_tdata       (s_axis_tdata ),
-    .s_axis_tlast       (s_axis_tlast ),
+    // Inputs           
+    .s_axis_tdata       (s_axis_tdata),
+    .s_axis_tlast       (s_axis_tlast),
     .s_axis_tvalid      (s_axis_tvalid),
     .s_axis_tready      (s_axis_tready),
-    .m_axis_tdata       (m_axis_tdata ),
-    .m_axis_tlast       (m_axis_tlast ),
+    // Output           
+    .m_axis_tdata       (m_axis_tdata),
+    .m_axis_tlast       (m_axis_tlast),
     .m_axis_tvalid      (m_axis_tvalid),
     .m_axis_tready      (m_axis_tready),
+
     .s_axis_mgmt_tdata  ('h0),
     .s_axis_mgmt_tvalid (1'b0),
     .s_axis_mgmt_tready ()

@@ -42,12 +42,11 @@ module crossbar_tb();
   //----------------------------------------------------
   //<PARAMS_BLOCK_AUTOGEN>
   // Router parameters
-  localparam ROUTER_IMPL        = "axi_crossbar";         // Router implementation
-  localparam ROUTER_PORTS_SQRT  = 4;                      // Square root of the # router ports
-  localparam ROUTER_PORTS       = ROUTER_PORTS_SQRT ** 2; // # Router ports
-  localparam ROUTER_DWIDTH      = 64;                     // Router datapath width
-  localparam MTU_LOG2           = 7;                      // log2 of max packet size for router
-  localparam NUM_MASTERS        = ROUTER_PORTS;           // Number of data generators in test
+  localparam ROUTER_IMPL        = "axi_crossbar"; // Router implementation
+  localparam ROUTER_PORTS       = 16;             // # Router ports
+  localparam ROUTER_DWIDTH      = 64;             // Router datapath width
+  localparam MTU_LOG2           = 7;              // log2 of max packet size for router
+  localparam NUM_MASTERS        = ROUTER_PORTS;   // Number of data generators in test
   // Test parameters
   localparam TEST_MAX_PACKETS   = 100;    // How many packets to stream per test case?
   localparam TEST_LPP           = 100;    // Lines per packet
@@ -231,9 +230,9 @@ module crossbar_tb();
       .s_axis_mgmt_tready (mgmt_axis.axis.tready)
     );
   end else begin
-    axis_ctrl_crossbar_2d_mesh #(
+    axis_ctrl_crossbar_nxn #(
       .WIDTH            (ROUTER_DWIDTH),
-      .DIM_SIZE         (ROUTER_PORTS_SQRT),
+      .NPORTS           (ROUTER_PORTS),
       .TOPOLOGY         (ROUTER_IMPL == "axis_ctrl_2d_torus" ? "TORUS" : "MESH"),
       .INGRESS_BUFF_SIZE(MTU_LOG2),
       .ROUTER_BUFF_SIZE (MTU_LOG2),
