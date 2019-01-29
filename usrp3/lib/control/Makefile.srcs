@@ -28,6 +28,7 @@ por_gen.v \
 priority_encoder_one_hot.v \
 priority_encoder.v \
 radio_ctrl_proc.v \
+ram_2port_impl.vh \
 ram_2port.v \
 reset_sync.v \
 s7_icap_wb.v \

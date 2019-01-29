@@ -5,14 +5,57 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Description
-// This code implements a parameterizable true dual port memory 
-// (both ports can read and write). If an enable is not necessary
-// it may be tied off
+//  This code implements a parameterizable true dual port memory 
+//  (both ports can read and write). If an enable is not necessary
+//  it may be tied off.
+//
+// Note
+//  This module requires the ram_2port_impl.vh header file. The
+//  header is included multiple times with different values of
+//  the RAM_DIRECTIVE macro to create different implementations of the
+//  RAM. An implementation is chosen in ram_2port based on the 
+//  user parameter for RAM_TYPE.
+
+// Mode: AUTOMATIC
+`define RAM_DIRECTIVE
+`define RAM_MOD_NAME ram_2port_impl_auto
+`include "ram_2port_impl.vh"
+`undef RAM_MOD_NAME
+`undef RAM_DIRECTIVE
+
+// Mode: REG
+`define RAM_DIRECTIVE (* ram_style = "registers" *)
+`define RAM_MOD_NAME ram_2port_impl_reg
+`include "ram_2port_impl.vh"
+`undef RAM_MOD_NAME
+`undef RAM_DIRECTIVE
+
+// Mode: LUTRAM
+`define RAM_DIRECTIVE (* ram_style = "distributed" *)
+`define RAM_MOD_NAME ram_2port_impl_lutram
+`include "ram_2port_impl.vh"
+`undef RAM_MOD_NAME
+`undef RAM_DIRECTIVE
+
+// Mode: BRAM
+`define RAM_DIRECTIVE (* ram_style = "block" *)
+`define RAM_MOD_NAME ram_2port_impl_bram
+`include "ram_2port_impl.vh"
+`undef RAM_MOD_NAME
+`undef RAM_DIRECTIVE
+
+// Mode: URAM
+`define RAM_DIRECTIVE (* ram_style = "ultra" *)
+`define RAM_MOD_NAME ram_2port_impl_uram
+`include "ram_2port_impl.vh"
+`undef RAM_MOD_NAME
+`undef RAM_DIRECTIVE
 
 module ram_2port #(
   parameter DWIDTH    = 32,           // Width of the memory block
   parameter AWIDTH    = 9,            // log2 of the depth of the memory block
   parameter RW_MODE   = "READ-FIRST", // Read-write mode {READ-FIRST, WRITE-FIRST, NO-CHANGE}
+  parameter RAM_TYPE  = "AUTOMATIC",  // Type of RAM to infer {AUTOMATIC, REG, LUTRAM, BRAM, URAM}
   parameter OUT_REG   = 0,            // Instantiate an output register? (+1 cycle of read latency)
   parameter INIT_FILE = ""            // Optionally initialize memory with this file
 ) (
@@ -31,101 +74,47 @@ module ram_2port #(
   output wire [DWIDTH-1:0] dob
 );
 
-  reg [DWIDTH-1:0] ram [(1<<AWIDTH)-1:0];
-
-  // Initialize ram to a specified file or to all zeros to match hardware
-  generate if (INIT_FILE != "") begin
-    initial
-      $readmemh(INIT_FILE, ram, 0, (1<<AWIDTH)-1);
-  end else begin
-    integer i;
-    initial
-      for (i = 0; i < (1<<AWIDTH); i = i + 1)
-        ram[i] = {DWIDTH{1'b0}};
-  end endgenerate
-
-  reg [DWIDTH-1:0] doa_r = 'h0, dob_r = 'h0;
-  generate if (OUT_REG == 1) begin
-    // A 2 clock cycle read latency with improve clock-to-out timing
-    reg [DWIDTH-1:0] doa_rr = 'h0, dob_rr = 'h0;
-
-    always @(posedge clka)
-      if (ena)
-        doa_rr <= doa_r;
-
-    always @(posedge clkb)
-      if (enb)
-        dob_rr <= dob_r;
-
-    assign doa = doa_rr;
-    assign dob = dob_rr;
-  end else begin
-    // A 1 clock cycle read latency at the cost of a longer clock-to-out timing
-    assign doa = doa_r;
-    assign dob = dob_r;
-  end endgenerate
-
-  generate if (RW_MODE == "READ-FIRST") begin
-    // When data is written, the prior memory contents at the write
-    // address are presented on the output port.
-    always @(posedge clka) begin
-      if (ena) begin
-        if (wea)
-          ram[addra] <= dia;
-        doa_r <= ram[addra];
-      end
-    end
-    always @(posedge clkb) begin
-      if (enb) begin
-        if (web)
-          ram[addrb] <= dib;
-        dob_r <= ram[addrb];
-      end
-    end
-
-  end else if (RW_MODE == "WRITE-FIRST") begin
-    // The data being written to the RAM also resides on the output port.
-    always @(posedge clka) begin
-      if (ena) begin
-        if (wea) begin
-          ram[addra] <= dia;
-          doa_r <= dia;
-        end else begin
-          doa_r <= ram[addra];
-        end
-      end
-    end
-    always @(posedge clkb) begin
-      if (enb) begin
-        if (web) begin
-          ram[addrb] <= dib;
-          dob_r <= dib;
-        end else begin
-          dob_r <= ram[addrb];
-        end
-      end
-    end
-
-  end else begin
-    // This is a no change RAM which retains the last read value on the output during writes
-    // which is the most power efficient mode.
-    always @(posedge clka) begin
-      if (ena) begin
-        if (wea)
-          ram[addra] <= dia;
-        else
-          doa_r <= ram[addra];
-      end
-    end
-    always @(posedge clkb) begin
-      if (enb) begin
-        if (web)
-          ram[addrb] <= dib;
-        else
-          dob_r <= ram[addrb];
-      end
-    end
-
-  end endgenerate
+  generate
+    if (RAM_TYPE == "URAM")
+      ram_2port_impl_uram #(
+        .DWIDTH(DWIDTH), .AWIDTH(AWIDTH), .RW_MODE(RW_MODE),
+        .OUT_REG(OUT_REG), .INIT_FILE(INIT_FILE)
+      ) impl (
+        .clka(clka), .ena(ena), .wea(wea), .addra(addra), .dia(dia), .doa(doa),
+        .clkb(clkb), .enb(enb), .web(web), .addrb(addrb), .dib(dib), .dob(dob)
+      );
+    else if (RAM_TYPE == "BRAM")
+      ram_2port_impl_bram #(
+        .DWIDTH(DWIDTH), .AWIDTH(AWIDTH), .RW_MODE(RW_MODE),
+        .OUT_REG(OUT_REG), .INIT_FILE(INIT_FILE)
+      ) impl (
+        .clka(clka), .ena(ena), .wea(wea), .addra(addra), .dia(dia), .doa(doa),
+        .clkb(clkb), .enb(enb), .web(web), .addrb(addrb), .dib(dib), .dob(dob)
+      );
+    else if (RAM_TYPE == "LUTRAM")
+      ram_2port_impl_lutram #(
+        .DWIDTH(DWIDTH), .AWIDTH(AWIDTH), .RW_MODE(RW_MODE),
+        .OUT_REG(OUT_REG), .INIT_FILE(INIT_FILE)
+      ) impl (
+        .clka(clka), .ena(ena), .wea(wea), .addra(addra), .dia(dia), .doa(doa),
+        .clkb(clkb), .enb(enb), .web(web), .addrb(addrb), .dib(dib), .dob(dob)
+      );
+    else if (RAM_TYPE == "REG")
+      ram_2port_impl_reg #(
+        .DWIDTH(DWIDTH), .AWIDTH(AWIDTH), .RW_MODE(RW_MODE),
+        .OUT_REG(OUT_REG), .INIT_FILE(INIT_FILE)
+      ) impl (
+        .clka(clka), .ena(ena), .wea(wea), .addra(addra), .dia(dia), .doa(doa),
+        .clkb(clkb), .enb(enb), .web(web), .addrb(addrb), .dib(dib), .dob(dob)
+      );
+    else
+      ram_2port_impl_auto #(
+        .DWIDTH(DWIDTH), .AWIDTH(AWIDTH), .RW_MODE(RW_MODE),
+        .OUT_REG(OUT_REG), .INIT_FILE(INIT_FILE)
+      ) impl (
+        .clka(clka), .ena(ena), .wea(wea), .addra(addra), .dia(dia), .doa(doa),
+        .clkb(clkb), .enb(enb), .web(web), .addrb(addrb), .dib(dib), .dob(dob)
+      );
+  endgenerate
 
 endmodule
