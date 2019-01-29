@@ -49,7 +49,8 @@ module noc_block_ddc #(
     .NOC_ID(NOC_ID),
     .INPUT_PORTS(NUM_CHAINS),
     .OUTPUT_PORTS(NUM_CHAINS),
-    .STR_SINK_FIFOSIZE({NUM_CHAINS{STR_SINK_FIFOSIZE[7:0]}}))
+    .STR_SINK_FIFOSIZE({NUM_CHAINS{STR_SINK_FIFOSIZE[7:0]}}),
+    .MTU({NUM_CHAINS{MTU[7:0]}}))
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),

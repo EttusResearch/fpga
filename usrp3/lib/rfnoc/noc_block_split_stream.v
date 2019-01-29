@@ -46,11 +46,14 @@ module noc_block_split_stream #(
   wire [1:0]     clear_tx_seqnum;
   wire [15:0]    src_sid[0:1], next_dst_sid[0:1];
 
+  localparam MTU = 10;
+
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
     .INPUT_PORTS(1),
-    .OUTPUT_PORTS(NUM_OUTPUTS))
+    .OUTPUT_PORTS(NUM_OUTPUTS),
+    .MTU({NUM_OUTPUTS{MTU[7:0]}}))
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
@@ -98,8 +101,6 @@ module noc_block_split_stream #(
 
   assign out_tuser[0] = { out_tuser_pre[0][127:96], src_sid[0], next_dst_sid[0], out_tuser_pre[0][63:0] };
   assign out_tuser[1] = { out_tuser_pre[1][127:96], src_sid[1], next_dst_sid[1], out_tuser_pre[1][63:0] };
-
-  localparam MTU = 10;
 
   genvar i;
   generate

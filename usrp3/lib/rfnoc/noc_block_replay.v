@@ -176,7 +176,8 @@ module noc_block_replay #(
     .INPUT_PORTS       (NUM_REPLAY_BLOCKS),                          
     .OUTPUT_PORTS      (NUM_REPLAY_BLOCKS),                          
     .STR_SINK_FIFOSIZE ({NUM_REPLAY_BLOCKS{STR_SINK_FIFOSIZE[7:0]}}),
-    .USE_TIMED_CMDS    (0)                                           
+    .MTU               ({NUM_REPLAY_BLOCKS{MTU[7:0]}}),
+    .USE_TIMED_CMDS    (0)
   ) noc_shell (
     // Bus clock domain
     .bus_clk (bus_clk),
