@@ -29,24 +29,6 @@ fragment@2 {
 	};
 };
 
-fragment@6 {
-    target = <&amba>;
-	reg = <0x0006>;
-    __overlay__ {
-        axi_pmu: axi_pmu@40000000 {
-            compatible = "ettus,e3xx-pmu";
-			reg = <0x40000000 0x1000>;
-            syscon = <&devctrl>;
-            ettus,resistor-sense = <10>;
-            ettus,capacity-full = <3200>;
-            interrupt-parent = <&intc>;
-            interrupts = <0 32 1>;
-            interrupt-names = "fw";
-            status = "okay";
-        };
-    };
-};
-
 fragment@5 {
 	target = <&spi0>;
 	reg = <0x0005>;
