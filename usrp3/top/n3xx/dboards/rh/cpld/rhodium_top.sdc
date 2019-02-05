@@ -1,264 +1,412 @@
-## Generated SDC file "rhodium_top.sdc"
-# Author: Humberto Jimenez
-# Based on Mg CPLD constraints by Daniel Jepson.
-
-## Copyright (C) 2017  Intel Corporation. All rights reserved.
-## Your use of Intel Corporation's design tools, logic functions 
-## and other software and tools, and its AMPP partner logic 
-## functions, and any output files from any of the foregoing 
-## (including device programming or simulation files), and any 
-## associated documentation or information are expressly subject 
-## to the terms and conditions of the Intel Program License 
-## Subscription Agreement, the Intel Quartus Prime License Agreement,
-## the Intel MegaCore Function License Agreement, or other 
-## applicable license agreement, including, without limitation, 
-## that your use is for the sole purpose of programming logic 
-## devices manufactured by Intel and sold by Intel or its 
-## authorized distributors.  Please refer to the applicable 
-## agreement for further details.
-
-
-## VENDOR  "Altera"
-## PROGRAM "Quartus Prime"
-## VERSION "Version 17.0.2 Build 602 07/19/2017 SJ Lite Edition"
-
-## DATE    "Wed Nov 15 08:22:11 2017"
-
-##
-## DEVICE  "10M04SAU169I7G"
-##
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Copyright 2019 Ettus Research, A National Instruments Company
+#
+# Timing constraints for Rhodium's MAX 10 board controller
 
 set_time_format -unit ns -decimal_places 3
 
-# All the magic numbers come from the "/n3xx/dboards/rh/doc/rh_timing.xlsx" timing
-# analysis spreadsheet. Analysis should be re-performed every time a board rev occurs
-# that affects the CPLD interfaces.
+# Some constants for constraining the design with the FPGA-centric method:
+#     Maximum trace propagation delay is assumed to be 0.6 ns on any traces
+#     to on-dboard slaves
+set board_delay 0.600
+set clk_uncertainty 0.150
 
-################################################################################
-# PS SPI Slave constraints.
-# These constraints are for the CPLD endpoint. Pass-through constraints are
-# handled in another section.
-#   - PS SPI Clk rate.
-#   - PS SPI Clk to SDI.
-#   - PS SPI Clk to LE.
-#   - PS SPI Clk to SDO.
-################################################################################
+###############################################################################
+# Clocks
+###############################################################################
 
-# Maximum 6 MHz clock rate! This is heavily limited by the read data turnaround time...
-# and could be up to 25 MHz if only performing writes.
-set PsSpiFreq  6000000.0; # In Hz (6 MHz)
+# The PS SPI clock is maximum 10 MHz. It is driven from another source and
+# provided with the data.
+# CPLD_PS_SPI_CLK_25: 10 MHz
+set sclk_ps_period 100.000
 
-create_clock -name {SpiPsClk} \
-             -period [expr 1.0e9 / $PsSpiFreq] \
-             [get_ports {CPLD_PS_SPI_CLK_25}]             
+# Create clock for the PS's SPI interface
+create_clock -name sclk_ps -period $sclk_ps_period \
+    [get_ports CPLD_PS_SPI_CLK_25]
 
-set_clock_uncertainty -to SpiPsClk 0.1ns
+# The PL SPI clock is split into two pieces. For the normal case, the clock
+# frequency is 10 MHz. This is for any read operations.
+#
+# CPLD_PL_SPI_SCLK_18 pass through / read back ONLY: 10 MHz
+set sclk_pl_period 100.000
+create_clock -name sclk_pl -period $sclk_pl_period \
+    [get_ports CPLD_PL_SPI_SCLK_18]
 
-# SDI is both registered in the CPLD and used as a direct passthrough. First constrain
-# the input delay on the local paths inside the CPLD. Passthrough constraints
-# are handled elsewhere.
+# We can go faster for the PL writes to the internal registers and LOs.
+# This rate is not supported for readback, but it helps with getting the DSA
+# settings and LO settings in faster.
+# CPLD_PL_SPI_SCLK_18 internal ONLY: 25 MHz
+set sclk_pl_wr_period 40.000
+create_clock -name sclk_pl_wr -period $sclk_pl_wr_period \
+    [get_ports CPLD_PL_SPI_SCLK_18] -add
 
-set PsSdiInputDelayMax  10.404
-set PsSdiInputDelayMin  -9.564
+# Output clocks for the MAX 10's SPI master interfaces (1 for each slave IC)
+create_generated_clock -source [get_ports CPLD_PS_SPI_CLK_25] \
+    -name clkdist_clk [get_ports CLKDIST_SPI_SCLK]
+create_generated_clock -source [get_ports CPLD_PS_SPI_CLK_25] \
+    -name adc_clk [get_ports ADC_SPI_SCLK_18]
+create_generated_clock -source [get_ports CPLD_PS_SPI_CLK_25] \
+    -name dac_clk [get_ports DAC_SPI_SCLK_18]
+create_generated_clock -source [get_ports CPLD_PS_SPI_CLK_25] \
+    -name phdac_clk [get_ports PHDAC_SPI_SCLK]
 
-# SDI is driven from the PS on the falling edge of the Clk. Worst-case data-clock skew
-# is around +/-10ns due to FPGA routing delays and board buffering. Complete timing
-# analysis is performed and recorded elsewhere.
-set_input_delay -clock SpiPsClk -max $PsSdiInputDelayMax [get_ports CPLD_PS_SPI_SDI_25] -clock_fall
-set_input_delay -clock SpiPsClk -min $PsSdiInputDelayMin [get_ports CPLD_PS_SPI_SDI_25] -clock_fall
+create_generated_clock -source [get_ports CPLD_PL_SPI_SCLK_18] \
+    -master_clock [get_clocks sclk_pl] \
+    -name lo_clk [get_ports LO_SPI_SCLK]
+create_generated_clock -source [get_ports CPLD_PL_SPI_SCLK_18] \
+    -master_clock [get_clocks sclk_pl_wr] \
+    -name lo_wr_clk [get_ports LO_SPI_SCLK] -add
+create_generated_clock -source [get_ports CPLD_PL_SPI_SCLK_18] \
+    -master_clock [get_clocks sclk_pl] \
+    -name lodist_clk [get_ports LODIST_Bd_SPI_SCLK]
 
-# For the CPLD Cs_n, the latch enable is used both as an asynchronous reset and
-# synchronously to latch data. First, constrain the overall input delay for sync use.
-# Technically, Cs_n is asserted and de-asserted many nanoseconds before the clock arrives
-# but we still constrain it identically to the SDI in case something goes amiss.
-set_input_delay -clock SpiPsClk -max $PsSdiInputDelayMax [get_ports CPLD_PS_ADDR0_25] -clock_fall
-set_input_delay -clock SpiPsClk -min $PsSdiInputDelayMin [get_ports CPLD_PS_ADDR0_25] -clock_fall
-# Then set a false path only on the async reset flops.
-set_false_path -from [get_ports {CPLD_PS_ADDR0_25}] -to [get_pins *|clrn]
+# Virtual clock for DSA writes for skew calculations
+#create_generated_clock -source [get_pins lo_gain_table\|dsa1_le\|clk]
+create_generated_clock -source [get_ports CPLD_PL_SPI_SCLK_18] \
+    -master_clock [get_clocks sclk_pl_wr] \
+    -name dsa_reg_clk [get_pins lo_gain_table\|dsa1_le\|q]
 
-# Constrain MISO as snugly as possible through the CPLD without making the tools work
-# too hard. At a 166.667 ns period, this sets the clock-to-out for the CPLD at [10, 50]ns.
-# Math for Max = T_clk/2 - 50 = 166.667/2 - 50 = 33.33 ns.
-# The clock_fall argument is not used, because the tools are already aware of which edge
-# to launch and latch at. This was verified in the TimeQuest Timing Analyzer diagrams.
-set PsSdoOutputDelayMax   33.333
-set PsSdoOutputDelayMin  -10.000
+create_generated_clock -source [get_pins lo_gain_table\|dsa1_le\|q] \
+    -name dsa_clk [get_ports RxLO_DSA_LE]
 
-set_output_delay -clock SpiPsClk -max $PsSdoOutputDelayMax [get_ports CPLD_PS_SPI_SDO_25]
-set_output_delay -clock SpiPsClk -min $PsSdoOutputDelayMin [get_ports CPLD_PS_SPI_SDO_25]
+# PL's pass through clock doesn't interact with internal clock
+set_clock_groups -physically_exclusive \
+    -group [get_clocks {sclk_pl_wr lo_wr_clk dsa_reg_clk dsa_clk}] \
+    -group [get_clocks {sclk_pl lo_clk lodist_clk}]
 
+set_clock_groups -asynchronous \
+    -group [get_clocks {sclk_ps clkdist_clk adc_clk dac_clk phdac_clk}] \
+    -group [get_clocks {sclk_pl sclk_pl_wr lo_clk lodist_clk}]
 
+set_clock_uncertainty -to [get_clocks {sclk_ps sclk_pl sclk_pl_wr clkdist_clk
+    adc_clk dac_clk phdac_clk lo_clk lo_wr_clk lodist_clk dsa_reg_clk dsa_clk}] \
+    $clk_uncertainty
 
-################################################################################
-# PL SPI Slave constraints.
-# These constraints are for the CPLD endpoint. Pass-through constraints are
-# handled in another section.
-#   - PL SPI Clk rate.
-#   - PL SPI Clk to SDI.
-#   - PL SPI Clk to LE.
-#   - PL SPI Clk to SDO.
-################################################################################
+###############################################################################
+# Timing Budget Calculations
+###############################################################################
+# Here we carve out some timing budget for the master's SPI interfaces.
+# The master will use these values to time its SPI interface.
+# The PL's write-only values are smaller because there are no external chip
+# dependencies.
+set setup_ps 15
+set hold_ps 30
 
-# Maximum 62.500 MHz clock rate for writes!
-# Maximum 15.625 MHz clock rate for reads!
+# PL SPI is constrained on the master with an allowed skew value of +/- 3 ns
+# relative to the launch clock
+# Increase to 5 ns here for more margin
+set pl_skew 5
 
-set PlSpiFreqW 62500000.0; # In Hz (250 MHz/4) = 62.5 MHz
-set PlSpiFreqR 15625000.0; # In Hz (250 MHz/16) = 15.625 MHz
+# Clocks are nominally a 50% duty cycle, so difference between latch and
+# launch is half a period, so subtract allowed skew from that for setup/hold
+# specification. The half period is due to launch being the falling edge and
+# latch being the rising edge.
+set setup_pl [expr {$sclk_pl_period / 2 - $pl_skew}]
+set hold_pl [expr {$sclk_pl_period / 2 - $pl_skew}]
+set setup_pl_wr [expr {$sclk_pl_wr_period / 2 - $pl_skew}]
+set hold_pl_wr [expr {$sclk_pl_wr_period / 2 - $pl_skew}]
 
-create_clock -name {PlSpiClkW} \
-             -period [expr 1.0e9 / $PlSpiFreqW] \
-             [get_ports {CPLD_PL_SPI_SCLK_18}]                    
+# Calculate input delays relative to falling edge (launch)
+# Min is hold time after previous rising edge (previous latch)
+# Max is setup time before next rising edge (next latch)
+set input_delay_min_ps [expr {-$sclk_ps_period / 2 + $hold_ps}]
+set input_delay_max_ps [expr {$sclk_ps_period / 2 - $setup_ps}]
+set input_delay_min_pl [expr {-$sclk_pl_period / 2 + $hold_pl}]
+set input_delay_max_pl [expr {$sclk_pl_period / 2 - $setup_pl}]
+set input_delay_min_pl_wr [expr {-$sclk_pl_wr_period / 2 + $hold_pl_wr}]
+set input_delay_max_pl_wr [expr {$sclk_pl_wr_period / 2 - $setup_pl_wr}]
 
-create_clock -name {PlSpiClkR} \
-             -period [expr 1.0e9 / $PlSpiFreqR] \
-             [get_ports {CPLD_PL_SPI_SCLK_18}] \
-             -add             
+# Again, carve out timing budget for master's SPI interface
+# Readback on the master will depend on clk-to-q of our slave.
+# These values will need to be at least as large as the worst slave.
+# Clock arrival at the slave will be delayed by propagation through the MAX 10
+# Data to the MAX 10's input port will be further delayed by slave's clk-to-q
+# On top of that, we then need budget for the data to cross the MAX 10, head
+# out the I/O, and propagate to the master's pin. Then the master will need
+# some budget for setup time.
+#
+# Here is what we'll budget:
+# Clk propagation to I/O: 7 ns
+# Clk trace delay: 1 ns
+# Worst-case chip clk-to-q: 10 ns
+# Data trace delay: 1 ns
+# Data propagation delay from input pin to output pin: 8 ns
+# Total clk-to-q from MAX 10 sclk input to MAX 10 output: 27 ns
+#
+# Then master's budget is 23 ns for clock delay + data delay + setup time
+set clk_q_max_ps 27.000
 
-set_clock_uncertainty -to PlSpiClkW 0.1ns
-set_clock_uncertainty -to PlSpiClkR 0.1ns
+# For the PL, the worst-case chip changes to 2 ns, so there is more budget
+set clk_q_max_pl 20.000
 
-# Technically, only one clock can be driven from the FPGA for the PL SPI, so
-# we treat both clocks as logically exclusive to tell the tools to not analyze
-# the paths between them.
-set_clock_groups -logically_exclusive -group [get_clocks {PlSpiClkR}] -group [get_clocks {PlSpiClkW}]
+# clk-to-q determines one side of the data invalid window
+# The maximum output delay is simply latch edge - clk-to-q
+# Launch is falling edge, and latch is rising edge, so...
+set output_delay_max_ps [expr {$sclk_ps_period / 2 - $clk_q_max_ps}]
+set output_delay_max_pl [expr {$sclk_pl_period / 2 - $clk_q_max_pl}]
 
-# SDI is both registered in the CPLD and used as a direct passthrough. First constrain
-# the input delay on the local paths inside the CPLD. Passthrough constraints
-# are handled elsewhere.
-
-set PlSdiInputDelayMax   3.445
-set PlSdiInputDelayMin  -3.427
-
-# SDI is driven from the FPGA on the falling edge of the Clk. Worst-case data-clock skew
-# is around +/-5ns. Complete timing analysis is performed and recorded elsewhere.
-set_input_delay -clock PlSpiClkW -max $PlSdiInputDelayMax [get_ports CPLD_PL_SPI_SDI_18] -clock_fall
-set_input_delay -clock PlSpiClkW -min $PlSdiInputDelayMin [get_ports CPLD_PL_SPI_SDI_18] -clock_fall
-
-# For the CPLD Cs_n, the latch enable is used both as an asynchronous reset and
-# synchronously to latch data. First, constrain the overall input delay for sync use.
-# Technically, Cs_n is asserted and de-asserted many nanoseconds before the clock arrives
-# but we still constrain it identically to the SDI in case something goes amiss.
-set_input_delay -clock PlSpiClkW -max $PlSdiInputDelayMax [get_ports CPLD_PL_SPI_ADDR0_18] -clock_fall
-set_input_delay -clock PlSpiClkW -min $PlSdiInputDelayMin [get_ports CPLD_PL_SPI_ADDR0_18] -clock_fall
-# Then set a false path only on the async reset flops.
-set_false_path -from [get_ports {CPLD_PL_SPI_ADDR0_18}] -to [get_pins *|clrn]
-
-# Constrain MISO as snugly as possible through the CPLD without making the tools work too
-# hard. At a 64 ns period (15.625 MHz), this sets the clock-to-out for the CPLD at [5, 10]ns.
-# Math for Max = T_clk/2 - 22 = 64/2 - 22 = 10 ns.
-set PlSdoOutputDelayMax  22.000
-set PlSdoOutputDelayMin  -5.000
-
-set_output_delay -clock PlSpiClkR -max $PlSdoOutputDelayMax [get_ports CPLD_PL_SPI_SDO_18]
-set_output_delay -clock PlSpiClkR -min $PlSdoOutputDelayMin [get_ports CPLD_PL_SPI_SDO_18]
-
-
-## Passthrough Constraints ##############################################################
-# SPI Passthroughs: constrain min and max delays for outputs and inputs.
-# Since the SDI ports have input delays pre-defined above, we have to remove those from
-# the delay analysis here by adding the input delay to the constraint.
-# Similarly, for the SDO pins add the output delay to the constraint.
-
-# - PsClk passthrough
-#   - SDI passthrough for LMK, Phase DAC, DAC, and ADC
-#   - Cs_n passthrough for LMK, Phase DAC, DAC, and ADC
-#   - SDO return mux passthrough for LMK, DAC, and ADC
-
-# These values give us a constrained skew of +/- 25 ns considering worst delay combinations.
-# For an overconstrained 166.67 ns period (6 MHz, above), 50 ns of total skew is accepted.
-# In reality, this interface will be running at ~1 MHz (1000 ns), so we have plenty of time.
-set PsSpiMaxDelay  30.000
-set PsSpiMinDelay   5.000
-
-## PS
-# SDI
-set_max_delay -to [get_ports {CLKDIST_SPI_SDIO PHDAC_SPI_SDI DAC_SPI_SDIO_18 ADC_SPI_SDIO_18}] \
-              [expr $PsSdiInputDelayMax + $PsSpiMaxDelay]
-set_min_delay -to [get_ports {CLKDIST_SPI_SDIO PHDAC_SPI_SDI DAC_SPI_SDIO_18 ADC_SPI_SDIO_18}] \
-              [expr $PsSdiInputDelayMin + $PsSpiMinDelay]
-# CS
-set_max_delay -to [get_ports {CLKDIST_SPI_CS_L PHDAC_SPI_CS_L DAC_SPI_CS_L_18 ADC_SPI_CS_L_18}] \
-              $PsSpiMaxDelay
-set_min_delay -to [get_ports {CLKDIST_SPI_CS_L PHDAC_SPI_CS_L DAC_SPI_CS_L_18 ADC_SPI_CS_L_18}] \
-              $PsSpiMinDelay
-# CLK
-set_max_delay -to [get_ports {CLKDIST_SPI_SCLK PHDAC_SPI_SCLK DAC_SPI_SCLK_18 ADC_SPI_SCLK_18}] \
-              $PsSpiMaxDelay
-set_min_delay -to [get_ports {CLKDIST_SPI_SCLK PHDAC_SPI_SCLK DAC_SPI_SCLK_18 ADC_SPI_SCLK_18}] \
-              $PsSpiMinDelay
-# SDO
-set_max_delay -from [get_ports {CLKDIST_SPI_SDIO DAC_SPI_SDIO_18 ADC_SPI_SDIO_18}] \
-              [expr $PsSpiMaxDelay + $PsSdoOutputDelayMax]
-set_min_delay -from [get_ports {CLKDIST_SPI_SDIO DAC_SPI_SDIO_18 ADC_SPI_SDIO_18}] \
-              [expr $PsSpiMinDelay + $PsSdoOutputDelayMin]
-
-# - PlClk passthrough
-#   - SDI passthrough for TX-LO, RX-LO, and LO Dist.
-#   - Cs_n passthrough for TX-LO, RX-LO, and LO Dist.
-#   - SDO return mux passthrough for TX-LO, and RX-LO.
-
-# These values give us a constrained skew of +/- 7 ns considering worst delay combinations.
-# For an overconstrained 64 ns period (15.625 MHz, above), 14 ns of total skew is accepted.
-set PlSpiMaxDelay  10.000
-set PlSpiMinDelay   3.000
-
-## PL
-# SDI
-set_max_delay -to [get_ports {LO_SPI_SDI LODIST_Bd_SPI_SDI}] \
-              [expr $PlSdiInputDelayMax + $PlSpiMaxDelay]
-set_min_delay -to [get_ports {LO_SPI_SDI LODIST_Bd_SPI_SDI}] \
-              [expr $PlSdiInputDelayMin + $PlSpiMinDelay]
-# CS
-set_max_delay -to [get_ports {LO_TX_CS_L LO_RX_CS_L LODIST_Bd_SPI_CS_L}] \
-              $PlSpiMaxDelay
-set_min_delay -to [get_ports {LO_TX_CS_L LO_RX_CS_L LODIST_Bd_SPI_CS_L}] \
-              $PlSpiMinDelay
-# CLK
-set_max_delay -to [get_ports {LO_SPI_SCLK LODIST_Bd_SPI_SCLK}] \
-              $PlSpiMaxDelay
-set_min_delay -to [get_ports {LO_SPI_SCLK LODIST_Bd_SPI_SCLK}] \
-              $PlSpiMinDelay
-# SDO
-set_max_delay -from [get_ports {LOSYNTH_RX_MUXOUT LOSYNTH_TX_MUXOUT}] \
-              [expr $PlSpiMaxDelay + $PlSdoOutputDelayMax]
-set_min_delay -from [get_ports {LOSYNTH_RX_MUXOUT LOSYNTH_TX_MUXOUT}] \
-              [expr $PlSpiMinDelay + $PlSdoOutputDelayMin]
+# The minimum output delay represents the other edge of the data invalid
+# window. Our clock is likely quite delayed already, but add a little more
+# margin for hold time.
+set output_delay_min_ps -5.000
+set output_delay_min_pl -5.000
 
 
-set_max_skew -to [get_ports Rx_DSA_*] 1.3
-set_max_skew -to [get_ports Tx_DSA_*] 1.3
-set_max_skew -to [get_ports {LO_DSA_* RxLO_DSA_LE TxLO_DSA_LE}] 1.3
+###############################################################################
+# I/O groups (for reference later)
+###############################################################################
 
-set_false_path -to [get_ports {Tx_Sw1_Ctrl_1
-Tx_Sw1_Ctrl_2
-Tx_Sw2_Ctrl_1
-Tx_Sw2_Ctrl_2
-Tx_Sw3_Ctrl_1
-Tx_Sw3_Ctrl_2
-Tx_Sw3_Ctrl_3
-Tx_Sw3_Ctrl_4
-Rx_LO_Input_Select
-Rx_LO_Filter_Sw_1
-Rx_LO_Filter_Sw_2
-Tx_LO_Input_Select
-Tx_LO_Filter_Sw_1
-Tx_LO_Filter_Sw_2
-Tx_Sw5_Ctrl_1
-Tx_Sw5_Ctrl_2
-Rx_Sw6_Ctrl_1
-Rx_Sw6_Ctrl_2
-Tx_HB_LB_Select
-Rx_HB_LB_Select
-Cal_iso_Sw_Ctrl
-Rx_Sw2_Ctrl
-Rx_Sw1_Ctrl_1
-Rx_Sw1_Ctrl_2
-Rx_Sw3_Ctrl_1
-Rx_Sw3_Ctrl_2
-Rx_Sw4_Ctrl_1
-Rx_Sw4_Ctrl_2
-Rx_Sw4_Ctrl_3
-Rx_Sw4_Ctrl_4
-Rx_Demod_ADJ_1
-Rx_Demod_ADJ_2}]
-           
+# Chip selects
+set ps_csb [get_ports {
+    CPLD_PS_ADDR0_25
+    CPLD_PS_ADDR1_25
+    CPLD_PS_SPI_LE_25
+    usrp_io[12]
+    usrp_io[13]
+}]
+set pl_csb [get_ports {
+    CPLD_PL_SPI_ADDR0_18
+    CPLD_PL_SPI_ADDR1_18
+    CPLD_PL_SPI_ADDR2_18
+    CPLD_PL_SPI_LE_18
+}]
+
+# Data for internal PL SPI
+set pl_src [get_ports {
+    CPLD_PL_SPI_SDI_18
+}]
+
+# Passthrough inputs (forward direction)
+# CPLD_PS_SPI_CLK_25 and CPLD_PL_SPI_SCLK_18 are special
+set ps_pt_src [get_ports {CPLD_PS_SPI_LE_25
+                          usrp_io[12]
+                          usrp_io[13]
+                          CPLD_PS_ADDR1_25
+                          CPLD_PS_SPI_SDI_25
+              }]
+
+set pl_pt_src [get_ports {CPLD_PL_SPI_LE_18
+                          CPLD_PL_SPI_ADDR1_18
+                          CPLD_PL_SPI_ADDR2_18
+                          CPLD_PL_SPI_SDI_18
+              }]
+
+# Passthrough outputs (forward direction)
+# And inputs from the SPI slaves (readback direction)
+set clkdist_spi_out [get_ports {
+    CLKDIST_SPI_CS_L
+    CLKDIST_SPI_SDIO
+}]
+
+set clkdist_spi_in [get_ports {
+    CLKDIST_SPI_SDIO
+}]
+
+set phdac_spi [get_ports {
+    PHDAC_SPI_CS_L
+    PHDAC_SPI_SDI
+}]
+
+set dac_spi_out [get_ports {
+    DAC_SPI_CS_L_18
+    DAC_SPI_SDIO_18
+}]
+
+set dac_spi_in [get_ports {
+    DAC_SPI_SDIO_18
+}]
+
+set adc_spi_out [get_ports {
+    ADC_SPI_CS_L_18
+    ADC_SPI_SDIO_18
+}]
+
+set adc_spi_in [get_ports {
+    ADC_SPI_SDIO_18
+}]
+
+set lo_spi_out [get_ports {
+    LO_TX_CS_L
+    LO_RX_CS_L
+    LO_SPI_SDI
+}]
+
+set lo_spi_in [get_ports {
+    LOSYNTH_RX_MUXOUT
+    LOSYNTH_TX_MUXOUT
+}]
+
+set lodist_spi_out [get_ports {
+    LODIST_Bd_SPI_CS_L
+    LODIST_Bd_SPI_SDI
+}]
+
+# Readback outputs
+set ps_rb_out [get_ports CPLD_PS_SPI_SDO_25]
+set pl_rb_out [get_ports CPLD_PL_SPI_SDO_18]
+
+##############################################################################
+# Chip-selects provide async resets
+##############################################################################
+set_false_path -from $ps_csb -to [get_pins *|clrn]
+set_false_path -from $pl_csb -to [get_pins *|clrn]
+
+# Also ignore setup/hold analysis for chip-selects affecting readback path
+# These are available many cycles before readback begins and have
+# combinatorial paths to the output
+set_false_path -from $ps_csb -to $ps_rb_out
+set_false_path -from $pl_csb -to $pl_rb_out
+
+set_input_delay -clock sclk_ps -clock_fall -max $input_delay_max_ps \
+    [get_ports CPLD_PS_ADDR0_25]
+set_input_delay -clock sclk_ps -clock_fall -min $input_delay_min_ps \
+    [get_ports CPLD_PS_ADDR0_25]
+
+set_input_delay -clock sclk_pl -clock_fall -max $input_delay_max_pl \
+    [get_ports CPLD_PL_SPI_ADDR0_18]
+set_input_delay -clock sclk_pl -clock_fall -min $input_delay_min_pl \
+    [get_ports CPLD_PL_SPI_ADDR0_18]
+
+set_input_delay -clock sclk_pl_wr -clock_fall -max $input_delay_max_pl_wr \
+    [get_ports CPLD_PL_SPI_ADDR0_18] -add
+set_input_delay -clock sclk_pl_wr -clock_fall -min $input_delay_min_pl_wr \
+    [get_ports CPLD_PL_SPI_ADDR0_18] -add
+
+
+##############################################################################
+# Input delays from SPI master
+##############################################################################
+set_input_delay -clock sclk_ps -clock_fall -max $input_delay_max_ps $ps_pt_src
+set_input_delay -clock sclk_ps -clock_fall -min $input_delay_min_ps $ps_pt_src
+
+set_input_delay -clock sclk_pl -clock_fall -max $input_delay_max_pl $pl_pt_src
+set_input_delay -clock sclk_pl -clock_fall -min $input_delay_min_pl $pl_pt_src
+
+set_input_delay -clock sclk_pl_wr -clock_fall -max $input_delay_max_pl_wr $pl_src -add
+set_input_delay -clock sclk_pl_wr -clock_fall -min $input_delay_min_pl_wr $pl_src -add
+
+##############################################################################
+# Output delays to each SPI slave (uses setup/hold times from data sheet)
+##############################################################################
+set adc_setup 4
+set adc_hold 2
+set_output_delay -clock adc_clk -max [expr {$adc_setup + $board_delay}] \
+    $adc_spi_out
+set_output_delay -clock adc_clk -min [expr {-$adc_hold - $board_delay}] \
+    $adc_spi_out
+
+set dac_setup 10
+set dac_hold 5
+set_output_delay -clock dac_clk -max [expr {$dac_setup + $board_delay}] \
+    $dac_spi_out
+set_output_delay -clock dac_clk -min [expr {-$dac_hold - $board_delay}] \
+    $dac_spi_out
+
+set phdac_setup 5
+set phdac_hold 5
+set_output_delay -clock phdac_clk -max [expr {$phdac_setup + $board_delay}] \
+    $phdac_spi
+set_output_delay -clock phdac_clk -min [expr {-$phdac_hold - $board_delay}] \
+    $phdac_spi
+
+set clkdist_setup 10
+set clkdist_hold 10
+set_output_delay -clock clkdist_clk -max [expr {$clkdist_setup + $board_delay}] \
+    $clkdist_spi_out
+set_output_delay -clock clkdist_clk -min [expr {-$clkdist_hold - $board_delay}] \
+    $clkdist_spi_out
+
+set lo_setup 2
+set lo_hold 2
+set_output_delay -clock lo_wr_clk -max [expr {$lo_setup + $board_delay}] \
+    $lo_spi_out
+set_output_delay -clock lo_wr_clk -min [expr {-$lo_hold - $board_delay}] \
+    $lo_spi_out
+
+##############################################################################
+# Input delays from each SPI slave (uses clk-to-q times from data sheet)
+# One board delay for clock, another for data
+##############################################################################
+set lo_clk_q 2
+set_input_delay -clock lo_clk -clock_fall -max [expr {$lo_clk_q + $board_delay + $board_delay}] \
+    $lo_spi_in
+set_input_delay -clock lo_clk -clock_fall -min 0 \
+    $lo_spi_in
+
+set adc_clk_q 10
+set dac_clk_q 10
+set clkdist_clk_q 10
+set_input_delay -clock adc_clk -clock_fall -max [expr {$adc_clk_q + $board_delay + $board_delay}] \
+    $adc_spi_in
+set_input_delay -clock adc_clk -clock_fall -min 0 \
+    $adc_spi_in
+set_input_delay -clock dac_clk -clock_fall -max [expr {$dac_clk_q + $board_delay + $board_delay}] \
+    $dac_spi_in
+set_input_delay -clock dac_clk -clock_fall -min 0 \
+    $dac_spi_in
+set_input_delay -clock clkdist_clk -clock_fall  -max [expr {$clkdist_clk_q + $board_delay + $board_delay}] \
+    $clkdist_spi_in
+set_input_delay -clock clkdist_clk -clock_fall  -min 0 \
+    $clkdist_spi_in
+
+
+##############################################################################
+# Output delays for readback path
+##############################################################################
+set_output_delay -clock sclk_ps -max $output_delay_max_ps $ps_rb_out
+set_output_delay -clock sclk_ps -min $output_delay_min_ps $ps_rb_out
+
+set_output_delay -clock sclk_pl -max $output_delay_max_pl $pl_rb_out
+set_output_delay -clock sclk_pl -min $output_delay_min_pl $pl_rb_out
+
+##############################################################################
+# GPIOs and DSAs
+# Outputs that aren't timing-critical
+##############################################################################
+set gpos [get_ports {Tx_Sw*
+                     Rx_LO_*
+                     Tx_LO_*
+                     Rx_Sw*
+                     Rx_Demod_*
+                     Tx_HB_LB_Select
+                     Rx_HB_LB_Select
+                     Cal_iso_Sw_Ctrl
+                     LODIST_Bd_IO1
+         }]
+
+# Inputs that aren't timing-critical
+set gpis [get_ports {LO_SYNC
+                     CPLD_ATR_TX_18
+                     CPLD_ATR_RX_18
+                     DAC_Alarm_18
+                     CLKDIST_Status*
+                     LODIST_Bd_IO1
+         }]
+
+# DSAs (special skew needs)
+# RxLO_DSA_LE used for skew basis
+set dsas [get_ports {Tx_DSA*
+                     Rx_DSA*
+                     TxLO_DSA*
+                     LO_DSA*
+         }]
+
+# Just do false paths for gpios
+set_false_path -to $gpos
+set_false_path -from $gpis
+
+# Unused
+set_false_path -to $lodist_spi_out
+
+# DSA skew timing
+# Earlier, we created a "clock" for one of the DSA latch enable signals
+# Use set_output_delay to constrain skew around the latch enable
+#     set_multicycle_path is used to make latch clock = launch clock for setup
+# Constrain skew to 8 ns -- controller nominally does 120 ns minimum between
+# edges, and 100 ns is the DSA's requirement for setup/hold
+set dsa_skew 8.0
+set_output_delay -clock dsa_clk -max -$dsa_skew $dsas
+set_output_delay -clock dsa_clk -min $dsa_skew $dsas
+set_multicycle_path -start -setup 0 -to $dsas
+

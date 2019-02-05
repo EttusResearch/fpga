@@ -81,22 +81,29 @@ create_generated_clock -name radio_clk_b_2x [get_pins {dbb_core/RadioClockingx/R
 # Define clocks on the PL SPI clock output pins for both DBs. Actual divider values are
 # set by SW at run-time. Current divider value is 125 based on what radio clock
 # rate is set.
-# For the CPLD SPI endpoint alone, we need it to run at ~50 MHz (writes only), this means
-# that at times, the PL SPI will have its divider set to 5 (radio_clock = 250 MHz) or 4
+# For the CPLD SPI endpoint alone, we need it to run at ~25 MHz (writes only), this means
+# that at times, the PL SPI will have its divider set to 10 (radio_clock = 250 MHz) or 8
 # (radio_clock = 200 MHz).
-# Using an overconstraining approach, we set the divider to 4.
-# Also, having a divider value set to an even number makes timing analysis much easier
-# for constraining skew, due to how the tools interpret the edges.
-set PL_SPI_DIVIDE_VAL 4
+# The readback clock is lower (~10 MHz), so create a separate clock for it.
+# Use readback divide value of 24 for an even divider (and some overconstraining).
+set PL_SPI_DIVIDE_VAL 10
+set PL_SPI_RB_DIVIDE_VAL 24
 set PL_SPI_CLK_A [get_ports DBA_CPLD_PL_SPI_SCLK]
 create_generated_clock -name pl_spi_clk_a \
   -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_A]/C] \
   -divide_by $PL_SPI_DIVIDE_VAL $PL_SPI_CLK_A
+create_generated_clock -name pl_spi_rb_clk_a \
+  -master_clock [get_clocks radio_clk] \
+  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_A]/C] \
+  -divide_by $PL_SPI_RB_DIVIDE_VAL -add $PL_SPI_CLK_A
 set PL_SPI_CLK_B [get_ports DBB_CPLD_PL_SPI_SCLK]
 create_generated_clock -name pl_spi_clk_b \
   -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_B]/C] \
   -divide_by $PL_SPI_DIVIDE_VAL $PL_SPI_CLK_B
-
+create_generated_clock -name pl_spi_rb_clk_b \
+  -master_clock [get_clocks radio_clk] \
+  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_B]/C] \
+  -divide_by $PL_SPI_RB_DIVIDE_VAL -add $PL_SPI_CLK_B
 
 
 #*******************************************************************************
@@ -112,7 +119,14 @@ set_clock_groups -asynchronous -group [get_clocks mgt_clk_dbb -include_generated
 # virtual clock as well as the real ones.
 set_clock_groups -asynchronous -group [get_clocks {fpga_clk_a* fpga_clk_b*} -include_generated_clocks]
 
-
+# The SPI readback and write clocks cannot be active at the same time, as they
+# originate from the same pin.
+set_clock_groups -physically_exclusive \
+    -group [get_clocks pl_spi_rb_clk_a] \
+    -group [get_clocks pl_spi_clk_a]
+set_clock_groups -physically_exclusive \
+    -group [get_clocks pl_spi_rb_clk_b] \
+    -group [get_clocks pl_spi_clk_b]
 
 #*******************************************************************************
 ## PS SPI: since these lines all come from the PS and I don't have access to the
@@ -199,33 +213,30 @@ set_multicycle_path -hold  -from [get_clocks radio_clk] -to [get_clocks pl_spi_c
 
 # For SDO input timing (MISO), we need to look at the CPLD's constraints on turnaround
 # time plus any board propagation delay.
+# CPLD clk-to-q is 20 ns, then add 1.2 ns for board delay (once for clock, once for data)
+# For hold time, assume zero delay (likely overconstraining here, due to board delays)
 set MISO_INPUT_A [get_ports DBA_CPLD_PL_SPI_MISO]
 set MISO_INPUT_B [get_ports DBB_CPLD_PL_SPI_MISO]
-set_input_delay -clock [get_clocks pl_spi_clk_a] -clock_fall -max  12.192  $MISO_INPUT_A
-set_input_delay -clock [get_clocks pl_spi_clk_a] -clock_fall -min   6.496  $MISO_INPUT_A
-set_input_delay -clock [get_clocks pl_spi_clk_b] -clock_fall -max  12.192  $MISO_INPUT_B
-set_input_delay -clock [get_clocks pl_spi_clk_b] -clock_fall -min   6.496  $MISO_INPUT_B
+set_input_delay -clock [get_clocks pl_spi_rb_clk_a] -clock_fall -max  22.400  $MISO_INPUT_A
+set_input_delay -clock [get_clocks pl_spi_rb_clk_a] -clock_fall -min   0.000  $MISO_INPUT_A
+set_input_delay -clock [get_clocks pl_spi_rb_clk_b] -clock_fall -max  22.400  $MISO_INPUT_B
+set_input_delay -clock [get_clocks pl_spi_rb_clk_b] -clock_fall -min   0.000  $MISO_INPUT_B
+
 # Since the input delay span is clearly more than a period of the radio_clk, we need to
 # add a multicycle path here as well to define the clock divider ratio. The MISO data
 # is driven on the falling edge of the SPI clock and captured on the rising edge, so we
 # only have one half of a SPI clock cycle for our setup. Hold is left alone and is OK
 # as-is due to the delays in the CPLD and board.
-# IMPORTANT! The pl_spi_clk_* full rate is only used for writes, any readback from the
-# endpoint must not be performed at rate higher than pl_spi_clk_* / 4.
-# For example, if we overconstrain pl_spi_clk_* @ 62.5 MHz, the fastest rate we will
-# constrain the FPGA is to 62.5/4 = 15.625 MHz.
-# This is the reason why we multiply the PL_SPI_DIVIDE_VAL by 4 below:
-set SETUP_CYCLES [expr {$PL_SPI_DIVIDE_VAL * 4 / 2}]
+set SETUP_CYCLES [expr {$PL_SPI_RB_DIVIDE_VAL / 2}]
 set HOLD_CYCLES 0
-set_multicycle_path -setup -from [get_clocks pl_spi_clk_a] -through $MISO_INPUT_A \
+set_multicycle_path -setup -from [get_clocks pl_spi_rb_clk_a] -through $MISO_INPUT_A \
   $SETUP_CYCLES
-set_multicycle_path -hold  -from [get_clocks pl_spi_clk_a] -through $MISO_INPUT_A -end \
+set_multicycle_path -hold  -from [get_clocks pl_spi_rb_clk_a] -through $MISO_INPUT_A -end \
   [expr {$SETUP_CYCLES + $HOLD_CYCLES - 1}]
-set_multicycle_path -setup -from [get_clocks pl_spi_clk_b] -through $MISO_INPUT_B \
+set_multicycle_path -setup -from [get_clocks pl_spi_rb_clk_b] -through $MISO_INPUT_B \
   $SETUP_CYCLES
-set_multicycle_path -hold  -from [get_clocks pl_spi_clk_b] -through $MISO_INPUT_B -end \
+set_multicycle_path -hold  -from [get_clocks pl_spi_rb_clk_b] -through $MISO_INPUT_B -end \
   [expr {$SETUP_CYCLES + $HOLD_CYCLES - 1}]
-
 
 #*******************************************************************************
 ## SYSREF/SYNC JESD Timing

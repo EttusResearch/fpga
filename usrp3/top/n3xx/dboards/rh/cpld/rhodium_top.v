@@ -130,7 +130,7 @@ output    Cal_iso_Sw_Ctrl
 
 localparam GIT_HASH = 36'h`GIT_HASH;
 localparam PROD_SIGNATURE   = 16'h0045; // Product signature (Rhodium atomic number in BCD)
-localparam REVISION_MINOR   = 16'h0000;
+localparam REVISION_MINOR   = 16'h0001;
 localparam REVISION_MAJOR   = 16'h0004;
 localparam CPLD_BUILD_LSB   = GIT_HASH[15:0]; // Build code LSB
 localparam CPLD_BUILD_MSB   = GIT_HASH[31:16]; // Build code MSB
