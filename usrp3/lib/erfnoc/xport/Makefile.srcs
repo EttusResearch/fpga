@@ -7,8 +7,8 @@
 ##################################################
 # RFNoC Utility Sources
 ##################################################
-RFNOC_UTIL_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/utils/, \
-chdr_trim_payload.v \
-context_handler_sync.v \
-ctrlport_timer.v \
+RFNOC_XPORT_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/xport/, \
+chdr_xport_adapter_generic.v \
+eth_ipv4_chdr64_adapter.v \
+eth_ipv4_chdr64_dispatch.v \
 ))

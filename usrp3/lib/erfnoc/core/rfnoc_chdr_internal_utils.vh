@@ -419,9 +419,11 @@ endfunction
 //  OP specific fields
 // -----------------------
 
-localparam [7:0] NODE_TYPE_XBAR       = 8'd1;
-localparam [7:0] NODE_TYPE_STREAM_EP  = 8'd2;
-localparam [7:0] NODE_TYPE_XPORT      = 8'd3;
+localparam [7:0] NODE_TYPE_XBAR          = 8'd1;
+localparam [7:0] NODE_TYPE_STREAM_EP     = 8'd2;
+
+// ../xports defines more transport types
+localparam [7:0] NODE_TYPE_XPORT_BASE    = 8'd64;
 
 function [47:0] chdr_mgmt_build_node_info(
   input [9:0] num_outputs,
