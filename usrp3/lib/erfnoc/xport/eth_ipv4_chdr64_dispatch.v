@@ -19,8 +19,13 @@
 //  - DROP_UNKNOWN_MAC: Drop packets not addressed to us?
 //
 // Signals:
-//  - s_axis_* : Input AXI-Stream CHDR bus
-//  - m_axis_* : Output AXI-Stream CHDR bus
+//   - s_mac_*: The input Ethernet stream from the MAC (plus tuser for trailing bytes + err)
+//   - m_chdr_*: The output CHDR stream to the rfnoc infrastructure
+//   - m_cpu_*: The output Ethernet stream to the CPU (plus tuser for trailing bytes + err)
+//   - my_eth_addr: The Ethernet (MAC) address of this endpoint
+//   - my_ipv4_addr: The IPv4 address of this endpoint
+//   - my_udp_chdr_port: The UDP port allocated for CHDR traffic on this endpoint
+//
 
 module eth_ipv4_chdr64_dispatch #(
   parameter [0:0] DROP_UNKNOWN_MAC = 1

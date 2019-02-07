@@ -165,8 +165,8 @@ module chdr_crossbar_nxn #(
   end endgenerate
 
   wire [CHDR_W-1:0]          i_tdata   [0:NPORTS-1];
-  wire [NPORTS_W-1:0]        i_tdest   [0:NPORTS-1];
-  wire                       i_tid     [0:NPORTS-1];
+  wire [9:0]                 i_tdest   [0:NPORTS-1];
+  wire [1:0]                 i_tid     [0:NPORTS-1];
   wire                       i_tlast   [0:NPORTS-1];
   wire                       i_tvalid  [0:NPORTS-1];
   wire                       i_tready  [0:NPORTS-1];
@@ -227,8 +227,8 @@ module chdr_crossbar_nxn #(
         );
       end else begin
         assign i_tdata      [n] = s_axis_tdata [(n*CHDR_W)+:CHDR_W];
-        assign i_tdest      [n] = 'd0;
-        assign i_tid        [n] = 1'b0;
+        assign i_tid        [n] = CHDR_MGMT_ROUTE_EPID;
+        assign i_tdest      [n] = 10'd0;  // Unused
         assign i_tlast      [n] = s_axis_tlast [n];
         assign i_tvalid     [n] = s_axis_tvalid[n];
         assign s_axis_tready[n] = i_tready     [n];
@@ -244,12 +244,12 @@ module chdr_crossbar_nxn #(
       // - Stores and gates an incoming packet
       // - Looks up destination in routing table and attaches a tdest for the packet
       chdr_xb_ingress_buff #(
-        .WIDTH(CHDR_W), .MTU(MTU), .DEST_W(NPORTS_W)
+        .WIDTH(CHDR_W), .MTU(MTU), .DEST_W(NPORTS_W), .NODE_ID(n)
       ) buf_i (
         .clk                 (clk                                  ),
         .reset               (reset                                ),
         .s_axis_chdr_tdata   (i_tdata      [n]                     ),
-        .s_axis_chdr_tdest   (i_tdest      [n]                     ),
+        .s_axis_chdr_tdest   (i_tdest      [n][NPORTS_W-1:0]       ),
         .s_axis_chdr_tid     (i_tid        [n]                     ),
         .s_axis_chdr_tlast   (i_tlast      [n]                     ),
         .s_axis_chdr_tvalid  (i_tvalid     [n]                     ),

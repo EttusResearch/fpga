@@ -362,13 +362,14 @@ function [2:0] chdr_w_to_enum(input integer bits);
 endfunction
 
 localparam [7:0] CHDR_MGMT_OP_NOP         = 8'd0;
-localparam [7:0] CHDR_MGMT_OP_SEL_DEST    = 8'd1;
-localparam [7:0] CHDR_MGMT_OP_CFG_ROUTER  = 8'd2;
-localparam [7:0] CHDR_MGMT_OP_INFO_REQ    = 8'd3;
-localparam [7:0] CHDR_MGMT_OP_INFO_RESP   = 8'd4;
-localparam [7:0] CHDR_MGMT_OP_CFG_WR_REQ  = 8'd5;
-localparam [7:0] CHDR_MGMT_OP_CFG_RD_REQ  = 8'd6;
-localparam [7:0] CHDR_MGMT_OP_CFG_RD_RESP = 8'd7;
+localparam [7:0] CHDR_MGMT_OP_ADVERTISE   = 8'd1;
+localparam [7:0] CHDR_MGMT_OP_SEL_DEST    = 8'd2;
+localparam [7:0] CHDR_MGMT_OP_CFG_ROUTER  = 8'd3;
+localparam [7:0] CHDR_MGMT_OP_INFO_REQ    = 8'd4;
+localparam [7:0] CHDR_MGMT_OP_INFO_RESP   = 8'd5;
+localparam [7:0] CHDR_MGMT_OP_CFG_WR_REQ  = 8'd6;
+localparam [7:0] CHDR_MGMT_OP_CFG_RD_REQ  = 8'd7;
+localparam [7:0] CHDR_MGMT_OP_CFG_RD_RESP = 8'd8;
 
 function [15:0] chdr_mgmt_get_proto_ver(input [63:0] header);
   chdr_mgmt_get_proto_ver = header[63:48];
@@ -414,6 +415,11 @@ function [63:0] chdr_mgmt_build_op(
 );
   chdr_mgmt_build_op = {op_payload, op_code, ops_pending};
 endfunction
+
+// Definition for the TID field for the output of chdr_mgmt_pkt_handler
+localparam [1:0] CHDR_MGMT_ROUTE_EPID    = 2'd0;  // Route based on EPID
+localparam [1:0] CHDR_MGMT_ROUTE_TDEST   = 2'd1;  // Route based on tdest field
+localparam [1:0] CHDR_MGMT_RETURN_TO_SRC = 2'd2;  // Return packet to sender
 
 // -----------------------
 //  OP specific fields

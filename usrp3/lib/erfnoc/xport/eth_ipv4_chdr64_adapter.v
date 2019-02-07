@@ -4,12 +4,35 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 // Module: eth_ipv4_chdr64_adapter
-// Description:
+// Description: A generic transport adapter module that can be used in
+//   a veriety of transports. It does the following:
+//   - Exposes a configuration port for mgmt packets to configure the node
+//   - Implements a return-address map for packets with metadata other than
+//     the CHDR. Additional metadata can be passed as a tuser to this module
+//     which will store it in a map indexed by the SrcEPID in a management
+//     packet. For all returning packets, the metadata will be looked up in
+//     the map and attached as the outgoing tuser.
+//   - Implements a loopback path for node-info discovery
 //
 // Parameters:
-//  - DROP_UNKNOWN_MAC: Drop packets not addressed to us?
+//   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
+//   - MTU: Log2 of the MTU of the packet in 64-bit words
+//   - CPU_FIFO_SIZE: Log2 of the FIFO depth (in 64-bit words) for the CPU egress path
+//   - RT_TBL_SIZE: Log2 of the depth of the return-address routing table
+//   - NODE_INST: The node type to return for a node-info discovery
+//   - DROP_UNKNOWN_MAC: Drop packets not addressed to us?
 //
 // Signals:
+//   - s_mac_*: The input Ethernet stream from the MAC (plus tuser for trailing bytes + err)
+//   - m_mac_*: The output Ethernet stream to the MAC (plus tuser for trailing bytes + err)
+//   - s_chdr_*: The input CHDR stream from the rfnoc infrastructure
+//   - m_chdr_*: The output CHDR stream to the rfnoc infrastructure
+//   - s_cpu_*: The input Ethernet stream from the CPU (plus tuser for trailing bytes + err)
+//   - m_cpu_*: The output Ethernet stream to the CPU (plus tuser for trailing bytes + err)
+//   - my_eth_addr: The Ethernet (MAC) address of this endpoint
+//   - my_ipv4_addr: The IPv4 address of this endpoint
+//   - my_udp_chdr_port: The UDP port allocated for CHDR traffic on this endpoint
+//
 
 module eth_ipv4_chdr64_adapter #(
   parameter [15:0] PROTOVER         = {8'd1, 8'd0},
@@ -60,6 +83,8 @@ module eth_ipv4_chdr64_adapter #(
 );
 
   `include "../core/rfnoc_chdr_utils.vh"
+  `include "../core/rfnoc_chdr_internal_utils.vh"
+  `include "rfnoc_xport_types.vh" // Include after rfnoc_chdr_internal_utils.vh
 
   //---------------------------------------
   // E2X and E2C DEMUX
@@ -109,11 +134,9 @@ module eth_ipv4_chdr64_adapter #(
   wire        e2x_fifo_tlast, e2x_fifo_tvalid, e2x_fifo_tready;
 
   chdr_xport_adapter_generic #(
-    .PROTOVER(PROTOVER),
-    .CHDR_W(64),
-    .USER_W(96),
-    .TBL_SIZE(RT_TBL_SIZE),
-    .NODE_INST(NODE_INST)
+    .PROTOVER(PROTOVER), .CHDR_W(64),
+    .USER_W(96), .TBL_SIZE(RT_TBL_SIZE),
+    .NODE_TYPE(NODE_TYPE_XPORT_IPV4_CHDR64), .NODE_INST(NODE_INST)
   ) xport_adapter_gen_i (
     .clk                (clk),
     .rst                (rst),
@@ -134,7 +157,13 @@ module eth_ipv4_chdr64_adapter #(
     .m_axis_rfnoc_tdata (e2x_fifo_tdata),
     .m_axis_rfnoc_tlast (e2x_fifo_tlast),
     .m_axis_rfnoc_tvalid(e2x_fifo_tvalid),
-    .m_axis_rfnoc_tready(e2x_fifo_tready)
+    .m_axis_rfnoc_tready(e2x_fifo_tready),
+    .ctrlport_req_wr    (/* unused */),
+    .ctrlport_req_rd    (/* unused */),
+    .ctrlport_req_addr  (/* unused */),
+    .ctrlport_req_data  (/* unused */),
+    .ctrlport_resp_ack  (/* unused */),
+    .ctrlport_resp_data (/* unused */)
   );
 
   //---------------------------------------

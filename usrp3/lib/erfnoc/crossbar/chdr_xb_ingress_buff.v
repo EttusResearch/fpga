@@ -10,16 +10,17 @@
 //   - Looks up destination in routing table and attaches a tdest for the packet
 
 module chdr_xb_ingress_buff #(
-  parameter WIDTH  = 64,
-  parameter MTU    = 5,
-  parameter DEST_W = 4
+  parameter       WIDTH   = 64,
+  parameter       MTU     = 5,
+  parameter       DEST_W  = 4,
+  parameter [9:0] NODE_ID = 0
 ) (
   input  wire               clk,
   input  wire               reset,
   // CHDR input port
   input  wire [WIDTH-1:0]   s_axis_chdr_tdata,
   input  wire [DEST_W-1:0]  s_axis_chdr_tdest,
-  input  wire               s_axis_chdr_tid,
+  input  wire [1:0]         s_axis_chdr_tid,
   input  wire               s_axis_chdr_tlast,
   input  wire               s_axis_chdr_tvalid,
   output wire               s_axis_chdr_tready,
@@ -45,6 +46,7 @@ module chdr_xb_ingress_buff #(
   //  RFNoC Includes
   // ---------------------------------------------------
   `include "../core/rfnoc_chdr_utils.vh"
+  `include "../core/rfnoc_chdr_internal_utils.vh"
 
   //----------------------------------------------------
   // Payload packet state tracker
@@ -91,11 +93,11 @@ module chdr_xb_ingress_buff #(
 
   //NOTE: Violates AXIS but OK since FIFO downstream
   assign buff_i_tvalid = s_axis_chdr_tvalid & s_axis_chdr_tready;
-  assign find_tvalid = (in_state == ST_HEAD) && buff_i_tvalid && !s_axis_chdr_tid;
+  assign find_tvalid = (in_state == ST_HEAD) && buff_i_tvalid && (s_axis_chdr_tid == CHDR_MGMT_ROUTE_EPID);
   assign buff_o_tready = m_axis_chdr_tready;
 
   assign s_axis_chdr_tready = buff_i_tready &
-    ((in_state != ST_HEAD) || (s_axis_chdr_tid ? dest_i_tready : find_tready));
+    ((in_state != ST_HEAD) || ((s_axis_chdr_tid == CHDR_MGMT_ROUTE_EPID) ? find_tready : dest_i_tready));
 
   axi_packet_gate #(.WIDTH(WIDTH), .SIZE(MTU)) pkt_gate_i (
     .clk(clk), .reset(reset), .clear(1'b0),
@@ -115,10 +117,10 @@ module chdr_xb_ingress_buff #(
     .space(), .occupied()
   );
 
-  assign dest_i_tdata = s_axis_result_tvalid ? 
-    {s_axis_result_tkeep, s_axis_result_tdata} : {1'b1, s_axis_chdr_tdest};
+  assign dest_i_tdata = s_axis_result_tvalid ? {s_axis_result_tkeep, s_axis_result_tdata} :
+    {1'b1, (s_axis_chdr_tid == CHDR_MGMT_RETURN_TO_SRC) ? NODE_ID[DEST_W-1:0] : s_axis_chdr_tdest};
   assign dest_i_tvalid = s_axis_result_tvalid ||
-    ((in_state == ST_HEAD) && buff_i_tvalid && s_axis_chdr_tid);
+    ((in_state == ST_HEAD) && buff_i_tvalid && (s_axis_chdr_tid != CHDR_MGMT_ROUTE_EPID));
   assign s_axis_result_tready = s_axis_result_tvalid && dest_i_tready;
 
   axi_fifo #(.WIDTH(DEST_W+1), .SIZE(1)) dest_fifo_i (

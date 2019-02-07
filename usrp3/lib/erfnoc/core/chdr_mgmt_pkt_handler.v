@@ -16,7 +16,7 @@
 // Parameters:
 //   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
 //   - CHDR_W: Widht of the CHDR bus in bits
-//   - NODEINFO: Info about the node that contains this management slave
+//   - NODE_INFO: Info about the node that contains this management slave
 //   - RESP_FIFO_SIZE: Log2 of the depth of the response FIFO
 //                     Maximum value = 8
 //
@@ -29,7 +29,7 @@
 module chdr_mgmt_pkt_handler #(
   parameter [15:0] PROTOVER       = {8'd1, 8'd0},
   parameter        CHDR_W         = 256,
-  parameter [47:0] NODEINFO       = 48'd0,
+  parameter [47:0] NODE_INFO      = 48'd0,
   parameter        RESP_FIFO_SIZE = 5
 )(
   // Clock, reset and settings
@@ -42,8 +42,8 @@ module chdr_mgmt_pkt_handler #(
   output wire              s_axis_chdr_tready,
   // CHDR Data Out (AXI-Stream)             
   output wire [CHDR_W-1:0] m_axis_chdr_tdata,
-  output wire [9:0]        m_axis_chdr_tdest,    // Destination of a mgmt packet (crossbar only) 
-  output wire [0:0]        m_axis_chdr_tid,      // If high, then this is a mgmt packet
+  output wire [1:0]        m_axis_chdr_tid,      // Routing mode. Valued defined in rfnoc_chdr_internal_utils.vh
+  output wire [9:0]        m_axis_chdr_tdest,    // Manual routing destination (only valid for tid = CHDR_MGMT_ROUTE_TDEST)
   output wire              m_axis_chdr_tlast,
   output wire              m_axis_chdr_tvalid,
   input  wire              m_axis_chdr_tready,
@@ -81,7 +81,7 @@ module chdr_mgmt_pkt_handler #(
 
   wire [CHDR_W-1:0] s_mgmt_tdata, m_mgmt_tdata, bypass_tdata;
   wire [9:0]        m_mgmt_tdest, bypass_tdest;
-  wire [0:0]        m_mgmt_tid, bypass_tid;
+  wire [1:0]        m_mgmt_tid, bypass_tid;
   wire              s_mgmt_tlast, s_mgmt_tvalid, s_mgmt_tready;
   wire              m_mgmt_tlast, m_mgmt_tvalid, m_mgmt_tready;
   wire              bypass_tlast, bypass_tvalid, bypass_tready;
@@ -97,10 +97,10 @@ module chdr_mgmt_pkt_handler #(
     .o_tdata({s_mgmt_tdata, bypass_tdata}), .o_tlast({s_mgmt_tlast, bypass_tlast}),
     .o_tvalid({s_mgmt_tvalid, bypass_tvalid}), .o_tready({s_mgmt_tready, bypass_tready})
   );
-  assign {bypass_tid, bypass_tdest} = {1'b0, 10'h0};
+  assign {bypass_tid, bypass_tdest} = {CHDR_MGMT_ROUTE_EPID, 10'h0};
 
   axi_mux #(
-    .WIDTH(CHDR_W+10+1), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
+    .WIDTH(CHDR_W+10+2), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
   ) mgmt_mux_i (
     .clk(clk), .reset(rst), .clear(1'b0),
     .i_tdata({m_mgmt_tid, m_mgmt_tdest, m_mgmt_tdata, bypass_tid, bypass_tdest, bypass_tdata}),
@@ -120,8 +120,9 @@ module chdr_mgmt_pkt_handler #(
   reg         i64_tready;
   reg [63:0]  o64_tdata;
   reg [9:0]   o64_tdest;
+  reg [1:0]   o64_tid;
   reg         o64_tlast, o64_tvalid;
-  wire        o64_tready, o64_tdest_stb;
+  wire        o64_tready;
 
   axi_fifo #(.WIDTH(65), .SIZE(1)) in_flop_i (
     .clk(clk), .reset(rst), .clear(1'b0),
@@ -132,11 +133,11 @@ module chdr_mgmt_pkt_handler #(
     .space(), .occupied()
   );
 
-  axi_fifo #(.WIDTH(65), .SIZE(1)) out_flop_i (
+  axi_fifo #(.WIDTH(64+10+2+1), .SIZE(1)) out_flop_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({o64_tlast, o64_tdata}),
+    .i_tdata({o64_tlast, o64_tdest, o64_tid, o64_tdata}),
     .i_tvalid(o64_tvalid), .i_tready(o64_tready),
-    .o_tdata({m_mgmt_tlast, m_mgmt_tdata[63:0]}),
+    .o_tdata({m_mgmt_tlast, m_mgmt_tdest, m_mgmt_tid, m_mgmt_tdata[63:0]}),
     .o_tvalid(m_mgmt_tvalid), .o_tready(m_mgmt_tready),
     .space(), .occupied()
   );
@@ -145,18 +146,6 @@ module chdr_mgmt_pkt_handler #(
     if (CHDR_W > 64)
       assign m_mgmt_tdata[CHDR_W-1:CHDR_W-64] = 'h0;
   endgenerate
-
-  // If a management packet has a CHDR_MGMT_OP_SEL_DEST operation, then
-  // the tdest for the packet will be set along with tid = 1 which indicates
-  // that this packet has to be assigned to the management stream downstream.
-  axi_fifo #(.WIDTH(10), .SIZE(1)) dest_fifo_i (
-    .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata(o64_tdest), .i_tvalid(o64_tdest_stb),
-    .i_tready(/* Will always be high */),
-    .o_tdata(m_mgmt_tdest), .o_tvalid(m_mgmt_tid),
-    .o_tready(m_mgmt_tvalid && m_mgmt_tready && m_mgmt_tlast),
-    .space(), .occupied()
-  );
 
   // ---------------------------------------------------
   //  Parse management packet
@@ -253,17 +242,27 @@ module chdr_mgmt_pkt_handler #(
         // - Launch the requested action be looking at the op_code
         ST_MGMT_OP_EXEC: begin
           if (i64_tvalid) begin
+            // Assume that the packet is getting routed normally
+            // unless some operation changes that
+            o64_tid   <= CHDR_MGMT_ROUTE_EPID;
+            o64_tdest <= 10'd0;
             case (op_code)
               // Operation: Do nothing
               CHDR_MGMT_OP_NOP: begin
                 // No-op. Jump to the finish state
                 pkt_state <= ST_MGMT_OP_DONE;
               end
+              // Operation: Advertise this management packet to outside logic
+              CHDR_MGMT_OP_ADVERTISE: begin
+                // Pretty much a no-op. Jump to the finish state
+                pkt_state <= ST_MGMT_OP_DONE;
+              end
               // Operation: Select a destination for the output CHDR stream
               CHDR_MGMT_OP_SEL_DEST: begin
                 // - Update tdest for the output CHDR bus
                 // - o64_tdest_stb will be asserted next clock cycle to put
-                //   o64_tdest in the dest FIFO  
+                //   o64_tdest in the dest FIFO
+                o64_tid   <= CHDR_MGMT_ROUTE_TDEST;
                 o64_tdest <= chdr_mgmt_sel_dest_get_tdest(op_payload);
                 pkt_state <= ST_MGMT_OP_DONE;   // Single cycle op
               end
@@ -278,6 +277,7 @@ module chdr_mgmt_pkt_handler #(
               // Operation: Handle a node information request.
               //            Send the info as a response
               CHDR_MGMT_OP_INFO_REQ: begin
+                o64_tid   <= CHDR_MGMT_RETURN_TO_SRC;
                 pkt_state <= ST_MGMT_OP_DONE; // Single cycle op
               end
               // Operation: Handle a node information response.
@@ -484,6 +484,12 @@ module chdr_mgmt_pkt_handler #(
     endcase
   end
 
+  // Swap src/dst EPIDs if returning packet to source
+  wire [15:0] o64_dst_epid = (o64_tid == CHDR_MGMT_RETURN_TO_SRC) ? 
+    chdr_mgmt_get_src_epid(cached_mgmt_hdr) : chdr_get_dst_epid(cached_chdr_hdr);
+  wire [15:0] o64_src_epid = (o64_tid == CHDR_MGMT_RETURN_TO_SRC) ? 
+    chdr_get_dst_epid(cached_chdr_hdr) : chdr_mgmt_get_src_epid(cached_mgmt_hdr);
+
   // Logic to drive the output CHDR stream
   always @(*) begin
     case (pkt_state)
@@ -491,7 +497,8 @@ module chdr_mgmt_pkt_handler #(
         // We are generating new data using cached values.
         // Output header = Input header with new length
         o64_tdata  = chdr_set_length(
-          cached_chdr_hdr, (stripped_len + (num_resp_pending << LOG2_CHDR_W_BYTES)));
+          chdr_set_dst_epid(cached_chdr_hdr, o64_dst_epid), 
+          (stripped_len + (num_resp_pending << LOG2_CHDR_W_BYTES)));
         o64_tvalid = 1'b1;
         o64_tlast  = 1'b0;
       end
@@ -499,8 +506,7 @@ module chdr_mgmt_pkt_handler #(
         // We are generating new data using cached values.
         // Output header = Input header with new num_hops and some protocol info
         o64_tdata  = chdr_mgmt_build_hdr(PROTOVER, chdr_w_to_enum(CHDR_W), 
-          chdr_mgmt_get_num_hops(cached_mgmt_hdr) - 10'd1, 
-          chdr_mgmt_get_src_epid(cached_mgmt_hdr));
+          chdr_mgmt_get_num_hops(cached_mgmt_hdr) - 10'd1, o64_src_epid);
         o64_tvalid = 1'b1;
         o64_tlast  = 1'b0;
       end
@@ -533,16 +539,12 @@ module chdr_mgmt_pkt_handler #(
     endcase
   end
 
-  // External strobe
-  assign op_stb      = i64_tvalid && (pkt_state == ST_MGMT_OP_DONE);
+  // CHDR_MGMT_OP_ADVERTISE
+  // ----------------------
+  assign op_stb      = i64_tvalid && (pkt_state == ST_MGMT_OP_DONE) &&
+                       (op_code == CHDR_MGMT_OP_ADVERTISE);
   assign op_dst_epid = chdr_get_dst_epid(cached_chdr_hdr);
   assign op_src_epid = chdr_mgmt_get_src_epid(cached_mgmt_hdr);
-
-  // CHDR_MGMT_OP_SEL_DEST
-  // ---------------------
-  // Push to the dest FIFO in the ST_MGMT_OP_DONE state
-  assign o64_tdest_stb = i64_tvalid && (pkt_state == ST_MGMT_OP_DONE) && 
-                         (op_code == CHDR_MGMT_OP_SEL_DEST);
 
   // CHDR_MGMT_OP_CFG_ROUTER
   // -----------------------
@@ -572,7 +574,7 @@ module chdr_mgmt_pkt_handler #(
     ((pkt_state == ST_MGMT_OP_DONE) && (op_code == CHDR_MGMT_OP_INFO_REQ)));
   assign resp_i_tdata = (op_code == CHDR_MGMT_OP_CFG_RD_REQ) ?
     {ctrlport_resp_data, ctrlport_req_addr, CHDR_MGMT_OP_CFG_RD_RESP} : // Ctrlport response
-    {NODEINFO, CHDR_MGMT_OP_INFO_RESP};                                 // NodeInfo
+    {NODE_INFO, CHDR_MGMT_OP_INFO_RESP};                                // NodeInfo
 
   // The response FIFO should be deep enough to store all the responses
   wire [15:0] resp_fifo_occ;
