@@ -48,10 +48,11 @@ module datapath_gatekeeper #(
   );
 
   axis_packet_flush #(
-    .WIDTH(WIDTH), .FLUSH_PARTIAL_PKTS(0)
+    .WIDTH(WIDTH), .FLUSH_PARTIAL_PKTS(0),
+    .TIMEOUT_W(1), .PIPELINE("NONE")
   ) flusher_i (
     .clk(clk), .reset(reset),
-    .enable(flush), .flushing(flushing),
+    .enable(flush), .timeout(1'b0), .flushing(flushing), .done(),
     .s_axis_tdata(s_axis_tdata), .s_axis_tlast(s_axis_tlast),
     .s_axis_tvalid(s_axis_tvalid), .s_axis_tready(s_axis_tready),
     .m_axis_tdata(m_axis_tdata), .m_axis_tlast(m_axis_tlast),

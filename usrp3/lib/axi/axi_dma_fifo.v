@@ -357,10 +357,10 @@ module axi_dma_fifo
    );
 
    axis_packet_flush #(
-      .WIDTH(DWIDTH), .FLUSH_PARTIAL_PKTS(0)
+      .WIDTH(DWIDTH), .FLUSH_PARTIAL_PKTS(0), .TIMEOUT_W(1), .PIPELINE("NONE")
    ) flusher_i (
       .clk(bus_clk), .reset(bus_reset),
-      .enable(clear_bclk | flush_bclk), .flushing(),
+      .enable(clear_bclk | flush_bclk), .timeout(1'b0), .flushing(), .done(),
       .s_axis_tdata(o_tdata_int), .s_axis_tlast(o_tlast_int),
       .s_axis_tvalid(o_tvalid_int), .s_axis_tready(o_tready_int),
       .m_axis_tdata(o_tdata), .m_axis_tlast(o_tlast),
