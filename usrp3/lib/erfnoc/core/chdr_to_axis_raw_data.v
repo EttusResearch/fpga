@@ -34,6 +34,7 @@
 //   - s_axis_chdr_* : Input CHDR stream (AXI-Stream)
 //   - m_axis_payload_* : Output payload stream (AXI-Stream)
 //   - m_axis_context_* : Output context stream (AXI-Stream)
+//   - flush_* : Signals for flush control and status
 //
 
 module chdr_to_axis_raw_data #(
@@ -66,7 +67,12 @@ module chdr_to_axis_raw_data #(
   output wire [3:0]               m_axis_context_tuser,
   output wire                     m_axis_context_tlast,
   output wire                     m_axis_context_tvalid,
-  input  wire                     m_axis_context_tready
+  input  wire                     m_axis_context_tready,
+  // Flush signals
+  input  wire                     flush_en,
+  input  wire [31:0]              flush_timeout,
+  output wire                     flush_active,
+  output wire                     flush_done
 );
 
   // ---------------------------------------------------
@@ -266,12 +272,23 @@ module chdr_to_axis_raw_data #(
 
   wire tmp_ctxt_tvalid, tmp_ctxt_tready;
 
+  wire [(SAMP_W*NSPC)-1:0] flush_pyld_tdata ;
+  wire [NSPC-1:0]          flush_pyld_tkeep ;
+  wire                     flush_pyld_tlast ;
+  wire                     flush_pyld_tvalid;
+  wire                     flush_pyld_tready;
+  wire [CHDR_W-1:0]        flush_ctxt_tdata ;
+  wire [3:0]               flush_ctxt_tuser ;
+  wire                     flush_ctxt_tlast ;
+  wire                     flush_ctxt_tvalid;
+  wire                     flush_ctxt_tready;
+
   generate if (SYNC_CLKS) begin
     axi_fifo #(.WIDTH(CHDR_W+4+1), .SIZE(CONTEXT_FIFO_SIZE)) ctxt_fifo_i (
       .clk(axis_data_clk), .reset(axis_data_rst), .clear(1'b0),
       .i_tdata({in_ctxt_tlast, in_ctxt_tuser, in_ctxt_tdata}),
       .i_tvalid(in_ctxt_tvalid), .i_tready(in_ctxt_tready),
-      .o_tdata({m_axis_context_tlast, m_axis_context_tuser, m_axis_context_tdata}),
+      .o_tdata({flush_ctxt_tlast, flush_ctxt_tuser, flush_ctxt_tdata}),
       .o_tvalid(tmp_ctxt_tvalid), .o_tready(tmp_ctxt_tready),
       .space(), .occupied()
     );
@@ -290,7 +307,7 @@ module chdr_to_axis_raw_data #(
       .i_tdata({in_ctxt_tlast, in_ctxt_tuser, in_ctxt_tdata}),
       .i_tvalid(in_ctxt_tvalid), .i_tready(in_ctxt_tready),
       .o_aclk(axis_data_clk),
-      .o_tdata({m_axis_context_tlast, m_axis_context_tuser, m_axis_context_tdata}),
+      .o_tdata({flush_ctxt_tlast, flush_ctxt_tuser, flush_ctxt_tdata}),
       .o_tvalid(tmp_ctxt_tvalid), .o_tready(tmp_ctxt_tready)
     );
     axi_fifo_2clk #(.WIDTH(CHDR_W+1), .SIZE(PAYLOAD_FIFO_SIZE)) pyld_fifo_i (
@@ -319,7 +336,7 @@ module chdr_to_axis_raw_data #(
 
   axis_width_conv #(
     .WORD_W(SAMP_W), .IN_WORDS(CHDR_W/SAMP_W), .OUT_WORDS(NSPC),
-    .SYNC_CLKS(1), .PIPELINE("OUT")
+    .SYNC_CLKS(1), .PIPELINE("NONE")
   ) payload_width_conv_i (
     .s_axis_aclk(axis_data_clk), .s_axis_rst(axis_data_rst),
     .s_axis_tdata(out_pyld_tdata),
@@ -328,9 +345,9 @@ module chdr_to_axis_raw_data #(
     .s_axis_tvalid(out_pyld_tvalid),
     .s_axis_tready(out_pyld_tready),
     .m_axis_aclk(axis_data_clk), .m_axis_rst(axis_data_rst),
-    .m_axis_tdata(m_axis_payload_tdata),
-    .m_axis_tkeep(m_axis_payload_tkeep),
-    .m_axis_tlast(m_axis_payload_tlast),
+    .m_axis_tdata(flush_pyld_tdata),
+    .m_axis_tkeep(flush_pyld_tkeep),
+    .m_axis_tlast(flush_pyld_tlast),
     .m_axis_tvalid(tmp_pyld_tvalid),
     .m_axis_tready(tmp_pyld_tready)
   );
@@ -351,17 +368,78 @@ module chdr_to_axis_raw_data #(
       ctxt_pkt_cnt <= 3'd0;
       pyld_pkt_cnt <= 3'd0;
     end else begin
-      if (m_axis_context_tvalid && m_axis_context_tready && m_axis_context_tlast)
+      if (flush_ctxt_tvalid && flush_ctxt_tready && flush_ctxt_tlast)
         ctxt_pkt_cnt <= ctxt_pkt_cnt + 3'd1;
-      if (m_axis_payload_tvalid && m_axis_payload_tready && m_axis_payload_tlast)
+      if (flush_pyld_tvalid && flush_pyld_tready && flush_pyld_tlast)
         pyld_pkt_cnt <= pyld_pkt_cnt + 3'd1;
     end
   end
 
-  assign m_axis_payload_tvalid = tmp_pyld_tvalid && pass_pyld;
-  assign tmp_pyld_tready = m_axis_payload_tready && pass_pyld;
+  assign flush_pyld_tvalid = tmp_pyld_tvalid && pass_pyld;
+  assign tmp_pyld_tready = flush_pyld_tready && pass_pyld;
 
-  assign m_axis_context_tvalid = tmp_ctxt_tvalid && pass_ctxt;
-  assign tmp_ctxt_tready = m_axis_context_tready && pass_ctxt;
+  assign flush_ctxt_tvalid = tmp_ctxt_tvalid && pass_ctxt;
+  assign tmp_ctxt_tready = flush_ctxt_tready && pass_ctxt;
+
+  // ---------------------------------------------------
+  //  Flushing Logic
+  // ---------------------------------------------------
+
+  wire [31:0] flush_timeout_dclk;
+  wire        flush_en_dclk;
+  wire        flush_active_pyld_cclk, flush_active_ctxt_cclk;
+  wire        flush_done_pyld_cclk, flush_done_ctxt_cclk;
+  wire        flush_active_pyld, flush_active_ctxt;
+  wire        flush_done_pyld, flush_done_ctxt;
+
+  synchronizer #(.WIDTH(4), .INITIAL_VAL(4'd0)) flush_2clk_rb_i (
+    .clk(axis_chdr_clk), .rst(1'b0),
+    .in({flush_active_pyld, flush_done_pyld,
+         flush_active_ctxt, flush_done_ctxt}),
+    .out({flush_active_pyld_cclk, flush_done_pyld_cclk,
+         flush_active_ctxt_cclk, flush_done_ctxt_cclk})
+  );
+  assign flush_active = flush_active_pyld_cclk | flush_active_ctxt_cclk;
+  assign flush_done = flush_done_pyld_cclk & flush_done_ctxt_cclk;
+
+  axi_fifo_2clk #(.WIDTH(33), .SIZE(1)) flush_2clk_ctrl_i (
+    .reset(axis_chdr_rst),
+    .i_aclk(axis_chdr_clk),
+    .i_tdata({flush_en, flush_timeout}), .i_tvalid(1'b1), .i_tready(),
+    .o_aclk(axis_data_clk),
+    .o_tdata({flush_en_dclk, flush_timeout_dclk}), .o_tvalid(), .o_tready(1'b1)
+  );
+
+  axis_packet_flush #(
+    .WIDTH((SAMP_W+1)*NSPC), .FLUSH_PARTIAL_PKTS(0), .TIMEOUT_W(32), .PIPELINE("OUT")
+  ) pyld_flusher_i (
+    .clk(axis_data_clk), .reset(axis_data_rst),
+    .enable(flush_en_dclk), .timeout(flush_timeout_dclk),
+    .flushing(flush_active_pyld), .done(flush_done_pyld),
+    .s_axis_tdata({flush_pyld_tkeep, flush_pyld_tdata}),
+    .s_axis_tlast(flush_pyld_tlast),
+    .s_axis_tvalid(flush_pyld_tvalid),
+    .s_axis_tready(flush_pyld_tready),
+    .m_axis_tdata({m_axis_payload_tkeep, m_axis_payload_tdata}),
+    .m_axis_tlast(m_axis_payload_tlast),
+    .m_axis_tvalid(m_axis_payload_tvalid),
+    .m_axis_tready(m_axis_payload_tready)
+  );
+
+  axis_packet_flush #(
+    .WIDTH(CHDR_W+4), .FLUSH_PARTIAL_PKTS(0), .TIMEOUT_W(32), .PIPELINE("OUT")
+  ) ctxt_flusher_i (
+    .clk(axis_data_clk), .reset(axis_data_rst),
+    .enable(flush_en), .timeout(flush_timeout),
+    .flushing(flush_active_ctxt), .done(flush_done_ctxt),
+    .s_axis_tdata({flush_ctxt_tuser, flush_ctxt_tdata}),
+    .s_axis_tlast(flush_ctxt_tlast),
+    .s_axis_tvalid(flush_ctxt_tvalid),
+    .s_axis_tready(flush_ctxt_tready),
+    .m_axis_tdata({m_axis_context_tuser, m_axis_context_tdata}),
+    .m_axis_tlast(m_axis_context_tlast),
+    .m_axis_tvalid(m_axis_context_tvalid),
+    .m_axis_tready(m_axis_context_tready)
+  );
 
 endmodule // chdr_to_axis_raw_data

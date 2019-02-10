@@ -33,7 +33,8 @@
 //   - s_axis_payload_* : Input payload stream (AXI-Stream)
 //   - s_axis_context_* : Input context stream (AXI-Stream)
 //   - s_axis_chdr_* : Output CHDR stream (AXI-Stream)
-//   - framer_errors: Number of framer errors (dropped packets)
+//   - framer_errors : Number of framer errors (dropped packets)
+//   - flush_* : Signals for flush control and status
 //
 
 module axis_raw_data_to_chdr #(
@@ -69,7 +70,12 @@ module axis_raw_data_to_chdr #(
   input  wire                     s_axis_context_tvalid,
   output wire                     s_axis_context_tready,
   // Status
-  output reg  [31:0]              framer_errors
+  output reg  [31:0]              framer_errors,
+  // Flush signals
+  input  wire                     flush_en,
+  input  wire [31:0]              flush_timeout,
+  output wire                     flush_active,
+  output wire                     flush_done
 );
 
   // ---------------------------------------------------
@@ -426,10 +432,26 @@ module axis_raw_data_to_chdr #(
   //  Packet gate
   // ---------------------------------------------------
 
+  wire [CHDR_W-1:0] chdr_flush_tdata;
+  wire              chdr_flush_tlast, chdr_flush_tvalid;
+  wire              chdr_flush_terror, chdr_flush_tready;
+
+  axis_packet_flush #(
+    .WIDTH(CHDR_W+1), .FLUSH_PARTIAL_PKTS(0), .TIMEOUT_W(32), .PIPELINE("IN")
+  ) chdr_flusher_i (
+    .clk(axis_chdr_clk), .reset(axis_chdr_rst),
+    .enable(flush_en), .timeout(flush_timeout),
+    .flushing(flush_active), .done(flush_done),
+    .s_axis_tdata({chdr_pg_terror, chdr_pg_tdata}), .s_axis_tlast(chdr_pg_tlast),
+    .s_axis_tvalid(chdr_pg_tvalid), .s_axis_tready(chdr_pg_tready),
+    .m_axis_tdata({chdr_flush_terror, chdr_flush_tdata}), .m_axis_tlast(chdr_flush_tlast),
+    .m_axis_tvalid(chdr_flush_tvalid), .m_axis_tready(chdr_flush_tready)
+  );
+
   axi_packet_gate #( .WIDTH(CHDR_W), .SIZE(MTU), .USE_AS_BUFF(0) ) out_gate_i (
-    .clk(axis_chdr_clk), .reset(axis_chdr_rst), .clear(1'b0),
-    .i_tdata(chdr_pg_tdata), .i_tlast(chdr_pg_tlast), .i_terror(chdr_pg_terror),
-    .i_tvalid(chdr_pg_tvalid), .i_tready(chdr_pg_tready),
+    .clk(axis_chdr_clk), .reset(axis_chdr_rst), .clear(flush_active),
+    .i_tdata(chdr_flush_tdata), .i_tlast(chdr_flush_tlast), .i_terror(chdr_flush_terror),
+    .i_tvalid(chdr_flush_tvalid), .i_tready(chdr_flush_tready),
     .o_tdata(m_axis_chdr_tdata), .o_tlast(m_axis_chdr_tlast),
     .o_tvalid(m_axis_chdr_tvalid), .o_tready(m_axis_chdr_tready)
   );
