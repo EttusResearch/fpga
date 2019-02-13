@@ -57,6 +57,7 @@ module source_flow_control #(
   wire        sfc_enable;
   wire        window_enable;
   wire        pkt_limit_enable;
+  wire        fc_ack_disable;
 
   reg  [15:0] last_pkt_consumed;
   reg  [31:0] last_byte_consumed;
@@ -70,9 +71,9 @@ module source_flow_control #(
   // dropped by this module and it will reset to the SFC_HEAD head state.
   // The reset sequence can take more than one cycle during which this
   // module will hold off all flow control data.
-  setting_reg #(.my_addr(SR_FLOW_CTRL_EN), .width(3)) sr_enable (
+  setting_reg #(.my_addr(SR_FLOW_CTRL_EN), .width(4)) sr_enable (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),.in(set_data),
-    .out({pkt_limit_enable,window_enable,sfc_enable}),.changed(window_reset));
+    .out({fc_ack_disable,pkt_limit_enable,window_enable,sfc_enable}),.changed(window_reset));
 
   // Sets the size of the flow control window
   setting_reg #(.my_addr(SR_FLOW_CTRL_WINDOW_SIZE)) sr_window_size (
@@ -234,7 +235,7 @@ module source_flow_control #(
           pkt_len_reg       <= pkt_len;
           if (sfc_enable) begin
             // Received a FC RESP packet, send a FC ACK packet
-            if (fc_ack_cnt != 0) begin
+            if (~fc_ack_disable && fc_ack_cnt != 0) begin
               state         <= ST_FC_ACK_HEAD;
             end else if (in_tvalid) begin
               if (is_data_pkt) begin

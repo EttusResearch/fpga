@@ -71,7 +71,7 @@ module noc_shell
 
    localparam RB_AWIDTH = 3;
    localparam [31:0] NOC_SHELL_MAJOR_COMPAT_NUM = 32'd5;
-   localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'd0;
+   localparam [31:0] NOC_SHELL_MINOR_COMPAT_NUM = 32'd1;
 
    wire [63:0] fcin_tdata, fcout_tdata, cmdin_tdata, ackout_tdata;
    wire fcin_tlast, fcout_tlast, cmdin_tlast, ackout_tlast;
