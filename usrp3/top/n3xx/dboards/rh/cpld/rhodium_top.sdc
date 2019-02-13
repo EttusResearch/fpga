@@ -410,3 +410,6 @@ set_output_delay -clock dsa_clk -max -$dsa_skew $dsas
 set_output_delay -clock dsa_clk -min $dsa_skew $dsas
 set_multicycle_path -start -setup 0 -to $dsas
 
+set_max_delay -from [get_ports CPLD_ATR_TX_18] \
+    -to [get_ports {Tx_Sw1_Ctrl_1 Tx_Sw1_Ctrl_2}] 10.0
+

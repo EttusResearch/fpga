@@ -130,7 +130,7 @@ output    Cal_iso_Sw_Ctrl
 
 localparam GIT_HASH = 36'h`GIT_HASH;
 localparam PROD_SIGNATURE   = 16'h0045; // Product signature (Rhodium atomic number in BCD)
-localparam REVISION_MINOR   = 16'h0001;
+localparam REVISION_MINOR   = 16'h0002;
 localparam REVISION_MAJOR   = 16'h0004;
 localparam CPLD_BUILD_LSB   = GIT_HASH[15:0]; // Build code LSB
 localparam CPLD_BUILD_MSB   = GIT_HASH[31:16]; // Build code MSB
@@ -148,6 +148,9 @@ localparam PS_CPLD_REGS   = 2'b00;
 localparam GAIN_TABLE_RX  = 2'b01;
 localparam GAIN_TABLE_TX  = 2'b10;
 localparam GAIN_TABLE_LO  = 2'b11;
+
+// Setting to put TX SW1 in isolation mode
+localparam [1:0] TX_SW1_TERM = 2'b11;
 
 wire clkdis_cs_b = CPLD_PS_SPI_LE_25;
 wire cpld_ps_cs_b = CPLD_PS_ADDR0_25;
@@ -510,9 +513,10 @@ assign { Tx_Sw5_Ctrl_2,
          Tx_Sw3_Ctrl_2,
          Tx_Sw3_Ctrl_1,
          Tx_Sw2_Ctrl_2,
-         Tx_Sw2_Ctrl_1,
-         Tx_Sw1_Ctrl_2,
-         Tx_Sw1_Ctrl_1 } = { txbs[11:2] };
+         Tx_Sw2_Ctrl_1} = { txbs[11:4] };
+
+// Terminate TX when idle
+assign {Tx_Sw1_Ctrl_2, Tx_Sw1_Ctrl_1} = CPLD_ATR_TX_18 ? txbs[3:2] : TX_SW1_TERM;
 
 assign { Rx_LO_Filter_Sw_2,
   Rx_LO_Filter_Sw_1,
