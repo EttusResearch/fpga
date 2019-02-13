@@ -3428,7 +3428,8 @@ module n3xx (
     .NUM_RADIO_CORES(NUM_RADIOS),
     .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
     .NUM_CHANNELS(NUM_CHANNELS),
-    .NUM_DBOARDS(NUM_DBOARDS)
+    .NUM_DBOARDS(NUM_DBOARDS),
+    .USE_REPLAY(1)
   ) n3xx_core(
     // Clocks and resets
   `ifdef NO_DB
