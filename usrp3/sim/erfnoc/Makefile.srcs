@@ -11,4 +11,7 @@ SIM_ERFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../sim/erfnoc/, \
 PkgTestExec.sv \
 sim_clock_gen.sv \
 PkgAxiStreamBfm.sv \
+PkgChdrUtils.sv \
+PkgChdrBfm.sv \
+PkgAxisCtrlBfm.sv \
 ))
