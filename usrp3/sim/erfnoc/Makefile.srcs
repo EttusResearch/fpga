@@ -1,0 +1,13 @@
+#
+# Copyright 2019 Ettus Research, a National Instruments Company
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+
+##################################################
+# Simulation Libraries/Headers for AXI based interfaces
+##################################################
+SIM_ERFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../sim/erfnoc/, \
+PkgTestExec.sv \
+sim_clock_gen.sv \
+))
