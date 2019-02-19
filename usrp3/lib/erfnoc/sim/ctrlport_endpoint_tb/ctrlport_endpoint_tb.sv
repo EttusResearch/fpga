@@ -22,9 +22,10 @@ module ctrlport_endpoint_tb;
   localparam [9:0]  THIS_PORTID = 10'h17;
   localparam [15:0] THIS_EPID   = 16'hDEAD;
 
-  localparam integer NUM_XACT_PER_TEST = 250;
+  localparam integer NUM_XACT_PER_TEST = 300;
   localparam integer FAST_STALL_PROB   = 0;
   localparam integer SLOW_STALL_PROB   = 50;
+  localparam bit     VERBOSE           = 0;
 
   // Clock and Reset Definition
   bit rfnoc_ctrl_clk, rfnoc_ctrl_rst;
@@ -234,8 +235,10 @@ module ctrlport_endpoint_tb;
       resp_data             = cp_mst_resp_data;
 
       // Validate contents
-      //$display("%s(addr=%0x, data=%0x, portid=%0x, has_time=%0b) = %0x (Status = %0d)",
-      //  (rd&wr)?"WRRD":(rd?"RD":"WR"), addr, data, portid, has_time, resp_data, resp_status);
+      if (VERBOSE) begin
+        $display("%s(addr=%0x, data=%0x, portid=%0x, has_time=%0b) = %0x (Status = %0d)",
+          (rd&wr)?"WRRD":(rd?"RD":"WR"), addr, data, portid, has_time, resp_data, resp_status);
+      end
       test.assert_error(cp_mst_resp_status == addr[19:18],
         "Received Ctrlport response had the wrong status");
       test.assert_error(cp_mst_resp_data == data,
@@ -268,7 +271,7 @@ module ctrlport_endpoint_tb;
     case (ctrl_opcode_t'(opcode))
       CTRL_OP_SLEEP: begin
         // data[0] = cycles of sleep so limit its value
-        data[0][31:5] = 0;
+        if (data.size() > 0) data[0][31:5] = 0;
         exp_status = CTRL_STS_OKAY;
         exp_data0 = data[0];
       end
@@ -306,7 +309,6 @@ module ctrlport_endpoint_tb;
     op_word = '{
       default      : '0,
       op_code      : ctrl_opcode_t'(opcode),
-      status       : CTRL_STATUS_OKAY,
       byte_enable  : byte_en,
       address      : addr
     };
@@ -316,25 +318,31 @@ module ctrlport_endpoint_tb;
     if (data.size() > 0) begin
       exp_pkt = tx_pkt.copy();
       exp_pkt.header.is_ack = 1'b1;
-      exp_pkt.op_word.status = ctrl_status_t'(exp_status);
+      exp_pkt.op_word.status = exp_status;
       exp_pkt.data[0] = exp_data0;
     end
 
-    // Send/receive the packet
+    if (VERBOSE) $display("*******************");
     fork
-      axis_ctrl_bfm.put_ctrl(tx_pkt.copy());
-      axis_ctrl_bfm.get_ctrl(rx_pkt);
+      // Send the packet
+      begin
+        axis_ctrl_bfm.put_ctrl(tx_pkt.copy());
+        if (VERBOSE) begin $display("[TRANSMITTED]"); tx_pkt.print(); end
+      end
+      // Wait for response only if we are expecting one
+      if (exp_pkt != null) begin
+        axis_ctrl_bfm.get_ctrl(rx_pkt);
+        if (VERBOSE) begin $display("[RECEIVED]"); rx_pkt.print(); end
+      end
     join
     cached_seq_num = cached_seq_num + 1;
 
     // Validate contents
-    /*
-    $display("TRANSMITTED:"); tx_pkt.print();
-    $display("RECEIVED:");    rx_pkt.print();
-    $display("EXPECTED:");    exp_pkt.print();
-    */
-    test.assert_error(exp_pkt.equal(rx_pkt),
-      "Received AXIS-Ctrl packet was incorrect");
+    if (exp_pkt != null) begin
+      if (VERBOSE) begin $display("[EXPECTED]"); exp_pkt.print(); end
+      test.assert_error(exp_pkt.equal(rx_pkt),
+        "Received AXIS-Ctrl packet was incorrect");
+    end
   endtask
 
   // ----------------------------------------
@@ -348,7 +356,6 @@ module ctrlport_endpoint_tb;
     logic [31:0] data_vtr[$];
     logic [1:0]  resp_status;
     logic [31:0] resp_data;
-    logic [31:0] rand_32bits_s, rand_32bits_m;
 
     // Initialize
     // ----------------------------------------
@@ -358,10 +365,6 @@ module ctrlport_endpoint_tb;
     // Start the BFMs
     axis_ctrl_bfm = new(m_ctrl, s_ctrl);
     axis_ctrl_bfm.run();
-
-    // Start the clock
-    rfnoc_ctrl_clk_gen.start();
-    ctrlport_clk_gen.start();
 
     // Reset
     // ----------------------------------------
@@ -381,8 +384,8 @@ module ctrlport_endpoint_tb;
     // Send AXIS-Ctrl packets to the DUT and expect AXIS-Ctrl
     // responses. There is a ctrlport slave implemented above
     for (int cfg = 0; cfg < 4; cfg++) begin
-      logic mst_cfg = cfg[0];
-      logic slv_cfg = cfg[1];
+      automatic logic mst_cfg = cfg[0];
+      automatic logic slv_cfg = cfg[1];
       $sformat(tc_label,
         "AXIS-Ctrl Slave (%s Master, %s Slave)",
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
@@ -393,10 +396,13 @@ module ctrlport_endpoint_tb;
         axis_ctrl_bfm.set_slave_stall_prob(slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         // Test multiple transactions
         for (int n = 0; n < NUM_XACT_PER_TEST; n++) begin
-          rand_32bits_s = $urandom();
-          for (int i = 0; i < rand_32bits_s[3:0]; i++)
+          // Generate random data for the payload
+          // It is illegal in the protocol to have a zero
+          // data length but we test it here to ensure no lockups
+          data_vtr.delete();
+          for (int i = 0; i < $urandom_range(15); i++)
             data_vtr[i] = $urandom();
-  
+          // Perform transaction
           test.start_timeout(timeout, 10us, "Waiting for AXIS-Ctrl transaction");
           axis_ctrl_transact(
             $urandom_range(5), // opcode
@@ -404,8 +410,8 @@ module ctrlport_endpoint_tb;
             THIS_PORTID, // portid
             $urandom(), $urandom(), // rem_epid, rem_portid
             data_vtr,
-            rand_32bits_s[7:4], // byte_en
-            rand_32bits_s[8], // has_time
+            $urandom_range(15), // byte_en
+            $urandom_range(1), // has_time
             {$urandom(), $urandom()}, // timestamp
             resp_status,
             resp_data
@@ -425,16 +431,14 @@ module ctrlport_endpoint_tb;
       // Test multiple transactions
       for (int n = 0; n < NUM_XACT_PER_TEST * 4; n++) begin
         test.start_timeout(timeout, 10us, "Waiting for Ctrlport transaction");
-        rand_32bits_m = $urandom();
-
         ctrlport_transact(
-          rand_32bits_m[1], rand_32bits_m[0], // wr and rd
+          $urandom_range(1), $urandom_range(1), // wr and rd
           $urandom(), // addr
           THIS_PORTID, // portid
           $urandom(), $urandom(), // rem_epid, rem_portid
           $urandom(), // data
-          rand_32bits_m[5:2], // byte_en
-          rand_32bits_m[6], // has_time
+          $urandom_range(15), // byte_en
+          $urandom_range(1), // has_time
           {$urandom(), $urandom()}, // timestamp
           resp_status,
           resp_data
@@ -454,32 +458,35 @@ module ctrlport_endpoint_tb;
       test.start_timeout(timeout, 10us * NUM_XACT_PER_TEST, "Waiting for test case");
       fork
         for (int n = 0; n < NUM_XACT_PER_TEST; n++) begin
-          rand_32bits_s = $urandom();
-          for (int i = 0; i < rand_32bits_s[3:0]; i++)
+          // Generate random data for the payload
+          // It is illegal in the protocol to have a zero
+          // data length but we test it here to ensure no lockups
+          data_vtr.delete();
+          for (int i = 0; i < $urandom_range(15); i++)
             data_vtr[i] = $urandom();
+          // Perform transaction
           axis_ctrl_transact(
             $urandom_range(5), // opcode
             $urandom(), // addr
             THIS_PORTID, // portid
             $urandom(), $urandom(), // rem_epid, rem_portid
             data_vtr,
-            rand_32bits_s[7:4], // byte_en
-            rand_32bits_s[8], // has_time
+            $urandom_range(15), // byte_en
+            $urandom_range(1), // has_time
             {$urandom(), $urandom()}, // timestamp
             resp_status,
             resp_data
           );
         end
         for (int n = 0; n < NUM_XACT_PER_TEST; n++) begin
-          rand_32bits_m = $urandom();
           ctrlport_transact(
-            rand_32bits_m[1], rand_32bits_m[0], // wr and rd
+            $urandom_range(1), $urandom_range(1), // wr and rd
             $urandom(), // addr
             THIS_PORTID, // portid
             $urandom(), $urandom(), // rem_epid, rem_portid
             $urandom(), // data
-            rand_32bits_m[5:2], // byte_en
-            rand_32bits_m[6], // has_time
+            $urandom_range(15), // byte_en
+            $urandom_range(1), // has_time
             {$urandom(), $urandom()}, // timestamp
             resp_status,
             resp_data
@@ -493,10 +500,7 @@ module ctrlport_endpoint_tb;
     // Finish Up
     // ----------------------------------------
     // Display final statistics and results
-    test.end_tb(0);
-    // Stop the simulation
-    rfnoc_ctrl_clk_gen.kill();
-    ctrlport_clk_gen.kill();
+    test.end_tb();
   end
 
 endmodule

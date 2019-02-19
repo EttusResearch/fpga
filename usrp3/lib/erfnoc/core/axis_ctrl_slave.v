@@ -106,7 +106,7 @@ module axis_ctrl_slave (
 
   axis_width_conv #(
     .WORD_W(32), .IN_WORDS(2), .OUT_WORDS(1),
-    .SYNC_CLKS(1), .PIPELINE("OUT")
+    .SYNC_CLKS(1), .PIPELINE("IN")
   ) downsizer_i (
     .s_axis_aclk(clk), .s_axis_rst(rst),
     .s_axis_tdata(out64_gt_tdata), .s_axis_tkeep(out64_gt_tkeep),
@@ -151,6 +151,7 @@ module axis_ctrl_slave (
   wire [9:0]  dst_port     = axis_ctrl_get_dst_port    (in64_tdata[31:0] );
   wire [9:0]  rem_dst_port = axis_ctrl_get_rem_dst_port(in64_tdata[63:32]);
   wire [15:0] rem_dst_epid = axis_ctrl_get_rem_dst_epid(in64_tdata[63:32]);
+  wire        malformed    = (is_ack || num_data == 4'd0);
   // Shortcuts (transaction request op-word)
   wire [19:0] xact_address = axis_ctrl_get_address(in64_tdata[31:0]);
   wire [3:0]  xact_byte_en = axis_ctrl_get_byte_en(in64_tdata[31:0]);
@@ -172,7 +173,7 @@ module axis_ctrl_slave (
           if (in64_tvalid && in64_tready) begin
             cached_has_time <= has_time;
             if (!in64_tlast) begin
-              if (is_ack)           // Unexpected ACK. Drop.
+              if (malformed)        // Malformed packet. Drop.
                 state <= ST_DROP;
               else if (has_time)    // Pkt has a timestamp
                 state <= ST_IN_TS;
@@ -277,7 +278,7 @@ module axis_ctrl_slave (
           axis_ctrl_build_hdr_hi(rem_dst_port, rem_dst_epid),
           axis_ctrl_build_hdr_lo(1'b1, has_time, seq_num, num_data, dst_port, src_port)
         };
-        out64_tvalid = in64_tvalid;
+        out64_tvalid = in64_tvalid && !malformed;
       end
       ST_IN_TS: begin       // Pass input to the output without modification
         in64_tready  = out64_tready;
