@@ -73,9 +73,10 @@ package PkgChdrUtils;
   const chdr_flags_t CHDR_FLAGS_USER3 = 6'b100000;
 
   // AXIS-Ctrl packet OpCode field values
-  const ctrl_opcode_t CTRL_OPCODE_SLEEP = 0;
-  const ctrl_opcode_t CTRL_OPCODE_WRITE = 1;
-  const ctrl_opcode_t CTRL_OPCODE_READ  = 2;
+  const ctrl_opcode_t CTRL_OPCODE_SLEEP      = 0;
+  const ctrl_opcode_t CTRL_OPCODE_WRITE      = 1;
+  const ctrl_opcode_t CTRL_OPCODE_READ       = 2;
+  const ctrl_opcode_t CTRL_OPCODE_WRITE_READ = 3;
 
   // AXIS-Ctrl packet Status field values
   const ctrl_status_t CTRL_STATUS_OKAY    = 0;

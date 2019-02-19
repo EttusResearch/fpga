@@ -35,7 +35,7 @@ package PkgTestExec;
 
 
     function new(string tb_name);
-      $timeformat(-9, 0, " ns", 0);
+      $timeformat(-9, 0, " ns", 12);
       this.tb_name = tb_name;
     endfunction : new
 
@@ -106,7 +106,7 @@ package PkgTestExec;
 
       current_test = test_name;
       num_started++;
-      $display("[TEST CASE %3d] (t = %0t) BEGIN: %s...", num_started, $time, test_name);
+      $display("[TEST CASE %3d] (t = %t) BEGIN: %s...", num_started, $time, test_name);
       test_status.push_back(1);   // Set status to 1 (passed) initially
       num_assertions = 0;
     endfunction : start_test
@@ -126,7 +126,7 @@ package PkgTestExec;
 
       passed = test_status[num_started-1] && test_result;
       num_finished++;
-      $display("[TEST CASE %3d] (t = %0t) DONE... %s", 
+      $display("[TEST CASE %3d] (t = %t) DONE... %s", 
                num_started, $time, passed ? "Passed" : "FAILED");
 
       if (passed) num_passed++;
