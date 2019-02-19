@@ -8,7 +8,8 @@
 module axi_fifo_2clk #(
     parameter SYNC_STAGES = 2,
     parameter SIZE        = 10,
-    parameter WIDTH       = 32)
+    parameter WIDTH       = 32,
+    parameter PIPELINE    = "<UNUSED>")
 (
     input reset,
     input i_aclk,
