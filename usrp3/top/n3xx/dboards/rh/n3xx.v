@@ -3357,8 +3357,12 @@ module n3xx (
     .NUM_DBOARDS(NUM_DBOARDS),
     .NUM_SPI_PER_DBOARD(4),
     .RADIO_NOC_ID(64'h12AD_1000_0000_0320),
-    .USE_REPLAY(1),
     .USE_CORRECTION(1)
+  `ifdef USE_REPLAY
+    .USE_REPLAY(1)
+  `else
+    .USE_REPLAY(0)
+  `endif
   ) n3xx_core(
     // Clocks and resets
 `ifdef NO_DB
