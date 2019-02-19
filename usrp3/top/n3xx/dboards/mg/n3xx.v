@@ -3429,7 +3429,11 @@ module n3xx (
     .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
     .NUM_CHANNELS(NUM_CHANNELS),
     .NUM_DBOARDS(NUM_DBOARDS),
+  `ifdef USE_REPLAY
     .USE_REPLAY(1)
+  `else
+    .USE_REPLAY(0)
+  `endif
   ) n3xx_core(
     // Clocks and resets
   `ifdef NO_DB
