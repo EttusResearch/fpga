@@ -95,6 +95,7 @@ module axis_ctrl_master #(
   reg [63:0]  req_time;           // Cached timestamp for transaction request
   // Response state
   reg         resp_has_time;      // Does the response have a timestamp?
+  reg [1:0]   resp_status;        // The status in the response
   reg         resp_seq_err, resp_cmd_err; // Error bits for the response
 
   always @(posedge clk) begin
@@ -125,6 +126,8 @@ module axis_ctrl_master #(
             req_byte_en    <= ctrlport_req_byte_en;
             req_has_time   <= ctrlport_req_has_time;
             req_time       <= ctrlport_req_time;
+            // Start sending out AXIS-Ctrl packet
+            state <= ST_REQ_HDR_LO;
           end
         end
 
@@ -218,6 +221,7 @@ module axis_ctrl_master #(
               resp_cmd_err <= resp_cmd_err ||
                               (axis_ctrl_get_opcode(s_axis_ctrl_tdata) != req_opcode) ||
                               (axis_ctrl_get_address(s_axis_ctrl_tdata) != req_addr);
+              resp_status <= axis_ctrl_get_status(s_axis_ctrl_tdata);
               state <= ST_RESP_OP_DATA;
             end else begin
               // Response was too short
@@ -306,7 +310,7 @@ module axis_ctrl_master #(
   assign ctrlport_resp_ack    = (state == ST_RESP_OP_DATA && s_axis_ctrl_tvalid) || 
                                 (state == ST_SHORT_PKT_ERR); 
   assign ctrlport_resp_status = resp_cmd_err ? AXIS_CTRL_STS_CMDERR : 
-                                  (resp_seq_err ? AXIS_CTRL_STS_WARNING : AXIS_CTRL_STS_OKAY);
+                                  (resp_seq_err ? AXIS_CTRL_STS_WARNING : resp_status);
   assign ctrlport_resp_data   = (state == ST_SHORT_PKT_ERR) ? 32'h0 : s_axis_ctrl_tdata;
 
 endmodule // axis_ctrl_master

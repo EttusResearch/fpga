@@ -216,10 +216,16 @@ module axis_ctrl_slave (
         // Hold the input bus to implement a sleep
         // ------------------------------------
         ST_SLEEP: begin
-          if (sleep_cntr == 32'd0)
+          if (sleep_cntr == 32'd0) begin
             state <= ST_OUT_OP_WORD;
-          else
+            resp_data <= xact_data;
+            // We could get to this state for an invalid opcode so
+            // only update the status if this is a legit sleep op
+            if (xact_opcode == AXIS_CTRL_OPCODE_SLEEP)
+              resp_status <= AXIS_CTRL_STS_OKAY;
+          end else begin
             sleep_cntr <= sleep_cntr - 32'd1;
+          end
         end
 
         // Wait for a response on the master ctrlport
@@ -227,7 +233,8 @@ module axis_ctrl_slave (
         ST_WAIT_FOR_ACK: begin
           if (ctrlport_resp_ack) begin
             resp_status <= ctrlport_resp_status;
-            if (xact_opcode == AXIS_CTRL_OPCODE_READ)
+            if (xact_opcode == AXIS_CTRL_OPCODE_READ ||
+                xact_opcode == AXIS_CTRL_OPCODE_WRITE_READ)
               resp_data <= ctrlport_resp_data;
             else
               resp_data <= xact_data;
