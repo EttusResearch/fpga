@@ -11,7 +11,7 @@ set cmd       [lindex $argv 0]
 set part_name [lindex $argv 1]
 
 # Only create an in-memory roject when not using bdtcl commands.
-if [expr [lsearch {_bdtcl} $cmd] == 0] {
+if [expr [lsearch {_bdtcl} $cmd] == -1] {
     create_project -in_memory -ip -name inmem_ip_proj -part $part_name
 # Otherwise, set the system's TMP directory.
 } else {
