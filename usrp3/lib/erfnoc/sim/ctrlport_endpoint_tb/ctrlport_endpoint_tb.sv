@@ -258,34 +258,34 @@ module ctrlport_endpoint_tb;
     output [1:0]  resp_status,
     output [31:0] resp_data
   );
-    AxisCtrlPacket tx_pkt, rx_pkt, exp_pkt;
-    axis_ctrl_header_t header;
-    ctrl_op_word_t op_word;
-    ctrl_status_t exp_status;
-    ctrl_word_t   exp_data0;
+    automatic AxisCtrlPacket tx_pkt, rx_pkt = null, exp_pkt = null;
+    automatic axis_ctrl_header_t header;
+    automatic ctrl_op_word_t op_word;
+    automatic ctrl_status_t  exp_status;
+    automatic ctrl_word_t    exp_data0;
 
     // Opcode specific logic
-    case (opcode)
-      CTRL_OPCODE_SLEEP: begin
+    case (ctrl_opcode_t'(opcode))
+      CTRL_OP_SLEEP: begin
         // data[0] = cycles of sleep so limit its value
         data[0][31:5] = 0;
-        exp_status = CTRL_STATUS_OKAY;
+        exp_status = CTRL_STS_OKAY;
         exp_data0 = data[0];
       end
-      CTRL_OPCODE_WRITE_READ: begin
-        exp_status = addr[19:18];
+      CTRL_OP_WRITE_READ: begin
+        exp_status = ctrl_status_t'(addr[19:18]);
         exp_data0 = {16'hFEED, ~addr[15:0]};
       end
-      CTRL_OPCODE_WRITE: begin
-        exp_status = addr[19:18];
+      CTRL_OP_WRITE: begin
+        exp_status = ctrl_status_t'(addr[19:18]);
         exp_data0 = data[0];
       end
-      CTRL_OPCODE_READ: begin
-        exp_status = addr[19:18];
+      CTRL_OP_READ: begin
+        exp_status = ctrl_status_t'(addr[19:18]);
         exp_data0 = {16'hFEED, ~addr[15:0]};
       end
       default: begin
-        exp_status = CTRL_STATUS_CMDERR;
+        exp_status = CTRL_STS_CMDERR;
         exp_data0 = data[0];
       end
     endcase
@@ -305,18 +305,20 @@ module ctrlport_endpoint_tb;
     };
     op_word = '{
       default      : '0,
+      op_code      : ctrl_opcode_t'(opcode),
       status       : CTRL_STATUS_OKAY,
-      op_code      : opcode,
       byte_enable  : byte_en,
       address      : addr
     };
     tx_pkt.write_ctrl(header, op_word, data, timestamp);
 
-    // Build expected packet
-    exp_pkt = tx_pkt.copy();
-    exp_pkt.header.is_ack = 1'b1;
-    exp_pkt.op_word.status = exp_status;
-    exp_pkt.data[0] = exp_data0;
+    // Build expected packet (NULL if data vector is empty)
+    if (data.size() > 0) begin
+      exp_pkt = tx_pkt.copy();
+      exp_pkt.header.is_ack = 1'b1;
+      exp_pkt.op_word.status = ctrl_status_t'(exp_status);
+      exp_pkt.data[0] = exp_data0;
+    end
 
     // Send/receive the packet
     fork

@@ -130,7 +130,7 @@ module test_chdr_tb;
 
       // Build packet
       header = '{
-        pkt_type  : PKT_TYPE_DATA_WITH_TIMESTAMP,
+        pkt_type  : CHDR_DATA_WITH_TS,
         seq_num   : 5678,
         dst_epid  : 'hABCD,
         default   : 0
@@ -169,7 +169,7 @@ module test_chdr_tb;
       header = '{
         seq_num  : 5678,
         dst_epid : 'hABCD,
-        pkt_type : PKT_TYPE_STREAM_STATUS,
+        pkt_type : CHDR_STRM_STATUS,
         default  : 0
       };
       tx_status = '{
@@ -219,7 +219,7 @@ module test_chdr_tb;
       header = '{
         seq_num  : 5678,
         dst_epid : 'hABCD,
-        pkt_type : PKT_TYPE_STREAM_COMMAND,
+        pkt_type : CHDR_STRM_CMD,
         default  : 0
       };
       tx_command = '{
@@ -266,7 +266,7 @@ module test_chdr_tb;
       header = '{
         seq_num  : 5678,
         dst_epid : 'hABCD,
-        pkt_type : PKT_TYPE_MANAGEMENT,
+        pkt_type : CHDR_MANAGEMENT,
         default  : 0
       };
       tx_mgmt.header = '{

@@ -32,8 +32,8 @@ package PkgChdrBfm;
 
     extern function ChdrPacket copy();
     extern function bit        equal(ChdrPacket packet);
-    extern function string     sprint();
-    extern function void       print();
+    extern function string     sprint(bit pretty = 1);
+    extern function void       print(bit pretty = 1);
 
     // Accessors
     extern function void write_raw          (ref chdr_header_t         header,
@@ -75,6 +75,9 @@ package PkgChdrBfm;
     extern function int  mdata_bytes();
     extern function int  data_bytes();
     extern function void update_lengths();
+
+    extern function string sprint_raw();
+    extern function string sprint_pretty();
 
   endclass : ChdrPacket;
 
@@ -146,31 +149,98 @@ package PkgChdrBfm;
     if (header != packet.header) return 0;
     if (!chdr_word_queues_equal(data, packet.data)) return 0;
     if (!chdr_word_queues_equal(metadata, packet.metadata)) return 0;
-    if (header.pkt_type == PKT_TYPE_DATA_WITH_TIMESTAMP && timestamp != packet.timestamp) return 0;
+    if (header.pkt_type == CHDR_DATA_WITH_TS && timestamp != packet.timestamp) return 0;
     return 1;
   endfunction : equal
 
 
-  // Format the contents of the packet into a string
-  function string ChdrPacket::sprint();
+  // Format the contents of the packet into a string (don't dissect contents)
+  function string ChdrPacket::sprint_raw();
     string str;
-    str = {str, $sformatf("header: %p\n", header) };
-    str = {str, $sformatf("timestamp: %X\n", timestamp) };
-    str = {str, $sformatf("metadata:\n") };
+    str = {str, $sformatf("ChdrPacket:\n")};
+    str = {str, $sformatf("- header: %p\n", header) };
+    str = {str, $sformatf("- timestamp: %X\n", timestamp) };
+    str = {str, $sformatf("- metadata:\n") };
     foreach (metadata[i]) begin
       str = {str, $sformatf("%5d> %X\n", i, metadata[i]) };
     end
-    str = {str, $sformatf("data:\n") };
+    str = {str, $sformatf("- data:\n") };
     foreach (data[i]) begin
       str = {str, $sformatf("%5d> %X\n", i, data[i]) };
     end
     return str;
-  endfunction : sprint
+  endfunction : sprint_raw
 
+  // Format the contents of the packet into a string (dissect contents)
+  function string ChdrPacket::sprint_pretty();
+    string str;
+    str = {str, $sformatf("ChdrPacket:\n")};
+    str = {str, $sformatf("- header: %p\n", header) };
+    if (header.pkt_type == CHDR_DATA_WITH_TS) begin
+      str = {str, $sformatf("- timestamp: %0d\n", timestamp) };
+    end
+    if (header.num_mdata != '0) begin
+      str = {str, $sformatf("- metadata:\n") };
+      foreach (metadata[i]) begin
+        str = {str, $sformatf("%5d> %X\n", i, metadata[i]) };
+      end
+    end
+    str = {str, $sformatf("- data (%s):\n", header.pkt_type.name) };
+    if (header.pkt_type == CHDR_MANAGEMENT) begin
+      chdr_header_t tmp_hdr;
+      chdr_mgmt_t tmp_mgmt;
+      read_mgmt(tmp_hdr, tmp_mgmt);
+      str = {str, $sformatf("  > chdr_mgmt_header_t : %p\n", tmp_mgmt.header)};
+      foreach (tmp_mgmt.ops[i]) begin
+        str = {str, $sformatf("  > %3d: chdr_mgmt_op_t: '{op_payload:0x%12x,op_code:%s,ops_pending:%0d}\n",
+          i, tmp_mgmt.ops[i].op_payload, tmp_mgmt.ops[i].op_code.name, tmp_mgmt.ops[i].ops_pending)};
+      end
+    end else if (header.pkt_type == CHDR_STRM_STATUS) begin
+      chdr_header_t tmp_hdr;
+      chdr_str_status_t tmp_sts;
+      read_stream_status(tmp_hdr, tmp_sts);
+      str = {str, $sformatf("  > chdr_str_status_t0 : '{status_info:0x%012x,buff_info:0x%04x,xfer_count_bytes:%0d,xfer_count_pkts:%0d...\n",
+        tmp_sts.status_info,tmp_sts.buff_info,tmp_sts.xfer_count_bytes,tmp_sts.xfer_count_pkts)};
+      str = {str, $sformatf("  > chdr_str_status_t1 :   capacity_pkts:%0d,capacity_bytes:%0d,status:%s,src_epid:%0d}\n",
+        tmp_sts.capacity_pkts,tmp_sts.capacity_bytes,tmp_sts.status.name,tmp_sts.src_epid)};
+    end else if (header.pkt_type == CHDR_STRM_CMD) begin
+      chdr_header_t tmp_hdr;
+      chdr_str_command_t tmp_cmd;
+      read_stream_cmd(tmp_hdr, tmp_cmd);
+      str = {str, $sformatf("  > chdr_str_command_t : %p\n", tmp_cmd)};
+    end else if (header.pkt_type == CHDR_CONTROL) begin
+      chdr_header_t tmp_hdr;
+      chdr_word_t tmp_ts;
+      chdr_ctrl_header_t tmp_ctrl_hdr;
+      ctrl_op_word_t tmp_op_word;
+      ctrl_word_t tmp_ctrl_data[$];
+      read_ctrl(tmp_hdr, tmp_ctrl_hdr, tmp_op_word, tmp_ctrl_data, tmp_ts);
+      str = {str, $sformatf("  > chdr_ctrl_header_t : %p\n", tmp_ctrl_hdr)};
+      if (tmp_ctrl_hdr.has_time)
+        str = {str, $sformatf("  > timestamp          : %0d\n", tmp_ts)};
+      str = {str, $sformatf("  > ctrl_op_word_t     : '{status:%s,op_code:%s,byte_enable:0b%4b,address:0x%05x}\n",
+        tmp_op_word.status.name, tmp_op_word.op_code.name, tmp_op_word.byte_enable, tmp_op_word.address)};
+      foreach (tmp_ctrl_data[i]) begin
+        str = {str, $sformatf("  > data %2d            : 0x%08x\n", i, tmp_ctrl_data[i])};
+      end
+    end else begin
+      foreach (data[i]) begin
+        str = {str, $sformatf("%5d> %X\n", i, data[i]) };
+      end
+    end
+    return str;
+  endfunction : sprint_pretty
+
+  function string ChdrPacket::sprint(bit pretty = 1);
+    if (pretty)
+      return sprint_pretty();
+    else
+      return sprint_raw();
+  endfunction: sprint
 
   // Print the contents of the packet
-  function void ChdrPacket::print();
-    $display(sprint());
+  function void ChdrPacket::print(bit pretty = 1);
+    $display(sprint(pretty));
   endfunction : print
 
 
@@ -225,6 +295,7 @@ package PkgChdrBfm;
     ref chdr_header_t     header,
     ref chdr_str_status_t status
   );
+    header.pkt_type = CHDR_STRM_STATUS; // Update packet type in header
     this.header = header;
     data        = {};
     for (int i = 0; i < $bits(status); i += $bits(chdr_word_t)) begin
@@ -240,8 +311,8 @@ package PkgChdrBfm;
     output chdr_str_status_t  status
   );
     // Make sure it's a stream status packet
-    assert(this.header.pkt_type == PKT_TYPE_STREAM_STATUS) else begin
-      $error("ChdrPacket::read_status: Packet type is not PKT_TYPE_STREAM_STATUS");
+    assert(this.header.pkt_type == CHDR_STRM_STATUS) else begin
+      $error("ChdrPacket::read_status: Packet type is not CHDR_STRM_STATUS");
     end
 
     // Make sure we have enough payload
@@ -261,6 +332,7 @@ package PkgChdrBfm;
     ref chdr_header_t      header,
     ref chdr_str_command_t command
   );
+    header.pkt_type = CHDR_STRM_CMD; // Update packet type in header
     this.header = header;
     data = {};
     for (int i = 0; i < $bits(command); i += $bits(chdr_word_t)) begin
@@ -276,8 +348,8 @@ package PkgChdrBfm;
     output chdr_str_command_t command
   );
     // Make sure it's a stream command packet
-    assert(this.header.pkt_type == PKT_TYPE_STREAM_COMMAND) else begin
-      $error("ChdrPacket::read_command: Packet type is not PKT_TYPE_STREAM_COMMAND");
+    assert(this.header.pkt_type == CHDR_STRM_CMD) else begin
+      $error("ChdrPacket::read_command: Packet type is not CHDR_STRM_CMD");
     end
 
     // Make sure we have enough payload
@@ -297,6 +369,7 @@ package PkgChdrBfm;
     ref chdr_header_t header,
     ref chdr_mgmt_t   mgmt
   );
+    header.pkt_type = CHDR_MANAGEMENT; // Update packet type in header
     this.header = header;
     data = {};
 
@@ -320,8 +393,8 @@ package PkgChdrBfm;
     int num_ops;
 
     // Make sure it's a management packet
-    assert(header.pkt_type == PKT_TYPE_MANAGEMENT) else begin
-      $error("ChdrPacket::read_mgmt: Packet type is not PKT_TYPE_MANAGEMENT");
+    assert(header.pkt_type == CHDR_MANAGEMENT) else begin
+      $error("ChdrPacket::read_mgmt: Packet type is not CHDR_MANAGEMENT");
     end
 
     header = this.header;
@@ -351,12 +424,15 @@ package PkgChdrBfm;
     ref ctrl_word_t        ctrl_data[$],
     input chdr_word_t      ctrl_timestamp = 0
   );
+    bit partial_word;
+    ctrl_word_t mandatory_data;
+    header.pkt_type = CHDR_CONTROL; // Update packet type in header
     this.header = header;
     data = {};
 
     // Insert word 0 of control payload
     data.push_back(ctrl_header[63:0]);
-    
+
     // Insert word 1 of control payload, if timestamp is used
     if (ctrl_header.has_time) begin
       data.push_back(ctrl_timestamp);
@@ -364,11 +440,14 @@ package PkgChdrBfm;
 
     // Insert word 2 of control payload, the operation word
     // and first word of control data.
-    data.push_back({ctrl_data[0], ctrl_op_word[31:0]});
-    
+    mandatory_data = (ctrl_header.num_data > 0) ? ctrl_data[0] : '0;
+    data.push_back({mandatory_data, ctrl_op_word[31:0]});
+    // We have a half CHDR word if num_data is even
+    partial_word = (ctrl_header.num_data[0] == '0);
+
     // Insert remaining data, if present
     for (int i = 1; i < ctrl_data.size(); i+=2) begin
-      data.push_back( { ctrl_data[i+1], ctrl_data[i] } );
+      data.push_back({(partial_word ? '0 : ctrl_data[i+1]), ctrl_data[i]});
     end
 
     update_lengths();
@@ -383,28 +462,42 @@ package PkgChdrBfm;
     output ctrl_word_t        ctrl_data[$],
     output chdr_word_t        ctrl_timestamp
   );
-    chdr_word_t chdr_word;
+    chdr_word_t chdr_op_word;
+    int dptr = 0;
+
+    // Make sure it's a stream status packet
+    assert(this.header.pkt_type == CHDR_CONTROL) else begin
+      $error("ChdrPacket::read_status: Packet type is not CHDR_CONTROL");
+    end
+
+    // Make sure we have enough payload
+    assert($bits(ctrl_header)+$bits(ctrl_op_word) <= $bits(data)) else begin
+      $error("ChdrPacket::read_status: Not enough data for status payload");
+    end
 
     header = this.header;
-    
+
     // Word 0
-    ctrl_header[63:0] = data.pop_front();
+    ctrl_header[63:0] = data[dptr++];
 
     // Word 1
     if (ctrl_header.has_time) begin 
-      ctrl_timestamp = data.pop_front();
+      ctrl_timestamp = data[dptr++];
     end
 
     // Word 2, last 32-bits of control header and first word of control data
-    chdr_word = data.pop_front();
-    ctrl_op_word = chdr_word[31:0];
-    ctrl_data = { chdr_word[63:32] };
+    chdr_op_word = data[dptr++];
+    ctrl_op_word = chdr_op_word[31:0];
+    ctrl_data.delete();
+    if (ctrl_header.num_data > 0) begin
+      ctrl_data[0] = chdr_op_word[63:32];
+    end
 
     // Copy any remaining data words
-    for (int i = 0; i < data.size(); i++) begin
-      chdr_word = data.pop_front();
-      ctrl_data.push_back(chdr_word[31: 0]);
-      ctrl_data.push_back(chdr_word[63:32]);
+    for (int i = dptr; i < data.size(); i++) begin
+      ctrl_data.push_back(data[i][31:0]);
+      if (i != data.size()-1 || ctrl_header.num_data[0] != 0)
+        ctrl_data.push_back(data[i][63:32]);
     end
   endfunction : read_ctrl
 
@@ -412,7 +505,7 @@ package PkgChdrBfm;
   // Calculate the header size (including timestamp), in bytes, from the header
   // information.
   function int ChdrPacket::header_bytes();
-    if (BUS_WIDTH == $bits(chdr_word_t) && header.pkt_type == PKT_TYPE_DATA_WITH_TIMESTAMP) begin
+    if (BUS_WIDTH == $bits(chdr_word_t) && header.pkt_type == CHDR_DATA_WITH_TS) begin
       header_bytes = 2 * (BUS_WIDTH / 8);  // Two words (header + timestamp)
     end else begin
       header_bytes = (BUS_WIDTH / 8);      // One word, regardless of timestamp
@@ -548,7 +641,7 @@ package PkgChdrBfm;
 
           // Depending on the size of the word, we could have just the header 
           // or both the header and the timestamp in this word.
-          if (chdr_packet.header.pkt_type == PKT_TYPE_DATA_WITH_TIMESTAMP) begin
+          if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS) begin
             if ($bits(word) >= 128) begin
               chdr_packet.timestamp = word[127:64];
               rx_state = ST_METADATA;
@@ -618,7 +711,7 @@ package PkgChdrBfm;
     if (chdr_packet.data.size() % CHDR_PER_BUS != 0) num_bus_words++;
     num_bus_words += chdr_packet.metadata.size() / CHDR_PER_BUS;
     if (chdr_packet.metadata.size() % CHDR_PER_BUS != 0) num_bus_words++;
-    if (chdr_packet.header.pkt_type == PKT_TYPE_DATA_WITH_TIMESTAMP && CHDR_PER_BUS == 1) begin
+    if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS && CHDR_PER_BUS == 1) begin
       // Add two words, one for header and one for timestamp
       num_bus_words += 2;
     end else begin
@@ -640,7 +733,7 @@ package PkgChdrBfm;
     if (BUS_WIDTH == 64) axis_packet.data.push_back(bus_word);
 
     // Insert timestamp
-    if (chdr_packet.header.pkt_type == PKT_TYPE_DATA_WITH_TIMESTAMP) begin
+    if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS) begin
       if (BUS_WIDTH == 64) axis_packet.data.push_back(chdr_packet.timestamp);
       else begin
         bus_word[127:64] = chdr_packet.timestamp;

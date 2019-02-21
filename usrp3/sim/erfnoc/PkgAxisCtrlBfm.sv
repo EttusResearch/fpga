@@ -63,15 +63,18 @@ package PkgAxisCtrlBfm;
 
     // Format the contents of the packet into a string
     function string sprint();
-    string str;
-    str = {str, $sformatf("header: %p\n", header) };
-    str = {str, $sformatf("timestamp: %X\n", timestamp) };
-    str = {str, $sformatf("op_word: %p\n", op_word) };
-    str = {str, $sformatf("data:\n") };
-    foreach (data[i]) begin
-      str = {str, $sformatf("%5d> %X\n", i, data[i]) };
-    end
-    return str;
+      string str;
+      str = {str, $sformatf("AxisCtrlPacket:\n")};
+      str = {str, $sformatf("- header: %p\n", header) };
+      if (header.has_time)
+        str = {str, $sformatf("- timestamp: %0d\n", timestamp) };
+      str = {str, $sformatf("- op_word: '{status:%s,op_code:%s,byte_enable:0b%4b,address:0x%05x}\n",
+        op_word.status.name, op_word.op_code.name, op_word.byte_enable, op_word.address)};
+      str = {str, $sformatf("- data:\n") };
+      foreach (data[i]) begin
+        str = {str, $sformatf("%5d> 0x%08x\n", i, data[i]) };
+      end
+      return str;
     endfunction : sprint
 
     // Print the contents of the packet
