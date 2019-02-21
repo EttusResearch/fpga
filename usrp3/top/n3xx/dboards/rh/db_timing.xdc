@@ -177,3 +177,88 @@ set_output_delay -clock [get_clocks fpga_clk_a_v] -max -$SETUP_SKEW [get_ports R
 set_output_delay -clock [get_clocks fpga_clk_a_v] -min  $HOLD_SKEW  [get_ports REF_1PPS_OUT]
 set_multicycle_path -setup -to [get_ports REF_1PPS_OUT] -start 0
 set_multicycle_path -hold  -to [get_ports REF_1PPS_OUT] -1
+
+#*******************************************************************************
+### Async I/Os
+set DB_ASYNC_OUTPUTS [get_ports {
+    DB*_MODULE_PWR_ENABLE
+    DB*_RF_PWR_ENABLE
+    DB*_CLKDIST_SYNC
+    DB*_ATR_TX
+    DB*_ATR_RX
+    DB*_TXRX_SW_CTRL_1
+    DB*_TXRX_SW_CTRL_2
+    DB*_LED_RX
+    DB*_LED_RX2
+    DB*_LED_TX
+    QSFP_I2C_*
+}]
+set_output_delay -clock [get_clocks async_out_clk] 0.000 $DB_ASYNC_OUTPUTS
+set_max_delay -to $DB_ASYNC_OUTPUTS 50.000
+set_min_delay -to $DB_ASYNC_OUTPUTS 0.000
+
+set_input_delay -clock [get_clocks async_in_clk] 0.000 [get_ports QSFP_I2C_*]
+set_max_delay -from [get_ports QSFP_I2C_*] 50.000
+set_min_delay -from [get_ports QSFP_I2C_*] 0.000
+
+#*******************************************************************************
+## JTAG
+
+## MAX 10 JTAG TDI setup: 2 ns
+## MAX 10 JTAG TMS setup: 3 ns
+## MAX 10 JTAG hold: 10 ns
+## MAX 10 JTAG clk-to-q: 18 ns
+## Board delay: < 1.5 ns
+##
+## Setup time = Board delay + TMS setup = 3 ns + 1.5 ns = 4.5 ns
+## Hold time = Board delay + TMS hold = 1.5 ns + 10 ns = 11.5 ns
+## Overconstrain output delay and keep skew to +/- 8 ns
+##
+## Input delay = 2x Board delay + clk-to-q = 3 ns + 18 ns = 21 ns
+
+# Constrain outputs for skew, with same latch/launch edge:
+set_output_delay                        -clock [get_clocks dba_jtag_tck] -max -4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dba_jtag_tck] -max -4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dba_jtag_tck] -min  4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dba_jtag_tck] -min  4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dbb_jtag_tck] -max -4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dbb_jtag_tck] -max -4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dbb_jtag_tck] -min  4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dbb_jtag_tck] -min  4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+# Finally, make both the setup and hold checks use the same launching and latching edges.
+set_multicycle_path -setup -from [get_clocks clk40] -to [get_clocks dba_jtag_tck] -start 0
+set_multicycle_path -hold  -from [get_clocks clk40] -to [get_clocks dba_jtag_tck] -1
+set_multicycle_path -setup -from [get_clocks clk40] -to [get_clocks dbb_jtag_tck] -start 0
+set_multicycle_path -hold  -from [get_clocks clk40] -to [get_clocks dbb_jtag_tck] -1
+
+set_input_delay -clock [get_clocks dba_jtag_tck] -clock_fall -max 21 \
+    [get_ports DBA_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dba_jtag_tck] -clock_fall -min 0 \
+    [get_ports DBA_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dbb_jtag_tck] -clock_fall -max 21 \
+    [get_ports DBB_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dbb_jtag_tck] -clock_fall -min 0 \
+    [get_ports DBB_CPLD_JTAG_TDO]
+# Inputs have setup checks relative to half a period of TCK (launch on fall,
+# latch on rise). Actual latch clock is faster, so push back setup and hold
+# checks to match.
+set_multicycle_path -setup -from [get_clocks dba_jtag_tck] \
+    -through [get_ports DBA_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR / 2}]
+set_multicycle_path -end -hold -from [get_clocks dba_jtag_tck] \
+    -through [get_ports DBA_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR - 1}]
+set_multicycle_path -setup -from [get_clocks dbb_jtag_tck] \
+    -through [get_ports DBB_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR / 2}]
+set_multicycle_path -end -hold -from [get_clocks dbb_jtag_tck] \
+    -through [get_ports DBB_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR - 1}]
