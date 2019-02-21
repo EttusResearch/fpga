@@ -22,6 +22,10 @@ RHODIUM_TOP_SRCS = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/rh/, \
 n3xx.v \
 ))
 
+RHODIUM_DB_CLOCKS_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/rh/, \
+db_clocks.xdc \
+))
+
 RHODIUM_DB_XDC = $(abspath $(addprefix $(BASE_DIR)/n3xx/dboards/rh/, \
 db_pins.xdc \
 db_timing.xdc \

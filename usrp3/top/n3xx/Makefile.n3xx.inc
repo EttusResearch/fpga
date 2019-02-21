@@ -61,6 +61,8 @@ ifndef EISCAT
 TOP_SRCS += n3xx_core.v 
 endif
 
+MB_CLOCKS_XDC = $(abspath mb_clocks.xdc)
+
 MB_XDC = \
 mb_timing.xdc \
 mb_pins.xdc
@@ -92,23 +94,27 @@ DRAM_SRCS =
 endif
 
 ifdef EISCAT
+DB_CLOCKS_XDC =
 DB_SRCS = $(EISCAT_DB_XDC) $(EISCAT_DB_TIMING_XDC) \
 $(EISCAT_TOP_SRCS) $(EISCAT_DB_SRCS) $(EISCAT_SYSREF_SRCS) \
 $(IP_DELAY_TAP_BRAM_SRCS)
 else
 ifdef N300
+DB_CLOCKS_XDC =
 DB_SRCS = $(MAGNESIUM_DB_TIMING_XDC) \
 $(MAGNESIUM_DB0_XDC) \
 $(MAGNESIUM_TOP_SRCS) $(MAGNESIUM_DB_SRCS)
 endif
 
 ifdef N310
+DB_CLOCKS_XDC =
 DB_SRCS = $(MAGNESIUM_DB_TIMING_XDC) \
 $(MAGNESIUM_DB0_XDC) $(MAGNESIUM_DB1_XDC) \
 $(MAGNESIUM_TOP_SRCS) $(MAGNESIUM_DB_SRCS)
 endif
 
 ifdef N320
+DB_CLOCKS_XDC = $(RHODIUM_DB_CLOCKS_XDC)
 DB_SRCS = $(RHODIUM_DB_XDC) \
 $(RHODIUM_TOP_SRCS) $(RHODIUM_DB_SRCS)
 endif
@@ -116,9 +122,10 @@ endif
 
 DB_SRCS += $(DB_COMMON_SRCS)
 
-# The XDC files must be read in a specific order, motherboard first and then daughterboard.
+# The XDC files must be read in a specific order, motherboard first and then daughterboard,
+# and the clocking XDC files must be before other XDC files.
 # Outside of that, all the other sources can be read in any order desired.
-DESIGN_SRCS = $(abspath $(MB_XDC)) $(DB_SRCS) \
+DESIGN_SRCS = $(MB_CLOCKS_XDC) $(DB_CLOCKS_XDC) $(abspath $(MB_XDC)) $(DB_SRCS) \
 $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
