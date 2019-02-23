@@ -49,88 +49,123 @@ module chdr_xb_ingress_buff #(
   `include "../core/rfnoc_chdr_internal_utils.vh"
 
   //----------------------------------------------------
-  // Payload packet state tracker
+  // Packet buffer and search/response FIFOs
   //----------------------------------------------------
 
-  localparam [0:0] ST_HEAD = 1'd0;
-  localparam [0:0] ST_BODY = 1'd1;
+  wire [WIDTH-1:0]  dbuff_i_tdata , dbuff_o_tdata ;
+  wire              dbuff_i_tlast , dbuff_o_tlast ;
+  wire              dbuff_i_tvalid, dbuff_o_tvalid;
+  wire              dbuff_i_tready, dbuff_o_tready;
+                    
+  wire [15:0]       find_tdata;
+  wire              find_tvalid, find_tready;
 
-  reg [0:0] in_state = ST_HEAD, out_state = ST_HEAD;
-
-  always @(posedge clk) begin
-    if (reset) begin
-      in_state <= ST_HEAD;
-    end else if (s_axis_chdr_tvalid & s_axis_chdr_tready) begin
-      if (in_state == ST_HEAD) begin
-        in_state <= ST_BODY;
-      end else begin
-        in_state <= s_axis_chdr_tlast ? ST_HEAD : ST_BODY;
-      end
-    end
-  end
-
-  always @(posedge clk) begin
-    if (reset) begin
-      out_state <= ST_HEAD;
-    end else if (m_axis_chdr_tvalid & m_axis_chdr_tready) begin
-      if (out_state == ST_HEAD) begin
-        out_state <= ST_BODY;
-      end else begin
-        out_state <= m_axis_chdr_tlast ? ST_HEAD : ST_BODY;
-      end
-    end
-  end
-
-  //----------------------------------------------------
-  // Packet buffer and destination FIFO
-  //----------------------------------------------------
-
-  wire buff_i_tvalid, buff_i_tready;
-  wire buff_o_tvalid, buff_o_tready;
-  wire find_tvalid, find_tready;
-  wire dest_i_tvalid, dest_i_tready, dest_o_tvalid;
-  wire [DEST_W:0] dest_i_tdata;
-
-  //NOTE: Violates AXIS but OK since FIFO downstream
-  assign buff_i_tvalid = s_axis_chdr_tvalid & s_axis_chdr_tready;
-  assign find_tvalid = (in_state == ST_HEAD) && buff_i_tvalid && (s_axis_chdr_tid == CHDR_MGMT_ROUTE_EPID);
-  assign buff_o_tready = m_axis_chdr_tready;
-
-  assign s_axis_chdr_tready = buff_i_tready &
-    ((in_state != ST_HEAD) || ((s_axis_chdr_tid == CHDR_MGMT_ROUTE_EPID) ? find_tready : dest_i_tready));
+  wire [DEST_W-1:0] dest_i_tdata;
+  wire              dest_i_tkeep, dest_i_tvalid, dest_i_tready;
+  wire [DEST_W-1:0] dest_o_tdata;
+  wire              dest_o_tkeep, dest_o_tvalid, dest_o_tready;
 
   axi_packet_gate #(.WIDTH(WIDTH), .SIZE(MTU)) pkt_gate_i (
     .clk(clk), .reset(reset), .clear(1'b0),
-    .i_tdata(s_axis_chdr_tdata), .i_tlast(s_axis_chdr_tlast),
-    .i_tvalid(buff_i_tvalid), .i_tready(buff_i_tready),
-    .i_terror(1'b0),
-    .o_tdata(m_axis_chdr_tdata), .o_tlast(m_axis_chdr_tlast),
-    .o_tvalid(buff_o_tvalid), .o_tready(buff_o_tready)
+    .i_tdata(dbuff_i_tdata), .i_tlast(dbuff_i_tlast), .i_terror(1'b0),
+    .i_tvalid(dbuff_i_tvalid), .i_tready(dbuff_i_tready),
+    .o_tdata(dbuff_o_tdata), .o_tlast(dbuff_o_tlast),
+    .o_tvalid(dbuff_o_tvalid), .o_tready(dbuff_o_tready)
   );
 
   axi_fifo #(.WIDTH(16), .SIZE(1)) find_fifo_i (
     .clk(clk), .reset(reset), .clear(1'b0),
-    .i_tdata(chdr_get_dst_epid(s_axis_chdr_tdata[63:0])),
-    .i_tvalid(find_tvalid), .i_tready (find_tready),
-    .o_tdata(m_axis_find_tdata),
-    .o_tvalid(m_axis_find_tvalid), .o_tready (m_axis_find_tready),
+    .i_tdata(find_tdata), .i_tvalid(find_tvalid), .i_tready (find_tready),
+    .o_tdata(m_axis_find_tdata), .o_tvalid(m_axis_find_tvalid), .o_tready (m_axis_find_tready),
     .space(), .occupied()
   );
 
-  assign dest_i_tdata = s_axis_result_tvalid ? {s_axis_result_tkeep, s_axis_result_tdata} :
-    {1'b1, (s_axis_chdr_tid == CHDR_MGMT_RETURN_TO_SRC) ? NODE_ID[DEST_W-1:0] : s_axis_chdr_tdest};
-  assign dest_i_tvalid = s_axis_result_tvalid ||
-    ((in_state == ST_HEAD) && buff_i_tvalid && (s_axis_chdr_tid != CHDR_MGMT_ROUTE_EPID));
-  assign s_axis_result_tready = s_axis_result_tvalid && dest_i_tready;
-
-  axi_fifo #(.WIDTH(DEST_W+1), .SIZE(1)) dest_fifo_i (
+  axi_mux #(
+    .WIDTH(DEST_W+1), .SIZE(2), .PRIO(1), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(1)
+  ) dest_mux_i (
     .clk(clk), .reset(reset), .clear(1'b0),
-    .i_tdata(dest_i_tdata), .i_tvalid(dest_i_tvalid), .i_tready(dest_i_tready),
-    .o_tdata({m_axis_chdr_tkeep, m_axis_chdr_tdest}), .o_tvalid(dest_o_tvalid),
-    .o_tready(m_axis_chdr_tready & m_axis_chdr_tvalid & (out_state == ST_HEAD)),
-    .space(), .occupied ()
+    .i_tdata({dest_i_tkeep, dest_i_tdata, s_axis_result_tkeep, s_axis_result_tdata}),
+    .i_tlast(2'b11), .i_tvalid({dest_i_tvalid, s_axis_result_tvalid}),
+    .i_tready({dest_i_tready, s_axis_result_tready}),
+    .o_tdata({dest_o_tkeep, dest_o_tdata}), .o_tlast(),
+    .o_tvalid(dest_o_tvalid), .o_tready(dest_o_tready)
   );
-  assign m_axis_chdr_tvalid = buff_o_tvalid & ((out_state != ST_HEAD) || dest_o_tvalid);
+
+  //----------------------------------------------------
+  // Dispatch logic
+  //----------------------------------------------------
+
+  // Input Logic
+  // -----------
+  // When a packet comes in, we may have to do one of the following:
+  // 1) Lookup the tdest using the EPID
+  // 2) Use the specified input tdest
+  // 3) Use the NODE_ID as the tdest (to return the packet)
+
+  reg s_axis_chdr_header = 1'b1;
+  always @(posedge clk) begin
+    if (reset) begin
+      s_axis_chdr_header <= 1'b1;
+    end else if (s_axis_chdr_tvalid & s_axis_chdr_tready) begin
+      s_axis_chdr_header <= s_axis_chdr_tlast;
+    end
+  end
+
+  reg aux_fifo_tready;
+  always @(*) begin
+    if (s_axis_chdr_header) begin
+      case (s_axis_chdr_tid)
+        CHDR_MGMT_ROUTE_EPID:
+          aux_fifo_tready = find_tready;
+        CHDR_MGMT_ROUTE_TDEST:
+          aux_fifo_tready = dest_i_tready;
+        CHDR_MGMT_RETURN_TO_SRC:
+          aux_fifo_tready = dest_i_tready;
+        default:
+          aux_fifo_tready = 1'b0; // We should never get here
+      endcase
+    end else begin
+      aux_fifo_tready = 1'b1;
+    end
+  end
+  assign s_axis_chdr_tready = s_axis_chdr_tvalid && dbuff_i_tready && aux_fifo_tready;
+
+  wire chdr_header_stb = s_axis_chdr_tvalid && s_axis_chdr_tready && s_axis_chdr_header;
+
+  // ********************************************************************************
+  //NOTE: The logic below violates AXI-Stream by having a tready -> tvalid dependency
+  //      To ensure no deadlocks, we need to place FIFOs downstream of dbuff_i_*,
+  //      find_* and dest_i_*
+  //
+  assign find_tdata     = chdr_get_dst_epid(s_axis_chdr_tdata[63:0]);
+  assign find_tvalid    = chdr_header_stb && (s_axis_chdr_tid == CHDR_MGMT_ROUTE_EPID);
+
+  assign dbuff_i_tdata  = s_axis_chdr_tdata;
+  assign dbuff_i_tlast  = s_axis_chdr_tlast;
+  assign dbuff_i_tvalid = s_axis_chdr_tready & s_axis_chdr_tvalid;
+
+  assign dest_i_tdata  = (s_axis_chdr_tid == CHDR_MGMT_ROUTE_TDEST) ? s_axis_chdr_tdest : NODE_ID[DEST_W-1:0];
+  assign dest_i_tkeep  = 1'b1;
+  assign dest_i_tvalid = chdr_header_stb && (s_axis_chdr_tid != CHDR_MGMT_ROUTE_EPID);
+  //
+  // ********************************************************************************
+
+
+  // Output Logic
+  // ------------
+  // The destination for the packet (tdest) must be valid before we allow
+  // the header of the packet to pass. So the packet must be blocked until
+  // the output of the dest_fifo is valid. The tdest and tkeep must remain
+  // valid until the end of the packet
+
+  assign m_axis_chdr_tdata  = dbuff_o_tdata;
+  assign m_axis_chdr_tlast  = dbuff_o_tlast;
+  assign m_axis_chdr_tdest  = dest_o_tdata;
+  assign m_axis_chdr_tkeep  = dest_o_tkeep;
+  assign m_axis_chdr_tvalid = dbuff_o_tvalid && dest_o_tvalid;
+
+  assign dbuff_o_tready = m_axis_chdr_tvalid & m_axis_chdr_tready;
+  assign dest_o_tready  = m_axis_chdr_tvalid & m_axis_chdr_tready & m_axis_chdr_tlast;
 
 endmodule
 

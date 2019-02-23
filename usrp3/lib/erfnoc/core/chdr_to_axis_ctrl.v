@@ -57,9 +57,10 @@ module chdr_to_axis_ctrl #(
   `include "rfnoc_chdr_utils.vh"
   `include "rfnoc_axis_ctrl_utils.vh"
 
-  localparam [1:0] ST_HEADER   = 2'd0;  // Processing the CHDR header
-  localparam [1:0] ST_METADATA = 2'd1;  // Processing the CHDR metadata
-  localparam [1:0] ST_BODY     = 2'd2;  // Processing the CHDR payload
+  localparam [1:0] ST_CHDR_HDR   = 2'd0;  // Processing the CHDR header
+  localparam [1:0] ST_CHDR_MDATA = 2'd1;  // Processing the CHDR metadata
+  localparam [1:0] ST_CTRL_HDR   = 2'd2;  // Processing the CHDR control header
+  localparam [1:0] ST_CTRL_BODY  = 2'd3;  // Processing the CHDR control body
 
   // ---------------------------------------------------
   //  Input/output register slices
@@ -104,36 +105,39 @@ module chdr_to_axis_ctrl #(
   // - Use the CHDR SrcPort as the Ctrl RemDstPort (return path in the downstream EP)
   // - Ignore the CHDR DstEPID because packet is already here
 
-  reg [1:0]   ch2ct_state = ST_HEADER;
+  reg [1:0]   ch2ct_state = ST_CHDR_HDR;
   reg [6:0]   ch2ct_nmdata = 7'd0;
 
   always @(posedge rfnoc_chdr_clk) begin
     if (rfnoc_chdr_rst) begin
-      ch2ct_state <= ST_HEADER;
+      ch2ct_state <= ST_CHDR_HDR;
     end else if (ch2ct_tvalid && ch2ct_tready) begin
       case (ch2ct_state)
-        ST_HEADER: begin
+        ST_CHDR_HDR: begin
           ch2ct_nmdata <= chdr_get_num_mdata(ch2ct_tdata[63:0]) - 7'd1;
           if (!ch2ct_tlast)
             ch2ct_state <= (chdr_get_num_mdata(ch2ct_tdata[63:0]) == 7'd0) ? 
-              ST_BODY : ST_METADATA;
+              ST_CTRL_HDR : ST_CHDR_MDATA;
           else
-            ch2ct_state <= ST_HEADER;  // Premature termination
+            ch2ct_state <= ST_CHDR_HDR;  // Premature termination
         end
-        ST_METADATA: begin
+        ST_CHDR_MDATA: begin
           ch2ct_nmdata <= ch2ct_nmdata - 7'd1;
           if (!ch2ct_tlast)
-            ch2ct_state <= (ch2ct_nmdata == 7'd0) ? ST_BODY : ST_METADATA;
+            ch2ct_state <= (ch2ct_nmdata == 7'd0) ? ST_CTRL_HDR : ST_CHDR_MDATA;
           else
-            ch2ct_state <= ST_HEADER;  // Premature termination
+            ch2ct_state <= ST_CHDR_HDR;  // Premature termination
         end
-        ST_BODY: begin
+        ST_CTRL_HDR: begin
+          ch2ct_state <= ch2ct_tlast ? ST_CHDR_HDR : ST_CTRL_BODY;
+        end
+        ST_CTRL_BODY: begin
           if (ch2ct_tlast)
-            ch2ct_state <= ST_HEADER;
+            ch2ct_state <= ST_CHDR_HDR;
         end
         default: begin
           // We should never get here
-          ch2ct_state <= ST_HEADER;
+          ch2ct_state <= ST_CHDR_HDR;
         end
       endcase
     end
@@ -149,8 +153,8 @@ module chdr_to_axis_ctrl #(
 
   // Create the first two lines of the Ctrl word (wide)
   // using data from CHDR packet 
-  wire [CHDR_W-1:0] ch2ct_wctrl_tdata;
-  assign ch2ct_wctrl_tdata[63:0] = {
+  wire [CHDR_W-1:0] ch2ct_new_ctrl_hdr;
+  assign ch2ct_new_ctrl_hdr[63:0] = {
     axis_ctrl_build_hdr_hi(
       axis_ctrl_get_src_port(ch2ct_tdata[31:0]),
       axis_ctrl_get_rem_dst_epid(ch2ct_tdata[63:32])
@@ -165,8 +169,11 @@ module chdr_to_axis_ctrl #(
     )
   };
   generate if (CHDR_W > 64) begin
-    assign ch2ct_wctrl_tdata[CHDR_W-1:64] = {(CHDR_W-64){1'b0}};
+    assign ch2ct_new_ctrl_hdr[CHDR_W-1:64] = ch2ct_tdata[CHDR_W-1:64];
   end endgenerate
+
+  wire [CHDR_W-1:0] ch2ct_wctrl_tdata = 
+    (ch2ct_state == ST_CTRL_HDR) ? ch2ct_new_ctrl_hdr : ch2ct_tdata;
 
   axis_width_conv #(
     .WORD_W(32), .IN_WORDS(CHDR_W/32), .OUT_WORDS(1),
@@ -176,7 +183,7 @@ module chdr_to_axis_ctrl #(
     .s_axis_tdata(ch2ct_wctrl_tdata),
     .s_axis_tkeep(ch2ct_tkeep[(CHDR_W/8)-1:2]),
     .s_axis_tlast(ch2ct_tlast),
-    .s_axis_tvalid(ch2ct_tvalid && (ch2ct_state == ST_BODY)),
+    .s_axis_tvalid(ch2ct_tvalid && (ch2ct_state == ST_CTRL_HDR || ch2ct_state == ST_CTRL_BODY)),
     .s_axis_tready(ch2ct_tready),
     .m_axis_aclk(rfnoc_ctrl_clk), .m_axis_rst(rfnoc_ctrl_rst),
     .m_axis_tdata(m_rfnoc_ctrl_tdata),
@@ -221,26 +228,32 @@ module chdr_to_axis_ctrl #(
     .m_axis_tready(ct2ch_wctrl_tready)
   );
 
-  reg [1:0] ct2ch_state = ST_HEADER;
+  reg [1:0] ct2ch_state = ST_CHDR_HDR;
   reg [15:0] ct2ch_seqnum = 16'd0;
 
   always @(posedge rfnoc_chdr_clk) begin
     if (rfnoc_chdr_rst) begin
-      ct2ch_state <= ST_HEADER;
+      ct2ch_state <= ST_CHDR_HDR;
       ct2ch_seqnum <= 16'd0;
     end else if (ct2ch_tvalid && ct2ch_tready) begin
       case (ct2ch_state)
-        ST_HEADER: begin
+        ST_CHDR_HDR: begin
           if (!ct2ch_tlast)
-            ct2ch_state <= ST_BODY;
+            ct2ch_state <= ST_CTRL_HDR;
         end
-        ST_BODY: begin
+        ST_CTRL_HDR: begin
           if (ct2ch_tlast)
-            ct2ch_state <= ST_HEADER;
+            ct2ch_state <= ST_CHDR_HDR;
+          else
+            ct2ch_state <= ST_CTRL_BODY;
+        end
+        ST_CTRL_BODY: begin
+          if (ct2ch_tlast)
+            ct2ch_state <= ST_CHDR_HDR;
         end
         default: begin
           // We should never get here
-          ct2ch_state <= ST_HEADER;
+          ct2ch_state <= ST_CHDR_HDR;
         end
       endcase
       if (ct2ch_tlast)
@@ -249,26 +262,30 @@ module chdr_to_axis_ctrl #(
   end
 
   // Hold the first line to generate info for the outgoing CHDR header
-  assign ct2ch_wctrl_tready = (ct2ch_state == ST_BODY) ? ct2ch_tready : 1'b0;
+  assign ct2ch_wctrl_tready = (ct2ch_state == ST_CTRL_HDR || ct2ch_state == ST_CTRL_BODY) ? ct2ch_tready : 1'b0;
 
-  wire [7:0] ct2ch_len_lines = 8'd3 +                                 // Header + OpWord
+  wire [7:0] ct2ch_32bit_lines = 8'd3 +                               // Header + OpWord
     (axis_ctrl_get_has_time(ct2ch_wctrl_tdata[31:0]) ? 8'd2 : 8'd0) + // Timestamp
     ({4'h0, axis_ctrl_get_num_data(ct2ch_wctrl_tdata[31:0])});        // Data words
+
+  wire [15:0] ct2ch_chdr_lines = 16'd1 +            // CHDR header
+    ct2ch_32bit_lines[7:$clog2(CHDR_W/32)] +        // Convert 32-bit lines to CHDR_W
+    (|ct2ch_32bit_lines[$clog2(CHDR_W/32)-1:0]);    // Residue
 
   reg [63:0] ct2ch_chdr_tdata;
   always @(*) begin
     case (ct2ch_state)
-      ST_HEADER: begin
+      ST_CHDR_HDR: begin
         ct2ch_chdr_tdata = chdr_build_header(
           CHDR_FLAGS_NONE,
           CHDR_PKT_TYPE_CTRL,
           7'd0, /* no metadata */
           ct2ch_seqnum,
-          ({8'h0, ct2ch_len_lines} << 2) + (CHDR_W/8), /* length */
+          (ct2ch_chdr_lines << $clog2(CHDR_W/8)), /* length in bytes */
           axis_ctrl_get_rem_dst_epid(ct2ch_wctrl_tdata[63:32])
         );
       end
-      ST_BODY: begin
+      ST_CTRL_HDR: begin
         ct2ch_chdr_tdata = {
           axis_ctrl_build_hdr_hi(
             10'd0,        /* Unused in CHDR Control payload */
@@ -285,8 +302,7 @@ module chdr_to_axis_ctrl #(
         };
       end
       default: begin
-        // We should never get here
-        ct2ch_chdr_tdata = 64'h0;
+        ct2ch_chdr_tdata = ct2ch_wctrl_tdata[63:0];
       end
     endcase
   end
@@ -296,7 +312,7 @@ module chdr_to_axis_ctrl #(
   assign ct2ch_tlast       = ct2ch_wctrl_tlast;
   assign ct2ch_tvalid      = ct2ch_wctrl_tvalid;
   generate if (CHDR_W > 64) begin
-    assign ct2ch_tdata[CHDR_W-1:64] = {(CHDR_W-64){1'b0}};
+    assign ct2ch_tdata[CHDR_W-1:64] = ct2ch_wctrl_tdata[CHDR_W-1:64];
   end endgenerate
 
 endmodule // chdr_to_axis_ctrl

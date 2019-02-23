@@ -218,9 +218,9 @@ module chdr_stream_input #(
     (chdr_get_seq_num(buff_tdata[63:0]) != exp_data_seq_num);
   wire strc_seq_err_stb = (state == ST_IN_HDR) && is_strc_pkt && !is_first_strc_pkt &&
     (chdr_get_seq_num(buff_tdata[63:0]) != exp_strc_seq_num);
-  wire seq_err_stb = data_seq_err_stb || strc_seq_err_stb;
+  wire seq_err_stb = (data_seq_err_stb || strc_seq_err_stb) && buff_tvalid && buff_tready;
 
-  wire route_err_stb = (state == ST_IN_HDR) && 
+  wire route_err_stb = buff_tvalid && buff_tready && (state == ST_IN_HDR) && 
     (chdr_get_dst_epid(buff_tdata[63:0]) != this_epid);
 
   reg [47:0] stream_err_info;
@@ -260,7 +260,7 @@ module chdr_stream_input #(
     end else begin
       case (state)
         ST_IN_HDR: begin
-          if (buff_tvalid) begin
+          if (buff_tvalid && buff_tready) begin
             if (!buff_tlast) begin
               // Classify packet and...
               if (is_strc_pkt) begin
@@ -284,11 +284,11 @@ module chdr_stream_input #(
         end
         ST_IN_DATA: begin
           // Pass the data packet forward
-          if (buff_tvalid && buff_tlast)
+          if (buff_tvalid && buff_tready && buff_tlast)
             state <= ST_IN_HDR;
         end
         ST_STRC_W0: begin
-          if (buff_tvalid) begin
+          if (buff_tvalid && buff_tready) begin
             // Consume the first word of a stream command packet
             if (CHDR_W > 64) begin
               strc_num_bytes <= chdr128_strc_get_num_bytes(buff_tdata[127:0]);
@@ -308,7 +308,7 @@ module chdr_stream_input #(
           end
         end
         ST_STRC_W1: begin
-          if (buff_tvalid) begin
+          if (buff_tvalid && buff_tready) begin
             // Consume the second word of a stream command packet
             strc_num_bytes <= chdr64_strc_get_num_bytes(buff_tdata[63:0]);
             state <= ST_STRC_EXEC;
@@ -341,7 +341,7 @@ module chdr_stream_input #(
         end
         ST_FLUSH: begin
           // Drop until the next packet arrives
-          if (buff_tvalid) begin
+          if (buff_tvalid && buff_tready) begin
             flush_counter <= {FLUSH_TIMEOUT_W{1'b1}};
           end else begin
             flush_counter <= flush_counter - 'd1;
@@ -357,7 +357,7 @@ module chdr_stream_input #(
         end
         ST_DROP: begin
           // Drop until the next packet arrives
-          if (buff_tlast)
+          if (buff_tvalid && buff_tready && buff_tlast)
             state <= ST_IN_HDR;
         end
         default: begin

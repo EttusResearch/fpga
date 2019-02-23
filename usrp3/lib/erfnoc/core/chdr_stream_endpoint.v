@@ -40,7 +40,8 @@ module chdr_stream_endpoint #(
   parameter [9:0]  CTRL_XBAR_PORT    = 0,
   parameter        INGRESS_BUFF_SIZE = 12,
   parameter        MTU               = 10,
-  parameter [0:0]  REPORT_STRM_ERRS  = 1
+  parameter [0:0]  REPORT_STRM_ERRS  = 1,
+  parameter [0:0]  SIM_SPEEDUP       = 0
 )(
   // Clock, reset and settings
   input  wire              rfnoc_chdr_clk,
@@ -323,7 +324,7 @@ module chdr_stream_endpoint #(
   //  Data and Flow Control Path 
   // ---------------------------------------------------
   generate if (AXIS_DATA_EN) begin
-    localparam INPUT_FLUSH_TIMEOUT_W = 14;
+    localparam INPUT_FLUSH_TIMEOUT_W = SIM_SPEEDUP ? 6 : 14;
 
     wire [CHDR_W-1:0] axis_data_i_tdata,  axis_data_o_tdata;
     wire              axis_data_i_tlast,  axis_data_o_tlast;
