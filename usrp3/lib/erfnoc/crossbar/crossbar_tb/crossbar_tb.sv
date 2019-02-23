@@ -42,8 +42,8 @@ module crossbar_tb();
   //----------------------------------------------------
   //<PARAMS_BLOCK_AUTOGEN>
   // Router parameters
-  localparam ROUTER_IMPL        = "axi_crossbar"; // Router implementation
-  localparam ROUTER_PORTS       = 16;             // # Router ports
+  localparam ROUTER_IMPL        = "chdr_crossbar_nxn"; // Router implementation
+  localparam ROUTER_PORTS       = 10;             // # Router ports
   localparam ROUTER_DWIDTH      = 64;             // Router datapath width
   localparam MTU_LOG2           = 7;              // log2 of max packet size for router
   localparam NUM_MASTERS        = ROUTER_PORTS;   // Number of data generators in test
@@ -67,7 +67,7 @@ module crossbar_tb();
   
   // Control buses
   settings_bus_master #(.SR_AWIDTH(16), .SR_DWIDTH(32)) rtr_sb (.clk(clk));
-  axis_master #(.DWIDTH(32), .NUM_STREAMS(1)) mgmt_axis (.clk(clk));
+  wire rtr_sb_ack;
 
   // Test vector source and sink instantiation
   logic [7:0]   set_injection_rate;
@@ -209,7 +209,7 @@ module crossbar_tb();
       .MUX_ALLOC          ("ROUND-ROBIN"),
       .OPTIMIZE           ("AREA"),
       .MGMT_PORT_MASK     (0),
-      .EXT_MGMT_PORT      (1)
+      .EXT_RTCFG_PORT     (1)
     ) router_dut_i (
        // General         
       .clk                (clk),
@@ -224,10 +224,11 @@ module crossbar_tb();
       .m_axis_tlast       (rtr2snk_axis.tlast),
       .m_axis_tvalid      (rtr2snk_axis.tvalid),
       .m_axis_tready      (rtr2snk_axis.tready),
-
-      .s_axis_mgmt_tdata  (mgmt_axis.axis.tdata),
-      .s_axis_mgmt_tvalid (mgmt_axis.axis.tvalid),
-      .s_axis_mgmt_tready (mgmt_axis.axis.tready)
+      // External router config
+      .ext_rtcfg_stb      (rtr_sb.settings_bus.set_stb), 
+      .ext_rtcfg_addr     (rtr_sb.settings_bus.set_addr),
+      .ext_rtcfg_data     (rtr_sb.settings_bus.set_data),
+      .ext_rtcfg_ack      (rtr_sb_ack)
     );
   end else begin
     axis_ctrl_crossbar_nxn #(
@@ -376,13 +377,12 @@ module crossbar_tb();
     repeat (10) @(posedge clk);
 
     `TEST_CASE_START("Set up crossbar");
-      if (ROUTER_IMPL == "axi_crossbar") begin
-        for (node = 0; node < ROUTER_PORTS; node=node+1) begin
+      for (node = 0; node < ROUTER_PORTS; node=node+1) begin
+        if (ROUTER_IMPL == "axi_crossbar") begin
           rtr_sb.write(16'd256 + node[15:0], {16'h0, node[15:0]});
-        end
-      end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
-        for (node = 0; node < ROUTER_PORTS; node=node+1) begin
-          mgmt_axis.push_word({node[15:0], node[15:0]});
+        end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
+          rtr_sb.write(node[15:0], {16'h0, node[15:0]});
+          while (~rtr_sb_ack) @(posedge clk);
         end
       end
     `TEST_CASE_DONE(1)

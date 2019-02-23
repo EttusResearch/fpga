@@ -31,7 +31,7 @@
 //     * TIMING: Attempt to maximize Fmax at the cost of area and/or performance
 //   - MGMT_PORT_MASK: A bitmask where each bit indicates if a management endpoint needs
 //     to be instantiated on the input port.
-//   - EXT_MGMT_PORT: Enable a side-channel AXI-Stream management port to configure the
+//   - EXT_RTCFG_PORT: Enable a side-channel AXI-Stream management port to configure the
 //     routing table
 // Signals:
 //   - s_axis_*: Slave port for router (flattened)
@@ -48,7 +48,7 @@ module chdr_crossbar_nxn #(
   parameter              MUX_ALLOC      = "ROUND-ROBIN",
   parameter              OPTIMIZE       = "AREA",
   parameter [NPORTS-1:0] MGMT_PORT_MASK = {{(NPORTS-1){1'b0}}, 1'b1},
-  parameter              EXT_MGMT_PORT  = 0,
+  parameter              EXT_RTCFG_PORT = 0,
   parameter [15:0]       PROTOVER       = {8'd1, 8'd0}
 ) (
   input  wire                       clk,
@@ -63,10 +63,11 @@ module chdr_crossbar_nxn #(
   output wire [NPORTS-1:0]          m_axis_tlast,
   output wire [NPORTS-1:0]          m_axis_tvalid,
   input  wire [NPORTS-1:0]          m_axis_tready,
-  // Management
-  input  wire [31:0]                s_axis_mgmt_tdata,
-  input  wire                       s_axis_mgmt_tvalid,
-  output wire                       s_axis_mgmt_tready
+  // Router config management port
+  input  wire                       ext_rtcfg_stb,
+  input  wire [15:0]                ext_rtcfg_addr,
+  input  wire [31:0]                ext_rtcfg_data,
+  output wire                       ext_rtcfg_ack
 );
   // ---------------------------------------------------
   //  RFNoC Includes
@@ -76,8 +77,6 @@ module chdr_crossbar_nxn #(
 
   parameter NPORTS_W = $clog2(NPORTS);
   localparam EPID_W = 16;
-  localparam CFG_W = EPID_W + NPORTS_W;
-  localparam CFG_PORTS = NPORTS + EXT_MGMT_PORT;
 
   localparam [0:0] PKT_ST_HEAD = 1'b0;
   localparam [0:0] PKT_ST_BODY = 1'b1;
@@ -104,37 +103,36 @@ module chdr_crossbar_nxn #(
   end
   endfunction
 
-  wire [(EPID_W*NPORTS)-1:0]    find_tdata;
-  wire [NPORTS-1:0]             find_tvalid;
-  wire [NPORTS-1:0]             find_tready;
-  wire [(NPORTS_W*NPORTS)-1:0]  result_tdata;
-  wire [NPORTS-1:0]             result_tkeep;
-  wire [NPORTS-1:0]             result_tvalid;
-  wire [NPORTS-1:0]             result_tready;
-  wire [EPID_W-1:0]             insert_tdest;
-  wire [NPORTS_W-1:0]           insert_tdata;
-  wire                          insert_tvalid;
-  wire                          insert_tready;
-  wire [NPORTS_W*CFG_PORTS-1:0] rtcfg_tdata;
-  wire [EPID_W*CFG_PORTS-1:0]   rtcfg_tdest;
-  wire [CFG_PORTS-1:0]          rtcfg_tvalid;
-  wire [CFG_PORTS-1:0]          rtcfg_tready;
-  wire [CFG_W*CFG_PORTS-1:0]    rtcfg_info_flat;
+  wire [NPORTS-1:0]            rtcfg_req_wr;
+  wire [(16*NPORTS)-1:0]       rtcfg_req_addr;
+  wire [(32*NPORTS)-1:0]       rtcfg_req_data;
+  wire [NPORTS-1:0]            rtcfg_resp_ack;
+  wire [(EPID_W*NPORTS)-1:0]   find_tdata;
+  wire [NPORTS-1:0]            find_tvalid;
+  wire [NPORTS-1:0]            find_tready;
+  wire [(NPORTS_W*NPORTS)-1:0] result_tdata;
+  wire [NPORTS-1:0]            result_tkeep;
+  wire [NPORTS-1:0]            result_tvalid;
+  wire [NPORTS-1:0]            result_tready;
 
   // Instantiate a single CAM-based routing table that will be shared between all
   // input ports. Configuration and lookup is performed using an AXI-Stream iface.
   // If multiple packets arrive simultaneously, only the headers of those packets will
   // be serialized in order to arbitrate this map. Selection is done round-robin.
-  axis_muxed_kv_map #(
-    .KEY_WIDTH(EPID_W), .VAL_WIDTH(NPORTS_W),
-    .SIZE(ROUTE_TBL_SIZE), .NUM_PORTS(NPORTS)
-  ) kv_map_i (
-    .clk               (clk          ),
-    .reset             (reset        ),
-    .axis_insert_tdata (insert_tdata ),
-    .axis_insert_tdest (insert_tdest ),
-    .axis_insert_tvalid(insert_tvalid),
-    .axis_insert_tready(insert_tready),
+  chdr_xb_routing_table #(
+    .SIZE(ROUTE_TBL_SIZE), .NPORTS(NPORTS),
+    .EXT_INS_PORT_EN(EXT_RTCFG_PORT)
+  ) routing_tbl_i (
+    .clk               (clk),
+    .reset             (reset),
+    .port_req_wr       (rtcfg_req_wr),
+    .port_req_addr     (rtcfg_req_addr),
+    .port_req_data     (rtcfg_req_data),
+    .port_resp_ack     (rtcfg_resp_ack),
+    .ext_req_wr        (ext_rtcfg_stb),
+    .ext_req_addr      (ext_rtcfg_addr),
+    .ext_req_data      (ext_rtcfg_data),
+    .ext_resp_ack      (ext_rtcfg_ack),
     .axis_find_tdata   (find_tdata   ),
     .axis_find_tvalid  (find_tvalid  ),
     .axis_find_tready  (find_tready  ),
@@ -143,26 +141,6 @@ module chdr_crossbar_nxn #(
     .axis_result_tvalid(result_tvalid),
     .axis_result_tready(result_tready)
   );
-
-  axi_mux #(
-    .WIDTH(CFG_W), .SIZE(CFG_PORTS),
-    .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
-  ) rtcfg_mux_i (
-    .clk(clk), .reset(reset), .clear(1'b0),
-    .i_tdata(rtcfg_info_flat), .i_tlast({CFG_PORTS{1'b1}}),
-    .i_tvalid(rtcfg_tvalid), .i_tready(rtcfg_tready),
-    .o_tdata({insert_tdata, insert_tdest}), .o_tlast(),
-    .o_tvalid(insert_tvalid), .o_tready(insert_tready)
-  );
-
-  // Instantiate an additional input for the MUX if the config port is instantiated. 
-  generate if (EXT_MGMT_PORT == 1) begin
-    assign rtcfg_info_flat[NPORTS*CFG_W+:CFG_W] = s_axis_mgmt_tdata[CFG_W-1:0];
-    assign rtcfg_tvalid[NPORTS] = s_axis_mgmt_tvalid;
-    assign s_axis_mgmt_tready = rtcfg_tready[NPORTS];
-  end else begin
-    assign s_axis_mgmt_tready = 1'b1;
-  end endgenerate
 
   wire [CHDR_W-1:0]          i_tdata   [0:NPORTS-1];
   wire [9:0]                 i_tdest   [0:NPORTS-1];
@@ -197,33 +175,29 @@ module chdr_crossbar_nxn #(
       if (MGMT_PORT_MASK[n] == 1'b1) begin
         chdr_mgmt_pkt_handler #(
           .PROTOVER(PROTOVER), .CHDR_W(CHDR_W),
-          .NODEINFO(chdr_mgmt_build_node_info(NODE_TYPE_XBAR, n, NPORTS, NPORTS))
+          .NODE_INFO(chdr_mgmt_build_node_info(NPORTS, NPORTS, n, NODE_TYPE_XBAR))
         ) mgmt_ep_i (
-          .clk                (clk                                  ),
-          .rst                (reset                                ),
-          .s_axis_chdr_tdata  (s_axis_tdata [(n*CHDR_W)+:CHDR_W]    ),
-          .s_axis_chdr_tlast  (s_axis_tlast [n]                     ),
-          .s_axis_chdr_tvalid (s_axis_tvalid[n]                     ),
-          .s_axis_chdr_tready (s_axis_tready[n]                     ),
-          .m_axis_chdr_tdata  (i_tdata      [n]                     ),
-          .m_axis_chdr_tdest  (i_tdest      [n]                     ), 
-          .m_axis_chdr_tid    (i_tid        [n]                     ),
-          .m_axis_chdr_tlast  (i_tlast      [n]                     ),
-          .m_axis_chdr_tvalid (i_tvalid     [n]                     ),
-          .m_axis_chdr_tready (i_tready     [n]                     ),
-          .m_axis_rtcfg_tdata (rtcfg_tdata  [(n*NPORTS_W)+:NPORTS_W]),
-          .m_axis_rtcfg_tdest (rtcfg_tdest  [(n*EPID_W)+:EPID_W]    ),
-          .m_axis_rtcfg_tvalid(rtcfg_tvalid [n]                     ),
-          .m_axis_rtcfg_tready(rtcfg_tready [n]                     ),
-          .ctrlport_req_wr    (/* unused */),
-          .ctrlport_req_rd    (/* unused */),
-          .ctrlport_req_addr  (/* unused */),
-          .ctrlport_req_data  (/* unused */),
-          .ctrlport_resp_ack  (1'b0  /* unused */),
-          .ctrlport_resp_data (32'h0 /* unused */),
-          .op_stb             (/* unused */),
-          .op_dst_epid        (/* unused */),
-          .op_src_epid        (/* unused */)
+          .clk                (clk                              ),
+          .rst                (reset                            ),
+          .s_axis_chdr_tdata  (s_axis_tdata [(n*CHDR_W)+:CHDR_W]),
+          .s_axis_chdr_tlast  (s_axis_tlast [n]                 ),
+          .s_axis_chdr_tvalid (s_axis_tvalid[n]                 ),
+          .s_axis_chdr_tready (s_axis_tready[n]                 ),
+          .m_axis_chdr_tdata  (i_tdata      [n]                 ),
+          .m_axis_chdr_tdest  (i_tdest      [n]                 ), 
+          .m_axis_chdr_tid    (i_tid        [n]                 ),
+          .m_axis_chdr_tlast  (i_tlast      [n]                 ),
+          .m_axis_chdr_tvalid (i_tvalid     [n]                 ),
+          .m_axis_chdr_tready (i_tready     [n]                 ),
+          .ctrlport_req_wr    (rtcfg_req_wr  [n]                ),
+          .ctrlport_req_rd    (/* unused */                     ),
+          .ctrlport_req_addr  (rtcfg_req_addr[(n*16)+:16]       ),
+          .ctrlport_req_data  (rtcfg_req_data[(n*32)+:32]       ),
+          .ctrlport_resp_ack  (rtcfg_resp_ack[n]                ),
+          .ctrlport_resp_data (32'h0 /* unused */               ),
+          .op_stb             (/* unused */                     ),
+          .op_dst_epid        (/* unused */                     ),
+          .op_src_epid        (/* unused */                     )
         );
       end else begin
         assign i_tdata      [n] = s_axis_tdata [(n*CHDR_W)+:CHDR_W];
@@ -233,12 +207,10 @@ module chdr_crossbar_nxn #(
         assign i_tvalid     [n] = s_axis_tvalid[n];
         assign s_axis_tready[n] = i_tready     [n];
 
-        assign rtcfg_tdata  [(n*NPORTS_W)+:NPORTS_W] = 'h0;
-        assign rtcfg_tdest  [(n*EPID_W)+:EPID_W]     = 'h0;
-        assign rtcfg_tvalid [n]                      = 1'b0;
+        assign rtcfg_req_wr  [n]          =  1'b0;
+        assign rtcfg_req_addr[(n*16)+:16] = 16'h0;
+        assign rtcfg_req_data[(n*32)+:32] = 32'h0;
       end
-      assign rtcfg_info_flat[(n*CFG_W)+:CFG_W] =
-        {rtcfg_tdata[(n*NPORTS_W)+:NPORTS_W], rtcfg_tdest[(n*EPID_W)+:EPID_W]};
 
       // Ingress buffer module that does the following:
       // - Stores and gates an incoming packet

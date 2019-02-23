@@ -113,8 +113,6 @@ module chdr_stream_endpoint #(
     .m_axis_chdr_tdata(chdr_i_tdata), .m_axis_chdr_tlast(chdr_i_tlast),
     .m_axis_chdr_tdest(/* unused */), .m_axis_chdr_tid(/* unused */),
     .m_axis_chdr_tvalid(chdr_i_tvalid), .m_axis_chdr_tready(chdr_i_tready),
-    .m_axis_rtcfg_tdata(/* unused */), .m_axis_rtcfg_tdest(/* unused */),
-    .m_axis_rtcfg_tvalid(/* unused */), .m_axis_rtcfg_tready(1'b1 /* unused */),
     .ctrlport_req_wr(ctrlport_req_wr), .ctrlport_req_rd(ctrlport_req_rd),
     .ctrlport_req_addr(ctrlport_req_addr), .ctrlport_req_data(ctrlport_req_data),
     .ctrlport_resp_ack(ctrlport_resp_ack), .ctrlport_resp_data(ctrlport_resp_data),

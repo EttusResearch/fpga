@@ -29,7 +29,7 @@ module chdr_crossbar_nxn_top(
     .MUX_ALLOC          ("ROUND-ROBIN"),
     .OPTIMIZE           (OPTIMIZE),
     .MGMT_PORT_MASK     ({{NPORTS{{1'b1}}}}),
-    .EXT_MGMT_PORT      (1)
+    .EXT_RTCFG_PORT     (1)
   ) router_dut_i (
      // General         
     .clk                (clk),
@@ -44,10 +44,11 @@ module chdr_crossbar_nxn_top(
     .m_axis_tlast       (m_axis_tlast),
     .m_axis_tvalid      (m_axis_tvalid),
     .m_axis_tready      (m_axis_tready),
-
-    .s_axis_mgmt_tdata  ('h0),
-    .s_axis_mgmt_tvalid (1'b0),
-    .s_axis_mgmt_tready ()
+    // External rtcfg port
+    .ext_rtcfg_stb      (0),
+    .ext_rtcfg_addr     (0),
+    .ext_rtcfg_data     (0),
+    .ext_rtcfg_ack      ()
   );
 
 endmodule

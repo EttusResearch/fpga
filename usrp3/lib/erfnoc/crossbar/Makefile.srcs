@@ -17,6 +17,7 @@ axis_switch.v \
 axis_port_terminator.v \
 chdr_crossbar_nxn.v \
 chdr_xb_ingress_buff.v \
+chdr_xb_routing_table.v \
 ))
 
 # Unused sources

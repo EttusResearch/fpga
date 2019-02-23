@@ -7,8 +7,7 @@
 // Description:
 //   This module sits inline on a CHDR stream and adds a management
 //   node that is discoverable and configurable by software. As a 
-//   management node, this module exposes a AXIS configuration bus
-//   for a crossbar and a control-port master to configure any slave.
+//   management node, a control-port master to configure any slave.
 //   The output CHDR stream has an additional tdest and tid which can
 //   be used to make routing decisions for management packets only.
 //   tid will be high when tdest should be used.
@@ -23,7 +22,6 @@
 // Signals:
 //   - s_axis_chdr_* : Input CHDR stream (AXI-Stream)
 //   - m_axis_chdr_* : Output CHDR stream (AXI-Stream)
-//   - m_axis_rtcfg_* : Output router configuration stream (AXI-Stream)
 //   - ctrlport_* : Control-port master  
 
 module chdr_mgmt_pkt_handler #(
@@ -47,11 +45,6 @@ module chdr_mgmt_pkt_handler #(
   output wire              m_axis_chdr_tlast,
   output wire              m_axis_chdr_tvalid,
   input  wire              m_axis_chdr_tready,
-  // Routing table config bus
-  output reg [9:0]         m_axis_rtcfg_tdata,   // Value to put in the routing table
-  output reg [15:0]        m_axis_rtcfg_tdest,   // Row (key) in the routing table
-  output wire              m_axis_rtcfg_tvalid,
-  input  wire              m_axis_rtcfg_tready,
   // Control port endpoint
   output wire              ctrlport_req_wr,
   output wire              ctrlport_req_rd,
@@ -166,8 +159,8 @@ module chdr_mgmt_pkt_handler #(
 
   // Pieces of state maintained by this state machine
   reg [3:0]  pkt_state = ST_CHDR_IN_HDR;        // The state variable
-  reg [6:0]  num_mdata;
-  reg [63:0] cached_chdr_hdr, cached_mgmt_hdr;  // Cached versions of the CHDR and mgmt headers
+  reg [6:0]  num_mdata;                         // Number of metadata lines in packet
+  reg [63:0] cached_chdr_hdr, cached_mgmt_hdr;  // Cached copies of the CHDR and mgmt headers
   reg [15:0] stripped_len;                      // The new CHDR length after ops are stripped
   reg [9:0]  hops_remaining;                    // Number of hops remaining until pkt is consumed
   reg [7:0]  resp_op_code;                      // Opcode for the response
@@ -231,7 +224,7 @@ module chdr_mgmt_pkt_handler #(
         ST_MGMT_IN_HDR: begin
           if (i64_tvalid && i64_tready) begin
             cached_mgmt_hdr <= i64_tdata;
-            hops_remaining <= chdr_mgmt_get_num_hops(i64_tdata) - 10'd1;
+            hops_remaining <= chdr_mgmt_get_num_hops(i64_tdata);
             pkt_state <= (!i64_tlast) ? ST_MGMT_OP_EXEC : ST_CHDR_IN_HDR;
           end
         end
@@ -257,27 +250,20 @@ module chdr_mgmt_pkt_handler #(
                 // Pretty much a no-op. Jump to the finish state
                 pkt_state <= ST_MGMT_OP_DONE;
               end
-              // Operation: Select a destination for the output CHDR stream
+              // Operation: Select a destination (tdest and tid) for the output CHDR stream
               CHDR_MGMT_OP_SEL_DEST: begin
-                // - Update tdest for the output CHDR bus
-                // - o64_tdest_stb will be asserted next clock cycle to put
-                //   o64_tdest in the dest FIFO
                 o64_tid   <= CHDR_MGMT_ROUTE_TDEST;
                 o64_tdest <= chdr_mgmt_sel_dest_get_tdest(op_payload);
                 pkt_state <= ST_MGMT_OP_DONE;   // Single cycle op
               end
-              // Operation: Send a config command to the connected router
-              //            RoutingTable[tdest] <= tdata
-              CHDR_MGMT_OP_CFG_ROUTER: begin
-                // rtcfg_tvalid will be asserted in the ST_MGMT_OP_WAIT state
-                m_axis_rtcfg_tdest <= chdr_mgmt_cfg_rtr_get_tdest(op_payload);
-                m_axis_rtcfg_tdata <= chdr_mgmt_cfg_rtr_get_tdata(op_payload);
-                pkt_state <= ST_MGMT_OP_WAIT;   // Wait until ACKed
+              // Operation: Return the packet to source (turn it around)
+              CHDR_MGMT_OP_RETURN: begin
+                o64_tid   <= CHDR_MGMT_RETURN_TO_SRC;
+                pkt_state <= ST_MGMT_OP_DONE; // Single cycle op
               end
               // Operation: Handle a node information request.
               //            Send the info as a response
               CHDR_MGMT_OP_INFO_REQ: begin
-                o64_tid   <= CHDR_MGMT_RETURN_TO_SRC;
                 pkt_state <= ST_MGMT_OP_DONE; // Single cycle op
               end
               // Operation: Handle a node information response.
@@ -313,30 +299,16 @@ module chdr_mgmt_pkt_handler #(
         // - A management operation has started. We are waiting for it to finish
         ST_MGMT_OP_WAIT: begin
           if (i64_tvalid) begin
-            case (op_code)
-              // Wait for an AXIS router config command to finish
-              CHDR_MGMT_OP_CFG_ROUTER: begin
-                if (m_axis_rtcfg_tready) begin
-                  pkt_state <= ST_MGMT_OP_DONE;
-                end
-              end
-              // Wait for an control-port write to finish
-              CHDR_MGMT_OP_CFG_WR_REQ: begin
-                if (ctrlport_resp_ack) begin
-                  pkt_state <= ST_MGMT_OP_DONE;
-                end
-              end
-              // Wait for an control-port read to finish
-              CHDR_MGMT_OP_CFG_RD_REQ: begin
-                if (ctrlport_resp_ack) begin
-                  pkt_state <= ST_MGMT_OP_DONE;
-                end
-              end
-              // All other operations should not get here
-              default: begin
+            if (op_code == CHDR_MGMT_OP_CFG_WR_REQ ||
+                op_code == CHDR_MGMT_OP_CFG_RD_REQ) begin
+              // Wait for an control-port transaction to finish
+              if (ctrlport_resp_ack) begin
                 pkt_state <= ST_MGMT_OP_DONE;
               end
-            endcase
+            end else begin
+              // All other operations should not get here
+              pkt_state <= ST_MGMT_OP_DONE;
+            end
           end
         end
 
@@ -358,7 +330,8 @@ module chdr_mgmt_pkt_handler #(
                 pkt_state <= ST_MGMT_OP_EXEC;
               end
             end else begin
-              // Premature termination
+              // Premature termination or this is the last operation
+              // Either way, move back to the beginning of the next pkt
               pkt_state <= ST_CHDR_IN_HDR;
             end
           end
@@ -377,7 +350,10 @@ module chdr_mgmt_pkt_handler #(
         // - We are outputing the management header
         ST_MGMT_OUT_HDR: begin
           if (o64_tvalid && o64_tready)
-            pkt_state <= ST_PASS_PAYLOAD;
+            if (resp_o_tvalid && (hops_remaining == 10'd1))
+              pkt_state <= ST_MOD_LAST_HOP;   // Special state to append responses to last hod
+            else
+              pkt_state <= ST_PASS_PAYLOAD;   // Just pass the data as-is
         end
 
         // ST_PASS_PAYLOAD
@@ -392,12 +368,14 @@ module chdr_mgmt_pkt_handler #(
               // management operations.
               if (chdr_mgmt_get_ops_pending(i64_tdata) == 8'd0) begin
                 hops_remaining <= hops_remaining - 10'd1;
-                pkt_state <= (hops_remaining == 10'd1) ? ST_MOD_LAST_HOP : ST_PASS_PAYLOAD;
+                if (resp_o_tvalid && (hops_remaining == 10'd1))
+                  pkt_state <= ST_MOD_LAST_HOP;   // Special state to append responses to last hod
+                else
+                  pkt_state <= ST_PASS_PAYLOAD;   // Just pass the data as-is
               end else begin
                 pkt_state <= ST_PASS_PAYLOAD;
               end
             end else begin
-              // Premature termination
               pkt_state <= ST_CHDR_IN_HDR;
             end
           end
@@ -438,12 +416,8 @@ module chdr_mgmt_pkt_handler #(
         // - Append the popped response to the output packet here
         // - Keep doing so until the response FIFO is empty
         ST_APPEND_LAST_HOP: begin
-          if (o64_tvalid && o64_tready) begin
-            if (resp_o_tvalid)
-              pkt_state <= ST_POP_RESPONSE;
-            else
-              pkt_state <= i64_tlast ? ST_CHDR_IN_HDR : ST_FAILSAFE_DROP;
-          end
+          if (o64_tvalid && o64_tready)
+            pkt_state <= resp_o_tvalid ? ST_POP_RESPONSE : ST_CHDR_IN_HDR;
         end
 
         // ST_FAILSAFE_DROP
@@ -546,22 +520,15 @@ module chdr_mgmt_pkt_handler #(
   assign op_dst_epid = chdr_get_dst_epid(cached_chdr_hdr);
   assign op_src_epid = chdr_mgmt_get_src_epid(cached_mgmt_hdr);
 
-  // CHDR_MGMT_OP_CFG_ROUTER
-  // -----------------------
-  // tdata and tdest has already been updated. Assert tvalid in the
-  // ST_MGMT_OP_WAIT state where we will wait for tready
-  assign m_axis_rtcfg_tvalid = i64_tvalid && (pkt_state == ST_MGMT_OP_WAIT) && 
-                               (op_code == CHDR_MGMT_OP_CFG_ROUTER);
-
   // CHDR_MGMT_OP_CFG_WR_REQ
   // CHDR_MGMT_OP_CFG_RD_REQ
   // -----------------------
   // The request is sent out in the ST_MGMT_OP_EXEC state and we wait for a response
   // in the ST_MGMT_OP_WAIT state
-  assign ctrlport_req_wr = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
-                           (op_code == CHDR_MGMT_OP_CFG_WR_REQ);
-  assign ctrlport_req_rd = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
-                           (op_code == CHDR_MGMT_OP_CFG_RD_REQ);
+  assign ctrlport_req_wr   = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
+                             (op_code == CHDR_MGMT_OP_CFG_WR_REQ);
+  assign ctrlport_req_rd   = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
+                             (op_code == CHDR_MGMT_OP_CFG_RD_REQ);
   assign ctrlport_req_addr = chdr_mgmt_cfg_reg_get_addr(op_payload);
   assign ctrlport_req_data = chdr_mgmt_cfg_reg_get_data(op_payload);
 
