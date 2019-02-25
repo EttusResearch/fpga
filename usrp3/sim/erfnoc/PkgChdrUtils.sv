@@ -251,7 +251,7 @@ package PkgChdrUtils;
     foreach (a[i]) begin
       x = a[i];
       y = b[i];
-      if (x != y) return 0;
+      if (x !== y) return 0;
     end
     return 1;
   endfunction : chdr_word_queues_equal
@@ -266,7 +266,7 @@ package PkgChdrUtils;
     foreach (a[i]) begin
       x = a[i];
       y = b[i];
-      if (x != y) return 0;
+      if (x !== y) return 0;
     end
     return 1;
   endfunction : chdr_mgmt_op_queues_equal

@@ -149,7 +149,7 @@ package PkgChdrBfm;
     if (header != packet.header) return 0;
     if (!chdr_word_queues_equal(data, packet.data)) return 0;
     if (!chdr_word_queues_equal(metadata, packet.metadata)) return 0;
-    if (header.pkt_type == CHDR_DATA_WITH_TS && timestamp != packet.timestamp) return 0;
+    if (header.pkt_type == CHDR_DATA_WITH_TS && timestamp !== packet.timestamp) return 0;
     return 1;
   endfunction : equal
 

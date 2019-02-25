@@ -131,7 +131,7 @@ package PkgAxiStreamBfm;
       foreach (keep[i]) begin
         keep_a = keep[i];
         keep_b = packet.keep[i];
-        if (keep_a != keep_b) return 0;
+        if (keep_a !== keep_b) return 0;
       end
 
       return 1;
