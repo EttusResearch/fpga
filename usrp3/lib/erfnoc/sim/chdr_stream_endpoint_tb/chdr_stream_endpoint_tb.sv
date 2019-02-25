@@ -36,6 +36,7 @@ module chdr_stream_endpoint_tb;
   localparam integer CHDR_W   = 64;
   localparam integer MTU      = 7;
   localparam [15:0]  PROTOVER = {8'd1, 8'd0};
+  localparam [15:0]  DEV_ID   = 16'hBEEF;
   localparam [15:0]  EPID_TB  = 16'h1001;
   localparam [15:0]  EPID_A   = 16'h1002;
   localparam [15:0]  EPID_B   = 16'h1003;
@@ -84,6 +85,7 @@ module chdr_stream_endpoint_tb;
     .rfnoc_chdr_rst     (rfnoc_chdr_rst        ),
     .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
     .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
+    .device_id          (DEV_ID                ),
     .s_axis_chdr_tdata  (c2a_chdr_tdata        ),
     .s_axis_chdr_tlast  (c2a_chdr_tlast        ),
     .s_axis_chdr_tvalid (c2a_chdr_tvalid       ),
@@ -130,6 +132,7 @@ module chdr_stream_endpoint_tb;
     .rfnoc_chdr_rst     (rfnoc_chdr_rst        ),
     .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
     .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
+    .device_id          (DEV_ID                ),
     .s_axis_chdr_tdata  (c2b_chdr_tdata        ),
     .s_axis_chdr_tlast  (c2b_chdr_tlast        ),
     .s_axis_chdr_tvalid (c2b_chdr_tvalid       ),
@@ -174,6 +177,7 @@ module chdr_stream_endpoint_tb;
   ) xbar_c (
     .clk            (rfnoc_chdr_clk),
     .reset          (rfnoc_chdr_rst),
+    .device_id      (DEV_ID),
     .s_axis_tdata   ({b2c_chdr_tdata,  a2c_chdr_tdata,  m_tb_chdr.slave.tdata  }),
     .s_axis_tlast   ({b2c_chdr_tlast,  a2c_chdr_tlast,  m_tb_chdr.slave.tlast  }),
     .s_axis_tvalid  ({b2c_chdr_tvalid, a2c_chdr_tvalid, m_tb_chdr.slave.tvalid }),
@@ -441,7 +445,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover XB: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{10'h0, 10'd3 /*ports*/, 10'd3 /*ports*/, 10'd0 /*inst*/, 8'd1 /*type*/},
+      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd3 /*ports*/, 10'd0 /*inst*/, 8'd1 /*type*/},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover XB: Mgmt response ops were incorrect");
@@ -469,7 +473,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP A: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{10'h0, 10'd0 /*ports*/, 10'd1 /*ports*/, 10'd0 /*inst*/, 8'd2 /*type*/},
+      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd1 /*ports*/, 10'd0 /*inst*/, 8'd2 /*type*/},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP A: Mgmt response ops were incorrect");
@@ -494,7 +498,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP B: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{10'h0, 10'd0 /*ports*/, 10'd1 /*ports*/, 10'd1 /*inst*/, 8'd2 /*type*/},
+      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd1 /*ports*/, 10'd1 /*inst*/, 8'd2 /*type*/},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP B: Mgmt response ops were incorrect");

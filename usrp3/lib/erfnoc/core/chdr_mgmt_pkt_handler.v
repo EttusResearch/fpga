@@ -15,24 +15,26 @@
 // Parameters:
 //   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
 //   - CHDR_W: Widht of the CHDR bus in bits
-//   - NODE_INFO: Info about the node that contains this management slave
 //   - RESP_FIFO_SIZE: Log2 of the depth of the response FIFO
 //                     Maximum value = 8
 //
 // Signals:
 //   - s_axis_chdr_* : Input CHDR stream (AXI-Stream)
 //   - m_axis_chdr_* : Output CHDR stream (AXI-Stream)
-//   - ctrlport_* : Control-port master  
+//   - node_info: Info about the node that contains this management slave
+//   - ctrlport_* : Control-port master for management peripheral
+//   - op_*: Strobe and info signals for a mgmt advertisement
 
 module chdr_mgmt_pkt_handler #(
   parameter [15:0] PROTOVER       = {8'd1, 8'd0},
   parameter        CHDR_W         = 256,
-  parameter [47:0] NODE_INFO      = 48'd0,
   parameter        RESP_FIFO_SIZE = 5
 )(
   // Clock, reset and settings
   input  wire              clk,
   input  wire              rst,
+  // Node Info
+  input  wire [47:0]       node_info,
   // CHDR Data In (AXI-Stream)
   input  wire [CHDR_W-1:0] s_axis_chdr_tdata,
   input  wire              s_axis_chdr_tlast,
@@ -52,7 +54,7 @@ module chdr_mgmt_pkt_handler #(
   output wire [31:0]       ctrlport_req_data,
   input  wire              ctrlport_resp_ack,
   input  wire [31:0]       ctrlport_resp_data,
-  // Operation strobe
+  // Mgmt packet advertisement  strobe
   output wire              op_stb,
   output wire [15:0]       op_dst_epid,
   output wire [15:0]       op_src_epid
@@ -541,7 +543,7 @@ module chdr_mgmt_pkt_handler #(
     ((pkt_state == ST_MGMT_OP_DONE) && (op_code == CHDR_MGMT_OP_INFO_REQ)));
   assign resp_i_tdata = (op_code == CHDR_MGMT_OP_CFG_RD_REQ) ?
     {ctrlport_resp_data, ctrlport_req_addr, CHDR_MGMT_OP_CFG_RD_RESP} : // Ctrlport response
-    {NODE_INFO, CHDR_MGMT_OP_INFO_RESP};                                // NodeInfo
+    {node_info, CHDR_MGMT_OP_INFO_RESP};                                // NodeInfo
 
   // The response FIFO should be deep enough to store all the responses
   wire [15:0] resp_fifo_occ;

@@ -11,12 +11,13 @@
 
 module rfnoc_core_regs #(
   parameter [15:0] PROTOVER             = {8'd1, 8'd0},
+  parameter [15:0] DEVICE_TYPE          = 16'd0,
   parameter [9:0]  NUM_BLOCKS           = 0,
   parameter [9:0]  NUM_STREAM_ENDPOINTS = 0,
   parameter [9:0]  NUM_TRANSPORTS       = 0,
   parameter [11:0] NUM_EDGES            = 0,
-  parameter        EDGE_TBL_FILE        = "",
-  parameter [0:0]  CHDR_XBAR_PRESENT    = 1
+  parameter [0:0]  CHDR_XBAR_PRESENT    = 1,
+  parameter        EDGE_TBL_FILE        = ""
 )(
   // Clock and reset
   input  wire                        rfnoc_ctrl_clk,
@@ -30,6 +31,8 @@ module rfnoc_core_regs #(
   output wire                        m_axis_ctrl_tlast,
   output wire                        m_axis_ctrl_tvalid,
   input  wire                        m_axis_ctrl_tready,
+  // Global info
+  input  wire [15:0]                 device_id,
   // Backend config/status for each block
   output wire [(512*NUM_BLOCKS)-1:0] rfnoc_core_config,
   input  wire [(512*NUM_BLOCKS)-1:0] rfnoc_core_status
@@ -180,9 +183,10 @@ module rfnoc_core_regs #(
   end
 
   // Global Registers
-  localparam [3:0] REG_GLOBAL_PROTOVER = 4'd0;  // Offset = 0x00
-  localparam [3:0] REG_GLOBAL_PORT_CNT = 4'd1;  // Offset = 0x04
-  localparam [3:0] REG_GLOBAL_EDGE_CNT = 4'd2;  // Offset = 0x08
+  localparam [3:0] REG_GLOBAL_PROTOVER    = 4'd0;  // Offset = 0x00
+  localparam [3:0] REG_GLOBAL_PORT_CNT    = 4'd1;  // Offset = 0x04
+  localparam [3:0] REG_GLOBAL_EDGE_CNT    = 4'd2;  // Offset = 0x08
+  localparam [3:0] REG_GLOBAL_DEVICE_INFO = 4'd3;  // Offset = 0x0C
 
   // Signature and protocol version
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_PROTOVER] = {16'h12C6, PROTOVER[15:0]};
@@ -194,6 +198,8 @@ module rfnoc_core_regs #(
      NUM_TRANSPORTS[9:0], NUM_BLOCKS[9:0], NUM_STREAM_ENDPOINTS[9:0]};
   // Global edge count register
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_EDGE_CNT] = {20'd0, NUM_EDGES[11:0]};
+  // Device information
+  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_DEVICE_INFO] = {DEVICE_TYPE, device_id};
 
   // -----------------------------------
   // Connections Address Space

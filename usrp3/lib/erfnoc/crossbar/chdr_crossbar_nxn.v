@@ -37,9 +37,11 @@
 //   - s_axis_*: Slave port for router (flattened)
 //   - m_axis_*: Master port for router (flattened)
 //   - s_axis_mgmt_*: Management slave port
+//   - device_id: The ID of the device that has instantiated this module
 //
 
 module chdr_crossbar_nxn #(
+  parameter [15:0]       PROTOVER       = {8'd1, 8'd0},
   parameter              CHDR_W         = 64,
   parameter              NPORTS         = 8,
   parameter              DEFAULT_PORT   = 0,
@@ -48,11 +50,12 @@ module chdr_crossbar_nxn #(
   parameter              MUX_ALLOC      = "ROUND-ROBIN",
   parameter              OPTIMIZE       = "AREA",
   parameter [NPORTS-1:0] MGMT_PORT_MASK = {{(NPORTS-1){1'b0}}, 1'b1},
-  parameter              EXT_RTCFG_PORT = 0,
-  parameter [15:0]       PROTOVER       = {8'd1, 8'd0}
+  parameter              EXT_RTCFG_PORT = 0
 ) (
   input  wire                       clk,
   input  wire                       reset,
+  // Device info
+  input  wire [15:0]                device_id,
   // Inputs
   input  wire [(CHDR_W*NPORTS)-1:0] s_axis_tdata,
   input  wire [NPORTS-1:0]          s_axis_tlast,
@@ -174,11 +177,11 @@ module chdr_crossbar_nxn #(
       // the router.
       if (MGMT_PORT_MASK[n] == 1'b1) begin
         chdr_mgmt_pkt_handler #(
-          .PROTOVER(PROTOVER), .CHDR_W(CHDR_W),
-          .NODE_INFO(chdr_mgmt_build_node_info(NPORTS, NPORTS, n, NODE_TYPE_XBAR))
+          .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
         ) mgmt_ep_i (
           .clk                (clk                              ),
           .rst                (reset                            ),
+          .node_info          (chdr_mgmt_build_node_info(device_id, NPORTS, n, NODE_TYPE_XBAR)),
           .s_axis_chdr_tdata  (s_axis_tdata [(n*CHDR_W)+:CHDR_W]),
           .s_axis_chdr_tlast  (s_axis_tlast [n]                 ),
           .s_axis_chdr_tvalid (s_axis_tvalid[n]                 ),
@@ -189,7 +192,7 @@ module chdr_crossbar_nxn #(
           .m_axis_chdr_tlast  (i_tlast      [n]                 ),
           .m_axis_chdr_tvalid (i_tvalid     [n]                 ),
           .m_axis_chdr_tready (i_tready     [n]                 ),
-          .ctrlport_req_wr    (rtcfg_req_wr  [n]                ),
+          .ctrlport_req_wr    (rtcfg_req_wr [n]                 ),
           .ctrlport_req_rd    (/* unused */                     ),
           .ctrlport_req_addr  (rtcfg_req_addr[(n*16)+:16]       ),
           .ctrlport_req_data  (rtcfg_req_data[(n*32)+:32]       ),
@@ -246,17 +249,17 @@ module chdr_crossbar_nxn #(
       axi_fifo #(
         .WIDTH(CHDR_W+1+NPORTS_W), .SIZE(1)
       ) pipe_i (
-        .clk      (clk), 
-        .reset    (reset), 
-        .clear    (1'b0),
+        .clk      (clk                                       ), 
+        .reset    (reset                                     ), 
+        .clear    (1'b0                                      ),
         .i_tdata  ({buf_tlast[n], buf_tdest[n], buf_tdata[n]}),
-        .i_tvalid (buf_tvalid[n]),
-        .i_tready (buf_tready[n]),
+        .i_tvalid (buf_tvalid[n]                             ),
+        .i_tready (buf_tready[n]                             ),
         .o_tdata  ({swi_tlast[n], swi_tdest[n], swi_tdata[n]}),
-        .o_tvalid (swi_tvalid[n]),
-        .o_tready (swi_tready[n]),
-        .space    (),
-        .occupied ()
+        .o_tvalid (swi_tvalid[n]                             ),
+        .o_tready (swi_tready[n]                             ),
+        .space    (/* Unused */                              ),
+        .occupied (/* Unused */                              )
       );
 
       // Ingress demux. Use the tdest field to determine packet destination
@@ -333,19 +336,19 @@ module chdr_crossbar_nxn #(
           .DATA_W(CHDR_W), .DEST_W(1), .IN_PORTS(NPORTS), .OUT_PORTS(1),
           .PIPELINE(0)
         ) mux_i (
-          .clk           (clk                            ),
-          .reset         (reset                          ),
-          .s_axis_tdata  (muxi_tdata [n]                 ),
-          .s_axis_tdest  ({NPORTS{1'b0}} /* Unused */    ),
-          .s_axis_tlast  (muxi_tlast [n]                 ),
-          .s_axis_tvalid (muxi_tvalid[n]                 ),
-          .s_axis_tready (muxi_tready[n]                 ),
-          .s_axis_alloc  (muxi_sw_alloc                  ),
+          .clk           (clk                              ),
+          .reset         (reset                            ),
+          .s_axis_tdata  (muxi_tdata [n]                   ),
+          .s_axis_tdest  ({NPORTS{1'b0}} /* Unused */      ),
+          .s_axis_tlast  (muxi_tlast [n]                   ),
+          .s_axis_tvalid (muxi_tvalid[n]                   ),
+          .s_axis_tready (muxi_tready[n]                   ),
+          .s_axis_alloc  (muxi_sw_alloc                    ),
           .m_axis_tdata  (m_axis_tdata [(n*CHDR_W)+:CHDR_W]),
-          .m_axis_tdest  (/* Unused */                   ),
-          .m_axis_tlast  (m_axis_tlast [n]               ),
-          .m_axis_tvalid (m_axis_tvalid[n]               ),
-          .m_axis_tready (m_axis_tready[n]               )
+          .m_axis_tdest  (/* Unused */                     ),
+          .m_axis_tlast  (m_axis_tlast [n]                 ),
+          .m_axis_tvalid (m_axis_tvalid[n]                 ),
+          .m_axis_tready (m_axis_tready[n]                 )
         );
       end else begin
         // axi_mux has an additional bubble cycle but the logic
@@ -355,17 +358,17 @@ module chdr_crossbar_nxn #(
           .PRIO(MUX_ALLOC == "PRIO"), .WIDTH(CHDR_W), .SIZE(NPORTS),
           .PRE_FIFO_SIZE(OPTIMIZE == "TIMING" ? 1 : 0), .POST_FIFO_SIZE(1)
         ) mux_i (
-          .clk      (clk                            ),
-          .reset    (reset                          ),
-          .clear    (1'b0                           ),
-          .i_tdata  (muxi_tdata   [n]               ),
-          .i_tlast  (muxi_tlast   [n]               ),
-          .i_tvalid (muxi_tvalid  [n]               ),
-          .i_tready (muxi_tready  [n]               ),
+          .clk      (clk                              ),
+          .reset    (reset                            ),
+          .clear    (1'b0                             ),
+          .i_tdata  (muxi_tdata   [n]                 ),
+          .i_tlast  (muxi_tlast   [n]                 ),
+          .i_tvalid (muxi_tvalid  [n]                 ),
+          .i_tready (muxi_tready  [n]                 ),
           .o_tdata  (m_axis_tdata [(n*CHDR_W)+:CHDR_W]),
-          .o_tlast  (m_axis_tlast [n]               ),
-          .o_tvalid (m_axis_tvalid[n]               ),
-          .o_tready (m_axis_tready[n]               )
+          .o_tlast  (m_axis_tlast [n]                 ),
+          .o_tvalid (m_axis_tvalid[n]                 ),
+          .o_tready (m_axis_tready[n]                 )
         );
       end
     end

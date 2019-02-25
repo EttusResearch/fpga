@@ -432,12 +432,12 @@ localparam [7:0] NODE_TYPE_STREAM_EP     = 8'd2;
 localparam [7:0] NODE_TYPE_XPORT_BASE    = 8'd64;
 
 function [47:0] chdr_mgmt_build_node_info(
-  input [9:0] num_outputs,
-  input [9:0] num_inputs,
-  input [9:0] node_inst,
-  input [7:0] node_type
+  input [15:0] device_id,
+  input [9:0]  num_ports,
+  input [9:0]  node_inst,
+  input [7:0]  node_type
 );
-  chdr_mgmt_build_node_info = {10'h0, num_outputs, num_inputs, node_inst, node_type};
+  chdr_mgmt_build_node_info = {4'h0, device_id, num_ports, node_inst, node_type};
 endfunction
 
 function [9:0] chdr_mgmt_sel_dest_get_tdest(input [47:0] payload);

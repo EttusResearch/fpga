@@ -23,6 +23,7 @@
 //   - NODE_INST: The node type to return for a node-info discovery
 //
 // Signals:
+//   - device_id     : The ID of the device that has instantiated this module
 //   - s_axis_xport_*: The input CHDR stream from the transport (plus tuser metadata)
 //   - m_axis_xport_*: The output CHDR stream to transport (plus tuser metadata)
 //   - s_axis_rfnoc_*: The input CHDR stream from the rfnoc infrastructure
@@ -41,6 +42,8 @@ module chdr_xport_adapter_generic #(
   // Clock and reset
   input  wire               clk,
   input  wire               rst,
+  // Device info
+  input  wire [15:0]        device_id,
   // Context stream in (AXI-Stream)
   input  wire [CHDR_W-1:0]  s_axis_xport_tdata,
   input  wire [USER_W-1:0]  s_axis_xport_tuser,
@@ -64,12 +67,12 @@ module chdr_xport_adapter_generic #(
   output wire               m_axis_rfnoc_tvalid,
   input  wire               m_axis_rfnoc_tready,
   // Control port endpoint
-  output wire              ctrlport_req_wr,
-  output wire              ctrlport_req_rd,
-  output wire [15:0]       ctrlport_req_addr,
-  output wire [31:0]       ctrlport_req_data,
-  input  wire              ctrlport_resp_ack,
-  input  wire [31:0]       ctrlport_resp_data
+  output wire               ctrlport_req_wr,
+  output wire               ctrlport_req_rd,
+  output wire [15:0]        ctrlport_req_addr,
+  output wire [31:0]        ctrlport_req_data,
+  input  wire               ctrlport_resp_ack,
+  input  wire [31:0]        ctrlport_resp_data
 );
 
   // ---------------------------------------------------
@@ -93,10 +96,10 @@ module chdr_xport_adapter_generic #(
   wire [15:0] op_src_epid;
 
   chdr_mgmt_pkt_handler #(
-    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W),
-    .NODEINFO(chdr_mgmt_build_node_info(0, 1, NODE_INST, NODE_TYPE))
+    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
   ) mgmt_ep_i (
     .clk(clk), .rst(rst),
+    .node_info(chdr_mgmt_build_node_info(device_id, 1, NODE_INST, NODE_TYPE)),
     .s_axis_chdr_tdata(s_axis_xport_tdata), .s_axis_chdr_tlast(s_axis_xport_tlast),
     .s_axis_chdr_tvalid(s_axis_xport_tvalid), .s_axis_chdr_tready(s_axis_xport_tready),
     .m_axis_chdr_tdata(x2d_tdata), .m_axis_chdr_tlast(x2d_tlast),

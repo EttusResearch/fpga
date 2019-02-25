@@ -25,6 +25,7 @@
 //   - REPORT_STRM_ERRS: Report data stream errors upstream
 //
 // Signals:
+//   - device_id     : The ID of the device that has instantiated this module
 //   - *_axis_chdr_* : Input/output CHDR stream (AXI-Stream)
 //   - *_axis_ctrl_* : Input/output AXIS-Control stream (AXI-Stream)
 //   - *_axis_data_* : Input/output CHDR Data stream (AXI-Stream)
@@ -48,6 +49,8 @@ module chdr_stream_endpoint #(
   input  wire              rfnoc_chdr_rst,
   input  wire              rfnoc_ctrl_clk,
   input  wire              rfnoc_ctrl_rst,
+  // Device info
+  input  wire [15:0]       device_id,
   // CHDR in (AXI-Stream)
   input  wire [CHDR_W-1:0] s_axis_chdr_tdata,
   input  wire              s_axis_chdr_tlast,
@@ -105,10 +108,10 @@ module chdr_stream_endpoint #(
 
   // Handle management packets here
   chdr_mgmt_pkt_handler #(
-    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W),
-    .NODE_INFO(chdr_mgmt_build_node_info(0,1,INST_NUM,NODE_TYPE_STREAM_EP))
+    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
   ) mgmt_ep_i (
     .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
+    .node_info(chdr_mgmt_build_node_info(device_id, 1, INST_NUM, NODE_TYPE_STREAM_EP)),
     .s_axis_chdr_tdata(s_axis_chdr_tdata), .s_axis_chdr_tlast(s_axis_chdr_tlast),
     .s_axis_chdr_tvalid(s_axis_chdr_tvalid), .s_axis_chdr_tready(s_axis_chdr_tready),
     .m_axis_chdr_tdata(chdr_i_tdata), .m_axis_chdr_tlast(chdr_i_tlast),
