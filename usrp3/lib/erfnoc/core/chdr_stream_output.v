@@ -342,6 +342,8 @@ module chdr_stream_output #(
     if (rst) begin
       state <= ST_PASS_DATA;
       mid_pkt <= 1'b0;
+      data_seq_num <= 16'd0;
+      strc_seq_num <= 16'd0;
       cfg_pending <= 1'b0;
       cfg_failed <= 1'b0;
     end else begin
@@ -390,8 +392,11 @@ module chdr_stream_output #(
         // ------------------
         // Send the CHDR header for a stream command
         ST_STRC_HDR: begin
-          if (chdr_out_tready)
+          if (chdr_out_tready) begin
             state <= ST_STRC_W0;
+            // Update seqnum for the next packet
+            strc_seq_num <= strc_seq_num + 16'd1;
+          end
         end
 
         // ST_STRC_W0
@@ -417,14 +422,14 @@ module chdr_stream_output #(
         // ------------------
         // Done sending stream command. Wait for a response
         ST_STRC_WAIT: begin
-          // Update seqnum for the next packet
-          strc_seq_num <= strc_seq_num + 16'd1;
           // Wait for a new response to arrive
           if (msg_o_tvalid) begin
             if (msg_o_tdata == CHDR_STRS_STATUS_OKAY) begin
               state <= ST_INIT_DLY;
               cfg_delay <= 3'd4;
               fc_enabled <= 1'b1;
+              data_seq_num <= 16'd0;
+              strc_seq_num <= 16'd0;
             end else begin
               state <= ST_PASS_DATA;
               cfg_failed <= 1'b1;

@@ -126,7 +126,7 @@ module chdr_stream_input #(
   reg  [3:0] fc_due_shreg = 4'h0; // Is a response due? (shift register)
 
   // Endpoint IDs of this endpoint and the stream source
-  reg [15:0] this_epid, return_epid;
+  reg [15:0] this_epid = 16'd0, return_epid = 16'd0;
 
   // Cached values from a stream command
   reg [63:0] strc_num_bytes;
@@ -204,6 +204,7 @@ module chdr_stream_input #(
   reg         is_first_strc_pkt = 1'b1;   // Is this the strm cmd data pkt after fc_enabled = 1?
   reg [15:0]  exp_data_seq_num = 16'd0;   // Expected sequence number for the next data pkt
   reg [15:0]  exp_strc_seq_num = 16'd0;   // Expected sequence number for the next stream cmd pkt
+  reg [15:0]  strc_dst_epid = 16'd0;      // EPID in CHDR header of STRC packet 
 
   reg [FLUSH_TIMEOUT_W-1:0] flush_counter = {FLUSH_TIMEOUT_W{1'b0}};
 
@@ -266,20 +267,24 @@ module chdr_stream_input #(
               if (is_strc_pkt) begin
                 // ...consume if it is a stream command or...
                 state <= ST_STRC_W0;
-                this_epid <= chdr_get_dst_epid(buff_tdata[63:0]);
-                is_first_data_pkt <= 1'b1;
-                exp_strc_seq_num <= chdr_get_seq_num(buff_tdata[63:0]) + 16'd1;
               end else if (is_data_pkt) begin
                 // ...pass to output if it is a data packet...
                 state <= ST_IN_DATA;
-                is_first_strc_pkt <= 1'b1;
-                exp_data_seq_num <= chdr_get_seq_num(buff_tdata[63:0]) + 16'd1;
               end else begin
                 // ... otherwise drop.
                 state <= ST_DROP;
               end
             end
+            // Update other state vars
             pkt_too_long <= 1'b0;
+            if (is_strc_pkt) begin
+              is_first_strc_pkt <= 1'b0;
+              strc_dst_epid <= chdr_get_dst_epid(buff_tdata[63:0]);
+              exp_strc_seq_num <= chdr_get_seq_num(buff_tdata[63:0]) + 16'd1;
+            end else if (is_data_pkt) begin
+              is_first_data_pkt <= 1'b0;
+              exp_data_seq_num <= chdr_get_seq_num(buff_tdata[63:0]) + 16'd1;
+            end
           end
         end
         ST_IN_DATA: begin
@@ -321,6 +326,7 @@ module chdr_stream_input #(
               // Configure FC but disable it temporarily
               fc_freq_bytes <= strc_num_bytes;
               fc_freq_pkts <= strc_num_pkts;
+              this_epid <= strc_dst_epid;
               fc_enabled <= 1'b0;
               // Flush the input
               state <= ST_FLUSH;
@@ -349,8 +355,8 @@ module chdr_stream_input #(
               // Done flushing. Re-arm flow control and reset packet
               // sequence check info.
               fc_enabled <= 1'b1;
-              is_first_data_pkt <= 1'b0;
-              is_first_strc_pkt <= 1'b0;
+              is_first_data_pkt <= 1'b1;
+              is_first_strc_pkt <= 1'b1;
               state <= ST_IN_HDR;
             end
           end

@@ -177,7 +177,7 @@ module chdr_crossbar_nxn #(
       // the router.
       if (MGMT_PORT_MASK[n] == 1'b1) begin
         chdr_mgmt_pkt_handler #(
-          .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
+          .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
         ) mgmt_ep_i (
           .clk                (clk                              ),
           .rst                (reset                            ),

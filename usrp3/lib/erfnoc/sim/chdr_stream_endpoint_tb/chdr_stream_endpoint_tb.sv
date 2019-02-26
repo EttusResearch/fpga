@@ -29,9 +29,9 @@ module chdr_stream_endpoint_tb;
 
   // Parameters
   localparam bit     VERBOSE           = 0;
-  localparam integer NUM_PKTS_PER_TEST = 100;
+  localparam integer NUM_PKTS_PER_TEST = 200;
   localparam integer FAST_STALL_PROB   = 0;
-  localparam integer SLOW_STALL_PROB   = 33;
+  localparam integer SLOW_STALL_PROB   = 35;
 
   localparam integer CHDR_W   = 64;
   localparam integer MTU      = 7;
@@ -47,19 +47,24 @@ module chdr_stream_endpoint_tb;
   // ----------------------------------------
   // DUT (and Crossbar) Instantiations
   // ----------------------------------------
-  wire [CHDR_W-1:0] c2a_chdr_tdata , a2c_chdr_tdata ;
-  wire              c2a_chdr_tlast , a2c_chdr_tlast ;
-  wire              c2a_chdr_tvalid, a2c_chdr_tvalid;
-  wire              c2a_chdr_tready, a2c_chdr_tready;
-  wire [CHDR_W-1:0] c2b_chdr_tdata , b2c_chdr_tdata ;
-  wire              c2b_chdr_tlast , b2c_chdr_tlast ;
-  wire              c2b_chdr_tvalid, b2c_chdr_tvalid;
-  wire              c2b_chdr_tready, b2c_chdr_tready;
+  wire [CHDR_W-1:0] c2ae_chdr_tdata , c2ax_chdr_tdata , a2c_chdr_tdata ;
+  wire              c2ae_chdr_tlast , c2ax_chdr_tlast , a2c_chdr_tlast ;
+  wire              c2ae_chdr_tvalid, c2ax_chdr_tvalid, a2c_chdr_tvalid;
+  wire              c2ae_chdr_tready, c2ax_chdr_tready, a2c_chdr_tready;
+  wire [CHDR_W-1:0] c2be_chdr_tdata , c2bx_chdr_tdata , b2c_chdr_tdata ;
+  wire              c2be_chdr_tlast , c2bx_chdr_tlast , b2c_chdr_tlast ;
+  wire              c2be_chdr_tvalid, c2bx_chdr_tvalid, b2c_chdr_tvalid;
+  wire              c2be_chdr_tready, c2bx_chdr_tready, b2c_chdr_tready;
 
   wire [31:0] a_ctrl_in_tdata, a_ctrl_out_tdata, b_ctrl_in_tdata, b_ctrl_out_tdata;
   wire        a_ctrl_loop_tlast , b_ctrl_loop_tlast ;
   wire        a_ctrl_loop_tvalid, b_ctrl_loop_tvalid;
   wire        a_ctrl_loop_tready, b_ctrl_loop_tready;
+
+  logic       a_signal_data_err, b_signal_data_err;
+  logic       a_lossy_input, b_lossy_input;
+  logic [7:0] a_seqerr_prob, b_seqerr_prob;
+  logic [7:0] a_rterr_prob, b_rterr_prob;
 
   AxiStreamIf #(CHDR_W) m_tb_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);
   AxiStreamIf #(CHDR_W) s_tb_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);
@@ -86,10 +91,10 @@ module chdr_stream_endpoint_tb;
     .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
     .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
     .device_id          (DEV_ID                ),
-    .s_axis_chdr_tdata  (c2a_chdr_tdata        ),
-    .s_axis_chdr_tlast  (c2a_chdr_tlast        ),
-    .s_axis_chdr_tvalid (c2a_chdr_tvalid       ),
-    .s_axis_chdr_tready (c2a_chdr_tready       ),
+    .s_axis_chdr_tdata  (c2ae_chdr_tdata       ),
+    .s_axis_chdr_tlast  (c2ae_chdr_tlast       ),
+    .s_axis_chdr_tvalid (c2ae_chdr_tvalid      ),
+    .s_axis_chdr_tready (c2ae_chdr_tready      ),
     .m_axis_chdr_tdata  (a2c_chdr_tdata        ),
     .m_axis_chdr_tlast  (a2c_chdr_tlast        ),
     .m_axis_chdr_tvalid (a2c_chdr_tvalid       ),
@@ -113,7 +118,7 @@ module chdr_stream_endpoint_tb;
     .strm_seq_err_stb   (                      ),
     .strm_data_err_stb  (                      ),
     .strm_route_err_stb (                      ),
-    .signal_data_err    (1'b0                  )
+    .signal_data_err    (a_signal_data_err     )
   );
 
   chdr_stream_endpoint #(
@@ -133,10 +138,10 @@ module chdr_stream_endpoint_tb;
     .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
     .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
     .device_id          (DEV_ID                ),
-    .s_axis_chdr_tdata  (c2b_chdr_tdata        ),
-    .s_axis_chdr_tlast  (c2b_chdr_tlast        ),
-    .s_axis_chdr_tvalid (c2b_chdr_tvalid       ),
-    .s_axis_chdr_tready (c2b_chdr_tready       ),
+    .s_axis_chdr_tdata  (c2be_chdr_tdata       ),
+    .s_axis_chdr_tlast  (c2be_chdr_tlast       ),
+    .s_axis_chdr_tvalid (c2be_chdr_tvalid      ),
+    .s_axis_chdr_tready (c2be_chdr_tready      ),
     .m_axis_chdr_tdata  (b2c_chdr_tdata        ),
     .m_axis_chdr_tlast  (b2c_chdr_tlast        ),
     .m_axis_chdr_tvalid (b2c_chdr_tvalid       ),
@@ -160,7 +165,7 @@ module chdr_stream_endpoint_tb;
     .strm_seq_err_stb   (                      ),
     .strm_data_err_stb  (                      ),
     .strm_route_err_stb (                      ),
-    .signal_data_err    (1'b0                  )
+    .signal_data_err    (b_signal_data_err     )
   );
 
   chdr_crossbar_nxn #(
@@ -178,18 +183,50 @@ module chdr_stream_endpoint_tb;
     .clk            (rfnoc_chdr_clk),
     .reset          (rfnoc_chdr_rst),
     .device_id      (DEV_ID),
-    .s_axis_tdata   ({b2c_chdr_tdata,  a2c_chdr_tdata,  m_tb_chdr.slave.tdata  }),
-    .s_axis_tlast   ({b2c_chdr_tlast,  a2c_chdr_tlast,  m_tb_chdr.slave.tlast  }),
-    .s_axis_tvalid  ({b2c_chdr_tvalid, a2c_chdr_tvalid, m_tb_chdr.slave.tvalid }),
-    .s_axis_tready  ({b2c_chdr_tready, a2c_chdr_tready, m_tb_chdr.slave.tready }),
-    .m_axis_tdata   ({c2b_chdr_tdata,  c2a_chdr_tdata,  s_tb_chdr.master.tdata }),
-    .m_axis_tlast   ({c2b_chdr_tlast,  c2a_chdr_tlast,  s_tb_chdr.master.tlast }),
-    .m_axis_tvalid  ({c2b_chdr_tvalid, c2a_chdr_tvalid, s_tb_chdr.master.tvalid}),
-    .m_axis_tready  ({c2b_chdr_tready, c2a_chdr_tready, s_tb_chdr.master.tready}),
+    .s_axis_tdata   ({b2c_chdr_tdata,   a2c_chdr_tdata,   m_tb_chdr.slave.tdata  }),
+    .s_axis_tlast   ({b2c_chdr_tlast,   a2c_chdr_tlast,   m_tb_chdr.slave.tlast  }),
+    .s_axis_tvalid  ({b2c_chdr_tvalid,  a2c_chdr_tvalid,  m_tb_chdr.slave.tvalid }),
+    .s_axis_tready  ({b2c_chdr_tready,  a2c_chdr_tready,  m_tb_chdr.slave.tready }),
+    .m_axis_tdata   ({c2bx_chdr_tdata,  c2ax_chdr_tdata,  s_tb_chdr.master.tdata }),
+    .m_axis_tlast   ({c2bx_chdr_tlast,  c2ax_chdr_tlast,  s_tb_chdr.master.tlast }),
+    .m_axis_tvalid  ({c2bx_chdr_tvalid, c2ax_chdr_tvalid, s_tb_chdr.master.tvalid}),
+    .m_axis_tready  ({c2bx_chdr_tready, c2ax_chdr_tready, s_tb_chdr.master.tready}),
     .ext_rtcfg_stb  ('0),
     .ext_rtcfg_addr ('0),
     .ext_rtcfg_data ('0),
     .ext_rtcfg_ack  ()
+  );
+
+  lossy_xport_model #( .CHDR_W(CHDR_W) ) xport_a (
+    .clk           (rfnoc_chdr_clk  ),
+    .rst           (rfnoc_chdr_rst  ),
+    .s_axis_tdata  (c2ax_chdr_tdata ),
+    .s_axis_tlast  (c2ax_chdr_tlast ),
+    .s_axis_tvalid (c2ax_chdr_tvalid),
+    .s_axis_tready (c2ax_chdr_tready),
+    .m_axis_tdata  (c2ae_chdr_tdata ),
+    .m_axis_tlast  (c2ae_chdr_tlast ),
+    .m_axis_tvalid (c2ae_chdr_tvalid),
+    .m_axis_tready (c2ae_chdr_tready),
+    .seqerr_prob   (a_seqerr_prob   ),
+    .rterr_prob    (a_rterr_prob    ),
+    .lossy         (a_lossy_input   )
+  );
+
+  lossy_xport_model #( .CHDR_W(CHDR_W) ) xport_b (
+    .clk           (rfnoc_chdr_clk  ),
+    .rst           (rfnoc_chdr_rst  ),
+    .s_axis_tdata  (c2bx_chdr_tdata ),
+    .s_axis_tlast  (c2bx_chdr_tlast ),
+    .s_axis_tvalid (c2bx_chdr_tvalid),
+    .s_axis_tready (c2bx_chdr_tready),
+    .m_axis_tdata  (c2be_chdr_tdata ),
+    .m_axis_tlast  (c2be_chdr_tlast ),
+    .m_axis_tvalid (c2be_chdr_tvalid),
+    .m_axis_tready (c2be_chdr_tready),
+    .seqerr_prob   (b_seqerr_prob   ),
+    .rterr_prob    (b_rterr_prob    ),
+    .lossy         (b_lossy_input   )
   );
 
   // ----------------------------------------
@@ -223,7 +260,11 @@ module chdr_stream_endpoint_tb;
   // ----------------------------------------
   // Test Utilities
   // ----------------------------------------
-  task send_recv_mgmt_packet(
+  integer cached_mgmt_seqnum = 0;
+  integer cached_ctrl_seqnum = 0;
+  integer cached_data_seqnum = 0;
+
+  task automatic send_recv_mgmt_packet(
     input  chdr_header_t tx_mgmt_hdr,
     input  chdr_mgmt_t   tx_mgmt_pl,
     output chdr_header_t rx_mgmt_hdr,
@@ -241,9 +282,57 @@ module chdr_stream_endpoint_tb;
     if (VERBOSE) begin $write("Rx"); rx_chdr.print(); end
   endtask
 
+  task automatic mgmt_read_err_counts(
+    input [15:0] dst_epid,
+    output [31:0] seq_err_count,
+    output [31:0] route_err_count,
+    output [31:0] data_err_count
+  );
+    automatic chdr_header_t tx_mgmt_hdr, rx_mgmt_hdr;
+    automatic chdr_mgmt_t tx_mgmt_pl, rx_mgmt_pl;
+    automatic chdr_mgmt_op_t exp_mgmt_op;
 
-  logic [5:0] cached_ctrl_seqnum = 0;
-  task send_recv_ctrl_packets(
+    // Generic management header
+    tx_mgmt_pl.header = '{
+      default:'0, prot_ver:PROTOVER, chdr_width:translate_chdr_w(CHDR_W), src_epid:EPID_TB
+    };
+    // Read error counts
+    tx_mgmt_pl.header.num_hops = 3;
+    tx_mgmt_pl.ops.delete();
+
+    tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
+      op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+    tx_mgmt_pl.ops[1] = '{  // Hop 2: Read status
+      op_payload:{32'h0, sep_a.REG_OSTRM_SEQ_ERR_CNT}, op_code:MGMT_OP_CFG_RD_REQ, ops_pending:8'd3};
+    tx_mgmt_pl.ops[2] = '{  // Hop 2: Read status
+      op_payload:{32'h0, sep_a.REG_OSTRM_DATA_ERR_CNT}, op_code:MGMT_OP_CFG_RD_REQ, ops_pending:8'd2};
+    tx_mgmt_pl.ops[3] = '{  // Hop 2: Read status
+      op_payload:{32'h0, sep_a.REG_OSTRM_ROUTE_ERR_CNT}, op_code:MGMT_OP_CFG_RD_REQ, ops_pending:8'd1};
+    tx_mgmt_pl.ops[4] = '{  // Hop 2: Stream Endpoint: Return 
+      op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
+    tx_mgmt_pl.ops[5] = '{  // Hop 3: Nop for return
+      op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+    tx_mgmt_hdr = '{
+      pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:dst_epid, default:'0};
+
+    // Send the packet and ensure that error counts are zero
+    send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
+    test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+      "Check Errs: Mgmt header was incorrect");
+    seq_err_count = 32'hx;
+    route_err_count = 32'hx;
+    data_err_count = 32'hx;
+    for (int i = 1; i <= 3; i++) begin
+      if (rx_mgmt_pl.ops[i].op_payload[15:0] == sep_a.REG_OSTRM_SEQ_ERR_CNT)
+        seq_err_count = rx_mgmt_pl.ops[i].op_payload[47:16];
+      else if (rx_mgmt_pl.ops[i].op_payload[15:0] == sep_a.REG_OSTRM_DATA_ERR_CNT)
+        data_err_count = rx_mgmt_pl.ops[i].op_payload[47:16];
+      else if (rx_mgmt_pl.ops[i].op_payload[15:0] == sep_a.REG_OSTRM_ROUTE_ERR_CNT)
+        route_err_count = rx_mgmt_pl.ops[i].op_payload[47:16];
+    end
+  endtask
+
+  task automatic send_recv_ctrl_packets(
     input [15:0] dst_epid,
     input [15:0] num_pkts,
     input [15:0] seq_num_start
@@ -265,7 +354,7 @@ module chdr_stream_endpoint_tb;
         src_epid : EPID_TB,
         is_ack   : 1'b0,
         has_time : $urandom_range(1),
-        seq_num  : cached_ctrl_seqnum++,
+        seq_num  : seq_num_start[5:0],
         num_data : ctrl_data.size(),
         src_port : $urandom(),
         dst_port : $urandom()
@@ -310,12 +399,12 @@ module chdr_stream_endpoint_tb;
     end
   endtask
 
-
-  task send_recv_data_packets(
+  task automatic send_recv_data_packets(
     input [15:0] src_epid,
     input [15:0] dst_epid,
     input [15:0] num_pkts,
-    input [15:0] seq_num_start
+    input [15:0] seq_num_start,
+    input bit    ignore_seq_route_errs = 0
   );
     fork
       begin: tx_loop
@@ -329,7 +418,7 @@ module chdr_stream_endpoint_tb;
           // Fill data in the packet
           tx_hdr = '{
             dst_epid  : dst_epid,
-            seq_num   : txi[15:0],
+            seq_num   : seq_num_start + txi[15:0],
             pkt_type  : (txi%4==0) ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS,
             num_mdata : $urandom_range(5),
             default   : 0
@@ -342,7 +431,7 @@ module chdr_stream_endpoint_tb;
           for (int i = 0; i < $urandom_range((1<<MTU)-10); i++)
             tx_data[i] = {txi << 16, i[15:0]};
           tx_chdr.write_raw(tx_hdr, tx_data, tx_mdata, tx_ts);
-          if (VERBOSE) begin $write("%s_Tx_",(src_epid == EPID_A)?"A":"B"); tx_chdr.print(); end
+          if (VERBOSE) $display("%s:Tx:%0d:",(src_epid == EPID_A)?"A":"B", txi, tx_chdr.sprint());
           // Send the packet
           test.start_timeout(tx_timeout, 2us, "Waiting to send data packet");
           if (src_epid == EPID_A)
@@ -364,9 +453,9 @@ module chdr_stream_endpoint_tb;
             b_data_bfm.get_chdr(rx_chdr);
           test.end_timeout(rx_timeout);
           // Validate the packet
-          if (VERBOSE) begin $write("%s_Rx_",(dst_epid == EPID_A)?"A":"B"); rx_chdr.print(); end
-          test.assert_error(rx_chdr.header.dst_epid == dst_epid, "Data Pkt: dst_epid was incorrect");
-          test.assert_error(rx_chdr.header.seq_num  == rxi + seq_num_start, "Data Pkt: seq_num was incorrect");
+          if (VERBOSE) $display("%s:Rx:%0d:",(src_epid == EPID_A)?"A":"B", rxi, rx_chdr.sprint());
+          test.assert_error(ignore_seq_route_errs || rx_chdr.header.dst_epid == dst_epid, "Data Pkt: dst_epid was incorrect");
+          test.assert_error(ignore_seq_route_errs || (rx_chdr.header.seq_num  == rxi + seq_num_start), "Data Pkt: seq_num was incorrect");
           if (rx_chdr.header.pkt_type == CHDR_DATA_WITH_TS)
             test.assert_error(rx_chdr.timestamp  == rxi, "Data Pkt: timestamp was incorrect");
           foreach (rx_chdr.data[i]) begin
@@ -387,7 +476,18 @@ module chdr_stream_endpoint_tb;
     timeout_t    timeout;
     string       tc_label;
     bit          stop_responder = 0;
-    integer      cached_seqnum = 0;
+    logic [31:0] seq_err_count;
+    logic [31:0] route_err_count;
+    logic [31:0] data_err_count;
+
+    a_signal_data_err = 0;
+    b_signal_data_err = 0;
+    a_seqerr_prob     = 0;
+    a_rterr_prob      = 0;
+    a_lossy_input     = 0;
+    b_seqerr_prob     = 0;
+    b_rterr_prob      = 0;
+    b_lossy_input     = 0;
 
     // Initialize
     // ----------------------------------------
@@ -439,7 +539,7 @@ module chdr_stream_endpoint_tb;
       tx_mgmt_pl.ops[2] = '{  // Hop 2: Nop for return
         op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
       tx_mgmt_hdr = '{
-        pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:16'h0, default:'0};
+        pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:16'h0, default:'0};
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -467,7 +567,7 @@ module chdr_stream_endpoint_tb;
       tx_mgmt_pl.ops[4] = '{  // Hop 3: TB: Nop for return
         op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
       tx_mgmt_hdr = '{
-        pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:16'h0, default:'0};
+        pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:16'h0, default:'0};
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -492,7 +592,7 @@ module chdr_stream_endpoint_tb;
       tx_mgmt_pl.ops[3] = '{  // Hop 3: TB: Nop for return
         op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
       tx_mgmt_hdr = '{
-        pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:16'h0, default:'0};
+        pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:16'h0, default:'0};
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -532,7 +632,7 @@ module chdr_stream_endpoint_tb;
       tx_mgmt_pl.ops[3] = '{  // Hop 2: Nop for return
         op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
       tx_mgmt_hdr = '{
-        pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:16'h0, default:'0};
+        pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:16'h0, default:'0};
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -577,7 +677,7 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[6] = '{  // Hop 3: Nop for return
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_hdr = '{
-          pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:epids[i], default:'0};
+          pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
   
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -632,7 +732,7 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[8] = '{  // Hop 3: Nop for return
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_hdr = '{
-          pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:epids[i], default:'0};
+          pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
 
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -668,7 +768,7 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[10] = '{  // Hop 3: Nop for return
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_hdr = '{
-          pkt_type:CHDR_MANAGEMENT, seq_num:cached_seqnum++, dst_epid:epids[i], default:'0};
+          pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
 
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
@@ -704,94 +804,290 @@ module chdr_stream_endpoint_tb;
 
     // Control transactions to Endpoint A
     // ----------------------------------------
-    cached_seqnum = 0;
-    for (int cfg = 0; cfg < 4; cfg++) begin
-      automatic logic mst_cfg = cfg[0];
-      automatic logic slv_cfg = cfg[1];
-      $sformat(tc_label, "Control Transactions to A (%s Master, %s Slave)",
-        (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
+    cached_ctrl_seqnum = 0;
+    for (int cfg = 0; cfg < 2; cfg++) begin
+      $sformat(tc_label, "Control Xact to A (%s)", (cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
-        send_recv_ctrl_packets(EPID_A, NUM_PKTS_PER_TEST, cached_seqnum);
+        tb_chdr_bfm.set_master_stall_prob(cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        tb_chdr_bfm.set_slave_stall_prob(cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        send_recv_ctrl_packets(EPID_A, NUM_PKTS_PER_TEST, cached_ctrl_seqnum);
       end
       test.end_test();
-      cached_seqnum += NUM_PKTS_PER_TEST;
+      cached_ctrl_seqnum += NUM_PKTS_PER_TEST;
     end
 
     // Control transactions to Endpoint B
     // ----------------------------------------
-    cached_seqnum = 0;
-    for (int cfg = 0; cfg < 4; cfg++) begin
-      automatic logic mst_cfg = cfg[0];
-      automatic logic slv_cfg = cfg[1];
-      $sformat(tc_label, "Control Transactions to B (%s Master, %s Slave)",
-        (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
+    cached_ctrl_seqnum = 0;
+    for (int cfg = 0; cfg < 2; cfg++) begin
+      $sformat(tc_label, "Control Xact to B (%s)", (cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
-        send_recv_ctrl_packets(EPID_B, NUM_PKTS_PER_TEST, cached_seqnum);
+        tb_chdr_bfm.set_master_stall_prob(cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        tb_chdr_bfm.set_slave_stall_prob(cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        send_recv_ctrl_packets(EPID_B, NUM_PKTS_PER_TEST, cached_ctrl_seqnum);
       end
       test.end_test();
-      cached_seqnum += NUM_PKTS_PER_TEST;
+      cached_ctrl_seqnum += NUM_PKTS_PER_TEST;
     end
-
 
     // Stream data from A to B
     // ----------------------------------------
-    cached_seqnum = 0;
+    cached_data_seqnum = 0;
     for (int cfg = 0; cfg < 4; cfg++) begin
       automatic logic mst_cfg = cfg[0];
       automatic logic slv_cfg = cfg[1];
-      $sformat(tc_label, "Stream Data Packets from A to B (%s Master, %s Slave)",
+      $sformat(tc_label, "Stream Data from A to B (%s Mst, %s Slv)",
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
         a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_seqnum);
+        send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_data_seqnum);
       end
       test.end_test();
-      cached_seqnum += NUM_PKTS_PER_TEST;
+      cached_data_seqnum += NUM_PKTS_PER_TEST;
     end
 
     // Stream data from B to A
     // ----------------------------------------
-    cached_seqnum = 0;
+    cached_data_seqnum = 0;
     for (int cfg = 0; cfg < 4; cfg++) begin
       automatic logic mst_cfg = cfg[0];
       automatic logic slv_cfg = cfg[1];
-      $sformat(tc_label, "Stream Data Packets from B to A (%s Master, %s Slave)",
+      $sformat(tc_label, "Stream Data from B to A (%s Mst, %s Slv)",
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
         b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_seqnum);
+        send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_data_seqnum);
       end
       test.end_test();
-      cached_seqnum += NUM_PKTS_PER_TEST;
+      cached_data_seqnum += NUM_PKTS_PER_TEST;
     end
 
-//    // Stream data between A <=> B simultaneously
-//    // ----------------------------------------
-//    for (int cfg = 0; cfg < 4; cfg++) begin
-//      automatic logic mst_cfg = cfg[0];
-//      automatic logic slv_cfg = cfg[1];
-//      $sformat(tc_label, "Stream Data Packets between A <=> B simultaneously (%s Master, %s Slave)",
-//        (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
-//      test.start_test(tc_label);
-//      begin
-//        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-//        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-//        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-//        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-//        fork
-//          send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_seqnum);
-//          send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_seqnum);
-//        join
-//      end
-//      test.end_test();
-//      cached_seqnum += NUM_PKTS_PER_TEST;
-//    end
+    // Stream data between A <=> B simultaneously
+    // ----------------------------------------
+    for (int cfg = 0; cfg < 4; cfg++) begin
+      automatic logic mst_cfg = cfg[0];
+      automatic logic slv_cfg = cfg[1];
+      $sformat(tc_label, "Stream Data between A <=> B simultaneously (%s Mst, %s Slv)",
+        (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
+      test.start_test(tc_label);
+      begin
+        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        fork
+          send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_data_seqnum);
+          send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_data_seqnum);
+        join
+      end
+      test.end_test();
+      cached_data_seqnum += NUM_PKTS_PER_TEST;
+    end
+
+    // Stream data and control between A <=> B simultaneously
+    // ----------------------------------------
+    for (int cfg = 0; cfg < 4; cfg++) begin
+      automatic logic mst_cfg = cfg[0];
+      automatic logic slv_cfg = cfg[1];
+      $sformat(tc_label, "Stream Data and Control between A <=> B (%s Mst, %s Slv)",
+        (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
+      test.start_test(tc_label);
+      begin
+        tb_chdr_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        tb_chdr_bfm.set_slave_stall_prob(slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        fork
+          send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
+          send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
+          send_recv_ctrl_packets(EPID_A, NUM_PKTS_PER_TEST, cached_ctrl_seqnum);
+        join
+        cached_data_seqnum += NUM_PKTS_PER_TEST/2;
+        fork
+          send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
+          send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
+          send_recv_ctrl_packets(EPID_B, NUM_PKTS_PER_TEST, cached_ctrl_seqnum);
+        join
+        cached_data_seqnum += NUM_PKTS_PER_TEST/2;
+        cached_ctrl_seqnum += NUM_PKTS_PER_TEST;
+      end
+      test.end_test();
+    end
+
+    // Check zero sequence errors after streaming
+    // ----------------------------------------
+    test.start_test("Check zero sequence errors after streaming");
+    begin
+      logic [15:0] epids[2] = {EPID_A, EPID_B};
+      foreach (epids[i]) begin
+        mgmt_read_err_counts(epids[i], seq_err_count, route_err_count, data_err_count);
+        test.assert_error(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
+        test.assert_error(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
+        test.assert_error(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
+      end
+    end
+    test.end_test();
+
+    // Force sequence error
+    // ----------------------------------------
+    test.start_test("Force sequence error");
+    begin
+      // First sequence error
+      send_recv_data_packets(EPID_A, EPID_B, 1, cached_data_seqnum++, 1);
+      b_seqerr_prob = 100;  // Simulate a dropped packet
+      send_recv_data_packets(EPID_A, EPID_B, 1, cached_data_seqnum++, 1);
+      b_seqerr_prob = 0;
+      repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
+      mgmt_read_err_counts(EPID_A, seq_err_count, route_err_count, data_err_count);
+      test.assert_error(seq_err_count == 32'd1, "Force SeqErr: Incorrect seq error count");
+      test.assert_error(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
+
+      // Second and third sequence error
+      send_recv_data_packets(EPID_A, EPID_B, 1, cached_data_seqnum++, 1);
+      b_seqerr_prob = 100;  // Simulate another dropped packet
+      send_recv_data_packets(EPID_A, EPID_B, 1, cached_data_seqnum++, 1);
+      b_seqerr_prob = 0;
+      repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
+      mgmt_read_err_counts(EPID_A, seq_err_count, route_err_count, data_err_count);
+      test.assert_error(seq_err_count > 32'd1, "Force SeqErr: Incorrect seq error count");
+      test.assert_error(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
+    end
+    test.end_test();
+
+    // Force routing error
+    // ----------------------------------------
+    test.start_test("Force routing error");
+    begin
+      // First sequence error
+      send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
+      a_rterr_prob = 100;  // Simulate a routing error
+      send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
+      a_rterr_prob = 0;
+      repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
+      mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
+      test.assert_error(seq_err_count == 32'd0, "Force RouteErr: Incorrect seq error count");
+      test.assert_error(route_err_count == 32'd1, "Force RouteErr: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force RouteErr: Incorrect data error count");
+
+      // Second routing error
+      send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
+      a_rterr_prob = 100;  // Simulate a routing error
+      send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
+      a_rterr_prob = 0;
+      repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
+      mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
+      test.assert_error(seq_err_count == 32'd0, "Force RouteErr: Incorrect seq error count");
+      test.assert_error(route_err_count > 32'd1, "Force RouteErr: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force RouteErr: Incorrect data error count");
+    end
+    test.end_test();
+
+    // Setup a stream between Endpoint A and B
+    // ----------------------------------------
+    test.start_test("Reconfigure flow control (reset state)");
+    begin
+      automatic chdr_header_t tx_mgmt_hdr, rx_mgmt_hdr;
+      automatic chdr_mgmt_t tx_mgmt_pl, rx_mgmt_pl;
+      automatic chdr_mgmt_op_t exp_mgmt_op;
+
+      logic [15:0] epids[2] = {EPID_A, EPID_B};
+      foreach (epids[i]) begin
+        // Generic management header
+        tx_mgmt_pl.header = '{
+          default:'0, prot_ver:PROTOVER, chdr_width:translate_chdr_w(CHDR_W), src_epid:EPID_TB
+        };
+        // Configure FC on streams
+        tx_mgmt_pl.header.num_hops = 3;
+        tx_mgmt_pl.ops.delete();
+
+        tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
+          op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+        tx_mgmt_pl.ops[1] = '{  // Hop 2: Configure lossy and start config
+          op_payload:{32'd3, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1};
+        tx_mgmt_pl.ops[2] = '{  // Hop 2: Stream Endpoint: Return 
+          op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
+        tx_mgmt_pl.ops[3] = '{  // Hop 3: Nop for return
+          op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+        tx_mgmt_hdr = '{
+          pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
+
+        // Send the packet and check the response
+        send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
+
+        // Wait for some time for node to flush and reset
+        // Typically we would poll in SW but we just wait to keep the code simple
+        repeat (256) @(posedge rfnoc_chdr_clk);
+
+        // Read back FC status
+        tx_mgmt_pl.header.num_hops = 3;
+        tx_mgmt_pl.ops.delete();
+
+        tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
+          op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+        tx_mgmt_pl.ops[1] = '{  // Hop 2: Read status
+          op_payload:{32'h0, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_RD_REQ, ops_pending:8'd1};
+        tx_mgmt_pl.ops[2] = '{  // Hop 2: Stream Endpoint: Return 
+          op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
+        tx_mgmt_pl.ops[3] = '{  // Hop 3: Nop for return
+          op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
+        tx_mgmt_hdr = '{
+          pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
+
+        // Send the packet and check the response
+        send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
+        test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+          "Config SEP: Mgmt header was incorrect");
+        exp_mgmt_op = '{op_payload:{32'h80000002, sep_a.REG_OSTRM_CTRL_STATUS},   // FC on, no errors and lossy
+          op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd0};
+        test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+      end
+    end
+    test.end_test();
+
+    // Check zero errors after reinit
+    // ----------------------------------------
+    test.start_test("Check zero errors after reinit");
+    begin
+      logic [15:0] epids[2] = {EPID_A, EPID_B};
+      foreach (epids[i]) begin
+        mgmt_read_err_counts(epids[i], seq_err_count, route_err_count, data_err_count);
+        test.assert_error(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
+        test.assert_error(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
+        test.assert_error(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
+      end
+    end
+    test.end_test();
+
+    // Stream data between A <=> B simultaneously
+    // ----------------------------------------
+    test.start_test("Stream Data between A <=> B with a lossy link");
+    begin
+      cached_data_seqnum = 0;
+      a_data_bfm.set_master_stall_prob(FAST_STALL_PROB);
+      b_data_bfm.set_master_stall_prob(FAST_STALL_PROB);
+      a_data_bfm.set_slave_stall_prob (SLOW_STALL_PROB);
+      b_data_bfm.set_slave_stall_prob (SLOW_STALL_PROB);
+      a_lossy_input = 1;
+      b_lossy_input = 1;
+      fork
+        send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST * 10, cached_data_seqnum);
+        send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST * 10, cached_data_seqnum);
+      join
+      a_lossy_input = 0;
+      b_lossy_input = 0;
+    end
+    test.end_test();
+    cached_data_seqnum += NUM_PKTS_PER_TEST*10;
 
     // Finish Up
     // ----------------------------------------

@@ -96,7 +96,7 @@ module chdr_xport_adapter_generic #(
   wire [15:0] op_src_epid;
 
   chdr_mgmt_pkt_handler #(
-    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
+    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
   ) mgmt_ep_i (
     .clk(clk), .rst(rst),
     .node_info(chdr_mgmt_build_node_info(device_id, 1, NODE_INST, NODE_TYPE)),

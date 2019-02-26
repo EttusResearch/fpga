@@ -34,6 +34,7 @@ include $(BASE_DIR)/../sim/erfnoc/Makefile.srcs
 SIM_TOP = chdr_stream_endpoint_tb
 
 SIM_SRCS = \
+$(abspath lossy_xport_model.v) \
 $(abspath chdr_stream_endpoint_tb.sv) \
 $(SIM_ERFNOC_SRCS)
 

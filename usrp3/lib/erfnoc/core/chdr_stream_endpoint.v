@@ -97,32 +97,6 @@ module chdr_stream_endpoint #(
   // ---------------------------------------------------
   //  Filter packets by type 
   // ---------------------------------------------------
-  wire [CHDR_W-1:0] chdr_i_tdata, chdr_i_header;
-  wire              chdr_i_tlast, chdr_i_tvalid, chdr_i_tready;
-
-  wire              ctrlport_req_wr, ctrlport_req_rd;
-  reg               ctrlport_resp_ack = 1'b0;
-  wire [15:0]       ctrlport_req_addr;
-  wire [31:0]       ctrlport_req_data;
-  reg  [31:0]       ctrlport_resp_data;
-
-  // Handle management packets here
-  chdr_mgmt_pkt_handler #(
-    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W)
-  ) mgmt_ep_i (
-    .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
-    .node_info(chdr_mgmt_build_node_info(device_id, 1, INST_NUM, NODE_TYPE_STREAM_EP)),
-    .s_axis_chdr_tdata(s_axis_chdr_tdata), .s_axis_chdr_tlast(s_axis_chdr_tlast),
-    .s_axis_chdr_tvalid(s_axis_chdr_tvalid), .s_axis_chdr_tready(s_axis_chdr_tready),
-    .m_axis_chdr_tdata(chdr_i_tdata), .m_axis_chdr_tlast(chdr_i_tlast),
-    .m_axis_chdr_tdest(/* unused */), .m_axis_chdr_tid(/* unused */),
-    .m_axis_chdr_tvalid(chdr_i_tvalid), .m_axis_chdr_tready(chdr_i_tready),
-    .ctrlport_req_wr(ctrlport_req_wr), .ctrlport_req_rd(ctrlport_req_rd),
-    .ctrlport_req_addr(ctrlport_req_addr), .ctrlport_req_data(ctrlport_req_data),
-    .ctrlport_resp_ack(ctrlport_resp_ack), .ctrlport_resp_data(ctrlport_resp_data),
-    .op_stb(/* unused */), .op_dst_epid(/* unused */), .op_src_epid(/* unused */)
-  );
-
   wire [CHDR_W-1:0] ctrl_i_tdata,  ctrl_o_tdata;
   wire              ctrl_i_tlast,  ctrl_o_tlast;
   wire              ctrl_i_tvalid, ctrl_o_tvalid;
@@ -138,10 +112,10 @@ module chdr_stream_endpoint #(
   wire              strs_i_tvalid, strs_o_tvalid;
   wire              strs_i_tready, strs_o_tready;
 
-  wire [CHDR_W-1:0] mgmt_loopback_tdata;
-  wire              mgmt_loopback_tlast;
-  wire              mgmt_loopback_tvalid;
-  wire              mgmt_loopback_tready;
+  wire [CHDR_W-1:0] mgmt_i_tdata,  mgmt_o_tdata;
+  wire              mgmt_i_tlast,  mgmt_o_tlast;
+  wire              mgmt_i_tvalid, mgmt_o_tvalid;
+  wire              mgmt_i_tready, mgmt_o_tready;
 
   function [1:0] compute_demux_dest;
     input [63:0] hdr;
@@ -161,33 +135,66 @@ module chdr_stream_endpoint #(
       compute_demux_dest = 2'd3;
   endfunction
 
+  // We give the demux a FIFO large enough to buffer short packets
+  // Flow control will ensure that data does not back up through
+  // this demux but we might have the other packet types block
+  // each other.
+  localparam DEMUX_FIFO_SIZE = 5;
+
+  wire [CHDR_W-1:0] chdr_header;
   axi_demux #(
-    .WIDTH(CHDR_W), .SIZE(4), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0)
+    .WIDTH(CHDR_W), .SIZE(4), .PRE_FIFO_SIZE(DEMUX_FIFO_SIZE), .POST_FIFO_SIZE(1)
   ) mgmt_demux_i (
     .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst), .clear(1'b0),
-    .header(chdr_i_header), .dest(compute_demux_dest(chdr_i_header[63:0])),
-    .i_tdata (chdr_i_tdata ),
-    .i_tlast (chdr_i_tlast ),
-    .i_tvalid(chdr_i_tvalid),
-    .i_tready(chdr_i_tready),
-    .o_tdata ({mgmt_loopback_tdata,  ctrl_i_tdata,  data_i_tdata,  strs_i_tdata }),
-    .o_tlast ({mgmt_loopback_tlast,  ctrl_i_tlast,  data_i_tlast,  strs_i_tlast }),
-    .o_tvalid({mgmt_loopback_tvalid, ctrl_i_tvalid, data_i_tvalid, strs_i_tvalid}),
-    .o_tready({mgmt_loopback_tready, ctrl_i_tready, data_i_tready, strs_i_tready})
+    .header(chdr_header), .dest(compute_demux_dest(chdr_header[63:0])),
+    .i_tdata (s_axis_chdr_tdata ),
+    .i_tlast (s_axis_chdr_tlast ),
+    .i_tvalid(s_axis_chdr_tvalid),
+    .i_tready(s_axis_chdr_tready),
+    .o_tdata ({mgmt_i_tdata,  ctrl_i_tdata,  data_i_tdata,  strs_i_tdata }),
+    .o_tlast ({mgmt_i_tlast,  ctrl_i_tlast,  data_i_tlast,  strs_i_tlast }),
+    .o_tvalid({mgmt_i_tvalid, ctrl_i_tvalid, data_i_tvalid, strs_i_tvalid}),
+    .o_tready({mgmt_i_tready, ctrl_i_tready, data_i_tready, strs_i_tready})
   );
 
   axi_mux #(
     .WIDTH(CHDR_W), .SIZE(4), .PRIO(1), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
   ) mgmt_mux_i (
     .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst), .clear(1'b0),
-    .i_tdata ({mgmt_loopback_tdata,  data_o_tdata,  strs_o_tdata,  ctrl_o_tdata }),
-    .i_tlast ({mgmt_loopback_tlast,  data_o_tlast,  strs_o_tlast,  ctrl_o_tlast }),
-    .i_tvalid({mgmt_loopback_tvalid, data_o_tvalid, strs_o_tvalid, ctrl_o_tvalid}),
-    .i_tready({mgmt_loopback_tready, data_o_tready, strs_o_tready, ctrl_o_tready}),
+    .i_tdata ({mgmt_o_tdata,  data_o_tdata,  strs_o_tdata,  ctrl_o_tdata }),
+    .i_tlast ({mgmt_o_tlast,  data_o_tlast,  strs_o_tlast,  ctrl_o_tlast }),
+    .i_tvalid({mgmt_o_tvalid, data_o_tvalid, strs_o_tvalid, ctrl_o_tvalid}),
+    .i_tready({mgmt_o_tready, data_o_tready, strs_o_tready, ctrl_o_tready}),
     .o_tdata (m_axis_chdr_tdata ),
     .o_tlast (m_axis_chdr_tlast ),
     .o_tvalid(m_axis_chdr_tvalid),
     .o_tready(m_axis_chdr_tready)
+  );
+
+  // ---------------------------------------------------
+  //  Management Path 
+  // ---------------------------------------------------
+  wire              ctrlport_req_wr, ctrlport_req_rd;
+  reg               ctrlport_resp_ack = 1'b0;
+  wire [15:0]       ctrlport_req_addr;
+  wire [31:0]       ctrlport_req_data;
+  reg  [31:0]       ctrlport_resp_data;
+
+  // Handle management packets here
+  chdr_mgmt_pkt_handler #(
+    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(1)
+  ) mgmt_ep_i (
+    .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
+    .node_info(chdr_mgmt_build_node_info(device_id, 1, INST_NUM, NODE_TYPE_STREAM_EP)),
+    .s_axis_chdr_tdata(mgmt_i_tdata), .s_axis_chdr_tlast(mgmt_i_tlast),
+    .s_axis_chdr_tvalid(mgmt_i_tvalid), .s_axis_chdr_tready(mgmt_i_tready),
+    .m_axis_chdr_tdata(mgmt_o_tdata), .m_axis_chdr_tlast(mgmt_o_tlast),
+    .m_axis_chdr_tdest(/* unused */), .m_axis_chdr_tid(/* unused */),
+    .m_axis_chdr_tvalid(mgmt_o_tvalid), .m_axis_chdr_tready(mgmt_o_tready),
+    .ctrlport_req_wr(ctrlport_req_wr), .ctrlport_req_rd(ctrlport_req_rd),
+    .ctrlport_req_addr(ctrlport_req_addr), .ctrlport_req_data(ctrlport_req_data),
+    .ctrlport_resp_ack(ctrlport_resp_ack), .ctrlport_resp_data(ctrlport_resp_data),
+    .op_stb(/* unused */), .op_dst_epid(/* unused */), .op_src_epid(/* unused */)
   );
 
   // ============================== REGISTERS ============================== 
@@ -326,7 +333,7 @@ module chdr_stream_endpoint #(
   // ---------------------------------------------------
   //  Data and Flow Control Path 
   // ---------------------------------------------------
-  generate if (AXIS_DATA_EN) begin
+  generate if (AXIS_DATA_EN) begin: datapath
     localparam INPUT_FLUSH_TIMEOUT_W = SIM_SPEEDUP ? 6 : 14;
 
     wire [CHDR_W-1:0] axis_data_i_tdata,  axis_data_o_tdata;
@@ -431,7 +438,7 @@ module chdr_stream_endpoint #(
   // ---------------------------------------------------
   //  Control Path 
   // ---------------------------------------------------
-  generate if (AXIS_CTRL_EN) begin
+  generate if (AXIS_CTRL_EN) begin: ctrlpath
     // Convert from a CHDR control packet to an AXIS control packet
     chdr_to_axis_ctrl #(
       .CHDR_W(CHDR_W), .THIS_PORTID(CTRL_XBAR_PORT)

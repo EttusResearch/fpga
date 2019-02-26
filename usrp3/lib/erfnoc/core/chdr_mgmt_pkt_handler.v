@@ -28,6 +28,7 @@
 module chdr_mgmt_pkt_handler #(
   parameter [15:0] PROTOVER       = {8'd1, 8'd0},
   parameter        CHDR_W         = 256,
+  parameter [0:0]  MGMT_ONLY      = 0,
   parameter        RESP_FIFO_SIZE = 5
 )(
   // Clock, reset and settings
@@ -74,37 +75,60 @@ module chdr_mgmt_pkt_handler #(
   localparam CHDR_W_BYTES = CHDR_W / 8;
   parameter  LOG2_CHDR_W_BYTES = $clog2(CHDR_W_BYTES);
 
-  wire [CHDR_W-1:0] s_mgmt_tdata, m_mgmt_tdata, bypass_tdata;
-  wire [9:0]        m_mgmt_tdest, bypass_tdest;
-  wire [1:0]        m_mgmt_tid, bypass_tid;
+  wire [CHDR_W-1:0] s_mgmt_tdata, m_mgmt_tdata;
+  wire [9:0]        m_mgmt_tdest;
+  wire [1:0]        m_mgmt_tid;
   wire              s_mgmt_tlast, s_mgmt_tvalid, s_mgmt_tready;
   wire              m_mgmt_tlast, m_mgmt_tvalid, m_mgmt_tready;
-  wire              bypass_tlast, bypass_tvalid, bypass_tready;
-  wire [CHDR_W-1:0] s_header;
 
-  axi_demux #(
-    .WIDTH(CHDR_W), .SIZE(2), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0)
-  ) mgmt_demux_i (
-    .clk(clk), .reset(rst), .clear(1'b0),
-    .header(s_header), .dest(chdr_get_pkt_type(s_header[63:0]) == CHDR_PKT_TYPE_MGMT),
-    .i_tdata(s_axis_chdr_tdata), .i_tlast(s_axis_chdr_tlast),
-    .i_tvalid(s_axis_chdr_tvalid), .i_tready(s_axis_chdr_tready),
-    .o_tdata({s_mgmt_tdata, bypass_tdata}), .o_tlast({s_mgmt_tlast, bypass_tlast}),
-    .o_tvalid({s_mgmt_tvalid, bypass_tvalid}), .o_tready({s_mgmt_tready, bypass_tready})
-  );
-  assign {bypass_tid, bypass_tdest} = {CHDR_MGMT_ROUTE_EPID, 10'h0};
+  generate if (!MGMT_ONLY) begin
+    // Instantiate MUX and DEMUX to segregate management and non-management packets.
+    // Management packets go to the main state machine, all others get bypassed to
+    // the output.
+    wire [CHDR_W-1:0] bypass_tdata;
+    wire [9:0]        bypass_tdest;
+    wire [1:0]        bypass_tid;
+    wire              bypass_tlast, bypass_tvalid, bypass_tready;
+    wire [CHDR_W-1:0] s_header;
 
-  axi_mux #(
-    .WIDTH(CHDR_W+10+2), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
-  ) mgmt_mux_i (
-    .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({m_mgmt_tid, m_mgmt_tdest, m_mgmt_tdata, bypass_tid, bypass_tdest, bypass_tdata}),
-    .i_tlast({m_mgmt_tlast, bypass_tlast}),
-    .i_tvalid({m_mgmt_tvalid, bypass_tvalid}), .i_tready({m_mgmt_tready, bypass_tready}),
-    .o_tdata({m_axis_chdr_tid, m_axis_chdr_tdest, m_axis_chdr_tdata}),
-    .o_tlast(m_axis_chdr_tlast),
-    .o_tvalid(m_axis_chdr_tvalid), .o_tready(m_axis_chdr_tready)
-  );
+    axi_demux #(
+      .WIDTH(CHDR_W), .SIZE(2), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0)
+    ) mgmt_demux_i (
+      .clk(clk), .reset(rst), .clear(1'b0),
+      .header(s_header), .dest(chdr_get_pkt_type(s_header[63:0]) == CHDR_PKT_TYPE_MGMT),
+      .i_tdata(s_axis_chdr_tdata), .i_tlast(s_axis_chdr_tlast),
+      .i_tvalid(s_axis_chdr_tvalid), .i_tready(s_axis_chdr_tready),
+      .o_tdata({s_mgmt_tdata, bypass_tdata}), .o_tlast({s_mgmt_tlast, bypass_tlast}),
+      .o_tvalid({s_mgmt_tvalid, bypass_tvalid}), .o_tready({s_mgmt_tready, bypass_tready})
+    );
+    assign {bypass_tid, bypass_tdest} = {CHDR_MGMT_ROUTE_EPID, 10'h0};
+
+    axi_mux #(
+      .WIDTH(CHDR_W+10+2), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
+    ) mgmt_mux_i (
+      .clk(clk), .reset(rst), .clear(1'b0),
+      .i_tdata({m_mgmt_tid, m_mgmt_tdest, m_mgmt_tdata, bypass_tid, bypass_tdest, bypass_tdata}),
+      .i_tlast({m_mgmt_tlast, bypass_tlast}),
+      .i_tvalid({m_mgmt_tvalid, bypass_tvalid}), .i_tready({m_mgmt_tready, bypass_tready}),
+      .o_tdata({m_axis_chdr_tid, m_axis_chdr_tdest, m_axis_chdr_tdata}),
+      .o_tlast(m_axis_chdr_tlast),
+      .o_tvalid(m_axis_chdr_tvalid), .o_tready(m_axis_chdr_tready)
+    );
+  end else begin
+    // We are assuming that only management packets come into this module so we don't
+    // instantiate a bypass path to save resources.
+    assign s_mgmt_tdata       = s_axis_chdr_tdata;
+    assign s_mgmt_tlast       = s_axis_chdr_tlast;
+    assign s_mgmt_tvalid      = s_axis_chdr_tvalid;
+    assign s_axis_chdr_tready = s_mgmt_tready;
+
+    assign m_axis_chdr_tdata  = m_mgmt_tdata;
+    assign m_axis_chdr_tdest  = m_mgmt_tdest;
+    assign m_axis_chdr_tid    = m_mgmt_tid;
+    assign m_axis_chdr_tlast  = m_mgmt_tlast;
+    assign m_axis_chdr_tvalid = m_mgmt_tvalid;
+    assign m_mgmt_tready      = m_axis_chdr_tready;
+  end endgenerate
 
   // ---------------------------------------------------
   //  Convert management packets to 64-bit
@@ -197,11 +221,16 @@ module chdr_mgmt_pkt_handler #(
             cached_chdr_hdr <= i64_tdata;
             stripped_len <= chdr_get_length(i64_tdata);
             num_mdata <= chdr_get_num_mdata(i64_tdata) - 7'd1;
-            if (!i64_tlast)
-              pkt_state <= (chdr_get_num_mdata(i64_tdata) == 7'd0) ? 
-                ST_MGMT_IN_HDR : ST_CHDR_IN_MDATA;
-            else
-              pkt_state <= ST_CHDR_IN_HDR;  // Premature termination
+            if (!i64_tlast) begin
+              if (chdr_get_pkt_type(i64_tdata) != CHDR_PKT_TYPE_MGMT)
+                pkt_state <= ST_FAILSAFE_DROP;  // Drop non-mgmt packets
+              else if (chdr_get_num_mdata(i64_tdata) != 7'd0)
+                pkt_state <= ST_CHDR_IN_MDATA;  // Skip over metadata
+              else
+                pkt_state <= ST_MGMT_IN_HDR;    // Start processing packet
+            end else begin
+              pkt_state <= ST_CHDR_IN_HDR;      // Premature termination
+            end
           end
         end
 
