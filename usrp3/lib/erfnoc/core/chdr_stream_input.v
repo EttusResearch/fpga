@@ -187,9 +187,6 @@ module chdr_stream_input #(
    // ---------------------------------------------------
   //  Stream Command Handler
   // ---------------------------------------------------
-  wire [51:0] resp_i_tdata, resp_o_tdata;
-  wire        resp_i_tvalid, resp_o_tvalid;
-
   localparam [2:0] ST_IN_HDR    = 3'd0;   // The CHDR header of an input pkt
   localparam [2:0] ST_IN_DATA   = 3'd1;   // The CHDR body (incl. mdata) of an input pkt
   localparam [2:0] ST_STRC_W0   = 3'd2;   // The first word of a stream command
@@ -215,6 +212,7 @@ module chdr_stream_input #(
   wire is_strc_pkt =
     chdr_get_pkt_type(buff_tdata[63:0]) == CHDR_PKT_TYPE_STRC;
 
+  // Error Logic
   wire data_seq_err_stb = (state == ST_IN_HDR) && is_data_pkt && !is_first_data_pkt &&
     (chdr_get_seq_num(buff_tdata[63:0]) != exp_data_seq_num);
   wire strc_seq_err_stb = (state == ST_IN_HDR) && is_strc_pkt && !is_first_strc_pkt &&
@@ -224,30 +222,33 @@ module chdr_stream_input #(
   wire route_err_stb = buff_tvalid && buff_tready && (state == ST_IN_HDR) && 
     (chdr_get_dst_epid(buff_tdata[63:0]) != this_epid);
 
-  reg [47:0] stream_err_info;
-  wire stream_err_stb = (SIGNAL_ERRS == 1) && (seq_err_stb | route_err_stb | data_err_stb);
-  wire [3:0] stream_err_status = 
-    seq_err_stb ? CHDR_STRS_STATUS_SEQERR : (
-      route_err_stb ? CHDR_STRS_STATUS_RTERR : CHDR_STRS_STATUS_DATAERR);
+  // Break critical paths to response FIFO
+  reg [47:0] stream_err_info = 48'h0;
+  reg        stream_err_stb = 1'b0;
+  reg [3:0]  stream_err_status = CHDR_STRS_STATUS_OKAY;
 
-  always @(*) begin
-    case (stream_err_status)
-      CHDR_STRS_STATUS_SEQERR: begin
+  always @(posedge clk) begin
+    if (rst || (SIGNAL_ERRS == 0)) begin
+      stream_err_stb <= 1'b0;
+    end else begin
+      stream_err_stb <= seq_err_stb | route_err_stb | data_err_stb;
+      if (seq_err_stb) begin
+        stream_err_status <= CHDR_STRS_STATUS_SEQERR;
         // The extended info has the packet type (to detect which stream
         // had an error), the expected and actual sequence number.
-        stream_err_info = {13'h0, chdr_get_pkt_type(buff_tdata[63:0]),
+        stream_err_info <= {13'h0, chdr_get_pkt_type(buff_tdata[63:0]),
             data_seq_err_stb ? exp_data_seq_num : exp_strc_seq_num, 
             chdr_get_seq_num(buff_tdata[63:0])};
-      end
-      CHDR_STRS_STATUS_RTERR: begin
+      end else if (route_err_stb) begin
+        stream_err_status <= CHDR_STRS_STATUS_RTERR;
         // The extended info has the expected and actual destination EPID.
-        stream_err_info = {16'd0, this_epid, chdr_get_dst_epid(buff_tdata[63:0])};
+        stream_err_info <= {16'd0, this_epid, chdr_get_dst_epid(buff_tdata[63:0])};
+      end else begin
+        stream_err_status <= CHDR_STRS_STATUS_DATAERR;
+        // The extended info has the expected and actual destination EPID.
+        stream_err_info <= {16'd0, this_epid, chdr_get_dst_epid(buff_tdata[63:0])};
       end
-      default: begin
-        // Same as above
-        stream_err_info = {16'd0, this_epid, chdr_get_dst_epid(buff_tdata[63:0])};
-      end
-    endcase
+    end
   end
 
   // Input State Machine
@@ -405,14 +406,26 @@ module chdr_stream_input #(
   assign fc_override = (state == ST_STRC_EXEC) && (strc_op_code == CHDR_STRC_OPCODE_RESYNC);
   always @(posedge clk) fc_override_del <= fc_override;
 
+  wire [51:0] resp_o_tdata;
+  wire        resp_o_tvalid;
+  reg  [51:0] resp_i_tdata;
+  reg         resp_i_tvalid = 1'b0;
+
   // Send a stream status packet for the following cases:
   // - Immediately after initialization 
   // - If a response is explicitly requested (ping)
   // - If a response is due i.e. we have exceeded the frequency
   // - If FC is resynchronized via a stream cmd
   // - If an error is detected in the stream
-  assign resp_i_tvalid = fc_first_resp || fc_ping || fc_resp_due || fc_override_del || stream_err_stb;
-  assign resp_i_tdata = stream_err_stb ? {stream_err_info, stream_err_status} : {48'h0, CHDR_STRS_STATUS_OKAY};
+  always @(posedge clk) begin
+    if (rst) begin
+      resp_i_tvalid <= 1'b0;
+      resp_i_tdata  <= 52'h0;
+    end else begin
+      resp_i_tvalid <= fc_first_resp || fc_ping || fc_resp_due || fc_override_del || stream_err_stb;
+      resp_i_tdata  <= stream_err_stb ? {stream_err_info, stream_err_status} : {48'h0, CHDR_STRS_STATUS_OKAY};
+    end
+  end
 
   // ---------------------------------------------------
   //  Stream Status Responder
@@ -425,8 +438,8 @@ module chdr_stream_input #(
   localparam [2:0] ST_STRS_W3   = 3'd5;   // Sending fourth response word
   localparam [2:0] ST_STRS_DONE = 3'd6;   // Consuming response
 
-  reg [2:0]   resp_state = ST_STRS_IDLE;  // State of the responder
-  reg [15:0]  resp_seq_num = 16'd0;       // Current sequence number of response
+  reg [2:0]  resp_state = ST_STRS_IDLE;   // State of the responder
+  reg [15:0] resp_seq_num = 16'd0;        // Current sequence number of response
 
   assign fc_refresh = (resp_state == ST_STRS_DONE);
 

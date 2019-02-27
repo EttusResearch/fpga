@@ -49,10 +49,10 @@ module chdr_mgmt_pkt_handler #(
   output wire              m_axis_chdr_tvalid,
   input  wire              m_axis_chdr_tready,
   // Control port endpoint
-  output wire              ctrlport_req_wr,
-  output wire              ctrlport_req_rd,
-  output wire [15:0]       ctrlport_req_addr,
-  output wire [31:0]       ctrlport_req_data,
+  output reg               ctrlport_req_wr,
+  output reg               ctrlport_req_rd,
+  output reg  [15:0]       ctrlport_req_addr,
+  output reg  [31:0]       ctrlport_req_data,
   input  wire              ctrlport_resp_ack,
   input  wire [31:0]       ctrlport_resp_data,
   // Mgmt packet advertisement  strobe
@@ -556,12 +556,19 @@ module chdr_mgmt_pkt_handler #(
   // -----------------------
   // The request is sent out in the ST_MGMT_OP_EXEC state and we wait for a response
   // in the ST_MGMT_OP_WAIT state
-  assign ctrlport_req_wr   = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
-                             (op_code == CHDR_MGMT_OP_CFG_WR_REQ);
-  assign ctrlport_req_rd   = i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
-                             (op_code == CHDR_MGMT_OP_CFG_RD_REQ);
-  assign ctrlport_req_addr = chdr_mgmt_cfg_reg_get_addr(op_payload);
-  assign ctrlport_req_data = chdr_mgmt_cfg_reg_get_data(op_payload);
+  always @(posedge clk) begin
+    if (rst) begin
+      ctrlport_req_wr   <= 1'b0;
+      ctrlport_req_rd   <= 1'b0;
+    end else begin
+      ctrlport_req_wr   <= i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
+                          (op_code == CHDR_MGMT_OP_CFG_WR_REQ);
+      ctrlport_req_rd   <= i64_tvalid && (pkt_state == ST_MGMT_OP_EXEC) &&
+                          (op_code == CHDR_MGMT_OP_CFG_RD_REQ);
+      ctrlport_req_addr <= chdr_mgmt_cfg_reg_get_addr(op_payload);
+      ctrlport_req_data <= chdr_mgmt_cfg_reg_get_data(op_payload);
+    end
+  end
 
   // CHDR_MGMT_OP_CFG_RD_REQ
   // CHDR_MGMT_OP_INFO_REQ

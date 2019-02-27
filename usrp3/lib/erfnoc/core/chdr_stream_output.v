@@ -138,7 +138,7 @@ module chdr_stream_output #(
   //   To allow the tools to re-time the wide comparators.
   // - We don't care about the latency here because stream
   //   status messages are asynchronous wrt the data
-  reg  [3:0] ok_shreg = 4'h0; // OK to send? (shift register)
+  reg  [3:0] ok_shreg = 4'b1111; // OK to send? (shift register)
   always @(posedge clk) begin
     if (rst || !fc_enabled) begin
       ok_shreg <= 4'b1111;
