@@ -11,7 +11,7 @@ set cmd       [lindex $argv 0]
 set part_name [lindex $argv 1]
 
 # Only create an in-memory roject when not using bdtcl commands.
-if [expr [lsearch {_bdtcl} $cmd] == 0] {
+if [expr [string first "_bdtcl" $cmd] == -1] {
     create_project -in_memory -ip -name inmem_ip_proj -part $part_name
 # Otherwise, set the system's TMP directory.
 } else {
@@ -75,6 +75,7 @@ if { [string compare $cmd "create"] == 0 } {
     set src_rootname [file rootname [file tail $src_file]]
     set src_ext [file extension $src_file ]
     set ip_repos [lindex $argv 3]
+    set hdl_sources "[file dirname $src_file]/hdl_sources.tcl"
     if [expr [lsearch {.tcl} $src_ext] >= 0] {
         # Create a temporary project to work on.
         set tmp_bddir "${sys_tmpdir}/.viv_${src_rootname}"
@@ -84,6 +85,12 @@ if { [string compare $cmd "create"] == 0 } {
         create_project tmp_bd $tmp_bddir -part $part_name -force
         set_property ip_repo_paths "{$ip_repos}" [current_project]
         update_ip_catalog
+        # Add any supporting HDL first
+        if {[file exists $hdl_sources] == 1} {
+          source $hdl_sources
+        } else {
+          puts "hdl_sources.tcl not found in IP directory. Skipping HDL import for BD design"
+        }
         # Recreate BD design from source file (.tcl)
         source $src_file
         regenerate_bd_layout
