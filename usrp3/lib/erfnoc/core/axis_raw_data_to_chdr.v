@@ -106,9 +106,13 @@ module axis_raw_data_to_chdr #(
     end
   end
 
-  wire tmp_ctxt_tready, tmp_pyld_tready;
-  assign s_axis_context_tready = tmp_ctxt_tready && pass_ctxt;
-  assign s_axis_payload_tready = tmp_pyld_tready && pass_pyld;
+  wire tmp_ctxt_tvalid, tmp_ctxt_tready;
+  wire tmp_pyld_tvalid, tmp_pyld_tready;
+
+  assign tmp_ctxt_tvalid       = s_axis_context_tvalid && pass_ctxt;
+  assign tmp_pyld_tvalid       = s_axis_payload_tvalid && pass_pyld;
+  assign s_axis_context_tready = tmp_ctxt_tready       && pass_ctxt;
+  assign s_axis_payload_tready = tmp_pyld_tready       && pass_pyld;
 
   // ---------------------------------------------------
   //  Data Width Converter: SAMP_W*NSPC => CHDR_W
@@ -126,7 +130,7 @@ module axis_raw_data_to_chdr #(
     .s_axis_tdata(s_axis_payload_tdata),
     .s_axis_tkeep(s_axis_payload_tkeep),
     .s_axis_tlast(s_axis_payload_tlast),
-    .s_axis_tvalid(s_axis_payload_tvalid && pass_pyld),
+    .s_axis_tvalid(tmp_pyld_tvalid),
     .s_axis_tready(tmp_pyld_tready),
     .m_axis_aclk(axis_data_clk), .m_axis_rst(axis_data_rst),
     .m_axis_tdata(in_pyld_tdata),
@@ -149,7 +153,7 @@ module axis_raw_data_to_chdr #(
     axi_fifo #(.WIDTH(CHDR_W+4+1), .SIZE(CONTEXT_FIFO_SIZE)) ctxt_fifo_i (
       .clk(axis_chdr_clk), .reset(axis_chdr_rst), .clear(1'b0),
       .i_tdata({s_axis_context_tlast, s_axis_context_tuser, s_axis_context_tdata}),
-      .i_tvalid(s_axis_context_tvalid), .i_tready(tmp_ctxt_tready),
+      .i_tvalid(tmp_ctxt_tvalid), .i_tready(tmp_ctxt_tready),
       .o_tdata({out_ctxt_tlast, out_ctxt_tuser, out_ctxt_tdata}),
       .o_tvalid(out_ctxt_tvalid), .o_tready(out_ctxt_tready),
       .space(), .occupied()
@@ -167,7 +171,7 @@ module axis_raw_data_to_chdr #(
       .reset(axis_data_rst),
       .i_aclk(axis_data_clk),
       .i_tdata({s_axis_context_tlast, s_axis_context_tuser, s_axis_context_tdata}),
-      .i_tvalid(s_axis_context_tvalid), .i_tready(tmp_ctxt_tready),
+      .i_tvalid(tmp_ctxt_tvalid), .i_tready(tmp_ctxt_tready),
       .o_aclk(axis_chdr_clk),
       .o_tdata({out_ctxt_tlast, out_ctxt_tuser, out_ctxt_tdata}),
       .o_tvalid(out_ctxt_tvalid), .o_tready(out_ctxt_tready)
@@ -301,7 +305,7 @@ module axis_raw_data_to_chdr #(
         // -----------------------
         ST_MDATA: begin
           if (out_ctxt_tvalid && out_ctxt_tready) begin
-            if (mdata_pending != 7'd0) begin
+            if (mdata_pending != 7'd1) begin
               mdata_pending <= mdata_pending - 'd1;
               if (!out_ctxt_tlast)
                 if (out_ctxt_tuser == CONTEXT_FIELD_MDATA)

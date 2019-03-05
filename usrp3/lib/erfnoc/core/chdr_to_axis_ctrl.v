@@ -143,8 +143,8 @@ module chdr_to_axis_ctrl #(
     end
   end
 
-  wire [(CHDR_W/8)-1:0] ch2ct_tkeep;
-  chdr_compute_tkeep #( .CHDR_W(CHDR_W)) chdr_tkeep_gen_i (
+  wire [(CHDR_W/32)-1:0] ch2ct_tkeep;
+  chdr_compute_tkeep #(.CHDR_W(CHDR_W), .SAMP_W(32)) chdr_tkeep_gen_i (
     .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
     .axis_tdata(ch2ct_tdata), .axis_tlast(ch2ct_tlast),
     .axis_tvalid(ch2ct_tvalid), .axis_tready(ch2ct_tready),
@@ -181,7 +181,7 @@ module chdr_to_axis_ctrl #(
   ) ctrl_downsizer_i (
     .s_axis_aclk(rfnoc_chdr_clk), .s_axis_rst(rfnoc_chdr_rst),
     .s_axis_tdata(ch2ct_wctrl_tdata),
-    .s_axis_tkeep(ch2ct_tkeep[(CHDR_W/8)-1:2]),
+    .s_axis_tkeep(ch2ct_tkeep),
     .s_axis_tlast(ch2ct_tlast),
     .s_axis_tvalid(ch2ct_tvalid && (ch2ct_state == ST_CTRL_HDR || ch2ct_state == ST_CTRL_BODY)),
     .s_axis_tready(ch2ct_tready),

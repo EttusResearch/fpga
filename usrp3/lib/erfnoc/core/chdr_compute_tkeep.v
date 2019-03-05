@@ -12,57 +12,75 @@
 //
 // Parameters:
 //   - CHDR_W: Width of the CHDR bus in bits
+//   - SAMP_W: Width of the sample bus in bits (must be a multiple of 8)
 //
 // Signals:
 //   - axis_* : AXI-Stream CHDR bus
 
 module chdr_compute_tkeep #(
-  parameter CHDR_W = 256
+  parameter CHDR_W = 256,
+  parameter SAMP_W = 32
 )(
-  input  wire                   clk,
-  input  wire                   rst,
-  input  wire [CHDR_W-1:0]      axis_tdata,
-  input  wire                   axis_tlast,
-  input  wire                   axis_tvalid,
-  input  wire                   axis_tready,
-  output wire [(CHDR_W/8)-1:0]  axis_tkeep
+  input  wire                       clk,
+  input  wire                       rst,
+  input  wire [CHDR_W-1:0]          axis_tdata,
+  input  wire                       axis_tlast,
+  input  wire                       axis_tvalid,
+  input  wire                       axis_tready,
+  output wire [(CHDR_W/SAMP_W)-1:0] axis_tkeep
 );
 
   `include "rfnoc_chdr_utils.vh"
 
-  parameter LOG2_BYTE_W = $clog2(CHDR_W/8);
+  generate if (CHDR_W > SAMP_W) begin 
 
-  // Binary to thermometer decoder
-  // 2'd0 => 4'b1111 (special case)
-  // 2'd1 => 4'b0001
-  // 2'd2 => 4'b0011
-  // 2'd3 => 4'b0111
-  function [(CHDR_W/8)-1:0] bin2thermo;
-    input [$clog2(CHDR_W/8)-1:0] bin;
-    bin2thermo = ~((~1)<<((bin-1)%(CHDR_W/8)));
-  endfunction
+    localparam CHDR_W_BYTES = CHDR_W/8;
+    localparam SAMP_W_BYTES = SAMP_W/8;
+    localparam KEEP_W       = CHDR_W_BYTES/SAMP_W_BYTES;
 
-  // Read the packet length and figure out the number
-  // of trailing words
-  wire [15:0] pkt_len = chdr_get_length(axis_tdata[63:0]);
-  wire [(CHDR_W/8)-1:0] len_thermo = bin2thermo(pkt_len[$clog2(CHDR_W/8)-1:0]);
-  reg  [(CHDR_W/8)-1:0] reg_len_thermo = 'h0;
-  reg                   is_header = 1'b1;
+    // Binary to thermometer decoder
+    // 2'd0 => 4'b1111 (special case)
+    // 2'd1 => 4'b0001
+    // 2'd2 => 4'b0011
+    // 2'd3 => 4'b0111
+    function [KEEP_W-1:0] bin2thermo;
+      input [$clog2(KEEP_W)-1:0] bin;
+      bin2thermo = ~((~1)<<((bin-1)%KEEP_W));
+    endfunction
+  
+    // Read the packet length and figure out the number
+    // of trailing samples
+    wire [15:0]       pkt_len    = chdr_get_length(axis_tdata[63:0]);
+    wire [KEEP_W-1:0] len_thermo = bin2thermo(pkt_len[$clog2(CHDR_W_BYTES)-1:$clog2(SAMP_W_BYTES)]);
+    reg  [KEEP_W-1:0] reg_len_thermo = 'h0;
+    reg               is_header = 1'b1;
 
-  always @(posedge clk) begin
-    if (rst) begin
-      is_header <= 1'b1;
-    end else if (axis_tvalid & axis_tready) begin
-      is_header <= axis_tlast;
-      if (is_header) begin
-        reg_len_thermo <= len_thermo;
+    always @(posedge clk) begin
+      if (rst) begin
+        is_header <= 1'b1;
+      end else if (axis_tvalid & axis_tready) begin
+        is_header <= axis_tlast;
+        if (is_header) begin
+          reg_len_thermo <= len_thermo;
+        end
       end
     end
-  end
 
-  // tkeep indicates trailing bytes, so for lines with tlast == 0, tkeep is
-  // all 1's.
-  assign axis_tkeep = (~axis_tlast) ? {LOG2_BYTE_W{1'b1}} :
-    (is_header ? len_thermo : reg_len_thermo);
+    // tkeep indicates trailing samples, so for lines with tlast == 0,
+    // tkeep is all 1's.
+    assign axis_tkeep = (~axis_tlast) ? {KEEP_W{1'b1}} :
+      (is_header ? len_thermo : reg_len_thermo);
+
+  end else if (CHDR_W == SAMP_W) begin
+
+    // Only one sample per CHDR word. So always keep it.
+    assign axis_tkeep = 1'b1;
+
+  end else begin
+
+    // Illegal. A sample must be smaller than the CHDR_W
+    illegal_parameter_value samp_w_cannot_be_larger_than_chdr_w();
+
+  end endgenerate
 
 endmodule // chdr_compute_tkeep

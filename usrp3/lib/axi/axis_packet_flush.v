@@ -128,8 +128,12 @@ module axis_packet_flush #(
     if (reset | ~enable) begin
       cyc_to_go <= {TIMEOUT_W{1'b1}};
       done <= 1'b0;
-    end else if (~done_tmp) begin
-      cyc_to_go <= xfer_stb ? timeout : (cyc_to_go - 1'b1);
+    end else if (enable & ~active) begin
+      cyc_to_go <= timeout;
+    end else begin
+      if (~done_tmp) begin
+        cyc_to_go <= xfer_stb ? timeout : (cyc_to_go - 1'b1);
+      end
       done <= done_tmp;
     end
   end
