@@ -144,7 +144,7 @@ package PkgAxiStreamBfm;
       if (data.size() == user.size() && data.size() == keep.size()) begin
         str = { str, "data, user, keep:\n" };
         foreach (data[i]) begin
-          str = { str, $sformatf("%5d> %X %X %X\n", i, data[i], user[i], keep[i]) };
+          str = { str, $sformatf("%5d> %X %X %b\n", i, data[i], user[i], keep[i]) };
         end
       end else begin
         str = { str, "data:\n" };

@@ -50,6 +50,13 @@ package PkgChdrUtils;
   const chdr_flags_t CHDR_FLAGS_USER2 = 6'b010000;
   const chdr_flags_t CHDR_FLAGS_USER3 = 6'b100000;
 
+  // CHDR Context Field Identifiers
+  typedef enum bit [3:0] { 
+    CONTEXT_FIELD_HDR    = 4'd0,
+    CONTEXT_FIELD_HDR_TS = 4'd1,
+    CONTEXT_FIELD_TS     = 4'd2,
+    CONTEXT_FIELD_MDATA  = 4'd3
+  } chdr_context_type_t;
 
   // AXIS-Ctrl Definitions
   // ---------------------
