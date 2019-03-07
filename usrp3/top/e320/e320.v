@@ -638,7 +638,7 @@ module e320 (
   );
 
   // Temperature monitor module
-  mig_7series_v4_0_tempmon #(
+  mig_7series_v4_2_tempmon #(
     .TEMP_MON_CONTROL ("INTERNAL"),
     .XADC_CLK_PERIOD  (5000)        // In ps, should match xadc_clk period
   ) tempmon_i (

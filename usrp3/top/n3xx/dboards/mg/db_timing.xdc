@@ -125,22 +125,21 @@ set CPLD_SPI_OUTS [get_ports {DB*_CPLD_PS_SPI_SCLK \
                               DB*_CPLD_PS_SPI_LE \
                               DB*_CPLD_PS_SPI_ADDR[0] \
                               DB*_CPLD_PS_SPI_ADDR[1]}]
+
+set_max_delay 12.0 -to $CPLD_SPI_OUTS
+set_min_delay  3.0 -to $CPLD_SPI_OUTS
+
 set MYK_SPI_OUTS  [get_ports {DB*_MYK_SPI_SCLK \
                               DB*_MYK_SPI_SDIO \
                               DB*_MYK_SPI_CS_n}]
 
-set MIN_OUT_DELAY   3.0
-set MAX_OUT_DELAY  12.0
-
-set_max_delay $MAX_OUT_DELAY -to $CPLD_SPI_OUTS
-set_min_delay $MIN_OUT_DELAY -to $CPLD_SPI_OUTS
-set_max_delay $MAX_OUT_DELAY -to $MYK_SPI_OUTS
-set_min_delay $MIN_OUT_DELAY -to $MYK_SPI_OUTS
+set_max_delay 14.0 -to $MYK_SPI_OUTS
+set_min_delay  3.0 -to $MYK_SPI_OUTS
 
 # report_timing -to $CPLD_SPI_OUTS -max_paths 20 -delay_type min_max -name CpldSpiOutTiming
 # report_timing -to $MYK_SPI_OUTS  -max_paths 20 -delay_type min_max -name MykSpiOutTiming
 
-set MIN_IN_DELAY   3.0
+set MIN_IN_DELAY   2.0
 set MAX_IN_DELAY  10.0
 
 set PS_SPI_INPUTS_0 [get_pins -hierarchical -filter {NAME =~ "*/PS7_i/EMIOSPI0MI"}]

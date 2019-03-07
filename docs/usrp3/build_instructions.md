@@ -6,13 +6,22 @@
 
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
-- [Xilinx Vivado 2017.4](https://www.xilinx.com/support/download.html) (For 7 Series FPGAs)
+- [Xilinx Vivado 2018.3](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2018-3.html) (For 7 Series FPGAs)
+  - AR#71898 Tactical Patch required for USRP N3xx devices. See note below.
 - [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For all other FPGAs)
 - [GNU Make 3.6+](https://www.gnu.org/software/make/)
 - [GNU Bash 4.0+](https://www.gnu.org/software/bash/)
 - [Python 2.7.x](https://www.python.org/)
 - [Doxygen](http://www.stack.nl/~dimitri/doxygen/index.html) (Optional: To build the manual)
 - [ModelSim](https://www.mentor.com/products/fv/modelsim/) (Optional: For simulation)
+
+##### NOTE: AR#71898 Tactical Patch for Vivado 2018.3
+The DDR3 Memory Interface Generator (MIG) IP in Vivado 2018.3 has a known issue that affects the generation of the IP in USRP N3xx build and produce the following error:
+```
+ERROR: [DRC BIVC-1] Bank IO standard Vcc: Conflicting Vcc voltages in bank 34. For example, the following two ports in this bank have conflicting VCCOs:  
+ddr3_ck_p[0] (DIFF_SSTL15, requiring VCCO=1.500) and ddr3_addr[15] (LVCMOS18, requiring VCCO=1.800)
+```
+The [AR#71898 Tactical Path](https://www.xilinx.com/support/answers/71898.html) must be installed to successfully build all supported FPGA images.
 
 ### What FPGA does my USRP have?
 
@@ -23,12 +32,12 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - USRP X310: Kintex 7 XC7K410T (7 Series)
 - USRP E310: Zynq-7000 XC7Z020 (7 Series)
 - USRP E320: Zynq-7000 XC7Z045 (7 Series)
-- USRP N300: Zynq-7100 XC7Z035 (7 Series)
-- USRP N310/N320: Zynq-7100 XC7Z100 (7 Series)
+- USRP N300: Zynq-7000 XC7Z035 (7 Series)
+- USRP N310/N320: Zynq-7000 XC7Z100 (7 Series)
 
 ### Requirements
 
-- [Xilinx Vivado Release Notes](http://www.xilinx.com/support/documentation/sw_manuals/xilinx2015_4/ug973-vivado-release-notes-install-license.pdf)
+- [Xilinx Vivado Release Notes](https://www.xilinx.com/support/documentation/sw_manuals/xilinx2018_3/ug973-vivado-release-notes-install-license.pdf)
 - [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
 
 ## Build Environment Setup

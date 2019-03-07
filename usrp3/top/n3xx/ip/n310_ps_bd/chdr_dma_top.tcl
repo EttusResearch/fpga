@@ -76,7 +76,7 @@ proc create_hier_cell_dma { parentCell nameHier numPorts } {
 CONFIG.NUM_REGS $numPorts \
  ] $axi_regfile_0
 
-  set ps_dma_rx_mapper [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_bram_ctrl:4.0 ps_dma_rx_mapper ]
+  set ps_dma_rx_mapper [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_bram_ctrl:4.1 ps_dma_rx_mapper ]
   set_property -dict [ list \
 CONFIG.ECC_TYPE {0} \
 CONFIG.PROTOCOL {AXI4LITE} \

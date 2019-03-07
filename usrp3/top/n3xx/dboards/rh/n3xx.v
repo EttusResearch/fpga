@@ -3211,7 +3211,7 @@ module n3xx (
   );
 
   // Temperature monitor module
-  mig_7series_v4_0_tempmon #(
+  mig_7series_v4_2_tempmon #(
      .TEMP_MON_CONTROL("INTERNAL"),
      .XADC_CLK_PERIOD(5000 /* 200MHz clock period in ps */)
   ) tempmon_i (

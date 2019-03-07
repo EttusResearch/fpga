@@ -29,7 +29,7 @@ module noc_block_duc_tb();
   localparam [15:0] FFT_SIZE = 256;
   wire [7:0] fft_size_log2   = $clog2(FFT_SIZE);        // Set FFT size
   wire fft_direction         = 0;                       // Set FFT direction to forward (i.e. DFT[x(n)] => X(k))
-  wire [11:0] fft_scale      = 12'b101010101010;        // Conservative scaling of 1/N
+  wire [11:0] fft_scale      = 12'b101010101001;        // Conservative scaling of 1/N
   wire [1:0] fft_shift       = 2'b00;                   // FFT shift + don't reverse
   int num_hb; //default 2
   int cic_max_interp; //default 128

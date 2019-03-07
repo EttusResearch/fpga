@@ -1272,7 +1272,7 @@ module x300
    );
 
    // Temperature monitor module
-   mig_7series_v4_0_tempmon #(
+   mig_7series_v4_2_tempmon #(
       .TEMP_MON_CONTROL("INTERNAL"), .XADC_CLK_PERIOD(8000 /* 125MHz clock period in ps */)
    ) tempmon_i (
       .clk(bus_clk), .xadc_clk(ioport2_clk), .rst(bus_rst),
