@@ -63,8 +63,8 @@ module ctrlport_timer #(
   input  wire [31:0]  m_ctrlport_resp_data
 );
 
-  `include "rfnoc_chdr_utils.vh"
-  `include "rfnoc_axis_ctrl_utils.vh"
+  `include "../core/rfnoc_chdr_utils.vh"
+  `include "../core/rfnoc_axis_ctrl_utils.vh"
 
   // Control triggers:
   // - pending: A command is waiting on the input port

@@ -27,4 +27,5 @@ chdr_stream_input.v \
 chdr_stream_output.v \
 chdr_to_axis_ctrl.v \
 ctrlport_endpoint.v \
+backend_iface.v \
 ))
