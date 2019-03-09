@@ -77,6 +77,7 @@ package PkgRfnocBlockCtrlBfm;
   import PkgChdrUtils::*;
   import PkgChdrBfm::*;
   import PkgAxisCtrlBfm::*;
+  import PkgRfnocSampUtils::*;
 
   //---------------------------------------------------------------------------
   // CHDR Stream BFM
@@ -174,10 +175,11 @@ package PkgRfnocBlockCtrlBfm;
     //
     //   data:  Data words from the received CHDR packet.
     //
-    task recv(output chdr_word_t data[$]);
+    task recv(output chdr_word_t data[$], output int data_bytes);
       ChdrPacket chdr_packet;
       get_chdr(chdr_packet);
       data = chdr_packet.data;
+      data_bytes = chdr_packet.data_bytes();
     endtask : recv
 
   endclass : ChdrDataStreamBfm
@@ -252,7 +254,7 @@ package PkgRfnocBlockCtrlBfm;
 
       assert(ctrl_packet.header.is_ack == 1 &&
              ctrl_packet.op_word.status == CTRL_STS_OKAY) else begin
-        $error("RegisterIfaceBfm::reg_read: Did not receive CTRL_STS_OKAY status");
+        $fatal(1, "RegisterIfaceBfm::reg_read: Did not receive CTRL_STS_OKAY status");
       end
     endtask : reg_read
 
@@ -292,7 +294,7 @@ package PkgRfnocBlockCtrlBfm;
 
       assert(ctrl_packet.header.is_ack == 1 &&
              ctrl_packet.op_word.status == CTRL_STS_OKAY) else begin
-        $error("RegisterIfaceBfm::reg_write: Did not receive CTRL_STS_OKAY status");
+        $fatal(1, "RegisterIfaceBfm::reg_write: Did not receive CTRL_STS_OKAY status");
       end
     endtask : reg_write
 
@@ -307,68 +309,101 @@ package PkgRfnocBlockCtrlBfm;
   //
   //---------------------------------------------------------------------------
 
-  class RfnocBlockCtrlBfm #(CHDR_W = 64, NUM_PORTS = 1);
-    localparam CMD_PROP_CYC = 5;
+  class RfnocBlockCtrlBfm #(CHDR_W = 64);
 
-    local ChdrDataStreamBfm             chdr[0:NUM_PORTS-1];
-    local RegisterIfaceBfm              ctrl;
     local virtual RfnocBackendIf.master bkend;
+    local RegisterIfaceBfm              ctrl;
+    local ChdrDataStreamBfm             m_data[$];
+    local ChdrDataStreamBfm             s_data[$];
+    local bit                           running;
+
+    localparam CMD_PROP_CYC = 5;
 
     // Class constructor to create a new BFM instance.
     //
-    //   src_port:  Source port to use in generated control packets
+    //   backend:   Interface for the backend signals of a block
     //   m_ctrl:    Interface for the CTRL master connection (EP's AXIS-Ctrl output)
     //   s_ctrl:    Interface for the CTRL slave connection (EP's AXIS-Ctrl input)
-    //   m_chdr:    Array of interfaces for the CHDR master connection (EP's AXIS CHDR data output)
-    //   s_chdr:    Array of interfaces for the CHDR slave connection (EP's AXIS CHDR data input)
+    //   dst_port:  Destination port to use in generated control packets
+    //   src_port:  Source port to use in generated control packets
     //
     function new(
-      virtual RfnocBackendIf.master        backend,
-      virtual AxiStreamIf #(32).master     m_ctrl,
-      virtual AxiStreamIf #(32).slave      s_ctrl,
-      virtual AxiStreamIf #(CHDR_W).master m_chdr[0:NUM_PORTS-1],
-      virtual AxiStreamIf #(CHDR_W).slave  s_chdr[0:NUM_PORTS-1],
-      input   ctrl_port_t                  dst_port = 2,
-      input   ctrl_port_t                  src_port = 1
+      virtual RfnocBackendIf.master    backend,
+      virtual AxiStreamIf #(32).master m_ctrl,
+      virtual AxiStreamIf #(32).slave  s_ctrl,
+      input   ctrl_port_t              dst_port = 10'd2,
+      input   ctrl_port_t              src_port = 10'd1
     );
-      ctrl = new(m_ctrl, s_ctrl, dst_port, src_port);
       bkend = backend;
+      ctrl = new(m_ctrl, s_ctrl, dst_port, src_port);
       bkend.chdr_rst = 0;
       bkend.ctrl_rst = 0;
-      for (int i = 0; i < NUM_PORTS; i++) begin
-        chdr[i] = new(m_chdr[i], s_chdr[i]);
-      end
+      running = 0;
     endfunction : new
+
+    // Add a master data port. This should connect to a DUT input
+    function int add_master_data_port(
+      virtual AxiStreamIf #(CHDR_W).master m_chdr
+    );
+      ChdrDataStreamBfm bfm = new(m_chdr, null);
+      m_data.push_back(bfm);
+      return m_data.size() - 1;
+    endfunction : add_master_data_port
+
+    // Add a slave data port. This should connect to a DUT output
+    function int add_slave_data_port(
+      virtual AxiStreamIf #(CHDR_W).slave s_chdr
+    );
+      ChdrDataStreamBfm bfm = new(null, s_chdr);
+      s_data.push_back(bfm);
+      return s_data.size() - 1;
+    endfunction : add_slave_data_port
 
     // Start the data and control BFM's processes running.
     task run();
-      for (int i = 0; i < NUM_PORTS; i++) 
-        chdr[i].run();
-      ctrl.run();
+      assert (backend.sts.v1.proto_ver == 1) else begin
+        $fatal(1, "The connected block has an incompatible backend interface");
+      end
+      if (!running) begin
+        ctrl.run();
+        foreach (m_data[i]) 
+          m_data[i].run();
+        foreach (s_data[i]) 
+          s_data[i].run();
+        running = 1;
+      end
     endtask : run
 
-    // Get static info about the block from the block
-    task get_block_info(
-      output logic [31:0] noc_id,
-      output logic  [5:0] num_data_i,
-      output logic  [5:0] num_data_o,
-      output logic  [5:0] ctrl_fifosize,
-      output logic  [5:0] mtu
-    );
-      noc_id = bkend.sts.noc_id;
-      num_data_i = bkend.sts.num_data_i;
-      num_data_o = bkend.sts.num_data_o;
-      ctrl_fifosize = bkend.sts.ctrl_fifosize;
-      mtu = bkend.sts.mtu;
-    endtask : get_block_info
+    // Get static info about the block
+    function logic [31:0] get_noc_id();
+      return bkend.sts.noc_id;
+    endfunction : get_noc_id
+
+    function logic [5:0] get_num_data_i();
+      return bkend.sts.num_data_i;
+    endfunction : get_num_data_i
+
+    function logic [5:0] get_num_data_o();
+      return bkend.sts.num_data_o;
+    endfunction : get_num_data_o
+
+    function logic [5:0] get_ctrl_fifosize();
+      return bkend.sts.ctrl_fifosize;
+    endfunction : get_ctrl_fifosize
+
+    function logic [5:0] get_mtu();
+      return bkend.sts.mtu;
+    endfunction : get_mtu
 
     // Flush the data ports of the block
     //
     //   idle_cyc: Number of idle cycles before done is asserted
     //
-    task flush(
-      input logic [31:0] idle_cyc = 100
-    );
+    task flush(input logic [31:0] idle_cyc = 100);
+      assert (running) else begin
+        $fatal(1, "Cannot call flush until RfnocBlockCtrlBfm is running");
+      end
+
       // Set flush timeout then wait
       bkend.cfg.flush_timeout = idle_cyc;
       repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
@@ -388,12 +423,18 @@ package PkgRfnocBlockCtrlBfm;
     // path, wait then reset the ctrl path
     //
     //   idle_cyc: Number of idle cycles before done is asserted
+    //   chdr_rst_cyc: Number of cycles to wait for chdr_rst completion
+    //   ctrl_rst_cyc: Number of cycles to wait for ctrl_rst completion
     //
     task flush_and_reset(
       input logic [31:0] idle_cyc     = 100,
       input int          chdr_rst_cyc = 100,
       input int          ctrl_rst_cyc = 100
     );
+      assert (running) else begin
+        $fatal(1, "Cannot call flush_and_reset until RfnocBlockCtrlBfm is running");
+      end
+
       // Set flush timeout then wait
       bkend.cfg.flush_timeout = idle_cyc;
       repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
@@ -432,14 +473,21 @@ package PkgRfnocBlockCtrlBfm;
     //               argument (or set to an unknown value, as in X or Z) to not
     //               include a timestamp.
     //
-    task send (
+    task send(
       input int         port,
       input chdr_word_t data[$],
       input int         data_bytes = -1,
       input chdr_word_t metadata[$] = {},
       input chdr_word_t timestamp = 'X
     );
-      chdr[port].send(data, data_bytes, metadata, timestamp);
+      assert (running) else begin
+        $fatal(1, "Cannot call send until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+
+      m_data[port].send(data, data_bytes, metadata, timestamp);
     endtask : send
 
     // Receive a CHDR data packet on the CHDR data interface and extract its
@@ -454,14 +502,21 @@ package PkgRfnocBlockCtrlBfm;
     //                is useful if the data is not a multiple of the
     //                chdr_word_t size.
     //
-    task recv_adv (
+    task recv_adv(
       input  int         port,
       output chdr_word_t data[$],
       output int         data_bytes,
       output chdr_word_t metadata[$],
       output chdr_word_t timestamp
     );
-      chdr[port].recv_adv(data, data_bytes, metadata, timestamp);
+      assert (running) else begin
+        $fatal(1, "Cannot call recv_adv until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+
+      s_data[port].recv_adv(data, data_bytes, metadata, timestamp);
     endtask : recv_adv
 
 
@@ -470,8 +525,19 @@ package PkgRfnocBlockCtrlBfm;
     //
     //   data:  Data words from the received CHDR packet
     //
-    task recv(input int port, output chdr_word_t data[$]);
-      chdr[port].recv(data);
+    task recv(
+      input  int         port,
+      output chdr_word_t data[$],
+      output int         data_bytes
+    );
+      assert (running) else begin
+        $fatal(1, "Cannot call recv until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid port number");
+      end
+
+      s_data[port].recv(data, data_bytes);
     endtask : recv
 
     // Send a read request packet on the AXIS-Ctrl interface and get the
@@ -480,10 +546,14 @@ package PkgRfnocBlockCtrlBfm;
     //   addr:   Address for the read request
     //   word:   Data word that was returned in response to the read
     //
-    task reg_read (
+    task reg_read(
       input  ctrl_address_t addr,
       output ctrl_word_t    word
     );
+      assert (running) else begin
+        $fatal(1, "Cannot call reg_read until RfnocBlockCtrlBfm is running");
+      end
+
       ctrl.reg_read(addr, word);
     endtask : reg_read
 
@@ -494,10 +564,14 @@ package PkgRfnocBlockCtrlBfm;
     //   addr:   Address for the write request
     //   word:   Data word to write
     //
-    task reg_write (
+    task reg_write(
       ctrl_address_t addr,
       ctrl_word_t    word
     );
+      assert (running) else begin
+        $fatal(1, "Cannot call reg_write until RfnocBlockCtrlBfm is running");
+      end
+
       ctrl.reg_write(addr, word);
     endtask : reg_write
 

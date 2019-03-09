@@ -248,7 +248,7 @@ package PkgAxiStreamBfm;
 
     // Queue the provided packet for transmission
     task put(AxisPacket packet);
-      assert (master_en) else $fatal(-1, "Cannot use TX operations for a null master");
+      assert (master_en) else $fatal(1, "Cannot use TX operations for a null master");
       tx_packets.put(packet);
     endtask : put
 
@@ -256,14 +256,14 @@ package PkgAxiStreamBfm;
     // Attempt to queue the provided packet for transmission. Return 1 if 
     // successful, return 0 if the queue is full.
     function bit try_put(AxisPacket packet);
-      assert (master_en) else $fatal(-1, "Cannot use TX operations for a null master");
+      assert (master_en) else $fatal(1, "Cannot use TX operations for a null master");
       return tx_packets.try_put(packet);
     endfunction : try_put
 
 
     // Get the next packet when it becomes available (waits if necessary)
     task get(output AxisPacket packet);
-      assert (slave_en) else $fatal(-1, "Cannot use RX operations for a null slave");
+      assert (slave_en) else $fatal(1, "Cannot use RX operations for a null slave");
       rx_packets.get(packet);
     endtask : get
 
@@ -271,7 +271,7 @@ package PkgAxiStreamBfm;
     // Get the next packet if there's one available and return 1. Return 0 if 
     // there's no packet available.
     function bit try_get(output AxisPacket packet);
-      assert (slave_en) else $fatal(-1, "Cannot use RX operations for a null slave");
+      assert (slave_en) else $fatal(1, "Cannot use RX operations for a null slave");
       return rx_packets.try_get(packet);
     endfunction : try_get
 
@@ -279,7 +279,7 @@ package PkgAxiStreamBfm;
     // Get the next packet when it becomes available (wait if necessary), but 
     // don't remove it from the receive queue.
     task peek(output AxisPacket packet);
-      assert (slave_en) else $fatal(-1, "Cannot use RX operations for a null slave");
+      assert (slave_en) else $fatal(1, "Cannot use RX operations for a null slave");
       rx_packets.peek(packet);
     endtask : peek
 
@@ -288,14 +288,14 @@ package PkgAxiStreamBfm;
     // remove it from the receive queue. Return 0 if there's no packet 
     // available.
     function bit try_peek(output AxisPacket packet);
-      assert (slave_en) else $fatal(-1, "Cannot use RX operations for a null slave");
+      assert (slave_en) else $fatal(1, "Cannot use RX operations for a null slave");
       return rx_packets.try_peek(packet);
     endfunction : try_peek
 
 
     // Return the number of packets available in the receive queue
     function int num_received();
-      assert (slave_en) else $fatal(-1, "Cannot use RX operations for a null slave");
+      assert (slave_en) else $fatal(1, "Cannot use RX operations for a null slave");
       return rx_packets.num();
     endfunction
 
@@ -305,13 +305,13 @@ package PkgAxiStreamBfm;
     // queued packets have started transmission.
     task wait_send(int num = -1);
       int end_num;
-      assert (master_en) else $fatal(-1, "Cannot use TX operations for a null master");
+      assert (master_en) else $fatal(1, "Cannot use TX operations for a null master");
 
       if (num == -1) end_num = 0;
       else begin
         end_num = tx_packets.num() - num;
         assert(end_num >= 0) else begin
-          $fatal(-1, "Not enough packets queued to wait for %0d packets", num);
+          $fatal(1, "Not enough packets queued to wait for %0d packets", num);
         end
       end
       while(tx_packets.num() > end_num) @(posedge master.clk);
@@ -322,12 +322,12 @@ package PkgAxiStreamBfm;
     // for all currently queued packets to complete transmission.
     task wait_complete(int num = -1);
       int end_num;
-      assert (master_en) else $fatal(-1, "Cannot use TX operations for a null master");
+      assert (master_en) else $fatal(1, "Cannot use TX operations for a null master");
 
       if (num == -1) num = tx_packets.num();
       else begin
         assert(num <= tx_packets.num()) else begin
-          $fatal(-1, "Not enough packets queued to wait for %0d packets", num);
+          $fatal(1, "Not enough packets queued to wait for %0d packets", num);
         end
       end
 
@@ -344,7 +344,7 @@ package PkgAxiStreamBfm;
     // stalling due to lack of data to send.
     function void set_master_stall_prob(int stall_probability = DEF_STALL_PROB);
       assert(stall_probability >= 0 && stall_probability <= 100) else begin
-        $fatal(-1, "Invalid master stall_probability value");
+        $fatal(1, "Invalid master stall_probability value");
       end
       master_stall_prob = stall_probability;
     endfunction
@@ -354,7 +354,7 @@ package PkgAxiStreamBfm;
     // stalling due to lack of buffer space.
     function void set_slave_stall_prob(int stall_probability = DEF_STALL_PROB);
       assert(stall_probability >= 0 && stall_probability <= 100) else begin
-        $fatal(-1, "Invalid slave stall_probability value");
+        $fatal(1, "Invalid slave stall_probability value");
       end
       slave_stall_prob = stall_probability;
     endfunction

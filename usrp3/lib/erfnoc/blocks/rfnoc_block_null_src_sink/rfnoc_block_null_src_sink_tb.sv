@@ -11,6 +11,7 @@
 import PkgTestExec::*;
 import PkgChdrUtils::*;
 import PkgRfnocBlockCtrlBfm::*;
+import PkgRfnocSampUtils::*;
 
 module rfnoc_block_null_src_sink_tb;
 
@@ -22,7 +23,8 @@ module rfnoc_block_null_src_sink_tb;
   localparam [9:0]  THIS_PORTID = 10'h17;
   localparam [15:0] THIS_EPID   = 16'hDEAD;
   localparam int    CHDR_W      = 64;
-  localparam int    LPP         = 100;
+  localparam int    SPP         = 201;
+  localparam int    LPP         = ((SPP+1)/2);
   localparam int    NUM_PKTS    = 50;
 
   localparam int    PORT_SRCSNK = 0;
@@ -46,7 +48,7 @@ module rfnoc_block_null_src_sink_tb;
   AxiStreamIf #(CHDR_W) s1_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Optional data iface
 
   // Bus functional model for a software block controller
-  RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W), .NUM_PORTS(2)) blk_ctrl;
+  RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W)) blk_ctrl;
 
   // DUT
   rfnoc_block_null_src_sink #(
@@ -95,8 +97,11 @@ module rfnoc_block_null_src_sink_tb;
     test.start_tb();
 
     // Start the stream endpoint BFM
-    blk_ctrl = new(backend, m_ctrl, s_ctrl,
-      '{m0_chdr, m1_chdr}, '{s0_chdr, s1_chdr});
+    blk_ctrl = new(backend, m_ctrl, s_ctrl);
+    blk_ctrl.add_master_data_port(m0_chdr);
+    blk_ctrl.add_slave_data_port(s0_chdr);
+    blk_ctrl.add_master_data_port(m1_chdr);
+    blk_ctrl.add_slave_data_port(s1_chdr);
     blk_ctrl.run();
 
     // Reset
@@ -120,19 +125,13 @@ module rfnoc_block_null_src_sink_tb;
 
     test.start_test("Read Block Info");
     begin
-      logic [31:0] noc_id;
-      logic  [5:0] num_data_i;
-      logic  [5:0] num_data_o;
-      logic  [5:0] ctrl_fifosize;
-      logic  [5:0] mtu;
       test.start_timeout(timeout, 1us, "Waiting for block info response");
       // Get static block info and validate it
-      blk_ctrl.get_block_info(noc_id, num_data_i, num_data_o, ctrl_fifosize, mtu);
-      test.assert_error(noc_id == 1, "Incorrect noc_id Value");
-      test.assert_error(num_data_i == 2, "Incorrect num_data_i Value");
-      test.assert_error(num_data_o == 2, "Incorrect num_data_o Value");
-      test.assert_error(ctrl_fifosize == 1, "Incorrect ctrl_fifosize Value");
-      test.assert_error(mtu == 10, "Incorrect mtu Value");
+      test.assert_error(blk_ctrl.get_noc_id() == 1, "Incorrect noc_id Value");
+      test.assert_error(blk_ctrl.get_num_data_i() == 2, "Incorrect num_data_i Value");
+      test.assert_error(blk_ctrl.get_num_data_o() == 2, "Incorrect num_data_o Value");
+      test.assert_error(blk_ctrl.get_ctrl_fifosize() == 1, "Incorrect ctrl_fifosize Value");
+      test.assert_error(blk_ctrl.get_mtu() == 10, "Incorrect mtu Value");
 
       // Read status register and validate it
       blk_ctrl.reg_read(dut.REG_CTRL_STATUS, rvalue);
@@ -146,15 +145,16 @@ module rfnoc_block_null_src_sink_tb;
     begin
       // Send and receive packets
       repeat (NUM_PKTS) begin
-        chdr_word_t tx_data[$];
         chdr_word_t rx_data[$];
+        int rx_bytes;
+        automatic SampDataBuff #(logic[31:0]) tx_dbuff = new, rx_dbuff = new;
+        for (int i = 0; i < SPP; i++)
+          tx_dbuff.put($urandom());
         test.start_timeout(timeout, 5us, "Waiting for pkt to loop back");
-        tx_data.delete();
-        for (int i = 0; i < LPP; i++)
-          tx_data.push_back({$urandom(), $urandom()});
-        blk_ctrl.send(PORT_LOOP, tx_data);
-        blk_ctrl.recv(PORT_LOOP, rx_data);
-        test.assert_error(blk_ctrl.compare_data(tx_data, rx_data), "Data mismatch");
+        blk_ctrl.send(PORT_LOOP, tx_dbuff.to_chdr_payload(), tx_dbuff.get_bytes());
+        blk_ctrl.recv(PORT_LOOP, rx_data, rx_bytes);
+        rx_dbuff.from_chdr_payload(rx_data, rx_bytes);
+        test.assert_error(rx_dbuff.equal(tx_dbuff), "Data mismatch");
         test.end_timeout(timeout);
       end
 
@@ -182,16 +182,16 @@ module rfnoc_block_null_src_sink_tb;
     begin
       // Send packets
       repeat (NUM_PKTS) begin
-        chdr_word_t tx_data[$];
         chdr_word_t rx_data[$];
+        int rx_bytes;
+        automatic SampDataBuff #(logic[31:0]) tx_dbuff = new;
+        for (int i = 0; i < SPP; i++)
+          tx_dbuff.put($urandom());
         test.start_timeout(timeout, 5us, "Waiting for pkt to loop back");
-        tx_data.delete();
-        for (int i = 0; i < LPP; i++)
-          tx_data.push_back({$urandom(), $urandom()});
-        blk_ctrl.send(PORT_SRCSNK, tx_data);
+        blk_ctrl.send(PORT_SRCSNK, tx_dbuff.to_chdr_payload(), tx_dbuff.get_bytes());
         test.end_timeout(timeout);
       end
-      repeat (NUM_PKTS * LPP * 4) @(posedge rfnoc_chdr_clk);
+      repeat (NUM_PKTS * SPP * 2) @(posedge rfnoc_chdr_clk);
 
       // Read sample and packet counts on loopback port
       blk_ctrl.reg_read(dut.REG_LOOP_LINE_CNT_LO, rvalue);
@@ -229,11 +229,12 @@ module rfnoc_block_null_src_sink_tb;
       for (int p = 0; p < rvalue; p++) begin
         chdr_word_t exp_data[$];
         chdr_word_t rx_data[$];
+        int rx_bytes;
         test.start_timeout(timeout, 5us, "Waiting for pkt to arrive");
         exp_data.delete();
         for (int i = p*LPP; i < (p+1)*LPP; i++)
           exp_data.push_back({~i[15:0], i[15:0], ~i[15:0], i[15:0]});
-        blk_ctrl.recv(PORT_SRCSNK, rx_data);
+        blk_ctrl.recv(PORT_SRCSNK, rx_data, rx_bytes);
         test.assert_error(blk_ctrl.compare_data(exp_data, rx_data), "Data mismatch");
         test.end_timeout(timeout);
       end
