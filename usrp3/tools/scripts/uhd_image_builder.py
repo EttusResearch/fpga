@@ -116,6 +116,10 @@ def setup_parser():
                 you won't build your IP",
         default=None)
     parser.add_argument(
+        "--v-file",
+        help="VFile The verilog file that should be used instead of generating one automatically",
+        default=None)
+    parser.add_argument(
         "-d", "--device",
         help="Device to be programmed [x300, x310, e310, e320, n300, n310, n320]",
         default="x310")
@@ -500,7 +504,10 @@ def main():
     else:
         blocks = args.blocks
         params = [get_default_parameters()]*len(blocks)
-    vfile = create_vfiles(blocks, params, args.max_num_blocks, args.fill_with_fifos)
+    if args.v_file is None:
+        vfile = create_vfiles(blocks, params, args.max_num_blocks, args.fill_with_fifos)
+    else:
+        vfile = open(args.v_file, 'r').read()
     file_generator(args, vfile)
     create_oot_include(args.device, args.include_dir)
     if args.outfile is  None:
