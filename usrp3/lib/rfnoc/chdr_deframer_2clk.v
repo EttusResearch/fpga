@@ -74,15 +74,23 @@ module chdr_deframer_2clk #(
       endcase
     end
   end
-  
+
+  wire pkt_rst_stretch;
+  pulse_stretch #(.SCALE('d10)) pkt_reset_i (
+    .clk(pkt_clk),
+    .rst(1'b0),
+    .pulse(pkt_rst),
+    .pulse_stretched(pkt_rst_stretch)
+  );
+
   axi_fifo_2clk #(.WIDTH(128), .SIZE(5)) hdr_fifo_i (
-    .i_aclk(pkt_clk), .o_aclk(samp_clk), .reset(pkt_rst),
+    .i_aclk(pkt_clk), .o_aclk(samp_clk), .reset(pkt_rst_stretch),
     .i_tdata(hdr_i_tuser), .i_tvalid(hdr_i_tvalid), .i_tready(hdr_i_tready),
     .o_tdata(hdr_o_tuser), .o_tvalid(hdr_o_tvalid), .o_tready(hdr_o_tready)
   );
 
   axi_fifo_2clk #(.WIDTH(65), .SIZE(9)) body_fifo (
-    .i_aclk(pkt_clk), .o_aclk(samp_clk), .reset(pkt_rst),
+    .i_aclk(pkt_clk), .o_aclk(samp_clk), .reset(pkt_rst_stretch),
     .i_tdata({body_i_tlast, body_i_tdata}), .i_tvalid(body_i_tvalid), .i_tready(body_i_tready),
     .o_tdata({body_o_tlast, body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready)
   );

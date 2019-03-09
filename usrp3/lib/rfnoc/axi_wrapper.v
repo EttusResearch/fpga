@@ -123,8 +123,8 @@ module axi_wrapper
        always @(posedge clk) begin
          if (reset | clear_tx_seqnum) begin
            m_axis_data_tlast_reg <= 1'b0;
-           m_axis_pkt_cnt        <= 4;
-           m_axis_pkt_len_reg    <= 8;
+           m_axis_pkt_cnt        <= (WIDTH/8);   // Number of bytes in packet
+           m_axis_pkt_len_reg    <= 2*(WIDTH/8); // Double size by default
          end else begin
            // Only update packet length at the beginning of a new packet
            if (m_axis_pkt_len_tvalid & m_axis_pkt_len_tready) begin
@@ -132,11 +132,11 @@ module axi_wrapper
            end
            if (m_axis_data_tvalid & m_axis_data_tready) begin
              if (m_axis_pkt_cnt >= m_axis_pkt_len_reg) begin
-               m_axis_pkt_cnt        <= 4;
+               m_axis_pkt_cnt        <= (WIDTH/8);
              end else begin
-               m_axis_pkt_cnt        <= m_axis_pkt_cnt + 4;
+               m_axis_pkt_cnt        <= m_axis_pkt_cnt + (WIDTH/8);
              end
-             if (m_axis_pkt_cnt >= m_axis_pkt_len_reg-4) begin
+             if (m_axis_pkt_cnt >= m_axis_pkt_len_reg-(WIDTH/8)) begin
                m_axis_data_tlast_reg <= 1'b1;
              end else begin
                m_axis_data_tlast_reg <= 1'b0;

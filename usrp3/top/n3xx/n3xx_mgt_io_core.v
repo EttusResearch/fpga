@@ -13,7 +13,7 @@
 
 module n3xx_mgt_io_core #(
   parameter        PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
-  parameter [13:0] REG_BASE     = 14'h0,
+  parameter        REG_BASE     = 0,
   parameter        REG_DWIDTH   = 32,
   parameter        REG_AWIDTH   = 14,
   parameter        GT_COMMON    = 1,
@@ -82,18 +82,18 @@ module n3xx_mgt_io_core #(
   localparam [7:0] COMPAT_NUM         = 8'd2;
 
   // Common registers
-  localparam REG_PORT_INFO            = REG_BASE + 'h0;
-  localparam REG_MAC_CTRL_STATUS      = REG_BASE + 'h4;
-  localparam REG_PHY_CTRL_STATUS      = REG_BASE + 'h8;
-  localparam REG_MAC_LED_CTL          = REG_BASE + 'hC;
+  localparam [REG_AWIDTH-1:0] REG_PORT_INFO            = REG_BASE + 'h0;
+  localparam [REG_AWIDTH-1:0] REG_MAC_CTRL_STATUS      = REG_BASE + 'h4;
+  localparam [REG_AWIDTH-1:0] REG_PHY_CTRL_STATUS      = REG_BASE + 'h8;
+  localparam [REG_AWIDTH-1:0] REG_MAC_LED_CTL          = REG_BASE + 'hC;
 
   // Ethernet specific
-  localparam REG_ETH_MDIO_BASE        = REG_BASE + 'h10;
+  localparam [REG_AWIDTH-1:0] REG_ETH_MDIO_BASE        = REG_BASE + 'h10;
   // Aurora specific
-  localparam REG_AURORA_OVERRUNS      = REG_BASE + 'h20;
-  localparam REG_CHECKSUM_ERRORS      = REG_BASE + 'h24;
-  localparam REG_BIST_CHECKER_SAMPS   = REG_BASE + 'h28;
-  localparam REG_BIST_CHECKER_ERRORS  = REG_BASE + 'h2C;
+  localparam [REG_AWIDTH-1:0] REG_AURORA_OVERRUNS      = REG_BASE + 'h20;
+  localparam [REG_AWIDTH-1:0] REG_CHECKSUM_ERRORS      = REG_BASE + 'h24;
+  localparam [REG_AWIDTH-1:0] REG_BIST_CHECKER_SAMPS   = REG_BASE + 'h28;
+  localparam [REG_AWIDTH-1:0] REG_BIST_CHECKER_ERRORS  = REG_BASE + 'h2C;
 
   wire                  reg_rd_resp_mdio;
   reg                   reg_rd_resp_glob = 1'b0;

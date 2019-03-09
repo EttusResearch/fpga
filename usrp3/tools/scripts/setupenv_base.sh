@@ -339,7 +339,7 @@ function viv_modify_bd {
     if [[ -z $1 || -z $2 ]]; then
         echo "Modify an existing Vivado Block Design instance"
         echo ""
-        echo "Usage: viv_modify_ip <BD Path> <Product>"
+        echo "Usage: viv_modify_bd <BD Path> <Product>"
         echo "- <BD Path>: Path to the BD file."
         echo "- <Product>: Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
         return 1
@@ -352,6 +352,30 @@ function viv_modify_bd {
         $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify $part_name $(resolve_viv_path $bd_path)
     else
         echo "ERROR: IP $bd_path not found."
+        return 1
+    fi
+}
+
+function viv_modify_tcl_bd {
+    if [[ -z $1 || -z $2 ]]; then
+        echo "Modify an existing Vivado TCL-based Block Design instance."
+        echo ""
+        echo "Usage: viv_modify_bd_tcl <TCL Path> <Product>"
+        echo "- <TCL Path>: Path to the TCL source file."
+        echo "- <Product> : Product to generate IP for. Choose from: ${!PRODUCT_ID_MAP[@]}"
+        return 1
+    fi
+
+    src_path=$(readlink -f $1)
+    IFS='/' read -r -a prod_tokens <<< "${PRODUCT_ID_MAP[$2]}"
+    part_name=${prod_tokens[1]}${prod_tokens[2]}${prod_tokens[3]}
+    bd_ip_repo="${src_path%/top*}/lib/vivado_ipi"
+    if [[ -f $src_path ]]; then
+        $VIVADO_EXEC -mode gui -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs modify_bdtcl $part_name $(resolve_viv_path $src_path) $(resolve_viv_path $bd_ip_repo)
+        echo "INFO: Vivado BD was closed, writing source TCL..."
+        $VIVADO_EXEC -mode batch -source $(resolve_viv_path $VIV_IP_UTILS) -nolog -nojournal -tclargs write_bdtcl $part_name $(resolve_viv_path $src_path)
+    else
+        echo "ERROR: IP $src_path not found."
         return 1
     fi
 }

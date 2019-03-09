@@ -1,10 +1,13 @@
 #
-# Copyright 2014 Ettus Research
+# Copyright 2017-2018 Ettus Research, a National Instruments Company
 #
 
 #include $(IP_DIR)/axi4_dualport_sram/Makefile.inc
+include $(IP_DIR)/hb47_1to2/Makefile.inc
+include $(IP_DIR)/hb47_2to1/Makefile.inc
 include $(IP_DIR)/axi64_4k_2clk_fifo/Makefile.inc
 include $(IP_DIR)/axi64_8k_2clk_fifo/Makefile.inc
+include $(IP_DIR)/axi_intercon_2x64_256_bd/Makefile.inc
 include $(IP_DIR)/axi_intercon_4x64_256_bd/Makefile.inc
 include $(IP_DIR)/ddr3_32bit/Makefile.inc
 include $(IP_DIR)/fifo_4k_2clk/Makefile.inc
@@ -20,12 +23,16 @@ include $(IP_DIR)/axi_eth_dma/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
 include $(IP_DIR)/n310_ps_bd/Makefile.inc
+include $(IP_DIR)/delay_tap_bram/Makefile.inc
 
 BD_SRCS = \
+$(IP_AXI_INTERCON_2X64_256_BD_SRCS) \
 $(IP_AXI_INTERCON_4X64_256_BD_SRCS) \
 $(IP_N310_PS_BD_SRCS)
 
 IP_XCI_SRCS = \
+$(IP_HB47_1TO2_SRCS) \
+$(IP_HB47_2TO1_SRCS) \
 $(IP_AXI4_BRAM_SRCS) \
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) \
 $(IP_AXI64_8K_2CLK_FIFO_SRCS) \
@@ -52,6 +59,8 @@ $(ONE_GIGE_PHY_SRCS) \
 $(TEN_GIGE_PHY_SRCS)
 
 IP_SYNTH_OUTPUTS = \
+$(IP_HB47_1TO2_OUTS) \
+$(IP_HB47_2TO1_OUTS) \
 $(IP_AXI4_BRAM_OUTS) \
 $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
@@ -68,6 +77,7 @@ $(IP_TEN_GIG_ETH_PCS_PMA_OUTS) \
 $(IP_AURORA_64B66B_PCS_PMA_OUTS)
 
 BD_OUTPUTS = \
+$(IP_AXI_INTERCON_2X64_256_BD_OUTS) \
 $(IP_AXI_INTERCON_4X64_256_BD_OUTS) \
 $(IP_N310_PS_BD_OUTS)
 

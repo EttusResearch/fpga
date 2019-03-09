@@ -11,7 +11,6 @@
 CONTROL_LIB_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/control/, \
 ad5662_auto_spi.v \
 arb_qualify_master.v \
-axi_crossbar_intf.sv \
 axi_crossbar.v \
 axi_crossbar_regport.v \
 axi_fifo_header.v \

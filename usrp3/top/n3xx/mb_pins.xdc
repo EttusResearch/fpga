@@ -27,9 +27,9 @@ set_property DRIVE         4                [get_ports {FPGA_GPIO[*]}]
 set_property SLEW          SLOW             [get_ports {FPGA_GPIO[*]}]
 
 # These pins should be commented out for release hardware.
-# set_property PACKAGE_PIN   Y30              [get_ports {FPGA_TEST[0]}]
-# set_property PACKAGE_PIN   AA30             [get_ports {FPGA_TEST[1]}]
-# set_property IOSTANDARD    LVCMOS33         [get_ports {FPGA_TEST[*]}]
+set_property PACKAGE_PIN   Y30              [get_ports {FPGA_TEST[0]}]
+set_property PACKAGE_PIN   AA30             [get_ports {FPGA_TEST[1]}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {FPGA_TEST[*]}]
 
 # set_property PACKAGE_PIN   AH27             [get_ports {MGMT-GPIO0}]
 # set_property PACKAGE_PIN   AH26             [get_ports {MGMT-GPIO1}]
@@ -150,32 +150,50 @@ set_property PACKAGE_PIN   AJ3              [get_ports {NPIO_TX1_N}]
 ## Bank 12, 3.3V
 #########################################################################################
 
-# set_property PACKAGE_PIN   AJ26             [get_ports {QSFP-I2C-SCL}]
-# set_property PACKAGE_PIN   AK26             [get_ports {QSFP-I2C-SDA}]
-# set_property PACKAGE_PIN   AK28             [get_ports {QSFP-INTL}]
-# set_property PACKAGE_PIN   AK30             [get_ports {QSFP-LED}]
-# set_property PACKAGE_PIN   AJ29             [get_ports {QSFP-LPMODE}]
-# set_property PACKAGE_PIN   AK27             [get_ports {QSFP-MODPRSL}]
-# set_property PACKAGE_PIN   AJ28             [get_ports {QSFP-MODSELL}]
-# set_property PACKAGE_PIN   AJ30             [get_ports {QSFP-RESETL}]
+set_property PACKAGE_PIN   AJ26             [get_ports {QSFP_I2C_SCL}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_I2C_SCL}]
+set_property DRIVE         8                [get_ports {QSFP_I2C_SCL}]
+
+set_property PACKAGE_PIN   AK26             [get_ports {QSFP_I2C_SDA}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_I2C_SDA}]
+set_property DRIVE         8                [get_ports {QSFP_I2C_SDA}]
+
+set_property PACKAGE_PIN   AK28             [get_ports {QSFP_INT_B}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_INT_B}]
+
+set_property PACKAGE_PIN   AK30             [get_ports {QSFP_LED}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_LED}]
+
+set_property PACKAGE_PIN   AJ29             [get_ports {QSFP_LPMODE}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_LPMODE}]
+
+set_property PACKAGE_PIN   AK27             [get_ports {QSFP_PRESENT_B}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_PRESENT_B}]
+
+set_property PACKAGE_PIN   AJ28             [get_ports {QSFP_MODSEL_B}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_MODSEL_B}]
+
+set_property PACKAGE_PIN   AJ30             [get_ports {QSFP_RESET_B}]
+set_property IOSTANDARD    LVCMOS33         [get_ports {QSFP_RESET_B}]
+
 # When implemented, the QSFP signals need DRIVE and SLEW attributes applied.
 
-set_property PACKAGE_PIN   AD5              [get_ports {QSFP_RX0_N}]
-set_property PACKAGE_PIN   AD6              [get_ports {QSFP_RX0_P}]
-set_property PACKAGE_PIN   AF5              [get_ports {QSFP_RX1_N}]
-set_property PACKAGE_PIN   AF6              [get_ports {QSFP_RX1_P}]
-set_property PACKAGE_PIN   AG3              [get_ports {QSFP_RX2_N}]
-set_property PACKAGE_PIN   AG4              [get_ports {QSFP_RX2_P}]
-set_property PACKAGE_PIN   AH5              [get_ports {QSFP_RX3_N}]
-set_property PACKAGE_PIN   AH6              [get_ports {QSFP_RX3_P}]
-set_property PACKAGE_PIN   AD1              [get_ports {QSFP_TX0_N}]
-set_property PACKAGE_PIN   AD2              [get_ports {QSFP_TX0_P}]
-set_property PACKAGE_PIN   AE3              [get_ports {QSFP_TX1_N}]
-set_property PACKAGE_PIN   AE4              [get_ports {QSFP_TX1_P}]
-set_property PACKAGE_PIN   AF1              [get_ports {QSFP_TX2_N}]
-set_property PACKAGE_PIN   AF2              [get_ports {QSFP_TX2_P}]
-set_property PACKAGE_PIN   AH1              [get_ports {QSFP_TX3_N}]
-set_property PACKAGE_PIN   AH2              [get_ports {QSFP_TX3_P}]
+set_property PACKAGE_PIN   AD5              [get_ports {QSFP_RX_N[0]}]
+set_property PACKAGE_PIN   AD6              [get_ports {QSFP_RX_P[0]}]
+set_property PACKAGE_PIN   AF5              [get_ports {QSFP_RX_N[1]}]
+set_property PACKAGE_PIN   AF6              [get_ports {QSFP_RX_P[1]}]
+set_property PACKAGE_PIN   AG3              [get_ports {QSFP_RX_N[2]}]
+set_property PACKAGE_PIN   AG4              [get_ports {QSFP_RX_P[2]}]
+set_property PACKAGE_PIN   AH5              [get_ports {QSFP_RX_N[3]}]
+set_property PACKAGE_PIN   AH6              [get_ports {QSFP_RX_P[3]}]
+set_property PACKAGE_PIN   AD1              [get_ports {QSFP_TX_N[0]}]
+set_property PACKAGE_PIN   AD2              [get_ports {QSFP_TX_P[0]}]
+set_property PACKAGE_PIN   AE3              [get_ports {QSFP_TX_N[1]}]
+set_property PACKAGE_PIN   AE4              [get_ports {QSFP_TX_P[1]}]
+set_property PACKAGE_PIN   AF1              [get_ports {QSFP_TX_N[2]}]
+set_property PACKAGE_PIN   AF2              [get_ports {QSFP_TX_P[2]}]
+set_property PACKAGE_PIN   AH1              [get_ports {QSFP_TX_N[3]}]
+set_property PACKAGE_PIN   AH2              [get_ports {QSFP_TX_P[3]}]
 
 
 ## White Rabbit : #######################################################################

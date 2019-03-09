@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Copyright 2016-2017 Ettus Research
+Copyright 2016-2018 Ettus Research
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -147,6 +147,7 @@ class MainWindow(QtWidgets.QWidget):
         self.targets.setModel(self.model_targets)
         self.populate_target('x300')
         self.populate_target('e300')
+        self.populate_target('e320')
         self.populate_target('n3xx')
         grid.addWidget(self.targets, 0, 0, 8, 1)
 
@@ -399,8 +400,14 @@ class MainWindow(QtWidgets.QWidget):
             self.max_allowed_blocks = 10
         elif self.device == 'E310':
             self.target = 'e300'
-            self.max_allowed_blocks = 6
-        if self.device == 'N310' or self.device == 'N300':
+            self.max_allowed_blocks = 14
+        elif self.device == 'E320':
+            self.target = 'e320'
+            self.max_allowed_blocks = 12
+        elif self.device == 'N300':
+            self.target = 'n3xx'
+            self.max_allowed_blocks = 11
+        elif self.device == 'N310' or self.device == 'N320':
             self.target = 'n3xx'
             self.max_allowed_blocks = 10
         oot_sources = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',\
@@ -437,6 +444,9 @@ class MainWindow(QtWidgets.QWidget):
         filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '/home/')[0]
         if len(filename) > 0:
             self.grc_populate_list(self.model_in_design, filename)
+            self.set_target_and_device()
+            self.blocks_to_add_slot()
+            self.cmd_display_slot()
 
     def check_no_blocks(self):
         """

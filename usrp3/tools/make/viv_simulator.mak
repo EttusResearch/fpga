@@ -35,6 +35,7 @@ SETUP_AND_LAUNCH_SIMULATION = \
 	export VIV_SIM_SRCS=$(call RESOLVE_PATHS,$(SIM_SRCS)); \
 	export VIV_INC_SRCS=$(call RESOLVE_PATHS,$(INC_SRCS)); \
 	export VIV_SIM_TOP=$(SIM_TOP); \
+	export VIV_SYNTH_TOP="$(SYNTH_DUT)"; \
 	export VIV_PART_NAME=$(PART_NAME); \
 	export VIV_SIM_RUNTIME=$(SIM_RUNTIME_US); \
 	export VIV_SIM_FAST="$(SIM_FAST)"; \

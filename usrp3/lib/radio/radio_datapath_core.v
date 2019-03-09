@@ -11,7 +11,8 @@
 // Note: Register addresses defined radio_core_regs.vh
 
 module radio_datapath_core #(
-  parameter RADIO_NUM = 0
+  parameter RADIO_NUM = 0,
+  parameter WIDTH = 32       // Can be 32 or 64
 )(
   input clk, input reset,
   input clear_rx, input clear_tx,
@@ -20,15 +21,15 @@ module radio_datapath_core #(
   input [15:0] rx_resp_dst_sid,     // Destination stream ID for TX errors / response packets (i.e. host PC)
   input [15:0] tx_resp_dst_sid,     // Destination stream ID for TX errors / response packets (i.e. host PC)
   // Interface to the physical radio (ADC, DAC, controls)
-  input [31:0] rx, input rx_stb, output rx_running,
-  output [31:0] tx, input tx_stb, output tx_running,
+  input [WIDTH-1:0] rx, input rx_stb, output rx_running,
+  output [WIDTH-1:0] tx, input tx_stb, output tx_running,
   // VITA time
   input [63:0] vita_time, input [63:0] vita_time_lastpps,
   // Interface to the NoC Shell
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   output reg rb_stb, input [7:0] rb_addr, output reg [63:0] rb_data, input rb_holdoff,
-  input [31:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready, input [127:0] tx_tuser,
-  output [31:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
+  input [WIDTH-1:0] tx_tdata, input tx_tlast, input tx_tvalid, output tx_tready, input [127:0] tx_tuser,
+  output [WIDTH-1:0] rx_tdata, output rx_tlast, output rx_tvalid, input rx_tready, output [127:0] rx_tuser,
   output [63:0] resp_tdata, output resp_tlast, output resp_tvalid, input resp_tready
 );
 
@@ -43,8 +44,10 @@ module radio_datapath_core #(
     case (rb_addr)
       RB_VITA_TIME    : {rb_stb, rb_data} <= {~rb_holdoff, vita_time};
       RB_VITA_LASTPPS : {rb_stb, rb_data} <= {~rb_holdoff, vita_time_lastpps};
-      RB_TEST         : {rb_stb, rb_data} <= {~rb_holdoff, {rx, test_readback}};
-      RB_TXRX         : {rb_stb, rb_data} <= {~rb_holdoff, {tx, rx}};
+      //TODO: Update the register map to use the full WIDTH for TEST and TXRX
+      //when we actually start using 64-bit samples
+      RB_TEST         : {rb_stb, rb_data} <= {~rb_holdoff, {rx[31:0], test_readback}};
+      RB_TXRX         : {rb_stb, rb_data} <= {~rb_holdoff, {tx[31:0], rx[31:0]}};
       RB_RADIO_NUM    : {rb_stb, rb_data} <= {~rb_holdoff, {32'd0, RADIO_NUM[31:0]}};
       // All others default to daughter board control readback data
       default         : {rb_stb, rb_data} <= {1'b0, 64'h0};
@@ -69,11 +72,11 @@ module radio_datapath_core #(
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(tx_idle), .changed());
 
-  wire [31:0] sample_tx;
+  wire [WIDTH-1:0] sample_tx;
   wire [63:0] txresp_tdata;
   wire [127:0] txresp_tuser;
   wire txresp_tlast, txresp_tvalid, txresp_tready;
-  tx_control_gen3 #(.SR_ERROR_POLICY(SR_TX_CTRL_ERROR_POLICY)) tx_control_gen3 (
+  tx_control_gen3 #(.SR_ERROR_POLICY(SR_TX_CTRL_ERROR_POLICY), .WIDTH(WIDTH)) tx_control_gen3 (
     .clk(clk), .reset(reset), .clear(clear_tx),
     .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
     .vita_time(vita_time), .resp_sid({src_sid, tx_resp_dst_sid}),
@@ -81,13 +84,15 @@ module radio_datapath_core #(
     .resp_tdata(txresp_tdata), .resp_tlast(txresp_tlast), .resp_tvalid(txresp_tvalid), .resp_tready(txresp_tready), .resp_tuser(txresp_tuser),
     .run(tx_running), .sample(sample_tx), .strobe(tx_stb));
 
-  assign tx = tx_running ? sample_tx : tx_idle;
+  //TODO: Update the idle value to use the full WIDTH value from regmap
+  //when we actually start using 64-bit samples
+  assign tx = tx_running ? sample_tx : {(WIDTH/32){tx_idle}};
 
   /********************************************************
   ** RX Chain
   ********************************************************/
-  wire [31:0] sample_rx     = loopback ? tx     : rx;     // Digital Loopback TX -> RX
-  wire        sample_rx_stb = loopback ? tx_stb : rx_stb;
+  wire [WIDTH-1:0] sample_rx     = loopback ? tx     : rx;     // Digital Loopback TX -> RX
+  wire             sample_rx_stb = loopback ? tx_stb : rx_stb;
 
   wire [63:0] rxresp_tdata;
   wire [127:0] rxresp_tuser;
@@ -99,7 +104,8 @@ module radio_datapath_core #(
     .SR_RX_CTRL_HALT(SR_RX_CTRL_HALT),
     .SR_RX_CTRL_MAXLEN(SR_RX_CTRL_MAXLEN),
     .SR_RX_CTRL_CLEAR_CMDS(SR_RX_CTRL_CLEAR_CMDS),
-    .SR_RX_CTRL_OUTPUT_FORMAT(SR_RX_CTRL_OUTPUT_FORMAT)
+    .SR_RX_CTRL_OUTPUT_FORMAT(SR_RX_CTRL_OUTPUT_FORMAT),
+    .WIDTH(WIDTH)
   )
   rx_control_gen3 (
     .clk(clk), .reset(reset), .clear(clear_rx),

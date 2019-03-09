@@ -13,29 +13,32 @@ module pulse_stretch #(
   output pulse_stretched
 );
 
-  reg [$clog2(SCALE)-1:0] count;
-  reg             state;
+  reg [$clog2(SCALE)-1:0] count = 'd0;
+  reg             state = 1'b0;
 
   always @ (posedge clk)
-    if (rst)
-      state <= 0;
-    else case (state)
+    if (rst) begin
+      state <= 1'b0;
+      count <= 'd0;
+    end
+    else begin
+      case (state)
 
-    1'b0: begin
-      if (pulse) begin
-        state <= 1'b1;
-        count <= 'd0;
+      1'b0: begin
+        if (pulse) begin
+          state <= 1'b1;
+          count <= 'd0;
+        end
       end
-    end
 
-    1'b1: begin
-      if (count == SCALE)
-        state <= 1'b0;
-      else
-        count <= count + 1'b1;
+      1'b1: begin
+        if (count == SCALE)
+          state <= 1'b0;
+        else
+          count <= count + 1'b1;
+      end
+      endcase
     end
-
-    endcase
 
   assign pulse_stretched = (state == 1'b1);
 

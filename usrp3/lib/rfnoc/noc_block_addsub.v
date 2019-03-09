@@ -50,6 +50,7 @@ module noc_block_addsub #(
   noc_shell #(
     .NOC_ID(NOC_ID),
     .STR_SINK_FIFOSIZE({2{STR_SINK_FIFOSIZE[7:0]}}),
+    .MTU({2{MTU[7:0]}}),
     .INPUT_PORTS(2),
     .OUTPUT_PORTS(2))
   noc_shell (

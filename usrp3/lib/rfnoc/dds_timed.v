@@ -240,7 +240,7 @@ module dds_timed #(
    .WIDTH_B(SCALING_WIDTH),
    .WIDTH_P(DDS_WIDTH+SCALING_WIDTH),
    .DROP_TOP_P(4),
-   .LATENCY(2),
+   .LATENCY(3),
    .CASCADE_OUT(0))
   i_mult (
     .clk(clk), .reset(reset | clear),
@@ -253,7 +253,7 @@ module dds_timed #(
    .WIDTH_B(SCALING_WIDTH),
    .WIDTH_P(DDS_WIDTH+SCALING_WIDTH),
    .DROP_TOP_P(4),
-   .LATENCY(2),
+   .LATENCY(3),
    .CASCADE_OUT(0))
   q_mult (
     .clk(clk), .reset(reset | clear),

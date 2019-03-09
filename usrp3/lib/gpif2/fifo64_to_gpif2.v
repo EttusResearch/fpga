@@ -9,7 +9,7 @@
 module fifo64_to_gpif2
 #(
     parameter FIFO_SIZE = 9,
-    parameter MTU = 11
+    parameter MTU = 12
 )
 (
     //input fifo interface

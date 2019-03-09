@@ -90,7 +90,7 @@ module cmd_pkt_proc #(
     .clk(clk), .reset(reset), .clear(clear),
     .hdr_stb(),
     .pkt_type(pkt_type), .eob(eob), .has_time(has_time),
-    .seqnum(seqnum), .length(),
+    .seqnum(seqnum), .length(), .payload_length(),
     .src_sid(src_sid), .dst_sid(dst_sid),
     .vita_time_stb(), .vita_time(pkt_vita_time),
     .i_tdata(cmd_fifo_tdata), .i_tlast(cmd_fifo_tlast), .i_tvalid(cmd_fifo_tvalid), .i_tready(cmd_fifo_tready),

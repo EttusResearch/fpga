@@ -8,17 +8,18 @@
 // Outputs an error packet if an underrun or late timed command occurs.
 
 module tx_control_gen3 #(
-  parameter SR_ERROR_POLICY = 0   // What to do when errors occur -- wait for next packet or next burst
+  parameter SR_ERROR_POLICY = 0,  // What to do when errors occur -- wait for next packet or next burst
+  parameter WIDTH = 32            // Can be 32 or 64
 )(
   input clk, input reset, input clear,
   input [63:0] vita_time, input [31:0] resp_sid,
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   // Data packets
-  input [31:0] tx_tdata, input [127:0] tx_tuser, input tx_tlast, input tx_tvalid, output tx_tready,
+  input [WIDTH-1:0] tx_tdata, input [127:0] tx_tuser, input tx_tlast, input tx_tvalid, output tx_tready,
   // Error packets
   output reg [63:0] resp_tdata, output reg [127:0] resp_tuser, output reg resp_tlast, output reg resp_tvalid, input resp_tready,
   // To radio frontend
-  output run, output [31:0] sample, input strobe
+  output run, output [WIDTH-1:0] sample, input strobe
 );
 
   wire [63:0] send_time = tx_tuser[63:0];

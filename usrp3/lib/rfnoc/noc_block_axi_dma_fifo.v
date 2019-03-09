@@ -106,6 +106,7 @@ module noc_block_axi_dma_fifo #(
     .INPUT_PORTS(NUM_FIFOS),
     .OUTPUT_PORTS(NUM_FIFOS),
     .STR_SINK_FIFOSIZE({NUM_FIFOS{STR_SINK_FIFOSIZE[7:0]}}),
+    .MTU({NUM_FIFOS{MTU[7:0]}}),
     .USE_TIMED_CMDS(0)) // Settings bus transactions will occur at the vita time specified in the command packet
   noc_shell (
     .bus_clk(bus_clk), .bus_rst(bus_rst),

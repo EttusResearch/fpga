@@ -18,10 +18,15 @@ module n3xx_core #(
   parameter REG_DWIDTH  = 32, // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH  = 32,  // Width of the address bus
   parameter BUS_CLK_RATE = 200000000, // BUS_CLK rate
+  parameter CHANNEL_WIDTH = 32,
   parameter NUM_RADIO_CORES = 4,
   parameter NUM_CHANNELS_PER_RADIO = 1,
   parameter NUM_CHANNELS = 4,
   parameter NUM_DBOARDS = 2,
+  parameter NUM_SPI_PER_DBOARD = 8,
+  parameter RADIO_NOC_ID = 64'h12AD_1000_0001_1310 + NUM_CHANNELS_PER_RADIO,
+  parameter USE_CORRECTION = 0,
+  parameter USE_REPLAY = 0,    // 1 for Replay block instead of DMA FIFO
   parameter FP_GPIO_WIDTH = 12 // Front panel GPIO width
 )(
   // Clocks and resets
@@ -88,11 +93,11 @@ module n3xx_core #(
   // Radio Data
   input  [NUM_CHANNELS-1:0]    rx_stb,
   input  [NUM_CHANNELS-1:0]    tx_stb,
-  input  [32*NUM_CHANNELS-1:0] rx,
-  output [32*NUM_CHANNELS-1:0] tx,
+  input  [CHANNEL_WIDTH*NUM_CHANNELS-1:0] rx,
+  output [CHANNEL_WIDTH*NUM_CHANNELS-1:0] tx,
 
   // CPLD
-  output [8*NUM_DBOARDS-1:0] sen_flat,
+  output [NUM_SPI_PER_DBOARD*NUM_DBOARDS-1:0] sen_flat,
   output [NUM_DBOARDS-1:0]   sclk_flat,
   output [NUM_DBOARDS-1:0]   mosi_flat,
   input  [NUM_DBOARDS-1:0]   miso_flat,
@@ -200,9 +205,6 @@ module n3xx_core #(
 
   // Computation engines that need access to IO
   localparam NUM_IO_CE = NUM_RADIO_CORES + 1; // NUM_RADIO_CORES + 1 DMA_FIFO
-
-  // Indicate if we want to use replay block
-  localparam USE_REPLAY = 0;
 
   /////////////////////////////////////////////////////////////////////////////////
   // Motherboard Registers
@@ -331,7 +333,7 @@ module n3xx_core #(
       fp_gpio_master_reg <= 32'h0;
       fp_gpio_src_reg <= 32'h0;
       pps_select     <= 4'h1;
-      pps_select_sfp <= 2'h1;
+      pps_select_sfp <= 2'h0;
       pps_out_enb    <= 1'b0;
       ref_clk_reset  <= 1'b0;
       meas_clk_reset <= 1'b0;
@@ -744,7 +746,7 @@ module n3xx_core #(
       noc_block_replay #(
         .NOC_ID            (64'h4E91_A000_0000_0004),
         .NUM_REPLAY_BLOCKS (NUM_DRAM_FIFOS),
-        .STR_SINK_FIFOSIZE (14)
+        .STR_SINK_FIFOSIZE (11)
       ) inst_noc_block_replay (
         .bus_clk (bus_clk),
         .bus_rst (bus_rst),
@@ -887,7 +889,6 @@ module n3xx_core #(
 
   localparam RADIO_COMPAT_NUM_MAJOR = 32'b1;
   localparam RADIO_COMPAT_NUM_MINOR = 32'b0;
-  localparam RADIO_NOC_ID = 64'h12AD_1000_0001_1310 + NUM_CHANNELS_PER_RADIO;
   localparam FIRST_RADIO_CORE_INST = 1;
   localparam LAST_RADIO_CORE_INST = NUM_RADIO_CORES+FIRST_RADIO_CORE_INST;
 
@@ -906,10 +907,12 @@ module n3xx_core #(
   //------------------------------------
   // Radios
   //------------------------------------
-  wire [7:0]  sen[0:NUM_CHANNELS-1];
+  wire [NUM_SPI_PER_DBOARD-1:0]  sen[0:NUM_CHANNELS-1];
   wire        sclk[0:NUM_CHANNELS-1], mosi[0:NUM_CHANNELS-1], miso[0:NUM_CHANNELS-1];
   // Data
-  wire [31:0] rx_int[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
+  wire [CHANNEL_WIDTH-1:0] rx_int[0:NUM_CHANNELS-1], rx_data_int[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data_int[0:NUM_CHANNELS-1];
+  wire [CHANNEL_WIDTH*NUM_CHANNELS-1:0] rx_data;
+  wire [CHANNEL_WIDTH*NUM_CHANNELS-1:0] tx_data;
   wire        db_fe_set_stb[0:NUM_CHANNELS-1];
   wire [7:0]  db_fe_set_addr[0:NUM_CHANNELS-1];
   wire [31:0] db_fe_set_data[0:NUM_CHANNELS-1];
@@ -918,12 +921,28 @@ module n3xx_core #(
   wire [63:0] db_fe_rb_data[0:NUM_CHANNELS-1];
   wire        rx_running[0:NUM_CHANNELS-1], tx_running[0:NUM_CHANNELS-1];
   wire [NUM_RADIO_CORES-1:0] sync_out;
+  wire [NUM_CHANNELS-1:0]    db_fe_set_stb_flat;
+  wire [8*NUM_CHANNELS-1:0]  db_fe_set_addr_flat;
+  wire [32*NUM_CHANNELS-1:0] db_fe_set_data_flat;
+  wire [NUM_CHANNELS-1:0]    db_fe_rb_stb_flat;
+  wire [8*NUM_CHANNELS-1:0]  db_fe_rb_addr_flat;
+  wire [64*NUM_CHANNELS-1:0] db_fe_rb_data_flat;
+  wire [NUM_CHANNELS-1:0]    rx_running_flat, tx_running_flat;
+  wire [NUM_CHANNELS-1:0] sync_out_int;
 
   genvar i;
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
       assign rx_atr[i] = rx_running[i];
       assign tx_atr[i] = tx_running[i];
+      assign db_fe_set_stb[i] = db_fe_set_stb_flat[i];
+      assign db_fe_set_addr[i] = db_fe_set_addr_flat[8*i +: 8];
+      assign db_fe_set_data[i] = db_fe_set_data_flat[32*i +: 32];
+      assign db_fe_rb_stb_flat[i] = db_fe_rb_stb[i];
+      assign db_fe_rb_addr[i] = db_fe_rb_addr_flat[8*i +: 8];
+      assign db_fe_rb_data_flat[64*i +: 64] = db_fe_rb_data[i];
+      assign rx_running[i] = rx_running_flat[i];
+      assign tx_running[i] = tx_running_flat[i];
     end
   endgenerate
 
@@ -932,6 +951,7 @@ module n3xx_core #(
       noc_block_radio_core #(
         .NOC_ID(RADIO_NOC_ID),
         .NUM_CHANNELS(NUM_CHANNELS_PER_RADIO),
+        .WIDTH(CHANNEL_WIDTH),
         .STR_SINK_FIFOSIZE({NUM_CHANNELS_PER_RADIO{RADIO_INPUT_BUFF_SIZE}}),
         .COMPAT_NUM_MAJOR(RADIO_COMPAT_NUM_MAJOR),
         .COMPAT_NUM_MINOR(RADIO_COMPAT_NUM_MINOR),
@@ -952,23 +972,23 @@ module n3xx_core #(
         .o_tvalid(ioce_i_tvalid[i]),
         .o_tready(ioce_i_tready[i]),
         // Data ports connected to radio front end
-        .rx({rx_data[2*(i-FIRST_RADIO_CORE_INST)+1], rx_data[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .rx_stb({rx_stb[2*(i-FIRST_RADIO_CORE_INST)+1], rx_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .tx({tx_data[2*(i-FIRST_RADIO_CORE_INST)+1], tx_data[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .tx_stb({tx_stb[2*(i-FIRST_RADIO_CORE_INST)+1], tx_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .rx(rx_data[CHANNEL_WIDTH*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: CHANNEL_WIDTH*NUM_CHANNELS_PER_RADIO]),
+        .rx_stb(rx_stb[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
+        .tx(tx_data[CHANNEL_WIDTH*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: CHANNEL_WIDTH*NUM_CHANNELS_PER_RADIO]),
+        .tx_stb(tx_stb[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
         // Timing and sync
         .pps(pps),
         .sync_in(1'b0),
-        .sync_out(sync_out[i]),
-        .rx_running({rx_running[2*(i-FIRST_RADIO_CORE_INST)+1],rx_running[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .tx_running({tx_running[2*(i-FIRST_RADIO_CORE_INST)+1],tx_running[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .sync_out(sync_out[i-FIRST_RADIO_CORE_INST]),
+        .rx_running(rx_running_flat[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
+        .tx_running(tx_running_flat[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
         // Ctrl ports connected to radio dboard and front end core
-        .db_fe_set_stb ({db_fe_set_stb[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .db_fe_set_addr({db_fe_set_addr[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_addr[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .db_fe_set_data({db_fe_set_data[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_set_data[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .db_fe_rb_stb  ({db_fe_rb_stb[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_stb[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .db_fe_rb_addr ({db_fe_rb_addr[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_addr[2*(i-FIRST_RADIO_CORE_INST)]}),
-        .db_fe_rb_data ({db_fe_rb_data[2*(i-FIRST_RADIO_CORE_INST)+1], db_fe_rb_data[2*(i-FIRST_RADIO_CORE_INST)]}),
+        .db_fe_set_stb (db_fe_set_stb_flat[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
+        .db_fe_set_addr(db_fe_set_addr_flat[8*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: 8*NUM_CHANNELS_PER_RADIO]),
+        .db_fe_set_data(db_fe_set_data_flat[32*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: 32*NUM_CHANNELS_PER_RADIO]),
+        .db_fe_rb_stb  (db_fe_rb_stb_flat[NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: NUM_CHANNELS_PER_RADIO]),
+        .db_fe_rb_addr (db_fe_rb_addr_flat[8*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: 8*NUM_CHANNELS_PER_RADIO]),
+        .db_fe_rb_data (db_fe_rb_data_flat[64*NUM_CHANNELS_PER_RADIO*(i-FIRST_RADIO_CORE_INST) +: 64*NUM_CHANNELS_PER_RADIO]),
         //Debug
         .debug()
       );
@@ -1002,8 +1022,10 @@ module n3xx_core #(
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
       // Radio Data
-      assign rx_int[i] = rx[32*i+31:32*i];
-      assign tx[32*i+31:32*i] = tx_int[i];
+      assign rx_int[i] = rx[CHANNEL_WIDTH*i +: CHANNEL_WIDTH];
+      assign rx_data[CHANNEL_WIDTH*i +: CHANNEL_WIDTH] = rx_data_int[i];
+      assign tx[CHANNEL_WIDTH*i +: CHANNEL_WIDTH] = tx_int[i];
+      assign tx_data_int[i] = tx_data[CHANNEL_WIDTH*i +: CHANNEL_WIDTH];
       // GPIO
       assign db_gpio_out_flat[16*i+15:16*i] = db_gpio_out[i];
       assign db_gpio_ddr_flat[16*i+15:16*i] = db_gpio_ddr[i];
@@ -1012,19 +1034,40 @@ module n3xx_core #(
     end
   endgenerate
 
-  generate
-    for (i = 0; i < NUM_DBOARDS; i = i + 1) begin
-      // SPI
-      assign miso[2*i] = miso_flat[i];
-      assign sclk_flat[i] = sclk[2*i];
-      assign sen_flat[8*i+7:8*i] = sen[2*i];
-      assign mosi_flat[i] = mosi[2*i];
+  generate if (NUM_CHANNELS_PER_RADIO == 1)
+    begin
+      for (i = 0; i < NUM_DBOARDS; i = i + 1) begin
+        // SPI
+        assign miso[i] = miso_flat[i];
+        assign sclk_flat[i] = sclk[i];
+        assign sen_flat[NUM_SPI_PER_DBOARD*i +: NUM_SPI_PER_DBOARD] = sen[i];
+        assign mosi_flat[i] = mosi[i];
+      end
+      for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+        assign sync_out_int[i] = sync_out[i];
+      end
+    end else if (NUM_CHANNELS_PER_RADIO == 2)
+    begin
+      for (i = 0; i < NUM_DBOARDS; i = i + 1) begin
+        // SPI
+        assign miso[2*i] = miso_flat[i];
+        assign sclk_flat[i] = sclk[2*i];
+        assign sen_flat[NUM_SPI_PER_DBOARD*i +: NUM_SPI_PER_DBOARD] = sen[2*i];
+        assign mosi_flat[i] = mosi[2*i];
+      end
+      for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+        assign sync_out_int[i] = sync_out[i < 2 ? 0 : 1];
+      end
     end
   endgenerate
 
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
-      n3xx_db_fe_core db_fe_core_i (
+      n3xx_db_fe_core #(
+        .USE_CORRECTION(USE_CORRECTION),
+        .NUM_SPI_SEN(NUM_SPI_PER_DBOARD),
+        .WIDTH(CHANNEL_WIDTH)
+      ) db_fe_core_i (
         .clk(radio_clk),
         .reset(radio_rst),
         .set_stb(db_fe_set_stb[i]),
@@ -1033,14 +1076,14 @@ module n3xx_core #(
         .rb_stb(db_fe_rb_stb[i]),
         .rb_addr(db_fe_rb_addr[i]),
         .rb_data(db_fe_rb_data[i]),
-        .time_sync(sync_out[i < 2 ? 0 : 1]),
+        .time_sync(sync_out_int[i]),
         .tx_stb(tx_stb[i]),
-        .tx_data_in(tx_data[i]),
+        .tx_data_in(tx_data_int[i]),
         .tx_data_out(tx_int[i]),
         .tx_running(tx_running[i]),
         .rx_stb(rx_stb[i]),
         .rx_data_in(rx_int[i]),
-        .rx_data_out(rx_data[i]),
+        .rx_data_out(rx_data_int[i]),
         .rx_running(rx_running[i]),
         .misc_ins(32'h0),
         .misc_outs(),
@@ -1075,12 +1118,16 @@ module n3xx_core #(
     `include "rfnoc_ce_auto_inst_n310.v"
   `elsif N300
     `include "rfnoc_ce_auto_inst_n300.v"
+  `elsif N320
+    `include "rfnoc_ce_auto_inst_n320.v"
   `endif
 `else
   `ifdef N310
     `include "rfnoc_ce_default_inst_n310.v"
   `elsif N300
     `include "rfnoc_ce_default_inst_n300.v"
+  `elsif N320
+    `include "rfnoc_ce_default_inst_n320.v"
   `endif
 `endif
 
@@ -1219,4 +1266,4 @@ module n3xx_core #(
     end
   endgenerate
 
-endmodule //n310_core
+endmodule //n3xx_core

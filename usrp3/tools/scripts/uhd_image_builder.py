@@ -102,7 +102,8 @@ def setup_parser():
     parser.add_argument(
         "-m", "--max-num-blocks", type=int,
         help="Maximum number of blocks (Max. Allowed for x310|x300: 10,\
-                for e300: 6)",
+                for e300: 14, for e320: 12, for n300: 11, \
+                for n310/n320: 10)",
         default=10)
     parser.add_argument(
         "--fill-with-fifos",
@@ -116,12 +117,12 @@ def setup_parser():
         default=None)
     parser.add_argument(
         "-d", "--device",
-        help="Device to be programmed [x300, x310, e310, n300, n310]",
+        help="Device to be programmed [x300, x310, e310, e320, n300, n310, n320]",
         default="x310")
     parser.add_argument(
         "-t", "--target",
         help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG,\
-                E310_RFNOC_sg3...]",
+                E310_RFNOC_sg3, E320_RFNOC_1G, N310_RFNOC_HG, ...]",
         default=None)
     parser.add_argument(
         "-g", "--GUI",
@@ -424,6 +425,7 @@ def device_dict(args):
         'x310':'x300',
         'e300':'e300',
         'e310':'e300',
+        'e320':'e320',
         'n300':'n3xx',
         'n310':'n3xx'
     }
@@ -431,7 +433,7 @@ def device_dict(args):
 
 def dtarget(args):
     """
-    If no target specified,  selecs the default building target based on the
+    If no target specified,  selects the default building target based on the
     targeted device
     """
     if args.target is None:
@@ -439,8 +441,10 @@ def dtarget(args):
             'x300':'X300_RFNOC_HG',
             'x310':'X310_RFNOC_HG',
             'e310':'E310_RFNOC_HLS',
+            'e320':'E320_RFNOC_1G',
             'n300':'N300_RFNOC_HG',
-            'n310':'N310_RFNOC_HG'
+            'n310':'N310_RFNOC_HG',
+            'n320':'N320_RFNOC_XG',
         }
         return default_trgt[args.device.lower()]
     else:

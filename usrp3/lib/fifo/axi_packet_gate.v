@@ -27,7 +27,7 @@
 module axi_packet_gate #(
   parameter WIDTH       = 64,   // Width of datapath
   parameter SIZE        = 10,   // log2 of the buffer size (must be >= MTU of packet)
-  parameter USE_AS_BUFF = 1     // Allow the packet gate to be used as a buffer (uses more RAM)
+  parameter USE_AS_BUFF = 0     // Allow the packet gate to be used as a buffer (uses more RAM)
 ) (
   input  wire             clk, 
   input  wire             reset, 

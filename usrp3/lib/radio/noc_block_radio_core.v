@@ -9,10 +9,11 @@
 module noc_block_radio_core #(
   parameter NOC_ID = 64'h12AD_1000_0000_0000,
   parameter NUM_CHANNELS = 1,
+  parameter WIDTH = 32,                          // Num bits width of the AXI stream data (can be 32 or 64)
   parameter STR_SINK_FIFOSIZE = {NUM_CHANNELS{8'd11}},
   parameter COMPAT_NUM_MAJOR  = 32'h1,
   parameter COMPAT_NUM_MINOR  = 32'h0,
-  parameter MTU = 10                            //Log2 of maximum packet size (in 8-byte words)
+  parameter MTU = 10                             //Log2 of maximum packet size (in 8-byte words)
 )(
   input bus_clk, input bus_rst,
   input ce_clk, input ce_rst,
@@ -22,8 +23,8 @@ module noc_block_radio_core #(
   output [NUM_CHANNELS-1:0] db_fe_set_stb, output [NUM_CHANNELS*8-1:0] db_fe_set_addr, output [NUM_CHANNELS*32-1:0] db_fe_set_data,
   input  [NUM_CHANNELS-1:0] db_fe_rb_stb,  output [NUM_CHANNELS*8-1:0] db_fe_rb_addr,  input  [NUM_CHANNELS*64-1:0] db_fe_rb_data,
   // Ports connected to radio front end
-  input  [NUM_CHANNELS*32-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb, output [NUM_CHANNELS-1:0] rx_running,
-  output [NUM_CHANNELS*32-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb, output [NUM_CHANNELS-1:0] tx_running,
+  input  [NUM_CHANNELS*WIDTH-1:0] rx, input [NUM_CHANNELS-1:0] rx_stb, output [NUM_CHANNELS-1:0] rx_running,
+  output [NUM_CHANNELS*WIDTH-1:0] tx, input [NUM_CHANNELS-1:0] tx_stb, output [NUM_CHANNELS-1:0] tx_running,
   // Interfaces to front panel and daughter board
   input pps, input sync_in, output sync_out,
   output [63:0] debug
@@ -55,7 +56,8 @@ module noc_block_radio_core #(
     .NOC_ID(NOC_ID),
     .INPUT_PORTS(NUM_CHANNELS),
     .OUTPUT_PORTS(NUM_CHANNELS),
-    .STR_SINK_FIFOSIZE(STR_SINK_FIFOSIZE),
+    .STR_SINK_FIFOSIZE({NUM_CHANNELS{STR_SINK_FIFOSIZE[7:0]}}),
+    .MTU({NUM_CHANNELS{MTU[7:0]}}),
     .USE_TIMED_CMDS(1), // Settings bus transactions will occur at the vita time specified in the command packet
     .CMD_FIFO_SIZE({NUM_CHANNELS{8'd8}}), // Up to 128 commands in flight per radio (256/2 lines per command packet = 128 untimed commands, 256/3 timed)
     .RESP_FIFO_SIZE(5)) // Provide buffering for responses to prevent mux from back pressuring
@@ -84,13 +86,13 @@ module noc_block_radio_core #(
   // Disable unused response port
   assign ackin_tready        = 1'b1;
 
-  wire [31:0]                 m_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [WIDTH-1:0]            m_axis_data_tdata[0:NUM_CHANNELS-1];
   wire [127:0]                m_axis_data_tuser[0:NUM_CHANNELS-1];
   wire [NUM_CHANNELS-1:0]     m_axis_data_tlast;
   wire [NUM_CHANNELS-1:0]     m_axis_data_tvalid;
   wire [NUM_CHANNELS-1:0]     m_axis_data_tready;
 
-  wire [31:0]                 s_axis_data_tdata[0:NUM_CHANNELS-1];
+  wire [WIDTH-1:0]            s_axis_data_tdata[0:NUM_CHANNELS-1];
   wire [127:0]                s_axis_data_tuser[0:NUM_CHANNELS-1];
   wire [NUM_CHANNELS-1:0]     s_axis_data_tlast;
   wire [NUM_CHANNELS-1:0]     s_axis_data_tvalid;
@@ -132,7 +134,8 @@ module noc_block_radio_core #(
   timekeeper #(
     .SR_TIME_HI(SR_TIME_HI),
     .SR_TIME_LO(SR_TIME_LO),
-    .SR_TIME_CTRL(SR_TIME_CTRL))
+    .SR_TIME_CTRL(SR_TIME_CTRL),
+    .INCREMENT(WIDTH == 64 ? 64'h2 : 64'h1))
   timekeeper (
     .clk(ce_clk), .reset(ce_rst), .pps(pps), .sync_in(sync_in), .strobe(rx_stb[0]),
     .set_stb(set_stb_mux), .set_addr(set_addr_mux), .set_data(set_data_mux),
@@ -163,7 +166,8 @@ module noc_block_radio_core #(
       axi_wrapper #(
         .MTU(MTU),
         .SIMPLE_MODE(0),
-        .USE_SEQ_NUM(1))
+        .USE_SEQ_NUM(1),
+        .WIDTH(WIDTH))
       axi_wrapper (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .clk(ce_clk), .reset(ce_rst),
@@ -192,7 +196,8 @@ module noc_block_radio_core #(
       );
 
       radio_datapath_core #(
-        .RADIO_NUM(i)
+        .RADIO_NUM(i),
+        .WIDTH(WIDTH)
       ) radio_datapath_core_i (
         .clk(ce_clk), .reset(ce_rst),
         .clear_rx(clear_tx_seqnum[i]), .clear_tx(clear_tx_seqnum[i]),
@@ -200,8 +205,8 @@ module noc_block_radio_core #(
         .dst_sid(next_dst_sid[16*i+15:16*i]),
         .rx_resp_dst_sid(resp_out_dst_sid[16*i+15:16*i]),
         .tx_resp_dst_sid(resp_in_dst_sid[16*i+15:16*i]),
-        .rx(rx[32*i+31:32*i]), .rx_stb(rx_stb[i]), .rx_running(rx_running[i]),
-        .tx(tx[32*i+31:32*i]), .tx_stb(tx_stb[i]), .tx_running(tx_running[i]),
+        .rx(rx[WIDTH*i+:WIDTH]), .rx_stb(rx_stb[i]), .rx_running(rx_running[i]),
+        .tx(tx[WIDTH*i+:WIDTH]), .tx_stb(tx_stb[i]), .tx_running(tx_running[i]),
         .vita_time(vita_time), .vita_time_lastpps(vita_time_lastpps),
         .set_stb(set_stb[i]), .set_addr(set_addr[8*i+7:8*i]), .set_data(set_data[32*i+31:32*i]),
         .rb_stb(rb_stb_dp[i]), .rb_addr(rb_addr[8*i+7:8*i]), .rb_data(rb_data_dp[64*i+63:64*i]), .rb_holdoff(~db_fe_rb_stb[i]),
@@ -210,7 +215,6 @@ module noc_block_radio_core #(
         .resp_tdata(resp_tdata[64*i+63:64*i]), .resp_tlast(resp_tlast[i]), .resp_tvalid(resp_tvalid[i]), .resp_tready(resp_tready[i])
       );
 
-      // Readback Radio Register
       assign rb_stb[i]             = db_fe_rb_stb[i] | rb_stb_dp[i];
       assign rb_data[64*i+63:64*i] = (rb_addr[8*i+7:8*i] >= RB_DB_FE_BASE) ? db_fe_rb_data[64*i+63:64*i] :
                                      (rb_addr[8*i+7:8*i] == RB_COMPAT_NUM) ? {COMPAT_NUM_MAJOR, COMPAT_NUM_MINOR} :

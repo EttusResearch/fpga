@@ -1,4 +1,4 @@
-  localparam NUM_CE = 2;  // Must be no more than 10 (6 ports taken by transport and IO connected CEs)
+  localparam NUM_CE = 4;  // Must be no more than 11 (5 ports taken by transport and IO connected CEs)
 
   wire [NUM_CE*64-1:0] ce_flat_o_tdata, ce_flat_i_tdata;
   wire [63:0]          ce_o_tdata[0:NUM_CE-1], ce_i_tdata[0:NUM_CE-1];
@@ -35,7 +35,9 @@
   genvar n;
   generate
     for (n = 2; n < NUM_CE; n = n + 1) begin
-      noc_block_axi_fifo_loopback inst_noc_block_axi_fifo_loopback (
+      noc_block_axi_fifo_loopback #(
+        .STR_SINK_FIFOSIZE(14)
+      ) inst_noc_block_axi_fifo_loopback (
         .bus_clk(bus_clk), .bus_rst(bus_rst),
         .ce_clk(ce_clk), .ce_rst(ce_rst),
         .i_tdata(ce_o_tdata[n]), .i_tlast(ce_o_tlast[n]), .i_tvalid(ce_o_tvalid[n]), .i_tready(ce_o_tready[n]),

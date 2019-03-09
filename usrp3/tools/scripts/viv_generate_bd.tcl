@@ -14,17 +14,40 @@ if {[info exists env(BD_IP_REPOS)]} {
 } else {
     set ip_repos {}
 }
+if {[info exists env(BD_HDL_SRCS)]} {
+    set hdl_sources $::env(BD_HDL_SRCS);# Any supporting HDL files
+} else {
+    set hdl_sources {}
+}
 
 # Delete any previous output cookie file
 file delete -force "$bd_file.out"
 # ---------------------------------------
 # Vivado Commands
 # ---------------------------------------
+create_project -part $part_name -in_memory
+# In non-project mode, the hierarchy must be updated for the HDL source files to be
+# correctly applied to the BD. See AR:
+# https://www.xilinx.com/support/answers/63488.html
+set_property source_mgmt_mode All [current_project]
+set_property ip_repo_paths "{$ip_repos}" [current_project]
+update_ip_catalog
+# Add supplementary HDL sources, if they exist.
+foreach src_file $hdl_sources {
+    set hdl_ext [file extension $src_file ]
+    if [expr [lsearch {.vhd .vhdl} $hdl_ext] >= 0] {
+        puts "BUILDER: Adding VHDL    : $src_file"
+        read_vhdl -library work $src_file
+    } elseif [expr [lsearch {.v .vh} $hdl_ext] >= 0] {
+        puts "BUILDER: Adding Verilog : $src_file"
+        read_verilog $src_file
+    } else {
+        puts "BUILDER: \[WARNING\] File ignored!!!: $src_file"
+    }
+}
+# Open .tcl or .bd design directly.
 if [expr [lsearch {.tcl} $src_ext] >= 0] {
     puts "BUILDER: Generating Block Diagram from script: $bd_file"
-    create_project -part $part_name -in_memory
-    set_property ip_repo_paths "{$ip_repos}" [current_project]
-    update_ip_catalog
     create_bd_design -dir . $bd_name
     source $bd_file
     report_ip_status
@@ -32,9 +55,6 @@ if [expr [lsearch {.tcl} $src_ext] >= 0] {
     set bd_file $bd_name.bd
 } else {
     puts "BUILDER: Adding Block Diagram: $bd_file"
-    create_project -part $part_name -in_memory
-    set_property ip_repo_paths "{$ip_repos}" [current_project]
-    update_ip_catalog
     add_files -norecurse $bd_file
     puts "BUILDER: Generating BD Target first pass..."
     generate_target all [get_files $bd_file] -force
@@ -42,6 +62,7 @@ if [expr [lsearch {.tcl} $src_ext] >= 0] {
     puts "BUILDER: Report_ip_status done"
     open_bd_design $bd_file
 }
+# Generate outputs.
 puts "BUILDER: Generating BD Target..."
 generate_target all [get_files $bd_file]
 puts "BUILDER: Generate all done"

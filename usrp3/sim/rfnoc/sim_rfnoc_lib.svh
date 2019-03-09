@@ -459,7 +459,7 @@ interface rfnoc_block_streamer #(
   // Args:
   // - cmd_pkt:  Command CVITA packet
   task automatic push_cmd_pkt (
-    output cvita_pkt_t cmd_pkt);
+    input cvita_pkt_t cmd_pkt);
     begin
       m_cvita_cmd.push_pkt(cmd_pkt);
     end

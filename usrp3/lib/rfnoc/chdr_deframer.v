@@ -6,10 +6,11 @@
 //
 // FIXME -- detect seqnum errors?
 
-module chdr_deframer
-  (input clk, input reset, input clear,
+module chdr_deframer #(
+   parameter WIDTH = 32 // Can be 32 or 64
+)( input clk, input reset, input clear,
    input [63:0] i_tdata, input i_tlast, input i_tvalid, output i_tready,
-   output [31:0] o_tdata, output [127:0] o_tuser, output o_tlast, output o_tvalid, input o_tready);
+   output [WIDTH-1:0] o_tdata, output [127:0] o_tuser, output o_tlast, output o_tvalid, input o_tready);
    
    localparam ST_HEAD = 2'd0;
    localparam ST_TIME = 2'd1;
@@ -30,7 +31,6 @@ module chdr_deframer
    wire 	 has_time = i_tdata[61];
    wire [15:0] 	 len = i_tdata[47:32];
    reg [63:0] 	 held_i_tdata;
-   reg 		 second_half;
    
    assign body_i_tdata = i_tdata;
    assign body_i_tlast = i_tlast;
@@ -78,25 +78,31 @@ module chdr_deframer
       .o_tdata({body_o_tlast, body_o_tdata}), .o_tvalid(body_o_tvalid), .o_tready(body_o_tready),
       .occupied(), .space());
 
-   wire odd_len = hdr_o_tuser[98] ^ |hdr_o_tuser[97:96];
-   
-   always @(posedge clk)
-     if(reset | clear)
-       second_half <= 1'b0;
-     else
-       if(o_tvalid & o_tready)
-	 if(o_tlast)
-	   second_half <= 1'b0;
-	 else
-	   second_half <= ~second_half;
-   
-   assign o_tdata = second_half ? body_o_tdata[31:0] : body_o_tdata[63:32];
-   assign o_tlast = body_o_tlast & (second_half | odd_len);
    assign o_tuser = hdr_o_tuser;
    assign o_tvalid = hdr_o_tvalid & body_o_tvalid;
-
    assign hdr_o_tready = o_tvalid & o_tready & o_tlast;
-   assign body_o_tready = o_tvalid & o_tready & (o_tlast | second_half);
 
+   generate if (WIDTH == 32) begin
+     reg second_half;
+     wire odd_len = hdr_o_tuser[98] ^ |hdr_o_tuser[97:96];
+
+     always @(posedge clk)
+       if(reset | clear)
+         second_half <= 1'b0;
+       else
+         if(o_tvalid & o_tready)
+           if(o_tlast)
+             second_half <= 1'b0;
+           else
+             second_half <= ~second_half;
+     
+     assign o_tdata = second_half ? body_o_tdata[31:0] : body_o_tdata[63:32];
+     assign o_tlast = body_o_tlast & (second_half | odd_len);
+     assign body_o_tready = o_tvalid & o_tready & (o_tlast | second_half);
+   end else if (WIDTH == 64) begin
+     assign o_tdata = body_o_tdata;
+     assign o_tlast = body_o_tlast;
+     assign body_o_tready = o_tvalid & o_tready;
+   end endgenerate
  
 endmodule // chdr_deframer

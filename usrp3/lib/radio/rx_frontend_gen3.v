@@ -39,7 +39,7 @@ module rx_frontend_gen3 #(
   wire [23:0]        adc_i_ofs, adc_q_ofs, adc_i_comp, adc_q_comp;
   reg  [23:0]        adc_i_ofs_dly, adc_q_ofs_dly;
   wire               adc_ofs_stb, adc_comp_stb;
-  reg                adc_ofs_stb_dly;
+  reg  [1:0]         adc_ofs_stb_dly;
   wire [23:0]        adc_i_dsp, adc_q_dsp;
   wire               adc_dsp_stb;
   wire [35:0]        corr_i, corr_q;
@@ -112,44 +112,56 @@ module rx_frontend_gen3 #(
   generate
     if (BYPASS_IQ_COMP == 0) begin
 
-      MULT_MACRO #(
-        .DEVICE(DEVICE), .LATENCY(1),
-        .WIDTH_A(18), .WIDTH_B(18))
-      mult_i (
-        .CLK(clk), .RST(reset), .CE(adc_ofs_stb),
-        .P(corr_i), .A(adc_i_ofs[23:6]), .B(mag_corr));
-      MULT_MACRO #(
-        .DEVICE(DEVICE), .LATENCY(1),
-        .WIDTH_A(18), .WIDTH_B(18))
-      mult_q (
-        .CLK(clk), .RST(reset), .CE(adc_ofs_stb),
-        .P(corr_q), .A(adc_i_ofs[23:6]), .B(phase_corr));
+      mult_add_clip #(
+        .WIDTH_A(18),
+        .BIN_PT_A(17),
+        .WIDTH_B(18),
+        .BIN_PT_B(17),
+        .WIDTH_C(24),
+        .BIN_PT_C(23),
+        .WIDTH_O(24),
+        .BIN_PT_O(23),
+        .LATENCY(2)
+      ) mult_i (
+        .clk(clk),
+        .reset(reset),
+        .CE(1'b1),
+        .A(adc_i_ofs[23:6]),
+        .B(mag_corr),
+        .C(adc_i_ofs),
+        .O(adc_i_comp)
+      );
+
+      mult_add_clip #(
+        .WIDTH_A(18),
+        .BIN_PT_A(17),
+        .WIDTH_B(18),
+        .BIN_PT_B(17),
+        .WIDTH_C(24),
+        .BIN_PT_C(23),
+        .WIDTH_O(24),
+        .BIN_PT_O(23),
+        .LATENCY(2)
+      ) mult_q (
+        .clk(clk),
+        .reset(reset),
+        .CE(1'b1),
+        .A(adc_i_ofs[23:6]),
+        .B(phase_corr),
+        .C(adc_q_ofs),
+        .O(adc_q_comp)
+      );
 
       // Delay to match path latencies
       always @(posedge clk) begin
         if (reset) begin
-          adc_ofs_stb_dly <= 1'b0;
-          adc_i_ofs_dly   <= 24'd0;
-          adc_q_ofs_dly   <= 24'd0;
+          adc_ofs_stb_dly <= 2'b0;
         end else begin
-          adc_ofs_stb_dly <= adc_ofs_stb;
-          if (adc_ofs_stb) begin
-            adc_i_ofs_dly <= adc_i_ofs;
-            adc_q_ofs_dly <= adc_q_ofs;
-          end
+          adc_ofs_stb_dly <= {adc_ofs_stb_dly[0], adc_ofs_stb};
         end
       end
 
-      add2_and_clip_reg #(.WIDTH(24))
-      add_clip_i (
-        .clk(clk), .rst(reset),
-        .in1(adc_i_ofs_dly), .in2(corr_i[35:12]), .strobe_in(adc_ofs_stb_dly),
-        .sum(adc_i_comp), .strobe_out(adc_comp_stb));
-      add2_and_clip_reg #(.WIDTH(24))
-      add_clip_q (
-        .clk(clk), .rst(reset), 
-        .in1(adc_q_ofs_dly), .in2(corr_q[35:12]), .strobe_in(adc_ofs_stb_dly),
-        .sum(adc_q_comp), .strobe_out());
+      assign adc_comp_stb = adc_ofs_stb_dly[1];
 
     end else begin
       assign adc_comp_stb = adc_ofs_stb;

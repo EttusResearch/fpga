@@ -22,7 +22,9 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - USRP X300: Kintex 7 XC7K325T (7 Series)
 - USRP X310: Kintex 7 XC7K410T (7 Series)
 - USRP E310: Zynq-7000 XC7Z020 (7 Series)
-- USRP N310: Zynq-7100 XC7Z100 (7 Series)
+- USRP E320: Zynq-7000 XC7Z045 (7 Series)
+- USRP N300: Zynq-7100 XC7Z035 (7 Series)
+- USRP N310/N320: Zynq-7100 XC7Z100 (7 Series)
 
 ### Requirements
 
@@ -79,6 +81,8 @@ The following additional packages are also required and can be selected in the G
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
   + e300: For USRP E310
+  + e320: For USRP E320
+  + n3xx: For USRP N300/N310/N320
 
 - To add vivado to the PATH and to setup up the Ettus Xilinx build environment run
   + `source setupenv.sh` (If Vivado is installed in the default path /opt/Xilinx/Vivado) _OR_
@@ -159,6 +163,58 @@ a list and usage information
 
 #### Supported Targets
 - E310:  Builds the USRP E310 design.
+
+#### Outputs
+- `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
+- `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
+- `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
+
+### E320 Targets and Outputs
+
+#### Supported Targets
+- E320_1G: 1GigE on SFP+ Port.
+- E320_XG: 10GigE on SFP+ Port.
+- E320_AA: Aurora on SFP+ Port.
+- E320_RFNOC_1G: 1GigE on SFP+ Port. RFNOC CEs enabled.
+- E320_RFNOC_XG: 10GigE on SFP+ Port. RFNOC CEs enabled.
+- E320_RFNOC_AA: Aurora on SFP+ Port. RFNOC CEs enabled.
+
+#### Outputs
+- `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
+- `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
+- `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
+
+### N3XX Targets and Outputs
+
+#### Supported Targets
+
+The targets depend on the actual hardware the FPGA image is being deployed to.
+Unlike the X300 Series, the daughterboards are an integral part of the module
+and not meant to be removed. Therefore, the target is specific to the
+combination of motherboard and daughterboards.
+
+- N300_AA: Aurora on both SFP+ ports
+- N300_HA: 1GigE on SFP0, Aurora on SFP1
+- N300_HG: 1GigE on SFP0, 10GigE on SFP1
+- N300_WX: White Rabbing on SFP0, 10GigE on SFP1
+- N300_XA: 10GigE on SFP0, Aurora on SFP1
+- N300_XG: 10GigE on both SFP+ ports
+- N310_AA: Aurora on both SFP+ ports
+- N310_HA: 1GigE on SFP0, Aurora on SFP1
+- N310_HG: 1GigE on SFP0, 10GigE on SFP1
+- N310_WX: White Rabbing on SFP0, 10GigE on SFP1
+- N310_XA: 10GigE on SFP0, Aurora on SFP1
+- N310_XG: 10GigE on both SFP+ ports
+- N320_AQ: 10GigE on both SFP+ ports, Aurora on QSFP+ ports
+- N320_HG: 1GigE on SFP0, 10GigE on SFP1
+- N320_XG: 10GigE on both SFP+ ports
+- N320_XQ: White Rabbit on SFP0, 10 GigE on QSFP0 and QSFP1
+
+For the N320 targets see also the N320 manual page on the UHD manual.
+
+All targets also support an RFNOC version (e.g. `N300_RFNOC_XG`), which enables
+custom selection of RFNoC blocks.
+
 
 #### Outputs
 - `build/usrp_<product>_fpga.bit` : Configuration bitstream with header

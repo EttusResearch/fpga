@@ -10,7 +10,8 @@ module db_control #(
   // would cause spi transactions to take a long time. WARNING: This adds a clock crossing FIFO!
   parameter USE_SPI_CLK = 0,
   parameter SR_BASE     = 160,
-  parameter RB_BASE     = 16
+  parameter RB_BASE     = 16,
+  parameter NUM_SPI_SEN = 8
 )(
   // Commands from Radio Core
   input clk, input reset,
@@ -22,7 +23,7 @@ module db_control #(
   input [31:0] fp_gpio_in, output [31:0] fp_gpio_out, output [31:0] fp_gpio_ddr, input [31:0] fp_gpio_fab,
   input [31:0] db_gpio_in, output [31:0] db_gpio_out, output [31:0] db_gpio_ddr, input [31:0] db_gpio_fab,
   output [31:0] leds,
-  input spi_clk, input spi_rst, output [7:0] sen, output sclk, output mosi, input miso
+  input spi_clk, input spi_rst, output [NUM_SPI_SEN-1:0] sen, output sclk, output mosi, input miso
 );
 
   localparam [7:0] SR_MISC_OUTS = SR_BASE + 8'd0;
@@ -137,7 +138,7 @@ module db_control #(
 
   // SPI Core instantiation
   // Note: We don't use "ready" because we use readback_stb to backpressure the settings bus
-  simple_spi_core #(.BASE(SR_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) simple_spi_core (
+  simple_spi_core #(.BASE(SR_SPI), .WIDTH(NUM_SPI_SEN), .CLK_IDLE(0), .SEN_IDLE(8'hFF)) simple_spi_core (
     .clock(spi_clk_int), .reset(spi_rst_int),
     .set_stb(spi_set_stb), .set_addr(spi_set_addr), .set_data(spi_set_data),
     .readback(spi_readback), .readback_stb(spi_readback_stb), .ready(/* Unused */),

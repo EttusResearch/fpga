@@ -175,3 +175,8 @@ set_min_delay -to $FP_GPIO_CLK 0.000
 set_input_delay -clock [get_clocks async_in_clk] 0.000 $PORT_LIST
 set_max_delay -from $PORT_LIST 50.000
 set_min_delay -from $PORT_LIST 0.000
+
+#******************************************************************************
+## Reset Sync False Path
+set_false_path -to [get_pins */synchronizer_false_path/stages[0].value_reg[0]/D]
+set_false_path -to [get_pins */synchronizer_false_path/stages[0].value_reg[0]/C]
