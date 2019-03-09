@@ -22,6 +22,7 @@ package PkgChdrUtils;
 
   // The fundamental unit of the CHDR bus, which is always a multiple of 64-bits
   typedef logic [63:0] chdr_word_t;
+  typedef chdr_word_t chdr_word_queue_t[$];
 
   // CHDR header fields
   typedef enum bit [2:0] { 
