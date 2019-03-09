@@ -72,6 +72,9 @@ $VIVADO_COMMAND $viv_args 2>&1 | while IFS= read -r line
 do
     if [[ $line != \#* ]]; then # Ignore script output
         case $(trim $line) in
+            *FATAL:*|*Fatal:*)
+                eval $ERR_CLR; echo "$line"; eval $CLR_OFF
+                ;;
             *ERROR:*|*Error:*)
                 eval $ERR_CLR; echo "$line"; eval $CLR_OFF
                 ;;
