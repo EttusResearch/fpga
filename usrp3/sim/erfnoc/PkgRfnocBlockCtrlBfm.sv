@@ -28,18 +28,28 @@ typedef struct packed {
   bit         soft_ctrl_rst;
   bit         flush_en;
   bit [31:0]  flush_timeout;
-} backend_config_t;
+} backend_config_v1_t;
 
 typedef struct packed {
-  bit [453:0] reserved0;
+  bit [445:0] reserved0;
   bit         flush_done;
   bit         flush_active;
+  bit [31:0]  noc_id;
   bit [5:0]   mtu;
   bit [5:0]   ctrl_fifosize;
   bit [5:0]   num_data_o;
   bit [5:0]   num_data_i;
-  bit [31:0]  noc_id;
+  bit [7:0]   proto_ver;
+} backend_status_v1_t;
+
+typedef union packed {
+  backend_config_v1_t v1;
+} backend_config_t;
+
+typedef union packed {
+  backend_status_v1_t v1;
 } backend_status_t;
+
 
 interface RfnocBackendIf(
   input wire logic chdr_clk,
@@ -311,7 +321,7 @@ package PkgRfnocBlockCtrlBfm;
 
   class RfnocBlockCtrlBfm #(CHDR_W = 64);
 
-    local virtual RfnocBackendIf.master bkend;
+    local virtual RfnocBackendIf.master backend;
     local RegisterIfaceBfm              ctrl;
     local ChdrDataStreamBfm             m_data[$];
     local ChdrDataStreamBfm             s_data[$];
@@ -334,11 +344,11 @@ package PkgRfnocBlockCtrlBfm;
       input   ctrl_port_t              dst_port = 10'd2,
       input   ctrl_port_t              src_port = 10'd1
     );
-      bkend = backend;
-      ctrl = new(m_ctrl, s_ctrl, dst_port, src_port);
-      bkend.chdr_rst = 0;
-      bkend.ctrl_rst = 0;
-      running = 0;
+      this.backend = backend;
+      this.ctrl = new(m_ctrl, s_ctrl, dst_port, src_port);
+      this.backend.chdr_rst = 0;
+      this.backend.ctrl_rst = 0;
+      this.running = 0;
     endfunction : new
 
     // Add a master data port. This should connect to a DUT input
@@ -375,24 +385,28 @@ package PkgRfnocBlockCtrlBfm;
     endtask : run
 
     // Get static info about the block
+    function logic [7:0] get_proto_ver();
+      return backend.sts.v1.proto_ver;
+    endfunction : get_proto_ver
+
     function logic [31:0] get_noc_id();
-      return bkend.sts.noc_id;
+      return backend.sts.v1.noc_id;
     endfunction : get_noc_id
 
     function logic [5:0] get_num_data_i();
-      return bkend.sts.num_data_i;
+      return backend.sts.v1.num_data_i;
     endfunction : get_num_data_i
 
     function logic [5:0] get_num_data_o();
-      return bkend.sts.num_data_o;
+      return backend.sts.v1.num_data_o;
     endfunction : get_num_data_o
 
     function logic [5:0] get_ctrl_fifosize();
-      return bkend.sts.ctrl_fifosize;
+      return backend.sts.v1.ctrl_fifosize;
     endfunction : get_ctrl_fifosize
 
     function logic [5:0] get_mtu();
-      return bkend.sts.mtu;
+      return backend.sts.v1.mtu;
     endfunction : get_mtu
 
     // Flush the data ports of the block
@@ -405,18 +419,18 @@ package PkgRfnocBlockCtrlBfm;
       end
 
       // Set flush timeout then wait
-      bkend.cfg.flush_timeout = idle_cyc;
-      repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
-      repeat (CMD_PROP_CYC) @(posedge bkend.chdr_clk);
+      backend.cfg.v1.flush_timeout = idle_cyc;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
       // Start flush then wait for done
-      @(posedge bkend.ctrl_clk);
-      bkend.cfg.flush_en = 1;
-      @(posedge bkend.ctrl_clk);
-      while (~bkend.sts.flush_done) @(posedge bkend.ctrl_clk);
+      @(posedge backend.ctrl_clk);
+      backend.cfg.v1.flush_en = 1;
+      @(posedge backend.ctrl_clk);
+      while (~backend.sts.v1.flush_done) @(posedge backend.ctrl_clk);
       // Deassert flush then wait
-      bkend.cfg.flush_en = 0;
-      repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
-      repeat (CMD_PROP_CYC) @(posedge bkend.chdr_clk);
+      backend.cfg.v1.flush_en = 0;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
     endtask : flush
 
     // Flush the data ports of the block then reset the CHDR
@@ -436,30 +450,30 @@ package PkgRfnocBlockCtrlBfm;
       end
 
       // Set flush timeout then wait
-      bkend.cfg.flush_timeout = idle_cyc;
-      repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
-      repeat (CMD_PROP_CYC) @(posedge bkend.chdr_clk);
+      backend.cfg.v1.flush_timeout = idle_cyc;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
       // Start flush then wait for done
-      @(posedge bkend.ctrl_clk);
-      bkend.cfg.flush_en = 1;
-      @(posedge bkend.ctrl_clk);
-      while (~bkend.sts.flush_done) @(posedge bkend.ctrl_clk);
+      @(posedge backend.ctrl_clk);
+      backend.cfg.v1.flush_en = 1;
+      @(posedge backend.ctrl_clk);
+      while (~backend.sts.v1.flush_done) @(posedge backend.ctrl_clk);
       // Assert chdr_rst then wait
-      @(posedge bkend.chdr_clk);
-      bkend.chdr_rst = 1;
-      @(posedge bkend.chdr_clk);
-      bkend.chdr_rst = 0;
-      repeat (chdr_rst_cyc) @(posedge bkend.chdr_clk);
+      @(posedge backend.chdr_clk);
+      backend.chdr_rst = 1;
+      @(posedge backend.chdr_clk);
+      backend.chdr_rst = 0;
+      repeat (chdr_rst_cyc) @(posedge backend.chdr_clk);
       // Assert chdr_rst then wait
-      @(posedge bkend.ctrl_clk);
-      bkend.ctrl_rst = 1;
-      @(posedge bkend.ctrl_clk);
-      bkend.ctrl_rst = 0;
-      repeat (ctrl_rst_cyc) @(posedge bkend.ctrl_clk);
+      @(posedge backend.ctrl_clk);
+      backend.ctrl_rst = 1;
+      @(posedge backend.ctrl_clk);
+      backend.ctrl_rst = 0;
+      repeat (ctrl_rst_cyc) @(posedge backend.ctrl_clk);
       // Deassert flush then wait
-      bkend.cfg.flush_en = 0;
-      repeat (CMD_PROP_CYC) @(posedge bkend.ctrl_clk);
-      repeat (CMD_PROP_CYC) @(posedge bkend.chdr_clk);
+      backend.cfg.v1.flush_en = 0;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
     endtask : flush_and_reset
 
 

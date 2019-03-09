@@ -113,11 +113,12 @@ module backend_iface #(
     .out({flush_active_ctclk, flush_done_ctclk})
   );
 
-  assign rfnoc_core_status[BES_NOC_ID_OFFSET       +:BES_NOC_ID_WIDTH       ] = NOC_ID;
+  assign rfnoc_core_status[BES_PROTO_VER_OFFSET    +:BES_PROTO_VER_WIDTH    ] = BACKEND_PROTO_VER;
   assign rfnoc_core_status[BES_NUM_DATA_I_OFFSET   +:BES_NUM_DATA_I_WIDTH   ] = NUM_DATA_I;
   assign rfnoc_core_status[BES_NUM_DATA_O_OFFSET   +:BES_NUM_DATA_O_WIDTH   ] = NUM_DATA_O;
   assign rfnoc_core_status[BES_CTRL_FIFOSIZE_OFFSET+:BES_CTRL_FIFOSIZE_WIDTH] = CTRL_FIFOSIZE;
   assign rfnoc_core_status[BES_MTU_OFFSET          +:BES_MTU_WIDTH          ] = MTU;
+  assign rfnoc_core_status[BES_NOC_ID_OFFSET       +:BES_NOC_ID_WIDTH       ] = NOC_ID;
   assign rfnoc_core_status[BES_FLUSH_ACTIVE_OFFSET +:BES_FLUSH_ACTIVE_WIDTH ] = flush_active_ctclk;
   assign rfnoc_core_status[BES_FLUSH_DONE_OFFSET   +:BES_FLUSH_DONE_WIDTH   ] = flush_done_ctclk;
   // Assign the rest to 0
