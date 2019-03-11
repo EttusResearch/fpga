@@ -72,12 +72,12 @@ E310_RFNOC_sg3:
 
 ##Build USRP E310 design with DRAM test.
 E310_dram_test:
-	$(call vivado_build,xc7z020,1,E310 DRAM_TEST=1)
+	$(call vivado_build,xc7z020,1,E310=1 DRAM_TEST=1)
 	$(call post_build,E310,_dram_test,)
 
 ##Build USRP E310 design with DRAM test.
 E310_dram_test_sg3:
-	$(call vivado_build,xc7z020,3,E310 DRAM_TEST=1 E3XX_SG3=1)
+	$(call vivado_build,xc7z020,3,E310=1 DRAM_TEST=1 E3XX_SG3=1)
 	$(call post_build,E310,_dram_test_,sg3)
 
 clean: ##Clean up all itarget build outputs.

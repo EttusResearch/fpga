@@ -202,7 +202,11 @@ module e310_core
     `endif
   `else
     `ifdef E310
-      `include "rfnoc_ce_default_inst_e310.v"
+      `ifdef DRAM_TEST
+        localparam NUM_CE = 0;
+      `else
+        `include "rfnoc_ce_default_inst_e310.v"
+      `endif
     `endif
   `endif
 
