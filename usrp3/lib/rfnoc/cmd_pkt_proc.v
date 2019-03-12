@@ -52,6 +52,7 @@ module cmd_pkt_proc #(
   // TODO: Eliminate extra readback address output once NoC Shell / user register readback address spaces are merged
   parameter SR_RB_ADDR = 0,         // Settings bus address to set NoC Shell readback address register
   parameter SR_RB_ADDR_USER = 1,    // Settings bus address to set user readback address register
+  parameter DEFAULT_RB_ADDR = 0,    // Default address for the readback address bus
   parameter FIFO_SIZE = 5           // Depth of command FIFO
 )(
   input clk, input reset, input clear,
@@ -150,7 +151,7 @@ module cmd_pkt_proc #(
       resp_tvalid         <= 1'b0;
       set_stb             <= 1'b0;
       set_has_time        <= 1'b0;
-      rb_addr             <= 'd0;
+      rb_addr             <= DEFAULT_RB_ADDR;
       rb_addr_user        <= 'd0;
     end else begin
       case (state)
@@ -212,6 +213,9 @@ module cmd_pkt_proc #(
               rb_addr       <= int_tdata[RB_AWIDTH-1:0];
             end else if (set_rb_addr_user) begin
               rb_addr_user  <= int_tdata[RB_USER_AWIDTH-1:0];
+              rb_addr       <= DEFAULT_RB_ADDR;
+            end else begin
+              rb_addr       <= DEFAULT_RB_ADDR;
             end
             set_stb         <= 1'b1;
             if (int_tlast) begin
