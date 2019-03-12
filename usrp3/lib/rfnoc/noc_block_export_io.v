@@ -73,7 +73,7 @@ module noc_block_export_io
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
     .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
-    .rb_stb(rb_stb), .rb_data(rb_data), .rb_addr(rb_addr),
+    .rb_stb({NUM_PORTS{1'b1}}), .rb_data(rb_data), .rb_addr(rb_addr),
     // Control Source
     .cmdout_tdata(s_cvita_cmd_tdata), .cmdout_tlast(s_cvita_cmd_tlast), .cmdout_tvalid(s_cvita_cmd_tvalid), .cmdout_tready(s_cvita_cmd_tready),
     .ackin_tdata(m_cvita_ack_tdata), .ackin_tlast(m_cvita_ack_tlast), .ackin_tvalid(m_cvita_ack_tvalid), .ackin_tready(m_cvita_ack_tready),

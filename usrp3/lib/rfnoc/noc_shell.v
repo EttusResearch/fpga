@@ -249,6 +249,7 @@ module noc_shell
          .USE_TIME(USE_TIMED_CMDS),
          .SR_RB_ADDR(SR_RB_ADDR),
          .SR_RB_ADDR_USER(SR_RB_ADDR_USER),
+         .DEFAULT_RB_ADDR(RB_USER_RB_DATA),
          .FIFO_SIZE(CMD_FIFO_SIZE[8*k+7:8*k]))
        cmd_pkt_proc (
          .clk(clk), .reset(reset), .clear(1'b0),
