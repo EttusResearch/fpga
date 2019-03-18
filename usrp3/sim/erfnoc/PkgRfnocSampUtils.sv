@@ -40,7 +40,7 @@ package PkgRfnocSampUtils;
     endfunction : samp_w
 
     // Delete the contents of this buffer
-    function delete();
+    function void delete();
       buff.delete();
     endfunction : delete
 
@@ -61,7 +61,7 @@ package PkgRfnocSampUtils;
 
     // Put and element in this buffer. If i is negative
     // then put it at the end
-    function put(data_t d, int i = -1);
+    function void put(data_t d, int i = -1);
       if (i < 0)
         buff.push_back(d);
       else
@@ -88,7 +88,7 @@ package PkgRfnocSampUtils;
     // Populate this buffer using a CHDR payload
     // A CHDR payload can be received using the block controller
     // BFM.
-    function from_chdr_payload(chdr_word_queue_t chdr_w_vtr, int bytes);
+    function void from_chdr_payload(chdr_word_queue_t chdr_w_vtr, int bytes);
       int samps_per_word = $size(chdr_word_t) / $size(data_t);
       int bytes_left = bytes;
       buff.delete();
@@ -148,7 +148,7 @@ package PkgRfnocSampUtils;
     endfunction : new
 
     // Delete the contents of this queue
-    function delete();
+    function void delete();
       queue.delete();
     endfunction : delete
 
@@ -164,7 +164,7 @@ package PkgRfnocSampUtils;
 
     // Put an element in this buffer. If i is negative
     // then put it at the end
-    function put(SampDataBuff #(data_t) buff, int i = -1);
+    function void put(SampDataBuff #(data_t) buff, int i = -1);
       if (i < 0)
         queue.push_back(buff);
       else
