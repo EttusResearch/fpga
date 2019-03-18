@@ -25,11 +25,16 @@
 		status = "okay";
 
 		phy-mode = "xgmii";
-		phy-handle = <&ethernet_phy1>;
 
-		ethernet_phy1: ethernet-phy@4 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <4>;
+		fixed-link {
+			speed = <1000>;
+			full-duplex;
+ 			/* 114 = 54 (MIOs) + 60 (EMIO 60) */
+ 			link-gpios = <&gpio0 114 0>;
+		};
+
+		mdio {
+
 		};
 	};
 
