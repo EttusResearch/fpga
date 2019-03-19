@@ -27,9 +27,11 @@
 		phy-mode = "xgmii";
 		phy-handle = <&ethernet_phy1>;
 
-		ethernet_phy1: ethernet-phy@4 {
-			compatible = "ethernet-phy-ieee802.3-c45";
-			reg = <4>;
+		mdio {
+			ethernet_phy1: ethernet-phy@4 {
+				compatible = "ethernet-phy-ieee802.3-c45";
+				reg = <4>;
+			};
 		};
 	};
 
@@ -58,9 +60,11 @@
 		phy-mode = "xgmii";
 		phy-handle = <&ethernet_phy2>;
 
-		ethernet_phy2: ethernet-phy@4 {
-			compatible = "ethernet-phy-ieee802.3-c45";
-			reg = <4>;
+		mdio {
+			ethernet_phy2: ethernet-phy@4 {
+				compatible = "ethernet-phy-ieee802.3-c45";
+				reg = <4>;
+			};
 		};
 	};
 
