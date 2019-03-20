@@ -449,7 +449,7 @@ module noc_block_radio_core_tb;
     `ASSERT_ERROR(noc_id == noc_block_radio_core.NOC_ID, "Incorrect NOC ID");
     // Test read back fifo size on one block. All setup using default STR_SINK_FIFO_SIZE from noc_shell of each block
     read_fifo_size_reg(0,fifo_size);
-    `ASSERT_ERROR(fifo_size == 2**(noc_block_radio_core.noc_shell.STR_SINK_FIFOSIZE[0 +: 8]+3),"Wrong FIFO Size");
+    `ASSERT_ERROR((fifo_size & 32'hFFFFFFFF) == 2**(noc_block_radio_core.noc_shell.STR_SINK_FIFOSIZE[0 +: 8]+3),"Wrong FIFO Size");
     `TEST_CASE_DONE(1);
 
     /********************************************************
