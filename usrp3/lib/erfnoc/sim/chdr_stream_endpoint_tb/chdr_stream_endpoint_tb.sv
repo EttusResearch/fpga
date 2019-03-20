@@ -716,20 +716,22 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_pl.ops[1] = '{  // Hop 2: Write destination EPID
-          op_payload:{16'h0, epids[1-i], sep_a.REG_OSTRM_DST_EPID}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd6};
+          op_payload:{16'h0, epids[1-i], sep_a.REG_OSTRM_DST_EPID}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd7};
         tx_mgmt_pl.ops[2] = '{  // Hop 2: Configure flow ack control freq
-          op_payload:{32'd50, sep_a.REG_OSTRM_FC_FREQ_BYTES_LO}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd5};
+          op_payload:{32'd50, sep_a.REG_OSTRM_FC_FREQ_BYTES_LO}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd6};
         tx_mgmt_pl.ops[3] = '{  // Hop 2: Configure flow ack control freq
-          op_payload:{32'd0, sep_a.REG_OSTRM_FC_FREQ_BYTES_HI}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd4};
+          op_payload:{32'd0, sep_a.REG_OSTRM_FC_FREQ_BYTES_HI}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd5};
         tx_mgmt_pl.ops[4] = '{  // Hop 2: Configure flow ack control freq
-          op_payload:{32'd1000, sep_a.REG_OSTRM_FC_FREQ_PKTS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd3};
+          op_payload:{32'd1000, sep_a.REG_OSTRM_FC_FREQ_PKTS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd4};
         tx_mgmt_pl.ops[5] = '{  // Hop 2: Configure flow headroom
-          op_payload:{32'd0, sep_a.REG_OSTRM_FC_HEADROOM}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd2};
-        tx_mgmt_pl.ops[6] = '{  // Hop 2: Configure lossy and start config
-          op_payload:{32'd3, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1};
-        tx_mgmt_pl.ops[7] = '{  // Hop 2: Stream Endpoint: Return 
+          op_payload:{32'd0, sep_a.REG_OSTRM_FC_HEADROOM}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd3};
+        tx_mgmt_pl.ops[6] = '{  // Hop 2: Configure word swapping
+          op_payload:{32'd4, sep_a.REG_ISTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd2}; // Swap 32-bit words
+        tx_mgmt_pl.ops[7] = '{  // Hop 2: Configure lossy and start config
+          op_payload:{32'd7, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1}; // Swap 32-bit words, lossy and reset
+        tx_mgmt_pl.ops[8] = '{  // Hop 2: Stream Endpoint: Return 
           op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
-        tx_mgmt_pl.ops[8] = '{  // Hop 3: Nop for return
+        tx_mgmt_pl.ops[9] = '{  // Hop 3: Nop for return
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_hdr = '{
           pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};
@@ -774,7 +776,7 @@ module chdr_stream_endpoint_tb;
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
         test.assert_error(rx_mgmt_pl.header.num_hops == 1,
           "Config SEP: Mgmt header was incorrect");
-        exp_mgmt_op = '{op_payload:{32'h80000002, sep_a.REG_OSTRM_CTRL_STATUS},   // FC on, no errors and lossy
+        exp_mgmt_op = '{op_payload:{32'h80000006, sep_a.REG_OSTRM_CTRL_STATUS},   // FC on, no errors and lossy
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd7};
         test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{((1<<(MTU+1))*(CHDR_W/8)-1), sep_a.REG_OSTRM_BUFF_CAP_BYTES_LO},
@@ -1012,11 +1014,13 @@ module chdr_stream_endpoint_tb;
 
         tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
-        tx_mgmt_pl.ops[1] = '{  // Hop 2: Configure lossy and start config
+        tx_mgmt_pl.ops[1] = '{  // Hop 2: Disable swapping
+          op_payload:{32'd0, sep_a.REG_ISTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd2};
+        tx_mgmt_pl.ops[2] = '{  // Hop 2: Configure lossy and start config
           op_payload:{32'd3, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1};
-        tx_mgmt_pl.ops[2] = '{  // Hop 2: Stream Endpoint: Return 
+        tx_mgmt_pl.ops[3] = '{  // Hop 2: Stream Endpoint: Return 
           op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
-        tx_mgmt_pl.ops[3] = '{  // Hop 3: Nop for return
+        tx_mgmt_pl.ops[4] = '{  // Hop 3: Nop for return
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_hdr = '{
           pkt_type:CHDR_MANAGEMENT, seq_num:cached_mgmt_seqnum++, dst_epid:epids[i], default:'0};

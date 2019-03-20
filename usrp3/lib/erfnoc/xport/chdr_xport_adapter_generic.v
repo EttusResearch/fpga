@@ -13,6 +13,7 @@
 //     packet. For all returning packets, the metadata will be looked up in
 //     the map and attached as the outgoing tuser.
 //   - Implements a loopback path for node-info discovery
+//   - Converts data stream to/from "RFNoC Network Order" (64-bit-Big-Endian)
 //
 // Parameters:
 //   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
@@ -44,24 +45,24 @@ module chdr_xport_adapter_generic #(
   input  wire               rst,
   // Device info
   input  wire [15:0]        device_id,
-  // Context stream in (AXI-Stream)
+  // Transport stream in (AXI-Stream)
   input  wire [CHDR_W-1:0]  s_axis_xport_tdata,
   input  wire [USER_W-1:0]  s_axis_xport_tuser,
   input  wire               s_axis_xport_tlast,
   input  wire               s_axis_xport_tvalid,
   output wire               s_axis_xport_tready,
-  // Context stream out (AXI-Stream)
+  // Transport stream out (AXI-Stream)
   output wire [CHDR_W-1:0]  m_axis_xport_tdata,
   output wire [USER_W-1:0]  m_axis_xport_tuser,
   output wire               m_axis_xport_tlast,
   output wire               m_axis_xport_tvalid,
   input  wire               m_axis_xport_tready,
-
+  // RFNoC stream in (AXI-Stream)
   input  wire [CHDR_W-1:0]  s_axis_rfnoc_tdata,
   input  wire               s_axis_rfnoc_tlast,
   input  wire               s_axis_rfnoc_tvalid,
   output wire               s_axis_rfnoc_tready,
-  // Context stream out (AXI-Stream)
+  // RFNoC stream out (AXI-Stream)
   output wire [CHDR_W-1:0]  m_axis_rfnoc_tdata,
   output wire               m_axis_rfnoc_tlast,
   output wire               m_axis_rfnoc_tvalid,
@@ -80,6 +81,45 @@ module chdr_xport_adapter_generic #(
   // ---------------------------------------------------
   `include "../core/rfnoc_chdr_utils.vh"
   `include "../core/rfnoc_chdr_internal_utils.vh"
+
+  // ---------------------------------------------------
+  // Reverse groups of 64-bit words to translate
+  // stream to "RFNoC Network Order" i.e. Big-Endian
+  // in groups of 8 bytes
+  // ---------------------------------------------------
+  wire [CHDR_W-1:0]  i_xport_tdata;
+  wire [USER_W-1:0]  i_xport_tuser;
+  wire               i_xport_tlast, i_xport_tvalid, i_xport_tready;
+  wire [CHDR_W-1:0]  o_xport_tdata;
+  wire [USER_W-1:0]  o_xport_tuser;
+  wire               o_xport_tlast, o_xport_tvalid, o_xport_tready;
+
+  localparam [$clog2(CHDR_W)-1:0] SWAP_LANES = ((CHDR_W / 64) - 1) << 6;
+
+  axis_data_swap #(
+    .DATA_W(CHDR_W), .USER_W(USER_W), .STAGES_EN(SWAP_LANES), .DYNAMIC(0)
+  ) xport_in_swap_i (
+    .clk(clk), .rst(rst),
+    .s_axis_tdata(s_axis_xport_tdata), .s_axis_tswap('h0),
+    .s_axis_tuser(s_axis_xport_tuser), .s_axis_tlast(s_axis_xport_tlast),
+    .s_axis_tvalid(s_axis_xport_tvalid), .s_axis_tready(s_axis_xport_tready),
+    .m_axis_tdata (i_xport_tdata), .m_axis_tuser (i_xport_tuser),
+    .m_axis_tlast (i_xport_tlast),
+    .m_axis_tvalid(i_xport_tvalid), .m_axis_tready(i_xport_tready)
+  );
+
+  axis_data_swap #(
+    .DATA_W(CHDR_W), .USER_W(USER_W), .STAGES_EN(SWAP_LANES), .DYNAMIC(0)
+  ) xport_out_swap_i (
+    .clk(clk), .rst(rst),
+    .s_axis_tdata(o_xport_tdata), .s_axis_tswap('h0),
+    .s_axis_tuser(o_xport_tuser), .s_axis_tlast(o_xport_tlast),
+    .s_axis_tvalid(o_xport_tvalid), .s_axis_tready(o_xport_tready),
+    .m_axis_tdata (m_axis_xport_tdata), .m_axis_tuser (m_axis_xport_tuser),
+    .m_axis_tlast (m_axis_xport_tlast),
+    .m_axis_tvalid(m_axis_xport_tvalid), .m_axis_tready(m_axis_xport_tready)
+  );
+
 
   wire [CHDR_W-1:0] x2d_tdata;  // Xport => Demux
   wire [1:0]        x2d_tid;
@@ -100,8 +140,8 @@ module chdr_xport_adapter_generic #(
   ) mgmt_ep_i (
     .clk(clk), .rst(rst),
     .node_info(chdr_mgmt_build_node_info(device_id, 1, NODE_INST, NODE_TYPE)),
-    .s_axis_chdr_tdata(s_axis_xport_tdata), .s_axis_chdr_tlast(s_axis_xport_tlast),
-    .s_axis_chdr_tvalid(s_axis_xport_tvalid), .s_axis_chdr_tready(s_axis_xport_tready),
+    .s_axis_chdr_tdata(i_xport_tdata), .s_axis_chdr_tlast(i_xport_tlast),
+    .s_axis_chdr_tvalid(i_xport_tvalid), .s_axis_chdr_tready(i_xport_tready),
     .m_axis_chdr_tdata(x2d_tdata), .m_axis_chdr_tlast(x2d_tlast),
     .m_axis_chdr_tdest(/* unused */), .m_axis_chdr_tid(x2d_tid),
     .m_axis_chdr_tvalid(x2d_tvalid), .m_axis_chdr_tready(x2d_tready),
@@ -119,7 +159,7 @@ module chdr_xport_adapter_generic #(
     .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE), .NUM_PORTS(1)
   ) kv_map_i (
     .clk(clk), .reset(rst),
-    .axis_insert_tdata(s_axis_xport_tuser), .axis_insert_tdest(op_src_epid),
+    .axis_insert_tdata(i_xport_tuser), .axis_insert_tdest(op_src_epid),
     .axis_insert_tvalid(op_stb), .axis_insert_tready(/* Time between op_stb > Insertion time */),
     .axis_find_tdata(chdr_get_dst_epid(s_axis_rfnoc_tdata[63:0])),
     .axis_find_tvalid(find_tvalid), .axis_find_tready(find_tready),
@@ -160,14 +200,14 @@ module chdr_xport_adapter_generic #(
   // ---------------------------------------------------
 
   wire m2x_tvalid_tmp, m2x_tready_tmp;
-  wire m_axis_xport_tvalid_tmp, m_axis_xport_tready_tmp;
+  wire o_xport_tvalid_tmp, o_xport_tready_tmp;
 
   axi_fifo #(.WIDTH(CHDR_W + 1), .SIZE(1)) ret_flop_i (
     .clk(clk), .reset(rst), .clear(1'b0),
     .i_tdata({m2x_tlast, m2x_tdata}),
     .i_tvalid(m2x_tvalid_tmp), .i_tready(m2x_tready_tmp),
-    .o_tdata({m_axis_xport_tlast, m_axis_xport_tdata}),
-    .o_tvalid(m_axis_xport_tvalid_tmp), .o_tready(m_axis_xport_tready_tmp),
+    .o_tdata({o_xport_tlast, o_xport_tdata}),
+    .o_tvalid(o_xport_tvalid_tmp), .o_tready(o_xport_tready_tmp),
     .space(), .occupied()
   );
 
@@ -183,8 +223,8 @@ module chdr_xport_adapter_generic #(
   always @(posedge clk) begin
     if (rst)
       o_hdr <= 1'b0;
-    else if (m_axis_xport_tvalid && m_axis_xport_tready)
-      o_hdr <= m_axis_xport_tlast;
+    else if (o_xport_tvalid && o_xport_tready)
+      o_hdr <= o_xport_tlast;
   end
 
   assign m2x_tready = m2x_tvalid & 
@@ -194,9 +234,9 @@ module chdr_xport_adapter_generic #(
   assign m2x_tvalid_tmp = m2x_tvalid & m2x_tready;
   assign find_tvalid = m2x_tvalid & i_hdr & m2x_tready;
 
-  assign m_axis_xport_tvalid = m_axis_xport_tvalid_tmp & (o_hdr ? result_tvalid : 1'b0);
-  assign m_axis_xport_tuser = result_tkeep ? result_tdata : {USER_W{1'b0}};
-  assign result_tready = m_axis_xport_tready && m_axis_xport_tvalid;
-  assign m_axis_xport_tready_tmp = m_axis_xport_tready && m_axis_xport_tvalid;
+  assign o_xport_tvalid = o_xport_tvalid_tmp & (o_hdr ? result_tvalid : 1'b0);
+  assign o_xport_tuser = result_tkeep ? result_tdata : {USER_W{1'b0}};
+  assign result_tready = o_xport_tready && o_xport_tvalid;
+  assign o_xport_tready_tmp = o_xport_tready && o_xport_tvalid;
 
 endmodule // chdr_xport_adapter_generic

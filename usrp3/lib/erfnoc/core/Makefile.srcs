@@ -22,6 +22,7 @@ chdr_to_axis_raw_data.v \
 axis_raw_data_to_chdr.v \
 chdr_ingress_fifo.v \
 chdr_mgmt_pkt_handler.v \
+chdr_data_swapper.v \
 chdr_stream_endpoint.v \
 chdr_stream_input.v \
 chdr_stream_output.v \

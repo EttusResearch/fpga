@@ -247,6 +247,7 @@ module chdr_stream_endpoint #(
   localparam [15:0] REG_OSTRM_SEQ_ERR_CNT       = 16'h30;   //R
   localparam [15:0] REG_OSTRM_DATA_ERR_CNT      = 16'h34;   //R
   localparam [15:0] REG_OSTRM_ROUTE_ERR_CNT     = 16'h38;   //R
+  localparam [15:0] REG_ISTRM_CTRL_STATUS       = 16'h3C;   //RW
 
   // Configurable registers
   reg  [15:0] reg_epid_self          = 16'h0;
@@ -256,11 +257,15 @@ module chdr_stream_endpoint #(
   wire        reg_ostrm_cfg_pending;
   wire        reg_ostrm_cfg_failed;
   reg         reg_ostrm_cfg_lossy_xport = 1'b0;
+  reg  [1:0]  reg_ostrm_cfg_pyld_sw_buff = 2'd0;
+  reg  [1:0]  reg_ostrm_cfg_mdata_sw_buff = 2'd0;
   reg  [15:0] reg_ostrm_dst_epid     = 16'h0;
   reg  [39:0] reg_fc_freq_bytes      = 40'h0;
   reg  [23:0] reg_fc_freq_pkts       = 24'h0;
   reg  [15:0] reg_fc_headroom_bytes  = 16'd0;
   reg  [7:0]  reg_fc_headroom_pkts   = 8'd0;
+  reg  [1:0]  reg_istrm_cfg_pyld_sw_buff = 2'd0;
+  reg  [1:0]  reg_istrm_cfg_mdata_sw_buff = 2'd0;
   wire        reg_fc_enabled;
   wire [63:0] reg_buff_cap_bytes;
   wire [39:0] reg_buff_cap_pkts;
@@ -282,7 +287,8 @@ module chdr_stream_endpoint #(
           REG_RESET_AND_FLUSH:
             {reg_ctrlpath_reset, reg_datapath_reset} <= ctrlport_req_data[1:0];
           REG_OSTRM_CTRL_STATUS:
-            {reg_ostrm_cfg_lossy_xport, reg_ostrm_cfg_start} <= ctrlport_req_data[1:0];
+            {reg_ostrm_cfg_mdata_sw_buff, reg_ostrm_cfg_pyld_sw_buff,
+             reg_ostrm_cfg_lossy_xport, reg_ostrm_cfg_start} <= ctrlport_req_data[5:0];
           REG_OSTRM_DST_EPID:
             reg_ostrm_dst_epid <= ctrlport_req_data[15:0];
           REG_OSTRM_FC_FREQ_BYTES_LO:
@@ -293,6 +299,8 @@ module chdr_stream_endpoint #(
             reg_fc_freq_pkts <= ctrlport_req_data[23:0];
           REG_OSTRM_FC_HEADROOM:
             {reg_fc_headroom_pkts, reg_fc_headroom_bytes} <= ctrlport_req_data[23:0];
+          REG_ISTRM_CTRL_STATUS:
+            {reg_istrm_cfg_mdata_sw_buff, reg_istrm_cfg_pyld_sw_buff} <= ctrlport_req_data[5:2];
         endcase
       end else begin
         // Strobed registers
@@ -307,8 +315,9 @@ module chdr_stream_endpoint #(
             ctrlport_resp_data <= {16'h0, reg_epid_self};
           REG_OSTRM_CTRL_STATUS:
             ctrlport_resp_data <= {
-              reg_fc_enabled, reg_ostrm_cfg_failed, reg_ostrm_cfg_pending, 1'b0,
-              26'h0, reg_ostrm_cfg_lossy_xport, 1'b0};
+              reg_fc_enabled, reg_ostrm_cfg_failed, reg_ostrm_cfg_pending, 23'h0,
+              reg_ostrm_cfg_mdata_sw_buff, reg_ostrm_cfg_pyld_sw_buff,
+              reg_ostrm_cfg_lossy_xport, 1'b0};
           REG_OSTRM_BUFF_CAP_BYTES_LO:
             ctrlport_resp_data <= reg_buff_cap_bytes[31:0];
           REG_OSTRM_BUFF_CAP_BYTES_HI:
@@ -323,6 +332,9 @@ module chdr_stream_endpoint #(
             ctrlport_resp_data <= reg_data_err_cnt;
           REG_OSTRM_ROUTE_ERR_CNT:
             ctrlport_resp_data <= reg_route_err_cnt;
+          REG_ISTRM_CTRL_STATUS:
+            ctrlport_resp_data <= {
+              26'h0, reg_istrm_cfg_mdata_sw_buff, reg_istrm_cfg_pyld_sw_buff, 2'b0};
           default:
             ctrlport_resp_data <= 32'h0;
         endcase
@@ -336,31 +348,35 @@ module chdr_stream_endpoint #(
   generate if (AXIS_DATA_EN) begin: datapath
     localparam INPUT_FLUSH_TIMEOUT_W = SIM_SPEEDUP ? 6 : 14;
 
-    wire [CHDR_W-1:0] axis_data_i_tdata,  axis_data_o_tdata;
-    wire              axis_data_i_tlast,  axis_data_o_tlast;
-    wire              axis_data_i_tvalid, axis_data_o_tvalid;
-    wire              axis_data_i_tready, axis_data_o_tready;
-  
-    chdr_stream_input #(
-      .CHDR_W(CHDR_W), .BUFF_SIZE(INGRESS_BUFF_SIZE),
-      .FLUSH_TIMEOUT_W(INPUT_FLUSH_TIMEOUT_W),
-      .MONITOR_EN(0), .SIGNAL_ERRS(REPORT_STRM_ERRS)
-    ) strm_input_i (
-      .clk                  (rfnoc_chdr_clk),
-      .rst                  (rfnoc_chdr_rst | reg_datapath_reset),
-      .s_axis_chdr_tdata    (data_i_tdata),
-      .s_axis_chdr_tlast    (data_i_tlast),
-      .s_axis_chdr_tvalid   (data_i_tvalid),
-      .s_axis_chdr_tready   (data_i_tready),
-      .m_axis_data_tdata    (axis_data_o_tdata),
-      .m_axis_data_tlast    (axis_data_o_tlast),
-      .m_axis_data_tvalid   (axis_data_o_tvalid),
-      .m_axis_data_tready   (axis_data_o_tready),
-      .m_axis_strs_tdata    (strs_o_tdata),
-      .m_axis_strs_tlast    (strs_o_tlast),
-      .m_axis_strs_tvalid   (strs_o_tvalid),
-      .m_axis_strs_tready   (strs_o_tready),
-      .data_err_stb         (signal_data_err)
+    // Data => CHDR
+    //-------------
+    wire [CHDR_W-1:0] axis_di_tdata,  axis_dis_tdata;
+    wire              axis_di_tlast,  axis_dis_tlast;
+    wire              axis_di_tvalid, axis_dis_tvalid;
+    wire              axis_di_tready, axis_dis_tready;
+
+    axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) axis_s_reg_i (
+      .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst | reg_datapath_reset), .clear(1'b0),
+      .i_tdata({s_axis_data_tlast, s_axis_data_tdata}),
+      .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
+      .o_tdata({axis_di_tlast, axis_di_tdata}),
+      .o_tvalid(axis_di_tvalid), .o_tready(axis_di_tready),
+      .space(), .occupied()
+    );
+
+    chdr_data_swapper #( .CHDR_W(CHDR_W)) di_swap_i (
+      .clk            (rfnoc_chdr_clk),
+      .rst            (rfnoc_chdr_rst | reg_datapath_reset),
+      .payload_sw_buff(reg_ostrm_cfg_pyld_sw_buff),
+      .mdata_sw_buff  (reg_ostrm_cfg_mdata_sw_buff),
+      .s_axis_tdata   (axis_di_tdata),
+      .s_axis_tlast   (axis_di_tlast),
+      .s_axis_tvalid  (axis_di_tvalid),
+      .s_axis_tready  (axis_di_tready),
+      .m_axis_tdata   (axis_dis_tdata),
+      .m_axis_tlast   (axis_dis_tlast),
+      .m_axis_tvalid  (axis_dis_tvalid),
+      .m_axis_tready  (axis_dis_tready)
     );
 
     chdr_stream_output #(
@@ -372,10 +388,10 @@ module chdr_stream_endpoint #(
       .m_axis_chdr_tlast    (data_o_tlast),
       .m_axis_chdr_tvalid   (data_o_tvalid),
       .m_axis_chdr_tready   (data_o_tready),
-      .s_axis_data_tdata    (axis_data_i_tdata),
-      .s_axis_data_tlast    (axis_data_i_tlast),
-      .s_axis_data_tvalid   (axis_data_i_tvalid),
-      .s_axis_data_tready   (axis_data_i_tready),
+      .s_axis_data_tdata    (axis_dis_tdata),
+      .s_axis_data_tlast    (axis_dis_tlast),
+      .s_axis_data_tvalid   (axis_dis_tvalid),
+      .s_axis_data_tready   (axis_dis_tready),
       .s_axis_strs_tdata    (strs_i_tdata),
       .s_axis_strs_tlast    (strs_i_tlast),
       .s_axis_strs_tvalid   (strs_i_tvalid),
@@ -401,24 +417,61 @@ module chdr_stream_endpoint #(
       .route_err_cnt        (reg_route_err_cnt)
     );
 
+    // Data => CHDR
+    //-------------
+    wire [CHDR_W-1:0] axis_do_tdata,  axis_dos_tdata;
+    wire              axis_do_tlast,  axis_dos_tlast;
+    wire              axis_do_tvalid, axis_dos_tvalid;
+    wire              axis_do_tready, axis_dos_tready;
+
+    chdr_stream_input #(
+      .CHDR_W(CHDR_W), .BUFF_SIZE(INGRESS_BUFF_SIZE),
+      .FLUSH_TIMEOUT_W(INPUT_FLUSH_TIMEOUT_W),
+      .MONITOR_EN(0), .SIGNAL_ERRS(REPORT_STRM_ERRS)
+    ) strm_input_i (
+      .clk                  (rfnoc_chdr_clk),
+      .rst                  (rfnoc_chdr_rst | reg_datapath_reset),
+      .s_axis_chdr_tdata    (data_i_tdata),
+      .s_axis_chdr_tlast    (data_i_tlast),
+      .s_axis_chdr_tvalid   (data_i_tvalid),
+      .s_axis_chdr_tready   (data_i_tready),
+      .m_axis_data_tdata    (axis_do_tdata),
+      .m_axis_data_tlast    (axis_do_tlast),
+      .m_axis_data_tvalid   (axis_do_tvalid),
+      .m_axis_data_tready   (axis_do_tready),
+      .m_axis_strs_tdata    (strs_o_tdata),
+      .m_axis_strs_tlast    (strs_o_tlast),
+      .m_axis_strs_tvalid   (strs_o_tvalid),
+      .m_axis_strs_tready   (strs_o_tready),
+      .data_err_stb         (signal_data_err)
+    );
+
+    chdr_data_swapper #( .CHDR_W(CHDR_W)) do_swap_i (
+      .clk            (rfnoc_chdr_clk),
+      .rst            (rfnoc_chdr_rst | reg_datapath_reset),
+      .payload_sw_buff(reg_istrm_cfg_pyld_sw_buff),
+      .mdata_sw_buff  (reg_istrm_cfg_mdata_sw_buff),
+      .s_axis_tdata   (axis_do_tdata),
+      .s_axis_tlast   (axis_do_tlast),
+      .s_axis_tvalid  (axis_do_tvalid),
+      .s_axis_tready  (axis_do_tready),
+      .m_axis_tdata   (axis_dos_tdata),
+      .m_axis_tlast   (axis_dos_tlast),
+      .m_axis_tvalid  (axis_dos_tvalid),
+      .m_axis_tready  (axis_dos_tready)
+    );
+
     axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) axis_m_reg_i (
       .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst | reg_datapath_reset), .clear(1'b0),
-      .i_tdata({axis_data_o_tlast, axis_data_o_tdata}),
-      .i_tvalid(axis_data_o_tvalid), .i_tready(axis_data_o_tready),
+      .i_tdata({axis_dos_tlast, axis_dos_tdata}),
+      .i_tvalid(axis_dos_tvalid), .i_tready(axis_dos_tready),
       .o_tdata({m_axis_data_tlast, m_axis_data_tdata}),
       .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready),
       .space(), .occupied()
     );
-  
-    axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) axis_s_reg_i (
-      .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst | reg_datapath_reset), .clear(1'b0),
-      .i_tdata({s_axis_data_tlast, s_axis_data_tdata}),
-      .i_tvalid(s_axis_data_tvalid), .i_tready(s_axis_data_tready),
-      .o_tdata({axis_data_i_tlast, axis_data_i_tdata}),
-      .o_tvalid(axis_data_i_tvalid), .o_tready(axis_data_i_tready),
-      .space(), .occupied()
-    );
+
   end else begin    // if (AXIS_DATA_EN)
+
     assign data_i_tready = 1'b1;
     assign data_o_tdata  = {CHDR_W{1'b0}};
     assign data_o_tlast  = 1'b0;
@@ -433,12 +486,14 @@ module chdr_stream_endpoint #(
     assign m_axis_data_tdata  = {CHDR_W{1'b0}};
     assign m_axis_data_tlast  = 1'b0;
     assign m_axis_data_tvalid = 1'b0;
+
   end endgenerate
 
   // ---------------------------------------------------
   //  Control Path 
   // ---------------------------------------------------
   generate if (AXIS_CTRL_EN) begin: ctrlpath
+
     // Convert from a CHDR control packet to an AXIS control packet
     chdr_to_axis_ctrl #(
       .CHDR_W(CHDR_W), .THIS_PORTID(CTRL_XBAR_PORT)
@@ -465,7 +520,9 @@ module chdr_stream_endpoint #(
       .m_rfnoc_ctrl_tvalid(m_axis_ctrl_tvalid),
       .m_rfnoc_ctrl_tready(m_axis_ctrl_tready)
     );
+
   end else begin    // if (AXIS_CTRL_EN)
+
     assign ctrl_i_tready = 1'b1;
     assign ctrl_o_tdata  = {CHDR_W{1'b0}};
     assign ctrl_o_tlast  = 1'b0;
@@ -475,6 +532,7 @@ module chdr_stream_endpoint #(
     assign m_axis_ctrl_tdata  = 32'h0;
     assign m_axis_ctrl_tlast  = 1'b0;
     assign m_axis_ctrl_tvalid = 1'b0;
+
   end endgenerate
 
 endmodule // chdr_stream_endpoint
