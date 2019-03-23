@@ -31,7 +31,7 @@ module rx_frontend_gen3 #(
   wire               bypass_all;
   wire [1:0]         iq_map_reserved;
   wire [17:0]        mag_corr, phase_corr;
-  wire               phase_dir;
+  wire [31:0]        phase_incr;
   wire               phase_reset;
 
   reg  [23:0]        adc_i_mux, adc_q_mux;
@@ -60,12 +60,9 @@ module rx_frontend_gen3 #(
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
     .in(set_data),.out({bypass_all,iq_map_reserved,realmode_decim,invert_i,invert_q,realmode,swap_iq}),.changed());
 
-  // Setting reg: 1 bit to set phase direction: default to 0:
-  //   direction bit == 0: the phase is increased by pi/2 (counter clockwise)
-  //   direction bit == 1: the phase is increased by -pi/2 (clockwise)
-  setting_reg #(.my_addr(SR_HET_PHASE_INCR), .width(1)) sr_phase_dir (
+  setting_reg #(.my_addr(SR_HET_PHASE_INCR), .width(32)) sr_het_phase_incr (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-    .in(set_data),.out(phase_dir),.changed(phase_reset));
+    .in(set_data),.out(phase_incr),.changed(phase_reset));
 
   /********************************************************
   ** IQ Mapping (swapping, inversion, real-mode)
@@ -178,54 +175,58 @@ module rx_frontend_gen3 #(
   generate
     if (BYPASS_REALMODE_DSP == 0) begin
 
+      wire [24:0] adc_i_dsp_cin, adc_q_dsp_cin;
       wire [24:0] adc_i_dsp_cout, adc_q_dsp_cout;
       wire [23:0] adc_i_cclip, adc_q_cclip;
-      wire [23:0] adc_i_hb, adc_q_hb;
-      wire [23:0] adc_i_dec, adc_q_dec;
-      wire        adc_dsp_cout_stb;
+      wire [46:0] adc_i_hb, adc_q_hb;
+      wire        adc_dsp_cin_stb, adc_dsp_cout_stb;
       wire        adc_cclip_stb;
       wire        adc_hb_stb;
 
-      wire valid_hbf0;
-      wire valid_hbf1;
-      wire valid_dec0;
-      wire valid_dec1;
+      // NCO for CORDIC
+      reg [31:0] phase;
+      always @(posedge clk) begin
+        if (reset || phase_reset || sync_in)
+          phase <= 32'd0;
+        else if (adc_dsp_cin_stb)
+          phase <= phase + phase_incr;
+      end
 
-      // 90 degree mixer
-      quarter_rate_downconverter #(.WIDTH(24)) qr_dc_i(
-        .clk(clk), .reset(reset || sync_in),
-        .i_tdata({adc_i_comp, adc_q_comp}), .i_tlast(1'b1), .i_tvalid(adc_comp_stb), .i_tready(),
-        .o_tdata({adc_i_dsp_cout, adc_q_dsp_cout}), .o_tlast(), .o_tvalid(adc_dsp_cout_stb), .o_tready(1'b1),
-        .dirctn(phase_dir));
+      sign_extend #(.bits_in(24), .bits_out(25)) sign_extend_cordic_i (
+        .in(adc_i_comp), .out(adc_i_dsp_cin));
+      sign_extend #(.bits_in(24), .bits_out(25)) sign_extend_cordic_q (
+        .in(adc_q_comp), .out(adc_q_dsp_cin));
+      assign adc_dsp_cin_stb = adc_comp_stb;   //sign_extend has 0 latency
 
-      // Double FIR and decimator block
-      localparam HB_COEFS = {-18'd62, 18'd0, 18'd194, 18'd0, -18'd440, 18'd0, 18'd855, 18'd0, -18'd1505, 18'd0, 18'd2478, 18'd0,
-        -18'd3900, 18'd0, 18'd5990, 18'd0, -18'd9187, 18'd0, 18'd14632, 18'd0, -18'd26536, 18'd0, 18'd83009, 18'd131071, 18'd83009,
-        18'd0, -18'd26536, 18'd0, 18'd14632, 18'd0, -18'd9187, 18'd0, 18'd5990, 18'd0, -18'd3900, 18'd0, 18'd2478, 18'd0, -18'd1505,
-        18'd0, 18'd855, 18'd0, -18'd440, 18'd0, 18'd194, 18'd0, -18'd62};
+     // CORDIC  24-bit I/O
+      cordic #(.bitwidth(25)) het_cordic_i (
+        .clk(clk), .reset(reset || sync_in), .enable(1'b1),
+        .strobe_in(adc_dsp_cin_stb), .strobe_out(adc_dsp_cout_stb),
+        .last_in(1'b0), .last_out(),
+        .xi(adc_i_dsp_cin),. yi(adc_q_dsp_cin), .zi(phase[31:8]),
+        .xo(adc_i_dsp_cout),.yo(adc_q_dsp_cout),.zo());
 
-      axi_fir_filter_dec #(
-          .WIDTH(24),
-          .COEFF_WIDTH(18),
-          .NUM_COEFFS(47),
-          .COEFFS_VEC(HB_COEFS),
-          .BLANK_OUTPUT(0)
-        ) ffd0 (
-        .clk(clk), .reset(reset || sync_in),
+      clip_reg #(.bits_in(25), .bits_out(24)) clip_cordic_i (
+        .clk(clk), .in(adc_i_dsp_cout), .out(adc_i_cclip),
+        .strobe_in(adc_dsp_cout_stb), .strobe_out(adc_cclip_stb));
+      clip_reg #(.bits_in(25), .bits_out(24)) clip_cordic_q (
+        .clk(clk), .in(adc_q_dsp_cout), .out(adc_q_cclip),
+        .strobe_in(adc_dsp_cout_stb), .strobe_out());
 
-        .i_tdata({adc_i_dsp_cout, adc_q_dsp_cout}),
-        .i_tlast(1'b1),
-        .i_tvalid(adc_dsp_cout_stb),
-        .i_tready(),
+      // Half-band decimator for heterodyne signals
+      // We assume that hbdec1 can accept a sample per cycle
+      hbdec1 het_hbdec_i (
+        .clk(clk), .sclr(reset || sync_in), .ce(1'b1),
+        .coef_ld(1'b0), .coef_we(1'b0), .coef_din(18'd0),
+        .rfd(), .nd(adc_cclip_stb),
+        .din_1(adc_i_cclip), .din_2(adc_q_cclip),
+        .rdy(), .data_valid(adc_hb_stb),
+        .dout_1(adc_i_hb), .dout_2(adc_q_hb));
 
-        .o_tdata({adc_i_dec, adc_q_dec}),
-        .o_tlast(),
-        .o_tvalid(adc_hb_stb),
-        .o_tready(1'b1));
-
-      assign adc_dsp_stb = realmode_decim ? adc_hb_stb : adc_comp_stb;
-      assign adc_i_dsp   = realmode_decim ? adc_i_dec : adc_i_comp;
-      assign adc_q_dsp   = realmode_decim ? adc_q_dec : adc_q_comp;
+      localparam  HB_SCALE = 17;
+      assign adc_dsp_stb = realmode_decim ? adc_hb_stb : adc_cclip_stb;
+      assign adc_i_dsp   = realmode_decim ? adc_i_hb[23+HB_SCALE:HB_SCALE] : adc_i_cclip;
+      assign adc_q_dsp   = realmode_decim ? adc_q_hb[23+HB_SCALE:HB_SCALE] : adc_q_cclip;
 
     end else begin
       assign adc_dsp_stb = adc_comp_stb;

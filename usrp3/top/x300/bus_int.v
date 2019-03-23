@@ -102,8 +102,8 @@ module bus_int #(
    localparam RB_XADC_VALS    = 8'd11;
    localparam RB_CROSSBAR     = 8'd128;
 
-   localparam COMPAT_MAJOR    = 16'h0024;
-   localparam COMPAT_MINOR    = 16'h0000;
+   localparam COMPAT_MAJOR    = 16'h0023;
+   localparam COMPAT_MINOR    = 16'h0001;
 
    wire [31:0] 	  set_data;
    wire [7:0] 	  set_addr;
