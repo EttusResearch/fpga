@@ -177,7 +177,10 @@ package PkgRfnocBlockCtrlBfm;
     // Receive a CHDR data packet and extract the data. Any metadata or
     // timestamp, if present, are discarded.
     //
-    //   data:  Data words from the received CHDR packet.
+    //   data:        Data words from the received CHDR packet.
+    //   data_bytes:  The number of data bytes in the CHDR packet. This
+    //                is useful if the data is not a multiple of the
+    //                chdr_word_t size.
     //
     task recv(output chdr_word_t data[$], output int data_bytes);
       ChdrPacket chdr_packet;
@@ -499,7 +502,10 @@ package PkgRfnocBlockCtrlBfm;
 
     // Send a CHDR data packet out the CHDR data interface.
     //
+    //   port:       Port to send the CHDR packet on.
     //   data:       Data words to insert into the CHDR packet.
+    //   data_bytes: Size of data in bytes. If omitted or -1, data_bytes will
+    //               be calculated based on the number of words in data.
     //   metadata:   Metadata words to insert into the CHDR packet. Omit this
     //               argument (or set to an empty array) to not include
     //               metadata.
@@ -557,7 +563,11 @@ package PkgRfnocBlockCtrlBfm;
     // Receive a CHDR data packet on the CHDR data interface and extract the
     // data. Any metadata or timestamp, if present, are discarded.
     //
-    //   data:  Data words from the received CHDR packet
+    //   port:        Port number for the block to receive from
+    //   data:        Data words from the received CHDR packet
+    //   data_bytes:  The number of data bytes in the CHDR packet. This
+    //                is useful if the data is not a multiple of the
+    //                chdr_word_t size.
     //
     task recv(
       input  int         port,
