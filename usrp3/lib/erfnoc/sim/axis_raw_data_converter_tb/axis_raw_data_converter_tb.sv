@@ -38,8 +38,8 @@ module axis_raw_data_converter_tb;
 
   typedef struct {
     realtime clk_period;
-    int      samp_w;
-    int      nspc;
+    int      item_w;
+    int      nipc;
     int      ctxt_fifo;
     int      pyld_fifo;
     bit      prefetch;
@@ -47,12 +47,12 @@ module axis_raw_data_converter_tb;
 
   // Module instances to test
   localparam inst_params_t INST_PARAMS[0:NINST-1] = {
-    '{clk_period: 6.0, samp_w:64, nspc: 1, ctxt_fifo:5, pyld_fifo:7, prefetch:1},
-    '{clk_period:20.0, samp_w:32, nspc: 6, ctxt_fifo:5, pyld_fifo:1, prefetch:1},
-    '{clk_period: 3.0, samp_w:32, nspc: 4, ctxt_fifo:1, pyld_fifo:2, prefetch:0},
-    '{clk_period:10.0, samp_w:16, nspc: 4, ctxt_fifo:8, pyld_fifo:5, prefetch:1},
-    '{clk_period: 3.0, samp_w:32, nspc: 2, ctxt_fifo:1, pyld_fifo:7, prefetch:0},
-    '{clk_period: 3.0, samp_w:8,  nspc:13, ctxt_fifo:1, pyld_fifo:7, prefetch:0}
+    '{clk_period: 6.0, item_w:64, nipc: 1, ctxt_fifo:5, pyld_fifo:7, prefetch:1},
+    '{clk_period:20.0, item_w:32, nipc: 6, ctxt_fifo:5, pyld_fifo:1, prefetch:1},
+    '{clk_period: 3.0, item_w:32, nipc: 4, ctxt_fifo:1, pyld_fifo:2, prefetch:0},
+    '{clk_period:10.0, item_w:16, nipc: 4, ctxt_fifo:8, pyld_fifo:5, prefetch:1},
+    '{clk_period: 3.0, item_w:32, nipc: 2, ctxt_fifo:1, pyld_fifo:7, prefetch:0},
+    '{clk_period: 3.0, item_w:8,  nipc:13, ctxt_fifo:1, pyld_fifo:7, prefetch:0}
   };
 
   // ----------------------------------------
@@ -109,8 +109,8 @@ module axis_raw_data_converter_tb;
     // Instantiate AxisRaw to Chdr DUT
     axis_raw_data_to_chdr #(
       .CHDR_W               (CHDR_W),
-      .SAMP_W               (INST_PARAMS[inst_i].samp_w),
-      .NSPC                 (INST_PARAMS[inst_i].nspc),
+      .ITEM_W               (INST_PARAMS[inst_i].item_w),
+      .NIPC                 (INST_PARAMS[inst_i].nipc),
       .SYNC_CLKS            (INST_PARAMS[inst_i].clk_period == CHDR_CLK_PERIOD),
       .CONTEXT_FIFO_SIZE    (INST_PARAMS[inst_i].ctxt_fifo),
       .PAYLOAD_FIFO_SIZE    (INST_PARAMS[inst_i].pyld_fifo),
@@ -125,8 +125,8 @@ module axis_raw_data_converter_tb;
       .m_axis_chdr_tlast    (chdr_tlast[inst_i]),
       .m_axis_chdr_tvalid   (chdr_tvalid[inst_i]),
       .m_axis_chdr_tready   (chdr_tready[inst_i]),
-      .s_axis_payload_tdata (r2c_pyld[inst_i].slave.tdata[(INST_PARAMS[inst_i].samp_w*INST_PARAMS[inst_i].nspc)-1:0]),
-      .s_axis_payload_tkeep (r2c_pyld[inst_i].slave.tkeep[INST_PARAMS[inst_i].nspc-1:0]),
+      .s_axis_payload_tdata (r2c_pyld[inst_i].slave.tdata[(INST_PARAMS[inst_i].item_w*INST_PARAMS[inst_i].nipc)-1:0]),
+      .s_axis_payload_tkeep (r2c_pyld[inst_i].slave.tkeep[INST_PARAMS[inst_i].nipc-1:0]),
       .s_axis_payload_tlast (r2c_pyld[inst_i].slave.tlast),
       .s_axis_payload_tvalid(r2c_pyld[inst_i].slave.tvalid),
       .s_axis_payload_tready(r2c_pyld[inst_i].slave.tready),
@@ -145,8 +145,8 @@ module axis_raw_data_converter_tb;
     // Instantiate Chdr to AxisRaw DUT
     chdr_to_axis_raw_data #(
       .CHDR_W               (CHDR_W),
-      .SAMP_W               (INST_PARAMS[inst_i].samp_w),
-      .NSPC                 (INST_PARAMS[inst_i].nspc),
+      .ITEM_W               (INST_PARAMS[inst_i].item_w),
+      .NIPC                 (INST_PARAMS[inst_i].nipc),
       .SYNC_CLKS            (INST_PARAMS[inst_i].clk_period == CHDR_CLK_PERIOD),
       .CONTEXT_FIFO_SIZE    (INST_PARAMS[inst_i].ctxt_fifo),
       .PAYLOAD_FIFO_SIZE    (INST_PARAMS[inst_i].pyld_fifo),
@@ -160,8 +160,8 @@ module axis_raw_data_converter_tb;
       .s_axis_chdr_tlast    (chdr_tlast[inst_i]),
       .s_axis_chdr_tvalid   (chdr_tvalid[inst_i]),
       .s_axis_chdr_tready   (chdr_tready[inst_i]),
-      .m_axis_payload_tdata (c2r_pyld[inst_i].master.tdata[(INST_PARAMS[inst_i].samp_w*INST_PARAMS[inst_i].nspc)-1:0]),
-      .m_axis_payload_tkeep (c2r_pyld[inst_i].master.tkeep[INST_PARAMS[inst_i].nspc-1:0]),
+      .m_axis_payload_tdata (c2r_pyld[inst_i].master.tdata[(INST_PARAMS[inst_i].item_w*INST_PARAMS[inst_i].nipc)-1:0]),
+      .m_axis_payload_tkeep (c2r_pyld[inst_i].master.tkeep[INST_PARAMS[inst_i].nipc-1:0]),
       .m_axis_payload_tlast (c2r_pyld[inst_i].master.tlast),
       .m_axis_payload_tvalid(c2r_pyld[inst_i].master.tvalid),
       .m_axis_payload_tready(c2r_pyld[inst_i].master.tready),
@@ -194,8 +194,8 @@ module axis_raw_data_converter_tb;
   function automatic bit pyld_pkts_equal(
     ref AxiStreamPacket #(MAX_PYLD_W) exp,
     ref AxiStreamPacket #(MAX_PYLD_W) act,
-    input int samp_w,
-    input int nspc
+    input int item_w,
+    input int nipc
   );
     if (exp.data.size() != act.data.size()) return 0;
     if (exp.keep.size() != act.keep.size()) return 0;
@@ -204,10 +204,10 @@ module axis_raw_data_converter_tb;
       automatic bit [MAX_PYLD_W-1:0] mask     = '0;
       automatic bit [MAX_PYLD_W-1:0] data_exp = exp.data[i];
       automatic bit [MAX_PYLD_W-1:0] data_act = act.data[i];
-      for (int r = 0; r < nspc; r++) begin
+      for (int r = 0; r < nipc; r++) begin
         if (exp.keep[i][r] === 1'b1) begin
-          automatic bit [MAX_PYLD_W-1:0] samp_mask = ((1<<samp_w)-1);
-          mask |= (samp_mask << (r*samp_w));
+          automatic bit [MAX_PYLD_W-1:0] samp_mask = ((1<<item_w)-1);
+          mask |= (samp_mask << (r*item_w));
         end
       end
       if (exp.keep[i] !== act.keep[i]) return 0;
@@ -224,8 +224,8 @@ module axis_raw_data_converter_tb;
     input int slv_stall_prob,
     input bit flushing = 0
   );
-    int nspc     = params.nspc;
-    int samp_w   = params.samp_w;
+    int nipc     = params.nipc;
+    int item_w   = params.item_w;
     bit prefetch = params.prefetch;
 
     AxiStreamPacket #(MAX_PYLD_W) pyld_pkt_arr[$] = {};
@@ -239,17 +239,17 @@ module axis_raw_data_converter_tb;
 
     // Generate a stream of data packets
     for (int p = 0; p < num_pkts; p++) begin
-      int len_lines = $urandom_range((MTU_BITS/(samp_w*nspc))-10, 1);
-      int keep_int = $urandom_range(nspc, 1);
+      int len_lines = $urandom_range((MTU_BITS/(item_w*nipc))-10, 1);
+      int keep_int = $urandom_range(nipc, 1);
       pyld_pkt_arr[p] = new();
       for (int i = 0; i < len_lines; i++) begin
         logic [MAX_PYLD_W-1:0] rand_samp;
         logic [(MAX_PYLD_W/8)-1:0] keep_val = 'x;
-        for (int r = 0; r < (((nspc*samp_w)+31)/32); r++)
+        for (int r = 0; r < (((nipc*item_w)+31)/32); r++)
           rand_samp[r*32 +: 32] = $urandom();
         pyld_pkt_arr[p].data.push_back(rand_samp);
         pyld_pkt_arr[p].user.push_back('x);
-        for (int r = 0; r < nspc; r++) begin
+        for (int r = 0; r < nipc; r++) begin
           if (i == len_lines-1)
             keep_val[r] = (r < keep_int) ? 1'b1 : 1'b0;
           else
@@ -267,15 +267,15 @@ module axis_raw_data_converter_tb;
       automatic int num_pyld_lines = pyld_pkt_arr[p].data.size();
       automatic int invalid_samps = 0;
       automatic int length;
-      for (int r = 0; r < nspc; r++)
+      for (int r = 0; r < nipc; r++)
         if (pyld_pkt_arr[p].keep[num_pyld_lines-1][r] === 1'b0)
           invalid_samps++;
       length = 
         (CHDR_W/8) +                                        // header
         ((has_time && (CHDR_W == 64)) ? (CHDR_W/8) : 0) +   // timestamp
         (num_mdata * (CHDR_W/8)) +                          // metadata
-        (num_pyld_lines * nspc * (samp_w/8)) +              // payload
-        (-invalid_samps * (samp_w/8));                      // payload (back out empty slots)
+        (num_pyld_lines * nipc * (item_w/8)) +              // payload
+        (-invalid_samps * (item_w/8));                      // payload (back out empty slots)
 
       chdr_hdr = '{
         flags     : $urandom_range(63),
@@ -346,7 +346,7 @@ module axis_raw_data_converter_tb;
             test.end_timeout(timeout);
             if (VERBOSE) $display("[INST%0d:RxPayload:%0d]\n%s", inst, p, rx_pyld_pkt.sprint());
             if (VERBOSE) $display("[INST%0d:ExpPayload:%0d]\n%s", inst, p, pyld_pkt_arr[p].sprint());
-            test.assert_error(pyld_pkts_equal(pyld_pkt_arr[p], rx_pyld_pkt, samp_w, nspc), "RX payload packet did not match TX");
+            test.assert_error(pyld_pkts_equal(pyld_pkt_arr[p], rx_pyld_pkt, item_w, nipc), "RX payload packet did not match TX");
           end
         end
       end

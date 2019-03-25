@@ -16,13 +16,13 @@
 //   context prefetching is enabled, the context for the next packet
 //   may arrive before the data for the current packet has been
 //   consumed. In the case of a rate reduction, this allows the module
-//   to sustain a gapless stream of payload samples and a bursty
+//   to sustain a gapless stream of payload items and a bursty
 //   sideband context path.
 //
 // Parameters:
 //   - CHDR_W: Width of the input CHDR bus in bits
-//   - SAMP_W: Width of the output sample bus in bits
-//   - NSPC: The number of output samples delievered per cycle
+//   - ITEM_W: Width of the output item bus in bits
+//   - NIPC: The number of output items delievered per cycle
 //   - SYNC_CLKS: Are the CHDR and data clocks synchronous to each other?
 //   - CONTEXT_FIFO_SIZE: FIFO size for the context path
 //   - PAYLOAD_FIFO_SIZE: FIFO size for the payload path
@@ -39,8 +39,8 @@
 
 module axis_raw_data_to_chdr #(
   parameter CHDR_W              = 256,
-  parameter SAMP_W              = 32,
-  parameter NSPC                = 2,
+  parameter ITEM_W              = 32,
+  parameter NIPC                = 2,
   parameter SYNC_CLKS           = 0,
   parameter CONTEXT_FIFO_SIZE   = 1,
   parameter PAYLOAD_FIFO_SIZE   = 1,
@@ -58,8 +58,8 @@ module axis_raw_data_to_chdr #(
   output wire                     m_axis_chdr_tvalid,
   input  wire                     m_axis_chdr_tready,
   // Payload stream out (AXI-Stream)
-  input  wire [(SAMP_W*NSPC)-1:0] s_axis_payload_tdata,
-  input  wire [NSPC-1:0]          s_axis_payload_tkeep,
+  input  wire [(ITEM_W*NIPC)-1:0] s_axis_payload_tdata,
+  input  wire [NIPC-1:0]          s_axis_payload_tkeep,
   input  wire                     s_axis_payload_tlast,
   input  wire                     s_axis_payload_tvalid,
   output wire                     s_axis_payload_tready,
@@ -115,7 +115,7 @@ module axis_raw_data_to_chdr #(
   assign s_axis_payload_tready = tmp_pyld_tready       && pass_pyld;
 
   // ---------------------------------------------------
-  //  Data Width Converter: SAMP_W*NSPC => CHDR_W
+  //  Data Width Converter: ITEM_W*NIPC => CHDR_W
   // ---------------------------------------------------
   wire [CHDR_W-1:0] in_pyld_tdata;
   wire              in_pyld_tlast;
@@ -123,7 +123,7 @@ module axis_raw_data_to_chdr #(
   wire              in_pyld_tready;
 
   axis_width_conv #(
-    .WORD_W(SAMP_W), .IN_WORDS(NSPC), .OUT_WORDS(CHDR_W/SAMP_W),
+    .WORD_W(ITEM_W), .IN_WORDS(NIPC), .OUT_WORDS(CHDR_W/ITEM_W),
     .SYNC_CLKS(1), .PIPELINE("IN")
   ) payload_width_conv_i (
     .s_axis_aclk(axis_data_clk), .s_axis_rst(axis_data_rst),

@@ -14,6 +14,6 @@ PkgAxiStreamBfm.sv \
 PkgChdrUtils.sv \
 PkgChdrBfm.sv \
 PkgAxisCtrlBfm.sv \
-PkgRfnocSampUtils.sv \
+PkgRfnocItemUtils.sv \
 PkgRfnocBlockCtrlBfm.sv \
 ))

@@ -11,7 +11,7 @@
 import PkgTestExec::*;
 import PkgChdrUtils::*;
 import PkgRfnocBlockCtrlBfm::*;
-import PkgRfnocSampUtils::*;
+import PkgRfnocItemUtils::*;
 
 module rfnoc_block_null_src_sink_tb;
 
@@ -54,7 +54,7 @@ module rfnoc_block_null_src_sink_tb;
   rfnoc_block_null_src_sink #(
     .THIS_PORTID        (THIS_PORTID),
     .CHDR_W             (CHDR_W),
-    .NSPC               (2),
+    .NIPC               (2),
     .MTU                (10)
   ) dut (
     .rfnoc_chdr_clk     (backend.chdr_clk),
@@ -135,8 +135,8 @@ module rfnoc_block_null_src_sink_tb;
 
       // Read status register and validate it
       blk_ctrl.reg_read(dut.REG_CTRL_STATUS, rvalue);
-      test.assert_error(rvalue[31:24] == 2, "Incorrect NSPC Value");
-      test.assert_error(rvalue[23:16] == 32, "Incorrect SAMP_W Value");
+      test.assert_error(rvalue[31:24] == 2, "Incorrect NIPC Value");
+      test.assert_error(rvalue[23:16] == 32, "Incorrect ITEM_W Value");
       test.end_timeout(timeout);
     end
     test.end_test();
@@ -147,7 +147,7 @@ module rfnoc_block_null_src_sink_tb;
       repeat (NUM_PKTS) begin
         chdr_word_t rx_data[$];
         int rx_bytes;
-        automatic SampDataBuff #(logic[31:0]) tx_dbuff = new, rx_dbuff = new;
+        automatic ItemDataBuff #(logic[31:0]) tx_dbuff = new, rx_dbuff = new;
         for (int i = 0; i < SPP; i++)
           tx_dbuff.put($urandom());
         test.start_timeout(timeout, 5us, "Waiting for pkt to loop back");
@@ -158,19 +158,19 @@ module rfnoc_block_null_src_sink_tb;
         test.end_timeout(timeout);
       end
 
-      // Read sample and packet counts on loopback port
+      // Read item and packet counts on loopback port
       blk_ctrl.reg_read(dut.REG_LOOP_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == (LPP*NUM_PKTS), "Incorrect REG_LOOP_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_LOOP_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == NUM_PKTS, "Incorrect REG_LOOP_PKT_CNT_LO value");
 
-      // Read sample and packet counts on source port
+      // Read item and packet counts on source port
       blk_ctrl.reg_read(dut.REG_SRC_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SRC_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_PKT_CNT_LO value");
 
-      // Read sample and packet counts on sink port
+      // Read item and packet counts on sink port
       blk_ctrl.reg_read(dut.REG_SNK_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SNK_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SNK_PKT_CNT_LO, rvalue);
@@ -184,7 +184,7 @@ module rfnoc_block_null_src_sink_tb;
       repeat (NUM_PKTS) begin
         chdr_word_t rx_data[$];
         int rx_bytes;
-        automatic SampDataBuff #(logic[31:0]) tx_dbuff = new;
+        automatic ItemDataBuff #(logic[31:0]) tx_dbuff = new;
         for (int i = 0; i < SPP; i++)
           tx_dbuff.put($urandom());
         test.start_timeout(timeout, 5us, "Waiting for pkt to loop back");
@@ -193,19 +193,19 @@ module rfnoc_block_null_src_sink_tb;
       end
       repeat (NUM_PKTS * SPP * 2) @(posedge rfnoc_chdr_clk);
 
-      // Read sample and packet counts on loopback port
+      // Read item and packet counts on loopback port
       blk_ctrl.reg_read(dut.REG_LOOP_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == (LPP*NUM_PKTS), "Incorrect REG_LOOP_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_LOOP_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == NUM_PKTS, "Incorrect REG_LOOP_PKT_CNT_LO value");
 
-      // Read sample and packet counts on source port
+      // Read item and packet counts on source port
       blk_ctrl.reg_read(dut.REG_SRC_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SRC_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_PKT_CNT_LO value");
 
-      // Read sample and packet counts on sink port
+      // Read item and packet counts on sink port
       blk_ctrl.reg_read(dut.REG_SNK_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == (LPP*NUM_PKTS), "Incorrect REG_SNK_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SNK_PKT_CNT_LO, rvalue);
@@ -247,19 +247,19 @@ module rfnoc_block_null_src_sink_tb;
       // Clear
       blk_ctrl.reg_write(dut.REG_CTRL_STATUS, 2'b01);
 
-      // Read sample and packet counts on loopback port
+      // Read item and packet counts on loopback port
       blk_ctrl.reg_read(dut.REG_LOOP_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_LOOP_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_LOOP_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_LOOP_PKT_CNT_LO value");
 
-      // Read sample and packet counts on source port
+      // Read item and packet counts on source port
       blk_ctrl.reg_read(dut.REG_SRC_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SRC_PKT_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SRC_PKT_CNT_LO value");
 
-      // Read sample and packet counts on sink port
+      // Read item and packet counts on sink port
       blk_ctrl.reg_read(dut.REG_SNK_LINE_CNT_LO, rvalue);
       test.assert_error(rvalue == 0, "Incorrect REG_SNK_LINE_CNT_LO value");
       blk_ctrl.reg_read(dut.REG_SNK_PKT_CNT_LO, rvalue);

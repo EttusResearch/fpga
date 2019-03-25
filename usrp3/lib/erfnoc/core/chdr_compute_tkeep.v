@@ -12,14 +12,14 @@
 //
 // Parameters:
 //   - CHDR_W: Width of the CHDR bus in bits
-//   - SAMP_W: Width of the sample bus in bits (must be a multiple of 8)
+//   - ITEM_W: Width of the item bus in bits (must be a multiple of 8)
 //
 // Signals:
 //   - axis_* : AXI-Stream CHDR bus
 
 module chdr_compute_tkeep #(
   parameter CHDR_W = 256,
-  parameter SAMP_W = 32
+  parameter ITEM_W = 32
 )(
   input  wire                       clk,
   input  wire                       rst,
@@ -27,16 +27,16 @@ module chdr_compute_tkeep #(
   input  wire                       axis_tlast,
   input  wire                       axis_tvalid,
   input  wire                       axis_tready,
-  output wire [(CHDR_W/SAMP_W)-1:0] axis_tkeep
+  output wire [(CHDR_W/ITEM_W)-1:0] axis_tkeep
 );
 
   `include "rfnoc_chdr_utils.vh"
 
-  generate if (CHDR_W > SAMP_W) begin 
+  generate if (CHDR_W > ITEM_W) begin 
 
     localparam CHDR_W_BYTES = CHDR_W/8;
-    localparam SAMP_W_BYTES = SAMP_W/8;
-    localparam KEEP_W       = CHDR_W_BYTES/SAMP_W_BYTES;
+    localparam ITEM_W_BYTES = ITEM_W/8;
+    localparam KEEP_W       = CHDR_W_BYTES/ITEM_W_BYTES;
 
     // Binary to thermometer decoder
     // 2'd0 => 4'b1111 (special case)
@@ -49,9 +49,9 @@ module chdr_compute_tkeep #(
     endfunction
   
     // Read the packet length and figure out the number
-    // of trailing samples
+    // of trailing items
     wire [15:0]       pkt_len    = chdr_get_length(axis_tdata[63:0]);
-    wire [KEEP_W-1:0] len_thermo = bin2thermo(pkt_len[$clog2(CHDR_W_BYTES)-1:$clog2(SAMP_W_BYTES)]);
+    wire [KEEP_W-1:0] len_thermo = bin2thermo(pkt_len[$clog2(CHDR_W_BYTES)-1:$clog2(ITEM_W_BYTES)]);
     reg  [KEEP_W-1:0] reg_len_thermo = 'h0;
     reg               is_header = 1'b1;
 
@@ -66,20 +66,20 @@ module chdr_compute_tkeep #(
       end
     end
 
-    // tkeep indicates trailing samples, so for lines with tlast == 0,
+    // tkeep indicates trailing items, so for lines with tlast == 0,
     // tkeep is all 1's.
     assign axis_tkeep = (~axis_tlast) ? {KEEP_W{1'b1}} :
       (is_header ? len_thermo : reg_len_thermo);
 
-  end else if (CHDR_W == SAMP_W) begin
+  end else if (CHDR_W == ITEM_W) begin
 
-    // Only one sample per CHDR word. So always keep it.
+    // Only one item per CHDR word. So always keep it.
     assign axis_tkeep = 1'b1;
 
   end else begin
 
-    // Illegal. A sample must be smaller than the CHDR_W
-    illegal_parameter_value samp_w_cannot_be_larger_than_chdr_w();
+    // Illegal. A item must be smaller than the CHDR_W
+    illegal_parameter_value item_w_cannot_be_larger_than_chdr_w();
 
   end endgenerate
 

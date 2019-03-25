@@ -3,28 +3,28 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: PkgRfnocSampUtils
+// Module: PkgRfnocItemUtils
 //
-// Description: This package contains utilities to handle and process samples.
+// Description: This package contains utilities to handle and process items.
 //
-// - SampDataBuff: A class that holds a collection of samples of arbitrary width
+// - ItemDataBuff: A class that holds a collection of items of arbitrary width
 //                 To can convert to and from a CHDR vector
-// - SampDataBuffQueue: A queue of SampDataBuff buffers
+// - ItemDataBuffQueue: A queue of ItemDataBuff buffers
 // 
 
-package PkgRfnocSampUtils;
+package PkgRfnocItemUtils;
 
   import PkgChdrUtils::*;
 
   //---------------------------------------------------------------------------
-  // Sample Data Buffer
+  // Item Data Buffer
   //---------------------------------------------------------------------------
   //
-  // This class samples of an arbitrary type
+  // This class items of an arbitrary type
   //
   //---------------------------------------------------------------------------
-  class SampDataBuff #(type data_t);
-    typedef SampDataBuff #(data_t) SampDataBuffQueue[$];
+  class ItemDataBuff #(type data_t);
+    typedef ItemDataBuff #(data_t) ItemDataBuffQueue[$];
 
     // Store data in the user-specified format
     local data_t buff[$];
@@ -34,10 +34,10 @@ package PkgRfnocSampUtils;
       buff.delete();
     endfunction : new
 
-    // Get the bitwidth of a sample in this buffer
-    function int samp_w();
+    // Get the bitwidth of a item in this buffer
+    function int item_w();
       return $size(data_t);
-    endfunction : samp_w
+    endfunction : item_w
 
     // Delete the contents of this buffer
     function void delete();
@@ -51,7 +51,7 @@ package PkgRfnocSampUtils;
 
     // Get the size (in number of bytes) of this buffer
     function int get_bytes();
-      return size() * (samp_w() / 8);
+      return size() * (item_w() / 8);
     endfunction : get_bytes
 
     // Get the i'th element in this buffer
@@ -105,14 +105,14 @@ package PkgRfnocSampUtils;
     // Output a string representation of the contents of the buffer
     function string sprint(string format = "%X", bit as_chdr = 0);
       if (as_chdr) begin
-        string str = $sformatf("SampDataBuff (64-bit CHDR, %0d bytes)\n", get_bytes());
+        string str = $sformatf("ItemDataBuff (64-bit CHDR, %0d bytes)\n", get_bytes());
         chdr_word_queue_t chdr_q = this.to_chdr_payload();
         foreach (chdr_q[i]) begin
           str = { str, $sformatf({"%5d> ", format, "\n"}, i, chdr_q[i]) };
         end
         return str;
       end else begin
-        string str = $sformatf("SampDataBuff (%0d-bit)\n", $size(data_t));
+        string str = $sformatf("ItemDataBuff (%0d-bit)\n", $size(data_t));
         foreach (buff[i]) begin
           str = { str, $sformatf({"%5d> ", format, "\n"}, i, buff[i]) };
         end
@@ -127,7 +127,7 @@ package PkgRfnocSampUtils;
 
     // Check if the contents of two buffers is equal
     function bit equal(
-      SampDataBuff #(data_t) rhs
+      ItemDataBuff #(data_t) rhs
     );
       if (this.size() != rhs.size()) return 0;
       for (int i = 0; i < this.size(); i++) begin
@@ -139,8 +139,8 @@ package PkgRfnocSampUtils;
   endclass
 
 
-  class SampDataBuffQueue #(type data_t);
-    local SampDataBuff #(data_t) queue[$];
+  class ItemDataBuffQueue #(type data_t);
+    local ItemDataBuff #(data_t) queue[$];
 
     // Create a new empty queue
     function new();
@@ -158,13 +158,13 @@ package PkgRfnocSampUtils;
     endfunction : size
 
     // Get the i'th element in this buffer
-    function SampDataBuff #(data_t) get(int i);
+    function ItemDataBuff #(data_t) get(int i);
       return queue[i];
     endfunction : get
 
     // Put an element in this buffer. If i is negative
     // then put it at the end
-    function void put(SampDataBuff #(data_t) buff, int i = -1);
+    function void put(ItemDataBuff #(data_t) buff, int i = -1);
       if (i < 0)
         queue.push_back(buff);
       else
@@ -184,7 +184,7 @@ package PkgRfnocSampUtils;
         data_t word = 'x;
         int buff_i = word_i++ / max_buff_size;
         if (queue.size() < buff_i + 1) begin
-          SampDataBuff #(data_t) buff = new;
+          ItemDataBuff #(data_t) buff = new;
           queue.push_back(buff);
         end
         if ($sscanf(line, "%x", word) > 0) begin
@@ -212,4 +212,4 @@ package PkgRfnocSampUtils;
     endfunction : to_hex_file
 
   endclass
-endpackage : PkgRfnocSampUtils
+endpackage : PkgRfnocItemUtils

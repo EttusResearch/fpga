@@ -13,7 +13,7 @@
 module rfnoc_block_null_src_sink #(
   parameter  [9:0] THIS_PORTID = 10'd0,
   parameter        CHDR_W      = 64,
-  parameter        NSPC        = 2,
+  parameter        NIPC        = 2,
   parameter  [5:0] MTU         = 10
 )(
   // RFNoC Framework Clocks and Resets
@@ -77,8 +77,8 @@ module rfnoc_block_null_src_sink #(
   reg                  ctrlport_resp_ack;
   reg  [31:0]          ctrlport_resp_data;
 
-  wire [(32*NSPC)-1:0] src_pyld_tdata , snk_pyld_tdata , loop_pyld_tdata ;
-  wire [NSPC-1:0]      src_pyld_tkeep , snk_pyld_tkeep , loop_pyld_tkeep ;
+  wire [(32*NIPC)-1:0] src_pyld_tdata , snk_pyld_tdata , loop_pyld_tdata ;
+  wire [NIPC-1:0]      src_pyld_tkeep , snk_pyld_tkeep , loop_pyld_tkeep ;
   wire                 src_pyld_tlast , snk_pyld_tlast , loop_pyld_tlast ;
   wire                 src_pyld_tvalid, snk_pyld_tvalid, loop_pyld_tvalid;
   wire                 src_pyld_tready, snk_pyld_tready, loop_pyld_tready;
@@ -99,8 +99,8 @@ module rfnoc_block_null_src_sink #(
     .CTRLPORT_SLV_EN          (0),
     .NUM_DATA_I               (2),
     .NUM_DATA_O               (2),
-    .SAMP_W                   (32),
-    .NSPC                     (NSPC),
+    .ITEM_W                   (32),
+    .NIPC                     (NIPC),
     .MTU                      (MTU),
     .CTXT_FIFOSIZE            (1),
     .PYLD_FIFOSIZE            (1)
@@ -268,8 +268,8 @@ module rfnoc_block_null_src_sink #(
     end
   end
 
-  assign src_pyld_tdata  = {NSPC{{~src_line_cnt[15:0], src_line_cnt[15:0]}}};
-  assign src_pyld_tkeep  = {NSPC{1'b1}};
+  assign src_pyld_tdata  = {NIPC{{~src_line_cnt[15:0], src_line_cnt[15:0]}}};
+  assign src_pyld_tkeep  = {NIPC{1'b1}};
   assign src_pyld_tlast  = (lines_left == 12'd0);
   assign src_pyld_tvalid = (state == ST_PYLD);
 
@@ -305,7 +305,7 @@ module rfnoc_block_null_src_sink #(
       if (ctrlport_req_rd) begin
         case(ctrlport_req_addr)
           REG_CTRL_STATUS:
-            ctrlport_resp_data <= {NSPC[7:0], 8'd32, state, 12'h0, reg_src_en, reg_clear_cnts};
+            ctrlport_resp_data <= {NIPC[7:0], 8'd32, state, 12'h0, reg_src_en, reg_clear_cnts};
           REG_SRC_LINES_PER_PKT:
             ctrlport_resp_data <= {20'h0, reg_src_lpp};
           REG_SRC_BYTES_PER_PKT:

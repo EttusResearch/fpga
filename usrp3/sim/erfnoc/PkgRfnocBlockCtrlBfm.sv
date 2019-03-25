@@ -87,7 +87,7 @@ package PkgRfnocBlockCtrlBfm;
   import PkgChdrUtils::*;
   import PkgChdrBfm::*;
   import PkgAxisCtrlBfm::*;
-  import PkgRfnocSampUtils::*;
+  import PkgRfnocItemUtils::*;
 
   //---------------------------------------------------------------------------
   // CHDR Stream BFM

@@ -14,8 +14,8 @@
 
 module context_handler_sync #(
   parameter CHDR_W = 256,
-  parameter SAMP_W = 32,
-  parameter NSPC   = 2
+  parameter ITEM_W = 32,
+  parameter NIPC   = 2
 )(
   // Clock and reset
   input  wire              clk,
@@ -33,12 +33,12 @@ module context_handler_sync #(
   output wire              m_axis_context_tvalid,
   input  wire              m_axis_context_tready,
   // Input payload stream monitor
-  input  wire [NSPC-1:0]   in_payload_tkeep,
+  input  wire [NIPC-1:0]   in_payload_tkeep,
   input  wire              in_payload_tlast,
   input  wire              in_payload_tvalid,
   input  wire              in_payload_tready,
   // Output payload stream monitor
-  input  wire [NSPC-1:0]   out_payload_tkeep,
+  input  wire [NIPC-1:0]   out_payload_tkeep,
   input  wire              out_payload_tlast,
   input  wire              out_payload_tvalid,
   input  wire              out_payload_tready,
@@ -55,13 +55,13 @@ module context_handler_sync #(
   // 4'b0011 => 3'd2
   // 4'b0111 => 3'd3
   // 4'b1111 => 3'd4
-  function [$clog2(NSPC):0] thermo2bin(input [NSPC-1:0] thermo);
-    reg [NSPC:0] onehot;
+  function [$clog2(NIPC):0] thermo2bin(input [NIPC-1:0] thermo);
+    reg [NIPC:0] onehot;
     integer i;
   begin
     onehot = thermo + 1;
     thermo2bin = 0;
-    for (i = 0; i <= NSPC; i=i+1)
+    for (i = 0; i <= NIPC; i=i+1)
       if (onehot[i])
         thermo2bin = thermo2bin | i;
   end
@@ -101,10 +101,10 @@ module context_handler_sync #(
     if (rst) begin
       pyld_pkt_len <= 16'd0;
     end else if (in_payload_tvalid && in_payload_tready) begin
-      pyld_pkt_len <= in_payload_tlast ? 16'd0 : (pyld_pkt_len + ((SAMP_W*NSPC)/8));
+      pyld_pkt_len <= in_payload_tlast ? 16'd0 : (pyld_pkt_len + ((ITEM_W*NIPC)/8));
     end
     length_err_stb <= in_payload_tvalid && in_payload_tready && in_payload_tlast &&
-                      (pyld_pkt_len + (thermo2bin(in_payload_tkeep)*(SAMP_W/8)) != exp_pkt_len);
+                      (pyld_pkt_len + (thermo2bin(in_payload_tkeep)*(ITEM_W/8)) != exp_pkt_len);
   end
 
 endmodule // context_handler_sync

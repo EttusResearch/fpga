@@ -144,7 +144,7 @@ module chdr_to_axis_ctrl #(
   end
 
   wire [(CHDR_W/32)-1:0] ch2ct_tkeep;
-  chdr_compute_tkeep #(.CHDR_W(CHDR_W), .SAMP_W(32)) chdr_tkeep_gen_i (
+  chdr_compute_tkeep #(.CHDR_W(CHDR_W), .ITEM_W(32)) chdr_tkeep_gen_i (
     .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
     .axis_tdata(ch2ct_tdata), .axis_tlast(ch2ct_tlast),
     .axis_tvalid(ch2ct_tvalid), .axis_tready(ch2ct_tready),
