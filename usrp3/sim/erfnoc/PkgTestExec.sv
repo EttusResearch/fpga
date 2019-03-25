@@ -31,7 +31,8 @@ package PkgTestExec;
     bit    stop_on_error = 1;         // Configuration option to stop when an error occurs
     bit    test_status[$];            // Pass/fail status of each test
 
-    timeout_t tb_timeout;             // Handle to overall timeout for the testbench
+    timeout_t tb_timeout;             // Handle to timeout for the overall testbench
+    timeout_t test_timeout;           // Handle to timeout for current test
 
 
     function new(string tb_name);
@@ -59,7 +60,7 @@ package PkgTestExec;
       start_timeout(
         tb_timeout, 
         time_limit, 
-        $sformatf("Testbench %s time limit exceeded", tb_name),
+        $sformatf("Testbench \"%s\" time limit exceeded", tb_name),
         SEV_FATAL
       );
     endtask : start_tb
@@ -98,10 +99,20 @@ package PkgTestExec;
     //
     //   test_name:  String name for the test to be started
     //
-    function void start_test(string test_name);
+    task start_test(string test_name, realtime time_limit = 0);
       // Make sure a there isn't already a test running
       assert (num_started == num_finished) else begin
         $fatal(0, "Test started before completing previous test");
+      end
+
+      // Create a timeout for this test
+      if (time_limit > 0) begin
+        start_timeout(
+          test_timeout, 
+          time_limit, 
+          $sformatf("Test \"%s\" time limit exceeded", test_name),
+          SEV_FATAL
+        );
       end
 
       current_test = test_name;
@@ -109,7 +120,7 @@ package PkgTestExec;
       $display("[TEST CASE %3d] (t = %t) BEGIN: %s...", num_started, $time, test_name);
       test_status.push_back(1);   // Set status to 1 (passed) initially
       num_assertions = 0;
-    endfunction : start_test
+    endtask : start_test
 
 
     // Call end_test() at the end of each test. 
@@ -117,12 +128,14 @@ package PkgTestExec;
     //   test_result:  Optional value to indicate the overall pass/fail result
     //                 of the test. Use non-zero for pass, 0 for fail.
     //
-    function void end_test(int test_result = 1);
+    task end_test(int test_result = 1);
       bit passed;
 
       assert (num_started == num_finished + 1) else begin
         $fatal(0, "No test running");
       end
+
+      end_timeout(test_timeout);
 
       passed = test_status[num_started-1] && test_result;
       num_finished++;
@@ -132,7 +145,7 @@ package PkgTestExec;
       if (passed) num_passed++;
 
       current_test = "";
-    endfunction : end_test
+    endtask : end_test
 
 
     // Assert the given expression and call $error() if it fails. Simulation
@@ -252,7 +265,8 @@ package PkgTestExec;
     //   handle:  Handle created by start_timeout() for the timeout process.
     //
     function void end_timeout(timeout_t handle);
-      if(handle.status != process::FINISHED) handle.kill();
+      if (handle != null)
+        if (handle.status != process::FINISHED) handle.kill();
     endfunction;
 
   endclass : TestExec
