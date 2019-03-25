@@ -64,7 +64,7 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         if [expr [lsearch {.vhd .vhdl} $src_ext] >= 0] {
             puts "BUILDER: Adding VHDL    : $src_file"
             read_vhdl -library work $src_file
-        } elseif [expr [lsearch {.v .vh} $src_ext] >= 0] {
+        } elseif [expr [lsearch {.v .vh .sv .svh} $src_ext] >= 0] {
             puts "BUILDER: Adding Verilog : $src_file"
             read_verilog $src_file
         } elseif [expr [lsearch {.xdc} $src_ext] >= 0] {

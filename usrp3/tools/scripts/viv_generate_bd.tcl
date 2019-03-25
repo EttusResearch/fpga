@@ -38,7 +38,7 @@ foreach src_file $hdl_sources {
     if [expr [lsearch {.vhd .vhdl} $hdl_ext] >= 0] {
         puts "BUILDER: Adding VHDL    : $src_file"
         read_vhdl -library work $src_file
-    } elseif [expr [lsearch {.v .vh} $hdl_ext] >= 0] {
+    } elseif [expr [lsearch {.v .sv .vh .svh} $hdl_ext] >= 0] {
         puts "BUILDER: Adding Verilog : $src_file"
         read_verilog $src_file
     } else {
