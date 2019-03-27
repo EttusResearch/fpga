@@ -20,14 +20,14 @@ module axi_fifo_flop2 #(
   input [WIDTH-1:0] i_tdata,
   input i_tvalid,
   output i_tready,
-  output reg [WIDTH-1:0] o_tdata,
-  output reg o_tvalid,
+  output reg [WIDTH-1:0] o_tdata = 'h0,
+  output reg o_tvalid = 1'b0,
   input o_tready,
   output [1:0] space,
   output [1:0] occupied);
 
-  reg [WIDTH-1:0] i_tdata_temp;
-  reg             i_tvalid_temp;
+  reg [WIDTH-1:0] i_tdata_temp = 'h0;
+  reg             i_tvalid_temp = 1'b0;
 
   assign i_tready = ~i_tvalid_temp;
 
