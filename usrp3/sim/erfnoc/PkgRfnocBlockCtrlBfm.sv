@@ -55,24 +55,18 @@ interface RfnocBackendIf(
   input wire logic chdr_clk,
   input wire logic ctrl_clk
 );
-  logic            chdr_rst;
-  logic            ctrl_rst;
   backend_config_t cfg;
   backend_status_t sts;
 
   modport master (
     input  chdr_clk,
     input  ctrl_clk,
-    output chdr_rst,
-    output ctrl_rst,
     output cfg,
     input  sts
   );
   modport slave (
     input  chdr_clk,
     input  ctrl_clk,
-    input  chdr_rst,
-    input  ctrl_rst,
     input  cfg,
     output sts
   );
@@ -346,8 +340,6 @@ package PkgRfnocBlockCtrlBfm;
     );
       this.backend = backend;
       this.ctrl = new(m_ctrl, s_ctrl, dst_port, src_port);
-      this.backend.chdr_rst = 0;
-      this.backend.ctrl_rst = 0;
       this.running = 0;
     endfunction : new
 
@@ -409,6 +401,42 @@ package PkgRfnocBlockCtrlBfm;
       return backend.sts.v1.mtu;
     endfunction : get_mtu
 
+    // Soft-Reset the CHDR path 
+    //
+    //   rst_cyc: Number of cycles to wait for reset completion
+    //
+    task reset_chdr(input int rst_cyc = 100);
+      assert (running) else begin
+        $fatal(1, "Cannot call flush_and_reset until RfnocBlockCtrlBfm is running");
+      end
+
+      // Assert soft_chdr_rst then wait
+      // Note: soft_chdr_rst must be driven in the ctrl_clk domain
+      @(posedge backend.ctrl_clk);
+      backend.cfg.v1.soft_chdr_rst = 1;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      backend.cfg.v1.soft_chdr_rst = 0;
+      @(posedge backend.ctrl_clk);
+      repeat (rst_cyc) @(posedge backend.ctrl_clk);
+    endtask : reset_chdr
+
+    // Soft-Reset the Control path 
+    //
+    //   rst_cyc: Number of cycles to wait for reset completion
+    //
+    task reset_ctrl(input int rst_cyc = 100);
+      assert (running) else begin
+        $fatal(1, "Cannot call flush_and_reset until RfnocBlockCtrlBfm is running");
+      end
+
+      // Assert soft_ctrl_rst then wait
+      @(posedge backend.ctrl_clk);
+      backend.cfg.v1.soft_ctrl_rst = 1;
+      repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
+      backend.cfg.v1.soft_ctrl_rst = 0;
+      repeat (rst_cyc) @(posedge backend.ctrl_clk);
+    endtask : reset_ctrl
+
     // Flush the data ports of the block
     //
     //   idle_cyc: Number of idle cycles before done is asserted
@@ -459,17 +487,9 @@ package PkgRfnocBlockCtrlBfm;
       @(posedge backend.ctrl_clk);
       while (~backend.sts.v1.flush_done) @(posedge backend.ctrl_clk);
       // Assert chdr_rst then wait
-      @(posedge backend.chdr_clk);
-      backend.chdr_rst = 1;
-      @(posedge backend.chdr_clk);
-      backend.chdr_rst = 0;
-      repeat (chdr_rst_cyc) @(posedge backend.chdr_clk);
-      // Assert chdr_rst then wait
-      @(posedge backend.ctrl_clk);
-      backend.ctrl_rst = 1;
-      @(posedge backend.ctrl_clk);
-      backend.ctrl_rst = 0;
-      repeat (ctrl_rst_cyc) @(posedge backend.ctrl_clk);
+      reset_chdr(chdr_rst_cyc);
+      // Assert ctrl_rst then wait
+      reset_ctrl(ctrl_rst_cyc);
       // Deassert flush then wait
       backend.cfg.v1.flush_en = 0;
       repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);

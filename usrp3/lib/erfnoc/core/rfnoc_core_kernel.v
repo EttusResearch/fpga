@@ -3,15 +3,46 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: rfnoc_core_regs
+// Module: rfnoc_core_kernel
 // Description:
-//   The main software interface module for an assembled rfnoc
-//   design
+//   The main utility and software interface module for an 
+//   assembled rfnoc design
 //
+// Parameters:
+//   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
+//   - DEVICE_TYPE: The device type to use in the Device Info register
+//   - DEVICE_FAMILY: The device family (to pass to Xilinx primitives)
+//   - SAFE_START_CLKS: Instantiate logic to ensure that all output
+//                      clocks are glitch-free and startup safely
+//   - NUM_BLOCKS: Number of blocks instantiated in the design
+//   - NUM_STREAM_ENDPOINTS: Number of stream EPs instantiated in the design
+//   - NUM_TRANSPORTS: Number of transports instantiated in the design
+//   - NUM_EDGES: Number of edges of static connection in the design
+//   - CHDR_XBAR_PRESENT: 1 if the CHDR crossbar is present. If 0 then
+//                        transports are directly connected to SEPs
+//   - EDGE_TBL_FILE: The memory init file for the static connection
+//                    adjacency list
+//
+// Signals:
+//   - chdr_aclk : The input CHDR clock (may be unbuffered if SAFE_START_CLKS=1)
+//   - chdr_aclk_locked : The PLL locked pin for the input CHDR clock (unused if SAFE_START_CLKS=0)
+//   - ctrl_aclk : The input Control clock (may be unbuffered if SAFE_START_CLKS=1)
+//   - ctrl_aclk_locked : The PLL locked pin for the input Control clock (unused if SAFE_START_CLKS=0)
+//   - core_chdr_clk: Output stable CHDR clock for the rest of the design
+//   - core_chdr_rst: Output sync CHDR reset for all infrastructure modules (not blocks)
+//   - core_ctrl_clk: Output stable Control clock for the rest of the design
+//   - core_ctrl_rst: Output sync Control reset for all infrastructure modules (not blocks)
+//   - s_axis_ctrl_* : Slave AXIS-Ctrl for the primary (zero'th) control endpoint
+//   - m_axis_ctrl_* : Master AXIS-Ctrl for the primary (zero'th) control endpoint
+//   - device_id: The dynamic device_id to read through the Device Info regiser
+//   - rfnoc_core_config: The backend config port for all blocks in the design
+//   - rfnoc_core_status: The backend status port for all blocks in the design
 
-module rfnoc_core_regs #(
+module rfnoc_core_kernel #(
   parameter [15:0] PROTOVER             = {8'd1, 8'd0},
   parameter [15:0] DEVICE_TYPE          = 16'd0,
+  parameter        DEVICE_FAMILY        = "7SERIES",
+  parameter        SAFE_START_CLKS      = 0,
   parameter [9:0]  NUM_BLOCKS           = 0,
   parameter [9:0]  NUM_STREAM_ENDPOINTS = 0,
   parameter [9:0]  NUM_TRANSPORTS       = 0,
@@ -19,9 +50,17 @@ module rfnoc_core_regs #(
   parameter [0:0]  CHDR_XBAR_PRESENT    = 1,
   parameter        EDGE_TBL_FILE        = ""
 )(
-  // Clock and reset
-  input  wire                        rfnoc_ctrl_clk,
-  input  wire                        rfnoc_ctrl_rst,
+  // Input clocks and resets
+  input  wire                        chdr_aclk,
+  input  wire                        chdr_aclk_locked,
+  input  wire                        ctrl_aclk,
+  input  wire                        ctrl_aclk_locked,
+  input  wire                        core_arst,
+  // Output clocks and resets
+  output wire                        core_chdr_clk,
+  output wire                        core_chdr_rst,
+  output wire                        core_ctrl_clk,
+  output wire                        core_ctrl_rst,
   // AXIS-Control Bus
   input  wire [31:0]                 s_axis_ctrl_tdata,
   input  wire                        s_axis_ctrl_tlast,
@@ -39,6 +78,67 @@ module rfnoc_core_regs #(
 );
 
   `include "rfnoc_axis_ctrl_utils.vh"
+  `include "rfnoc_backend_iface.vh"
+
+  // -----------------------------------
+  // Clocking and Resets
+  // -----------------------------------
+  
+  generate if (SAFE_START_CLKS == 1) begin
+    // Safe startup logic for the CHDR and Control clocks:
+    // chdr_aclk and ctrl_aclk can be unbuffered.
+    // Use a BUFGCE to disable the clock until the upstream
+    // PLLs have locked.
+
+    wire chdr_ce_clk, ctrl_ce_clk;
+    (* keep = "true" *) (* async_reg = "true" *) reg [7:0] chdr_clk_ce_shreg = 8'h0;
+    (* keep = "true" *) (* async_reg = "true" *) reg [7:0] ctrl_clk_ce_shreg = 8'h0;
+
+    // A glitch-free clock buffer with an enable
+    BUFGCE chdr_clk_buf_i (
+      .I (chdr_aclk),
+      .CE(chdr_clk_ce_shreg[7]),
+      .O (core_chdr_clk)
+    );
+    // A separate clock buffer for the CE signal
+    // We instantiate this manually to prevent the tools from instantiating
+    // the more scare BUFG here. There are a lot more BUFHs than BUFGs
+    BUFH chdr_ce_buf_i (
+      .I(chdr_aclk),
+      .O(chdr_ce_clk)
+    );
+    always @(posedge chdr_ce_clk) begin
+      chdr_clk_ce_shreg <= {chdr_clk_ce_shreg[6:0], chdr_aclk_locked};
+    end
+
+    // A glitch-free clock buffer with an enable
+    BUFGCE ctrl_clk_buf_i (
+      .I (ctrl_aclk),
+      .CE(ctrl_clk_ce_shreg[7]),
+      .O (core_ctrl_clk)
+    );
+    // A separate clock buffer for the CE signal
+    // We instantiate this manually to prevent the tools from instantiating
+    // the more scare BUFG here. There are a lot more BUFHs than BUFGs
+    BUFH ctrl_ce_buf_i (
+      .I(ctrl_aclk),
+      .O(ctrl_ce_clk)
+    );
+    always @(posedge ctrl_ce_clk) begin
+      ctrl_clk_ce_shreg <= {ctrl_clk_ce_shreg[6:0], ctrl_aclk_locked};
+    end
+  end else begin
+    // We assume that chdr_aclk and ctrl_aclk start safely and are glitch-free
+    assign core_chdr_clk = chdr_aclk;
+    assign core_ctrl_clk = ctrl_aclk;
+  end endgenerate
+
+  reset_sync rst_sync_chdr_i (
+    .clk(core_chdr_clk), .reset_in(core_arst), .reset_out(core_chdr_rst)
+  );
+  reset_sync rst_sync_ctrl_i (
+    .clk(core_ctrl_clk), .reset_in(core_arst), .reset_out(core_ctrl_rst)
+  );
 
   // -----------------------------------
   // AXIS-Ctrl Slave
@@ -59,10 +159,10 @@ module rfnoc_core_regs #(
     .AXIS_CTRL_MST_EN(0), .AXIS_CTRL_SLV_EN(1),
     .SLAVE_FIFO_SIZE(5)
   ) ctrlport_ep_i (
-    .rfnoc_ctrl_clk           (rfnoc_ctrl_clk     ),
-    .rfnoc_ctrl_rst           (rfnoc_ctrl_rst     ),
-    .ctrlport_clk             (rfnoc_ctrl_clk     ),
-    .ctrlport_rst             (rfnoc_ctrl_rst     ),
+    .rfnoc_ctrl_clk           (core_ctrl_clk      ),
+    .rfnoc_ctrl_rst           (core_ctrl_rst      ),
+    .ctrlport_clk             (core_ctrl_clk      ),
+    .ctrlport_rst             (core_ctrl_rst      ),
     .s_rfnoc_ctrl_tdata       (s_axis_ctrl_tdata  ),
     .s_rfnoc_ctrl_tlast       (s_axis_ctrl_tlast  ),
     .s_rfnoc_ctrl_tvalid      (s_axis_ctrl_tvalid ),
@@ -118,7 +218,7 @@ module rfnoc_core_regs #(
   wire con_addr_space = (ctrlport_req_addr[19:16] == 4'd1);
 
   // ControlPort MUX
-  always @(posedge rfnoc_ctrl_clk) begin
+  always @(posedge core_ctrl_clk) begin
     // Write strobe
     blk_req_wr <= ctrlport_req_wr & blk_addr_space;
     con_req_wr <= ctrlport_req_wr & con_addr_space;
@@ -149,7 +249,7 @@ module rfnoc_core_regs #(
   // status endpoint. The slot number has a 1-to-1 mapping to the port
   // number on the control crossbar.
   localparam NUM_REGS_PER_SLOT = 512/32;
-  parameter  NUM_SLOTS = 1 /*this*/ + NUM_STREAM_ENDPOINTS + $clog2(NUM_BLOCKS);
+  localparam NUM_SLOTS = 1 /*this*/ + NUM_STREAM_ENDPOINTS + NUM_BLOCKS;
   localparam BLOCK_OFFSET = 1 /*this*/ + NUM_STREAM_ENDPOINTS;
   
   reg  [31:0] config_arr_2d [0:NUM_SLOTS-1][0:NUM_REGS_PER_SLOT-1];
@@ -165,19 +265,25 @@ module rfnoc_core_regs #(
     end
   endgenerate
 
-  always @(posedge rfnoc_ctrl_clk) begin
-    if (rfnoc_ctrl_rst) begin
+  integer m, n;
+  always @(posedge core_ctrl_clk) begin
+    if (core_ctrl_rst) begin
       blk_resp_ack <= 1'b0;
+      for (m = 0; m < NUM_SLOTS; m = m + 1) begin
+        for (n = 0; n < NUM_REGS_PER_SLOT; n = n + 1) begin
+          config_arr_2d[m][n] <= BEC_DEFAULT_VAL[(n*32)+:32];
+        end
+      end
     end else begin
       // All transactions finish in 1 cycle
       blk_resp_ack <= blk_req_wr | blk_req_rd;
       // Handle register writes
       if (blk_req_wr) begin
-        config_arr_2d[req_addr[$clog2(NUM_SLOTS)-1:6]][req_addr[5:2]] <= req_data;
+        config_arr_2d[req_addr[$clog2(NUM_SLOTS)+5:6]][req_addr[5:2]] <= req_data;
       end
       // Handle register reads
       if (blk_req_rd) begin
-        blk_resp_data <= status_arr_2d[req_addr[$clog2(NUM_SLOTS)-1:6]][req_addr[5:2]];
+        blk_resp_data <= status_arr_2d[req_addr[$clog2(NUM_SLOTS)+5:6]][req_addr[5:2]];
       end
     end
   end
@@ -228,7 +334,7 @@ module rfnoc_core_regs #(
   generate if (EDGE_TBL_FILE == "" || NUM_EDGES == 0) begin
     // If no file is specified or if the number of edges is zero
     // then just return zero for all transactions
-    always @(posedge rfnoc_ctrl_clk) begin
+    always @(posedge core_ctrl_clk) begin
       con_resp_ack  <= (con_req_wr | con_req_rd);
       con_resp_data <= 32'h0;
     end
@@ -238,11 +344,11 @@ module rfnoc_core_regs #(
     initial begin
       $readmemh(EDGE_TBL_FILE, edge_tbl_rom, 0, NUM_EDGES);
     end
-    always @(posedge rfnoc_ctrl_clk) begin
+    always @(posedge core_ctrl_clk) begin
       con_resp_ack  <= (con_req_wr | con_req_rd);
       con_resp_data <= edge_tbl_rom[req_addr[$clog2(NUM_EDGES+1)+1:2]];
     end
   end endgenerate
 
-endmodule // rfnoc_core_regs
+endmodule // rfnoc_core_kernel
 

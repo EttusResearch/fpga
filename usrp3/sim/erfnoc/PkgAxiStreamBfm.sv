@@ -21,7 +21,7 @@ interface AxiStreamIf #(
   parameter int USER_WIDTH = 1
 ) (
   input wire logic clk,
-  input wire logic rst
+  input wire logic rst = 1'b0
 );
   
   // Signals that make up a unidirectional AXI-Stream interface

@@ -28,9 +28,9 @@ module noc_shell_generic_ctrlport_raw #(
   //------------------------------------------------------------
   // RFNoC Framework Clocks and Resets
   input  wire                                 rfnoc_chdr_clk,
-  input  wire                                 rfnoc_chdr_rst,
+  output wire                                 rfnoc_chdr_rst,
   input  wire                                 rfnoc_ctrl_clk,
-  input  wire                                 rfnoc_ctrl_rst,
+  output wire                                 rfnoc_ctrl_rst,
   // RFNoC Backend Interface                  
   input  wire [511:0]                         rfnoc_core_config,
   output wire [511:0]                         rfnoc_core_status,
@@ -57,11 +57,6 @@ module noc_shell_generic_ctrlport_raw #(
 
   // Client Interface
   //------------------------------------------------------------
-  // Client Clocks and Resets
-  output wire                                 chdr_clk,
-  output wire                                 chdr_rst,
-  output wire                                 ctrl_clk,
-  output wire                                 ctrl_rst,
   // Control Port Master (Request)            
   output wire                                 m_ctrlport_req_wr,
   output wire                                 m_ctrlport_req_rd,
@@ -132,16 +127,12 @@ module noc_shell_generic_ctrlport_raw #(
     .CTRL_FIFOSIZE        (CTRL_FIFOSIZE),
     .MTU                  (MTU          )
   ) backend_iface_i (
-    .rfnoc_chdr_clk_i     (rfnoc_chdr_clk      ),
-    .rfnoc_chdr_rst_i     (rfnoc_chdr_rst      ),
-    .rfnoc_ctrl_clk_i     (rfnoc_ctrl_clk      ),
-    .rfnoc_ctrl_rst_i     (rfnoc_ctrl_rst      ),
+    .rfnoc_chdr_clk       (rfnoc_chdr_clk      ),
+    .rfnoc_ctrl_clk       (rfnoc_ctrl_clk      ),
     .rfnoc_core_config    (rfnoc_core_config   ),
     .rfnoc_core_status    (rfnoc_core_status   ),
-    .rfnoc_chdr_clk_o     (chdr_clk            ),
-    .rfnoc_chdr_rst_o     (chdr_rst            ),
-    .rfnoc_ctrl_clk_o     (ctrl_clk            ),
-    .rfnoc_ctrl_rst_o     (ctrl_rst            ),
+    .rfnoc_chdr_rst       (rfnoc_chdr_rst      ),
+    .rfnoc_ctrl_rst       (rfnoc_ctrl_rst      ),
     .data_i_flush_en      (data_i_flush_en     ),
     .data_i_flush_timeout (data_i_flush_timeout),
     .data_i_flush_active  (data_i_flush_active ),
@@ -163,10 +154,10 @@ module noc_shell_generic_ctrlport_raw #(
     .AXIS_CTRL_SLV_EN         (1              ),
     .SLAVE_FIFO_SIZE          (CTRL_FIFOSIZE  )
   ) ctrlport_ep_i (
-    .rfnoc_ctrl_clk           (ctrl_clk                 ),
-    .rfnoc_ctrl_rst           (ctrl_rst                 ),
-    .ctrlport_clk             (chdr_clk                 ),
-    .ctrlport_rst             (chdr_rst                 ),
+    .rfnoc_ctrl_clk           (rfnoc_ctrl_clk           ),
+    .rfnoc_ctrl_rst           (rfnoc_ctrl_rst           ),
+    .ctrlport_clk             (rfnoc_chdr_clk           ),
+    .ctrlport_rst             (rfnoc_chdr_rst           ),
     .s_rfnoc_ctrl_tdata       (s_rfnoc_ctrl_tdata       ),
     .s_rfnoc_ctrl_tlast       (s_rfnoc_ctrl_tlast       ),
     .s_rfnoc_ctrl_tvalid      (s_rfnoc_ctrl_tvalid      ),
@@ -216,10 +207,10 @@ module noc_shell_generic_ctrlport_raw #(
         .PAYLOAD_FIFO_SIZE    (PYLD_FIFOSIZE),
         .CONTEXT_PREFETCH_EN  (1             )
       ) chdr2raw_i (
-        .axis_chdr_clk        (chdr_clk                                             ),
-        .axis_chdr_rst        (chdr_rst                                             ),
-        .axis_data_clk        (chdr_clk                                             ),
-        .axis_data_rst        (chdr_rst                                             ),
+        .axis_chdr_clk        (rfnoc_chdr_clk                                       ),
+        .axis_chdr_rst        (rfnoc_chdr_rst                                       ),
+        .axis_data_clk        (rfnoc_chdr_clk                                       ),
+        .axis_data_rst        (rfnoc_chdr_rst                                       ),
         .s_axis_chdr_tdata    (s_rfnoc_chdr_tdata   [(i*CHDR_W)+:CHDR_W]            ),
         .s_axis_chdr_tlast    (s_rfnoc_chdr_tlast   [i]                             ),
         .s_axis_chdr_tvalid   (s_rfnoc_chdr_tvalid  [i]                             ),
@@ -252,10 +243,10 @@ module noc_shell_generic_ctrlport_raw #(
         .CONTEXT_PREFETCH_EN  (1             ),
         .MTU                  (MTU           )
       ) raw2chdr_i (
-        .axis_chdr_clk        (chdr_clk                                             ),
-        .axis_chdr_rst        (chdr_rst                                             ),
-        .axis_data_clk        (chdr_clk                                             ),
-        .axis_data_rst        (chdr_rst                                             ),
+        .axis_chdr_clk        (rfnoc_chdr_clk                                       ),
+        .axis_chdr_rst        (rfnoc_chdr_rst                                       ),
+        .axis_data_clk        (rfnoc_chdr_clk                                       ),
+        .axis_data_rst        (rfnoc_chdr_rst                                       ),
         .m_axis_chdr_tdata    (m_rfnoc_chdr_tdata   [(i*CHDR_W)+:CHDR_W]            ),
         .m_axis_chdr_tlast    (m_rfnoc_chdr_tlast   [i]                             ),
         .m_axis_chdr_tvalid   (m_rfnoc_chdr_tvalid  [i]                             ),

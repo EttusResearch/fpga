@@ -31,21 +31,21 @@ module rfnoc_block_null_src_sink_tb;
   localparam int    PORT_LOOP   = 1;
 
   // Clock and Reset Definition
-  bit rfnoc_chdr_clk, rfnoc_chdr_rst;
-  sim_clock_gen #(2.5) rfnoc_chdr_clk_gen (rfnoc_chdr_clk, rfnoc_chdr_rst); // 400 MHz
+  bit rfnoc_chdr_clk;
+  sim_clock_gen #(2.5) rfnoc_chdr_clk_gen (rfnoc_chdr_clk); // 400 MHz
 
   // ----------------------------------------
   // Instantiate DUT
   // ----------------------------------------
 
   // Connections to DUT as interfaces:
-  RfnocBackendIf        backend (rfnoc_chdr_clk, rfnoc_chdr_clk);   // Required backend iface
-  AxiStreamIf #(32)     m_ctrl  (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Required control iface
-  AxiStreamIf #(32)     s_ctrl  (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Required control iface
-  AxiStreamIf #(CHDR_W) m0_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Optional data iface
-  AxiStreamIf #(CHDR_W) m1_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Optional data iface
-  AxiStreamIf #(CHDR_W) s0_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Optional data iface
-  AxiStreamIf #(CHDR_W) s1_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);   // Optional data iface
+  RfnocBackendIf        backend (rfnoc_chdr_clk, rfnoc_chdr_clk); // Required backend iface
+  AxiStreamIf #(32)     m_ctrl  (rfnoc_chdr_clk);                 // Required control iface
+  AxiStreamIf #(32)     s_ctrl  (rfnoc_chdr_clk);                 // Required control iface
+  AxiStreamIf #(CHDR_W) m0_chdr (rfnoc_chdr_clk);                 // Optional data iface
+  AxiStreamIf #(CHDR_W) m1_chdr (rfnoc_chdr_clk);                 // Optional data iface
+  AxiStreamIf #(CHDR_W) s0_chdr (rfnoc_chdr_clk);                 // Optional data iface
+  AxiStreamIf #(CHDR_W) s1_chdr (rfnoc_chdr_clk);                 // Optional data iface
 
   // Bus functional model for a software block controller
   RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W)) blk_ctrl;
@@ -58,9 +58,7 @@ module rfnoc_block_null_src_sink_tb;
     .MTU                (10)
   ) dut (
     .rfnoc_chdr_clk     (backend.chdr_clk),
-    .rfnoc_chdr_rst     (backend.chdr_rst),
     .rfnoc_ctrl_clk     (backend.ctrl_clk),
-    .rfnoc_ctrl_rst     (backend.ctrl_rst),
     .rfnoc_core_config  (backend.slave.cfg),
     .rfnoc_core_status  (backend.slave.sts),
     .s_rfnoc_chdr_tdata ({m1_chdr.slave.tdata  , m0_chdr.slave.tdata  }),
@@ -104,25 +102,19 @@ module rfnoc_block_null_src_sink_tb;
     blk_ctrl.add_slave_data_port(s1_chdr);
     blk_ctrl.run();
 
-    // Reset
+    // Startup block (Software initialization)
     // ----------------------------------------
-    rfnoc_chdr_clk_gen.reset();
-
-    test.start_test("Wait for reset");
-    test.start_timeout(timeout, 1us, "Waiting for reset");
-    while (rfnoc_chdr_rst) @(posedge rfnoc_chdr_clk);
-    test.end_timeout(timeout);
-    test.assert_error(!rfnoc_chdr_rst, "Reset did not deassert");
-    test.end_test();
-
     test.start_test("Flush block then reset it");
     begin
       test.start_timeout(timeout, 10us, "Waiting for flush_and_reset");
+      #100;  //Wait for GSR to deassert
       blk_ctrl.flush_and_reset();
       test.end_timeout(timeout);
     end
     test.end_test();
 
+    // Run Tests
+    // ----------------------------------------
     test.start_test("Read Block Info");
     begin
       test.start_timeout(timeout, 1us, "Waiting for block info response");

@@ -19,6 +19,14 @@ localparam BEC_SOFT_CHDR_RST_OFFSET = BEC_SOFT_CTRL_RST_OFFSET + BEC_SOFT_CTRL_R
 localparam BEC_SOFT_CHDR_RST_WIDTH  = 1;
 localparam BEC_TOTAL_WIDTH          = BEC_SOFT_CHDR_RST_OFFSET + BEC_SOFT_CHDR_RST_WIDTH;
 
+localparam [511:0] BEC_DEFAULT_VAL = {
+  {(512-BEC_TOTAL_WIDTH){1'b0}},
+  1'b1,     // BEC_SOFT_CHDR_RST
+  1'b1,     // BEC_SOFT_CTRL_RST
+  1'b0,     // BEC_FLUSH_EN
+  32'd0     // BEC_FLUSH_TIMEOUT
+};
+
 // Backend Status
 localparam BES_PROTO_VER_OFFSET     = 0;
 localparam BES_PROTO_VER_WIDTH      = 8;

@@ -18,9 +18,7 @@ module rfnoc_block_null_src_sink #(
 )(
   // RFNoC Framework Clocks and Resets
   input  wire                   rfnoc_chdr_clk,
-  input  wire                   rfnoc_chdr_rst,
   input  wire                   rfnoc_ctrl_clk,
-  input  wire                   rfnoc_ctrl_rst,
   // RFNoC Backend Interface    
   input  wire [511:0]           rfnoc_core_config,
   output wire [511:0]           rfnoc_core_status,
@@ -65,10 +63,8 @@ module rfnoc_block_null_src_sink #(
   localparam [19:0] REG_LOOP_PKT_CNT_LO   = 20'h38;
   localparam [19:0] REG_LOOP_PKT_CNT_HI   = 20'h3C;
 
-  wire                 chdr_clk;
-  wire                 chdr_rst;
-  wire                 ctrl_clk;
-  wire                 ctrl_rst;
+  wire                 rfnoc_chdr_rst;
+  wire                 rfnoc_ctrl_rst;
 
   wire                 ctrlport_req_wr;
   wire                 ctrlport_req_rd;
@@ -127,10 +123,6 @@ module rfnoc_block_null_src_sink #(
     .m_rfnoc_ctrl_tlast       (m_rfnoc_ctrl_tlast                 ),
     .m_rfnoc_ctrl_tvalid      (m_rfnoc_ctrl_tvalid                ),
     .m_rfnoc_ctrl_tready      (m_rfnoc_ctrl_tready                ),
-    .chdr_clk                 (chdr_clk                           ),
-    .chdr_rst                 (chdr_rst                           ),
-    .ctrl_clk                 (ctrl_clk                           ),
-    .ctrl_rst                 (ctrl_rst                           ),
     .m_ctrlport_req_wr        (ctrlport_req_wr                    ),
     .m_ctrlport_req_rd        (ctrlport_req_rd                    ),
     .m_ctrlport_req_addr      (ctrlport_req_addr                  ),
@@ -183,8 +175,8 @@ module rfnoc_block_null_src_sink #(
   reg [63:0] src_line_cnt  = 64'd0, src_pkt_cnt  = 64'd0;
   reg [63:0] loop_line_cnt = 64'd0, loop_pkt_cnt = 64'd0;
 
-  always @(posedge chdr_clk) begin
-    if (chdr_rst | reg_clear_cnts) begin
+  always @(posedge rfnoc_chdr_clk) begin
+    if (rfnoc_chdr_rst | reg_clear_cnts) begin
       snk_line_cnt  <= 64'd0;
       snk_pkt_cnt   <= 64'd0;
       src_line_cnt  <= 64'd0;
@@ -230,8 +222,8 @@ module rfnoc_block_null_src_sink #(
   reg [11:0] lines_left = 12'd0;
   reg  [9:0] throttle_cntr = 10'd0;
 
-  always @(posedge chdr_clk) begin
-    if (chdr_rst) begin
+  always @(posedge rfnoc_chdr_clk) begin
+    if (rfnoc_chdr_rst) begin
       state <= ST_HDR;
     end else begin
       case (state)
@@ -282,8 +274,8 @@ module rfnoc_block_null_src_sink #(
 
   // Register Interface
   // ---------------------------
-  always @(posedge chdr_clk) begin
-    if (chdr_rst) begin
+  always @(posedge rfnoc_chdr_clk) begin
+    if (rfnoc_chdr_rst) begin
       ctrlport_resp_ack <= 1'b0;
     end else begin
       // All transactions finish in 1 cycle
