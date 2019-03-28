@@ -91,7 +91,7 @@ module chdr_xport_adapter_generic #(
   wire [USER_W-1:0]  i_xport_tuser;
   wire               i_xport_tlast, i_xport_tvalid, i_xport_tready;
   wire [CHDR_W-1:0]  o_xport_tdata;
-  wire [USER_W-1:0]  o_xport_tuser;
+  reg  [USER_W-1:0]  o_xport_tuser;
   wire               o_xport_tlast, o_xport_tvalid, o_xport_tready;
 
   localparam [$clog2(CHDR_W)-1:0] SWAP_LANES = ((CHDR_W / 64) - 1) << 6;
@@ -103,7 +103,7 @@ module chdr_xport_adapter_generic #(
     .s_axis_tdata(s_axis_xport_tdata), .s_axis_tswap('h0),
     .s_axis_tuser(s_axis_xport_tuser), .s_axis_tlast(s_axis_xport_tlast),
     .s_axis_tvalid(s_axis_xport_tvalid), .s_axis_tready(s_axis_xport_tready),
-    .m_axis_tdata (i_xport_tdata), .m_axis_tuser (i_xport_tuser),
+    .m_axis_tdata (i_xport_tdata), .m_axis_tuser(i_xport_tuser),
     .m_axis_tlast (i_xport_tlast),
     .m_axis_tvalid(i_xport_tvalid), .m_axis_tready(i_xport_tready)
   );
@@ -122,18 +122,26 @@ module chdr_xport_adapter_generic #(
 
 
   wire [CHDR_W-1:0] x2d_tdata;  // Xport => Demux
+  wire [USER_W-1:0] x2d_tuser;
   wire [1:0]        x2d_tid;
   wire              x2d_tlast, x2d_tvalid, x2d_tready;
   wire [CHDR_W-1:0] x2x_tdata;  // Xport => Xport (loopback)
+  wire [USER_W-1:0] x2x_tuser;
   wire              x2x_tlast, x2x_tvalid, x2x_tready;
   wire [CHDR_W-1:0] m2x_tdata;  // Mux => Xport
+  wire              m2x_tdest;  // 1: Return to src, 0: CHDR input
+  wire [USER_W-1:0] m2x_tuser;
   wire              m2x_tlast, m2x_tvalid, m2x_tready;
 
   // ---------------------------------------------------
   // Transport => DEMUX
   // ---------------------------------------------------
-  wire        op_stb;
-  wire [15:0] op_src_epid;
+  wire              op_stb;
+  wire [15:0]       op_src_epid;
+  wire              lookup_stb;
+  wire [15:0]       lookup_epid;
+  wire [USER_W-1:0] lookup_res_val;
+  wire              lookup_res_match;
 
   chdr_mgmt_pkt_handler #(
     .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
@@ -151,34 +159,54 @@ module chdr_xport_adapter_generic #(
     .op_stb(op_stb), .op_dst_epid(/* unused */), .op_src_epid(op_src_epid)
   );
 
-  wire              find_tvalid, find_tready;
-  wire [USER_W-1:0] result_tdata;
-  wire              result_tkeep, result_tvalid, result_tready;
-
-  axis_muxed_kv_map #(
-    .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE), .NUM_PORTS(1)
+  kv_map #(
+    .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE), .INSERT_MODE("LOSSY")
   ) kv_map_i (
     .clk(clk), .reset(rst),
-    .axis_insert_tdata(i_xport_tuser), .axis_insert_tdest(op_src_epid),
-    .axis_insert_tvalid(op_stb), .axis_insert_tready(/* Time between op_stb > Insertion time */),
-    .axis_find_tdata(chdr_get_dst_epid(s_axis_rfnoc_tdata[63:0])),
-    .axis_find_tvalid(find_tvalid), .axis_find_tready(find_tready),
-    .axis_result_tdata(result_tdata), .axis_result_tkeep(result_tkeep),
-    .axis_result_tvalid(result_tvalid), .axis_result_tready(result_tready)
+    .insert_stb(op_stb), .insert_key(op_src_epid), .insert_val(i_xport_tuser),
+    .insert_busy(/* Time between op_stb > Insertion time */),
+    .find_key_stb(lookup_stb), .find_key(lookup_epid),
+    .find_res_stb(),
+    .find_res_match(lookup_res_match), .find_res_val(lookup_res_val),
+    .count(/* unused */)
+  );
+
+  reg i_xport_hdr = 1'b1;
+  always @(posedge clk) begin
+    if (rst)
+      i_xport_hdr <= 1'b1;
+    else if (i_xport_tvalid && i_xport_tready)
+      i_xport_hdr <= i_xport_tlast;
+  end
+
+  reg x2d_hdr = 1'b1;
+  always @(posedge clk) begin
+    if (rst)
+      x2d_hdr <= 1'b1;
+    else if (x2d_tvalid && x2d_tready)
+      x2d_hdr <= x2d_tlast;
+  end
+
+  axi_fifo #(.WIDTH(USER_W),.SIZE(1)) in_user_fifo_i (
+    .clk(clk), .reset(rst), .clear(1'b0),
+    .i_tdata(i_xport_tuser), .i_tvalid(i_xport_tvalid && i_xport_tready && i_xport_hdr), .i_tready(),
+    .o_tdata(x2d_tuser), .o_tvalid(), .o_tready(x2d_tvalid && x2d_tready && x2d_hdr),
+    .space(), .occupied()
   );
 
   // ---------------------------------------------------
   // MUX and DEMUX for return path
   // ---------------------------------------------------
 
+  wire [USER_W-1:0] dummy_tuser;
   axis_switch #(
-    .DATA_W(CHDR_W), .DEST_W(1), .IN_PORTS(1), .OUT_PORTS(2), .PIPELINE(1)
+    .DATA_W(CHDR_W+USER_W), .DEST_W(1), .IN_PORTS(1), .OUT_PORTS(2), .PIPELINE(0)
   ) rtn_demux_i (
     .clk(clk), .reset(rst),
-    .s_axis_tdata(x2d_tdata), .s_axis_alloc(1'b0),
+    .s_axis_tdata({x2d_tuser, x2d_tdata}), .s_axis_alloc(1'b0),
     .s_axis_tdest(x2d_tid == CHDR_MGMT_RETURN_TO_SRC ? 2'b01 : 2'b00), 
     .s_axis_tlast(x2d_tlast), .s_axis_tvalid(x2d_tvalid), .s_axis_tready(x2d_tready),
-    .m_axis_tdata({x2x_tdata, m_axis_rfnoc_tdata}),
+    .m_axis_tdata({x2x_tuser, x2x_tdata, dummy_tuser, m_axis_rfnoc_tdata}),
     .m_axis_tdest(/* unused */),
     .m_axis_tlast({x2x_tlast, m_axis_rfnoc_tlast}),
     .m_axis_tvalid({x2x_tvalid, m_axis_rfnoc_tvalid}),
@@ -186,12 +214,13 @@ module chdr_xport_adapter_generic #(
   );
 
   axi_mux #(
-    .WIDTH(CHDR_W), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
+    .WIDTH(CHDR_W+USER_W+1), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0)
   ) rtn_mux_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({x2x_tdata, s_axis_rfnoc_tdata}), .i_tlast({x2x_tlast, s_axis_rfnoc_tlast}),
+    .i_tdata({1'b1, x2x_tuser, x2x_tdata, 1'b0, {USER_W{1'b0}}, s_axis_rfnoc_tdata}),
+    .i_tlast({x2x_tlast, s_axis_rfnoc_tlast}),
     .i_tvalid({x2x_tvalid, s_axis_rfnoc_tvalid}), .i_tready({x2x_tready, s_axis_rfnoc_tready}),
-    .o_tdata(m2x_tdata), .o_tlast(m2x_tlast),
+    .o_tdata({m2x_tdest, m2x_tuser, m2x_tdata}), .o_tlast(m2x_tlast),
     .o_tvalid(m2x_tvalid), .o_tready(m2x_tready)
   );
 
@@ -199,44 +228,50 @@ module chdr_xport_adapter_generic #(
   // MUX => Transport
   // ---------------------------------------------------
 
-  wire m2x_tvalid_tmp, m2x_tready_tmp;
-  wire o_xport_tvalid_tmp, o_xport_tready_tmp;
-
-  axi_fifo #(.WIDTH(CHDR_W + 1), .SIZE(1)) ret_flop_i (
-    .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({m2x_tlast, m2x_tdata}),
-    .i_tvalid(m2x_tvalid_tmp), .i_tready(m2x_tready_tmp),
-    .o_tdata({o_xport_tlast, o_xport_tdata}),
-    .o_tvalid(o_xport_tvalid_tmp), .o_tready(o_xport_tready_tmp),
-    .space(), .occupied()
+  // The map takes 2 cycles for a lookup and we add one more
+  // register for a total of 3 cycles. We need to make sure
+  // that the data-path has at least that much latency before
+  // it hits the output.
+  axis_shift_register #(
+    .WIDTH(CHDR_W), .NSPC(1), .LATENCY(3),
+    .SIDEBAND_DATAPATH(0), .GAPLESS(0),
+    .PIPELINE("NONE")
+  ) xport_delayline_i (
+    .clk(clk), .reset(rst),
+    .s_axis_tdata(m2x_tdata), .s_axis_tkeep(1'b1), .s_axis_tlast(m2x_tlast),
+    .s_axis_tvalid(m2x_tvalid), .s_axis_tready(m2x_tready),
+    .m_axis_tdata(o_xport_tdata), .m_axis_tkeep(), .m_axis_tlast(o_xport_tlast),
+    .m_axis_tvalid(o_xport_tvalid), .m_axis_tready(o_xport_tready),
+    .stage_stb(), .stage_eop(),
+    .m_sideband_data(), .m_sideband_keep(),
+    .s_sideband_data('h0)
   );
 
-  reg i_hdr = 1'b1;
+  reg m2x_hdr = 1'b1;
   always @(posedge clk) begin
     if (rst)
-      i_hdr <= 1'b0;
+      m2x_hdr <= 1'b1;
     else if (m2x_tvalid && m2x_tready)
-      i_hdr <= m2x_tlast;
+      m2x_hdr <= m2x_tlast;
   end
 
-  reg o_hdr = 1'b1;
+  reg [USER_W-1:0] in_tuser = {USER_W{1'b0}};
   always @(posedge clk) begin
-    if (rst)
-      o_hdr <= 1'b0;
-    else if (o_xport_tvalid && o_xport_tready)
-      o_hdr <= o_xport_tlast;
+    if (m2x_tvalid && m2x_tready && m2x_hdr)
+      in_tuser <= m2x_tuser;
   end
 
-  assign m2x_tready = m2x_tvalid & 
-    m2x_tready_tmp & (i_hdr ? find_tready : 1'b1);
-  // Note: This violates AXI-Stream but it's OK because there is at least one
-  // register stage (FIFO) downstream
-  assign m2x_tvalid_tmp = m2x_tvalid & m2x_tready;
-  assign find_tvalid = m2x_tvalid & i_hdr & m2x_tready;
+  // Lookup tuser in the map only if a packet is coming from the m_axis_rfnoc path
+  assign lookup_stb = (!m2x_tdest) && m2x_hdr && m2x_tvalid && m2x_tready;
+  assign lookup_epid = chdr_get_dst_epid(m2x_tdata[63:0]);
 
-  assign o_xport_tvalid = o_xport_tvalid_tmp & (o_hdr ? result_tvalid : 1'b0);
-  assign o_xport_tuser = result_tkeep ? result_tdata : {USER_W{1'b0}};
-  assign result_tready = o_xport_tready && o_xport_tvalid;
-  assign o_xport_tready_tmp = o_xport_tready && o_xport_tvalid;
+  // State machine to compute o_xport_tuser
+  always @(posedge clk) begin
+    if (rst) begin
+      o_xport_tuser <= {USER_W{1'b0}};
+    end else if (o_xport_tvalid && o_xport_tready && o_xport_tlast) begin
+      o_xport_tuser <= lookup_res_match ? lookup_res_val : in_tuser;
+    end
+  end
 
 endmodule // chdr_xport_adapter_generic

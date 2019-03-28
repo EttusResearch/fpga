@@ -30,7 +30,7 @@
 module axis_data_swap #(
   parameter integer              DATA_W    = 256,
   parameter integer              USER_W    = 1,
-  parameter [$clog2(DATA_W)-1:0] STAGES_EN = {$clog2(DATA_W){1'b1}},
+  parameter [$clog2(DATA_W)-1:0] STAGES_EN = 'hFFFFFFFF, //@HACK: Vivado does not allow $clog2 in value of this expr
   parameter [0:0]                DYNAMIC   = 1
 )(
   // Clock and Reset

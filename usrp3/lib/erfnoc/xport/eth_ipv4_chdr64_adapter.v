@@ -193,7 +193,7 @@ module eth_ipv4_chdr64_adapter #(
   // blocked, we instantiate one packet worth of buffering here.
   axi_fifo #(
     .WIDTH(64+1),.SIZE(MTU)
-  ) cpu_fifo_i (
+  ) chdr_fifo_i (
     .clk(clk), .reset(rst), .clear(1'b0),
     .i_tdata({e2x_fifo_tlast, e2x_fifo_tdata}),
     .i_tvalid(e2x_fifo_tvalid), .i_tready(e2x_fifo_tready),
