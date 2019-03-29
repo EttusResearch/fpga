@@ -165,7 +165,7 @@ module aurora_axis_mac #(
    );
 
    // AXI-Flop to ease timing
-   axi_fifo_flop #(.WIDTH(64)) input_pipe_i0 (
+   axi_fifo_flop2 #(.WIDTH(64)) input_pipe_i0 (
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata(i_raw_tdata), .i_tvalid(i_raw_tvalid), .i_tready(i_raw_tready),
       .o_tdata(i_pip_tdata), .o_tvalid(i_pip_tvalid),
@@ -186,7 +186,7 @@ module aurora_axis_mac #(
       .crc_err(checksum_err), .pkt_dropped(), .crit_error(critical_err)
    );
 
-  axi_fifo_flop #(.WIDTH(65)) input_pipe_i1 (
+  axi_fifo_flop2 #(.WIDTH(65)) input_pipe_i1 (
      .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
      .i_tdata({i_gt_tlast, i_gt_tdata}), .i_tvalid(i_gt_tvalid), .i_tready(i_gt_tready),
      .o_tdata({m_axis_tlast, m_axis_tdata}), .o_tvalid(m_axis_tvalid), .o_tready(m_axis_tready),
@@ -213,7 +213,7 @@ module aurora_axis_mac #(
    wire           o_raw_tvalid, o_raw_tready;
 
    // AXI-Flop to ease timing
-   axi_fifo_flop #(.WIDTH(65)) output_pipe_i0 (
+   axi_fifo_flop2 #(.WIDTH(65)) output_pipe_i0 (
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata({s_axis_tlast, s_axis_tdata}), .i_tvalid(s_axis_tvalid), .i_tready(s_axis_tready),
       .o_tdata({o_pkt_tlast, o_pkt_tdata}), .o_tvalid(o_pkt_tvalid), .o_tready(o_pkt_tready),
@@ -228,7 +228,7 @@ module aurora_axis_mac #(
    );
 
    // AXI-Flop to ease timing
-   axi_fifo_flop #(.WIDTH(64)) output_pipe_i1 (
+   axi_fifo_flop2 #(.WIDTH(64)) output_pipe_i1 (
       .clk(sys_clk), .reset(sys_rst), .clear(clear_sysclk),
       .i_tdata(bist_gen_en_reg ? bist_o_tdata : (bist_loopback_en_reg ? loopback_tdata : o_pip_tdata)),
       .i_tvalid(bist_gen_en_reg ? bist_o_tvalid : (bist_loopback_en_reg ? loopback_tvalid : o_pip_tvalid)),

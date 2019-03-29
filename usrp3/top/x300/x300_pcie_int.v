@@ -298,7 +298,7 @@ module x300_pcie_int #(
         .o_tdata(dmatx_tdata_mux), .o_tlast(dmatx_tlast_mux), .o_tvalid(dmatx_tvalid_mux), .o_tready(dmatx_tready_mux)
     );
 
-    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) tx_pipeline_srl (
+    axi_fifo_flop2 #(.WIDTH(DMA_STREAM_WIDTH+1)) tx_pipeline_reg (
         .clk(bus_clk), .reset(bus_rst), .clear(|(dmatx_clear)),
         .i_tdata({dmatx_tlast_mux, dmatx_tdata_mux}), .i_tvalid(dmatx_tvalid_mux), .i_tready(dmatx_tready_mux),
         .o_tdata({dmatx_tlast, dmatx_tdata}), .o_tvalid(dmatx_tvalid), .o_tready(dmatx_tready),
@@ -317,7 +317,7 @@ module x300_pcie_int #(
     wire [DMA_STREAM_WIDTH-1:0]                     dmarx_tdata_mux;
     wire                                            dmarx_tvalid_mux, dmarx_tlast_mux, dmarx_tready_mux;
 
-    axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) rx_pipeline_srl (
+    axi_fifo_flop2 #(.WIDTH(DMA_STREAM_WIDTH+1)) rx_pipeline_reg (
         .clk(bus_clk), .reset(bus_rst), .clear(|(dmarx_clear)),
         .i_tdata({dmarx_tlast, dmarx_tdata}), .i_tvalid(dmarx_tvalid), .i_tready(dmarx_tready),
         .o_tdata({dmarx_tlast_mux, dmarx_tdata_mux}), .o_tvalid(dmarx_tvalid_mux), .o_tready(dmarx_tready_mux),
