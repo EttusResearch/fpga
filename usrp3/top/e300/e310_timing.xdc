@@ -51,12 +51,12 @@ set_output_delay -clock CAT_FB_CLK -min [expr $cat_fb_data_prog_dly - $cat_fb_da
 # CAT SPI, path is segmented due to mux between PS SPI and PL soft SPI.
 # 8.333 MHz PL SPI clock rate
 set_property IOB FALSE [get_ports {CAT_CS CAT_SCLK CAT_MOSI CAT_MISO}] # Cannot pack IOB due to SPI mux
-set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 10.000
-set_min_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 1.000
-set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 10.000
-set_min_delay -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 1.000
-set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 10.000
-set_min_delay -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 1.000
+set_max_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 15.000
+set_min_delay -to [get_ports {CAT_CS CAT_SCLK CAT_MOSI}] 3.000
+set_max_delay -datapath_only -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 15.000
+set_min_delay -from [get_ports CAT_MISO] -to [all_registers -edge_triggered] 3.000
+set_max_delay -datapath_only -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 15.000
+set_min_delay -from [all_registers -edge_triggered] -to [get_pins {CAT_SCLK_MUX/I0 CAT_SCLK_MUX/I1 CAT_SCLK_MUX/S}] 3.000
 
 # TCXO DAC SPI
 # 12 MHz SPI clock rate
