@@ -373,11 +373,11 @@ module noc_shell
        assign fcin_ports_tvalid    = fcin_tvalid;
        assign fcin_tready          = fcin_ports_tready;
      end else begin
-       axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_mux (
+       axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(OUTPUT_PORTS)) axi_mux (
          .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
          .i_tdata(dataout_ports_tdata), .i_tlast(dataout_ports_tlast), .i_tvalid(dataout_ports_tvalid), .i_tready(dataout_ports_tready),
          .o_tdata(dataout_tdata), .o_tlast(dataout_tlast), .o_tvalid(dataout_tvalid), .o_tready(dataout_tready));
-       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_demux (
+       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0), .SIZE(OUTPUT_PORTS)) axi_demux (
          .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
          .header(header_fcin), .dest(header_fcin[3:0]),
          .i_tdata(fcin_tdata), .i_tlast(fcin_tlast), .i_tvalid(fcin_tvalid), .i_tready(fcin_tready),
@@ -434,12 +434,12 @@ module noc_shell
        assign fcout_tvalid        = fcout_ports_tvalid;
        assign fcout_ports_tready  = fcout_tready;
      end else begin
-       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
+       axi_demux #(.WIDTH(64), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_demux (
          .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
          .header(header_datain), .dest(header_datain[3:0]),
          .i_tdata(datain_tdata), .i_tlast(datain_tlast), .i_tvalid(datain_tvalid), .i_tready(datain_tready),
          .o_tdata(datain_ports_tdata), .o_tlast(datain_ports_tlast), .o_tvalid(datain_ports_tvalid), .o_tready(datain_ports_tready));
-       axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0), .SIZE(INPUT_PORTS)) axi_mux (
+       axi_mux #(.PRIO(0), .WIDTH(64), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1), .SIZE(INPUT_PORTS)) axi_mux (
          .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
          .i_tdata(fcout_ports_tdata), .i_tlast(fcout_ports_tlast), .i_tvalid(fcout_ports_tvalid), .i_tready(fcout_ports_tready),
          .o_tdata(fcout_tdata), .o_tlast(fcout_tlast), .o_tvalid(fcout_tvalid), .o_tready(fcout_tready));
