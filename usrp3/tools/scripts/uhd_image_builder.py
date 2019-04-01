@@ -303,18 +303,24 @@ def create_oot_include(device, include_dirs):
             currpath = os.path.abspath(str(dirs))
             if os.path.isdir(currpath) & (os.path.basename(currpath) == "rfnoc"):
                 # Case 1: Pointed directly to rfnoc directory
-                oot_path = os.path.dirname(currpath)
+                oot_path = currpath
             elif os.path.isdir(os.path.join(currpath, 'rfnoc')):
                 # Case 2: Pointed to top level rfnoc module directory
+                oot_path = os.path.join(currpath, 'rfnoc')
+            elif os.path.isfile(os.path.join(currpath, 'Makefile.inc')):
+                # Case 3: Pointed to a random directory with a Makefile.inc
                 oot_path = currpath
             else:
                 print('No RFNoC module found at ' + os.path.abspath(currpath))
                 continue
             if oot_path not in oot_dir_list:
                 oot_dir_list.append(oot_path)
-                named_path = os.path.join('$(BASE_DIR)', get_relative_path(get_basedir(), oot_path), 'rfnoc')
+                named_path = os.path.join('$(BASE_DIR)', get_relative_path(get_basedir(), oot_path))
                 incfile.write(OOT_DIR_TMPL.format(oot_dir=named_path))
-                if os.path.isfile(os.path.join(oot_path, 'rfnoc', 'Makefile.inc')):
+                if os.path.isfile(os.path.join(oot_path, 'Makefile.inc')):
+                    # Check for Makefile.inc
+                    incfile.write(OOT_INC_TMPL)
+                elif os.path.isfile(os.path.join(oot_path, 'rfnoc', 'Makefile.inc')):
                     # Check for Makefile.inc
                     incfile.write(OOT_INC_TMPL)
                 elif os.path.isfile(os.path.join(oot_path, 'rfnoc', 'fpga-src', 'Makefile.srcs')):
