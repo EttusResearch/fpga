@@ -320,8 +320,8 @@ package PkgRfnocBlockCtrlBfm;
 
     local virtual RfnocBackendIf.master backend;
     local RegisterIfaceBfm              ctrl;
-    local ChdrDataStreamBfm             m_data[$];
-    local ChdrDataStreamBfm             s_data[$];
+    local ChdrDataStreamBfm #(CHDR_W)   m_data[$];
+    local ChdrDataStreamBfm #(CHDR_W)   s_data[$];
     local bit                           running;
 
     localparam CMD_PROP_CYC = 5;
@@ -350,7 +350,7 @@ package PkgRfnocBlockCtrlBfm;
     function int add_master_data_port(
       virtual AxiStreamIf #(CHDR_W).master m_chdr
     );
-      ChdrDataStreamBfm bfm = new(m_chdr, null);
+      ChdrDataStreamBfm #(CHDR_W) bfm = new(m_chdr, null);
       m_data.push_back(bfm);
       return m_data.size() - 1;
     endfunction : add_master_data_port
@@ -359,7 +359,7 @@ package PkgRfnocBlockCtrlBfm;
     function int add_slave_data_port(
       virtual AxiStreamIf #(CHDR_W).slave s_chdr
     );
-      ChdrDataStreamBfm bfm = new(null, s_chdr);
+      ChdrDataStreamBfm #(CHDR_W) bfm = new(null, s_chdr);
       s_data.push_back(bfm);
       return s_data.size() - 1;
     endfunction : add_slave_data_port
