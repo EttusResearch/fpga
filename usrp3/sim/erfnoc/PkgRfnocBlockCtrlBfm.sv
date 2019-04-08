@@ -481,6 +481,7 @@ package PkgRfnocBlockCtrlBfm;
       while (~backend.sts.v1.flush_done) @(posedge backend.ctrl_clk);
       // Deassert flush then wait
       backend.cfg.v1.flush_en = 0;
+      while (backend.sts.v1.flush_active) @(posedge backend.ctrl_clk);
       repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
       repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
     endtask : flush
@@ -516,6 +517,7 @@ package PkgRfnocBlockCtrlBfm;
       reset_ctrl(ctrl_rst_cyc);
       // Deassert flush then wait
       backend.cfg.v1.flush_en = 0;
+      while (backend.sts.v1.flush_active) @(posedge backend.ctrl_clk);
       repeat (CMD_PROP_CYC) @(posedge backend.ctrl_clk);
       repeat (CMD_PROP_CYC) @(posedge backend.chdr_clk);
     endtask : flush_and_reset
