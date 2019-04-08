@@ -84,8 +84,13 @@ module ctrlport_decoder #(
   for (i = 0; i < NUM_SLAVES; i = i+1) begin : gen_split
     // Check if the upper bits of the request address match each slave. If the 
     // address matches, set the corresponding decoder[] bit.
-    assign decoder[i] = ((s_ctrlport_req_addr & BASE_ADDR_MASK) == BASE_ADDR) &&
-                         (s_ctrlport_req_addr[PORT_NUM_POS +: PORT_NUM_W] == i);
+    if (PORT_NUM_W == 0) begin
+      // Only one port in this case, so there are no port number bits to check
+      assign decoder[i] = ((s_ctrlport_req_addr & BASE_ADDR_MASK) == BASE_ADDR);
+    end else begin
+      assign decoder[i] = ((s_ctrlport_req_addr & BASE_ADDR_MASK) == BASE_ADDR) && 
+                           (s_ctrlport_req_addr[PORT_NUM_POS +: PORT_NUM_W] == i);
+    end
 
     always @(posedge ctrlport_clk) begin
       if (ctrlport_rst) begin
