@@ -87,7 +87,7 @@ module ctrlport_endpoint #(
   wire        i_ctrl_tready, o_ctrl_tready;
 
   generate
-    if (SYNC_CLKS) begin
+    if (SYNC_CLKS) begin : gen_sync_fifos
       axi_fifo #(.WIDTH(32+1), .SIZE(1)) in_fifo_i (
         .clk(ctrlport_clk), .reset(ctrlport_rst), .clear(1'b0),
         .i_tdata({s_rfnoc_ctrl_tlast, s_rfnoc_ctrl_tdata}),
@@ -105,7 +105,7 @@ module ctrlport_endpoint #(
         .o_tvalid(m_rfnoc_ctrl_tvalid), .o_tready(m_rfnoc_ctrl_tready),
         .space(), .occupied()
       );
-    end else begin
+    end else begin : gen_async_fifos
       axi_fifo_2clk #(.WIDTH(32+1), .SIZE(1), .PIPELINE("IN")) in_fifo_i (
         .reset(rfnoc_ctrl_rst),
         .i_aclk(rfnoc_ctrl_clk),
@@ -143,7 +143,7 @@ module ctrlport_endpoint #(
   wire        slv_req_tready, slv_req_fifo_tready, slv_resp_tready;
 
   generate
-    if (AXIS_CTRL_MST_EN == 1'b1 && AXIS_CTRL_SLV_EN == 1'b1) begin
+    if (AXIS_CTRL_MST_EN == 1'b1 && AXIS_CTRL_SLV_EN == 1'b1) begin : gen_mst_slv_muxing
       wire [31:0] in_hdr;
       axi_demux #(
         .WIDTH(32), .SIZE(2), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(0)
@@ -174,7 +174,7 @@ module ctrlport_endpoint #(
         .o_tready(o_ctrl_tready)
       );
 
-    end else if (AXIS_CTRL_MST_EN == 1'b1) begin
+    end else if (AXIS_CTRL_MST_EN == 1'b1) begin : gen_mst_muxing
 
       assign mst_resp_tdata  = i_ctrl_tdata;
       assign mst_resp_tlast  = i_ctrl_tlast;
@@ -186,7 +186,7 @@ module ctrlport_endpoint #(
       assign o_ctrl_tvalid   = mst_req_tvalid;
       assign mst_req_tready  = o_ctrl_tready;
 
-    end else begin
+    end else begin : gen_no_mst_muxing
 
       assign slv_req_tdata   = i_ctrl_tdata;
       assign slv_req_tlast   = i_ctrl_tlast;
@@ -206,7 +206,7 @@ module ctrlport_endpoint #(
   // ---------------------------------------------------
 
   generate
-    if (AXIS_CTRL_MST_EN == 1'b1) begin
+    if (AXIS_CTRL_MST_EN == 1'b1) begin : gen_ctrl_master
       axis_ctrl_master #( .THIS_PORTID(THIS_PORTID) ) axis_ctrl_mst_i (
         .clk                    (ctrlport_clk),
         .rst                    (ctrlport_rst),
@@ -232,14 +232,14 @@ module ctrlport_endpoint #(
         .ctrlport_resp_status   (s_ctrlport_resp_status),
         .ctrlport_resp_data     (s_ctrlport_resp_data)
       );
-    end else begin
+    end else begin : gen_no_ctrl_master
       assign mst_resp_tready = 1'b1;
       assign mst_req_tlast = 1'b0;
       assign mst_req_tvalid = 1'b0;
       assign s_ctrlport_resp_ack = 1'b0;
     end
 
-    if (AXIS_CTRL_SLV_EN == 1'b1) begin
+    if (AXIS_CTRL_SLV_EN == 1'b1) begin : gen_ctrl_slave
       axi_fifo #(.WIDTH(32+1), .SIZE(SLAVE_FIFO_SIZE)) slv_fifo_i (
         .clk(ctrlport_clk), .reset(ctrlport_rst), .clear(1'b0),
         .i_tdata({slv_req_tlast, slv_req_tdata}),
@@ -271,7 +271,7 @@ module ctrlport_endpoint #(
         .ctrlport_resp_status (m_ctrlport_resp_status),
         .ctrlport_resp_data   (m_ctrlport_resp_data)
       );
-    end else begin
+    end else begin : gen_no_ctrl_slave
       assign slv_req_fifo_tready = 1'b1;
       assign slv_resp_tlast = 1'b0;
       assign slv_resp_tvalid = 1'b0;
