@@ -10,9 +10,9 @@
 RFNOC_UTIL_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/utils/, \
 chdr_trim_payload.v \
 context_handler_sync.v \
+context_builder.v \
+context_parser.v \
 ctrlport_timer.v \
-ctrlport_req_combine.v \
-ctrlport_resp_combine.v \
 ctrlport_combiner.v \
 ctrlport_decoder.v \
 ctrlport_decoder_param.v \
