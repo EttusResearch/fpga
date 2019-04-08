@@ -379,6 +379,27 @@ package PkgRfnocBlockCtrlBfm;
       end
     endtask : run
 
+    // Return a handle to the control BFM
+    function RegisterIfaceBfm get_ctrl_bfm();
+      return ctrl;
+    endfunction : get_ctrl_bfm
+
+    // Return a handle to the indicated master port BFM
+    function ChdrDataStreamBfm #(CHDR_W) get_master_data_bfm(int port);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+      return m_data[port];
+    endfunction : get_master_data_bfm
+
+    // Return a handle to the indicated slave port BFM
+    function ChdrDataStreamBfm #(CHDR_W) get_slave_data_bfm(int port);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+      return s_data[port];
+    endfunction : get_slave_data_bfm
+
     // Get static info about the block
     function logic [7:0] get_proto_ver();
       return backend.sts.v1.proto_ver;
