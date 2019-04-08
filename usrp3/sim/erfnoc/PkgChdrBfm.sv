@@ -730,15 +730,17 @@ package PkgChdrBfm;
 
     // Insert header
     bus_word[63:0] = chdr_packet.header;
-    if (BUS_WIDTH == 64) axis_packet.data.push_back(bus_word);
-
-    // Insert timestamp
-    if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS) begin
-      if (BUS_WIDTH == 64) axis_packet.data.push_back(chdr_packet.timestamp);
-      else begin
-        bus_word[127:64] = chdr_packet.timestamp;
-        axis_packet.data.push_back(bus_word);
+    if (BUS_WIDTH == 64) begin
+      axis_packet.data.push_back(bus_word);
+      if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS) begin
+        // Insert timestamp
+        axis_packet.data.push_back(chdr_packet.timestamp);
       end
+    end else begin
+      // Copy the timestamp word from the header, regardless of whether or not 
+      // this packet uses the timestamp field.
+      bus_word[127:64] = chdr_packet.timestamp;
+      axis_packet.data.push_back(bus_word);
     end
 
     // Insert metadata
