@@ -257,7 +257,9 @@ module chdr_to_axis_pyld_ctxt #(
         // The header goes to the context stream
         in_chdr_tready <= in_ctxt_tready;
         in_ctxt_tuser  <= (CHDR_W > 64) ? CONTEXT_FIELD_HDR_TS : CONTEXT_FIELD_HDR;
-        last_ctxt_line <= (in_num_mdata == CHDR_NO_MDATA) && (in_pkt_type == CHDR_PKT_TYPE_DATA);
+        last_ctxt_line <= (in_num_mdata == 7'd0) && (
+                           in_pkt_type == CHDR_PKT_TYPE_DATA || 
+                          (in_pkt_type == CHDR_PKT_TYPE_DATA_TS && CHDR_W > 64));
       end
       ST_TS: begin
         // The timestamp goes to the context stream
@@ -307,7 +309,7 @@ module chdr_to_axis_pyld_ctxt #(
   wire [3:0]               flush_ctxt_tuser;
   wire                     flush_ctxt_tlast, flush_ctxt_tvalid, flush_ctxt_tready;
 
-  generate if (SYNC_CLKS) begin
+  generate if (SYNC_CLKS) begin : gen_sync_fifo
     axi_fifo #(.WIDTH(CHDR_W+4+1), .SIZE(CONTEXT_FIFO_SIZE)) ctxt_fifo_i (
       .clk(axis_data_clk), .reset(axis_data_rst), .clear(1'b0),
       .i_tdata({in_ctxt_tlast, in_ctxt_tuser, in_ctxt_tdata}),
@@ -324,7 +326,7 @@ module chdr_to_axis_pyld_ctxt #(
       .o_tvalid(out_pyld_tvalid), .o_tready(out_pyld_tready),
       .space(), .occupied()
     );
-  end else begin
+  end else begin : gen_async_fifo
     axi_fifo_2clk #(.WIDTH(CHDR_W+4+1), .SIZE(CONTEXT_FIFO_SIZE)) ctxt_fifo_i (
       .reset(axis_chdr_rst),
       .i_aclk(axis_chdr_clk),
