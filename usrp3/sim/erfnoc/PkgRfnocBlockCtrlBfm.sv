@@ -117,12 +117,18 @@ package PkgRfnocBlockCtrlBfm;
     //   timestamp:  Timestamp to insert into the CHDR packet. Omit this
     //               argument (or set to an unknown value, as in X or Z) to not
     //               include a timestamp.
+    //   eob:        End of burst flag
+    //   eov:        End of vector flag
+    //   vc:         Virtual channel number
     //
     task send (
-      input chdr_word_t data[$],
-      input int         data_bytes = -1,
-      input chdr_word_t metadata[$] = {},
-      input chdr_word_t timestamp = 'X
+      input chdr_word_t  data[$],
+      input int          data_bytes = -1,
+      input chdr_word_t  metadata[$] = {},
+      input chdr_word_t  timestamp = 'X,
+      input logic        eob = 0,
+      input logic        eov = 0,
+      input chdr_vc_t    vc  = 0
     );
       ChdrPacket      chdr_packet;
       chdr_header_t   chdr_header;
@@ -132,6 +138,9 @@ package PkgRfnocBlockCtrlBfm;
       pkt_type = $isunknown(timestamp) ? CHDR_DATA_NO_TS : CHDR_DATA_WITH_TS;
       chdr_packet = new();
       chdr_header = '{
+        vc       : vc,
+        eob      : eob,
+        eov      : eov,
         seq_num  : seq_num++,
         pkt_type : pkt_type,
         dst_epid : dst_epid,
@@ -535,13 +544,19 @@ package PkgRfnocBlockCtrlBfm;
     //   timestamp:  Timestamp to insert into the CHDR packet. Omit this
     //               argument (or set to an unknown value, as in X or Z) to not
     //               include a timestamp.
+    //   logic       End of burst flag
+    //   eov:        End of vector flag
+    //   vc:         Virtual channel number
     //
     task send(
-      input int         port,
-      input chdr_word_t data[$],
-      input int         data_bytes = -1,
-      input chdr_word_t metadata[$] = {},
-      input chdr_word_t timestamp = 'X
+      input int          port,
+      input chdr_word_t  data[$],
+      input int          data_bytes = -1,
+      input chdr_word_t  metadata[$] = {},
+      input chdr_word_t  timestamp = 'X,
+      input logic        eob = 0,
+      input logic        eov = 0,
+      input chdr_vc_t    vc  = 0
     );
       assert (running) else begin
         $fatal(1, "Cannot call send until RfnocBlockCtrlBfm is running");
@@ -550,7 +565,7 @@ package PkgRfnocBlockCtrlBfm;
         $fatal(1, "Invalid master port number");
       end
 
-      m_data[port].send(data, data_bytes, metadata, timestamp);
+      m_data[port].send(data, data_bytes, metadata, timestamp, eob, eov, vc);
     endtask : send
 
     // Receive a CHDR data packet on the CHDR data interface and extract its
