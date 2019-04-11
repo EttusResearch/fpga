@@ -129,7 +129,9 @@ def parse_output(simout):
         if tfm is not None:
             results['wall_time'] = str(tfm.group(1), 'ascii')
     # Parse testbench results
-    tb_match_arr = ([
+    # We have two possible formats to parse because we have two simulation
+    # test executors.
+    tb_match_fmt0 = ([
         b'.*TESTBENCH FINISHED: (.+)\n',
         b' - Time elapsed:   (.+) ns.*\n',
         b' - Tests Expected: (.+)\n',
@@ -137,17 +139,35 @@ def parse_output(simout):
         b' - Tests Passed:   (.+)\n',
         b'Result: (PASSED|FAILED).*',
     ])
-    m = re.match(b''.join(tb_match_arr), simout, re.DOTALL)
+    m_fmt0 = re.match(b''.join(tb_match_fmt0), simout, re.DOTALL)
+    tb_match_fmt1 = ([
+        b'.*TESTBENCH FINISHED: (.+)\n',
+        b' - Time elapsed:  (.+) ns.*\n',
+        b' - Tests Run:     (.+)\n',
+        b' - Tests Passed:  (.+)\n',
+        b' - Tests Failed:  (.+)\n',
+        b'Result: (PASSED|FAILED).*',
+    ])
+    m_fmt1 = re.match(b''.join(tb_match_fmt1), simout, re.DOTALL)
+
     # Figure out the returncode 
     retcode = RETCODE_UNKNOWN_ERR
-    if m is not None:
+    if m_fmt0 is not None or m_fmt1 is not None:
         retcode = RETCODE_SUCCESS
-        results['passed'] = (m.group(6) == b'PASSED')
-        results['module'] = m.group(1)
-        results['sim_time_ns'] = int(m.group(2))
-        results['tc_expected'] = int(m.group(3))
-        results['tc_run'] = int(m.group(4))
-        results['tc_passed'] = int(m.group(5))
+        if m_fmt0 is not None:
+            results['passed'] = (m_fmt0.group(6) == b'PASSED')
+            results['module'] = m_fmt0.group(1)
+            results['sim_time_ns'] = int(m_fmt0.group(2))
+            results['tc_expected'] = int(m_fmt0.group(3))
+            results['tc_run'] = int(m_fmt0.group(4))
+            results['tc_passed'] = int(m_fmt0.group(5))
+        else:
+            results['passed'] = (m_fmt1.group(6) == b'PASSED')
+            results['module'] = m_fmt1.group(1)
+            results['sim_time_ns'] = int(m_fmt1.group(2))
+            results['tc_expected'] = int(m_fmt1.group(3))
+            results['tc_run'] = int(m_fmt1.group(3))
+            results['tc_passed'] = int(m_fmt1.group(4))
     elif tb_started:
         retcode = RETCODE_PARSE_ERR
     elif compile_started:
