@@ -176,7 +176,7 @@ module chdr_stream_endpoint_tb;
     .ROUTE_TBL_SIZE (6),
     .MUX_ALLOC      ("ROUND-ROBIN"),
     .OPTIMIZE       ("AREA"),
-    .MGMT_PORT_MASK (3'b001),
+    .NPORTS_MGMT    (1),
     .EXT_RTCFG_PORT (0),
     .PROTOVER       (PROTOVER)
   ) xbar_c (
@@ -545,7 +545,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover XB: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd3 /*ports*/, 10'd0 /*inst*/, 8'd1 /*type*/},
+      exp_mgmt_op = '{op_payload:{2'h0, 8'd1/*ports_mgmt*/, 8'd3 /*ports*/, 10'd0 /*inst*/, 4'd1 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover XB: Mgmt response ops were incorrect");
@@ -573,7 +573,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP A: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd1 /*ports*/, 10'd0 /*inst*/, 8'd2 /*type*/},
+      exp_mgmt_op = '{op_payload:{{5'd0, 3'b111, PORT_A} /*ext_info*/, 10'd0 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP A: Mgmt response ops were incorrect");
@@ -598,7 +598,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP B: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{4'h0, DEV_ID, 10'd1 /*ports*/, 10'd1 /*inst*/, 8'd2 /*type*/},
+      exp_mgmt_op = '{op_payload:{{5'd0, 3'b111, PORT_B} /*ext_info*/, 10'd1 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP B: Mgmt response ops were incorrect");

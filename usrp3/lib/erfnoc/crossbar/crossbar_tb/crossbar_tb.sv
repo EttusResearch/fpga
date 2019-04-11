@@ -43,10 +43,10 @@ module crossbar_tb();
   //<PARAMS_BLOCK_AUTOGEN>
   // Router parameters
   localparam ROUTER_IMPL        = "chdr_crossbar_nxn"; // Router implementation
-  localparam ROUTER_PORTS       = 10;             // # Router ports
-  localparam ROUTER_DWIDTH      = 64;             // Router datapath width
-  localparam MTU_LOG2           = 7;              // log2 of max packet size for router
-  localparam NUM_MASTERS        = ROUTER_PORTS;   // Number of data generators in test
+  localparam ROUTER_PORTS       = 10;                  // # Router ports
+  localparam ROUTER_DWIDTH      = 64;                  // Router datapath width
+  localparam MTU_LOG2           = 7;                   // log2 of max packet size for router
+  localparam NUM_MASTERS        = ROUTER_PORTS;        // Number of data generators in test
   // Test parameters
   localparam TEST_MAX_PACKETS   = 100;    // How many packets to stream per test case?
   localparam TEST_LPP           = 100;    // Lines per packet
@@ -201,34 +201,34 @@ module crossbar_tb();
     );
   end else if (ROUTER_IMPL == "chdr_crossbar_nxn") begin
     chdr_crossbar_nxn #(
-      .CHDR_W             (ROUTER_DWIDTH),
-      .NPORTS             (ROUTER_PORTS),
-      .DEFAULT_PORT       (0),
-      .MTU                (MTU_LOG2),
-      .ROUTE_TBL_SIZE     (6),
-      .MUX_ALLOC          ("ROUND-ROBIN"),
-      .OPTIMIZE           ("AREA"),
-      .MGMT_PORT_MASK     (0),
-      .EXT_RTCFG_PORT     (1)
+      .CHDR_W         (ROUTER_DWIDTH),
+      .NPORTS         (ROUTER_PORTS),
+      .DEFAULT_PORT   (0),
+      .MTU            (MTU_LOG2),
+      .ROUTE_TBL_SIZE (6),
+      .MUX_ALLOC      ("ROUND-ROBIN"),
+      .OPTIMIZE       ("AREA"),
+      .NPORTS_MGMT    (0),
+      .EXT_RTCFG_PORT (1)
     ) router_dut_i (
        // General         
-      .clk                (clk),
-      .reset              (rst),
-      // Inputs           
-      .s_axis_tdata       (src2rtr_axis.tdata),
-      .s_axis_tlast       (src2rtr_axis.tlast),
-      .s_axis_tvalid      (src2rtr_axis.tvalid),
-      .s_axis_tready      (src2rtr_axis.tready),
-      // Output           
-      .m_axis_tdata       (rtr2snk_axis.tdata),
-      .m_axis_tlast       (rtr2snk_axis.tlast),
-      .m_axis_tvalid      (rtr2snk_axis.tvalid),
-      .m_axis_tready      (rtr2snk_axis.tready),
+      .clk            (clk),
+      .reset          (rst),
+      // Inputs
+      .s_axis_tdata   (src2rtr_axis.tdata),
+      .s_axis_tlast   (src2rtr_axis.tlast),
+      .s_axis_tvalid  (src2rtr_axis.tvalid),
+      .s_axis_tready  (src2rtr_axis.tready),
+      // Output
+      .m_axis_tdata   (rtr2snk_axis.tdata),
+      .m_axis_tlast   (rtr2snk_axis.tlast),
+      .m_axis_tvalid  (rtr2snk_axis.tvalid),
+      .m_axis_tready  (rtr2snk_axis.tready),
       // External router config
-      .ext_rtcfg_stb      (rtr_sb.settings_bus.set_stb), 
-      .ext_rtcfg_addr     (rtr_sb.settings_bus.set_addr),
-      .ext_rtcfg_data     (rtr_sb.settings_bus.set_data),
-      .ext_rtcfg_ack      (rtr_sb_ack)
+      .ext_rtcfg_stb  (rtr_sb.settings_bus.set_stb),
+      .ext_rtcfg_addr (rtr_sb.settings_bus.set_addr),
+      .ext_rtcfg_data (rtr_sb.settings_bus.set_data),
+      .ext_rtcfg_ack  (rtr_sb_ack)
     );
   end else begin
     axis_ctrl_crossbar_nxn #(

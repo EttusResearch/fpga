@@ -180,12 +180,15 @@ module chdr_stream_endpoint #(
   wire [31:0]       ctrlport_req_data;
   reg  [31:0]       ctrlport_resp_data;
 
+  localparam [17:0] EXTENDED_INFO = {
+    5'b0, REPORT_STRM_ERRS, AXIS_DATA_EN, AXIS_CTRL_EN, CTRL_XBAR_PORT};
+
   // Handle management packets here
   chdr_mgmt_pkt_handler #(
     .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(1)
   ) mgmt_ep_i (
     .clk(rfnoc_chdr_clk), .rst(rfnoc_chdr_rst),
-    .node_info(chdr_mgmt_build_node_info(device_id, 1, INST_NUM, NODE_TYPE_STREAM_EP)),
+    .node_info(chdr_mgmt_build_node_info(EXTENDED_INFO, INST_NUM, NODE_TYPE_STREAM_EP, device_id)),
     .s_axis_chdr_tdata(mgmt_i_tdata), .s_axis_chdr_tlast(mgmt_i_tlast),
     .s_axis_chdr_tvalid(mgmt_i_tvalid), .s_axis_chdr_tready(mgmt_i_tready),
     .m_axis_chdr_tdata(mgmt_o_tdata), .m_axis_chdr_tlast(mgmt_o_tlast),

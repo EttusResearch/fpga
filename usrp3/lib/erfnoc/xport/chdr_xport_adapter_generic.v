@@ -33,12 +33,12 @@
 //
 
 module chdr_xport_adapter_generic #(
-  parameter [15:0] PROTOVER  = {8'd1, 8'd0},
-  parameter        CHDR_W    = 256,
-  parameter        USER_W    = 16,
-  parameter        TBL_SIZE  = 6,
-  parameter [7:0]  NODE_TYPE = 8'd0,
-  parameter        NODE_INST = 0
+  parameter [15:0] PROTOVER     = {8'd1, 8'd0},
+  parameter        CHDR_W       = 256,
+  parameter        USER_W       = 16,
+  parameter        TBL_SIZE     = 6,
+  parameter [7:0]  NODE_SUBTYPE = 8'd0,
+  parameter        NODE_INST    = 0
 )(
   // Clock and reset
   input  wire               clk,
@@ -139,7 +139,7 @@ module chdr_xport_adapter_generic #(
     .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
   ) mgmt_ep_i (
     .clk(clk), .rst(rst),
-    .node_info(chdr_mgmt_build_node_info(device_id, 1, NODE_INST, NODE_TYPE)),
+    .node_info(chdr_mgmt_build_node_info({10'h0, NODE_SUBTYPE}, NODE_INST, NODE_TYPE_TRANSPORT, device_id)),
     .s_axis_chdr_tdata(i_xport_tdata), .s_axis_chdr_tlast(i_xport_tlast),
     .s_axis_chdr_tvalid(i_xport_tvalid), .s_axis_chdr_tready(i_xport_tready),
     .m_axis_chdr_tdata(x2d_tdata), .m_axis_chdr_tlast(x2d_tlast),

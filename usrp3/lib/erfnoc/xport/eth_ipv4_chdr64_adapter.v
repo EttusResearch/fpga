@@ -23,6 +23,7 @@
 //   - DROP_UNKNOWN_MAC: Drop packets not addressed to us?
 //
 // Signals:
+//   - device_id : The ID of the device that has instantiated this module
 //   - s_mac_*: The input Ethernet stream from the MAC (plus tuser for trailing bytes + err)
 //   - m_mac_*: The output Ethernet stream to the MAC (plus tuser for trailing bytes + err)
 //   - s_chdr_*: The input CHDR stream from the rfnoc infrastructure
@@ -45,6 +46,8 @@ module eth_ipv4_chdr64_adapter #(
   // Clocking and reset interface
   input  wire        clk,
   input  wire        rst,
+  // Device info
+  input  wire [15:0] device_id,
   // AXI-Stream interface to/from MAC
   input  wire [63:0] s_mac_tdata,
   input  wire [3:0]  s_mac_tuser,
@@ -84,7 +87,7 @@ module eth_ipv4_chdr64_adapter #(
 
   `include "../core/rfnoc_chdr_utils.vh"
   `include "../core/rfnoc_chdr_internal_utils.vh"
-  `include "rfnoc_xport_types.vh" // Include after rfnoc_chdr_internal_utils.vh
+  `include "rfnoc_xport_types.vh"
 
   //---------------------------------------
   // E2X and E2C DEMUX
@@ -136,10 +139,11 @@ module eth_ipv4_chdr64_adapter #(
   chdr_xport_adapter_generic #(
     .PROTOVER(PROTOVER), .CHDR_W(64),
     .USER_W(96), .TBL_SIZE(RT_TBL_SIZE),
-    .NODE_TYPE(NODE_TYPE_XPORT_IPV4_CHDR64), .NODE_INST(NODE_INST)
+    .NODE_SUBTYPE(NODE_SUBTYPE_XPORT_IPV4_CHDR64), .NODE_INST(NODE_INST)
   ) xport_adapter_gen_i (
     .clk                (clk),
     .rst                (rst),
+    .device_id          (device_id),
     .s_axis_xport_tdata (e2x_chdr_tdata),
     .s_axis_xport_tuser (e2x_chdr_tuser),
     .s_axis_xport_tlast (e2x_chdr_tlast),

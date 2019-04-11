@@ -425,19 +425,18 @@ localparam [1:0] CHDR_MGMT_RETURN_TO_SRC = 2'd2;  // Return packet to sender
 //  OP specific fields
 // -----------------------
 
-localparam [7:0] NODE_TYPE_XBAR          = 8'd1;
-localparam [7:0] NODE_TYPE_STREAM_EP     = 8'd2;
-
-// ../xports defines more transport types
-localparam [7:0] NODE_TYPE_XPORT_BASE    = 8'd64;
+localparam [3:0] NODE_TYPE_INVALID   = 4'd0;
+localparam [3:0] NODE_TYPE_XBAR      = 4'd1;
+localparam [3:0] NODE_TYPE_STREAM_EP = 4'd2;
+localparam [3:0] NODE_TYPE_TRANSPORT = 4'd3;
 
 function [47:0] chdr_mgmt_build_node_info(
-  input [15:0] device_id,
-  input [9:0]  num_ports,
+  input [17:0] ext_info,
   input [9:0]  node_inst,
-  input [7:0]  node_type
+  input [3:0]  node_type,
+  input [15:0] device_id
 );
-  chdr_mgmt_build_node_info = {4'h0, device_id, num_ports, node_inst, node_type};
+  chdr_mgmt_build_node_info = {ext_info, node_inst, node_type, device_id};
 endfunction
 
 function [9:0] chdr_mgmt_sel_dest_get_tdest(input [47:0] payload);
