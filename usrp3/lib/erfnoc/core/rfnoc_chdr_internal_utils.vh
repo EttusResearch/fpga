@@ -444,14 +444,6 @@ function [9:0] chdr_mgmt_sel_dest_get_tdest(input [47:0] payload);
   chdr_mgmt_sel_dest_get_tdest = payload[9:0];
 endfunction
 
-function [15:0] chdr_mgmt_cfg_rtr_get_tdest(input [47:0] payload);
-  chdr_mgmt_cfg_rtr_get_tdest = payload[15:0];
-endfunction
-
-function [9:0] chdr_mgmt_cfg_rtr_get_tdata(input [47:0] payload);
-  chdr_mgmt_cfg_rtr_get_tdata = payload[25:16];
-endfunction
-
 function [15:0] chdr_mgmt_cfg_reg_get_addr(input [47:0] payload);
   chdr_mgmt_cfg_reg_get_addr = payload[15:0];
 endfunction

@@ -665,7 +665,7 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[0] = '{  // Hop 1: Crossbar: Nop
           op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
         tx_mgmt_pl.ops[1] = '{  // Hop 2: Reset
-          op_payload:{30'h0, 2'b11, sep_a.REG_RESET_AND_FLUSH}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd4};
+          op_payload:{32'b111, sep_a.REG_RESET_AND_FLUSH}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd4};
         tx_mgmt_pl.ops[2] = '{  // Hop 2: Write EPID
           op_payload:{16'h0, epids[i], sep_a.REG_EPID_SELF}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd3};
         tx_mgmt_pl.ops[3] = '{  // Hop 2: Read EPID
