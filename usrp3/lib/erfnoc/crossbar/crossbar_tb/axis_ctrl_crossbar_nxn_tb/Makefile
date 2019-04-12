@@ -6,7 +6,7 @@
 # Top-of-Makefile
 #-------------------------------------------------
 # Define BASE_DIR to point to the "top" dir
-BASE_DIR = $(abspath ../../../../top)
+BASE_DIR = $(abspath ../../../../../top)
 # Include viv_sim_preample after defining BASE_DIR
 include $(BASE_DIR)/../tools/make/viv_sim_preamble.mak
 
@@ -34,14 +34,13 @@ $(RFNOC_CORE_SRCS) \
 # Testbench Specific
 #-------------------------------------------------
 # Define only one toplevel module
-TB_TOP_MODULE ?= crossbar_tb
-SIM_TOP = $(TB_TOP_MODULE)
+SIM_TOP = axis_ctrl_crossbar_nxn_tb
 
 SIM_SRCS = \
-$(abspath chdr_traffic_source_sim.sv) \
-$(abspath chdr_traffic_sink_sim.sv) \
-$(abspath crossbar_tb.sv) \
-$(abspath $(TB_TOP_MODULE).sv)
+$(abspath axis_ctrl_crossbar_nxn_tb.sv) \
+$(abspath ../crossbar_tb.sv) \
+$(abspath ../chdr_traffic_source_sim.sv) \
+$(abspath ../chdr_traffic_sink_sim.sv)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

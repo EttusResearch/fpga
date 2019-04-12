@@ -15,8 +15,26 @@
 
 `define SIM_TIMEOUT_US 1000000 // Default: 1s
 
-module crossbar_tb();
-  `TEST_BENCH_INIT("crossbar_tb",`NUM_TEST_CASES,`NS_PER_TICK)
+module crossbar_tb #(
+  parameter TEST_NAME          = "crossbar_tb",
+  // Router parameters
+  parameter ROUTER_IMPL        = "axi_crossbar", // Router implementation
+  parameter ROUTER_PORTS       = 10,             // # Router ports
+  parameter ROUTER_DWIDTH      = 64,             // Router datapath width
+  parameter MTU_LOG2           = 7,              // log2 of max packet size for router
+  parameter NUM_MASTERS        = ROUTER_PORTS,   // Number of data generators in test
+  // Test parameters
+  parameter TEST_MAX_PACKETS   = 50,             // How many packets to stream per test case?
+  parameter TEST_LPP           = 50,             // Lines per packet
+  parameter TEST_MIN_INJ_RATE  = 60,             // Minimum injection rate to test
+  parameter TEST_MAX_INJ_RATE  = 100,            // Maximum injection rate to test
+  parameter TEST_INJ_RATE_INCR = 10,             // Injection rate increment
+  parameter TEST_GEN_LL_FILES  = 0               // Generate files to produce load-latency graphs?
+
+)(
+  /* no IO */
+);
+  `TEST_BENCH_INIT(TEST_NAME,`NUM_TEST_CASES,`NS_PER_TICK)
 
   //----------------------------------------------------
   // General test setup
@@ -36,25 +54,6 @@ module crossbar_tb();
       timestamp = timestamp + 'd1;
     end
   end
-
-  //----------------------------------------------------
-  // Parameters
-  //----------------------------------------------------
-  //<PARAMS_BLOCK_AUTOGEN>
-  // Router parameters
-  localparam ROUTER_IMPL        = "chdr_crossbar_nxn"; // Router implementation
-  localparam ROUTER_PORTS       = 10;                  // # Router ports
-  localparam ROUTER_DWIDTH      = 64;                  // Router datapath width
-  localparam MTU_LOG2           = 7;                   // log2 of max packet size for router
-  localparam NUM_MASTERS        = ROUTER_PORTS;        // Number of data generators in test
-  // Test parameters
-  localparam TEST_MAX_PACKETS   = 100;    // How many packets to stream per test case?
-  localparam TEST_LPP           = 100;    // Lines per packet
-  localparam TEST_MIN_INJ_RATE  = 30;     // Minimum injection rate to test
-  localparam TEST_MAX_INJ_RATE  = 100;    // Maximum injection rate to test
-  localparam TEST_INJ_RATE_INCR = 10;     // Injection rate increment
-  localparam TEST_GEN_LL_FILES  = 0;      // Generate files to produce load-latency graphs?
-  //</PARAMS_BLOCK_AUTOGEN>
 
   //----------------------------------------------------
   // Instantiate traffic generators, checkers, buses

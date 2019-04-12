@@ -15,24 +15,31 @@ import shutil
 import glob
 import subprocess
 
-g_localparam_template = """  // Router parameters
-  localparam ROUTER_IMPL        = "{rtr_impl}";
-  localparam ROUTER_PORTS       = {rtr_ports};
-  localparam ROUTER_DWIDTH      = 64;
-  localparam MTU_LOG2           = {rtr_mtu};
-  localparam NUM_MASTERS        = {rtr_sources};
-  // Test parameters
-  localparam TEST_MAX_PACKETS   = {tst_maxpkts};
-  localparam TEST_LPP           = {tst_lpp};
-  localparam TEST_MIN_INJ_RATE  = {tst_injrate_min};
-  localparam TEST_MAX_INJ_RATE  = {tst_injrate_max};
-  localparam TEST_INJ_RATE_INCR = 10;
-  localparam TEST_GEN_LL_FILES  = 1;
+g_tb_top_template = """
+`timescale 1ns/1ps
+module crossbar_tb_auto();
+  crossbar_tb #(
+    .TEST_NAME          ("crossbar_tb_auto"),
+    .ROUTER_IMPL        ("{rtr_impl}"),
+    .ROUTER_PORTS       ({rtr_ports}),
+    .ROUTER_DWIDTH      ({rtr_width}),
+    .MTU_LOG2           ({rtr_mtu}),
+    .NUM_MASTERS        ({rtr_sources}),
+    .TEST_MAX_PACKETS   ({tst_maxpkts}),
+    .TEST_LPP           ({tst_lpp}),
+    .TEST_MIN_INJ_RATE  ({tst_injrate_min}),
+    .TEST_MAX_INJ_RATE  ({tst_injrate_max}),
+    .TEST_INJ_RATE_INCR (10),
+    .TEST_GEN_LL_FILES  (1)
+  ) impl (
+    /* no IO */
+  );
+endmodule
 """
 
 g_test_params = {
-    'data': {'rtr_mtu':7, 'tst_maxpkts':100, 'tst_lpp':100, 'tst_injrate_min':30, 'tst_injrate_max':100},
-    'ctrl': {'rtr_mtu':5, 'tst_maxpkts':100, 'tst_lpp':20,  'tst_injrate_min':10, 'tst_injrate_max':50},
+    'data': {'rtr_width':64, 'rtr_mtu':7, 'tst_maxpkts':100, 'tst_lpp':100, 'tst_injrate_min':30, 'tst_injrate_max':100},
+    'ctrl': {'rtr_width':64, 'rtr_mtu':5, 'tst_maxpkts':100, 'tst_lpp':20,  'tst_injrate_min':10, 'tst_injrate_max':50},
 }
 
 g_xb_types = {
@@ -52,20 +59,10 @@ def launch_run(impl, ports, sources):
     # Prepare a transform map to autogenerate a TB file
     transform = {'rtr_impl':impl, 'rtr_ports':ports, 'rtr_sources':sources}
     for k,v in g_test_params[g_xb_types[impl]].items():
-        transform[k] = v 
-    # Read crossbar_tb.sv and create crossbar_tb_auto.sv with new parameters
-    with open('crossbar_tb.sv', 'r') as in_file:
-        in_lines = in_file.readlines()
-    echo = 1
+        transform[k] = v
+    # Create crossbar_tb_auto.sv with specified parameters
     with open('crossbar_tb_auto.sv', 'w') as out_file:
-        for l in in_lines:
-            if '</PARAMS_BLOCK_AUTOGEN>' in l:
-                echo = 1
-            if echo:
-                out_file.write(l)
-            if '<PARAMS_BLOCK_AUTOGEN>' in l:
-                out_file.write(g_localparam_template.format(**transform))
-                echo = 0
+        out_file.write(g_tb_top_template.format(**transform))
     # Create data directory for the simulation
     data_dir = os.path.join('data', impl)
     export_dir = os.path.join('data', run_name)
@@ -76,7 +73,7 @@ def launch_run(impl, ports, sources):
     os.makedirs(data_dir)
     os.makedirs(export_dir)
     # Run "make xsim"
-    exitcode = subprocess.Popen('make xsim TB_TOP_FILE=crossbar_tb_auto.sv', shell=True).wait()
+    exitcode = subprocess.Popen('make xsim TB_TOP_MODULE=crossbar_tb_auto', shell=True).wait()
     if exitcode != 0:
         raise RuntimeError('Error running "make xsim". Was setupenv.sh run?')
     # Generate load-latency graphs
