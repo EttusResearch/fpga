@@ -6,107 +6,6 @@
 # See this spreadsheet for more details and explanations.
 
 #*******************************************************************************
-## Daughterboard Clocks
-#
-# 122.88, 200, 245.76 and 250 MHz Sample Rates are allowable with 2:1/1:2 DSP and 
-# 2 samples/cycle arriving at the FPGA:
-#
-#            <-- 2:1/1:2 -->
-#     | Supported   | Sample rate  | FPGA Clk  |
-#     |sample rates | at JESD core | Frequency |
-#     |   (MSPS)    |    (MSPS)    |   (MHz)   |
-#     |-------------|--------------|-----------|
-#     |   122.88    |    491.52    |  245.76   | (uses DUC/DDC)
-#     |   200.00    |    400.00    |  200.00   |
-#     |   245.76    |    491.52    |  245.76   |
-#     |   250.00    |    500.00    |  250.00   |
-#
-# Therefore, supported sample clocks are: 122.88, 200, 245.76 and 250 MHz.
-# Constrain the paths to the max rate to support all rates in a single FPGA image.
-set SAMPLE_CLK_PERIOD 4.00
-create_clock -name fpga_clk_a  -period $SAMPLE_CLK_PERIOD  [get_ports DBA_FPGA_CLK_P]
-create_clock -name fpga_clk_b  -period $SAMPLE_CLK_PERIOD  [get_ports DBB_FPGA_CLK_P]
-create_clock -name mgt_clk_dba -period $SAMPLE_CLK_PERIOD  [get_ports DBA_MGTCLK_P]
-create_clock -name mgt_clk_dbb -period $SAMPLE_CLK_PERIOD  [get_ports DBB_MGTCLK_P]
-
-# The Radio Clocks coming from the DBs are synchronized together (at the converters) to
-# a typical value of less than 100ps. To give ourselves and Vivado some margin, we claim
-# here that the DB-B Radio Clock can arrive 500ps before or after the DB-A clock at
-# the FPGA (note that the trace lengths of the Radio Clocks coming from the DBs to the
-# FPGA are about 0.5" different, thereby incurring ~80ps of additional skew at the FPGA).
-# There is one spot in the FPGA where we cross domains between the DB-A and
-# DB-B clock, so we must ensure that Vivado can analyze that path safely.
-set FPGA_CLK_EARLY -0.5
-set FPGA_CLK_LATE   0.5
-set_clock_latency  -source -early $FPGA_CLK_EARLY [get_clocks fpga_clk_b]
-set_clock_latency  -source -late  $FPGA_CLK_LATE  [get_clocks fpga_clk_b]
-
-# Virtual clocks for constraining I/O (used below)
-create_clock -name fpga_clk_a_v -period $SAMPLE_CLK_PERIOD
-create_clock -name fpga_clk_b_v -period $SAMPLE_CLK_PERIOD
-
-# The set_clock_latency constraints set on fpga_clk_b are problematic when used with
-# I/O timing, since the analyzer gives us a double-hit on the latency. One workaround
-# (used here) is to simply swap the early and late times for the virtual clock so that
-# it cancels out the source latency during analysis. D. Jepson tested this by setting
-# the early and late numbers to zero and then their actual value, running timing reports
-# on each. The slack report matches for both cases, showing that the reversed early/late
-# numbers on the virtual clock zero out the latency effects on the actual clock.
-#
-# Note this is not a problem for the fpga_clk_a, since no latency is added. So only apply
-# it to fpga_clk_b_v.
-set_clock_latency  -source -early $FPGA_CLK_LATE  [get_clocks fpga_clk_b_v]
-set_clock_latency  -source -late  $FPGA_CLK_EARLY [get_clocks fpga_clk_b_v]
-
-
-
-#*******************************************************************************
-## Aliases for auto-generated clocks
-
-create_generated_clock -name radio_clk_fb   [get_pins {dba_core/RadioClockingx/RadioClkMmcm/CLKFBOUT}]
-create_generated_clock -name radio_clk      [get_pins {dba_core/RadioClockingx/RadioClkMmcm/CLKOUT0}]
-create_generated_clock -name radio_clk_2x   [get_pins {dba_core/RadioClockingx/RadioClkMmcm/CLKOUT1}]
-
-create_generated_clock -name radio_clk_b_fb [get_pins {dbb_core/RadioClockingx/RadioClkMmcm/CLKFBOUT}]
-create_generated_clock -name radio_clk_b    [get_pins {dbb_core/RadioClockingx/RadioClkMmcm/CLKOUT0}]
-create_generated_clock -name radio_clk_b_2x [get_pins {dbb_core/RadioClockingx/RadioClkMmcm/CLKOUT1}]
-
-
-
-#*******************************************************************************
-## Generated clocks for output busses to the daughterboard
-#
-# These clock definitions need to come above the set_clock_groups commands below to work!
-
-# Define clocks on the PL SPI clock output pins for both DBs. Actual divider values are
-# set by SW at run-time. Current divider value is 125 based on what radio clock
-# rate is set.
-# For the CPLD SPI endpoint alone, we need it to run at ~25 MHz (writes only), this means
-# that at times, the PL SPI will have its divider set to 10 (radio_clock = 250 MHz) or 8
-# (radio_clock = 200 MHz).
-# The readback clock is lower (~10 MHz), so create a separate clock for it.
-# Use readback divide value of 24 for an even divider (and some overconstraining).
-set PL_SPI_DIVIDE_VAL 10
-set PL_SPI_RB_DIVIDE_VAL 24
-set PL_SPI_CLK_A [get_ports DBA_CPLD_PL_SPI_SCLK]
-create_generated_clock -name pl_spi_clk_a \
-  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_A]/C] \
-  -divide_by $PL_SPI_DIVIDE_VAL $PL_SPI_CLK_A
-create_generated_clock -name pl_spi_rb_clk_a \
-  -master_clock [get_clocks radio_clk] \
-  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_A]/C] \
-  -divide_by $PL_SPI_RB_DIVIDE_VAL -add $PL_SPI_CLK_A
-set PL_SPI_CLK_B [get_ports DBB_CPLD_PL_SPI_SCLK]
-create_generated_clock -name pl_spi_clk_b \
-  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_B]/C] \
-  -divide_by $PL_SPI_DIVIDE_VAL $PL_SPI_CLK_B
-create_generated_clock -name pl_spi_rb_clk_b \
-  -master_clock [get_clocks radio_clk] \
-  -source [get_pins [all_fanin -flat -only_cells -startpoints_only $PL_SPI_CLK_B]/C] \
-  -divide_by $PL_SPI_RB_DIVIDE_VAL -add $PL_SPI_CLK_B
-
-
-#*******************************************************************************
 ## Asynchronous clock groups
 
 # MGT reference clocks are also async to everything.
@@ -278,3 +177,88 @@ set_output_delay -clock [get_clocks fpga_clk_a_v] -max -$SETUP_SKEW [get_ports R
 set_output_delay -clock [get_clocks fpga_clk_a_v] -min  $HOLD_SKEW  [get_ports REF_1PPS_OUT]
 set_multicycle_path -setup -to [get_ports REF_1PPS_OUT] -start 0
 set_multicycle_path -hold  -to [get_ports REF_1PPS_OUT] -1
+
+#*******************************************************************************
+### Async I/Os
+set DB_ASYNC_OUTPUTS [get_ports {
+    DB*_MODULE_PWR_ENABLE
+    DB*_RF_PWR_ENABLE
+    DB*_CLKDIST_SYNC
+    DB*_ATR_TX
+    DB*_ATR_RX
+    DB*_TXRX_SW_CTRL_1
+    DB*_TXRX_SW_CTRL_2
+    DB*_LED_RX
+    DB*_LED_RX2
+    DB*_LED_TX
+    QSFP_I2C_*
+}]
+set_output_delay -clock [get_clocks async_out_clk] 0.000 $DB_ASYNC_OUTPUTS
+set_max_delay -to $DB_ASYNC_OUTPUTS 50.000
+set_min_delay -to $DB_ASYNC_OUTPUTS 0.000
+
+set_input_delay -clock [get_clocks async_in_clk] 0.000 [get_ports QSFP_I2C_*]
+set_max_delay -from [get_ports QSFP_I2C_*] 50.000
+set_min_delay -from [get_ports QSFP_I2C_*] 0.000
+
+#*******************************************************************************
+## JTAG
+
+## MAX 10 JTAG TDI setup: 2 ns
+## MAX 10 JTAG TMS setup: 3 ns
+## MAX 10 JTAG hold: 10 ns
+## MAX 10 JTAG clk-to-q: 18 ns
+## Board delay: < 1.5 ns
+##
+## Setup time = Board delay + TMS setup = 3 ns + 1.5 ns = 4.5 ns
+## Hold time = Board delay + TMS hold = 1.5 ns + 10 ns = 11.5 ns
+## Overconstrain output delay and keep skew to +/- 8 ns
+##
+## Input delay = 2x Board delay + clk-to-q = 3 ns + 18 ns = 21 ns
+
+# Constrain outputs for skew, with same latch/launch edge:
+set_output_delay                        -clock [get_clocks dba_jtag_tck] -max -4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dba_jtag_tck] -max -4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dba_jtag_tck] -min  4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dba_jtag_tck] -min  4.0 \
+    [get_ports {DBA_CPLD_JTAG_TDI DBA_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dbb_jtag_tck] -max -4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dbb_jtag_tck] -max -4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay                        -clock [get_clocks dbb_jtag_tck] -min  4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+set_output_delay -add_delay -clock_fall -clock [get_clocks dbb_jtag_tck] -min  4.0 \
+    [get_ports {DBB_CPLD_JTAG_TDI DBB_CPLD_JTAG_TMS}]
+# Finally, make both the setup and hold checks use the same launching and latching edges.
+set_multicycle_path -setup -from [get_clocks clk40] -to [get_clocks dba_jtag_tck] -start 0
+set_multicycle_path -hold  -from [get_clocks clk40] -to [get_clocks dba_jtag_tck] -1
+set_multicycle_path -setup -from [get_clocks clk40] -to [get_clocks dbb_jtag_tck] -start 0
+set_multicycle_path -hold  -from [get_clocks clk40] -to [get_clocks dbb_jtag_tck] -1
+
+set_input_delay -clock [get_clocks dba_jtag_tck] -clock_fall -max 21 \
+    [get_ports DBA_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dba_jtag_tck] -clock_fall -min 0 \
+    [get_ports DBA_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dbb_jtag_tck] -clock_fall -max 21 \
+    [get_ports DBB_CPLD_JTAG_TDO]
+set_input_delay -clock [get_clocks dbb_jtag_tck] -clock_fall -min 0 \
+    [get_ports DBB_CPLD_JTAG_TDO]
+# Inputs have setup checks relative to half a period of TCK (launch on fall,
+# latch on rise). Actual latch clock is faster, so push back setup and hold
+# checks to match.
+set_multicycle_path -setup -from [get_clocks dba_jtag_tck] \
+    -through [get_ports DBA_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR / 2}]
+set_multicycle_path -end -hold -from [get_clocks dba_jtag_tck] \
+    -through [get_ports DBA_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR - 1}]
+set_multicycle_path -setup -from [get_clocks dbb_jtag_tck] \
+    -through [get_ports DBB_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR / 2}]
+set_multicycle_path -end -hold -from [get_clocks dbb_jtag_tck] \
+    -through [get_ports DBB_CPLD_JTAG_TDO] \
+    [expr {$DB_JTAG_DIVISOR - 1}]

@@ -23,7 +23,8 @@
 //   if receive buffer has a size greater than 2GB (i.e. 2^31).
 //
 // Parameters:
-//   WIDTH                       - Input width / Output width
+//   WIDTH                       - Input / Output width in bits
+//                                 (must be a power of 2 that is at least 8)
 //   SR_FLOW_CTRL_EN             - Settings register address for enabling flow control
 //   SR_FLOW_CTRL_WINDOW_SIZE    - Settings register address for window_size
 //   SR_FLOW_CTRL_PKT_LIMIT      - Settings register address for pkt_limit
@@ -219,7 +220,7 @@ module source_flow_control #(
   localparam ST_IGNORE         = 4;
 
   reg        go;
-  reg [15:0] pkt_len_reg;
+  reg [31:0] pkt_len_reg;
   reg [11:0] fc_ack_seqnum;
 
    always @(posedge clk) begin
@@ -229,10 +230,14 @@ module source_flow_control #(
       current_byte    <= 0;
       fc_ack_seqnum   <= 0;
       state           <= ST_IDLE;
+      pkt_len_reg     <= 0;
     end else begin
       case (state)
         ST_IDLE : begin
-          pkt_len_reg       <= pkt_len;
+          // Round packet length up to nearest word
+          pkt_len_reg <=  (pkt_len[15:$clog2(WIDTH/8)] +
+                          (|pkt_len[$clog2(WIDTH/8)-1:0]))
+                          << $clog2(WIDTH/8);
           if (sfc_enable) begin
             // Received a FC RESP packet, send a FC ACK packet
             if (~fc_ack_disable && fc_ack_cnt != 0) begin
