@@ -995,8 +995,8 @@ endinterface
   tb_config.write_reg(sid_``from_noc_block_name, SR_NEXT_DST_SID, sid_``to_noc_block_name + to_block_port, from_block_port); \
   tb_config.write_reg(sid_``from_noc_block_name, SR_RESP_IN_DST_SID, sid_noc_block_tb, from_block_port); \
   tb_config.write_reg(sid_``from_noc_block_name, SR_RESP_OUT_DST_SID, sid_noc_block_tb, from_block_port); \
-  tb_config.write_reg(sid_``to_noc_block_name,   SR_RESP_IN_DST_SID, sid_noc_block_tb, from_block_port); \
-  tb_config.write_reg(sid_``to_noc_block_name,   SR_RESP_OUT_DST_SID, sid_noc_block_tb, from_block_port); \
+  tb_config.write_reg(sid_``to_noc_block_name,   SR_RESP_IN_DST_SID, sid_noc_block_tb, to_block_port); \
+  tb_config.write_reg(sid_``to_noc_block_name,   SR_RESP_OUT_DST_SID, sid_noc_block_tb, to_block_port); \
   // If connection involves testbench block, set the SID and packet size. \
   if (sid_``from_noc_block_name == sid_noc_block_tb) begin \
     tb_streamer.set_dst_sid(16'(sid_``to_noc_block_name + to_block_port), from_block_port); \
