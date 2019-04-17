@@ -8,7 +8,7 @@
 
 
 module simple_uart
-  #(parameter CLKDIV_DEFAULT = 16'd0)
+  #(parameter CLKDIV_DEFAULT = 16'd0, parameter RX_SIZE=8, parameter TX_SIZE=0)
    (input clk_i, input rst_i,
     input we_i, input stb_i, input cyc_i, output reg ack_o,
     input [2:0] adr_i, input [31:0] dat_i, output reg [31:0] dat_o,
@@ -50,13 +50,13 @@ module simple_uart
        SUART_RXCHAR : dat_o <= rx_char;
      endcase // case(adr_i)
 
-   simple_uart_tx simple_uart_tx
+   simple_uart_tx #(.SIZE(TX_SIZE)) simple_uart_tx
      (.clk(clk_i),.rst(rst_i),
       .fifo_in(dat_i[7:0]),.fifo_write(ack_o && wb_wr && (adr_i == SUART_TXCHAR)),
       .fifo_level(tx_fifo_level),.fifo_full(tx_fifo_full),
       .clkdiv(clkdiv),.baudclk(baud_o),.tx(tx_o));
 
-   simple_uart_rx simple_uart_rx
+   simple_uart_rx #(.SIZE(RX_SIZE)) simple_uart_rx
      (.clk(clk_i),.rst(rst_i),
       .fifo_out(rx_char),.fifo_read(ack_o && ~wb_wr && (adr_i == SUART_RXCHAR)),
       .fifo_level(rx_fifo_level),.fifo_empty(rx_fifo_empty),

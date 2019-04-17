@@ -62,7 +62,7 @@ module simple_uart_rx
 
    wire 	  i_tready, o_tvalid;
    wire 	  full = ~i_tready;
-   wire 	  write = ~full & rx_d2 & stop_now;
+   wire 	  write = ~full & stop_now;
    assign fifo_empty = ~o_tvalid;
 
    axi_fifo #(.WIDTH(8), .SIZE(SIZE)) fifo
