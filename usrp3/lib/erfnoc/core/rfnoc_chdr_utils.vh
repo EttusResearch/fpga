@@ -17,15 +17,16 @@
 // -----------------------
 // Bits     Name       Meaning
 // ----     ----       -------
-// 63:58    flags      Flags (bitfield)
-// 57:55    pkt_type   Packet Type (enumeration)
-// 54:48    num_mdata  Number of lines of metadata
+// 63:58    vc         Virtual Channel
+// 57       eob        End of Burst Delimiter
+// 56       eov        End of Vector Delimiter
+// 55:53    pkt_type   Packet Type (enumeration)
+// 52:48    num_mdata  Number of lines of metadata
 // 47:32    seq_num    Sequence number for the packet
 // 31:16    length     Length of the datagram in bytes
 // 15:0     dst_epid   Destination Endpoint ID
 // 
-// 
-// Packet Type
+// Field: Packet Type
 // -----------------------
 // 3'd0     Management
 // 3'd1     Stream Status
@@ -36,18 +37,11 @@
 // 3'd6     Data (without timestamp)
 // 3'd7     Data (with timestamp)
 //
-// Flags
-// -----------------------
-// flags[0] EOV (End of Vector)
-// flags[1] EOB (End of Burst)
-// flags[2] User Defined
-// flags[3] User Defined
-// flags[4] User Defined
-// flags[5] User Defined
-// 
 
-// CHDR Packet Types
+// Special CHDR Values
 //
+
+// Packet Type
 localparam [2:0] CHDR_PKT_TYPE_MGMT    = 3'd0;
 localparam [2:0] CHDR_PKT_TYPE_STRS    = 3'd1;
 localparam [2:0] CHDR_PKT_TYPE_STRC    = 3'd2;
@@ -57,28 +51,29 @@ localparam [2:0] CHDR_PKT_TYPE_CTRL    = 3'd4;
 localparam [2:0] CHDR_PKT_TYPE_DATA    = 3'd6;
 localparam [2:0] CHDR_PKT_TYPE_DATA_TS = 3'd7;
 
-// Flags
-//
-localparam [5:0] CHDR_FLAGS_NONE  = 6'b000000;
-localparam [5:0] CHDR_FLAGS_EOV   = 6'b000001;
-localparam [5:0] CHDR_FLAGS_EOB   = 6'b000010;
-localparam [5:0] CHDR_FLAGS_USER0 = 6'b000100;
-localparam [5:0] CHDR_FLAGS_USER1 = 6'b001000;
-localparam [5:0] CHDR_FLAGS_USER2 = 6'b010000;
-localparam [5:0] CHDR_FLAGS_USER3 = 6'b100000;
+// Metadata
+localparam [4:0] CHDR_NO_MDATA = 5'd0;
 
 // CHDR Getter Functions
 //
-function [5:0] chdr_get_flags(input [63:0] header);
-  chdr_get_flags = header[63:58];
+function [5:0] chdr_get_vc(input [63:0] header);
+  chdr_get_vc = header[63:58];
+endfunction
+
+function [0:0] chdr_get_eob(input [63:0] header);
+  chdr_get_eob = header[57];
+endfunction
+
+function [0:0] chdr_get_eov(input [63:0] header);
+  chdr_get_eov = header[56];
 endfunction
 
 function [2:0] chdr_get_pkt_type(input [63:0] header);
-  chdr_get_pkt_type = header[57:55];
+  chdr_get_pkt_type = header[55:53];
 endfunction
 
-function [6:0] chdr_get_num_mdata(input [63:0] header);
-  chdr_get_num_mdata = header[54:48];
+function [4:0] chdr_get_num_mdata(input [63:0] header);
+  chdr_get_num_mdata = header[52:48];
 endfunction
 
 function [15:0] chdr_get_seq_num(input [63:0] header);
@@ -96,35 +91,59 @@ endfunction
 // CHDR Setter Functions
 //
 function [63:0] chdr_build_header(
-  input [5:0]  flags,
+  input [5:0]  vc,
+  input [0:0]  eob,
+  input [0:0]  eov,
   input [2:0]  pkt_type,
-  input [6:0]  num_mdata,
+  input [4:0]  num_mdata,
   input [15:0] seq_num,
   input [15:0] length,
   input [15:0] dst_epid
 );
-  chdr_build_header = {flags, pkt_type, num_mdata, seq_num, length, dst_epid};
+  chdr_build_header = {vc, eob, eov, pkt_type, num_mdata, seq_num, length, dst_epid};
 endfunction
 
-function [63:0] chdr_set_flags(
+function [63:0] chdr_set_vc(
   input [63:0] base_hdr,
-  input [5:0]  flags
+  input [5:0]  vc
 );
-  chdr_set_flags = {flags, base_hdr[57:0]};
+  chdr_set_vc = {vc, base_hdr[57:0]};
+endfunction
+
+function [63:0] chdr_set_eob(
+  input [63:0] base_hdr,
+  input [0:0]  eob
+);
+  chdr_set_eob = {base_hdr[63:58], eob, base_hdr[56:0]};
+endfunction
+
+function [63:0] chdr_set_eov(
+  input [63:0] base_hdr,
+  input [0:0]  eov
+);
+  chdr_set_eov = {base_hdr[63:57], eov, base_hdr[55:0]};
+endfunction
+
+function [63:0] chdr_set_delims(
+  input [63:0] base_hdr,
+  input [0:0]  eob,
+  input [0:0]  eov
+);
+  chdr_set_delims = {base_hdr[63:58], eob, eov, base_hdr[55:0]};
 endfunction
 
 function [63:0] chdr_set_pkt_type(
   input [63:0] base_hdr,
   input [2:0]  pkt_type
 );
-  chdr_set_pkt_type = {base_hdr[63:58], pkt_type, base_hdr[54:0]};
+  chdr_set_pkt_type = {base_hdr[63:56], pkt_type, base_hdr[52:0]};
 endfunction
 
 function [63:0] chdr_set_num_mdata(
   input [63:0] base_hdr,
-  input [6:0]  num_mdata
+  input [4:0]  num_mdata
 );
-  chdr_set_num_mdata = {base_hdr[63:55], num_mdata, base_hdr[47:0]};
+  chdr_set_num_mdata = {base_hdr[63:53], num_mdata, base_hdr[47:0]};
 endfunction
 
 function [63:0] chdr_set_seq_num(

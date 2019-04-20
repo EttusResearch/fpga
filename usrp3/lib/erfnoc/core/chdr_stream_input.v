@@ -507,7 +507,7 @@ module chdr_stream_input #(
 
   // Output data. Header and Payload
   wire [63:0] strs_header = chdr_build_header(
-    /*flags*/ 6'h0, CHDR_PKT_TYPE_STRS, /*nmdata*/ 7'd0,
+    /*VC*/ 6'd0, /*eob*/ 1'b0, /*eov*/ 1'b0, CHDR_PKT_TYPE_STRS, CHDR_NO_MDATA,
     resp_seq_num, 16'd32+(CHDR_W/8), return_epid);
   wire [255:0] strs_payload = chdr256_strs_build(
     /*statusinfo*/ resp_o_tdata[51:4], buff_info,

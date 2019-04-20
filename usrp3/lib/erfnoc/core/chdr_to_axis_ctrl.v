@@ -106,7 +106,7 @@ module chdr_to_axis_ctrl #(
   // - Ignore the CHDR DstEPID because packet is already here
 
   reg [1:0]   ch2ct_state = ST_CHDR_HDR;
-  reg [6:0]   ch2ct_nmdata = 7'd0;
+  reg [4:0]   ch2ct_nmdata = CHDR_NO_MDATA;
 
   always @(posedge rfnoc_chdr_clk) begin
     if (rfnoc_chdr_rst) begin
@@ -114,17 +114,17 @@ module chdr_to_axis_ctrl #(
     end else if (ch2ct_tvalid && ch2ct_tready) begin
       case (ch2ct_state)
         ST_CHDR_HDR: begin
-          ch2ct_nmdata <= chdr_get_num_mdata(ch2ct_tdata[63:0]) - 7'd1;
+          ch2ct_nmdata <= chdr_get_num_mdata(ch2ct_tdata[63:0]) - 5'd1;
           if (!ch2ct_tlast)
-            ch2ct_state <= (chdr_get_num_mdata(ch2ct_tdata[63:0]) == 7'd0) ? 
+            ch2ct_state <= (chdr_get_num_mdata(ch2ct_tdata[63:0]) == 5'd0) ? 
               ST_CTRL_HDR : ST_CHDR_MDATA;
           else
             ch2ct_state <= ST_CHDR_HDR;  // Premature termination
         end
         ST_CHDR_MDATA: begin
-          ch2ct_nmdata <= ch2ct_nmdata - 7'd1;
+          ch2ct_nmdata <= ch2ct_nmdata - 5'd1;
           if (!ch2ct_tlast)
-            ch2ct_state <= (ch2ct_nmdata == 7'd0) ? ST_CTRL_HDR : ST_CHDR_MDATA;
+            ch2ct_state <= (ch2ct_nmdata == CHDR_NO_MDATA) ? ST_CTRL_HDR : ST_CHDR_MDATA;
           else
             ch2ct_state <= ST_CHDR_HDR;  // Premature termination
         end
@@ -277,9 +277,10 @@ module chdr_to_axis_ctrl #(
     case (ct2ch_state)
       ST_CHDR_HDR: begin
         ct2ch_chdr_tdata = chdr_build_header(
-          CHDR_FLAGS_NONE,
+          6'd0, /* VC */
+          1'b0, 1'b0, /* eob, eov */
           CHDR_PKT_TYPE_CTRL,
-          7'd0, /* no metadata */
+          CHDR_NO_MDATA,
           ct2ch_seqnum,
           (ct2ch_chdr_lines << $clog2(CHDR_W/8)), /* length in bytes */
           axis_ctrl_get_rem_dst_epid(ct2ch_wctrl_tdata[63:32])

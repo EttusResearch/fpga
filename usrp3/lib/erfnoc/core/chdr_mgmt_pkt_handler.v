@@ -185,7 +185,7 @@ module chdr_mgmt_pkt_handler #(
 
   // Pieces of state maintained by this state machine
   reg [3:0]  pkt_state = ST_CHDR_IN_HDR;        // The state variable
-  reg [6:0]  num_mdata;                         // Number of metadata lines in packet
+  reg [4:0]  num_mdata;                         // Number of metadata lines in packet
   reg [63:0] cached_chdr_hdr, cached_mgmt_hdr;  // Cached copies of the CHDR and mgmt headers
   reg [15:0] stripped_len;                      // The new CHDR length after ops are stripped
   reg [9:0]  hops_remaining;                    // Number of hops remaining until pkt is consumed
@@ -220,11 +220,11 @@ module chdr_mgmt_pkt_handler #(
           if (i64_tvalid && i64_tready) begin
             cached_chdr_hdr <= i64_tdata;
             stripped_len <= chdr_get_length(i64_tdata);
-            num_mdata <= chdr_get_num_mdata(i64_tdata) - 7'd1;
+            num_mdata <= chdr_get_num_mdata(i64_tdata) - 5'd1;
             if (!i64_tlast) begin
               if (chdr_get_pkt_type(i64_tdata) != CHDR_PKT_TYPE_MGMT)
                 pkt_state <= ST_FAILSAFE_DROP;  // Drop non-mgmt packets
-              else if (chdr_get_num_mdata(i64_tdata) != 7'd0)
+              else if (chdr_get_num_mdata(i64_tdata) != CHDR_NO_MDATA)
                 pkt_state <= ST_CHDR_IN_MDATA;  // Skip over metadata
               else
                 pkt_state <= ST_MGMT_IN_HDR;    // Start processing packet
@@ -239,9 +239,9 @@ module chdr_mgmt_pkt_handler #(
         // - Discard incoming CHDR metadata
         ST_CHDR_IN_MDATA: begin
           if (i64_tvalid && i64_tready) begin
-            num_mdata <= num_mdata - 7'd1;
+            num_mdata <= num_mdata - 5'd1;
             if (!i64_tlast)
-              pkt_state <= (num_mdata == 7'd0) ? ST_MGMT_IN_HDR : ST_CHDR_IN_MDATA;
+              pkt_state <= (num_mdata == CHDR_NO_MDATA) ? ST_MGMT_IN_HDR : ST_CHDR_IN_MDATA;
             else
               pkt_state <= ST_CHDR_IN_HDR;  // Premature termination
           end

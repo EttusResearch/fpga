@@ -266,7 +266,7 @@ module rfnoc_block_null_src_sink #(
   assign src_pyld_tvalid = (state == ST_PYLD);
 
   assign src_ctxt_tdata  = chdr_build_header(
-    6'h0, CHDR_PKT_TYPE_DATA, 7'd0, src_pkt_cnt[15:0], reg_src_bpp, 16'd0);
+    6'd0, 1'b0, 1'b0, CHDR_PKT_TYPE_DATA, CHDR_NO_MDATA, src_pkt_cnt[15:0], reg_src_bpp, 16'd0);
   assign src_ctxt_tuser  = CONTEXT_FIELD_HDR;
   assign src_ctxt_tlast  = 1'b1;
   assign src_ctxt_tvalid = (state == ST_HDR && reg_src_en);

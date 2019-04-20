@@ -126,12 +126,12 @@ module chdr_to_axis_raw_data #(
   localparam [2:0] ST_DROP  = 3'd4;   // Something went wrong... Dropping packet
 
   reg [2:0] state = ST_HDR;
-  reg [6:0] mdata_pending = 7'd0;
+  reg [4:0] mdata_pending = CHDR_NO_MDATA;
   reg       last_ctxt_line;
 
   // Shortcuts: CHDR header
   wire [2:0] in_pkt_type = chdr_get_pkt_type(in_chdr_tdata[63:0]);
-  wire [6:0] in_num_mdata = chdr_get_num_mdata(in_chdr_tdata[63:0]);
+  wire [4:0] in_num_mdata = chdr_get_num_mdata(in_chdr_tdata[63:0]);
 
   always @(posedge axis_chdr_clk) begin
     if (axis_chdr_rst) begin
@@ -151,7 +151,7 @@ module chdr_to_axis_raw_data #(
               // If this is a data packet (with/without a TS), we move on to the metadata/body
               // state otherwise we drop it. Non-data packets should never reach here.
               if (in_pkt_type == CHDR_PKT_TYPE_DATA || in_pkt_type == CHDR_PKT_TYPE_DATA_TS) begin
-                if (in_num_mdata != 7'd0) begin
+                if (in_num_mdata != CHDR_NO_MDATA) begin
                   state <= ST_MDATA;
                 end else begin
                   state <= ST_BODY;
@@ -166,7 +166,7 @@ module chdr_to_axis_raw_data #(
               if (in_pkt_type == CHDR_PKT_TYPE_DATA_TS) begin
                 state <= ST_TS;
               end else if (in_pkt_type == CHDR_PKT_TYPE_DATA) begin
-                if (in_num_mdata != 7'd0) begin
+                if (in_num_mdata != CHDR_NO_MDATA) begin
                   state <= ST_MDATA;
                 end else begin
                   state <= ST_BODY;
@@ -185,7 +185,7 @@ module chdr_to_axis_raw_data #(
         // ------------------------------------
         ST_TS: begin
           if (!in_chdr_tlast) begin
-            if (mdata_pending != 7'd0) begin
+            if (mdata_pending != CHDR_NO_MDATA) begin
               state <= ST_MDATA;
             end else begin
               state <= ST_BODY;
@@ -201,10 +201,10 @@ module chdr_to_axis_raw_data #(
         ST_MDATA: begin
           if (!in_chdr_tlast) begin
             // Count down metadata and stop at 1
-            if (mdata_pending == 7'd1) begin
+            if (mdata_pending == 5'd1) begin
               state <= ST_BODY;
             end else begin
-              mdata_pending <= mdata_pending - 7'd1;
+              mdata_pending <= mdata_pending - 5'd1;
             end
           end else begin    // Premature termination
             // Packets must have at least one payload line
@@ -257,19 +257,19 @@ module chdr_to_axis_raw_data #(
         // The header goes to the context stream
         in_chdr_tready <= in_ctxt_tready;
         in_ctxt_tuser  <= (CHDR_W > 64) ? CONTEXT_FIELD_HDR_TS : CONTEXT_FIELD_HDR;
-        last_ctxt_line <= (in_num_mdata == 7'd0) && (in_pkt_type == CHDR_PKT_TYPE_DATA);
+        last_ctxt_line <= (in_num_mdata == CHDR_NO_MDATA) && (in_pkt_type == CHDR_PKT_TYPE_DATA);
       end
       ST_TS: begin
         // The timestamp goes to the context stream
         in_chdr_tready <= in_ctxt_tready;
         in_ctxt_tuser  <= CONTEXT_FIELD_TS;
-        last_ctxt_line <= (mdata_pending == 7'd0);
+        last_ctxt_line <= (mdata_pending == CHDR_NO_MDATA);
       end
       ST_MDATA: begin
         // The metadata goes to the context stream
         in_chdr_tready <= in_ctxt_tready;
         in_ctxt_tuser  <= CONTEXT_FIELD_MDATA;
-        last_ctxt_line <= (mdata_pending == 7'd1);
+        last_ctxt_line <= (mdata_pending == 5'd1);
       end
       ST_BODY: begin
         // The body goes to the payload stream

@@ -36,20 +36,11 @@ package PkgChdrUtils;
     CHDR_DATA_WITH_TS = 3'd7
   } chdr_pkt_type_t;                    // CHDR Packet Type
 
-  typedef bit [ 5:0] chdr_flags_t;      // CHDR Flags field
-  typedef bit  [6:0] chdr_num_mdata_t;  // CHDR Num Metadata field
+  typedef bit [ 5:0] chdr_vc_t;         // CHDR Virtual Channel field
+  typedef bit [ 4:0] chdr_num_mdata_t;  // CHDR Num Metadata field
   typedef bit [15:0] chdr_seq_num_t;    // CHDR SeqNum field
   typedef bit [15:0] chdr_length_t;     // CHDR Length field
   typedef bit [15:0] chdr_epid_t;       // CHDR EPID field
-
-  // CHDR packet Flags field values
-  const chdr_flags_t CHDR_FLAGS_NONE  = 6'b000000;
-  const chdr_flags_t CHDR_FLAGS_EOV   = 6'b000001;
-  const chdr_flags_t CHDR_FLAGS_EOB   = 6'b000010;
-  const chdr_flags_t CHDR_FLAGS_USER0 = 6'b000100;
-  const chdr_flags_t CHDR_FLAGS_USER1 = 6'b001000;
-  const chdr_flags_t CHDR_FLAGS_USER2 = 6'b010000;
-  const chdr_flags_t CHDR_FLAGS_USER3 = 6'b100000;
 
   // CHDR Context Field Identifiers
   typedef enum bit [3:0] { 
@@ -149,7 +140,9 @@ package PkgChdrUtils;
 
   // CHDR packet header
   typedef struct packed {
-    chdr_flags_t     flags;
+    chdr_vc_t        vc;
+    bit              eob;
+    bit              eov;
     chdr_pkt_type_t  pkt_type;
     chdr_num_mdata_t num_mdata;
     chdr_seq_num_t   seq_num;

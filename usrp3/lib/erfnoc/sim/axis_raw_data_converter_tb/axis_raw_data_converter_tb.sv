@@ -278,7 +278,9 @@ module axis_raw_data_converter_tb;
         (-invalid_samps * (item_w/8));                      // payload (back out empty slots)
 
       chdr_hdr = '{
-        flags     : $urandom_range(63),
+        vc        : $urandom_range(63),
+        eob       : $urandom_range(1),
+        eov       : $urandom_range(1),
         pkt_type  : has_time ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS,
         num_mdata : num_mdata,
         seq_num   : p,

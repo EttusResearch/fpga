@@ -64,12 +64,12 @@ module chdr_data_swapper #(
   localparam [2:0] ST_OTHER     = 3'd4;
 
   reg [2:0]         state = ST_HDR;
-  reg [6:0]         mdata_pending = 7'd0;
+  reg [4:0]         mdata_pending = CHDR_NO_MDATA;
   reg [SWAP_W-2:0]  pyld_tswap = 'h0, mdata_tswap = 'h0;
 
   // Shortcuts: CHDR header
   wire [2:0] pkt_type = chdr_get_pkt_type(s_axis_tdata[63:0]);
-  wire [6:0] num_mdata = chdr_get_num_mdata(s_axis_tdata[63:0]);
+  wire [4:0] num_mdata = chdr_get_num_mdata(s_axis_tdata[63:0]);
 
   // State machine to determine packet state
   always @(posedge clk) begin
@@ -82,7 +82,7 @@ module chdr_data_swapper #(
           if (!s_axis_tlast) begin
             if (CHDR_W > 64) begin
               if (pkt_type == CHDR_PKT_TYPE_DATA || pkt_type == CHDR_PKT_TYPE_DATA_TS) begin
-                if (num_mdata != 7'd0) begin
+                if (num_mdata != CHDR_NO_MDATA) begin
                   state <= ST_MDATA;
                 end else begin
                   state <= ST_DATA_BODY;
@@ -94,7 +94,7 @@ module chdr_data_swapper #(
               if (pkt_type == CHDR_PKT_TYPE_DATA_TS) begin
                 state <= ST_TS;
               end else if (pkt_type == CHDR_PKT_TYPE_DATA) begin
-                if (num_mdata != 7'd0) begin
+                if (num_mdata != CHDR_NO_MDATA) begin
                   state <= ST_MDATA;
                 end else begin
                   state <= ST_DATA_BODY;
@@ -109,7 +109,7 @@ module chdr_data_swapper #(
         end
         ST_TS: begin
           if (!s_axis_tlast) begin
-            if (mdata_pending != 7'd0) begin
+            if (mdata_pending != CHDR_NO_MDATA) begin
               state <= ST_MDATA;
             end else begin
               state <= ST_DATA_BODY;
@@ -120,10 +120,10 @@ module chdr_data_swapper #(
         end
         ST_MDATA: begin
           if (!s_axis_tlast) begin
-            if (mdata_pending == 7'd1) begin
+            if (mdata_pending == 5'd1) begin
               state <= ST_DATA_BODY;
             end else begin
-              mdata_pending <= mdata_pending - 7'd1;
+              mdata_pending <= mdata_pending - 5'd1;
             end
           end else begin
             state <= ST_HDR;

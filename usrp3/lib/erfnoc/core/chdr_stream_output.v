@@ -470,7 +470,7 @@ module chdr_stream_output #(
   // Header for stream command
   wire [CHDR_W-1:0] strc_header;
   assign strc_header[63:0] = chdr_build_header(
-    /*flags*/ 6'h0, CHDR_PKT_TYPE_STRC, /*nmdata*/ 7'd0,
+    /*VC*/ 6'd0, /*eob*/ 1'b0, /*eov*/ 1'b0, CHDR_PKT_TYPE_STRC, CHDR_NO_MDATA,
     strc_seq_num, 16'd16+(CHDR_W/8), cached_dst_epid);
   generate if (CHDR_W > 64)
     assign strc_header[CHDR_W-1:64] = {(CHDR_W-64){1'b0}};

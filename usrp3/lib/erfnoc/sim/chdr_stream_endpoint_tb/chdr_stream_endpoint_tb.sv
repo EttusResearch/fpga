@@ -28,21 +28,21 @@ module chdr_stream_endpoint_tb;
   sim_clock_gen #(20.0) rfnoc_ctrl_clk_gen (rfnoc_ctrl_clk, rfnoc_ctrl_rst); // 50 MHz
 
   // Parameters
-  localparam bit     VERBOSE           = 0;
-  localparam integer NUM_PKTS_PER_TEST = 200;
-  localparam integer FAST_STALL_PROB   = 0;
-  localparam integer SLOW_STALL_PROB   = 35;
+  localparam bit    VERBOSE           = 0;
+  localparam int    NUM_PKTS_PER_TEST = 200;
+  localparam int    FAST_STALL_PROB   = 0;
+  localparam int    SLOW_STALL_PROB   = 35;
 
-  localparam integer CHDR_W   = 64;
-  localparam integer MTU      = 7;
-  localparam [15:0]  PROTOVER = {8'd1, 8'd0};
-  localparam [15:0]  DEV_ID   = 16'hBEEF;
-  localparam [15:0]  EPID_TB  = 16'h1001;
-  localparam [15:0]  EPID_A   = 16'h1002;
-  localparam [15:0]  EPID_B   = 16'h1003;
-  localparam [9:0]   PORT_TB  = 10'd0;
-  localparam [9:0]   PORT_A   = 10'd1;
-  localparam [9:0]   PORT_B   = 10'd2;
+  localparam int    CHDR_W   = 64;
+  localparam int    MTU      = 7;
+  localparam [15:0] PROTOVER = {8'd1, 8'd0};
+  localparam [15:0] DEV_ID   = 16'hBEEF;
+  localparam [15:0] EPID_TB  = 16'h1001;
+  localparam [15:0] EPID_A   = 16'h1002;
+  localparam [15:0] EPID_B   = 16'h1003;
+  localparam [9:0]  PORT_TB  = 10'd0;
+  localparam [9:0]  PORT_A   = 10'd1;
+  localparam [9:0]  PORT_B   = 10'd2;
 
   // ----------------------------------------
   // DUT (and Crossbar) Instantiations
@@ -69,10 +69,14 @@ module chdr_stream_endpoint_tb;
   AxiStreamIf #(CHDR_W) m_tb_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);
   AxiStreamIf #(CHDR_W) s_tb_chdr (rfnoc_chdr_clk, rfnoc_chdr_rst);
 
-  AxiStreamIf #(CHDR_W) m_a_data  (rfnoc_chdr_clk, rfnoc_chdr_rst);
-  AxiStreamIf #(CHDR_W) s_a_data  (rfnoc_chdr_clk, rfnoc_chdr_rst);
-  AxiStreamIf #(CHDR_W) m_b_data  (rfnoc_chdr_clk, rfnoc_chdr_rst);
-  AxiStreamIf #(CHDR_W) s_b_data  (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) m_a0_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) s_a0_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) m_a1_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) s_a1_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) m_b0_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) s_b0_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) m_b1_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
+  AxiStreamIf #(CHDR_W) s_b1_data (rfnoc_chdr_clk, rfnoc_chdr_rst);
 
   chdr_stream_endpoint #(
     .PROTOVER           (PROTOVER),
@@ -80,45 +84,47 @@ module chdr_stream_endpoint_tb;
     .AXIS_CTRL_EN       (1),
     .AXIS_DATA_EN       (1),
     .INST_NUM           (0),
+    .NUM_DATA_I         (2),
+    .NUM_DATA_O         (2),
     .CTRL_XBAR_PORT     (PORT_A),
     .INGRESS_BUFF_SIZE  (MTU+1),
     .MTU                (MTU),
     .REPORT_STRM_ERRS   (1),
     .SIM_SPEEDUP        (1)
   ) sep_a (
-    .rfnoc_chdr_clk     (rfnoc_chdr_clk        ),
-    .rfnoc_chdr_rst     (rfnoc_chdr_rst        ),
-    .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
-    .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
-    .device_id          (DEV_ID                ),
-    .s_axis_chdr_tdata  (c2ae_chdr_tdata       ),
-    .s_axis_chdr_tlast  (c2ae_chdr_tlast       ),
-    .s_axis_chdr_tvalid (c2ae_chdr_tvalid      ),
-    .s_axis_chdr_tready (c2ae_chdr_tready      ),
-    .m_axis_chdr_tdata  (a2c_chdr_tdata        ),
-    .m_axis_chdr_tlast  (a2c_chdr_tlast        ),
-    .m_axis_chdr_tvalid (a2c_chdr_tvalid       ),
-    .m_axis_chdr_tready (a2c_chdr_tready       ),
-    .s_axis_data_tdata  (m_a_data.slave.tdata  ),
-    .s_axis_data_tlast  (m_a_data.slave.tlast  ),
-    .s_axis_data_tvalid (m_a_data.slave.tvalid ),
-    .s_axis_data_tready (m_a_data.slave.tready ),
-    .m_axis_data_tdata  (s_a_data.master.tdata ),
-    .m_axis_data_tlast  (s_a_data.master.tlast ),
-    .m_axis_data_tvalid (s_a_data.master.tvalid),
-    .m_axis_data_tready (s_a_data.master.tready),
-    .s_axis_ctrl_tdata  (a_ctrl_out_tdata      ),
-    .s_axis_ctrl_tlast  (a_ctrl_loop_tlast     ),
-    .s_axis_ctrl_tvalid (a_ctrl_loop_tvalid    ),
-    .s_axis_ctrl_tready (a_ctrl_loop_tready    ),
-    .m_axis_ctrl_tdata  (a_ctrl_in_tdata       ),
-    .m_axis_ctrl_tlast  (a_ctrl_loop_tlast     ),
-    .m_axis_ctrl_tvalid (a_ctrl_loop_tvalid    ),
-    .m_axis_ctrl_tready (a_ctrl_loop_tready    ),
-    .strm_seq_err_stb   (                      ),
-    .strm_data_err_stb  (                      ),
-    .strm_route_err_stb (                      ),
-    .signal_data_err    (a_signal_data_err     )
+    .rfnoc_chdr_clk     (rfnoc_chdr_clk                                    ),
+    .rfnoc_chdr_rst     (rfnoc_chdr_rst                                    ),
+    .rfnoc_ctrl_clk     (rfnoc_ctrl_clk                                    ),
+    .rfnoc_ctrl_rst     (rfnoc_ctrl_rst                                    ),
+    .device_id          (DEV_ID                                            ),
+    .s_axis_chdr_tdata  (c2ae_chdr_tdata                                   ),
+    .s_axis_chdr_tlast  (c2ae_chdr_tlast                                   ),
+    .s_axis_chdr_tvalid (c2ae_chdr_tvalid                                  ),
+    .s_axis_chdr_tready (c2ae_chdr_tready                                  ),
+    .m_axis_chdr_tdata  (a2c_chdr_tdata                                    ),
+    .m_axis_chdr_tlast  (a2c_chdr_tlast                                    ),
+    .m_axis_chdr_tvalid (a2c_chdr_tvalid                                   ),
+    .m_axis_chdr_tready (a2c_chdr_tready                                   ),
+    .s_axis_data_tdata  ({m_a1_data.slave.tdata  , m_a0_data.slave.tdata  }),
+    .s_axis_data_tlast  ({m_a1_data.slave.tlast  , m_a0_data.slave.tlast  }),
+    .s_axis_data_tvalid ({m_a1_data.slave.tvalid , m_a0_data.slave.tvalid }),
+    .s_axis_data_tready ({m_a1_data.slave.tready , m_a0_data.slave.tready }),
+    .m_axis_data_tdata  ({s_a1_data.master.tdata , s_a0_data.master.tdata }),
+    .m_axis_data_tlast  ({s_a1_data.master.tlast , s_a0_data.master.tlast }),
+    .m_axis_data_tvalid ({s_a1_data.master.tvalid, s_a0_data.master.tvalid}),
+    .m_axis_data_tready ({s_a1_data.master.tready, s_a0_data.master.tready}),
+    .s_axis_ctrl_tdata  (a_ctrl_out_tdata                                  ),
+    .s_axis_ctrl_tlast  (a_ctrl_loop_tlast                                 ),
+    .s_axis_ctrl_tvalid (a_ctrl_loop_tvalid                                ),
+    .s_axis_ctrl_tready (a_ctrl_loop_tready                                ),
+    .m_axis_ctrl_tdata  (a_ctrl_in_tdata                                   ),
+    .m_axis_ctrl_tlast  (a_ctrl_loop_tlast                                 ),
+    .m_axis_ctrl_tvalid (a_ctrl_loop_tvalid                                ),
+    .m_axis_ctrl_tready (a_ctrl_loop_tready                                ),
+    .strm_seq_err_stb   (                                                  ),
+    .strm_data_err_stb  (                                                  ),
+    .strm_route_err_stb (                                                  ),
+    .signal_data_err    (a_signal_data_err                                 )
   );
 
   chdr_stream_endpoint #(
@@ -127,45 +133,47 @@ module chdr_stream_endpoint_tb;
     .AXIS_CTRL_EN       (1),
     .AXIS_DATA_EN       (1),
     .INST_NUM           (1),
+    .NUM_DATA_I         (2),
+    .NUM_DATA_O         (2),
     .CTRL_XBAR_PORT     (PORT_B),
     .INGRESS_BUFF_SIZE  (MTU+1),
     .MTU                (MTU),
     .REPORT_STRM_ERRS   (1),
     .SIM_SPEEDUP        (1)
   ) sep_b (
-    .rfnoc_chdr_clk     (rfnoc_chdr_clk        ),
-    .rfnoc_chdr_rst     (rfnoc_chdr_rst        ),
-    .rfnoc_ctrl_clk     (rfnoc_ctrl_clk        ),
-    .rfnoc_ctrl_rst     (rfnoc_ctrl_rst        ),
-    .device_id          (DEV_ID                ),
-    .s_axis_chdr_tdata  (c2be_chdr_tdata       ),
-    .s_axis_chdr_tlast  (c2be_chdr_tlast       ),
-    .s_axis_chdr_tvalid (c2be_chdr_tvalid      ),
-    .s_axis_chdr_tready (c2be_chdr_tready      ),
-    .m_axis_chdr_tdata  (b2c_chdr_tdata        ),
-    .m_axis_chdr_tlast  (b2c_chdr_tlast        ),
-    .m_axis_chdr_tvalid (b2c_chdr_tvalid       ),
-    .m_axis_chdr_tready (b2c_chdr_tready       ),
-    .s_axis_data_tdata  (m_b_data.slave.tdata  ),
-    .s_axis_data_tlast  (m_b_data.slave.tlast  ),
-    .s_axis_data_tvalid (m_b_data.slave.tvalid ),
-    .s_axis_data_tready (m_b_data.slave.tready ),
-    .m_axis_data_tdata  (s_b_data.master.tdata ),
-    .m_axis_data_tlast  (s_b_data.master.tlast ),
-    .m_axis_data_tvalid (s_b_data.master.tvalid),
-    .m_axis_data_tready (s_b_data.master.tready),
-    .s_axis_ctrl_tdata  (b_ctrl_out_tdata      ),
-    .s_axis_ctrl_tlast  (b_ctrl_loop_tlast     ),
-    .s_axis_ctrl_tvalid (b_ctrl_loop_tvalid    ),
-    .s_axis_ctrl_tready (b_ctrl_loop_tready    ),
-    .m_axis_ctrl_tdata  (b_ctrl_in_tdata       ),
-    .m_axis_ctrl_tlast  (b_ctrl_loop_tlast     ),
-    .m_axis_ctrl_tvalid (b_ctrl_loop_tvalid    ),
-    .m_axis_ctrl_tready (b_ctrl_loop_tready    ),
-    .strm_seq_err_stb   (                      ),
-    .strm_data_err_stb  (                      ),
-    .strm_route_err_stb (                      ),
-    .signal_data_err    (b_signal_data_err     )
+    .rfnoc_chdr_clk     (rfnoc_chdr_clk                                    ),
+    .rfnoc_chdr_rst     (rfnoc_chdr_rst                                    ),
+    .rfnoc_ctrl_clk     (rfnoc_ctrl_clk                                    ),
+    .rfnoc_ctrl_rst     (rfnoc_ctrl_rst                                    ),
+    .device_id          (DEV_ID                                            ),
+    .s_axis_chdr_tdata  (c2be_chdr_tdata                                   ),
+    .s_axis_chdr_tlast  (c2be_chdr_tlast                                   ),
+    .s_axis_chdr_tvalid (c2be_chdr_tvalid                                  ),
+    .s_axis_chdr_tready (c2be_chdr_tready                                  ),
+    .m_axis_chdr_tdata  (b2c_chdr_tdata                                    ),
+    .m_axis_chdr_tlast  (b2c_chdr_tlast                                    ),
+    .m_axis_chdr_tvalid (b2c_chdr_tvalid                                   ),
+    .m_axis_chdr_tready (b2c_chdr_tready                                   ),
+    .s_axis_data_tdata  ({m_b1_data.slave.tdata  , m_b0_data.slave.tdata  }),
+    .s_axis_data_tlast  ({m_b1_data.slave.tlast  , m_b0_data.slave.tlast  }),
+    .s_axis_data_tvalid ({m_b1_data.slave.tvalid , m_b0_data.slave.tvalid }),
+    .s_axis_data_tready ({m_b1_data.slave.tready , m_b0_data.slave.tready }),
+    .m_axis_data_tdata  ({s_b1_data.master.tdata , s_b0_data.master.tdata }),
+    .m_axis_data_tlast  ({s_b1_data.master.tlast , s_b0_data.master.tlast }),
+    .m_axis_data_tvalid ({s_b1_data.master.tvalid, s_b0_data.master.tvalid}),
+    .m_axis_data_tready ({s_b1_data.master.tready, s_b0_data.master.tready}),
+    .s_axis_ctrl_tdata  (b_ctrl_out_tdata                                  ),
+    .s_axis_ctrl_tlast  (b_ctrl_loop_tlast                                 ),
+    .s_axis_ctrl_tvalid (b_ctrl_loop_tvalid                                ),
+    .s_axis_ctrl_tready (b_ctrl_loop_tready                                ),
+    .m_axis_ctrl_tdata  (b_ctrl_in_tdata                                   ),
+    .m_axis_ctrl_tlast  (b_ctrl_loop_tlast                                 ),
+    .m_axis_ctrl_tvalid (b_ctrl_loop_tvalid                                ),
+    .m_axis_ctrl_tready (b_ctrl_loop_tready                                ),
+    .strm_seq_err_stb   (                                                  ),
+    .strm_data_err_stb  (                                                  ),
+    .strm_route_err_stb (                                                  ),
+    .signal_data_err    (b_signal_data_err                                 )
   );
 
   chdr_crossbar_nxn #(
@@ -234,8 +242,10 @@ module chdr_stream_endpoint_tb;
   // ----------------------------------------
   TestExec test;
 
-  ChdrBfm #(CHDR_W) a_data_bfm = new(m_a_data, s_a_data);
-  ChdrBfm #(CHDR_W) b_data_bfm = new(m_b_data, s_b_data);
+  ChdrBfm #(CHDR_W) a0_data_bfm = new(m_a0_data, s_a0_data);
+  ChdrBfm #(CHDR_W) b0_data_bfm = new(m_b0_data, s_b0_data);
+  ChdrBfm #(CHDR_W) a1_data_bfm = new(m_a1_data, s_a1_data);
+  ChdrBfm #(CHDR_W) b1_data_bfm = new(m_b1_data, s_b1_data);
   ChdrBfm #(CHDR_W) tb_chdr_bfm = new(m_tb_chdr, s_tb_chdr);
 
   // Simple responders for AXIS-Ctrl transactions
@@ -406,6 +416,8 @@ module chdr_stream_endpoint_tb;
     input [15:0] seq_num_start,
     input bit    ignore_seq_route_errs = 0
   );
+    // Pick a VC for this run randomly
+    logic [5:0] vc = $urandom_range(1);
     fork
       begin: tx_loop
         for (int txi = 0; txi < num_pkts; txi=txi+1) begin
@@ -417,6 +429,7 @@ module chdr_stream_endpoint_tb;
           automatic chdr_word_t tx_data[$];
           // Fill data in the packet
           tx_hdr = '{
+            vc        : vc,
             dst_epid  : dst_epid,
             seq_num   : seq_num_start + txi[15:0],
             pkt_type  : (txi%4==0) ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS,
@@ -431,13 +444,19 @@ module chdr_stream_endpoint_tb;
           for (int i = 0; i < $urandom_range((1<<MTU)-10); i++)
             tx_data[i] = {txi << 16, i[15:0]};
           tx_chdr.write_raw(tx_hdr, tx_data, tx_mdata, tx_ts);
-          if (VERBOSE) $display("%s:Tx:%0d:",(src_epid == EPID_A)?"A":"B", txi, tx_chdr.sprint());
+          if (VERBOSE) $display("%s%0d:Tx:%0d:",(src_epid == EPID_A)?"A":"B", vc, txi, tx_chdr.sprint());
           // Send the packet
           test.start_timeout(tx_timeout, 2us, "Waiting to send data packet");
           if (src_epid == EPID_A)
-            a_data_bfm.put_chdr(tx_chdr.copy());
+            if (vc == 0)
+              a0_data_bfm.put_chdr(tx_chdr.copy());
+            else
+              a1_data_bfm.put_chdr(tx_chdr.copy());
           else
-            b_data_bfm.put_chdr(tx_chdr.copy());
+            if (vc == 0)
+              b0_data_bfm.put_chdr(tx_chdr.copy());
+            else
+              b1_data_bfm.put_chdr(tx_chdr.copy());
           test.end_timeout(tx_timeout);
         end
       end
@@ -448,12 +467,18 @@ module chdr_stream_endpoint_tb;
           // Receive a packet
           test.start_timeout(rx_timeout, 2us, "Waiting to recv data packet");
           if (dst_epid == EPID_A)
-            a_data_bfm.get_chdr(rx_chdr);
+            if (vc == 0)
+              a0_data_bfm.get_chdr(rx_chdr);
+            else
+              a1_data_bfm.get_chdr(rx_chdr);
           else
-            b_data_bfm.get_chdr(rx_chdr);
+            if (vc == 0)
+              b0_data_bfm.get_chdr(rx_chdr);
+            else
+              b1_data_bfm.get_chdr(rx_chdr);
           test.end_timeout(rx_timeout);
           // Validate the packet
-          if (VERBOSE) $display("%s:Rx:%0d:",(src_epid == EPID_A)?"A":"B", rxi, rx_chdr.sprint());
+          if (VERBOSE) $display("%s:Rx%0d:%0d:",(src_epid == EPID_A)?"A":"B", vc, rxi, rx_chdr.sprint());
           test.assert_error(ignore_seq_route_errs || rx_chdr.header.dst_epid == dst_epid, "Data Pkt: dst_epid was incorrect");
           test.assert_error(ignore_seq_route_errs || (rx_chdr.header.seq_num  == rxi + seq_num_start), "Data Pkt: seq_num was incorrect");
           if (rx_chdr.header.pkt_type == CHDR_DATA_WITH_TS)
@@ -464,6 +489,33 @@ module chdr_stream_endpoint_tb;
         end
       end
     join
+  endtask
+
+  task automatic set_unidir_stall_prob(
+    input [15:0] src_epid,
+    input [15:0] dst_epid,
+    int          src_stall_prob,
+    int          dst_stall_prob
+  );
+    if (src_epid == EPID_A) begin
+      a0_data_bfm.set_master_stall_prob(src_stall_prob);
+      a1_data_bfm.set_master_stall_prob(src_stall_prob);
+      b0_data_bfm.set_slave_stall_prob (dst_stall_prob);
+      b1_data_bfm.set_slave_stall_prob (dst_stall_prob);
+    end else begin
+      b0_data_bfm.set_master_stall_prob(src_stall_prob);
+      b1_data_bfm.set_master_stall_prob(src_stall_prob);
+      a0_data_bfm.set_slave_stall_prob (dst_stall_prob);
+      a1_data_bfm.set_slave_stall_prob (dst_stall_prob);
+    end
+  endtask
+
+  task automatic set_bidir_stall_prob(
+    int src_stall_prob,
+    int dst_stall_prob
+  );
+    set_unidir_stall_prob(EPID_A, EPID_B, src_stall_prob, dst_stall_prob);
+    set_unidir_stall_prob(EPID_B, EPID_A, src_stall_prob, dst_stall_prob);
   endtask
 
   // ----------------------------------------
@@ -495,8 +547,10 @@ module chdr_stream_endpoint_tb;
     test.start_tb();
 
     // Start the BFMs
-    a_data_bfm.run();
-    b_data_bfm.run();
+    a0_data_bfm.run();
+    b0_data_bfm.run();
+    a1_data_bfm.run();
+    b1_data_bfm.run();
     tb_chdr_bfm.run();
 
     tb_chdr_bfm.set_master_stall_prob(0);
@@ -573,7 +627,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP A: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{{5'd0, 3'b111, PORT_A} /*ext_info*/, 10'd0 /*inst*/, 4'd2 /*type*/, DEV_ID},
+      exp_mgmt_op = '{op_payload:{{4'd1, 6'd2, 6'd2, 2'b11} /*ext_info*/, 10'd0 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP A: Mgmt response ops were incorrect");
@@ -598,7 +652,7 @@ module chdr_stream_endpoint_tb;
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
       test.assert_error(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP B: Mgmt header was incorrect");
-      exp_mgmt_op = '{op_payload:{{5'd0, 3'b111, PORT_B} /*ext_info*/, 10'd1 /*inst*/, 4'd2 /*type*/, DEV_ID},
+      exp_mgmt_op = '{op_payload:{{4'd1, 6'd2, 6'd2, 2'b11} /*ext_info*/, 10'd1 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
       test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP B: Mgmt response ops were incorrect");
@@ -844,8 +898,9 @@ module chdr_stream_endpoint_tb;
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
-        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        set_unidir_stall_prob(EPID_A, EPID_B,
+          mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB,
+          slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_data_seqnum);
       end
       test.end_test();
@@ -862,8 +917,9 @@ module chdr_stream_endpoint_tb;
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
-        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        set_unidir_stall_prob(EPID_B, EPID_A,
+          mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB,
+          slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_data_seqnum);
       end
       test.end_test();
@@ -879,10 +935,9 @@ module chdr_stream_endpoint_tb;
         (mst_cfg?"Slow":"Fast"), (slv_cfg?"Slow":"Fast"));
       test.start_test(tc_label);
       begin
-        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        set_bidir_stall_prob(
+          mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB,
+          slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         fork
           send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST, cached_data_seqnum);
           send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST, cached_data_seqnum);
@@ -903,10 +958,9 @@ module chdr_stream_endpoint_tb;
       begin
         tb_chdr_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         tb_chdr_bfm.set_slave_stall_prob(slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        a_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        b_data_bfm.set_master_stall_prob(mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        a_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
-        b_data_bfm.set_slave_stall_prob (slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
+        set_bidir_stall_prob(
+          mst_cfg?SLOW_STALL_PROB:FAST_STALL_PROB,
+          slv_cfg?SLOW_STALL_PROB:FAST_STALL_PROB);
         fork
           send_recv_data_packets(EPID_B, EPID_A, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
           send_recv_data_packets(EPID_A, EPID_B, NUM_PKTS_PER_TEST/2, cached_data_seqnum);
@@ -1077,10 +1131,7 @@ module chdr_stream_endpoint_tb;
     test.start_test("Stream Data between A <=> B with a lossy link");
     begin
       cached_data_seqnum = 0;
-      a_data_bfm.set_master_stall_prob(FAST_STALL_PROB);
-      b_data_bfm.set_master_stall_prob(FAST_STALL_PROB);
-      a_data_bfm.set_slave_stall_prob (SLOW_STALL_PROB);
-      b_data_bfm.set_slave_stall_prob (SLOW_STALL_PROB);
+      set_bidir_stall_prob(FAST_STALL_PROB, SLOW_STALL_PROB);
       a_lossy_input = 1;
       b_lossy_input = 1;
       fork

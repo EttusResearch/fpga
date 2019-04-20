@@ -203,11 +203,11 @@ module axis_raw_data_to_chdr #(
   localparam [2:0] ST_TERMINATE = 3'd6;   // Something went wrong... Rejecting output packet
 
   reg [2:0] state = ST_HDR;
-  reg [6:0] mdata_pending = 7'd0;
+  reg [4:0] mdata_pending = 5'd0;
 
   // Shortcuts: CHDR header
   wire [2:0] out_pkt_type = chdr_get_pkt_type(out_ctxt_tdata[63:0]);
-  wire [6:0] out_num_mdata = chdr_get_num_mdata(out_ctxt_tdata[63:0]);
+  wire [4:0] out_num_mdata = chdr_get_num_mdata(out_ctxt_tdata[63:0]);
 
   always @(posedge axis_chdr_clk) begin
     if (axis_chdr_rst) begin
@@ -225,7 +225,7 @@ module axis_raw_data_to_chdr #(
               // When CHDR_W > 64, the timestamp is a part of the header word.
               // If this is a data packet (with/without a TS), we skip the TS state
               // move directly to metadata/body
-              if (out_num_mdata != 7'd0) begin
+              if (out_num_mdata != CHDR_NO_MDATA) begin
                 if (!out_ctxt_tlast)
                   if (out_ctxt_tuser == CONTEXT_FIELD_HDR_TS)
                     state <= ST_MDATA;        // tlast should be low. Move to metadata.
@@ -255,7 +255,7 @@ module axis_raw_data_to_chdr #(
                 else
                   state <= ST_DROP_PYLD;      // Premature tlast. Drop pyld
               end else begin
-                if (out_num_mdata != 7'd0) begin
+                if (out_num_mdata != CHDR_NO_MDATA) begin
                   if (!out_ctxt_tlast)
                     if (out_ctxt_tuser == CONTEXT_FIELD_HDR)
                       state <= ST_MDATA;      // tlast should be low. Move to metadata.
@@ -281,7 +281,7 @@ module axis_raw_data_to_chdr #(
         // ------------------------------------
         ST_TS: begin
           if (out_ctxt_tvalid && out_ctxt_tready) begin
-            if (mdata_pending != 7'd0) begin
+            if (mdata_pending != CHDR_NO_MDATA) begin
               if (!out_ctxt_tlast)
                 if (out_ctxt_tuser == CONTEXT_FIELD_TS)
                   state <= ST_MDATA;        // tlast should be low. Move to metadata.
@@ -305,7 +305,7 @@ module axis_raw_data_to_chdr #(
         // -----------------------
         ST_MDATA: begin
           if (out_ctxt_tvalid && out_ctxt_tready) begin
-            if (mdata_pending != 7'd1) begin
+            if (mdata_pending != 5'd1) begin
               mdata_pending <= mdata_pending - 'd1;
               if (!out_ctxt_tlast)
                 if (out_ctxt_tuser == CONTEXT_FIELD_MDATA)
