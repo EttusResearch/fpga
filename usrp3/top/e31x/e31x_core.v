@@ -403,13 +403,13 @@ module e31x_core #(
     .clk(radio_clk), .rst(1'b0), .in(pps_refclk), .out(pps_radioclk)
   );
 
-  localparam RADIO_INPUT_BUFF_SIZE   = 8'd9;
+  localparam RADIO_INPUT_BUFF_SIZE   = 8'd11;
   // The radio needs a larger output buffer compared to other blocks because it is a finite
   // rate producer i.e. the input is not backpressured.
   // Here, we allocate enough room from 2 MTU sized packets. This buffer serves as a
   // packet gate so we need room for an additional packet if the first one is held due to
   // contention on the crossbar. Any additional buffering will be largely a waste.
-  localparam RADIO_OUTPUT_BUFF_SIZE  = 8'd8;
+  localparam RADIO_OUTPUT_BUFF_SIZE  = 8'd10;
 
   wire [31:0] rx_int[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
   wire        db_fe_set_stb[0:1];

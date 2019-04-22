@@ -17,21 +17,14 @@
   wire ce_clk = bus_clk;
   wire ce_rst = bus_rst;
 
-  //noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_DECIM(2), .STR_SINK_FIFOSIZE(9), .MTU(8)) inst_noc_block_ddc (
-  //  .bus_clk(bus_clk), .bus_rst(bus_rst),
-  //  .ce_clk(ce_clk), .ce_rst(ce_rst),
-  //  .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
-  //  .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
-  //  .debug(ce_debug[0]));
-
-  noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_DECIM(8), .STR_SINK_FIFOSIZE(9), .MTU(8)) inst_noc_block_ddc (
+  noc_block_ddc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_DECIM(16), .STR_SINK_FIFOSIZE(11), .MTU(10)) inst_noc_block_ddc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[0]), .i_tlast(ce_o_tlast[0]), .i_tvalid(ce_o_tvalid[0]), .i_tready(ce_o_tready[0]),
     .o_tdata(ce_i_tdata[0]), .o_tlast(ce_i_tlast[0]), .o_tvalid(ce_i_tvalid[0]), .o_tready(ce_i_tready[0]),
     .debug(ce_debug[0]));
 
-  noc_block_duc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_INTERP(8), .NOC_ID(64'hD0C0_0000_0000_0002), .STR_SINK_FIFOSIZE(9), .MTU(8)) inst_noc_block_duc (
+  noc_block_duc #( .NUM_CHAINS(2), .NUM_HB(1), .CIC_MAX_INTERP(8), .NOC_ID(64'hD0C0_0000_0000_0002), .STR_SINK_FIFOSIZE(11), .MTU(10)) inst_noc_block_duc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),
     .i_tdata(ce_o_tdata[1]), .i_tlast(ce_o_tlast[1]), .i_tvalid(ce_o_tvalid[1]), .i_tready(ce_o_tready[1]),
