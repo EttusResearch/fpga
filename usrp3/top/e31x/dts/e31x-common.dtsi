@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2018 National Instruments Corp
+ *
+ * SPDX-License-Identifier: GPL-2.0 OR X11
+ */
+
+fragment@2 {
+	target = <&amba>;
+	reg = <0x0002>;
+	__overlay__ {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		uio@40010000 {
+			compatible = "usrp-uio";
+			reg = <0x40010000 0x1000>;
+			reg-names = "mboard-regs";
+			status = "okay";
+		};
+
+		crossbar@40011000 {
+			compatible = "ni,platform-crossbar-rp";
+			reg = <0x40011000 0x1000>;
+			status = "okay";
+			rfnoc,ports = <0x10>;
+			clocks = <&clkc 15>;
+			clock-names = "bus_clk";
+		};
+
+	};
+};
+
+fragment@6 {
+    target = <&amba>;
+	reg = <0x0006>;
+    __overlay__ {
+        axi_pmu: axi_pmu@40000000 {
+            compatible = "ettus,e3xx-pmu";
+			reg = <0x40000000 0x1000>;
+            syscon = <&devctrl>;
+            ettus,resistor-sense = <10>;
+            ettus,capacity-full = <3200>;
+            interrupt-parent = <&intc>;
+            interrupts = <0 32 1>;
+            interrupt-names = "fw";
+            status = "okay";
+        };
+    };
+};
+
+fragment@5 {
+	target = <&spi0>;
+	reg = <0x0005>;
+	__overlay__ {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		cs-gpios = <0>;
+
+		spidev0: spidev@0 {
+			compatible = "rohm,dh2228fv";
+			reg = <0>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+	};
+};
