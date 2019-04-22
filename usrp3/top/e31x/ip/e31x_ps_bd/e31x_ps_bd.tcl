@@ -161,7 +161,7 @@ proc create_root_design { parentCell } {
  ] $axi_interconnect_0
 
   # Create instance: dma
-  create_hier_cell_dma [current_bd_instance .] dma 6
+  create_hier_cell_dma [current_bd_instance .] dma 4
 
   # Create instance: processing_system7_0, and set properties
   set processing_system7_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0 ]
@@ -678,28 +678,20 @@ proc create_root_design { parentCell } {
   create_bd_addr_seg -range 0x00010000 -offset 0x43C10000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma1/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite4
   create_bd_addr_seg -range 0x00010000 -offset 0x43C20000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma2/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite6
   create_bd_addr_seg -range 0x00010000 -offset 0x43C30000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma3/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite8
-  create_bd_addr_seg -range 0x00010000 -offset 0x43C40000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma4/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite10
-  create_bd_addr_seg -range 0x00010000 -offset 0x43C50000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma5/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite12
   create_bd_addr_seg -range 0x00010000 -offset 0x43CA0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_0/s_axi/axi_lite] SEG_axi_tx_dmac_0_axi_lite
   create_bd_addr_seg -range 0x00010000 -offset 0x43CB0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_1/s_axi/axi_lite] SEG_axi_tx_dmac_1_axi_lite
   create_bd_addr_seg -range 0x00010000 -offset 0x43CC0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_2/s_axi/axi_lite] SEG_axi_tx_dmac_2_axi_lite
   create_bd_addr_seg -range 0x00010000 -offset 0x43CD0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_3/s_axi/axi_lite] SEG_axi_tx_dmac_3_axi_lite
-  create_bd_addr_seg -range 0x00010000 -offset 0x43CE0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_4/s_axi/axi_lite] SEG_axi_tx_dmac_4_axi_lite
-  create_bd_addr_seg -range 0x00010000 -offset 0x43CF0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_5/s_axi/axi_lite] SEG_axi_tx_dmac_5_axi_lite
   create_bd_addr_seg -range 0x00004000 -offset 0x40000000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs m_axi_pmu/Reg] SEG_m_axi_pmu_Reg
   create_bd_addr_seg -range 0x00001000 -offset 0x42000000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/ps_dma_rx_mapper/S_AXI/Mem0] SEG_ps_dma_rx_mapper_Mem0
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_0/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_1/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_2/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_3/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
-  create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_4/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
-  create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_5/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma0/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma1/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma2/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma3/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
-  create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma4/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
-  create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/rx/dma5/axi_rx_dmac/m_dest_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM] SEG_processing_system7_0_HP1_DDR_LOWOCM
 
 
   # Restore current instance
