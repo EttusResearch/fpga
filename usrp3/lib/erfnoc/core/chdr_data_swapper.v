@@ -54,7 +54,7 @@ module chdr_data_swapper #(
   localparam [1:0] SW_BUFF_UINT16 = 2'd2;
   localparam [1:0] SW_BUFF_UINT8  = 2'd3;
 
-  parameter SWAP_W = $clog2(CHDR_W);
+  localparam SWAP_W = $clog2(CHDR_W);
 
   // Packet states
   localparam [2:0] ST_HDR       = 3'd0;

@@ -36,8 +36,8 @@ module axis_switch #(
   input  wire [OUT_PORTS-1:0]                             m_axis_tready   // Output ready      
 );
   // PRIVATE: Vivado synthesizer workaround (cannot be localparam)
-  parameter CLOG2_IN_PORTS = $clog2(IN_PORTS);
-  parameter CLOG2_OUT_PORTS = $clog2(OUT_PORTS);
+  localparam CLOG2_IN_PORTS = $clog2(IN_PORTS);
+  localparam CLOG2_OUT_PORTS = $clog2(OUT_PORTS);
 
   //---------------------------------------------------------
   // Flatten/unflatten and pipeline

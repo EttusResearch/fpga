@@ -75,7 +75,7 @@ module chdr_stream_output #(
   `include "rfnoc_chdr_utils.vh"
   `include "rfnoc_chdr_internal_utils.vh"
 
-  parameter CHDR_W_LOG2 = $clog2(CHDR_W);
+  localparam CHDR_W_LOG2 = $clog2(CHDR_W);
 
   // ---------------------------------------------------
   //  Output packet gate

@@ -78,7 +78,7 @@ module chdr_crossbar_nxn #(
   `include "../core/rfnoc_chdr_utils.vh"
   `include "../core/rfnoc_chdr_internal_utils.vh"
 
-  parameter         NPORTS_W = $clog2(NPORTS);
+  localparam        NPORTS_W = $clog2(NPORTS);
   localparam        EPID_W   = 16;
   localparam [17:0] EXT_INFO = {1'b0, EXT_RTCFG_PORT, NPORTS_MGMT, NPORTS};
 

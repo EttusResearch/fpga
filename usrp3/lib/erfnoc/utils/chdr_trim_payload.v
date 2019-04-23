@@ -37,7 +37,7 @@ module chdr_trim_payload #(
 
   `include "../core/rfnoc_chdr_utils.vh"
 
-  parameter LOG2_CHDR_W_BYTES = $clog2(CHDR_W/8);
+  localparam LOG2_CHDR_W_BYTES = $clog2(CHDR_W/8);
 
   localparam [1:0] ST_HEADER = 2'd0;
   localparam [1:0] ST_BODY   = 2'd1;

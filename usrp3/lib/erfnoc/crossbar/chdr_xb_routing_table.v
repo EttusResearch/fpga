@@ -37,7 +37,7 @@ module chdr_xb_routing_table #(
   output wire [NPORTS-1:0]                  axis_result_tvalid,
   input  wire [NPORTS-1:0]                  axis_result_tready
 );
-  parameter  NPORTS_W   = $clog2(NPORTS);
+  localparam NPORTS_W   = $clog2(NPORTS);
   localparam CFG_W      = NPORTS_W + 16;
   localparam CFG_PORTS  = NPORTS + EXT_INS_PORT_EN;
 

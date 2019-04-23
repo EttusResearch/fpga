@@ -73,7 +73,7 @@ module chdr_mgmt_pkt_handler #(
   // ---------------------------------------------------
 
   localparam CHDR_W_BYTES = CHDR_W / 8;
-  parameter  LOG2_CHDR_W_BYTES = $clog2(CHDR_W_BYTES);
+  localparam LOG2_CHDR_W_BYTES = $clog2(CHDR_W_BYTES);
 
   wire [CHDR_W-1:0] s_mgmt_tdata, m_mgmt_tdata;
   wire [9:0]        m_mgmt_tdest;
