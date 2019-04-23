@@ -233,7 +233,7 @@ module chdr_stream_endpoint #(
   //   - [23:16]: Packets of headroom
   // * REG_OSTRM_BUFF_CAP_BYTES_LO, REG_OSTRM_BUFF_CAP_BYTES_HI (Read-Only):
   //   Number of bytes in the downstream buffer
-  // * REG_OSTRM_BUFF_CAP_PKTS_LO, REG_OSTRM_BUFF_CAP_PKTS_HI (Read-Only):
+  // * REG_OSTRM_BUFF_CAP_PKTS (Read-Only):
   //   Number of packets in the downstream buffer
   // * REG_OSTRM_SEQ_ERR_CNT (Read-Only):
   //   Number of sequence errors since initialization
@@ -259,12 +259,11 @@ module chdr_stream_endpoint #(
   localparam [15:0] REG_OSTRM_FC_HEADROOM       = 16'h1C;   //W
   localparam [15:0] REG_OSTRM_BUFF_CAP_BYTES_LO = 16'h20;   //R
   localparam [15:0] REG_OSTRM_BUFF_CAP_BYTES_HI = 16'h24;   //R
-  localparam [15:0] REG_OSTRM_BUFF_CAP_PKTS_LO  = 16'h28;   //R
-  localparam [15:0] REG_OSTRM_BUFF_CAP_PKTS_HI  = 16'h2C;   //R
-  localparam [15:0] REG_OSTRM_SEQ_ERR_CNT       = 16'h30;   //R
-  localparam [15:0] REG_OSTRM_DATA_ERR_CNT      = 16'h34;   //R
-  localparam [15:0] REG_OSTRM_ROUTE_ERR_CNT     = 16'h38;   //R
-  localparam [15:0] REG_ISTRM_CTRL_STATUS       = 16'h3C;   //RW
+  localparam [15:0] REG_OSTRM_BUFF_CAP_PKTS     = 16'h28;   //R
+  localparam [15:0] REG_OSTRM_SEQ_ERR_CNT       = 16'h2C;   //R
+  localparam [15:0] REG_OSTRM_DATA_ERR_CNT      = 16'h30;   //R
+  localparam [15:0] REG_OSTRM_ROUTE_ERR_CNT     = 16'h34;   //R
+  localparam [15:0] REG_ISTRM_CTRL_STATUS       = 16'h38;   //RW
 
   // Configurable registers
   reg  [15:0] reg_epid_self = 16'h0;
@@ -285,8 +284,8 @@ module chdr_stream_endpoint #(
   reg  [1:0]  reg_istrm_cfg_pyld_sw_buff = 2'd0;
   reg  [1:0]  reg_istrm_cfg_mdata_sw_buff = 2'd0;
   wire        reg_fc_enabled;
-  wire [63:0] reg_buff_cap_bytes;
-  wire [39:0] reg_buff_cap_pkts;
+  wire [39:0] reg_buff_cap_bytes;
+  wire [23:0] reg_buff_cap_pkts;
   wire [31:0] reg_seq_err_cnt;
   wire [31:0] reg_data_err_cnt;
   wire [31:0] reg_route_err_cnt;
@@ -340,11 +339,9 @@ module chdr_stream_endpoint #(
           REG_OSTRM_BUFF_CAP_BYTES_LO:
             ctrlport_resp_data <= reg_buff_cap_bytes[31:0];
           REG_OSTRM_BUFF_CAP_BYTES_HI:
-            ctrlport_resp_data <= reg_buff_cap_bytes[63:32];
-          REG_OSTRM_BUFF_CAP_PKTS_LO:
-            ctrlport_resp_data <= reg_buff_cap_pkts[31:0];
-          REG_OSTRM_BUFF_CAP_PKTS_HI:
-            ctrlport_resp_data <= {24'h0, reg_buff_cap_pkts[39:32]};
+            ctrlport_resp_data <= {24'h0, reg_buff_cap_bytes[39:32]};
+          REG_OSTRM_BUFF_CAP_PKTS:
+            ctrlport_resp_data <= {8'h0, reg_buff_cap_pkts};
           REG_OSTRM_SEQ_ERR_CNT:
             ctrlport_resp_data <= reg_seq_err_cnt;
           REG_OSTRM_DATA_ERR_CNT:
@@ -377,7 +374,7 @@ module chdr_stream_endpoint #(
     wire              axis_di_tready, axis_dis_tready;
 
     // Optional MUX to combine multiple input data ports into a single one
-    if (NUM_DATA_I == 1) begin
+    if (NUM_DATA_I == 6'd1) begin
       axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) axis_s_reg_i (
         .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst | reg_ostrm_reset), .clear(1'b0),
         .i_tdata({s_axis_data_tlast, s_axis_data_tdata}),
@@ -521,7 +518,7 @@ module chdr_stream_endpoint #(
 
     // Optional DEMUX to split multiple single stream into multiple outputs
     // Packets with an invalid (out of bounds) VC goes to port 0 
-    if (NUM_DATA_O == 1) begin
+    if (NUM_DATA_O == 6'd1) begin
       axi_fifo #(.WIDTH(CHDR_W+1), .SIZE(1)) axis_m_reg_i (
         .clk(rfnoc_chdr_clk), .reset(rfnoc_chdr_rst | reg_istrm_reset), .clear(1'b0),
         .i_tdata({axis_dos_tlast, axis_dos_tdata}),
