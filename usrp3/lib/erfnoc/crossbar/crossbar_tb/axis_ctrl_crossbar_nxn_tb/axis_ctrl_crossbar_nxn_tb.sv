@@ -17,7 +17,7 @@ module axis_ctrl_crossbar_nxn_tb();
     .TEST_MAX_PACKETS   (100                        ), // How many packets to stream per test case?
     .TEST_LPP           (20                         ), // Lines per packet
     .TEST_MIN_INJ_RATE  (10                         ), // Minimum injection rate to test
-    .TEST_MAX_INJ_RATE  (50                         ), // Maximum injection rate to test
+    .TEST_MAX_INJ_RATE  (40                         ), // Maximum injection rate to test
     .TEST_INJ_RATE_INCR (10                         ), // Injection rate increment
     .TEST_GEN_LL_FILES  (0                          )  // Generate files to produce load-latency graphs?
   ) impl (
