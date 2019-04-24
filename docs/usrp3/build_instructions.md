@@ -89,7 +89,7 @@ The following additional packages are also required and can be selected in the G
 
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
-  + e300: For USRP E310
+  + e31x: For USRP E310
   + e320: For USRP E320
   + n3xx: For USRP N300/N310/N320
 
@@ -171,11 +171,14 @@ a list and usage information
 ### E310 Targets and Outputs
 
 #### Supported Targets
-- E310:  Builds the USRP E310 design.
+- E310_SG1 or E310 :  Builds the USRP E310 speed grade 1.
+- E310_SG3 or E310_sg3:  Builds the USRP E310 speed grade 3.
+- E310_SG1_RFNOC or E310_RFNOC:  Builds the USRP E310 RFNoC image for speed grade 1.
+- E310_SG3_RFNOC or E310_RFNOC_sg3:  Builds the USRP E310 RFNoC image for speed grade 3.
 
 #### Outputs
 - `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
-- `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
+- `build/usrp_<product>_fpga.dts` : Device tree overlay
 - `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
 
 ### E320 Targets and Outputs
@@ -190,7 +193,7 @@ a list and usage information
 
 #### Outputs
 - `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
-- `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
+- `build/usrp_<product>_fpga.dts` : Device tree overlay
 - `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
 
 ### N3XX Targets and Outputs
@@ -227,7 +230,7 @@ custom selection of RFNoC blocks.
 
 #### Outputs
 - `build/usrp_<product>_fpga.bit` : Configuration bitstream with header
-- `build/usrp_<product>_fpga.bin` : Configuration bitstream without header
+- `build/usrp_<product>_fpga.dts` : Device tree overlay
 - `build/usrp_<product>_fpga.rpt` : System, utilization and timing summary report
 
 ### Additional Build Options
