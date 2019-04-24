@@ -87,7 +87,7 @@ module rfnoc_block_null_src_sink #(
 
   // NoC Shell
   // ---------------------------
-  noc_shell_generic_ctrlport_raw #(
+  noc_shell_generic_ctrlport_pyld_chdr #(
     .NOC_ID                   (32'h0000_0001),
     .THIS_PORTID              (THIS_PORTID),
     .CHDR_W                   (CHDR_W),

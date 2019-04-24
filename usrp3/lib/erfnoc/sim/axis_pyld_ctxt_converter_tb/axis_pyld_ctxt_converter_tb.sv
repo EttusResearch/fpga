@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: axis_raw_data_converter_tb
+// Module: axis_pyld_ctxt_converter_tb
 //
 
 `default_nettype none
@@ -13,7 +13,7 @@ import PkgAxiStreamBfm::*;
 import PkgChdrUtils::*;
 import PkgChdrBfm::*;
 
-module axis_raw_data_converter_tb;
+module axis_pyld_ctxt_converter_tb;
 
   // ----------------------------------------
   // Global settings
@@ -106,8 +106,8 @@ module axis_raw_data_converter_tb;
       rfnoc_data_clk[inst_i], rfnoc_data_rst[inst_i]
     );
 
-    // Instantiate AxisRaw to Chdr DUT
-    axis_raw_data_to_chdr #(
+    // Instantiate PyldCtxt to Chdr DUT
+    axis_pyld_ctxt_to_chdr #(
       .CHDR_W               (CHDR_W),
       .ITEM_W               (INST_PARAMS[inst_i].item_w),
       .NIPC                 (INST_PARAMS[inst_i].nipc),
@@ -142,8 +142,8 @@ module axis_raw_data_converter_tb;
       .flush_done           (r2c_flush_done[inst_i])
     );
 
-    // Instantiate Chdr to AxisRaw DUT
-    chdr_to_axis_raw_data #(
+    // Instantiate Chdr to PyldCtxt DUT
+    chdr_to_axis_pyld_ctxt #(
       .CHDR_W               (CHDR_W),
       .ITEM_W               (INST_PARAMS[inst_i].item_w),
       .NIPC                 (INST_PARAMS[inst_i].nipc),
@@ -368,7 +368,7 @@ module axis_raw_data_converter_tb;
 
     // Initialize
     // ----------------------------------------
-    test = new("axis_raw_data_converter_tb");
+    test = new("axis_pyld_ctxt_converter_tb");
     test.start_tb();
 
     // Reset
@@ -407,7 +407,7 @@ module axis_raw_data_converter_tb;
 
       // Flush
       // ----------------------------------------
-      $sformat(tc_label, "INST%0d: Flush Raw => CHDR (Idle)", inst_num);
+      $sformat(tc_label, "INST%0d: Flush PyldCtxt => CHDR (Idle)", inst_num);
       test.start_test(tc_label);
       r2c_flush_timeout[inst_num] = $urandom_range(400, 200);
       r2c_flush_en[inst_num] = 1'b1;
@@ -420,7 +420,7 @@ module axis_raw_data_converter_tb;
       @(posedge rfnoc_chdr_clk);
       test.end_test();
 
-      $sformat(tc_label, "INST%0d: Flush CHDR => Raw (Idle)", inst_num);
+      $sformat(tc_label, "INST%0d: Flush CHDR => PyldCtxt (Idle)", inst_num);
       test.start_test(tc_label);
       c2r_flush_timeout[inst_num] = $urandom_range(400, 200);
       c2r_flush_en[inst_num] = 1'b1;
@@ -433,7 +433,7 @@ module axis_raw_data_converter_tb;
       @(posedge rfnoc_data_clk[inst_num]);
       test.end_test();
 
-      $sformat(tc_label, "INST%0d: Flush Raw => CHDR (Streaming)", inst_num);
+      $sformat(tc_label, "INST%0d: Flush PyldCtxt => CHDR (Streaming)", inst_num);
       test.start_test(tc_label);
       r2c_flush_timeout[inst_num] = $urandom_range(400, 200);
       r2c_flush_en[inst_num] = 1'b1;

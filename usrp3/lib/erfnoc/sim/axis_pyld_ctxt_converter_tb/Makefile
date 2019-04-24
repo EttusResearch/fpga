@@ -31,10 +31,10 @@ $(RFNOC_XBAR_SRCS) \
 #-------------------------------------------------
 include $(BASE_DIR)/../sim/erfnoc/Makefile.srcs
 
-SIM_TOP = axis_raw_data_converter_tb
+SIM_TOP = axis_pyld_ctxt_converter_tb
 
 SIM_SRCS = \
-$(abspath axis_raw_data_converter_tb.sv) \
+$(abspath axis_pyld_ctxt_converter_tb.sv) \
 $(SIM_ERFNOC_SRCS)
 
 # MODELSIM_USER_DO = $(abspath wave.do)

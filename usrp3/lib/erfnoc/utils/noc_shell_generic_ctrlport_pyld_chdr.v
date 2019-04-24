@@ -3,14 +3,14 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: noc_shell_generic_ctrlport_raw
+// Module: noc_shell_generic_ctrlport_pyld_chdr
 // Description:
 //
 // Parameters:
 //
 // Signals:
 
-module noc_shell_generic_ctrlport_raw #(
+module noc_shell_generic_ctrlport_pyld_chdr #(
   parameter [31:0] NOC_ID          = 32'h0,
   parameter  [9:0] THIS_PORTID     = 10'd0,
   parameter        CHDR_W          = 64,
@@ -198,7 +198,7 @@ module noc_shell_generic_ctrlport_raw #(
   genvar i;
   generate 
     for (i = 0; i < NUM_DATA_I; i = i + 1) begin: in
-      chdr_to_axis_raw_data #(
+      chdr_to_axis_pyld_ctxt #(
         .CHDR_W               (CHDR_W        ),
         .ITEM_W               (ITEM_W        ),
         .NIPC                 (NIPC          ),
@@ -233,7 +233,7 @@ module noc_shell_generic_ctrlport_raw #(
     end
 
     for (i = 0; i < NUM_DATA_O; i = i + 1) begin: out
-      axis_raw_data_to_chdr #(
+      axis_pyld_ctxt_to_chdr #(
         .CHDR_W               (CHDR_W        ),
         .ITEM_W               (ITEM_W        ),
         .NIPC                 (NIPC          ),

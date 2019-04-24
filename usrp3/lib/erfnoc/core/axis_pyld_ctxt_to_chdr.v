@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: axis_raw_data_to_chdr
+// Module: axis_pyld_ctxt_to_chdr
 // Description:
 //   A header framer module for CHDR data packets.
 //   Accepts an input payload and context stream, and produces an
@@ -37,7 +37,7 @@
 //   - flush_* : Signals for flush control and status
 //
 
-module axis_raw_data_to_chdr #(
+module axis_pyld_ctxt_to_chdr #(
   parameter CHDR_W              = 256,
   parameter ITEM_W              = 32,
   parameter NIPC                = 2,
@@ -460,4 +460,4 @@ module axis_raw_data_to_chdr #(
     .o_tvalid(m_axis_chdr_tvalid), .o_tready(m_axis_chdr_tready)
   );
 
-endmodule // axis_raw_data_to_chdr
+endmodule // axis_pyld_ctxt_to_chdr
