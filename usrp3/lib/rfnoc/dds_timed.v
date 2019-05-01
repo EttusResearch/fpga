@@ -126,8 +126,9 @@ module dds_timed #(
   wire [PHASE_ACCUM_WIDTH-1:0] phase_inc_mux_tdata;
   reg [PHASE_ACCUM_WIDTH-1:0] phase_inc;
   wire phase_inc_mux_tlast, phase_inc_mux_tvalid, phase_inc_mux_tready;
-  
-  reg [PHASE_WIDTH-1:0] phase_tdata;
+  reg [PHASE_ACCUM_WIDTH-1:0] phase;
+
+  wire [PHASE_WIDTH-1:0] phase_tdata = phase[PHASE_ACCUM_WIDTH-1:PHASE_ACCUM_WIDTH-PHASE_WIDTH];
   wire phase_tvalid, phase_tready, phase_tlast;
   
   wire [WIDTH*2-1:0] dds_in_fifo_tdata;
@@ -153,14 +154,21 @@ module dds_timed #(
   // phase is only valid when input i/q data stream is valid
   assign phase_tvalid = dds_in_tvalid;
   assign phase_tlast = dds_in_tlast;
+
+  always @(posedge clk) begin
+    if (reset | clear) begin
+      phase_inc <= 0;
+    end else if (phase_inc_mux_tvalid & phase_inc_mux_tready) begin
+      phase_inc <= phase_inc_mux_tdata;
+    end
+  end
     
   // NCO, increment phase input to DDS SIN/COS LUT
   always @(posedge clk) begin
-    if (reset | clear | (phase_inc_mux_tvalid & phase_inc_mux_tready)) begin
-      phase_inc <= phase_inc_mux_tdata;
-      phase_tdata <= 0;
+    if (reset | clear | (phase_inc_mux_tvalid & phase_inc_mux_tready) | eob) begin
+      phase <= 0;
     end else if (dds_in_tvalid & dds_in_tready) begin //only increment phase when data into dds is valid and data fifo is ready
-      phase_tdata <= phase_tdata + phase_inc[PHASE_ACCUM_WIDTH-1:PHASE_ACCUM_WIDTH-24];
+      phase <= phase + phase_inc;
     end
   end
 
