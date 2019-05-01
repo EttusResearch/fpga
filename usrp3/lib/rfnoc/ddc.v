@@ -41,6 +41,7 @@ module ddc #(
   wire [31:0] sr_phase_inc, sr_phase_inc_timed_tdata;
   wire sr_phase_inc_valid, sr_phase_inc_timed_tvalid, sr_phase_inc_timed_tready, sr_phase_inc_timed_tlast;
   reg [31:0] phase_inc;
+  reg [31:0] phase;
   reg phase_inc_valid;
   
   wire [SAMPLE_WIDTH*2-1:0] dds_in_tdata;
@@ -55,13 +56,13 @@ module ddc #(
   wire [WIDTH-1:0] dds_in_q_tdata;  
   wire [WIDTH-1:0] dds_out_i_tdata;
   wire [WIDTH-1:0] dds_out_q_tdata;
-  reg  [WIDTH-1:0] phase_tdata;
   
   wire [SAMPLE_WIDTH*2-1:0] dds_in_sync_tdata;
   wire dds_in_sync_tvalid, dds_in_sync_tready, dds_in_sync_tlast;
   wire [WIDTH-1:0] phase_sync_tdata;
   wire phase_sync_tvalid, phase_sync_tready, phase_sync_tlast;  
 
+  wire [WIDTH-1:0] phase_tdata = phase[31:32-WIDTH];
   wire phase_tvalid, phase_tready, phase_tlast;
   wire dds_out_tlast;
   wire dds_out_tvalid;
@@ -201,10 +202,10 @@ module ddc #(
  
    // NCO
   always @(posedge clk) begin
-    if (reset | clear | (phase_inc_valid & sr_phase_inc_timed_tready)) begin
-      phase_tdata <= 0;
+    if (reset | clear | (phase_inc_valid & sr_phase_inc_timed_tready) | sample_in_eob) begin
+      phase <= 0;
     end else if (dds_in_tvalid & dds_in_tready) begin //only increment phase when data is ready
-      phase_tdata <= phase_tdata + phase_inc[31:8];
+      phase <= phase + phase_inc;
     end
   end
 
