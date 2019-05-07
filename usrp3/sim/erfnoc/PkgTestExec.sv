@@ -74,7 +74,7 @@ package PkgTestExec;
     //
     function void end_tb(bit finish = 1);
       assert (num_started == num_finished) else begin
-        $fatal(0, "Testbench ended before test completed");
+        $fatal(1, "Testbench ended before test completed");
       end
 
       end_time = $time;
@@ -102,7 +102,7 @@ package PkgTestExec;
     task start_test(string test_name, realtime time_limit = 0);
       // Make sure a there isn't already a test running
       assert (num_started == num_finished) else begin
-        $fatal(0, "Test started before completing previous test");
+        $fatal(1, "Test started before completing previous test");
       end
 
       // Create a timeout for this test
@@ -132,7 +132,7 @@ package PkgTestExec;
       bit passed;
 
       assert (num_started == num_finished + 1) else begin
-        $fatal(0, "No test running");
+        $fatal(1, "No test running");
       end
 
       end_timeout(test_timeout);
@@ -173,7 +173,7 @@ package PkgTestExec;
       num_assertions++;
       assert (expr) else begin
         test_status[num_started] = 0;
-        $fatal(0, message);
+        $fatal(1, message);
       end
     endfunction : assert_fatal
 
@@ -221,7 +221,7 @@ package PkgTestExec;
           end
           default: begin  // SEV_FATAL
             test_status[num_started] = 0;
-            $fatal(0, message);
+            $fatal(1, message);
           end
         endcase
       end

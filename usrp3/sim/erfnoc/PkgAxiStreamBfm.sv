@@ -20,8 +20,8 @@ interface AxiStreamIf #(
   parameter int DATA_WIDTH = 64,
   parameter int USER_WIDTH = 1
 ) (
-  input wire logic clk,
-  input wire logic rst = 1'b0
+  input logic clk,
+  input logic rst = 1'b0
 );
   
   // Signals that make up a unidirectional AXI-Stream interface
@@ -422,7 +422,7 @@ package PkgAxiStreamBfm;
           master.tlast  <= 0;
         end
       end
-    endtask : master_body;
+    endtask : master_body
 
 
     //---------------
@@ -455,7 +455,7 @@ package PkgAxiStreamBfm;
           slave.tready <= $urandom_range(100) < slave_stall_prob ? 0 : 1;
         end
       end
-    endtask : slave_body;
+    endtask : slave_body
 
   endclass : AxiStreamBfm
 

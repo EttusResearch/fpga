@@ -560,7 +560,7 @@ package PkgChdrBfm;
   );
     super.new(master, slave);
     assert(BUS_WIDTH % 64 == 0) else begin
-      $fatal(0, "ChdrBfm::new: CHDR bus width must be a multiple of 64 bits");
+      $fatal(1, "ChdrBfm::new: CHDR bus width must be a multiple of 64 bits");
     end
   endfunction : new
 

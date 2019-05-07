@@ -52,8 +52,8 @@ typedef union packed {
 
 
 interface RfnocBackendIf(
-  input wire logic chdr_clk,
-  input wire logic ctrl_clk
+  input logic chdr_clk,
+  input logic ctrl_clk
 );
   backend_config_t cfg;
   backend_status_t sts;
