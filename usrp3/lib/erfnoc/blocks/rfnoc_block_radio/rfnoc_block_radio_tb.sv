@@ -39,8 +39,6 @@ module rfnoc_block_radio_tb #(
   localparam logic [15:0] THIS_EPID      = 16'hDEAD;
   localparam logic [31:0] NOC_ID         = 64'h12AD_1000_0000_0000;
   localparam int          MTU            = 8;
-  localparam int          PYLD_FIFO_SIZE = 10;
-  localparam int          CTRL_FIFO_SIZE = 5;
   localparam int          RADIO_W        = NSPC * SAMP_W;       // Radio word size
   localparam int          SPP            = 64;                  // Samples per packet
   localparam int          WPP            = SPP*SAMP_W/RADIO_W;  // Radio words per packet
@@ -178,9 +176,7 @@ module rfnoc_block_radio_tb #(
     .SAMP_W         (SAMP_W),
     .NUM_CHANNELS   (NUM_CHANNELS),
     .THIS_PORTID    (THIS_PORTID),
-    .MTU            (MTU),
-    .PYLD_FIFO_SIZE (PYLD_FIFO_SIZE),
-    .CTRL_FIFO_SIZE (CTRL_FIFO_SIZE)
+    .MTU            (MTU)
   ) rfnoc_block_radio_i (
     .rfnoc_chdr_clk          (backend.chdr_clk),
     .s_rfnoc_chdr_tdata      (s_rfnoc_chdr_tdata_flat),
@@ -575,7 +571,8 @@ module rfnoc_block_radio_tb #(
     test.assert_error(blk_ctrl.get_noc_id() == NOC_ID, "Incorrect noc_id Value");
     test.assert_error(blk_ctrl.get_num_data_i() == NUM_CHANNELS, "Incorrect num_data_i Value");
     test.assert_error(blk_ctrl.get_num_data_o() == NUM_CHANNELS, "Incorrect num_data_o Value");
-    test.assert_error(blk_ctrl.get_ctrl_fifosize() == CTRL_FIFO_SIZE, "Incorrect ctrl_fifosize Value");
+    test.assert_error(blk_ctrl.get_ctrl_fifosize() == rfnoc_block_radio_i.noc_shell_radio_i.CTRL_FIFO_SIZE,
+      "Incorrect ctrl_fifosize Value");
     test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect mtu Value");
 
     test.end_test();

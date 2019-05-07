@@ -30,8 +30,6 @@ module rfnoc_block_radio #(
   parameter NUM_CHANNELS     = 1,
   parameter THIS_PORTID      = 0,
   parameter MTU              = 10,
-  parameter PYLD_FIFO_SIZE   = 11,
-  parameter CTRL_FIFO_SIZE   = 5,
   parameter PERIPH_BASE_ADDR = 20'h80000,
   parameter PERIPH_ADDR_W    = 19
 ) (
@@ -165,16 +163,13 @@ module rfnoc_block_radio #(
     .NOC_ID          ('h12AD_1000_0000_0000),
     .THIS_PORTID     (THIS_PORTID),
     .CHDR_W          (CHDR_W),
-    .CTRL_FIFO_SIZE  (CTRL_FIFO_SIZE),
     .CTRLPORT_SLV_EN (1),
     .CTRLPORT_MST_EN (1),
     .NUM_DATA_I      (NUM_CHANNELS),
     .NUM_DATA_O      (NUM_CHANNELS),
     .ITEM_W          (SAMP_W),
     .NIPC            (NSPC),
-    .MTU             (MTU),
-    .CTXT_FIFO_SIZE  (1),
-    .PYLD_FIFO_SIZE  (PYLD_FIFO_SIZE)
+    .MTU             (MTU)
   ) noc_shell_radio_i (
     .rfnoc_chdr_clk            (rfnoc_chdr_clk),
     .rfnoc_chdr_rst            (rfnoc_chdr_rst),
@@ -290,13 +285,13 @@ module rfnoc_block_radio #(
   wire [31:0] ctrlport_core_resp_data;
 
   ctrlport_decoder_param #(
-    .NUM_SLAVES   (3),
-    .PORT0_BASE   (SHARED_BASE_ADDR),
-    .PORT0_ADDR_W (SHARED_ADDR_W),
-    .PORT1_BASE   (RADIO_BASE_ADDR),
-    .PORT1_ADDR_W (RADIO_ADDR_W + $clog2(NUM_CHANNELS)),
-    .PORT2_BASE   (PERIPH_BASE_ADDR),
-    .PORT2_ADDR_W (PERIPH_ADDR_W)
+    .NUM_SLAVES  (3),
+    .PORT0_BASE  (SHARED_BASE_ADDR),
+    .PORT0_ADDR_W(SHARED_ADDR_W),
+    .PORT1_BASE  (RADIO_BASE_ADDR),
+    .PORT1_ADDR_W(RADIO_ADDR_W + $clog2(NUM_CHANNELS)),
+    .PORT2_BASE  (PERIPH_BASE_ADDR),
+    .PORT2_ADDR_W(PERIPH_ADDR_W)
   ) ctrlport_decoder_param_i (
     .ctrlport_clk            (radio_clk),
     .ctrlport_rst            (radio_rst),

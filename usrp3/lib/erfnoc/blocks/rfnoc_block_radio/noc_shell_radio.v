@@ -13,16 +13,13 @@ module noc_shell_radio #(
   parameter [31:0] NOC_ID          = 32'h0,
   parameter [ 9:0] THIS_PORTID     = 10'd0,
   parameter        CHDR_W          = 64,
-  parameter [ 5:0] CTRL_FIFO_SIZE  = 0,
   parameter [ 0:0] CTRLPORT_SLV_EN = 1,
   parameter [ 0:0] CTRLPORT_MST_EN = 1,
   parameter [ 5:0] NUM_DATA_I      = 1,
   parameter [ 5:0] NUM_DATA_O      = 1,
   parameter        ITEM_W          = 32,
   parameter        NIPC            = 2,
-  parameter [ 5:0] MTU             = 10,
-  parameter        CTXT_FIFO_SIZE  = 1,
-  parameter        PYLD_FIFO_SIZE  = 1
+  parameter [ 5:0] MTU             = 10
 )(
   //---------------------------------------------------------------------------
   // Framework Interface
@@ -122,10 +119,18 @@ module noc_shell_radio #(
   input  wire [              NUM_DATA_O-1:0] s_axis_teov,
   input  wire [              NUM_DATA_O-1:0] s_axis_teob
 );
+  
+  localparam CTRL_FIFO_SIZE = 5;
+
+  localparam SNK_INFO_FIFO_SIZE = 4;
+  localparam SNK_PYLD_FIFO_SIZE = 8;
+  localparam SRC_INFO_FIFO_SIZE = 4;
+  localparam SRC_PYLD_FIFO_SIZE = MTU;
 
   //---------------------------------------------------------------------------
   //  Backend Interface
   //---------------------------------------------------------------------------
+
   wire         data_i_flush_en;
   wire [31:0]  data_i_flush_timeout;
   wire [63:0]  data_i_flush_active;
@@ -210,176 +215,74 @@ module noc_shell_radio #(
   //  Data Path
   //---------------------------------------------------------------------------
 
-  // Payload stream out (to user logic)
-  wire [(ITEM_W*NIPC*NUM_DATA_I)-1:0] m_axis_payload_tdata;
-  wire [       (NIPC*NUM_DATA_I)-1:0] m_axis_payload_tkeep;
-  wire [              NUM_DATA_I-1:0] m_axis_payload_tlast;
-  wire [              NUM_DATA_I-1:0] m_axis_payload_tvalid;
-  wire [              NUM_DATA_I-1:0] m_axis_payload_tready;
-  // Context stream out (to user logic)
-  wire [     (CHDR_W*NUM_DATA_I)-1:0] m_axis_context_tdata;
-  //wire [          (4*NUM_DATA_I)-1:0] m_axis_context_tuser;
-  wire [              NUM_DATA_I-1:0] m_axis_context_tlast;
-  wire [              NUM_DATA_I-1:0] m_axis_context_tvalid;
-  wire [              NUM_DATA_I-1:0] m_axis_context_tready;
-  // Payload stream in (from user logic)
-  wire [(ITEM_W*NIPC*NUM_DATA_O)-1:0] s_axis_payload_tdata;
-  wire [       (NIPC*NUM_DATA_O)-1:0] s_axis_payload_tkeep;
-  wire [              NUM_DATA_O-1:0] s_axis_payload_tlast;
-  wire [              NUM_DATA_O-1:0] s_axis_payload_tvalid;
-  wire [              NUM_DATA_O-1:0] s_axis_payload_tready;
-  // Context stream in (from user logic)
-  wire [     (CHDR_W*NUM_DATA_O)-1:0] s_axis_context_tdata;
-  wire [          (4*NUM_DATA_O)-1:0] s_axis_context_tuser;
-  wire [              NUM_DATA_O-1:0] s_axis_context_tlast;
-  wire [              NUM_DATA_O-1:0] s_axis_context_tvalid;
-  wire [              NUM_DATA_O-1:0] s_axis_context_tready;
-
   genvar i;
   generate
 
-    for (i = 0; i < NUM_DATA_I; i = i + 1) begin: in
-      chdr_to_axis_pyld_ctxt #(
-        .CHDR_W              (CHDR_W),
-        .ITEM_W              (ITEM_W),
-        .NIPC                (NIPC),
-        .SYNC_CLKS           (0),
-        .CONTEXT_FIFO_SIZE   (CTXT_FIFO_SIZE),
-        .PAYLOAD_FIFO_SIZE   (PYLD_FIFO_SIZE),
-        .CONTEXT_PREFETCH_EN (1)
-      ) chdr2raw_i (
-        .axis_chdr_clk         (rfnoc_chdr_clk),
-        .axis_chdr_rst         (rfnoc_chdr_rst),
-        .axis_data_clk         (axis_data_clk),
-        .axis_data_rst         (axis_data_rst),
-        .s_axis_chdr_tdata     (s_rfnoc_chdr_tdata   [(i*CHDR_W)+:CHDR_W]),
-        .s_axis_chdr_tlast     (s_rfnoc_chdr_tlast   [i]),
-        .s_axis_chdr_tvalid    (s_rfnoc_chdr_tvalid  [i]),
-        .s_axis_chdr_tready    (s_rfnoc_chdr_tready  [i]),
-        .m_axis_payload_tdata  (m_axis_payload_tdata [(i*ITEM_W*NIPC)+:(ITEM_W*NIPC)]),
-        .m_axis_payload_tkeep  (m_axis_payload_tkeep [(i*NIPC)+:NIPC]),
-        .m_axis_payload_tlast  (m_axis_payload_tlast [i]),
-        .m_axis_payload_tvalid (m_axis_payload_tvalid[i]),
-        .m_axis_payload_tready (m_axis_payload_tready[i]),
-        .m_axis_context_tdata  (m_axis_context_tdata [(i*CHDR_W)+:(CHDR_W)]),
-        .m_axis_context_tuser  (),
-        .m_axis_context_tlast  (m_axis_context_tlast [i]),
-        .m_axis_context_tvalid (m_axis_context_tvalid[i]),
-        .m_axis_context_tready (m_axis_context_tready[i]),
-        .flush_en              (data_i_flush_en),
-        .flush_timeout         (data_i_flush_timeout),
-        .flush_active          (data_i_flush_active  [i]),
-        .flush_done            (data_i_flush_done    [i])
-      );
-
-      // The context parser reads the context data from the NoC Shell and
-      // extracts the relevant information.
-      context_parser #(
-        .CHDR_W (CHDR_W),
-        .ITEM_W (ITEM_W),
-        .NIPC   (NIPC)
-      ) context_parser_i (
-        .axis_data_clk         (axis_data_clk),
-        .axis_data_rst         (axis_data_rst),
-
-        // AXI-Stream Raw Data (Simple Interface)
-        .s_axis_payload_tdata  (m_axis_payload_tdata [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
-        .s_axis_payload_tkeep  (m_axis_payload_tkeep [i*NIPC +: NIPC]),
-        .s_axis_payload_tlast  (m_axis_payload_tlast [i]),
-        .s_axis_payload_tvalid (m_axis_payload_tvalid[i]),
-        .s_axis_payload_tready (m_axis_payload_tready[i]),
-        //
-        .s_axis_context_tdata  (m_axis_context_tdata [i*CHDR_W +: CHDR_W]),
-        .s_axis_context_tlast  (m_axis_context_tlast [i]),
-        .s_axis_context_tvalid (m_axis_context_tvalid[i]),
-        .s_axis_context_tready (m_axis_context_tready[i]),
-
-        // Data stream user logic, with sideband info
-        .m_axis_tdata          (m_axis_tdata [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
-        .m_axis_tkeep          (m_axis_tkeep [i*NIPC +: NIPC]),
-        .m_axis_tlast          (m_axis_tlast [i]),
-        .m_axis_tvalid         (m_axis_tvalid[i]),
-        .m_axis_tready         (m_axis_tready[i]),
-        // Sideband info
-        .m_axis_ttimestamp     (m_axis_ttimestamp[i*64 +: 64]),
-        .m_axis_thas_time      (m_axis_thas_time [i]),
-        .m_axis_teov           (m_axis_teov      [i]),
-        .m_axis_teob           (m_axis_teob      [i])
+    for (i = 0; i < NUM_DATA_I; i = i + 1) begin: chdr_to_data
+      chdr_to_axis_data #(
+        .CHDR_W            (CHDR_W),
+        .ITEM_W            (ITEM_W),
+        .NIPC              (NIPC),
+        .SYNC_CLKS         (0),
+        .INFO_FIFO_SIZE    (SNK_INFO_FIFO_SIZE),
+        .PAYLOAD_FIFO_SIZE (SNK_PYLD_FIFO_SIZE)
+      ) chdr_to_axis_data_i (
+        .axis_chdr_clk      (rfnoc_chdr_clk),
+        .axis_chdr_rst      (rfnoc_chdr_rst),
+        .axis_data_clk      (axis_data_clk),
+        .axis_data_rst      (axis_data_rst),
+        .s_axis_chdr_tdata  (s_rfnoc_chdr_tdata  [(i*CHDR_W)+:CHDR_W]),
+        .s_axis_chdr_tlast  (s_rfnoc_chdr_tlast  [i]),
+        .s_axis_chdr_tvalid (s_rfnoc_chdr_tvalid [i]),
+        .s_axis_chdr_tready (s_rfnoc_chdr_tready [i]),
+        .m_axis_tdata       (m_axis_tdata  [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
+        .m_axis_tkeep       (m_axis_tkeep  [i*NIPC +: NIPC]),
+        .m_axis_tlast       (m_axis_tlast  [i]),
+        .m_axis_tvalid      (m_axis_tvalid [i]),
+        .m_axis_tready      (m_axis_tready [i]),
+        .m_axis_ttimestamp  (m_axis_ttimestamp [i*64 +: 64]),
+        .m_axis_thas_time   (m_axis_thas_time  [i]),
+        .m_axis_tlength     (),
+        .m_axis_teov        (m_axis_teov       [i]),
+        .m_axis_teob        (m_axis_teob       [i]),
+        .flush_en           (data_i_flush_en),
+        .flush_timeout      (data_i_flush_timeout),
+        .flush_active       (data_i_flush_active [i]),
+        .flush_done         (data_i_flush_done   [i])
       );
     end
 
-    for (i = 0; i < NUM_DATA_O; i = i + 1) begin: out
-      axis_pyld_ctxt_to_chdr #(
-        .CHDR_W              (CHDR_W),
-        .ITEM_W              (ITEM_W),
-        .NIPC                (NIPC),
-        .SYNC_CLKS           (0),
-        .CONTEXT_FIFO_SIZE   (CTXT_FIFO_SIZE),
-        .PAYLOAD_FIFO_SIZE   (PYLD_FIFO_SIZE),
-        .CONTEXT_PREFETCH_EN (1),
-        .MTU                 (MTU)
-      ) raw2chdr_i (
-        .axis_chdr_clk         (rfnoc_chdr_clk),
-        .axis_chdr_rst         (rfnoc_chdr_rst),
-        .axis_data_clk         (axis_data_clk),
-        .axis_data_rst         (axis_data_rst),
-        .m_axis_chdr_tdata     (m_rfnoc_chdr_tdata   [i*CHDR_W +: CHDR_W]),
-        .m_axis_chdr_tlast     (m_rfnoc_chdr_tlast   [i]),
-        .m_axis_chdr_tvalid    (m_rfnoc_chdr_tvalid  [i]),
-        .m_axis_chdr_tready    (m_rfnoc_chdr_tready  [i]),
-        .s_axis_payload_tdata  (s_axis_payload_tdata [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
-        .s_axis_payload_tkeep  (s_axis_payload_tkeep [i*NIPC +: NIPC]),
-        .s_axis_payload_tlast  (s_axis_payload_tlast [i]),
-        .s_axis_payload_tvalid (s_axis_payload_tvalid[i]),
-        .s_axis_payload_tready (s_axis_payload_tready[i]),
-        .s_axis_context_tdata  (s_axis_context_tdata [i*CHDR_W +: CHDR_W]),
-        .s_axis_context_tuser  (s_axis_context_tuser [i*4 +: 4]),
-        .s_axis_context_tlast  (s_axis_context_tlast [i]),
-        .s_axis_context_tvalid (s_axis_context_tvalid[i]),
-        .s_axis_context_tready (s_axis_context_tready[i]),
-        .framer_errors         (),
-        .flush_en              (data_o_flush_en),
-        .flush_timeout         (data_o_flush_timeout),
-        .flush_active          (data_o_flush_active  [i]),
-        .flush_done            (data_o_flush_done    [i])
-      );
-
-      // The context builder creates the information needed for the NoC Shell to
-      // build a CHDR packet from the data packets.
-      context_builder #(
+    for (i = 0; i < NUM_DATA_O; i = i + 1) begin: data_to_chdr
+      axis_data_to_chdr #(
         .CHDR_W         (CHDR_W),
         .ITEM_W         (ITEM_W),
         .NIPC           (NIPC),
-        .MTU            (MTU),
-        .INFO_FIFO_SIZE (5)
-      ) context_builder_i (
-        .axis_data_clk         (axis_data_clk),
-        .axis_data_rst         (axis_data_rst),
-
-        // Data stream from user logic, with sideband info
-        .s_axis_tdata          (s_axis_tdata     [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
-        .s_axis_tkeep          (s_axis_tkeep     [i*NIPC +: NIPC]),
-        .s_axis_tlast          (s_axis_tlast     [i]),
-        .s_axis_tvalid         (s_axis_tvalid    [i]),
-        .s_axis_tready         (s_axis_tready    [i]),
-        // Sideband info
-        .s_axis_ttimestamp     (s_axis_ttimestamp[i*64 +: 64]),
-        .s_axis_thas_time      (s_axis_thas_time [i]),
-        .s_axis_teov           (s_axis_teov      [i]),
-        .s_axis_teob           (s_axis_teob      [i]),
-
-        // AXI-Stream Raw Data (Simple Interface)
-        .m_axis_payload_tdata  (s_axis_payload_tdata [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
-        .m_axis_payload_tkeep  (s_axis_payload_tkeep [i*NIPC +: NIPC]),
-        .m_axis_payload_tlast  (s_axis_payload_tlast [i]),
-        .m_axis_payload_tvalid (s_axis_payload_tvalid[i]),
-        .m_axis_payload_tready (s_axis_payload_tready[i]),
-        //
-        .m_axis_context_tdata  (s_axis_context_tdata [i*CHDR_W +:CHDR_W]),
-        .m_axis_context_tuser  (s_axis_context_tuser [i*4 +: 4]),
-        .m_axis_context_tlast  (s_axis_context_tlast [i]),
-        .m_axis_context_tvalid (s_axis_context_tvalid[i]),
-        .m_axis_context_tready (s_axis_context_tready[i])
+        .SYNC_CLKS      (0),
+        .INFO_FIFO_SIZE (4),
+        .PYLD_FIFO_SIZE (SRC_INFO_FIFO_SIZE),
+        .MTU            (SRC_PYLD_FIFO_SIZE)
+      ) axis_data_to_chdr_i (
+        .axis_chdr_clk       (rfnoc_chdr_clk),
+        .axis_chdr_rst       (rfnoc_chdr_rst),
+        .axis_data_clk       (axis_data_clk),
+        .axis_data_rst       (axis_data_rst),
+        .m_axis_chdr_tdata   (m_rfnoc_chdr_tdata  [i*CHDR_W +: CHDR_W]),
+        .m_axis_chdr_tlast   (m_rfnoc_chdr_tlast  [i]),
+        .m_axis_chdr_tvalid  (m_rfnoc_chdr_tvalid [i]),
+        .m_axis_chdr_tready  (m_rfnoc_chdr_tready [i]),
+        .s_axis_tdata        (s_axis_tdata  [i*ITEM_W*NIPC +: ITEM_W*NIPC]),
+        .s_axis_tkeep        (s_axis_tkeep  [i*NIPC +: NIPC]),
+        .s_axis_tlast        (s_axis_tlast  [i]),
+        .s_axis_tvalid       (s_axis_tvalid [i]),
+        .s_axis_tready       (s_axis_tready [i]),
+        .s_axis_ttimestamp   (s_axis_ttimestamp [i*64 +: 64]),
+        .s_axis_thas_time    (s_axis_thas_time  [i]),
+        .s_axis_teov         (s_axis_teov       [i]),
+        .s_axis_teob         (s_axis_teob       [i]),
+        .flush_en            (data_o_flush_en),
+        .flush_timeout       (data_o_flush_timeout),
+        .flush_active        (data_o_flush_active [i]),
+        .flush_done          (data_o_flush_done   [i])
       );
     end
   endgenerate
