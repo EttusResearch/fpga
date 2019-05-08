@@ -16,6 +16,7 @@ include $(IP_DIR)/fifo_short_2clk/Makefile.inc
 #include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 #include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
 include $(IP_DIR)/e31x_ps_bd/Makefile.inc
+include $(IP_DIR)/mig_7series_0/Makefile.inc
 
 BD_SRCS = \
 $(IP_AXI_INTERCON_4X64_256_BD_SRCS) \
@@ -25,6 +26,7 @@ IP_XCI_SRCS = \
 $(IP_FIFO_SHORT_2CLK_SRCS) \
 $(IP_AXI64_4K_2CLK_FIFO_SRCS) \
 $(IP_AXI64_8K_2CLK_FIFO_SRCS) \
+$(IP_MIG_7SERIES_0_SRCS) \
 $(IP_FIFO_4K_2CLK_SRCS) \
 #$(IP_AXI4_BRAM_SRCS) \
 #$(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_SRCS) \
@@ -44,6 +46,7 @@ $(IP_FIFO_SHORT_2CLK_OUTS) \
 $(IP_AXI64_4K_2CLK_FIFO_OUTS) \
 $(IP_AXI64_8K_2CLK_FIFO_OUTS) \
 $(IP_FIFO_4K_2CLK_OUTS) \
+$(IP_MIG_7SERIES_0_OUTS) \
 #$(IP_AXI4_BRAM_OUTS) \
 #$(IP_AXI3_TO_AXI4LITE_PROTOCOL_CONVERTER_OUTS) \
 #$(IP_AXI_INTERCONNECT_OUTS) \

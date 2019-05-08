@@ -47,7 +47,7 @@ spi_slave.v \
 ifneq (IDLE,$(findstring IDLE, $(EXTRA_DEFS)))
 TOP_SRCS += e31x.v
 TOP_SRCS += e31x_core.v
-TOP_SRCS += e31x_io.v
+TOP_SRCS += e310_io.v
 MB_XDC = \
 e31x_pins.xdc \
 e31x_timing.xdc
