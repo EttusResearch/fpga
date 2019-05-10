@@ -17,5 +17,6 @@ ctrlport_combiner.v \
 ctrlport_decoder.v \
 ctrlport_decoder_param.v \
 ctrlport_splitter.v \
+ctrlport_to_settings_bus.v \
 noc_shell_generic_ctrlport_pyld_chdr.v \
 ))

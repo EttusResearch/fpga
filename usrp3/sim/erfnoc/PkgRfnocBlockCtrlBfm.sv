@@ -229,9 +229,8 @@ package PkgRfnocBlockCtrlBfm;
       int             first_dword, last_dword;
       int             first_mword, last_mword;
       bit             eob, eov;
-
-      chdr_word_t   temp_data[$];
-      chdr_word_t   temp_mdata[$];
+      chdr_word_t     temp_data[$];
+      chdr_word_t     temp_mdata[$];
 
       num_pkts   = $ceil(real'(data.size()*($bits(chdr_word_t)/8)) / max_payload_length);
       pkt_type   = pkt_info.has_time ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS;
@@ -279,8 +278,9 @@ package PkgRfnocBlockCtrlBfm;
         };
 
         // Copy region of data and metadata to be sent in next packet
-        temp_data  = data[first_dword : last_dword];
-        temp_mdata = first_mword < metadata.size() ? metadata[first_mword : last_mword] : {};
+        temp_data = data[first_dword : last_dword];
+        if (first_mword < metadata.size()) temp_mdata = metadata[first_mword : last_mword];
+        else temp_mdata = {};
 
         // Build the packet
         chdr_packet.write_raw(

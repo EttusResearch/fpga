@@ -52,8 +52,8 @@ module dds_freq_tune  #(
   reg phase_valid_hold;
   reg [7:0] phase_invalid_wait_count;
   reg [2:0] state;
-  reg reset_dds;
-  reg reset_dds_reg;
+  reg reset_dds     = 1'b1;  // Init DDS resets to 1, since simulation model 
+  reg reset_dds_reg = 1'b1;  // requires reset at time 0 to avoid failure.
   reg phase_ready_wait;
   wire s_axis_phase_tready_dds;
 
