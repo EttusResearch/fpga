@@ -442,8 +442,8 @@ def device_dict(args):
     build_dir = {
         'x300':'x300',
         'x310':'x300',
-        'e300':'e300',
-        'e310':'e300',
+        'e300':'e31x',
+        'e310':'e31x',
         'e320':'e320',
         'n300':'n3xx',
         'n310':'n3xx',
@@ -460,7 +460,7 @@ def dtarget(args):
         default_trgt = {
             'x300':'X300_RFNOC_HG',
             'x310':'X310_RFNOC_HG',
-            'e310':'E310_RFNOC_HLS',
+            'e310':'E310_SG3_RFNOC',
             'e320':'E320_RFNOC_1G',
             'n300':'N300_RFNOC_HG',
             'n310':'N310_RFNOC_HG',
