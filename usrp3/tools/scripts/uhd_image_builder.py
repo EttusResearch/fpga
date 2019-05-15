@@ -447,6 +447,7 @@ def device_dict(args):
         'e320':'e320',
         'n300':'n3xx',
         'n310':'n3xx'
+        'n320':'n3xx'
     }
     return build_dir[args]
 
