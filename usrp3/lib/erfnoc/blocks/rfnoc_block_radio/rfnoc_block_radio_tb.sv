@@ -398,17 +398,21 @@ module rfnoc_block_radio_tb #(
     int              num_samples;     // Number of samples to send
     int              byte_length;     // Number of bytes for next packet
     chdr_word_t      chdr_word;       // Next word to send to BFM
-    logic [63:0]     timestamp;       // Timestamp for next packet
+    packet_info_t    pkt_info = 0;    // Flags/timestamp for next packet
 
     $display("Radio %0d: Start TX, send %0d words", radio_num, num_words);
 
     num_samples = num_words * NSPC;
 
+    if (!$isunknown(start_time)) pkt_info.has_time = 1;
+
     sample_val   = start_val;
     sample_count = 0;
     while (sample_count < num_samples) begin
       // Calculate timestamp for this packet
-      timestamp = start_time + sample_count;
+      if (pkt_info.has_time) begin
+        pkt_info.timestamp = start_time + sample_count;
+      end
 
       // Clear the payload
       data = {};
@@ -427,13 +431,14 @@ module rfnoc_block_radio_tb #(
 
         // Send the packet if we're at a packet boundary
         if (sample_count % SPP == 0) begin
-          bit eob_flag = (sample_count == num_samples && eob) ? 1 : 0;
+          pkt_info.eob = (sample_count == num_samples && eob) ? 1 : 0;
           byte_length = SPP * SAMP_W/8;
-          blk_ctrl.send(radio_num, data, byte_length, {}, timestamp, eob_flag);
+          blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
           break;
         end else if (sample_count == num_samples) begin
+          pkt_info.eob = eob;
           byte_length = (sample_count % SPP) * SAMP_W/8;
-          blk_ctrl.send(radio_num, data, byte_length, {}, timestamp, eob);
+          blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
           break;
         end
       end
@@ -790,7 +795,7 @@ module rfnoc_block_radio_tb #(
     // receive anything. That is, make sure Rx actually stopped.
     #MAX_PKT_WAIT;
     test.assert_error(
-      blk_ctrl.get_slave_data_bfm(radio_num).num_received() == 0,
+      blk_ctrl.num_received(radio_num) == 0,
       "Received more packets than expected"
     );
 
@@ -811,12 +816,12 @@ module rfnoc_block_radio_tb #(
 
     // Grab and discard any remaining packets
     do begin
-      while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0) begin
+      while (blk_ctrl.num_received(radio_num) != 0) begin
         ChdrPacket #(CHDR_W) chdr_packet;
-        blk_ctrl.get_slave_data_bfm(radio_num).get_chdr(chdr_packet);
+        blk_ctrl.get_chdr(radio_num, chdr_packet);
       end
       #MAX_PKT_WAIT;
-    end while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0);
+    end while (blk_ctrl.num_received(radio_num) != 0);
 
     test.end_test();
 
@@ -836,7 +841,7 @@ module rfnoc_block_radio_tb #(
       start_rx_timed(radio_num, WPP, expected_time);
 
       // Take a peak at the timestamp in the received packet to check it
-      blk_ctrl.get_slave_data_bfm(radio_num).peek_chdr(chdr_packet);
+      blk_ctrl.peek_chdr(radio_num, chdr_packet);
       test.assert_error(
         chdr_packet.timestamp - expected_time <= NSPC*2,
         "Received packet didn't have expected timestamp"
@@ -863,7 +868,7 @@ module rfnoc_block_radio_tb #(
       start_rx_timed(radio_num, 0, expected_time);
 
       // Take a peak at the timestamp in the received packet to check it
-      blk_ctrl.get_slave_data_bfm(radio_num).peek_chdr(chdr_packet);
+      blk_ctrl.peek_chdr(radio_num, chdr_packet);
       test.assert_error(
         chdr_packet.timestamp - expected_time <= NSPC*2,
         "Received packet didn't have expected timestamp"
@@ -875,12 +880,12 @@ module rfnoc_block_radio_tb #(
 
       // Grab and discard any remaining packets
       do begin
-        while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0) begin
+        while (blk_ctrl.num_received(radio_num) != 0) begin
           ChdrPacket #(CHDR_W) chdr_packet;
-          blk_ctrl.get_slave_data_bfm(radio_num).get_chdr(chdr_packet);
+          blk_ctrl.get_chdr(radio_num, chdr_packet);
         end
         #(MAX_PKT_WAIT);
-      end while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0);
+      end while (blk_ctrl.num_received(radio_num) != 0);
 
       test.end_test();
     end
@@ -901,7 +906,7 @@ module rfnoc_block_radio_tb #(
       write_radio(radio_num, REG_RX_ERR_ADDR, TX_ERR_ADDRESS);
 
       // Stall the BFM to force a backup of data
-      blk_ctrl.get_slave_data_bfm(radio_num).set_slave_stall_prob(100);
+      blk_ctrl.set_slave_stall_prob(radio_num, 100);
 
       // Acquire continuously until we get an error
       start_rx(radio_num);
@@ -917,7 +922,7 @@ module rfnoc_block_radio_tb #(
       check_error(ERR_RX_OVERRUN);
 
       // Restore the BFM stall probability
-      blk_ctrl.get_slave_data_bfm(radio_num).set_slave_stall_prob(STALL_PROB);
+      blk_ctrl.set_slave_stall_prob(radio_num, STALL_PROB);
 
       // Verify that Rx stopped
       read_radio(radio_num, REG_RX_STATUS, val);
@@ -929,12 +934,12 @@ module rfnoc_block_radio_tb #(
       // Discard any packets we received. Rx should eventually stop 
       // automatically after an overflow.
       do begin
-        while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0) begin
+        while (blk_ctrl.num_received(radio_num) != 0) begin
           ChdrPacket #(CHDR_W) chdr_packet;
-          blk_ctrl.get_slave_data_bfm(radio_num).get_chdr(chdr_packet);
+          blk_ctrl.get_chdr(radio_num, chdr_packet);
         end
         #(MAX_PKT_WAIT);
-      end while (blk_ctrl.get_slave_data_bfm(radio_num).num_received() != 0);
+      end while (blk_ctrl.num_received(radio_num) != 0);
 
      test.end_test();
     end
@@ -954,12 +959,12 @@ module rfnoc_block_radio_tb #(
       ChdrPacket #(CHDR_W) chdr_packet;
       #(MAX_PKT_WAIT);
       test.assert_error(
-        blk_ctrl.get_slave_data_bfm(radio_num).try_get_chdr(chdr_packet) == 0,
+        blk_ctrl.num_received(radio_num) == 0,
         "Packets received for late Rx command"
       );
 
       // Discard any remaining packets
-      while (blk_ctrl.get_slave_data_bfm(radio_num).try_get_chdr(chdr_packet));
+      while (blk_ctrl.num_received(radio_num)) blk_ctrl.get_chdr(radio_num, chdr_packet);
     end
 
     test.end_test();
@@ -1235,8 +1240,8 @@ module rfnoc_block_radio_tb #(
       port_sem.get(i+1);
 
       // Set the CHDR BFM stall probability
-      blk_ctrl.get_master_data_bfm(i).set_master_stall_prob(STALL_PROB);
-      blk_ctrl.get_slave_data_bfm(i).set_slave_stall_prob(STALL_PROB);
+      blk_ctrl.set_master_stall_prob(i, STALL_PROB);
+      blk_ctrl.set_slave_stall_prob(i, STALL_PROB);
     end
     blk_ctrl.run();
 

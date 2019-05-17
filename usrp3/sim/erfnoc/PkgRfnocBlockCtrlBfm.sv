@@ -8,13 +8,13 @@
 // Description: This package includes high-level bus functional models (BFMs)
 // for communicating with RFNoC. This includes the following:
 //
-//   - ChdrDataStreamBfm: Model for the AXIS CHDR interface of a Transport Adapter
-//                    or Stream Endpoint.
+//   - ChdrDataStreamBfm: Model for the AXIS CHDR interface of a Transport 
+//                        Adapter or Stream Endpoint.
 //
 //   - RegisterIfaceBfm: Model for the AXIS CTRL interface of a Stream Endpoint.
 //
-//   - RfnocBlockCtrlBfm: Model for a software block controller, which includes both a
-//                      ChdrDataStreamBfm and a RegisterIfaceBfm.
+//   - RfnocBlockCtrlBfm: Model for a software block controller, which includes 
+//                        both a ChdrDataStreamBfm and a RegisterIfaceBfm.
 //
 
 
@@ -72,6 +72,7 @@ interface RfnocBackendIf(
   );
 endinterface : RfnocBackendIf
 
+
 //-----------------------------------------------------------------------------
 // RFNoC Block Controller Bus Functional Model
 //-----------------------------------------------------------------------------
@@ -83,6 +84,16 @@ package PkgRfnocBlockCtrlBfm;
   import PkgAxisCtrlBfm::*;
   import PkgRfnocItemUtils::*;
 
+
+  typedef struct packed {
+    chdr_vc_t   vc;
+    logic       eob;
+    logic       eov;
+    logic       has_time;
+    chdr_word_t timestamp;
+  } packet_info_t;
+
+
   //---------------------------------------------------------------------------
   // CHDR Stream BFM
   //---------------------------------------------------------------------------
@@ -93,7 +104,11 @@ package PkgRfnocBlockCtrlBfm;
   //---------------------------------------------------------------------------
 
   class ChdrDataStreamBfm #(CHDR_W = 64) extends ChdrBfm #(CHDR_W);
-    chdr_seq_num_t seq_num;
+    chdr_seq_num_t seq_num;  // Sequence number
+    
+    protected int max_payload_length;  // Maximum number of payload bytes per packet
+    protected int ticks_per_word;      // Timestamp increment per CHDR_W sized word
+
 
     // Class constructor to create a new BFM instance.
     //
@@ -102,55 +117,187 @@ package PkgRfnocBlockCtrlBfm;
     //
     function new(
       virtual AxiStreamIf #(CHDR_W).master m_chdr,
-      virtual AxiStreamIf #(CHDR_W).slave  s_chdr
+      virtual AxiStreamIf #(CHDR_W).slave  s_chdr,
+      input   int                          max_payload_length = 2**$bits(chdr_length_t),
+      input   int                          ticks_per_word     = CHDR_W/32
     );
       super.new(m_chdr, s_chdr);
-      this.seq_num  = '0;
+      this.seq_num = 0;
+      set_max_payload_length(max_payload_length);
+      set_ticks_per_word(ticks_per_word);
     endfunction : new
+
+
+    // Set the maximum payload size for packets. This value is used to split 
+    // large send requests across multiple packets.
+    //
+    //   max_length:  Maximum payload length in bytes for each packet
+    //
+    function void set_max_payload_length(int max_payload_length);
+      assert (max_payload_length % (CHDR_W/8) == 0) else begin
+        $fatal(1, "ChdrDataStreamBfm::set_max_payload_length: max_payload_length must be a multiple of CHDR_W in bytes");
+      end
+      this.max_payload_length = max_payload_length;
+    endfunction
+
+
+    // Return the maximum payload size for packets. This value is used to split 
+    // large send requests across multiple packets.
+    function int get_max_payload_length();
+      return max_payload_length;
+    endfunction
+
+
+    // Set the timestamp ticks per CHDR_W sized word.
+    //
+    //   ticks_per_word:  Amount to increment the timestamp per CHDR_W sized word
+    //
+    function void set_ticks_per_word(int ticks_per_word);
+      this.ticks_per_word = ticks_per_word;
+    endfunction
+
+
+    // Return the timestamp ticks per CHDR_W sized word.
+    function int get_ticks_per_word();
+      return ticks_per_word;
+    endfunction
+
 
     // Send a CHDR data packet.
     //
     //   data:       Data words to insert into the CHDR packet.
+    //   data_bytes: The number of data bytes in the CHDR packet. This
+    //               is useful if the data is not a multiple of the
+    //               chdr_word_t size.
     //   metadata:   Metadata words to insert into the CHDR packet. Omit this
     //               argument (or set to an empty array) to not include
     //               metadata.
-    //   timestamp:  Timestamp to insert into the CHDR packet. Omit this
-    //               argument (or set to an unknown value, as in X or Z) to not
-    //               include a timestamp.
-    //   eob:        End of burst flag
-    //   eov:        End of vector flag
-    //   vc:         Virtual channel number
+    //   pkt_info:   Data structure containing packet header information.
     //
     task send (
-      input chdr_word_t  data[$],
-      input int          data_bytes = -1,
-      input chdr_word_t  metadata[$] = {},
-      input chdr_word_t  timestamp = 'X,
-      input logic        eob = 0,
-      input logic        eov = 0,
-      input chdr_vc_t    vc  = 0
+      input chdr_word_t   data[$],
+      input int           data_bytes  = -1,
+      input chdr_word_t   metadata[$] = {},
+      input packet_info_t pkt_info    = 0
     );
       ChdrPacket      chdr_packet;
       chdr_header_t   chdr_header;
-      chdr_pkt_type_t pkt_type;
 
       // Build packet
-      pkt_type = $isunknown(timestamp) ? CHDR_DATA_NO_TS : CHDR_DATA_WITH_TS;
       chdr_packet = new();
       chdr_header = '{
-        vc       : vc,
-        eob      : eob,
-        eov      : eov,
+        vc       : pkt_info.vc,
+        eob      : pkt_info.eob,
+        eov      : pkt_info.eov,
         seq_num  : seq_num++,
-        pkt_type : pkt_type,
+        pkt_type : pkt_info.has_time ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS,
         dst_epid : dst_epid,
         default  : 0
       };
-      chdr_packet.write_raw(chdr_header, data, metadata, timestamp, data_bytes);
+      chdr_packet.write_raw(chdr_header, data, metadata, pkt_info.timestamp, data_bytes);
 
       // Send the packet
       put_chdr(chdr_packet);
     endtask : send
+
+
+    // Send data as one or more CHDR data packets. The input data and metadata 
+    // is automatically broken into max_payload_length'd packets. If multiple 
+    // packets are needed, EOB and EOV are only applied to the last packet.
+    //
+    //   data:       Data words to insert into the CHDR packet.
+    //   data_bytes: The number of data bytes in the CHDR packet. This
+    //               is useful if the data is not a multiple of the
+    //               chdr_word_t size.
+    //   metadata:   Metadata words to insert into the CHDR packet. Omit this
+    //               argument (or set to an empty array) to not include
+    //               metadata.
+    //   pkt_info:   Data structure containing packet header information.
+    //
+    task send_packets (
+      input chdr_word_t   data[$],
+      input int           data_bytes  = -1,
+      input chdr_word_t   metadata[$] = {},
+      input packet_info_t pkt_info    = 0
+    );
+      ChdrPacket      chdr_packet;
+      chdr_header_t   chdr_header;
+      chdr_pkt_type_t pkt_type;
+      chdr_word_t     timestamp;
+      int             num_pkts;
+      int             payload_length;
+      int             first_dword, last_dword;
+      int             first_mword, last_mword;
+      bit             eob, eov;
+
+      chdr_word_t   temp_data[$];
+      chdr_word_t   temp_mdata[$];
+
+      num_pkts   = $ceil(real'(data.size()*($bits(chdr_word_t)/8)) / max_payload_length);
+      pkt_type   = pkt_info.has_time ? CHDR_DATA_WITH_TS : CHDR_DATA_NO_TS;
+      timestamp  = pkt_info.timestamp;
+
+      // Make sure there's not too much metadata for this number of packets
+      assert(metadata.size()*$bits(chdr_word_t) < num_pkts * 2**$bits(chdr_num_mdata_t) * CHDR_W) else
+        $fatal(1, "ChdrDataStreamBfm::send: Too much metadata for this send request");
+
+      // Send the data, one packet at a time.
+      for (int i = 0; i < num_pkts; i++) begin
+        chdr_packet = new();
+
+        // Figure out which data chunk to send next
+        if (i == num_pkts-1) begin
+          // The last packet, which may or may not be full-sized
+          eob            = pkt_info.eob;
+          eov            = pkt_info.eov;
+          payload_length = (data_bytes < 0) ? data_bytes : data_bytes % max_payload_length;
+          first_dword    = i*max_payload_length/($bits(chdr_word_t)/8);
+          last_dword     = data.size()-1;
+          first_mword    = i*(2**$bits(chdr_num_mdata_t) * CHDR_W / $bits(chdr_word_t));
+          last_mword     = metadata.size()-1;
+        end else begin
+          // A full-sized packet, not the last
+          eob            = 1'b0;
+          eov            = 1'b0;
+          payload_length = max_payload_length;
+          first_dword    = (i+0)*max_payload_length / ($bits(chdr_word_t)/8);
+          last_dword     = (i+1)*max_payload_length / ($bits(chdr_word_t)/8) - 1;
+          first_mword    = (i+0)*(2**$bits(chdr_num_mdata_t) * CHDR_W / $bits(chdr_word_t));
+          last_mword     = (i+1)*(2**$bits(chdr_num_mdata_t) * CHDR_W / $bits(chdr_word_t)) - 1;
+          last_mword     = last_mword > metadata.size() ? metadata.size() : last_mword;
+        end
+
+        // Build the packet
+        chdr_header = '{
+          vc       : pkt_info.vc,
+          eob      : eob,
+          eov      : eov,
+          seq_num  : seq_num++,
+          pkt_type : pkt_type,
+          dst_epid : dst_epid,
+          default  : 0
+        };
+
+        // Copy region of data and metadata to be sent in next packet
+        temp_data  = data[first_dword : last_dword];
+        temp_mdata = first_mword < metadata.size() ? metadata[first_mword : last_mword] : {};
+
+        // Build the packet
+        chdr_packet.write_raw(
+          chdr_header,
+          temp_data, 
+          temp_mdata,
+          timestamp, 
+          payload_length
+        );
+
+        // Send the packet
+        put_chdr(chdr_packet);
+
+        // Update timestamp for next packet (in case this is not the last)
+        timestamp += max_payload_length/(CHDR_W/8) * ticks_per_word;
+      end
+    endtask : send_packets
 
 
     // Receive a CHDR data packet and extract its contents.
@@ -161,25 +308,25 @@ package PkgRfnocBlockCtrlBfm;
     //                chdr_word_t size.
     //   metadata:    Metadata words from the received CHDR packet. This
     //                will be an empty array if there was no metadata.
-    //   timestamp:   Timestamp from the received CHDR packet. If there
-    //                was no timestamp, then this will be X.
+    //   pkt_info:    Data structure to receive packet header information.
     //
     task recv_adv (
-      output chdr_word_t data[$],
-      output int         data_bytes,
-      output chdr_word_t metadata[$],
-      output chdr_word_t timestamp
+      output chdr_word_t   data[$],
+      output int           data_bytes,
+      output chdr_word_t   metadata[$],
+      output packet_info_t pkt_info
     );
       ChdrPacket chdr_packet;
       get_chdr(chdr_packet);
 
-      data = chdr_packet.data;
-      metadata = chdr_packet.metadata;
-      if (chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS)
-        timestamp = chdr_packet.timestamp;
-      else
-        timestamp = 'X;
-      data_bytes = chdr_packet.data_bytes();
+      data               = chdr_packet.data;
+      data_bytes         = chdr_packet.data_bytes();
+      metadata           = chdr_packet.metadata;
+      pkt_info.timestamp = chdr_packet.timestamp;
+      pkt_info.vc        = chdr_packet.header.vc;
+      pkt_info.eob       = chdr_packet.header.eob;
+      pkt_info.eov       = chdr_packet.header.eov;
+      pkt_info.has_time  = chdr_packet.header.pkt_type == CHDR_DATA_WITH_TS ? 1 : 0;
     endtask : recv_adv
 
 
@@ -355,16 +502,28 @@ package PkgRfnocBlockCtrlBfm;
       this.running = 0;
     endfunction : new
 
-    // Add a master data port. This should connect to a DUT input
+    // Add a master data port. This should connect to a DUT slave input.
+    // 
+    //   m_chdr:             Virtual master interface to connect new port to.
+    //   max_payload_length: Maximum payload length to create when building
+    //                       packets from data.
+    //   ticks_per_word:     Number of timebase clock ticks to increment per
+    //                       CHDR word.
+    //
     function int add_master_data_port(
-      virtual AxiStreamIf #(CHDR_W).master m_chdr
+      virtual AxiStreamIf #(CHDR_W).master m_chdr,
+      int max_payload_length = 2**$bits(chdr_length_t),
+      int ticks_per_word     = CHDR_W/32
     );
-      ChdrDataStreamBfm #(CHDR_W) bfm = new(m_chdr, null);
+      ChdrDataStreamBfm #(CHDR_W) bfm = new(m_chdr, null, max_payload_length, ticks_per_word);
       m_data.push_back(bfm);
       return m_data.size() - 1;
     endfunction : add_master_data_port
 
-    // Add a slave data port. This should connect to a DUT output
+    // Add a slave data port. This should connect to a DUT master output.
+    // 
+    //   s_chdr: Virtual slave interface to connect new port to
+    //
     function int add_slave_data_port(
       virtual AxiStreamIf #(CHDR_W).slave s_chdr
     );
@@ -372,6 +531,44 @@ package PkgRfnocBlockCtrlBfm;
       s_data.push_back(bfm);
       return s_data.size() - 1;
     endfunction : add_slave_data_port
+
+    // Add a master data port. This is equivalent to add_master_data_port() 
+    // except it accepts a port number and it waits until the preceding ports 
+    // are connected to ensure that ports are connected in the correct order.
+    //
+    //   port_num:           The port number to which m_chdr should be connected
+    //   m_chdr:             Master CHDR interface to connect to the port
+    //   max_payload_length: Maximum payload length to create when building
+    //                       packets from data.
+    //   ticks_per_word:     Number of timebase clock ticks to increment per
+    //                       CHDR word.
+    //
+    task connect_master_data_port(
+      int port_num,
+      virtual AxiStreamIf #(CHDR_W).master m_chdr,
+      int max_payload_length = 2**$bits(chdr_length_t),
+      int ticks_per_word     = CHDR_W/32
+    );
+      ChdrDataStreamBfm #(CHDR_W) bfm = new(m_chdr, null, max_payload_length, ticks_per_word);
+      wait (m_data.size() == port_num);
+      m_data.push_back(bfm);
+    endtask : connect_master_data_port
+
+    // Add a slave data port. This is equivalent to add_slave_data_port() 
+    // except it accepts a port number and it waits until the preceding ports 
+    // are connected to ensure that ports are connected in the correct order.
+    //
+    //   port_num:  The port number to which m_chdr should be connected
+    //   s_chdr:    Master CHDR interface to connect to the port
+    //
+    task connect_slave_data_port(
+      int port_num,
+      virtual AxiStreamIf #(CHDR_W).slave s_chdr
+    );
+      ChdrDataStreamBfm #(CHDR_W) bfm = new(null, s_chdr);
+      wait (s_data.size() == port_num);
+      s_data.push_back(bfm);
+    endtask : connect_slave_data_port
 
     // Start the data and control BFM's processes running.
     task run();
@@ -408,6 +605,54 @@ package PkgRfnocBlockCtrlBfm;
       end
       return s_data[port];
     endfunction : get_slave_data_bfm
+
+    // Set the maximum payload size for packets. This value is used to split 
+    // large send requests across multiple packets.
+    //
+    //   port:        Master port whose maximum length you want to set
+    //   max_length:  Maximum payload length in bytes for each packet
+    //
+    function void set_max_payload_length(int port, int max_length);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+      m_data[port].set_max_payload_length(max_length);
+    endfunction
+
+    // Return the maximum payload size for packets. This value is used to split 
+    // large send requests across multiple packets.
+    //
+    //   port: Master port whose maximum length you want to get
+    //
+    function int get_max_payload_length(int port);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+      return m_data[port].get_max_payload_length();
+    endfunction
+
+    // Set the timestamp ticks per CHDR_W sized word.
+    //
+    //   port:            Master port whose timestamp increment you want to set
+    //   ticks_per_word:  Amount to increment the timestamp per CHDR_W sized word
+    //
+    function void set_ticks_per_word(int port, int ticks_per_word);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+      m_data[port].set_ticks_per_word(ticks_per_word);
+    endfunction
+
+    // Return the timestamp ticks per CHDR_W sized word.
+    //
+    //   port:  Master port whose timestamp increment you want to get
+    //
+    function int get_ticks_per_word(int port);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+      return m_data[port].get_ticks_per_word();
+    endfunction
 
     // Get static info about the block
     function logic [7:0] get_proto_ver();
@@ -541,22 +786,14 @@ package PkgRfnocBlockCtrlBfm;
     //   metadata:   Metadata words to insert into the CHDR packet. Omit this
     //               argument (or set to an empty array) to not include
     //               metadata.
-    //   timestamp:  Timestamp to insert into the CHDR packet. Omit this
-    //               argument (or set to an unknown value, as in X or Z) to not
-    //               include a timestamp.
-    //   logic       End of burst flag
-    //   eov:        End of vector flag
-    //   vc:         Virtual channel number
+    //   pkt_info:   Data structure containing packet header information.
     //
     task send(
-      input int          port,
-      input chdr_word_t  data[$],
-      input int          data_bytes = -1,
-      input chdr_word_t  metadata[$] = {},
-      input chdr_word_t  timestamp = 'X,
-      input logic        eob = 0,
-      input logic        eov = 0,
-      input chdr_vc_t    vc  = 0
+      input int           port,
+      input chdr_word_t   data[$],
+      input int           data_bytes  = -1,
+      input chdr_word_t   metadata[$] = {},
+      input packet_info_t pkt_info    = 0
     );
       assert (running) else begin
         $fatal(1, "Cannot call send until RfnocBlockCtrlBfm is running");
@@ -565,27 +802,57 @@ package PkgRfnocBlockCtrlBfm;
         $fatal(1, "Invalid master port number");
       end
 
-      m_data[port].send(data, data_bytes, metadata, timestamp, eob, eov, vc);
+      m_data[port].send(data, data_bytes, metadata, pkt_info);
     endtask : send
+
+
+    // Send data as one or more CHDR data packets out the CHDR data interface.
+    //
+    //   port:       Port to send the CHDR packet(s) on.
+    //   data:       Data words to insert into the CHDR packet.
+    //   data_bytes: Size of data in bytes. If omitted or -1, data_bytes will
+    //               be calculated based on the number of words in data.
+    //   metadata:   Metadata words to insert into the CHDR packet(s). Omit 
+    //               this argument (or set to an empty array) to not include 
+    //               metadata.
+    //   pkt_info:   Data structure containing packet header information.
+    //
+    task send_packets(
+      input int           port,
+      input chdr_word_t   data[$],
+      input int           data_bytes  = -1,
+      input chdr_word_t   metadata[$] = {},
+      input packet_info_t pkt_info    = 0
+    );
+      assert (running) else begin
+        $fatal(1, "Cannot call send_packets until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+
+      m_data[port].send_packets(data, data_bytes, metadata, pkt_info);
+    endtask : send_packets
+
 
     // Receive a CHDR data packet on the CHDR data interface and extract its
     // contents.
     //
+    //   port:        Port to receive the CHDR packet from.
     //   data:        Data words from the received CHDR packet.
-    //   metadata:    Metadata words from the received CHDR packet. This
-    //                will be an empty array if there was no metadata.
-    //   timestamp:   Timestamp from the received CHDR packet. If there
-    //                was no timestamp, then this will be X.
     //   data_bytes:  The number of data bytes in the CHDR packet. This
     //                is useful if the data is not a multiple of the
     //                chdr_word_t size.
+    //   metadata:    Metadata words from the received CHDR packet. This
+    //                will be an empty array if there was no metadata.
+    //   pkt_info:    Data structure to receive packet header information.
     //
     task recv_adv(
-      input  int         port,
-      output chdr_word_t data[$],
-      output int         data_bytes,
-      output chdr_word_t metadata[$],
-      output chdr_word_t timestamp
+      input  int           port,
+      output chdr_word_t   data[$],
+      output int           data_bytes,
+      output chdr_word_t   metadata[$],
+      output packet_info_t pkt_info
     );
       assert (running) else begin
         $fatal(1, "Cannot call recv_adv until RfnocBlockCtrlBfm is running");
@@ -594,7 +861,7 @@ package PkgRfnocBlockCtrlBfm;
         $fatal(1, "Invalid slave port number");
       end
 
-      s_data[port].recv_adv(data, data_bytes, metadata, timestamp);
+      s_data[port].recv_adv(data, data_bytes, metadata, pkt_info);
     endtask : recv_adv
 
 
@@ -616,11 +883,133 @@ package PkgRfnocBlockCtrlBfm;
         $fatal(1, "Cannot call recv until RfnocBlockCtrlBfm is running");
       end
       assert (port >= 0 && port < s_data.size()) else begin
-        $fatal(1, "Invalid port number");
+        $fatal(1, "Invalid slave port number");
       end
 
       s_data[port].recv(data, data_bytes);
     endtask : recv
+
+
+    // Transmit a raw CHDR packet.
+    //
+    //   port:    Port number on which to transmit the packet
+    //   packet:  Packet to transmit
+    //
+    task put_chdr(
+      input int                  port,
+      input ChdrPacket #(CHDR_W) packet
+    );
+      assert (running) else begin
+        $fatal(1, "Cannot call put_chdr until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+
+      m_data[port].put_chdr(packet);
+    endtask : put_chdr
+
+
+    // Receive a raw CHDR packet.
+    //
+    //   port:    Port number on which to receive the packet
+    //   packet:  Data structure to store received packet
+    //
+    task get_chdr(
+      input  int                  port,
+      output ChdrPacket #(CHDR_W) packet
+    );
+      assert (running) else begin
+        $fatal(1, "Cannot call get_chdr until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+
+      s_data[port].get_chdr(packet);
+    endtask : get_chdr
+
+
+    // Receive a raw CHDR packet, but don't remove it from the receive queue.
+    //
+    //   port:    Port number on which to peek
+    //   packet:  Data structure to store received packet
+    //
+    task peek_chdr(
+      input  int                  port,
+      output ChdrPacket #(CHDR_W) packet
+    );
+      assert (running) else begin
+        $fatal(1, "Cannot call peek_chdr until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+
+      s_data[port].peek_chdr(packet);
+    endtask : peek_chdr
+
+
+    // Return the number of packets available in the receive queue for the 
+    // given port.
+    //
+    //   port:  Port for which to get the number of received packets
+    //
+    function int num_received(int port);
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+
+      return s_data[port].num_received();
+    endfunction
+
+
+    // Wait until packets have completed transmission.
+    //
+    //   port:  Port for which to wait
+    //   num:   Number of packets to wait for. Set to -1 or omit the argument 
+    //          to wait for all currently queued packets to complete 
+    //          transmission.
+    //
+    task wait_complete(int port, int num = -1);
+      assert (running) else begin
+        $fatal(1, "Cannot call wait_complete until RfnocBlockCtrlBfm is running");
+      end
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+
+      m_data[port].wait_complete(num);
+    endtask
+
+
+    // Set the stall probability for the indicated slave port.
+    //
+    //   port:        Port for which to set the probability
+    //   stall_prob:  Probability as a percentage (0-100)
+    //
+    function void set_slave_stall_prob(int port, int stall_prob);
+      assert (port >= 0 && port < s_data.size()) else begin
+        $fatal(1, "Invalid slave port number");
+      end
+
+      s_data[port].set_slave_stall_prob(stall_prob);
+    endfunction
+
+
+    // Set the stall probability for the indicated master port.
+    //
+    //   port:        Port for which to set the probability
+    //   stall_prob:  Probability as a percentage (0-100)
+    //
+    function void set_master_stall_prob(int port, int stall_prob);
+      assert (port >= 0 && port < m_data.size()) else begin
+        $fatal(1, "Invalid master port number");
+      end
+
+      m_data[port].set_master_stall_prob(stall_prob);
+    endfunction
+
 
     // Send a read request packet on the AXIS-Ctrl interface and get the
     // response.
