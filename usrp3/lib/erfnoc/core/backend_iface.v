@@ -34,6 +34,7 @@ module backend_iface #(
   input  wire [63:0]  data_o_flush_active,
   input  wire [63:0]  data_o_flush_done
 );
+  localparam RESET_LENGTH = 32;
 
   `include "rfnoc_backend_iface.vh"
 
@@ -70,14 +71,30 @@ module backend_iface #(
     .out({flush_en_chclk, flush_timeout_chclk})
   );
 
+  // Synchronize the reset to the CHDR and CTRL clock domains, and extend the 
+  // reset pulse to make it long enough for most IP to reset correctly.
+
+  wire rfnoc_ctrl_rst_pulse;
+  wire rfnoc_chdr_rst_pulse;
+
   pulse_synchronizer #(.MODE("POSEDGE")) soft_ctrl_rst_sync_i (
     .clk_a(rfnoc_ctrl_clk), .rst_a(1'b0), .pulse_a(soft_ctrl_rst_ctclk), .busy_a(),
-    .clk_b(rfnoc_ctrl_clk), .pulse_b(rfnoc_ctrl_rst)
+    .clk_b(rfnoc_ctrl_clk), .pulse_b(rfnoc_ctrl_rst_pulse)
   );
 
   pulse_synchronizer #(.MODE("POSEDGE")) soft_chdr_rst_sync_i (
     .clk_a(rfnoc_ctrl_clk), .rst_a(1'b0), .pulse_a(soft_chdr_rst_ctclk), .busy_a(),
-    .clk_b(rfnoc_chdr_clk), .pulse_b(rfnoc_chdr_rst)
+    .clk_b(rfnoc_chdr_clk), .pulse_b(rfnoc_chdr_rst_pulse)
+  );
+
+  pulse_stretch_min #(.LENGTH(RESET_LENGTH)) soft_ctrl_rst_stretch_i (
+    .clk(rfnoc_ctrl_clk), .rst(1'b0),
+    .pulse_in(rfnoc_ctrl_rst_pulse), .pulse_out(rfnoc_ctrl_rst)
+  );
+
+  pulse_stretch_min #(.LENGTH(RESET_LENGTH)) soft_chdr_rst_stretch_i (
+    .clk(rfnoc_chdr_clk), .rst(1'b0),
+    .pulse_in(rfnoc_chdr_rst_pulse), .pulse_out(rfnoc_chdr_rst)
   );
 
   assign data_i_flush_timeout = flush_timeout_chclk;
