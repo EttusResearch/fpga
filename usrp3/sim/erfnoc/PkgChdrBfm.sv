@@ -260,16 +260,19 @@ package PkgChdrBfm;
     this.timestamp = timestamp;
     this.data      = data;
     this.metadata  = metadata;
-    if (data_byte_length < 0) begin
-      // Automatically calculate the length fields
-      update_lengths();
-    end else begin
+    update_lengths();
+
+    // Adjust length field according to data_byte_length
+    if (data_byte_length >= 0) begin
+      int array_num_bytes;
+
       // Make sure number of words for data_byte_length matches data length
       assert((data_byte_length+7) / 8 == data.size()) else begin
         $error("ChdrPacket::write_raw: data_byte_length doesn't correspond to number of words in data");
       end
-      this.header.num_mdata = metadata.size();
-      this.header.length = header_bytes() + mdata_bytes() + data_byte_length;
+
+      array_num_bytes = data.size() * $bits(chdr_word_t)/8;
+      this.header.length -= (array_num_bytes - data_byte_length);
     end
   endfunction : write_raw
 
@@ -528,20 +531,26 @@ package PkgChdrBfm;
   // Update the length and num_mdata header fields of the packet based on the 
   // size of the metadata queue and the data queue.
   function void ChdrPacket::update_lengths();
-    int data_bytes;
+    int num_bytes;
     int num_mdata;
 
-    // Update the num_mdata header field based on the size of metadata queue
+    // Calculate NumMData based on the size of metadata queue
     num_mdata = metadata.size() / (BUS_WIDTH / $bits(chdr_word_t));
     if (metadata.size() % (BUS_WIDTH / $bits(chdr_word_t)) != 0) begin
       num_mdata++;
     end
+    assert(num_mdata < 2**$bits(chdr_num_mdata_t)) else
+      $fatal(1, "ChdrPacket::update_lengths():  Calculated NumMData exceeds maximum size");
 
-    // Calculate the number of bytes that make up the data
-    data_bytes = data.size() * $bits(chdr_word_t) / 8;
+    // Calculate the Length field
+    num_bytes = data.size() * $bits(chdr_word_t) / 8;        // Payload length
+    num_bytes = num_bytes + header_bytes() + mdata_bytes();  // Payload + header length
+    assert(num_bytes < 2**$bits(chdr_length_t)) else
+      $fatal(1, "ChdrPacket::update_lengths():  Calculated Length exceeds maximum size");
 
+    // Update header
     header.num_mdata = num_mdata;
-    header.length    = header_bytes() + mdata_bytes() + data_bytes;
+    header.length    = num_bytes;
   endfunction : update_lengths
 
 
