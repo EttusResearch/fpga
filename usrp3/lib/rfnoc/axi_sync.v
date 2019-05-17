@@ -25,7 +25,7 @@ module axi_sync #(
   // Helper function to calculate the MSB index based on widths stored in WIDTH_VEC.
   // Note: If n is negative, returns 0
   function automatic integer msb(input integer n, input [SIZE*32-1:0] bit_vec);
-    automatic integer i, total;
+    integer i, total;
   begin
     total = 0;
     if (n >= 0) begin

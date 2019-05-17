@@ -48,6 +48,7 @@ regport_resp_mux.v \
 regport_to_xbar_settingsbus.v \
 regport_to_settingsbus.v \
 pulse_stretch.v \
+pulse_stretch_min.v \
 mdio_master.v \
 map/cam_priority_encoder.v \
 map/cam_bram.v \
