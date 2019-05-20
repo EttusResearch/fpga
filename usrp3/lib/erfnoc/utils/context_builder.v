@@ -18,7 +18,7 @@
 //
 // The timestamp and flags must be input coincident with the AXI-Stream data 
 // input. The timestamp and flag inputs will be sampled coincident with the 
-// first word of data in the packet.
+// last word of data in the packet (i.e., when tlast is asserted).
 //
 // In order to determine the length of the packet, the entire packet is 
 // buffered before the header in the context stream is generated. Therefore, 
@@ -122,9 +122,10 @@ module context_builder #(
   // Timestamp and Flags Capture
   //---------------------------------------------------------------------------
   //
-  // The timestamp and flags that we use for each packet is that of the first 
-  // data word. Here, we capture this information at the start of the packet. 
-  // At the end of the packet, when the length is known, this value will be 
+  // The timestamp and flags that we use for each packet is that of the last 
+  // data word. This maintains compatibility with how tuser was used on old 
+  // RFnoC. Here, we capture this information at the start of the packet. At 
+  // the end of the packet, when the length is known, this value will be 
   // inserted into the packet info FIFO.
   //
   //---------------------------------------------------------------------------
@@ -133,25 +134,13 @@ module context_builder #(
   reg        packet_has_time;
   reg        packet_eov;
   reg        packet_eob;
-  reg        first_word = 1'b1;
 
   always @(posedge axis_data_clk) begin
-    if (axis_data_rst) begin
-      first_word <= 1'b1;
-    end else begin
-      if (s_axis_tvalid & s_axis_tready) begin
-        if (first_word) begin
-          packet_timestamp <= s_axis_ttimestamp;
-          packet_has_time  <= s_axis_thas_time;
-          packet_eov       <= s_axis_teov;
-          packet_eob       <= s_axis_teob;
-          first_word       <= 1'b0;
-        end
-
-        if (s_axis_tlast) begin
-          first_word <= 1'b1;
-        end
-      end
+    if (s_axis_tvalid & s_axis_tready & s_axis_tlast) begin
+      packet_timestamp <= s_axis_ttimestamp;
+      packet_has_time  <= s_axis_thas_time;
+      packet_eov       <= s_axis_teov;
+      packet_eob       <= s_axis_teob;
     end
   end
 
@@ -333,7 +322,7 @@ module context_builder #(
             m_axis_context_tdata <= chdr_header;
             m_axis_context_tuser <= CONTEXT_FIELD_HDR;
             m_axis_context_tlast <= !next_packet_has_time;
-            if (packet_info_valid) begin
+            if (packet_info_valid && !packet_info_ready) begin
               m_axis_context_tvalid <= 1'b1;
               seq_num               <= seq_num + 1;
               state                 <= ST_HEADER;
