@@ -180,3 +180,18 @@ function [0:0] chdr_get_has_time(input [63:0] header);
   chdr_get_has_time = (chdr_get_pkt_type(header) == CHDR_PKT_TYPE_DATA_TS);
 endfunction
 
+// Calculate the payload length in bytes based on the CHDR_W and header
+function [15:0] chdr_calc_payload_length(input [31:0] chdr_w, input [63:0] header);
+  reg [15:0] payload_length, mdata_length, header_length;
+  begin
+    if (chdr_w == 64) begin
+      header_length = chdr_get_has_time(header) ? 2*(chdr_w/8) : (chdr_w/8);
+    end else begin
+      header_length = chdr_w/8;
+    end
+    mdata_length   = chdr_get_num_mdata(header) * (chdr_w/8);
+    payload_length = chdr_get_length(header) - mdata_length - header_length;
+
+    chdr_calc_payload_length = payload_length;
+  end
+endfunction

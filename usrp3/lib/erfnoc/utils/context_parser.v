@@ -51,6 +51,7 @@ module context_parser #(
   // Sideband information
   output wire [             63:0] m_axis_ttimestamp,
   output wire                     m_axis_thas_time,
+  output wire [             15:0] m_axis_tlength,      // Payload length, in bytes
   output wire                     m_axis_teov,
   output wire                     m_axis_teob
 );
@@ -67,6 +68,7 @@ module context_parser #(
   // Sideband data for next packet
   reg [63:0] timestamp;
   reg        has_time;
+  reg [15:0] length;
   reg        eov;
   reg        eob;
 
@@ -99,9 +101,10 @@ module context_parser #(
       case(state)
         ST_HEADER: begin
           // Grab header information
-          eov       <= chdr_get_eov(s_axis_context_tdata[63:0]);
-          eob       <= chdr_get_eob(s_axis_context_tdata[63:0]);
-          has_time  <= chdr_get_has_time(s_axis_context_tdata[63:0]);
+          eov      <= chdr_get_eov(s_axis_context_tdata[63:0]);
+          eob      <= chdr_get_eob(s_axis_context_tdata[63:0]);
+          has_time <= chdr_get_has_time(s_axis_context_tdata[63:0]);
+          length   <= chdr_calc_payload_length(CHDR_W, s_axis_context_tdata[63:0]);
 
           if (s_axis_context_tvalid && s_axis_context_tready) begin
             if (CHDR_W > 64) begin
@@ -179,15 +182,16 @@ module context_parser #(
   //---------------------------------------------------------------------------
 
   axi_fifo_short #(
-    .WIDTH (67)
+    .WIDTH (83)
   ) sideband_fifo (
     .clk      (axis_data_clk),
     .reset    (axis_data_rst),
     .clear    (1'b0),
-    .i_tdata  ({eob, eov, has_time, timestamp}),
+    .i_tdata  ({length, eob, eov, has_time, timestamp}),
     .i_tvalid (sideband_i_tvalid),
     .i_tready (sideband_i_tready),
-    .o_tdata  ({m_axis_teob, m_axis_teov, m_axis_thas_time, m_axis_ttimestamp}),
+    .o_tdata  ({m_axis_tlength, m_axis_teob, m_axis_teov, 
+                m_axis_thas_time, m_axis_ttimestamp}),
     .o_tvalid (sideband_o_tvalid),
     .o_tready (sideband_o_tready),
     .space    (),

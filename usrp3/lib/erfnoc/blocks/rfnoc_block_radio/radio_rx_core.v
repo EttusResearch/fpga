@@ -309,6 +309,7 @@ module radio_rx_core #(
   reg [              2:0] state   = ST_IDLE; // Current state
   reg [NUM_WORDS_LEN-1:0] words_left;        // Words left in current command
   reg [             31:0] words_left_pkt;    // Words left in current packet
+  reg                     first_word = 1'b1; // Next word is first in packet
   reg [             15:0] seq_num = 0;       // Sequence number (packet count)
   reg [             63:0] error_time;        // Time at which overflow occurred
   reg [ERR_RX_CODE_W-1:0] error_code;        // Error code register
@@ -331,6 +332,7 @@ module radio_rx_core #(
       out_fifo_tvalid   <= 1'b0;
       seq_num           <=  'd0;
       m_ctrlport_req_wr <= 1'b0;
+      first_word        <= 1'b1;
     end else begin
       // Default assignments
       out_fifo_tvalid   <= 1'b0;
@@ -350,6 +352,7 @@ module radio_rx_core #(
           if (cmd_active) begin
             state <= ST_TIME_CHECK;
           end
+          first_word <= 1'b1;
         end
 
         ST_TIME_CHECK : begin
@@ -381,7 +384,10 @@ module radio_rx_core #(
             // Output the next word
             out_fifo_tvalid    <= 1'b1;
             out_fifo_tdata     <= radio_rx_data;
-            out_fifo_timestamp <= radio_time;
+            if (first_word) begin
+              out_fifo_timestamp <= radio_time;
+              first_word         <= 1'b0;
+            end
 
             // Update word counters
             words_left     <= words_left - 1;
@@ -393,11 +399,13 @@ module radio_rx_core #(
               cmd_done       <= 1'b1;
               out_fifo_tlast <= 1'b1;
               out_fifo_teob  <= 1'b1;
+              first_word     <= 1'b1;
             end else if (words_left_pkt == 1) begin
               // We've finished building a packet
               seq_num        <= seq_num + 1;
               words_left_pkt <= reg_max_pkt_len;
               out_fifo_tlast <= 1'b1;
+              first_word     <= 1'b1;
             end
 
             // Check for overflow. Note that we've left enough room in the
