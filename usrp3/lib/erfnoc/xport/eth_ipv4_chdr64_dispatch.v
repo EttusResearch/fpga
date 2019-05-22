@@ -312,7 +312,7 @@ module eth_ipv4_chdr64_dispatch #(
         cpu_terror  = in_tlast;   // Illegal short packet: Drop it
       end
       ST_FWD_CHDR: begin 
-        in_tready   = chdr_tready & cpu_tready;
+        in_tready   = chdr_tready & (discard_cpu_pkt ? cpu_tready : 1'b1);
         cpu_tvalid  = discard_cpu_pkt;
         cpu_tlast   = discard_cpu_pkt;
         cpu_terror  = discard_cpu_pkt;
@@ -369,9 +369,9 @@ module eth_ipv4_chdr64_dispatch #(
   // of a packet so we use a packet gate for the CPU path because we can rewind 
   // the write pointer and drop the packet in case it's destined for the CHDR
   // path.
-  // NOTE: The SIZE of this FIFO must be 10 to accomodate a 9000 byte jumbo frame
+  // NOTE: The SIZE of this FIFO must be 11 to accomodate a 9000 byte jumbo frame
   //       regardless of the CHDR MTU
-  axi_packet_gate #( .WIDTH(64+4), .SIZE(10), .USE_AS_BUFF(0) ) cpu_out_gate_i (
+  axi_packet_gate #( .WIDTH(64+4), .SIZE(11), .USE_AS_BUFF(0) ) cpu_out_gate_i (
     .clk(clk), .reset(rst), .clear(1'b0),
     .i_tdata({o_cpu_tuser, o_cpu_tdata}), .i_tlast(o_cpu_tlast), .i_terror(o_cpu_terror),
     .i_tvalid(o_cpu_tvalid), .i_tready(o_cpu_tready),

@@ -91,7 +91,8 @@ module chdr_xport_adapter_generic #(
   wire [USER_W-1:0]  i_xport_tuser;
   wire               i_xport_tlast, i_xport_tvalid, i_xport_tready;
   wire [CHDR_W-1:0]  o_xport_tdata;
-  reg  [USER_W-1:0]  o_xport_tuser;
+  wire [USER_W-1:0]  o_xport_tuser;
+  wire               o_xport_tdest;
   wire               o_xport_tlast, o_xport_tvalid, o_xport_tready;
 
   localparam [$clog2(CHDR_W)-1:0] SWAP_LANES = ((CHDR_W / 64) - 1) << 6;
@@ -122,7 +123,7 @@ module chdr_xport_adapter_generic #(
 
 
   wire [CHDR_W-1:0] x2d_tdata;  // Xport => Demux
-  wire [USER_W-1:0] x2d_tuser;
+  reg  [USER_W-1:0] x2d_tuser;
   wire [1:0]        x2d_tid;
   wire              x2d_tlast, x2d_tvalid, x2d_tready;
   wire [CHDR_W-1:0] x2x_tdata;  // Xport => Xport (loopback)
@@ -138,10 +139,10 @@ module chdr_xport_adapter_generic #(
   // ---------------------------------------------------
   wire              op_stb;
   wire [15:0]       op_src_epid;
-  wire              lookup_stb;
+  wire              lookup_stb, lookup_res_stb, lookup_res_match;
   wire [15:0]       lookup_epid;
   wire [USER_W-1:0] lookup_res_val;
-  wire              lookup_res_match;
+  reg  [USER_W-1:0] cam_tuser_cached = {USER_W{1'b0}};
 
   chdr_mgmt_pkt_handler #(
     .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
@@ -160,16 +161,21 @@ module chdr_xport_adapter_generic #(
   );
 
   kv_map #(
-    .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE), .INSERT_MODE("LOSSY")
+    .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE)
   ) kv_map_i (
     .clk(clk), .reset(rst),
     .insert_stb(op_stb), .insert_key(op_src_epid), .insert_val(i_xport_tuser),
     .insert_busy(/* Time between op_stb > Insertion time */),
     .find_key_stb(lookup_stb), .find_key(lookup_epid),
-    .find_res_stb(),
+    .find_res_stb(lookup_res_stb),
     .find_res_match(lookup_res_match), .find_res_val(lookup_res_val),
     .count(/* unused */)
   );
+
+  always @(posedge clk) begin
+    if (lookup_res_stb)
+      cam_tuser_cached <= lookup_res_match ? lookup_res_val : {USER_W{1'b0}};
+  end
 
   reg i_xport_hdr = 1'b1;
   always @(posedge clk) begin
@@ -179,20 +185,12 @@ module chdr_xport_adapter_generic #(
       i_xport_hdr <= i_xport_tlast;
   end
 
-  reg x2d_hdr = 1'b1;
+  // chdr_mgmt_pkt_handler does not buffer packets and has at least one cycle of delay
+  // TODO: The tuser caching logic could be more robust
   always @(posedge clk) begin
-    if (rst)
-      x2d_hdr <= 1'b1;
-    else if (x2d_tvalid && x2d_tready)
-      x2d_hdr <= x2d_tlast;
+    if (i_xport_tvalid && i_xport_tready && i_xport_hdr)
+      x2d_tuser <= i_xport_tuser;
   end
-
-  axi_fifo #(.WIDTH(USER_W),.SIZE(1)) in_user_fifo_i (
-    .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata(i_xport_tuser), .i_tvalid(i_xport_tvalid && i_xport_tready && i_xport_hdr), .i_tready(),
-    .o_tdata(x2d_tuser), .o_tvalid(), .o_tready(x2d_tvalid && x2d_tready && x2d_hdr),
-    .space(), .occupied()
-  );
 
   // ---------------------------------------------------
   // MUX and DEMUX for return path
@@ -228,19 +226,19 @@ module chdr_xport_adapter_generic #(
   // MUX => Transport
   // ---------------------------------------------------
 
-  // The map takes 2 cycles for a lookup and we add one more
-  // register for a total of 3 cycles. We need to make sure
+  // The map takes 3 cycles for a lookup and we add one more
+  // register for a total of 4 cycles. We need to make sure
   // that the data-path has at least that much latency before
   // it hits the output.
   axis_shift_register #(
-    .WIDTH(CHDR_W), .NSPC(1), .LATENCY(3),
+    .WIDTH(CHDR_W+1), .NSPC(1), .LATENCY(4),
     .SIDEBAND_DATAPATH(0), .GAPLESS(0),
     .PIPELINE("NONE")
   ) xport_delayline_i (
     .clk(clk), .reset(rst),
-    .s_axis_tdata(m2x_tdata), .s_axis_tkeep(1'b1), .s_axis_tlast(m2x_tlast),
+    .s_axis_tdata({m2x_tdest, m2x_tdata}), .s_axis_tkeep(1'b1), .s_axis_tlast(m2x_tlast),
     .s_axis_tvalid(m2x_tvalid), .s_axis_tready(m2x_tready),
-    .m_axis_tdata(o_xport_tdata), .m_axis_tkeep(), .m_axis_tlast(o_xport_tlast),
+    .m_axis_tdata({o_xport_tdest, o_xport_tdata}), .m_axis_tkeep(), .m_axis_tlast(o_xport_tlast),
     .m_axis_tvalid(o_xport_tvalid), .m_axis_tready(o_xport_tready),
     .stage_stb(), .stage_eop(),
     .m_sideband_data(), .m_sideband_keep(),
@@ -255,23 +253,17 @@ module chdr_xport_adapter_generic #(
       m2x_hdr <= m2x_tlast;
   end
 
-  reg [USER_W-1:0] in_tuser = {USER_W{1'b0}};
+  reg [USER_W-1:0] x2x_tuser_cached = {USER_W{1'b0}};
   always @(posedge clk) begin
     if (m2x_tvalid && m2x_tready && m2x_hdr)
-      in_tuser <= m2x_tuser;
+      x2x_tuser_cached <= m2x_tuser;
   end
 
   // Lookup tuser in the map only if a packet is coming from the m_axis_rfnoc path
   assign lookup_stb = (!m2x_tdest) && m2x_hdr && m2x_tvalid && m2x_tready;
   assign lookup_epid = chdr_get_dst_epid(m2x_tdata[63:0]);
 
-  // State machine to compute o_xport_tuser
-  always @(posedge clk) begin
-    if (rst) begin
-      o_xport_tuser <= {USER_W{1'b0}};
-    end else if (o_xport_tvalid && o_xport_tready && o_xport_tlast) begin
-      o_xport_tuser <= lookup_res_match ? lookup_res_val : in_tuser;
-    end
-  end
+  // Pick tuser based on the source of the data
+  assign o_xport_tuser = o_xport_tdest ? x2x_tuser_cached : cam_tuser_cached;
 
 endmodule // chdr_xport_adapter_generic
