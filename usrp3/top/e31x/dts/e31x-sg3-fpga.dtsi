@@ -4,14 +4,6 @@
  * SPDX-License-Identifier: GPL-2.0 OR X11
  */
 
-fragment@0 {
-	target = <&fpga_full>;
-	reg = <0x0000>;
-	#address-cells = <1>;
-	#size-cells = <1>;
-	__overlay__ {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		firmware-name = "e310_sg3.bin";
-	};
+&fpga_full {
+	firmware-name = "e310_sg3.bin";
 };
