@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
-// Module: axis_kv_map_multi
+// Module: axis_muxed_kv_map
 
 module axis_muxed_kv_map #(
   parameter KEY_WIDTH   = 16,
@@ -119,8 +119,7 @@ module axis_muxed_kv_map #(
   kv_map #(
     .KEY_WIDTH      (KEY_WIDTH),
     .VAL_WIDTH      (VAL_WIDTH),
-    .SIZE           (SIZE),
-    .INSERT_MODE    ("LOSSY")
+    .SIZE           (SIZE)
   ) map_i (
     .clk            (clk),
     .reset          (reset),
