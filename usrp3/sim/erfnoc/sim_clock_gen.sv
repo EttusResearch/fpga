@@ -86,6 +86,16 @@ module sim_clock_gen #(
     wait(rst);
   endtask : reset
 
+  // Assert reset
+  task set_reset();
+    rst <= 1'b1;
+  endtask : set_reset
+
+  // Deassert reset
+  task clr_reset();
+    rst <= 1'b0;
+  endtask : clr_reset
+
   // Wait for num rising edges of the clock
   task clk_wait_r(int num = 1);
     repeat(num) @(posedge clk);
