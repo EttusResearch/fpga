@@ -10,13 +10,13 @@
 
 
 module rfnoc_block_radio_tb #(
-  parameter int CHDR_W       = 128, // CHDR bus width
-  parameter int SAMP_W       = 32,  // Sample width
-  parameter int NSPC         = 2,   // Number of samples per radio clock cycle
-  parameter int NUM_CHANNELS = 2,   // Number of radio channels
-  parameter int STALL_PROB   = 25,  // Probability of AXI BFM stall
-  parameter int STB_PROB     = 80,  // Probability of radio STB asserting
-  parameter bit TEST_REGS    = 1    // Do register tests
+  parameter int CHDR_W     = 128, // CHDR bus width
+  parameter int ITEM_W     = 32,  // Sample width
+  parameter int NIPC       = 2,   // Number of samples per radio clock cycle
+  parameter int NUM_PORTS  = 2,   // Number of radio channels
+  parameter int STALL_PROB = 25,  // Probability of AXI BFM stall
+  parameter int STB_PROB   = 80,  // Probability of radio STB asserting
+  parameter bit TEST_REGS  = 1    // Do register tests
 );
 
   // Simulation timing
@@ -37,11 +37,10 @@ module rfnoc_block_radio_tb #(
   // Simulation Parameters
   localparam logic [ 9:0] THIS_PORTID    = 10'h17;
   localparam logic [15:0] THIS_EPID      = 16'hDEAD;
-  localparam logic [31:0] NOC_ID         = 64'h12AD_1000_0000_0000;
   localparam int          MTU            = 8;
-  localparam int          RADIO_W        = NSPC * SAMP_W;       // Radio word size
+  localparam int          RADIO_W        = NIPC * ITEM_W;       // Radio word size
   localparam int          SPP            = 64;                  // Samples per packet
-  localparam int          WPP            = SPP*SAMP_W/RADIO_W;  // Radio words per packet
+  localparam int          WPP            = SPP*ITEM_W/RADIO_W;  // Radio words per packet
   localparam int          CHDR_CLK_PER   = 5;                   // rfnoc_chdr_clk period in ns
   localparam int          CTRL_CLK_PER   = 25;                  // rfnoc_ctrl_clk period in ns
   localparam int          RADIO_CLK_PER  = 10;                  // radio_clk_per period in ns
@@ -79,8 +78,8 @@ module rfnoc_block_radio_tb #(
   RfnocBackendIf        backend               (rfnoc_chdr_clk, rfnoc_ctrl_clk);
   AxiStreamIf #(32)     m_ctrl                (rfnoc_ctrl_clk, 1'b0);
   AxiStreamIf #(32)     s_ctrl                (rfnoc_ctrl_clk, 1'b0);
-  AxiStreamIf #(CHDR_W) m_chdr [NUM_CHANNELS] (rfnoc_chdr_clk, 1'b0);
-  AxiStreamIf #(CHDR_W) s_chdr [NUM_CHANNELS] (rfnoc_chdr_clk, 1'b0);
+  AxiStreamIf #(CHDR_W) m_chdr [NUM_PORTS] (rfnoc_chdr_clk, 1'b0);
+  AxiStreamIf #(CHDR_W) s_chdr [NUM_PORTS] (rfnoc_chdr_clk, 1'b0);
 
   // Bus functional model for a software block controller
   RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W)) blk_ctrl;
@@ -91,20 +90,20 @@ module rfnoc_block_radio_tb #(
   // Radio Data Model
   //---------------------------------------------------------------------------
 
-  bit [NUM_CHANNELS*RADIO_W-1:0] radio_rx_data;
-  bit [        NUM_CHANNELS-1:0] radio_rx_stb;
+  bit [NUM_PORTS*RADIO_W-1:0] radio_rx_data;
+  bit [        NUM_PORTS-1:0] radio_rx_stb;
 
   bit [63:0] radio_time;
   bit        radio_pps;
 
   // Radio data generation
   sim_radio_gen #(
-    .NSPC         (NSPC),
-    .SAMP_W       (SAMP_W),
-    .NUM_CHANNELS (NUM_CHANNELS),
+    .NSPC         (NIPC),
+    .SAMP_W       (ITEM_W),
+    .NUM_CHANNELS (NUM_PORTS),
     .STB_PROB     (STB_PROB),
-    .INCREMENT    (NSPC),
-    .PPS_PERIOD   (NSPC * 250)
+    .INCREMENT    (NIPC),
+    .PPS_PERIOD   (NIPC * 250)
   ) radio_gen (
     .radio_clk     (radio_clk),
     .radio_rst     (1'b0),
@@ -120,21 +119,21 @@ module rfnoc_block_radio_tb #(
   // DUT
   //---------------------------------------------------------------------------
 
-  logic [NUM_CHANNELS-1:0] radio_rx_running;
+  logic [NUM_PORTS-1:0] radio_rx_running;
 
-  logic [NUM_CHANNELS*RADIO_W-1:0] radio_tx_data;
-  logic [        NUM_CHANNELS-1:0] radio_tx_stb;
-  logic [        NUM_CHANNELS-1:0] radio_tx_running;
+  logic [NUM_PORTS*RADIO_W-1:0] radio_tx_data;
+  logic [        NUM_PORTS-1:0] radio_tx_stb;
+  logic [        NUM_PORTS-1:0] radio_tx_running;
 
-  logic [NUM_CHANNELS*CHDR_W-1:0] s_rfnoc_chdr_tdata_flat;
-  logic [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tlast_flat;
-  logic [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tvalid_flat;
-  logic [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tready_flat;
+  logic [NUM_PORTS*CHDR_W-1:0] s_rfnoc_chdr_tdata_flat;
+  logic [       NUM_PORTS-1:0] s_rfnoc_chdr_tlast_flat;
+  logic [       NUM_PORTS-1:0] s_rfnoc_chdr_tvalid_flat;
+  logic [       NUM_PORTS-1:0] s_rfnoc_chdr_tready_flat;
 
-  logic [NUM_CHANNELS*CHDR_W-1:0] m_rfnoc_chdr_tdata_flat;
-  logic [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tlast_flat;
-  logic [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tvalid_flat;
-  logic [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tready_flat;
+  logic [NUM_PORTS*CHDR_W-1:0] m_rfnoc_chdr_tdata_flat;
+  logic [       NUM_PORTS-1:0] m_rfnoc_chdr_tlast_flat;
+  logic [       NUM_PORTS-1:0] m_rfnoc_chdr_tvalid_flat;
+  logic [       NUM_PORTS-1:0] m_rfnoc_chdr_tready_flat;
 
   semaphore port_sem = new(0);
 
@@ -144,7 +143,7 @@ module rfnoc_block_radio_tb #(
 
   // Flatten the data stream arrays into concatenated vectors
   genvar i;
-  for (i = 0; i < NUM_CHANNELS; i++) begin : gen_radio_connections
+  for (i = 0; i < NUM_PORTS; i++) begin : gen_radio_connections
     assign s_rfnoc_chdr_tdata_flat[CHDR_W*i+:CHDR_W] = m_chdr[i].tdata;
     assign s_rfnoc_chdr_tlast_flat[i]                = m_chdr[i].tlast;
     assign s_rfnoc_chdr_tvalid_flat[i]               = m_chdr[i].tvalid;
@@ -171,12 +170,12 @@ module rfnoc_block_radio_tb #(
 
 
   rfnoc_block_radio #(
-    .CHDR_W         (CHDR_W),
-    .NSPC           (NSPC),
-    .SAMP_W         (SAMP_W),
-    .NUM_CHANNELS   (NUM_CHANNELS),
-    .THIS_PORTID    (THIS_PORTID),
-    .MTU            (MTU)
+    .THIS_PORTID (THIS_PORTID),
+    .CHDR_W      (CHDR_W),
+    .NIPC        (NIPC),
+    .ITEM_W      (ITEM_W),
+    .NUM_PORTS   (NUM_PORTS),
+    .MTU         (MTU)
   ) rfnoc_block_radio_i (
     .rfnoc_chdr_clk          (backend.chdr_clk),
     .s_rfnoc_chdr_tdata      (s_rfnoc_chdr_tdata_flat),
@@ -330,13 +329,13 @@ module rfnoc_block_radio_tb #(
     int num_words     // Number of radio words to expect
   );
     int              sample_count;    // Counter to track number of samples generated
-    bit [SAMP_W-1:0] sample_val;      // Value of the next sample
+    bit [ITEM_W-1:0] sample_val;      // Value of the next sample
     chdr_word_t      data[$];         // Array of data for the received packet
     int              num_samples;     // Number of samples to send
     int              byte_length;     // Number of data bytes in next packet
     int              expected_length; // Expected byte length of the next packet
 
-    num_samples = num_words * NSPC;
+    num_samples = num_words * NIPC;
 
     sample_count = 0;
     while (sample_count < num_samples) begin
@@ -345,16 +344,16 @@ module rfnoc_block_radio_tb #(
 
       // Take the first sample as a starting count for the remaining samples
       if (sample_count == 0) begin
-        sample_val = data[0][SAMP_W-1:0];
+        sample_val = data[0][ITEM_W-1:0];
       end
 
       // Calculate expected length in bytes
       if (num_samples - sample_count >= SPP) begin
         // Expecting a full packet
-        expected_length = SPP*SAMP_W/8;
+        expected_length = SPP*ITEM_W/8;
       end else begin
         // Expecting partial packet
-        expected_length = (num_samples - sample_count) * SAMP_W/8;
+        expected_length = (num_samples - sample_count) * ITEM_W/8;
       end
 
       // Check that the length matches our expectation
@@ -366,14 +365,14 @@ module rfnoc_block_radio_tb #(
       // Loop over the packet, one chdr_word_t at a time
       foreach (data[i]) begin
         // Check each sample of the next chdr_word_t value
-        for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/SAMP_W; sub_sample++) begin
+        for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/ITEM_W; sub_sample++) begin
           chdr_word_t word;
-          word = data[i][SAMP_W*sub_sample +: SAMP_W];  // Work around Vivado 2018.3 issue
+          word = data[i][ITEM_W*sub_sample +: ITEM_W];  // Work around Vivado 2018.3 issue
           test.assert_error(
             word == sample_val,
             $sformatf(
               "Sample %0d (0x%X) didn't match expected value (0x%X)",
-              sample_count, data[i][SAMP_W*sub_sample +: SAMP_W],  sample_val
+              sample_count, data[i][ITEM_W*sub_sample +: ITEM_W],  sample_val
             )
           );
           sample_val++;
@@ -389,11 +388,11 @@ module rfnoc_block_radio_tb #(
     int                radio_num,       // Radio channel to transmit on
     bit   [63:0]       num_words,       // Number of radio words to transmit
     logic [63:0]       start_time = 'X, // Time at which to begin transmit
-    bit   [SAMP_W-1:0] start_val  = 1,  // Initial sample value
+    bit   [ITEM_W-1:0] start_val  = 1,  // Initial sample value
     bit                eob        = 1   // Set EOB flag at the end
   );
     int              sample_count;    // Counter to track number of samples generated
-    bit [SAMP_W-1:0] sample_val;      // Value of the next sample
+    bit [ITEM_W-1:0] sample_val;      // Value of the next sample
     chdr_word_t      data[$];         // Array of data for the packet
     int              num_samples;     // Number of samples to send
     int              byte_length;     // Number of bytes for next packet
@@ -402,7 +401,7 @@ module rfnoc_block_radio_tb #(
 
     $display("Radio %0d: Start TX, send %0d words", radio_num, num_words);
 
-    num_samples = num_words * NSPC;
+    num_samples = num_words * NIPC;
 
     if (!$isunknown(start_time)) pkt_info.has_time = 1;
 
@@ -420,8 +419,8 @@ module rfnoc_block_radio_tb #(
       // Loop until we've built up a packet
       forever begin
         // Generate the next word
-        for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/SAMP_W; sub_sample++) begin
-          chdr_word[SAMP_W*sub_sample +: SAMP_W] = sample_val;
+        for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/ITEM_W; sub_sample++) begin
+          chdr_word[ITEM_W*sub_sample +: ITEM_W] = sample_val;
           sample_val++;
           sample_count++;
         end
@@ -432,12 +431,12 @@ module rfnoc_block_radio_tb #(
         // Send the packet if we're at a packet boundary
         if (sample_count % SPP == 0) begin
           pkt_info.eob = (sample_count == num_samples && eob) ? 1 : 0;
-          byte_length = SPP * SAMP_W/8;
+          byte_length = SPP * ITEM_W/8;
           blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
           break;
         end else if (sample_count == num_samples) begin
           pkt_info.eob = eob;
-          byte_length = (sample_count % SPP) * SAMP_W/8;
+          byte_length = (sample_count % SPP) * ITEM_W/8;
           blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
           break;
         end
@@ -450,7 +449,7 @@ module rfnoc_block_radio_tb #(
   task automatic start_tx (
     int              radio_num,       // Radio channel to transmit on
     bit [63:0]       num_words,       // Number of radio words to transmit
-    bit [SAMP_W-1:0] start_val = 1,   // Initial sample value
+    bit [ITEM_W-1:0] start_val = 1,   // Initial sample value
     bit              eob = 1          // Set EOB flag at the end
   );
     // Passing 'X tells the underlying BFM to not insert a timestamp
@@ -463,19 +462,19 @@ module rfnoc_block_radio_tb #(
     int                radio_num,        // Radio channel to transmit on
     bit   [63:0]       num_words,        // Number of radio words to expect
     logic [63:0]       start_time = 'X,  // Expected start time
-    bit   [SAMP_W-1:0] start_val  = 1    // Initial sample value
+    bit   [ITEM_W-1:0] start_val  = 1    // Initial sample value
   );
     int sample_val;           // Expected value of next sample
 
     sample_val = start_val;
 
     // Wait for the packet to start
-    wait(radio_tx_data[radio_num*RADIO_W +: SAMP_W] == start_val);
+    wait(radio_tx_data[radio_num*RADIO_W +: ITEM_W] == start_val);
 
     // Check the time
     if (!$isunknown(start_time)) begin
       test.assert_error(
-        radio_time - start_time <= NSPC*2,
+        radio_time - start_time <= NIPC*2,
         $sformatf("Packet transmitted at radio time 0x%0X but expected 0x%0X", radio_time, start_time)
       );
     end
@@ -488,9 +487,9 @@ module rfnoc_block_radio_tb #(
       end while (radio_tx_stb[radio_num] == 0);
 
       // Check each sample of the radio word
-      for (int sub_sample = 0; sub_sample < NSPC; sub_sample++) begin
+      for (int sub_sample = 0; sub_sample < NIPC; sub_sample++) begin
         test.assert_error(
-          radio_tx_data[radio_num*RADIO_W + SAMP_W*sub_sample +: SAMP_W] == sample_val,
+          radio_tx_data[radio_num*RADIO_W + ITEM_W*sub_sample +: ITEM_W] == sample_val,
           "Radio output doesn't match expected value"
         );
         sample_val++;
@@ -503,7 +502,7 @@ module rfnoc_block_radio_tb #(
   task automatic check_tx (
     int              radio_num,        // Radio to transmit on
     bit [63:0]       num_words,        // Number of radio words to expect
-    bit [SAMP_W-1:0] start_val  = 1    // Initial sample value
+    bit [ITEM_W-1:0] start_val  = 1    // Initial sample value
   );
     check_tx_timed(radio_num, num_words, 'X, start_val);
   endtask : check_tx
@@ -573,9 +572,9 @@ module rfnoc_block_radio_tb #(
     test.start_test("Verify Block Info", 2us);
 
     // Get static block info and validate it
-    test.assert_error(blk_ctrl.get_noc_id() == NOC_ID, "Incorrect noc_id Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_CHANNELS, "Incorrect num_data_i Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_CHANNELS, "Incorrect num_data_o Value");
+    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_radio_i.NOC_ID, "Incorrect noc_id Value");
+    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect num_data_i Value");
+    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect num_data_o Value");
     test.assert_error(blk_ctrl.get_ctrl_fifosize() == rfnoc_block_radio_i.noc_shell_radio_i.CTRL_FIFO_SIZE,
       "Incorrect ctrl_fifosize Value");
     test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect mtu Value");
@@ -615,10 +614,10 @@ module rfnoc_block_radio_tb #(
     test.assert_error(val == 1, "REG_LOOPBACK_EN didn't update correctly");
     write_radio(radio_num, REG_LOOPBACK_EN, 0);
 
-    // Read SAMP_W and NSPC (read only)
+    // Read ITEM_W and NIPC (read only)
     read_radio(radio_num, REG_RADIO_WIDTH, val);
-    test.assert_error(val[15:0] == NSPC, "Value of NSPC register is incorrect");
-    test.assert_error(val[31:16] == SAMP_W, "Value of SAMP_W register is incorrect");
+    test.assert_error(val[15:0] == NIPC, "Value of NIPC register is incorrect");
+    test.assert_error(val[31:16] == ITEM_W, "Value of ITEM_W register is incorrect");
 
     test.end_test();
   endtask : test_general_registers
@@ -717,7 +716,7 @@ module rfnoc_block_radio_tb #(
     // REG_TX_IDLE_VALUE (read/write)
     read_radio(radio_num, REG_TX_IDLE_VALUE, val);
     test.assert_error(val == 0, "REG_TX_IDLE_VALUE not initially 0");
-    expected = $urandom() & {SAMP_W{1'b1}};
+    expected = $urandom() & {ITEM_W{1'b1}};
     write_radio(radio_num, REG_TX_IDLE_VALUE, expected);
     read_radio(radio_num, REG_TX_IDLE_VALUE, val);
     test.assert_error(val == expected, "REG_TX_IDLE_VALUE didn't update correctly");
@@ -843,7 +842,7 @@ module rfnoc_block_radio_tb #(
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
       test.assert_error(
-        chdr_packet.timestamp - expected_time <= NSPC*2,
+        chdr_packet.timestamp - expected_time <= NIPC*2,
         "Received packet didn't have expected timestamp"
       );
 
@@ -870,7 +869,7 @@ module rfnoc_block_radio_tb #(
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
       test.assert_error(
-        chdr_packet.timestamp - expected_time <= NSPC*2,
+        chdr_packet.timestamp - expected_time <= NIPC*2,
         "Received packet didn't have expected timestamp"
       );
 
@@ -1129,7 +1128,7 @@ module rfnoc_block_radio_tb #(
   task automatic test_loopback_and_idle(int radio_num);
     int              byte_length;
     chdr_word_t      data[$];
-    bit [SAMP_W-1:0] idle;
+    bit [ITEM_W-1:0] idle;
 
     //----------------------------
     // Use IDLE value to loopback
@@ -1161,7 +1160,7 @@ module rfnoc_block_radio_tb #(
         chdr_word_t word;
         word = data[i];   // Work around Vivado 2018.3 issue
         test.assert_error(
-          word == {$bits(chdr_word_t)/SAMP_W{idle}},
+          word == {$bits(chdr_word_t)/ITEM_W{idle}},
           "Loopback data didn't match expected"
         );
       end
@@ -1224,7 +1223,7 @@ module rfnoc_block_radio_tb #(
 
     // Setup and start the stream endpoint BFM
     blk_ctrl = new(backend, m_ctrl, s_ctrl);
-    for (int i = 0; i < NUM_CHANNELS; i++) begin
+    for (int i = 0; i < NUM_PORTS; i++) begin
       // I'd love to do this:
       //     void'(blk_ctrl.add_master_data_port(m_chdr[i]));
       //     void'(blk_ctrl.add_slave_data_port(s_chdr[i]));
@@ -1265,7 +1264,7 @@ module rfnoc_block_radio_tb #(
     test_block_info();
     if (TEST_REGS) test_shared_registers();
 
-    for (int radio_num = 0; radio_num < NUM_CHANNELS; radio_num++) begin
+    for (int radio_num = 0; radio_num < NUM_PORTS; radio_num++) begin
       $display("************************************************************");
       $display("Testing Radio Channel %0d", radio_num);
       $display("************************************************************");

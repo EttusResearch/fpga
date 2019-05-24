@@ -9,26 +9,24 @@
 //
 // Parameters:
 //
-//   CHDR_W           : CHDR AXI-Stream data bus width
-//   NSPC             : Number of radio samples per radio clock cycle
-//   SAMP_W           : Radio sample width
-//   NUM_CHANNELS     : Number of radio channels (RX/TX pairs)
 //   THIS_PORTID      : CTRL port ID to which this block is connected
+//   CHDR_W           : CHDR AXI-Stream data bus width
+//   NIPC             : Number of radio samples per radio clock cycle
+//   ITEM_W           : Radio sample width
+//   NUM_PORTS        : Number of radio channels (RX/TX pairs)
 //   MTU              : Maximum transmission unit (i.e., maximum packet size) 
 //                      in CHDR words is 2**MTU.
-//   PYLD_FIFO_SIZE   : Size of FIFO for DATA path = 2**PYLD_FIFO_SIZE
-//   CTRL_FIFO_SIZE   : Size of FIFO for CTRL port = 2**CTRL_FIFO_SIZE
 //   PERIPH_BASE_ADDR : CTRL port peripheral window base address
 //   PERIPH_ADDR_W    : CTRL port peripheral address space = 2**PERIPH_ADDR_W
 //
 
 
 module rfnoc_block_radio #(
-  parameter CHDR_W           = 64,
-  parameter NSPC             = 2,
-  parameter SAMP_W           = 32,
-  parameter NUM_CHANNELS     = 1,
   parameter THIS_PORTID      = 0,
+  parameter CHDR_W           = 64,
+  parameter NIPC             = 2,
+  parameter ITEM_W           = 32,
+  parameter NUM_PORTS        = 1,
   parameter MTU              = 10,
   parameter PERIPH_BASE_ADDR = 20'h80000,
   parameter PERIPH_ADDR_W    = 19
@@ -40,16 +38,16 @@ module rfnoc_block_radio #(
   input wire rfnoc_chdr_clk,
 
   // CHDR inputs from framework
-  input  wire [NUM_CHANNELS*CHDR_W-1:0] s_rfnoc_chdr_tdata,
-  input  wire [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tlast,
-  input  wire [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tvalid,
-  output wire [       NUM_CHANNELS-1:0] s_rfnoc_chdr_tready,
+  input  wire [CHDR_W*NUM_PORTS-1:0] s_rfnoc_chdr_tdata,
+  input  wire [       NUM_PORTS-1:0] s_rfnoc_chdr_tlast,
+  input  wire [       NUM_PORTS-1:0] s_rfnoc_chdr_tvalid,
+  output wire [       NUM_PORTS-1:0] s_rfnoc_chdr_tready,
 
   // CHDR outputs to framework
-  output wire [NUM_CHANNELS*CHDR_W-1:0] m_rfnoc_chdr_tdata,
-  output wire [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tlast,
-  output wire [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tvalid,
-  input  wire [       NUM_CHANNELS-1:0] m_rfnoc_chdr_tready,
+  output wire [CHDR_W*NUM_PORTS-1:0] m_rfnoc_chdr_tdata,
+  output wire [       NUM_PORTS-1:0] m_rfnoc_chdr_tlast,
+  output wire [       NUM_PORTS-1:0] m_rfnoc_chdr_tvalid,
+  input  wire [       NUM_PORTS-1:0] m_rfnoc_chdr_tready,
 
   // Backend interface
   input  wire [511:0] rfnoc_core_config,
@@ -101,38 +99,39 @@ module rfnoc_block_radio #(
   input wire [63:0] radio_time,
 
   // Radio Rx interface
-  input  wire [NUM_CHANNELS*(SAMP_W*NSPC)-1:0] radio_rx_data,
-  input  wire [              NUM_CHANNELS-1:0] radio_rx_stb,
-  output wire [              NUM_CHANNELS-1:0] radio_rx_running,
+  input  wire [(ITEM_W*NIPC)*NUM_PORTS-1:0] radio_rx_data,
+  input  wire [              NUM_PORTS-1:0] radio_rx_stb,
+  output wire [              NUM_PORTS-1:0] radio_rx_running,
 
   // Radio Tx interface
-  output wire [NUM_CHANNELS*(SAMP_W*NSPC)-1:0] radio_tx_data,
-  input  wire [              NUM_CHANNELS-1:0] radio_tx_stb,
-  output wire [              NUM_CHANNELS-1:0] radio_tx_running
+  output wire [(ITEM_W*NIPC)*NUM_PORTS-1:0] radio_tx_data,
+  input  wire [              NUM_PORTS-1:0] radio_tx_stb,
+  output wire [              NUM_PORTS-1:0] radio_tx_running
 );
 
   `include "rfnoc_block_radio_regs.vh"
   `include "../../core/rfnoc_axis_ctrl_utils.vh"
 
-  localparam RADIO_W = NSPC*SAMP_W;
+  localparam NOC_ID  = 32'h12AD1000;
+  localparam RADIO_W = NIPC*ITEM_W;
 
 
   // Radio Tx data stream
-  wire [NUM_CHANNELS*(RADIO_W)-1:0] axis_tx_tdata;
-  wire [          NUM_CHANNELS-1:0] axis_tx_tlast;
-  wire [          NUM_CHANNELS-1:0] axis_tx_tvalid;
-  wire [          NUM_CHANNELS-1:0] axis_tx_tready;
-  wire [       NUM_CHANNELS*64-1:0] axis_tx_ttimestamp;
-  wire [          NUM_CHANNELS-1:0] axis_tx_thas_time;
-  wire [          NUM_CHANNELS-1:0] axis_tx_teob;
+  wire [RADIO_W*NUM_PORTS-1:0] axis_tx_tdata;
+  wire [        NUM_PORTS-1:0] axis_tx_tlast;
+  wire [        NUM_PORTS-1:0] axis_tx_tvalid;
+  wire [        NUM_PORTS-1:0] axis_tx_tready;
+  wire [     64*NUM_PORTS-1:0] axis_tx_ttimestamp;
+  wire [        NUM_PORTS-1:0] axis_tx_thas_time;
+  wire [        NUM_PORTS-1:0] axis_tx_teob;
 
   // Radio Rx data stream
-  wire [NUM_CHANNELS*(RADIO_W)-1:0] axis_rx_tdata;
-  wire [          NUM_CHANNELS-1:0] axis_rx_tlast;
-  wire [          NUM_CHANNELS-1:0] axis_rx_tvalid;
-  wire [          NUM_CHANNELS-1:0] axis_rx_tready;
-  wire [       NUM_CHANNELS*64-1:0] axis_rx_ttimestamp;
-  wire [          NUM_CHANNELS-1:0] axis_rx_teob;
+  wire [RADIO_W*NUM_PORTS-1:0] axis_rx_tdata;
+  wire [        NUM_PORTS-1:0] axis_rx_tlast;
+  wire [        NUM_PORTS-1:0] axis_rx_tvalid;
+  wire [        NUM_PORTS-1:0] axis_rx_tready;
+  wire [     64*NUM_PORTS-1:0] axis_rx_ttimestamp;
+  wire [        NUM_PORTS-1:0] axis_rx_teob;
 
   // Control port signals used for register access (NoC shell masters user logic)
   wire        ctrlport_reg_req_wr;
@@ -160,15 +159,15 @@ module rfnoc_block_radio #(
   wire radio_rst;
 
   noc_shell_radio #(
-    .NOC_ID          ('h12AD_1000_0000_0000),
+    .NOC_ID          (NOC_ID),
     .THIS_PORTID     (THIS_PORTID),
     .CHDR_W          (CHDR_W),
     .CTRLPORT_SLV_EN (1),
     .CTRLPORT_MST_EN (1),
-    .NUM_DATA_I      (NUM_CHANNELS),
-    .NUM_DATA_O      (NUM_CHANNELS),
-    .ITEM_W          (SAMP_W),
-    .NIPC            (NSPC),
+    .NUM_DATA_I      (NUM_PORTS),
+    .NUM_DATA_O      (NUM_PORTS),
+    .ITEM_W          (ITEM_W),
+    .NIPC            (NIPC),
     .MTU             (MTU)
   ) noc_shell_radio_i (
     .rfnoc_chdr_clk            (rfnoc_chdr_clk),
@@ -230,13 +229,13 @@ module rfnoc_block_radio #(
     .m_axis_teov               (),
     .m_axis_teob               (axis_tx_teob),
     .s_axis_tdata              (axis_rx_tdata),
-    .s_axis_tkeep              ({NUM_CHANNELS*NSPC{1'b1}}), // Radio only receives full words
+    .s_axis_tkeep              ({NUM_PORTS*NIPC{1'b1}}), // Radio only receives full words
     .s_axis_tlast              (axis_rx_tlast),
     .s_axis_tvalid             (axis_rx_tvalid),
     .s_axis_tready             (axis_rx_tready),
     .s_axis_ttimestamp         (axis_rx_ttimestamp),
-    .s_axis_thas_time          ({NUM_CHANNELS{1'b1}}),      // Rx packet always include a timestamp
-    .s_axis_teov               ({NUM_CHANNELS{1'b0}}),
+    .s_axis_thas_time          ({NUM_PORTS{1'b1}}),      // Rx packet always include a timestamp
+    .s_axis_teov               ({NUM_PORTS{1'b0}}),
     .s_axis_teob               (axis_rx_teob)
   );
 
@@ -289,7 +288,7 @@ module rfnoc_block_radio #(
     .PORT0_BASE  (SHARED_BASE_ADDR),
     .PORT0_ADDR_W(SHARED_ADDR_W),
     .PORT1_BASE  (RADIO_BASE_ADDR),
-    .PORT1_ADDR_W(RADIO_ADDR_W + $clog2(NUM_CHANNELS)),
+    .PORT1_ADDR_W(RADIO_ADDR_W + $clog2(NUM_PORTS)),
     .PORT2_BASE  (PERIPH_BASE_ADDR),
     .PORT2_ADDR_W(PERIPH_ADDR_W)
   ) ctrlport_decoder_param_i (
@@ -343,15 +342,15 @@ module rfnoc_block_radio #(
   // Split Radio Control Port Interfaces
   //---------------------------------------------------------------------------
 
-  wire [   NUM_CHANNELS-1:0] ctrlport_radios_req_wr;
-  wire [   NUM_CHANNELS-1:0] ctrlport_radios_req_rd;
-  wire [20*NUM_CHANNELS-1:0] ctrlport_radios_req_addr;
-  wire [32*NUM_CHANNELS-1:0] ctrlport_radios_req_data;
-  wire [   NUM_CHANNELS-1:0] ctrlport_radios_resp_ack;
-  wire [32*NUM_CHANNELS-1:0] ctrlport_radios_resp_data;
+  wire [   NUM_PORTS-1:0] ctrlport_radios_req_wr;
+  wire [   NUM_PORTS-1:0] ctrlport_radios_req_rd;
+  wire [20*NUM_PORTS-1:0] ctrlport_radios_req_addr;
+  wire [32*NUM_PORTS-1:0] ctrlport_radios_req_data;
+  wire [   NUM_PORTS-1:0] ctrlport_radios_resp_ack;
+  wire [32*NUM_PORTS-1:0] ctrlport_radios_resp_data;
 
   ctrlport_decoder #(
-    .NUM_SLAVES   (NUM_CHANNELS),
+    .NUM_SLAVES   (NUM_PORTS),
     .BASE_ADDR    (0),
     .SLAVE_ADDR_W (RADIO_ADDR_W)
   ) ctrlport_decoder_i (
@@ -375,7 +374,7 @@ module rfnoc_block_radio #(
     .m_ctrlport_req_has_time (),
     .m_ctrlport_req_time     (),
     .m_ctrlport_resp_ack     (ctrlport_radios_resp_ack),
-    .m_ctrlport_resp_status  ({NUM_CHANNELS{2'b00}}),
+    .m_ctrlport_resp_status  ({NUM_PORTS{2'b00}}),
     .m_ctrlport_resp_data    (ctrlport_radios_resp_data)
   );
 
@@ -389,30 +388,30 @@ module rfnoc_block_radio #(
   //
   //---------------------------------------------------------------------------
 
-  wire [   NUM_CHANNELS-1:0] ctrlport_err_radio_req_wr;
-  wire [NUM_CHANNELS*20-1:0] ctrlport_err_radio_req_addr;
-  wire [NUM_CHANNELS*10-1:0] ctrlport_err_radio_req_portid;
-  wire [NUM_CHANNELS*16-1:0] ctrlport_err_radio_req_rem_epid;
-  wire [NUM_CHANNELS*10-1:0] ctrlport_err_radio_req_rem_portid;
-  wire [NUM_CHANNELS*32-1:0] ctrlport_err_radio_resp_data;
-  wire [   NUM_CHANNELS-1:0] ctrlport_err_radio_resp_ack;
+  wire [   NUM_PORTS-1:0] ctrlport_err_radio_req_wr;
+  wire [20*NUM_PORTS-1:0] ctrlport_err_radio_req_addr;
+  wire [10*NUM_PORTS-1:0] ctrlport_err_radio_req_portid;
+  wire [16*NUM_PORTS-1:0] ctrlport_err_radio_req_rem_epid;
+  wire [10*NUM_PORTS-1:0] ctrlport_err_radio_req_rem_portid;
+  wire [32*NUM_PORTS-1:0] ctrlport_err_radio_resp_data;
+  wire [   NUM_PORTS-1:0] ctrlport_err_radio_resp_ack;
 
   ctrlport_combiner #(
-    .NUM_MASTERS (NUM_CHANNELS),
+    .NUM_MASTERS (NUM_PORTS),
     .PRIORITY    (0)
   ) ctrlport_combiner_i (
     .ctrlport_clk              (radio_clk),
     .ctrlport_rst              (radio_rst),
     .s_ctrlport_req_wr         (ctrlport_err_radio_req_wr),
-    .s_ctrlport_req_rd         ({NUM_CHANNELS{1'b0}}),
+    .s_ctrlport_req_rd         ({NUM_PORTS{1'b0}}),
     .s_ctrlport_req_addr       (ctrlport_err_radio_req_addr),
     .s_ctrlport_req_portid     (ctrlport_err_radio_req_portid),
     .s_ctrlport_req_rem_epid   (ctrlport_err_radio_req_rem_epid),
     .s_ctrlport_req_rem_portid (ctrlport_err_radio_req_rem_portid),
     .s_ctrlport_req_data       (ctrlport_err_radio_resp_data),
-    .s_ctrlport_req_byte_en    ({4*NUM_CHANNELS{1'b1}}),
-    .s_ctrlport_req_has_time   ({NUM_CHANNELS{1'b0}}),
-    .s_ctrlport_req_time       ({NUM_CHANNELS{64'b0}}),
+    .s_ctrlport_req_byte_en    ({4*NUM_PORTS{1'b1}}),
+    .s_ctrlport_req_has_time   ({NUM_PORTS{1'b0}}),
+    .s_ctrlport_req_time       ({NUM_PORTS{64'b0}}),
     .s_ctrlport_resp_ack       (ctrlport_err_radio_resp_ack),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
@@ -470,18 +469,18 @@ module rfnoc_block_radio #(
   //---------------------------------------------------------------------------
   //
   // This generate block instantiates one radio core for each channel that is
-  // requested by NUM_CHANNELS.
+  // requested by NUM_PORTS.
   //
   //---------------------------------------------------------------------------
 
   genvar i;
   generate
-    for (i = 0; i < NUM_CHANNELS; i = i+1) begin : radio_core_gen
+    for (i = 0; i < NUM_PORTS; i = i+1) begin : radio_core_gen
 
       // The radio core contains all the logic related to a single radio channel.
       radio_core #(
-        .SAMP_W (SAMP_W),
-        .NSPC   (NSPC)
+        .SAMP_W (ITEM_W),
+        .NSPC   (NIPC)
       ) radio_core_i (
         .radio_clk                 (radio_clk),
         .radio_rst                 (radio_rst),
