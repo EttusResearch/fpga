@@ -31,15 +31,16 @@ typedef struct packed {
 } backend_config_v1_t;
 
 typedef struct packed {
-  bit [445:0] reserved0;
+  bit [439:0] reserved0;
+  bit [5:0]   mtu;
   bit         flush_done;
   bit         flush_active;
   bit [31:0]  noc_id;
-  bit [5:0]   mtu;
+  bit [7:0]   ctrl_max_async_msgs;
   bit [5:0]   ctrl_fifosize;
   bit [5:0]   num_data_o;
   bit [5:0]   num_data_i;
-  bit [7:0]   proto_ver;
+  bit [5:0]   proto_ver;
 } backend_status_v1_t;
 
 typedef union packed {

@@ -9,11 +9,12 @@
 //
 
 module backend_iface #(
-  parameter [31:0] NOC_ID        = 32'h0,
-  parameter  [5:0] NUM_DATA_I    = 0,
-  parameter  [5:0] NUM_DATA_O    = 0,
-  parameter  [5:0] CTRL_FIFOSIZE = 0,
-  parameter  [5:0] MTU           = 0
+  parameter [31:0] NOC_ID              = 32'h0,
+  parameter  [5:0] NUM_DATA_I          = 0,
+  parameter  [5:0] NUM_DATA_O          = 0,
+  parameter  [5:0] CTRL_FIFOSIZE       = 0,
+  parameter  [7:0] CTRL_MAX_ASYNC_MSGS = 0,
+  parameter  [5:0] MTU                 = 0
 )(
   // Input clock
   input  wire         rfnoc_chdr_clk,
@@ -125,14 +126,15 @@ module backend_iface #(
     .out({flush_active_ctclk, flush_done_ctclk})
   );
 
-  assign rfnoc_core_status[BES_PROTO_VER_OFFSET    +:BES_PROTO_VER_WIDTH    ] = BACKEND_PROTO_VER;
-  assign rfnoc_core_status[BES_NUM_DATA_I_OFFSET   +:BES_NUM_DATA_I_WIDTH   ] = NUM_DATA_I;
-  assign rfnoc_core_status[BES_NUM_DATA_O_OFFSET   +:BES_NUM_DATA_O_WIDTH   ] = NUM_DATA_O;
-  assign rfnoc_core_status[BES_CTRL_FIFOSIZE_OFFSET+:BES_CTRL_FIFOSIZE_WIDTH] = CTRL_FIFOSIZE;
-  assign rfnoc_core_status[BES_MTU_OFFSET          +:BES_MTU_WIDTH          ] = MTU;
-  assign rfnoc_core_status[BES_NOC_ID_OFFSET       +:BES_NOC_ID_WIDTH       ] = NOC_ID;
-  assign rfnoc_core_status[BES_FLUSH_ACTIVE_OFFSET +:BES_FLUSH_ACTIVE_WIDTH ] = flush_active_ctclk;
-  assign rfnoc_core_status[BES_FLUSH_DONE_OFFSET   +:BES_FLUSH_DONE_WIDTH   ] = flush_done_ctclk;
+  assign rfnoc_core_status[BES_PROTO_VER_OFFSET          +:BES_PROTO_VER_WIDTH          ] = BACKEND_PROTO_VER;
+  assign rfnoc_core_status[BES_NUM_DATA_I_OFFSET         +:BES_NUM_DATA_I_WIDTH         ] = NUM_DATA_I;
+  assign rfnoc_core_status[BES_NUM_DATA_O_OFFSET         +:BES_NUM_DATA_O_WIDTH         ] = NUM_DATA_O;
+  assign rfnoc_core_status[BES_CTRL_FIFOSIZE_OFFSET      +:BES_CTRL_FIFOSIZE_WIDTH      ] = CTRL_FIFOSIZE;
+  assign rfnoc_core_status[BES_CTRL_MAX_ASYNC_MSGS_OFFSET+:BES_CTRL_MAX_ASYNC_MSGS_WIDTH] = CTRL_MAX_ASYNC_MSGS;
+  assign rfnoc_core_status[BES_NOC_ID_OFFSET             +:BES_NOC_ID_WIDTH             ] = NOC_ID;
+  assign rfnoc_core_status[BES_FLUSH_ACTIVE_OFFSET       +:BES_FLUSH_ACTIVE_WIDTH       ] = flush_active_ctclk;
+  assign rfnoc_core_status[BES_FLUSH_DONE_OFFSET         +:BES_FLUSH_DONE_WIDTH         ] = flush_done_ctclk;
+  assign rfnoc_core_status[BES_DATA_MTU_OFFSET           +:BES_DATA_MTU_WIDTH           ] = MTU;
   // Assign the rest to 0
   assign rfnoc_core_status[511:BES_TOTAL_WIDTH] = {(512-BES_TOTAL_WIDTH){1'b0}};
 
