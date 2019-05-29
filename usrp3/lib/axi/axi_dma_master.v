@@ -210,6 +210,7 @@ module axi_dma_master
 	    if (m_axi_awready == 1'b1) begin
 	       // ...go to looking for a transaction response...
 	       write_addr_state <= WAIT_BVALID;
+	       m_axi_awvalid <= 1'b0;
 	       m_axi_bready <= 1'b1;
 	       `DEBUG $display("WRITE TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_awaddr[31:0],m_axi_awlen[7:0],$time);	       
 	    end else begin
@@ -405,6 +406,7 @@ module axi_dma_master
 	    if (m_axi_arready == 1'b1) begin
 	       // ...go to looking for the transaction to complete...
 	       read_addr_state <= WAIT_READ_DONE;
+	       m_axi_arvalid <= 1'b0;
 	        `DEBUG $display("READ TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_araddr[31:0],m_axi_arlen[7:0],$time);	       
 	    end else begin
                // ...otherwise wait to get the trasaction accepted.
