@@ -19,7 +19,8 @@ module noc_shell_radio #(
   parameter [ 5:0] NUM_DATA_O      = 1,
   parameter        ITEM_W          = 32,
   parameter        NIPC            = 2,
-  parameter [ 5:0] MTU             = 10
+  parameter        PYLD_FIFO_SIZE  = 10,
+  parameter        MTU             = 10
 )(
   //---------------------------------------------------------------------------
   // Framework Interface
@@ -123,7 +124,7 @@ module noc_shell_radio #(
   localparam CTRL_FIFO_SIZE = 5;
 
   localparam SNK_INFO_FIFO_SIZE = 4;
-  localparam SNK_PYLD_FIFO_SIZE = 8;
+  localparam SNK_PYLD_FIFO_SIZE = PYLD_FIFO_SIZE;
   localparam SRC_INFO_FIFO_SIZE = 4;
   localparam SRC_PYLD_FIFO_SIZE = MTU;
 

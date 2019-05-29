@@ -24,9 +24,9 @@
 module rfnoc_block_radio #(
   parameter THIS_PORTID      = 0,
   parameter CHDR_W           = 64,
-  parameter NIPC             = 2,
+  parameter NIPC             = 1,
   parameter ITEM_W           = 32,
-  parameter NUM_PORTS        = 1,
+  parameter NUM_PORTS        = 2,
   parameter MTU              = 10,
   parameter PERIPH_BASE_ADDR = 20'h80000,
   parameter PERIPH_ADDR_W    = 19
@@ -168,6 +168,7 @@ module rfnoc_block_radio #(
     .NUM_DATA_O      (NUM_PORTS),
     .ITEM_W          (ITEM_W),
     .NIPC            (NIPC),
+    .PYLD_FIFO_SIZE  (MTU),
     .MTU             (MTU)
   ) noc_shell_radio_i (
     .rfnoc_chdr_clk            (rfnoc_chdr_clk),
