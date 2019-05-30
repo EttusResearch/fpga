@@ -91,11 +91,17 @@ module chdr_mgmt_pkt_handler #(
     wire              bypass_tlast, bypass_tvalid, bypass_tready;
     wire [CHDR_W-1:0] s_header;
 
+    // We consume the management packet only if it is actually a management packet and we
+    // don't know where it's going. If the packet has a valid EPID, it is a response that
+    // is capable of begin routed.
+    wire consume_mgmt_pkt = (chdr_get_pkt_type(s_header[63:0]) == CHDR_PKT_TYPE_MGMT) && 
+                            (chdr_get_dst_epid(s_header[63:0]) == NULL_EPID);
+
     axi_demux #(
       .WIDTH(CHDR_W), .SIZE(2), .PRE_FIFO_SIZE(1), .POST_FIFO_SIZE(0)
     ) mgmt_demux_i (
       .clk(clk), .reset(rst), .clear(1'b0),
-      .header(s_header), .dest(chdr_get_pkt_type(s_header[63:0]) == CHDR_PKT_TYPE_MGMT),
+      .header(s_header), .dest(consume_mgmt_pkt ? 1'b1 : 1'b0),
       .i_tdata(s_axis_chdr_tdata), .i_tlast(s_axis_chdr_tlast),
       .i_tvalid(s_axis_chdr_tvalid), .i_tready(s_axis_chdr_tready),
       .o_tdata({s_mgmt_tdata, bypass_tdata}), .o_tlast({s_mgmt_tlast, bypass_tlast}),

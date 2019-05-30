@@ -54,6 +54,9 @@ localparam [2:0] CHDR_PKT_TYPE_DATA_TS = 3'd7;
 // Metadata
 localparam [4:0] CHDR_NO_MDATA = 5'd0;
 
+// EPID
+localparam [15:0] NULL_EPID = 16'd0;
+
 // CHDR Getter Functions
 //
 function [5:0] chdr_get_vc(input [63:0] header);
