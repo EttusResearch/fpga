@@ -7,17 +7,19 @@
 
 `include "axi_defs.v"
 
-`define DEBUG if (1)
+`define DEBUG if (0)
 
-module axi_dma_master
-  (
+module axi_dma_master #(
+   parameter AWIDTH = 32,
+   parameter DWIDTH = 64
+) (
    input aclk,                    // Global AXI clock
    input areset,                 // Global AXI reset
    //
    // AXI Write address channel
    //
    output [0 : 0] m_axi_awid,     // Write address ID. This signal is the identification tag for the write address signals
-   output reg [31 : 0] m_axi_awaddr,  // Write address. The write address gives the address of the first transfer in a write burst
+   output reg [AWIDTH-1 : 0] m_axi_awaddr,  // Write address. The write address gives the address of the first transfer in a write burst
    output reg [7 : 0] m_axi_awlen,    // Burst length. The burst length gives the exact number of transfers in a burst.
    output [2 : 0] m_axi_awsize,   // Burst size. This signal indicates the size of each transfer in the burst. 
    output [1 : 0] m_axi_awburst,  // Burst type. The burst type and the size information, determine how the address is calculated
@@ -32,8 +34,8 @@ module axi_dma_master
    //
    // AXI Write data channel.
    //
-   output [63 : 0] m_axi_wdata,   // Write data
-   output [7 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
+   output [DWIDTH-1 : 0] m_axi_wdata,   // Write data
+   output [DWIDTH/8-1 : 0] m_axi_wstrb,    // Write strobes. This signal indicates which byte lanes hold valid data.
    output reg m_axi_wlast,        // Write last. This signal indicates the last transfer in a write burst
    output m_axi_wuser,            // User signal. Optional User-defined signal in the write data channel.
    output m_axi_wvalid,           // Write valid. This signal indicates that valid write data and strobes are available. 
@@ -50,7 +52,7 @@ module axi_dma_master
    // AXI Read address channel
    //
    output [0 : 0] m_axi_arid,     // Read address ID. This signal is the identification tag for the read address group of signals
-   output reg [31 : 0] m_axi_araddr,  // Read address. The read address gives the address of the first transfer in a read burst
+   output reg [AWIDTH-1 : 0] m_axi_araddr,  // Read address. The read address gives the address of the first transfer in a read burst
    output reg [7 : 0] m_axi_arlen,    // Burst length. This signal indicates the exact number of transfers in a burst.
    output [2 : 0] m_axi_arsize,   // Burst size. This signal indicates the size of each transfer in the burst.
    output [1 : 0] m_axi_arburst,  // Burst type. The burst type and the size information determine how the address for each transfer
@@ -66,7 +68,7 @@ module axi_dma_master
    // AXI Read data channel
    //
    input [0 : 0] m_axi_rid,       // Read ID tag. This signal is the identification tag for the read data group of signals
-   input [63 : 0] m_axi_rdata,    // Read data.
+   input [DWIDTH-1 : 0] m_axi_rdata,    // Read data.
    input [1 : 0] m_axi_rresp,     // Read response. This signal indicates the status of the read transfer
    input m_axi_rlast,             // Read last. This signal indicates the last transfer in a read burst.
    input [0 : 0] m_axi_ruser,     // User signal. Optional User-defined signal in the read data channel.
@@ -75,21 +77,21 @@ module axi_dma_master
    //
    // DMA interface for Write transaction
    //
-   input [31:0] write_addr,       // Byte address for start of write transaction (should be 64bit alligned)
+   input [AWIDTH-1:0] write_addr,       // Byte address for start of write transaction (should be 64bit alligned)
    input [7:0] write_count,       // Count of 64bit words to write. (minus one)
    input write_ctrl_valid,
    output reg write_ctrl_ready,
-   input [63:0] write_data,
+   input [DWIDTH-1:0] write_data,
    input write_data_valid,
    output write_data_ready,
    //
    // DMA interface for Read
    //
-   input [31:0] read_addr,       // Byte address for start of read transaction (should be 64bit alligned)
+   input [AWIDTH-1:0] read_addr,       // Byte address for start of read transaction (should be 64bit alligned)
    input [7:0] read_count,       // Count of 64bit words to read.
    input read_ctrl_valid,
    output reg read_ctrl_ready,
-   output [63:0] read_data,
+   output [DWIDTH-1:0] read_data,
    output read_data_valid,
    input read_data_ready,
    //
@@ -150,7 +152,7 @@ module axi_dma_master
    //
    /////////////////////////////////////////////////////////////////////////////////
    assign m_axi_awid = 1'b0;
-   assign m_axi_awsize = 3'h3; // 8 bytes.
+   assign m_axi_awsize = $clog2(DWIDTH/8);
    assign m_axi_awburst = `AXI4_BURST_INCR;
    assign m_axi_awlock = `AXI4_LOCK_NORMAL;
    assign m_axi_awcache = `AXI4_CACHE_ALLOCATE | `AXI4_CACHE_OTHER_ALLOCATE | `AXI4_CACHE_MODIFIABLE | `AXI4_CACHE_BUFFERABLE;
@@ -167,7 +169,7 @@ module axi_dma_master
      if (areset) begin
 	write_ctrl_ready <= 1'b0;
 	write_addr_state <= AW_IDLE;
-	m_axi_awaddr[31:0] <= 32'h0;
+	m_axi_awaddr <= {AWIDTH{1'b0}};
 	m_axi_awlen[7:0] <= 8'h0;
 	m_axi_awvalid <= 1'b0;
 	m_axi_bready <= 1'b0;
@@ -185,13 +187,13 @@ module axi_dma_master
 	    // If we are offered a new transaction then.....
 	    if (write_ctrl_valid) begin
 	       // Drive all the relevent AXI4 write address channel signals next cycle.
-	       m_axi_awaddr[31:0] <= write_addr[31:0];
+	       m_axi_awaddr <= write_addr;
 	       m_axi_awlen[7:0] <= {write_count};
 	       m_axi_awvalid <= 1'b1;
 	       // If the AXI4 write channel is pre-emptively accepting the transaction...
 	       if (m_axi_awready == 1'b1) begin
 		  // ...go straight to looking for a transaction response...
-		  `DEBUG $display("WRITE TRANSACTION: ADDR: %x  LEN: %x @ time %d",write_addr[31:0],write_count,$time);	 		  
+		  `DEBUG $display("WRITE TRANSACTION: ADDR: %x  LEN: %x @ time %d",write_addr,write_count,$time);	 		  
 		  write_addr_state <= WAIT_BVALID;
 		  m_axi_bready <= 1'b1;
 	       end else begin
@@ -212,7 +214,7 @@ module axi_dma_master
 	       write_addr_state <= WAIT_BVALID;
 	       m_axi_awvalid <= 1'b0;
 	       m_axi_bready <= 1'b1;
-	       `DEBUG $display("WRITE TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_awaddr[31:0],m_axi_awlen[7:0],$time);	       
+	       `DEBUG $display("WRITE TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_awaddr,m_axi_awlen[7:0],$time);	       
 	    end else begin
                // ...otherwise wait to get the trasaction accepted.
 	       write_addr_state <= WAIT_AWREADY;
@@ -250,7 +252,7 @@ module axi_dma_master
 	 AW_ERROR: begin
 	    write_ctrl_ready <= 1'b0;
 	    write_addr_state <= AW_ERROR;
-	    m_axi_awaddr[31:0] <= 32'h0;
+	    m_axi_awaddr <= {AWIDTH{1'b0}};
 	    m_axi_awlen[7:0] <= 8'h0;
 	    m_axi_awvalid <= 1'b0;
 	    m_axi_bready <= 1'b0;
@@ -262,7 +264,7 @@ module axi_dma_master
    // AXI Write data channel
    //
    /////////////////////////////////////////////////////////////////////////////////
-   assign m_axi_wstrb = 8'hff;
+   assign m_axi_wstrb = {DWIDTH/8{1'b1}};
    assign m_axi_wuser = 1'b0;
 
    //
@@ -350,7 +352,7 @@ module axi_dma_master
    //
    /////////////////////////////////////////////////////////////////////////////////
    assign m_axi_arid = 1'b0;
-   assign m_axi_arsize = 3'h3; // 8 bytes
+   assign m_axi_arsize = $clog2(DWIDTH/8);
    assign m_axi_arburst = `AXI4_BURST_INCR;
    assign m_axi_arlock = `AXI4_LOCK_NORMAL;
    assign m_axi_arcache = `AXI4_CACHE_ALLOCATE | `AXI4_CACHE_OTHER_ALLOCATE | `AXI4_CACHE_MODIFIABLE | `AXI4_CACHE_BUFFERABLE;
@@ -367,7 +369,7 @@ module axi_dma_master
      if (areset) begin
 	read_ctrl_ready <= 1'b0;
 	read_addr_state <= AR_IDLE;
-	m_axi_araddr[31:0] <= 32'h0;
+	m_axi_araddr <= {AWIDTH{1'b0}};
 	m_axi_arlen[7:0] <= 8'h0;
 	m_axi_arvalid <= 1'b0;
      end else
@@ -382,13 +384,13 @@ module axi_dma_master
 	    // If we are offered a new transaction then.....
 	    if (read_ctrl_valid) begin
 	       // Drive all the relevent AXI4 read address channel signals next cycle.
-	       m_axi_araddr[31:0] <= read_addr[31:0];
+	       m_axi_araddr <= read_addr;
 	       m_axi_arlen[7:0] <= {read_count};
 	       m_axi_arvalid <= 1'b1;
 	       // If the AXI4 read channel is pre-emptively accepting the transaction...
 	       if (m_axi_arready == 1'b1) begin
 		  // ...go straight to looking for the transaction to complete
-		   `DEBUG $display("READ TRANSACTION: ADDR: %x  LEN: %x @ time %d",read_addr[31:0],read_count,$time);
+		   `DEBUG $display("READ TRANSACTION: ADDR: %x  LEN: %x @ time %d",read_addr,read_count,$time);
 		  read_addr_state <= WAIT_READ_DONE;
 	       end else begin
                   // ...otherwise wait to get the transaction accepted.
@@ -407,7 +409,7 @@ module axi_dma_master
 	       // ...go to looking for the transaction to complete...
 	       read_addr_state <= WAIT_READ_DONE;
 	       m_axi_arvalid <= 1'b0;
-	        `DEBUG $display("READ TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_araddr[31:0],m_axi_arlen[7:0],$time);	       
+	        `DEBUG $display("READ TRANSACTION: ADDR: %x  LEN: %x @ time %d",m_axi_araddr,m_axi_arlen[7:0],$time);	       
 	    end else begin
                // ...otherwise wait to get the trasaction accepted.
 	       read_addr_state <= WAIT_ARREADY;
@@ -440,7 +442,7 @@ module axi_dma_master
 	 AR_ERROR: begin
 	    read_ctrl_ready <= 1'b0;
 	    read_addr_state <= AR_ERROR;
-	    m_axi_araddr[31:0] <= 32'h0;
+	    m_axi_araddr <= {AWIDTH{1'b0}};
 	    m_axi_arlen[7:0] <= 8'h0;
 	    m_axi_arvalid <= 1'b0;
 	 end
