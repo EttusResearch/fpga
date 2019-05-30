@@ -360,6 +360,20 @@ package PkgAxiStreamBfm;
     endfunction
 
 
+    // Get the probability (as a percentage, 0 to 100) of the master interface 
+    // stalling due to lack of data to send.
+    function int get_master_stall_prob(int stall_probability = DEF_STALL_PROB);
+      return master_stall_prob;
+    endfunction
+
+
+    // Get the probability (as a percentage, 0 to 100) of the slave interface 
+    // stalling due to lack of buffer space.
+    function int get_slave_stall_prob(int stall_probability = DEF_STALL_PROB);
+      return slave_stall_prob;
+    endfunction
+
+
     // Create separate processes for driving the master and slave interfaces
     task run();
       fork
@@ -389,7 +403,7 @@ package PkgAxiStreamBfm;
         if (tx_packets.try_get(packet)) begin
           foreach (packet.data[i]) begin
             // Randomly deassert tvalid for next word and stall
-            if ($urandom_range(100) < master_stall_prob) begin
+            if ($urandom_range(99) < master_stall_prob) begin
               master.tvalid <= 0;
               master.tdata  <= IDLE_DATA;
               master.tuser  <= IDLE_USER;
@@ -398,7 +412,7 @@ package PkgAxiStreamBfm;
               do begin
                 @(posedge master.clk);
                 if (master.rst) break;
-              end while ($urandom_range(100) < master_stall_prob);
+              end while ($urandom_range(99) < master_stall_prob);
               if (master.rst) break;
             end
 
@@ -414,7 +428,6 @@ package PkgAxiStreamBfm;
               if (master.rst) break;
             end while (!master.tready);
           end
-          //$display("Sent packet at t=%t", $time);
           master.tvalid <= 0;
           master.tdata  <= IDLE_DATA;
           master.tuser  <= IDLE_USER;
@@ -440,7 +453,6 @@ package PkgAxiStreamBfm;
 
         if (slave.tvalid) begin
           if (slave.tready) begin
-            //$display("Received word: %X at t=%t", slave.tdata, $time);
             packet.data.push_back(slave.tdata);
             packet.user.push_back(slave.tuser);
             packet.keep.push_back(slave.tkeep);
@@ -449,10 +461,9 @@ package PkgAxiStreamBfm;
               packet.data = {};
               packet.user = {};
               packet.keep = {};
-              //$display("Received packet at t=%t", $time);
             end
           end
-          slave.tready <= $urandom_range(100) < slave_stall_prob ? 0 : 1;
+          slave.tready <= $urandom_range(99) < slave_stall_prob ? 0 : 1;
         end
       end
     endtask : slave_body
