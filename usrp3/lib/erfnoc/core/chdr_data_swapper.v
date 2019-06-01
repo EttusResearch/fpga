@@ -34,6 +34,7 @@ module chdr_data_swapper #(
   // Software Buffer Mode
   input  wire [1:0]        payload_sw_buff,
   input  wire [1:0]        mdata_sw_buff,
+  input  wire              swap_endianness,
   // Input AXIS
   input  wire [CHDR_W-1:0] s_axis_tdata,
   input  wire              s_axis_tlast,
@@ -172,28 +173,55 @@ module chdr_data_swapper #(
     endcase
   end
 
-  wire [SWAP_W-2:0] s_axis_tswap = 
+  wire [SWAP_W-2:0] s_axis_tswap_dyn = 
     (state == ST_DATA_BODY) ? pyld_tswap : (
     (state == ST_MDATA) ? mdata_tswap : {(SWAP_W-1){1'b0}}
   );
+  wire s_axis_tswap_end = swap_endianness && 
+    (state == ST_DATA_BODY || state == ST_MDATA);
+
+  // Swapper that re-aligns items in a buffer for software
+ wire [CHDR_W-1:0] out_swap_tdata, out_swap_tdata_pre;
+ wire              out_swap_tswap_end, out_swap_tlast, out_swap_tvalid, out_swap_tready;
 
   axis_data_swap #(
     .DATA_W(CHDR_W), .USER_W(1'b1),
     .STAGES_EN({{(SWAP_W-6){1'b0}}, 6'b111100}), .DYNAMIC(1)
   ) chdr_dyn_swap_i (
-    .clk          (clk          ),
-    .rst          (rst          ),
-    .s_axis_tdata (s_axis_tdata ),
-    .s_axis_tswap (s_axis_tswap ),
-    .s_axis_tuser (1'b0         ),
-    .s_axis_tlast (s_axis_tlast ),
-    .s_axis_tvalid(s_axis_tvalid),
-    .s_axis_tready(s_axis_tready),
-    .m_axis_tdata (m_axis_tdata ),
-    .m_axis_tuser (             ),
-    .m_axis_tlast (m_axis_tlast ),
-    .m_axis_tvalid(m_axis_tvalid),
-    .m_axis_tready(m_axis_tready)
+    .clk          (clk               ),
+    .rst          (rst               ),
+    .s_axis_tdata (s_axis_tdata      ),
+    .s_axis_tswap (s_axis_tswap_dyn  ),
+    .s_axis_tuser (s_axis_tswap_end  ),
+    .s_axis_tlast (s_axis_tlast      ),
+    .s_axis_tvalid(s_axis_tvalid     ),
+    .s_axis_tready(s_axis_tready     ),
+    .m_axis_tdata (out_swap_tdata_pre),
+    .m_axis_tuser (out_swap_tswap_end),
+    .m_axis_tlast (out_swap_tlast    ),
+    .m_axis_tvalid(out_swap_tvalid   ),
+    .m_axis_tready(out_swap_tready   )
+  );
+
+  // Swapper that pre-corrects for transport endianness
+  genvar i;
+  generate for (i = 0; i < CHDR_W/8; i=i+1) begin
+    assign out_swap_tdata[i*8 +: 8] = out_swap_tswap_end ? 
+      out_swap_tdata_pre[((CHDR_W/8)-i-1)*8 +: 8] : out_swap_tdata_pre[i*8 +: 8];
+  end endgenerate
+
+  axi_fifo_flop2 #(.WIDTH(CHDR_W+1)) out_reg_i (
+    .clk     (clk                             ),
+    .reset   (rst                             ),
+    .clear   (1'b0                            ),
+    .i_tdata ({out_swap_tlast, out_swap_tdata}),
+    .i_tvalid(out_swap_tvalid                 ),
+    .i_tready(out_swap_tready                 ),
+    .o_tdata ({m_axis_tlast, m_axis_tdata}    ),
+    .o_tvalid(m_axis_tvalid                   ),
+    .o_tready(m_axis_tready                   ),
+    .occupied(                                ),
+    .space   (                                )
   );
 
 endmodule // chdr_data_swapper

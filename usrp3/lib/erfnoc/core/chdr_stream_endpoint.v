@@ -220,6 +220,7 @@ module chdr_stream_endpoint #(
   //   - [1]  : Is this transport lossy?
   //   - [3:2]: Payload SW buff (0=u64, 1=u32, 2=u16, 3=u8)
   //   - [5:4]: Metadata SW buff (0=u64, 1=u32, 2=u16, 3=u8)
+  //   - [6]  : Swap endianness
   // * REG_OSTRM_DST_EPID (Write-Only):
   //   The endpoint ID of a downstream stream endpoint
   //   - [15:0]: Endpoint ID
@@ -247,6 +248,7 @@ module chdr_stream_endpoint #(
   //   - [1]  : Reserved
   //   - [3:2]: Payload SW buff (0=u64, 1=u32, 2=u16, 3=u8)
   //   - [5:4]: Metadata SW buff (0=u64, 1=u32, 2=u16, 3=u8)
+  //   - [6]  : Swap endianness
   // ======================================================================= 
 
   localparam [15:0] REG_EPID_SELF               = 16'h00;   //RW
@@ -276,6 +278,7 @@ module chdr_stream_endpoint #(
   reg         reg_ostrm_cfg_lossy_xport = 1'b0;
   reg  [1:0]  reg_ostrm_cfg_pyld_sw_buff = 2'd0;
   reg  [1:0]  reg_ostrm_cfg_mdata_sw_buff = 2'd0;
+  reg         reg_ostrm_cfg_swap_endian = 1'b0;
   reg  [15:0] reg_ostrm_dst_epid = 16'h0;
   reg  [39:0] reg_fc_freq_bytes = 40'h0;
   reg  [23:0] reg_fc_freq_pkts = 24'h0;
@@ -283,6 +286,7 @@ module chdr_stream_endpoint #(
   reg  [7:0]  reg_fc_headroom_pkts = 8'd0;
   reg  [1:0]  reg_istrm_cfg_pyld_sw_buff = 2'd0;
   reg  [1:0]  reg_istrm_cfg_mdata_sw_buff = 2'd0;
+  reg         reg_istrm_cfg_swap_endian = 1'b0;
   wire        reg_fc_enabled;
   wire [39:0] reg_buff_cap_bytes;
   wire [23:0] reg_buff_cap_pkts;
@@ -304,8 +308,8 @@ module chdr_stream_endpoint #(
           REG_RESET_AND_FLUSH:
             {reg_ctrl_reset, reg_istrm_reset, reg_ostrm_reset} <= ctrlport_req_data[2:0];
           REG_OSTRM_CTRL_STATUS:
-            {reg_ostrm_cfg_mdata_sw_buff, reg_ostrm_cfg_pyld_sw_buff,
-             reg_ostrm_cfg_lossy_xport, reg_ostrm_cfg_start} <= ctrlport_req_data[5:0];
+            {reg_ostrm_cfg_swap_endian, reg_ostrm_cfg_mdata_sw_buff, reg_ostrm_cfg_pyld_sw_buff,
+             reg_ostrm_cfg_lossy_xport, reg_ostrm_cfg_start} <= ctrlport_req_data[6:0];
           REG_OSTRM_DST_EPID:
             reg_ostrm_dst_epid <= ctrlport_req_data[15:0];
           REG_OSTRM_FC_FREQ_BYTES_LO:
@@ -317,7 +321,8 @@ module chdr_stream_endpoint #(
           REG_OSTRM_FC_HEADROOM:
             {reg_fc_headroom_pkts, reg_fc_headroom_bytes} <= ctrlport_req_data[23:0];
           REG_ISTRM_CTRL_STATUS:
-            {reg_istrm_cfg_mdata_sw_buff, reg_istrm_cfg_pyld_sw_buff} <= ctrlport_req_data[5:2];
+            {reg_istrm_cfg_swap_endian, reg_istrm_cfg_mdata_sw_buff, reg_istrm_cfg_pyld_sw_buff} 
+              <= ctrlport_req_data[6:2];
         endcase
       end else begin
         // Strobed registers
@@ -421,6 +426,7 @@ module chdr_stream_endpoint #(
       .rst            (rfnoc_chdr_rst | reg_ostrm_reset),
       .payload_sw_buff(reg_ostrm_cfg_pyld_sw_buff),
       .mdata_sw_buff  (reg_ostrm_cfg_mdata_sw_buff),
+      .swap_endianness(reg_ostrm_cfg_swap_endian),
       .s_axis_tdata   (axis_di_tdata),
       .s_axis_tlast   (axis_di_tlast),
       .s_axis_tvalid  (axis_di_tvalid),
@@ -506,6 +512,7 @@ module chdr_stream_endpoint #(
       .rst            (rfnoc_chdr_rst | reg_istrm_reset),
       .payload_sw_buff(reg_istrm_cfg_pyld_sw_buff),
       .mdata_sw_buff  (reg_istrm_cfg_mdata_sw_buff),
+      .swap_endianness(reg_istrm_cfg_swap_endian),
       .s_axis_tdata   (axis_do_tdata),
       .s_axis_tlast   (axis_do_tlast),
       .s_axis_tvalid  (axis_do_tvalid),

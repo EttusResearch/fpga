@@ -780,9 +780,9 @@ module chdr_stream_endpoint_tb;
         tx_mgmt_pl.ops[5] = '{  // Hop 2: Configure flow headroom
           op_payload:{32'd0, sep_a.REG_OSTRM_FC_HEADROOM}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd3};
         tx_mgmt_pl.ops[6] = '{  // Hop 2: Configure word swapping
-          op_payload:{32'd4, sep_a.REG_ISTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd2}; // Swap 32-bit words
+          op_payload:{32'h44, sep_a.REG_ISTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd2}; // Swap 32-bit words, endianness
         tx_mgmt_pl.ops[7] = '{  // Hop 2: Configure lossy and start config
-          op_payload:{32'd7, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1}; // Swap 32-bit words, lossy and reset
+          op_payload:{32'h47, sep_a.REG_OSTRM_CTRL_STATUS}, op_code:MGMT_OP_CFG_WR_REQ, ops_pending:8'd1}; // Swap 32-bit words, endianness, lossy and reset
         tx_mgmt_pl.ops[8] = '{  // Hop 2: Stream Endpoint: Return 
           op_payload:48'h0, op_code:MGMT_OP_RETURN, ops_pending:8'd0};
         tx_mgmt_pl.ops[9] = '{  // Hop 3: Nop for return
@@ -1019,6 +1019,7 @@ module chdr_stream_endpoint_tb;
     // ----------------------------------------
     test.start_test("Force routing error");
     begin
+      logic [31:0] old_route_err_count;
       // First sequence error
       send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
       a_rterr_prob = 100;  // Simulate a routing error
@@ -1026,9 +1027,10 @@ module chdr_stream_endpoint_tb;
       a_rterr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count == 32'd0, "Force RouteErr: Incorrect seq error count");
-      test.assert_error(route_err_count == 32'd1, "Force RouteErr: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force RouteErr: Incorrect data error count");
+      test.assert_error(seq_err_count == 32'd0, "Force RouteErr 1: Incorrect seq error count");
+      test.assert_error(route_err_count > 32'd0, "Force RouteErr 1: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force RouteErr 1: Incorrect data error count");
+      old_route_err_count = route_err_count;
 
       // Second routing error
       send_recv_data_packets(EPID_B, EPID_A, 1, cached_data_seqnum++, 1);
@@ -1037,9 +1039,9 @@ module chdr_stream_endpoint_tb;
       a_rterr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count == 32'd0, "Force RouteErr: Incorrect seq error count");
-      test.assert_error(route_err_count > 32'd1, "Force RouteErr: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force RouteErr: Incorrect data error count");
+      test.assert_error(seq_err_count == 32'd0, "Force RouteErr 2: Incorrect seq error count");
+      test.assert_error(route_err_count > old_route_err_count, "Force RouteErr 2: Incorrect route error count");
+      test.assert_error(data_err_count == 32'd0, "Force RouteErr 2: Incorrect data error count");
     end
     test.end_test();
 
