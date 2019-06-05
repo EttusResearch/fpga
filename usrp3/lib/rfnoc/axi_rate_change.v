@@ -204,7 +204,7 @@ module axi_rate_change #(
         //                      the header FIFO size).
         RECV : begin
           // If rate changed, force a EOB.
-          if (m_changed | n_changed) begin
+          if (m_changed) begin
             rate_changed           <= 1'b1;
           end
           if (i_reg_tvalid & i_reg_tready) begin

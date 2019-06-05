@@ -77,6 +77,7 @@ module noc_block_ddc_tb();
       $display("- Number of enabled HBs: %0d", hb_enables);
       $display("- CIC Rate:              %0d", cic_rate);
       tb_streamer.write_reg(sid_noc_block_ddc, SR_N_ADDR, decim_rate);                  // Set decimation rate in AXI rate change
+      tb_streamer.write_reg(sid_noc_block_ddc, SR_M_ADDR, 32'd1);                       // Write M to update N
       tb_streamer.write_reg(sid_noc_block_ddc, SR_DECIM_ADDR, {hb_enables,cic_rate});   // Enable HBs, set CIC rate
 
     end
