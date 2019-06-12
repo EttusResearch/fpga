@@ -1,12 +1,15 @@
 //
 // Copyright 2013 Ettus Research LLC
 // Copyright 2017 Ettus Research, a National Instruments Company
+// Copyright 2019 Ettus Research, a National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
 module bus_int #(
-    parameter NUM_CE = 3          // Number of computation engines
+    parameter NUM_RADIOS = 2,
+    parameter NUM_CHANNELS_PER_RADIO = 2,
+    parameter NUM_CHANNELS = 4
 )(
     input clk, input clk_div2, input reset, input reset_div2,
     output sen, output sclk, output mosi, input miso,
@@ -17,6 +20,27 @@ module bus_int #(
     output debug_txd, input debug_rxd,
     output [1:0] leds,
     output [3:0] sw_rst,
+    // Timekeeper
+    input                   pps,
+    // Block connections
+    input                   ce_clk,
+    input                   ce_rst,
+    // Radio Connections
+    input                       radio_clk,
+    input                       radio_rst,
+    input  [   NUM_CHANNELS-1:0] radio_rx_stb,
+    input  [32*NUM_CHANNELS-1:0] radio_rx_data,
+    output [   NUM_CHANNELS-1:0] radio_rx_running,
+    input  [   NUM_CHANNELS-1:0] radio_tx_stb,
+    output [32*NUM_CHANNELS-1:0] radio_tx_data,
+    output [   NUM_CHANNELS-1:0] radio_tx_running,
+    // Daughter Board Settings Buses
+    output [   NUM_RADIOS-1:0] db_fe_set_stb,
+    output [ 8*NUM_RADIOS-1:0] db_fe_set_addr,
+    output [32*NUM_RADIOS-1:0] db_fe_set_data,
+    input  [   NUM_RADIOS-1:0] db_fe_rb_stb,
+    output [ 8*NUM_RADIOS-1:0] db_fe_rb_addr,
+    input  [64*NUM_RADIOS-1:0] db_fe_rb_data,
     // SFP+ 0
     input SFPP0_ModAbs, input SFPP0_TxFault, input SFPP0_RxLOS, inout SFPP0_RS0, inout SFPP0_RS1,
     // SFP+ 1
@@ -32,9 +56,6 @@ module bus_int #(
     // PCIe
     output [63:0] pcio_tdata, output pcio_tlast, output pcio_tvalid, input pcio_tready,
     input [63:0] pcii_tdata, input pcii_tlast, input pcii_tvalid, output pcii_tready,
-    // Computation Engines
-    output [NUM_CE*64-1:0] ce_o_tdata, output [NUM_CE-1:0] ce_o_tlast, output [NUM_CE-1:0] ce_o_tvalid, input  [NUM_CE-1:0] ce_o_tready,
-    input  [NUM_CE*64-1:0] ce_i_tdata, input  [NUM_CE-1:0] ce_i_tlast, input  [NUM_CE-1:0] ce_i_tvalid, output [NUM_CE-1:0] ce_i_tready,
     //iop2 message fifos
     output [63:0] o_iop2_msg_tdata, output o_iop2_msg_tvalid, output o_iop2_msg_tlast, input o_iop2_msg_tready,
     input [63:0] i_iop2_msg_tdata, input i_iop2_msg_tvalid, input i_iop2_msg_tlast, output i_iop2_msg_tready,
@@ -73,47 +94,69 @@ module bus_int #(
    localparam SR_AWIDTH = 8;
    localparam RB_AWIDTH = 8;
 
-   localparam SR_LEDS         = 8'd00;
-   localparam SR_SW_RST       = 8'd01;
-   localparam SR_CLOCK_CTRL   = 8'd02;
-   localparam SR_XB_LOCAL     = 8'd03;
-   localparam SR_REF_FREQ     = 8'd04;
-   localparam SR_SFPP_CTRL0   = 8'd08;
-   localparam SR_SFPP_CTRL1   = 8'd09;
-   localparam SR_SPI          = 8'd32;
-   localparam SR_ETHINT0      = 8'd40;
-   localparam SR_ETHINT1      = 8'd56;
-   //localparam SR_NEXT_ADDR    = 8'd72;
-   // Sets the readback bus address dedicated to the xbar
-   localparam SR_RB_ADDR_XBAR = 8'd128;
+   localparam SR_LEDS            = 8'd00;
+   localparam SR_SW_RST          = 8'd01;
+   localparam SR_CLOCK_CTRL      = 8'd02;
+   localparam SR_DEVICE_ID       = 8'd03;
+   localparam SR_REF_FREQ        = 8'd04;
+   localparam SR_SFPP_CTRL0      = 8'd08;
+   localparam SR_SFPP_CTRL1      = 8'd09;
+   localparam SR_SPI             = 8'd32;
+   localparam SR_ETHINT0         = 8'd40;
+   localparam SR_ETHINT1         = 8'd56;
+   //localparam SR_NEXT_ADDR       = 8'd72;
+   localparam SR_BASE_TIME       = 8'd100;
 
+   localparam RB_COUNTER         = 8'd00;
+   localparam RB_SPI_RDY         = 8'd01;
+   localparam RB_SPI_DATA        = 8'd02;
+   localparam RB_CLK_STATUS      = 8'd03;
+   localparam RB_ETH_TYPE0       = 8'd04;
+   localparam RB_ETH_TYPE1       = 8'd05;
+   localparam RB_COMPAT_NUM      = 8'd06;
+   localparam RB_RFNOC_INFO      = 8'd07;
+   localparam RB_SFPP_STATUS0    = 8'd08;
+   localparam RB_SFPP_STATUS1    = 8'd09;
+   localparam RB_GIT_HASH        = 8'd10;
+   localparam RB_XADC_VALS       = 8'd11;
+   localparam RB_NUM_TIMEKEEPERS = 8'd12;
 
-   localparam RB_COUNTER      = 8'd00;
-   localparam RB_SPI_RDY      = 8'd01;
-   localparam RB_SPI_DATA     = 8'd02;
-   localparam RB_CLK_STATUS   = 8'd03;
-   localparam RB_ETH_TYPE0    = 8'd04;
-   localparam RB_ETH_TYPE1    = 8'd05;
-   localparam RB_COMPAT_NUM   = 8'd06;
-   localparam RB_NUM_CE       = 8'd07;
-   localparam RB_SFPP_STATUS0 = 8'd08;
-   localparam RB_SFPP_STATUS1 = 8'd09;
-   localparam RB_GIT_HASH     = 8'd10;
-   localparam RB_XADC_VALS    = 8'd11;
-   localparam RB_CROSSBAR     = 8'd128;
+   localparam COMPAT_MAJOR       = 16'h0025;
+   localparam COMPAT_MINOR       = 16'h0000;
+   localparam NUM_TIMEKEEPERS    = 1;
 
-   localparam COMPAT_MAJOR    = 16'h0024;
-   localparam COMPAT_MINOR    = 16'h0000;
+   localparam [15:0] RFNOC_PROTOVER  = {8'd1, 8'd0};
 
-   wire [31:0] 	  set_data;
-   wire [7:0] 	  set_addr;
-   reg [31:0] 	  rb_data;
+   wire [31:0] 	        set_data;
+   wire [7:0] 	        set_addr;
+   reg  [31:0] 	        rb_data;
    wire [RB_AWIDTH-1:0] rb_addr;
-   wire 		rb_rd_stb;
-   wire 	  set_stb;
-   wire 	  spi_ready;
-   wire [31:0] 	  rb_spi_data;
+   wire 		        rb_rd_stb;
+   wire                 set_stb;
+   wire 	            spi_ready;
+   wire [31:0] 	        rb_spi_data;
+   wire [15:0]          device_id;
 
+   wire                 m_ctrlport_req_wr_radio0;
+   wire                 m_ctrlport_req_rd_radio0;
+   wire [19:0]          m_ctrlport_req_addr_radio0;
+   wire [31:0]          m_ctrlport_req_data_radio0;
+   wire [3:0]           m_ctrlport_req_byte_en_radio0;
+   wire                 m_ctrlport_req_has_time_radio0;
+   wire [63:0]          m_ctrlport_req_time_radio0;
+   wire                 m_ctrlport_resp_ack_radio0;
+   wire [1:0]           m_ctrlport_resp_status_radio0;
+   wire [31:0]          m_ctrlport_resp_data_radio0;
+   wire                 m_ctrlport_req_wr_radio1;
+   wire                 m_ctrlport_req_rd_radio1;
+   wire [19:0]          m_ctrlport_req_addr_radio1;
+   wire [31:0]          m_ctrlport_req_data_radio1;
+   wire [3:0]           m_ctrlport_req_byte_en_radio1;
+   wire                 m_ctrlport_req_has_time_radio1;
+   wire [63:0]          m_ctrlport_req_time_radio1;
+   wire                 m_ctrlport_resp_ack_radio1;
+   wire [1:0]           m_ctrlport_resp_status_radio1;
+   wire [31:0]          m_ctrlport_resp_data_radio1;
 
    // ZPU in and ZPU out axi streams
    wire [63:0] 	  zpui_tdata, zpuo_tdata;
@@ -264,6 +307,13 @@ module bus_int #(
       .strobe(set_stb), .addr(set_addr), .in(set_data),
       .out(clock_control));
 
+   setting_reg #(.my_addr(SR_DEVICE_ID), .awidth(SR_AWIDTH), .width(16),
+        .at_reset(32'd0)
+    ) set_dev_id
+     (.clk(clk), .rst(reset),
+      .strobe(set_stb), .addr(set_addr), .in(set_data),
+      .out(device_id), .changed());
+
    setting_reg #(.my_addr(SR_REF_FREQ), .awidth(SR_AWIDTH), .width(32),
         .at_reset(32'd10_000_000) //default to 10 MHz reference clock
     ) set_ref_freq
@@ -278,15 +328,27 @@ module bus_int #(
       .sen(sen), .sclk(sclk), .mosi(mosi), .miso(miso),
       .debug());
 
-   reg [31:0]   counter;
-   wire [31:0]  rb_data_crossbar;
+   reg  [31:0] counter;
+   wire [31:0] rb_data_crossbar = 32'h0;
+   wire [63:0] radio_time_tb;
+   wire [63:0] radio_time_last_pps_tb;
+   wire [63:0] period_ns_q32_tb;
+   wire [63:0] radio_time;
+   wire [63:0] radio_time_last_pps;
+   reg  [31:0] radio_time_hi;
+   reg  [31:0] radio_time_last_pps_hi;
+   reg radio_time_hi_ld;
+   reg radio_time_last_pps_hi_ld;
+
 
    always @(posedge clk) counter <= counter + 1;
 
-   always @*
+   always @* begin
+     radio_time_hi_ld          = 1'b0;
+     radio_time_last_pps_hi_ld = 1'b0;
      casex (rb_addr)
-       RB_NUM_CE: rb_data = NUM_CE;
-       RB_COMPAT_NUM: rb_data = {32'h0, COMPAT_MAJOR, COMPAT_MINOR};
+       RB_RFNOC_INFO: rb_data = {device_id, RFNOC_PROTOVER[15:0]};
+       RB_COMPAT_NUM: rb_data = {COMPAT_MAJOR[15:0], COMPAT_MINOR[15:0]};
        RB_COUNTER: rb_data = counter;
        RB_SPI_RDY: rb_data = {31'b0, spi_ready};
        RB_SPI_DATA: rb_data = rb_spi_data;
@@ -300,6 +362,7 @@ module bus_int #(
             sfp1_phy_status_sync, 10'b0,
             SFPP1_ModAbs_chgd, SFPP1_TxFault_chgd, SFPP1_RxLOS_chgd,
             SFPP1_ModAbs_sync, SFPP1_TxFault_sync, SFPP1_RxLOS_sync};
+       RB_NUM_TIMEKEEPERS: rb_data = NUM_TIMEKEEPERS;
        // Allow readback of configured ethernet interfaces.
 `ifdef SFP0_AURORA
        RB_ETH_TYPE0: rb_data = {32'h2};
@@ -321,10 +384,83 @@ module bus_int #(
 `endif
        RB_GIT_HASH:  rb_data = `GIT_HASH;
        RB_XADC_VALS: rb_data = xadc_readback;
-       RB_CROSSBAR:  rb_data = rb_data_crossbar;
+       SR_BASE_TIME: begin
+                       rb_data = radio_time[31:0];
+                       radio_time_hi_ld = 1'b1;
+                     end
+       SR_BASE_TIME + 'h04: rb_data = radio_time_hi;
+       SR_BASE_TIME + 'h14: begin
+                           rb_data = radio_time_last_pps[31:0];
+                           radio_time_last_pps_hi_ld = 1'b1;
+                         end
+       SR_BASE_TIME + 'h18: rb_data = radio_time_last_pps_hi;
+       SR_BASE_TIME + 'h1C: rb_data = period_ns_q32_tb[31:0];
+       SR_BASE_TIME + 'h20: rb_data = period_ns_q32_tb[63:32];
 
-       default: rb_data = 32'h0;
+       default: begin
+         rb_data                   = 32'h0;
+       end
      endcase // case (rb_addr)
+   end
+
+   always @(posedge clk_div2) begin
+     if (radio_time_hi_ld)
+       radio_time_hi <= radio_time[63:32];
+     if (radio_time_last_pps_hi_ld)
+       radio_time_last_pps_hi <= radio_time_last_pps[63:32];
+   end
+
+   // Timekeeper
+
+   axi_fifo_2clk #(
+     .WIDTH (64),
+     .SIZE  (3)
+   ) radio_time_clk_cross_fifo (
+     .reset    (radio_rst),
+     .i_aclk   (radio_clk),
+     .i_tdata  (radio_time_tb),
+     .i_tvalid (1'b1),
+     .i_tready (),
+     .o_aclk   (clk_div2),
+     .o_tdata  (radio_time),
+     .o_tready (1'b1),
+     .o_tvalid ()
+   );
+
+   axi_fifo_2clk #(
+     .WIDTH (64),
+     .SIZE  (3)
+   ) radio_time_last_pps_clk_cross_fifo (
+     .reset    (radio_rst),
+     .i_aclk   (radio_clk),
+     .i_tdata  (radio_time_last_pps_tb),
+     .i_tvalid (1'b1),
+     .i_tready (),
+     .o_aclk   (clk_div2),
+     .o_tdata  (radio_time_last_pps),
+     .o_tready (1'b1),
+     .o_tvalid ()
+   );
+
+   timekeeper #(
+     .BASE_ADDR      (SR_BASE_TIME),
+     .TIME_INCREMENT (1'b1)
+   ) timekeeper_i (
+     .tb_clk                (radio_clk),
+     .tb_rst                (radio_rst),
+     .s_ctrlport_clk        (clk_div2),
+     .s_ctrlport_req_wr     (set_stb),
+     .s_ctrlport_req_rd     (),
+     .s_ctrlport_req_addr   (set_addr),
+     .s_ctrlport_req_data   (set_data),
+     .s_ctrlport_resp_ack   (),
+     .s_ctrlport_resp_data  (),
+     .sample_rx_stb         (radio_rx_stb[0]),
+     .pps                   (pps),
+     .tb_timestamp          (radio_time_tb),
+     .tb_timestamp_last_pps (radio_time_last_pps_tb),
+     .tb_period_ns_q32      (period_ns_q32_tb)
+   );
 
    // Latch state changes to SFP0+ pins.
    synchronizer #(.INITIAL_VAL(1'b0)) sfpp0_modabs_sync (
@@ -422,20 +558,17 @@ module bus_int #(
    // ////////////////////////////////////////////////////////////////
    // ETH interfaces
 
-   wire [63:0] e01_tdata, e10_tdata;
-   wire [3:0]  e01_tuser, e10_tuser;
-   wire        e01_tlast, e01_tvalid, e01_tready;
-   wire        e10_tlast, e10_tvalid, e10_tready;
-
 `ifdef SFP0_AURORA
    // The packet format over Aurora is CHDR so we don't need any special framing/deframing
    assign {e2v0_tdata, e2v0_tlast, e2v0_tvalid, sfp0_rx_tready} = {sfp0_rx_tdata, sfp0_rx_tlast, sfp0_rx_tvalid, e2v0_tready};
    assign {sfp0_tx_tdata, sfp0_tx_tlast, sfp0_tx_tvalid, v2e0_tready} = {v2e0_tdata, v2e0_tlast, v2e0_tvalid, sfp0_tx_tready};
    assign {zpui0_tdata, zpui0_tlast, zpui0_tvalid, zpuo0_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
-   assign {e01_tdata, e01_tlast, e01_tvalid, e10_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
 `else
-   eth_interface #(.BASE(SR_ETHINT0)) eth_interface0
-     (.clk(clk), .reset(reset), .clear(1'b0),
+   x300_eth_interface #(
+      .PROTOVER(RFNOC_PROTOVER), .MTU(10), .NODE_INST(0), .BASE(SR_ETHINT0)
+   ) eth_interface0 (
+      .clk(clk), .reset(reset),
+      .device_id(device_id),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .eth_tx_tdata(sfp0_tx_tdata), .eth_tx_tuser(sfp0_tx_tuser), .eth_tx_tlast(sfp0_tx_tlast),
       .eth_tx_tvalid(sfp0_tx_tvalid), .eth_tx_tready(sfp0_tx_tready),
@@ -443,11 +576,9 @@ module bus_int #(
       .eth_rx_tvalid(sfp0_rx_tvalid), .eth_rx_tready(sfp0_rx_tready),
       .e2v_tdata(e2v0_tdata), .e2v_tlast(e2v0_tlast), .e2v_tvalid(e2v0_tvalid), .e2v_tready(e2v0_tready),
       .v2e_tdata(v2e0_tdata), .v2e_tlast(v2e0_tlast), .v2e_tvalid(v2e0_tvalid), .v2e_tready(v2e0_tready),
-      .xo_tdata(e01_tdata), .xo_tuser(e01_tuser), .xo_tlast(e01_tlast), .xo_tvalid(e01_tvalid), .xo_tready(e01_tready),
-      .xi_tdata(e10_tdata), .xi_tuser(e10_tuser), .xi_tlast(e10_tlast), .xi_tvalid(e10_tvalid), .xi_tready(e10_tready),
       .e2z_tdata(zpui0_tdata), .e2z_tuser(zpui0_tuser), .e2z_tlast(zpui0_tlast), .e2z_tvalid(zpui0_tvalid), .e2z_tready(zpui0_tready),
-      .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready),
-      .debug());
+      .z2e_tdata(zpuo0_tdata), .z2e_tuser(zpuo0_tuser), .z2e_tlast(zpuo0_tlast), .z2e_tvalid(zpuo0_tvalid), .z2e_tready(zpuo0_tready)
+   );
 `endif
 
 `ifdef SFP1_AURORA
@@ -455,10 +586,12 @@ module bus_int #(
    assign {e2v1_tdata, e2v1_tlast, e2v1_tvalid, sfp1_rx_tready} = {sfp1_rx_tdata, sfp1_rx_tlast, sfp1_rx_tvalid, e2v1_tready};
    assign {sfp1_tx_tdata, sfp1_tx_tlast, sfp1_tx_tvalid, v2e1_tready} = {v2e1_tdata, v2e1_tlast, v2e1_tvalid, sfp1_tx_tready};
    assign {zpui1_tdata, zpui1_tlast, zpui1_tvalid, zpuo1_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
-   assign {e10_tdata, e10_tlast, e10_tvalid, e01_tready} = {64'h0, 1'b0, 1'b0, 1'b1};
 `else
-   eth_interface #(.BASE(SR_ETHINT1)) eth_interface1
-     (.clk(clk), .reset(reset), .clear(1'b0),
+   x300_eth_interface #(
+      .PROTOVER(RFNOC_PROTOVER), .MTU(10), .NODE_INST(1), .BASE(SR_ETHINT1)
+   ) eth_interface1 (
+      .clk(clk), .reset(reset),
+      .device_id(device_id),
       .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
       .eth_tx_tdata(sfp1_tx_tdata), .eth_tx_tuser(sfp1_tx_tuser), .eth_tx_tlast(sfp1_tx_tlast),
       .eth_tx_tvalid(sfp1_tx_tvalid), .eth_tx_tready(sfp1_tx_tready),
@@ -466,11 +599,9 @@ module bus_int #(
       .eth_rx_tvalid(sfp1_rx_tvalid), .eth_rx_tready(sfp1_rx_tready),
       .e2v_tdata(e2v1_tdata), .e2v_tlast(e2v1_tlast), .e2v_tvalid(e2v1_tvalid), .e2v_tready(e2v1_tready),
       .v2e_tdata(v2e1_tdata), .v2e_tlast(v2e1_tlast), .v2e_tvalid(v2e1_tvalid), .v2e_tready(v2e1_tready),
-      .xo_tdata(e10_tdata), .xo_tuser(e10_tuser), .xo_tlast(e10_tlast), .xo_tvalid(e10_tvalid), .xo_tready(e10_tready),
-      .xi_tdata(e01_tdata), .xi_tuser(e01_tuser), .xi_tlast(e01_tlast), .xi_tvalid(e01_tvalid), .xi_tready(e01_tready),
       .e2z_tdata(zpui1_tdata), .e2z_tuser(zpui1_tuser), .e2z_tlast(zpui1_tlast), .e2z_tvalid(zpui1_tvalid), .e2z_tready(zpui1_tready),
-      .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready),
-      .debug());
+      .z2e_tdata(zpuo1_tdata), .z2e_tuser(zpuo1_tuser), .z2e_tlast(zpuo1_tlast), .z2e_tvalid(zpuo1_tvalid), .z2e_tready(zpuo1_tready)
+   );
 `endif
 
    axi_mux4 #(.PRIO(0), .WIDTH(68)) zpui_mux
@@ -494,48 +625,128 @@ module bus_int #(
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1));
 
-   // //////////////////////////////////////////////////////////////////////
-   // axi_crossbar ports
-   // 0  - ETH0
-   // 1  - ETH1
-   // 2  - PCIe
-   // 3  - CE0
-   // ...
-   // 15 - CE13
+  rfnoc_image_core #(
+    .PROTOVER(RFNOC_PROTOVER)
+  ) rfnoc_sandbox_i (
+    .chdr_aclk               (clk        ),
+    .ctrl_aclk               (clk_div2   ),
+    .core_arst               (reset      ),
+    .device_id               (device_id  ),
+    .radio_clk               (radio_clk  ),
+    .ce_clk                  (ce_clk     ),
+    .m_ctrlport_radio1_req_wr       (m_ctrlport_req_wr_radio1      ),
+    .m_ctrlport_radio1_req_rd       (m_ctrlport_req_rd_radio1      ),
+    .m_ctrlport_radio1_req_addr     (m_ctrlport_req_addr_radio1    ),
+    .m_ctrlport_radio1_req_data     (m_ctrlport_req_data_radio1    ),
+    .m_ctrlport_radio1_req_byte_en  (m_ctrlport_req_byte_en_radio1 ),
+    .m_ctrlport_radio1_req_has_time (m_ctrlport_req_has_time_radio1),
+    .m_ctrlport_radio1_req_time     (m_ctrlport_req_time_radio1    ),
+    .m_ctrlport_radio1_resp_ack     (m_ctrlport_resp_ack_radio1    ),
+    .m_ctrlport_radio1_resp_status  (m_ctrlport_resp_status_radio1 ),
+    .m_ctrlport_radio1_resp_data    (m_ctrlport_resp_data_radio1   ),
+    .m_ctrlport_radio0_req_wr       (m_ctrlport_req_wr_radio0      ),
+    .m_ctrlport_radio0_req_rd       (m_ctrlport_req_rd_radio0      ),
+    .m_ctrlport_radio0_req_addr     (m_ctrlport_req_addr_radio0    ),
+    .m_ctrlport_radio0_req_data     (m_ctrlport_req_data_radio0    ),
+    .m_ctrlport_radio0_req_byte_en  (m_ctrlport_req_byte_en_radio0 ),
+    .m_ctrlport_radio0_req_has_time (m_ctrlport_req_has_time_radio0),
+    .m_ctrlport_radio0_req_time     (m_ctrlport_req_time_radio0    ),
+    .m_ctrlport_radio0_resp_ack     (m_ctrlport_resp_ack_radio0    ),
+    .m_ctrlport_radio0_resp_status  (m_ctrlport_resp_status_radio0 ),
+    .m_ctrlport_radio0_resp_data    (m_ctrlport_resp_data_radio0   ),
+    .radio_time                     (radio_time_tb    ),
+    .radio_rx_stb_radio0            (radio_rx_stb[1:0]     ),
+    .radio_rx_data_radio0           (radio_rx_data[63:0]   ),
+    .radio_rx_running_radio0        (radio_rx_running[1:0] ),
+    .radio_tx_stb_radio0            (radio_tx_stb[1:0]     ),
+    .radio_tx_data_radio0           (radio_tx_data[63:0]   ),
+    .radio_tx_running_radio0        (radio_tx_running[1:0] ),
+    .radio_rx_stb_radio1            (radio_rx_stb[3:2]     ),
+    .radio_rx_data_radio1           (radio_rx_data[127:64] ),
+    .radio_rx_running_radio1        (radio_rx_running[3:2] ),
+    .radio_tx_stb_radio1            (radio_tx_stb[3:2]     ),
+    .radio_tx_data_radio1           (radio_tx_data[127:64] ),
+    .radio_tx_running_radio1        (radio_tx_running[3:2] ),
+    .s_eth0_tdata            (e2v0_tdata ),
+    .s_eth0_tlast            (e2v0_tlast ),
+    .s_eth0_tvalid           (e2v0_tvalid),
+    .s_eth0_tready           (e2v0_tready),
+    .m_eth0_tdata            (v2e0_tdata ),
+    .m_eth0_tlast            (v2e0_tlast ),
+    .m_eth0_tvalid           (v2e0_tvalid),
+    .m_eth0_tready           (v2e0_tready),
+    .s_eth1_tdata            (e2v1_tdata ),
+    .s_eth1_tlast            (e2v1_tlast ),
+    .s_eth1_tvalid           (e2v1_tvalid),
+    .s_eth1_tready           (e2v1_tready),
+    .m_eth1_tdata            (v2e1_tdata ),
+    .m_eth1_tlast            (v2e1_tlast ),
+    .m_eth1_tvalid           (v2e1_tvalid),
+    .m_eth1_tready           (v2e1_tready),
+    .s_pcie_tdata            (pcii_tdata ),
+    .s_pcie_tlast            (pcii_tlast ),
+    .s_pcie_tvalid           (pcii_tvalid),
+    .s_pcie_tready           (pcii_tready),
+    .m_pcie_tdata            (pcio_tdata ),
+    .m_pcie_tlast            (pcio_tlast ),
+    .m_pcie_tvalid           (pcio_tvalid),
+    .m_pcie_tready           (pcio_tready)
+  );
 
-  // Base width of crossbar based on fixed components (ethernet, PCIE)
-   localparam XBAR_FIXED_PORTS = 3;
-   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE;
+  //---------------------------------------------------------------------------
+  // Convert Control Port to Settings Bus
+  //---------------------------------------------------------------------------
 
-   wire [7:0] local_addr;
-   // Dedicated address space readback of xbar stats (up to 16x16)
-   wire [$clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS)-1:0] rb_addr_xbar;
+  localparam NUM_CTRLPORTS_PER_DBOARD = 1;
 
-   setting_reg #(.my_addr(SR_XB_LOCAL), .awidth(SR_AWIDTH), .width(8)) sr_local_addr
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(local_addr),.changed());
+  ctrlport_to_settings_bus # (
+    .NUM_PORTS (NUM_CTRLPORTS_PER_DBOARD),
+    .USE_TIME  (1)
+  ) ctrlport0_to_settings_bus_i (
+    .ctrlport_clk             (radio_clk),
+    .ctrlport_rst             (radio_rst),
+    .s_ctrlport_req_wr        (m_ctrlport_req_wr_radio0),
+    .s_ctrlport_req_rd        (m_ctrlport_req_rd_radio0),
+    .s_ctrlport_req_addr      (m_ctrlport_req_addr_radio0),
+    .s_ctrlport_req_data      (m_ctrlport_req_data_radio0),
+    .s_ctrlport_req_has_time  (m_ctrlport_req_has_time_radio0),
+    .s_ctrlport_req_time      (m_ctrlport_req_time_radio0),
+    .s_ctrlport_resp_ack      (m_ctrlport_resp_ack_radio0),
+    .s_ctrlport_resp_data     (m_ctrlport_resp_data_radio0),
+    .set_data                 (db_fe_set_data[31:0]),
+    .set_addr                 (db_fe_set_addr[7:0]),
+    .set_stb                  (db_fe_set_stb[0]),
+    .set_time                 (),
+    .set_has_time             (),
+    .rb_stb                   (db_fe_rb_stb[0]),
+    .rb_addr                  (db_fe_rb_addr[7:0]),
+    .rb_data                  (db_fe_rb_data[63:0]),
+    .timestamp                (radio_time_tb)
+  );
 
-   setting_reg #(.my_addr(SR_RB_ADDR_XBAR), .awidth(SR_AWIDTH), .width($clog2(XBAR_NUM_PORTS)+$clog2(XBAR_NUM_PORTS))) sr_rb_addr_xbar
-     (.clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-      .in(set_data),.out(rb_addr_xbar),.changed());
-
-   // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-   axi_crossbar #(
-      .FIFO_WIDTH(64), .DST_WIDTH(16), .NUM_INPUTS(XBAR_NUM_PORTS), .NUM_OUTPUTS(XBAR_NUM_PORTS))
-   inst_axi_crossbar (
-      .clk(clk), .reset(reset), .clear(0),
-      .local_addr(local_addr),
-      .set_stb(set_stb_xb), .set_addr(set_addr_xb), .set_data(set_data_xb),
-      .i_tdata({ce_i_tdata,pcii_tdata,e2v1_tdata,e2v0_tdata}),
-      .i_tlast({ce_i_tlast,pcii_tlast,e2v1_tlast,e2v0_tlast}),
-      .i_tvalid({ce_i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .i_tready({ce_i_tready,pcii_tready,e2v1_tready,e2v0_tready}),
-      .o_tdata({ce_o_tdata,pcio_tdata,v2e1_tdata,v2e0_tdata}),
-      .o_tlast({ce_o_tlast,pcio_tlast,v2e1_tlast,v2e0_tlast}),
-      .o_tvalid({ce_o_tvalid,pcio_tvalid,v2e1_tvalid,v2e0_tvalid}),
-      .o_tready({ce_o_tready,pcio_tready,v2e1_tready,v2e0_tready}),
-      .pkt_present({ce_i_tvalid,pcii_tvalid,e2v1_tvalid,e2v0_tvalid}),
-      .rb_rd_stb(rb_rd_stb && (rb_addr == RB_CROSSBAR)),
-      .rb_addr(rb_addr_xbar), .rb_data(rb_data_crossbar));
+  ctrlport_to_settings_bus # (
+    .NUM_PORTS (NUM_CTRLPORTS_PER_DBOARD),
+    .USE_TIME  (1)
+  ) ctrlport1_to_settings_bus_i (
+    .ctrlport_clk             (radio_clk),
+    .ctrlport_rst             (radio_rst),
+    .s_ctrlport_req_wr        (m_ctrlport_req_wr_radio1),
+    .s_ctrlport_req_rd        (m_ctrlport_req_rd_radio1),
+    .s_ctrlport_req_addr      (m_ctrlport_req_addr_radio1),
+    .s_ctrlport_req_data      (m_ctrlport_req_data_radio1),
+    .s_ctrlport_req_has_time  (m_ctrlport_req_has_time_radio1),
+    .s_ctrlport_req_time      (m_ctrlport_req_time_radio1),
+    .s_ctrlport_resp_ack      (m_ctrlport_resp_ack_radio1),
+    .s_ctrlport_resp_data     (m_ctrlport_resp_data_radio1),
+    .set_data                 (db_fe_set_data[63:32]),
+    .set_addr                 (db_fe_set_addr[15:8]),
+    .set_stb                  (db_fe_set_stb[1]),
+    .set_time                 (),
+    .set_has_time             (),
+    .rb_stb                   (db_fe_rb_stb[1]),
+    .rb_addr                  (db_fe_rb_addr[15:8]),
+    .rb_data                  (db_fe_rb_data[127:64]),
+    .timestamp                (radio_time_tb)
+  );
 
 endmodule // bus_int

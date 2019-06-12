@@ -39,8 +39,13 @@ ifndef TARGET
 endif
 TOP ?= x300
 
+DEFAULT_IMAGE_CORE_FILE_X300=x300_rfnoc_image_core.v
+DEFAULT_IMAGE_CORE_FILE_X310=x310_rfnoc_image_core.v
+DEFAULT_EDGE_FILE_X300=$(abspath x300_static_router.hex)
+DEFAULT_EDGE_FILE_X310=$(abspath x310_static_router.hex)
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.x300.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.x300.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2" DEFAULT_RFNOC_IMAGE_CORE_FILE=$(DEFAULT_IMAGE_CORE_FILE_$1) DEFAULT_EDGE_FILE=$(DEFAULT_EDGE_FILE_$1)
 
 # post_build($1=Device, $2=Option)
 ifeq ($(TARGET),bin)
@@ -114,26 +119,6 @@ X310_XA:
 X300_XA:
 	$(call vivado_build,X300,$(XA_DEFS) X300=1)
 	$(call post_build,X300,XA)
-
-##X310_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-X310_RFNOC_HG:
-	$(call vivado_build,X310,$(HG_DEFS) RFNOC=1 X310=1)
-	$(call post_build,X310,RFNOC_HG)
-
-##X300_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-X300_RFNOC_HG:
-	$(call vivado_build,X300,$(HG_DEFS) RFNOC=1 X300=1)
-	$(call post_build,X300,RFNOC_HG)
-
-##X310_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled.
-X310_RFNOC_XG:
-	$(call vivado_build,X310,$(XG_DEFS) RFNOC=1 X310=1)
-	$(call post_build,X310,RFNOC_XG)
-
-##X300_RFNOC_XG: 10GigE on both SFP+ ports. RFNoC CEs enabled.
-X300_RFNOC_XG:
-	$(call vivado_build,X300,$(XG_DEFS) RFNOC=1 X300=1)
-	$(call post_build,X300,RFNOC_XG)
 
 clean:    ##Clean up all target build outputs.
 	@echo "Cleaning targets..."

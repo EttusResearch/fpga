@@ -38,7 +38,14 @@ include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(BASE_DIR)/x300/Makefile.OOT.inc
+include $(LIB_DIR)/erfnoc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_null_src_sink/Makefile.srcs
+
+IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
+EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
 
 ##################################################
 # Sources
@@ -49,13 +56,15 @@ x300_pcie_int.v \
 x300_core.v \
 x300_sfpp_io_core.v \
 x300_zpu_config.vhd \
-x300_db_fe_core.v \
+x300_eth_interface.v \
 soft_ctrl.v \
 capture_ddrlvds.v \
 gen_ddrlvds.v \
 bus_int.v \
 x300.xdc \
-timing.xdc
+timing.xdc \
+x300_edges.dat \
+$(IMAGE_CORE)
 
 ifdef BUILD_10G
 SFP_SERDES_SRCS += $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(abspath x300_10ge.xdc) $(TEN_GIGE_PHY_SRCS) $(IP_TEN_GIGE_PHY_XCI_SRCS)
@@ -91,15 +100,19 @@ $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(SFP_SERDES_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
-$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIB_HLS_IP_SRCS) $(LIBCOREGEN_SRCS)
-          
+$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) \
+$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
+$(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS)
+
+EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF)
+VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF) $(EDGE_TBL_DEF)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
