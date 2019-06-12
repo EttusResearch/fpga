@@ -91,7 +91,7 @@ module rfnoc_block_null_src_sink #(
     .NOC_ID                   (32'h0000_0001),
     .THIS_PORTID              (THIS_PORTID),
     .CHDR_W                   (CHDR_W),
-    .CTRL_FIFOSIZE            (1),
+    .CTRL_FIFOSIZE            (5),
     .CTRLPORT_SLV_EN          (0),
     .NUM_DATA_I               (2),
     .NUM_DATA_O               (2),

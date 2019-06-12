@@ -122,7 +122,7 @@ module rfnoc_block_null_src_sink_tb;
       test.assert_error(blk_ctrl.get_noc_id() == 1, "Incorrect noc_id Value");
       test.assert_error(blk_ctrl.get_num_data_i() == 2, "Incorrect num_data_i Value");
       test.assert_error(blk_ctrl.get_num_data_o() == 2, "Incorrect num_data_o Value");
-      test.assert_error(blk_ctrl.get_ctrl_fifosize() == 1, "Incorrect ctrl_fifosize Value");
+      test.assert_error(blk_ctrl.get_ctrl_fifosize() == 5, "Incorrect ctrl_fifosize Value");
       test.assert_error(blk_ctrl.get_mtu() == 10, "Incorrect mtu Value");
 
       // Read status register and validate it
