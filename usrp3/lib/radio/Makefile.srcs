@@ -12,6 +12,7 @@ RADIO_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/radio/, \
 radio_datapath_core.v \
 radio_core_regs.vh \
 db_control.v \
+fe_control.v \
 quarter_rate_downconverter.v \
 rx_frontend_gen3.v \
 tx_frontend_gen3.v \
