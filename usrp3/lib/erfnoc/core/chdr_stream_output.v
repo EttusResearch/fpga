@@ -103,6 +103,7 @@ module chdr_stream_output #(
   // accum:    Transfer count since last FC resynchronization request
   // headroom: Total headroom to keep in the downstream buffer
   // adj_cap:  The adjusted capacity (after headroom) of the downstream buffer
+  // strc_cnt: Saved count for the STRC packet (prevents mid-packet updates)
   reg [63:0] send_cnt_bytes = 64'd0;
   reg [39:0] send_cnt_pkts  = 40'd0;
   reg [63:0] recv_cnt_bytes = 64'd0;
@@ -113,6 +114,7 @@ module chdr_stream_output #(
   reg [ 7:0] headroom_pkts  =  8'd0;
   reg [39:0] adj_cap_bytes  = 40'd0;
   reg [23:0] adj_cap_pkts   = 24'd0;
+  reg [63:0] strc_cnt_bytes = 64'd0;
 
   // Output transfer count
   always @(posedge clk) begin
@@ -397,6 +399,8 @@ module chdr_stream_output #(
             // Update seqnum for the next packet
             strc_seq_num <= strc_seq_num + 16'd1;
           end
+	  // Update byte count for stream command
+          strc_cnt_bytes <= send_cnt_bytes;
         end
 
         // ST_STRC_W0
@@ -481,7 +485,7 @@ module chdr_stream_output #(
     {24'h0, cfg_fc_freq_bytes}, {16'h0, cfg_fc_freq_pkts},
     /*op_data*/ 4'h0, CHDR_STRC_OPCODE_INIT, cfg_this_epid);
   wire [127:0] strc_resync_payload = chdr128_strc_build(
-    send_cnt_bytes, send_cnt_pkts,
+    strc_cnt_bytes, send_cnt_pkts,
     /*op_data*/ 4'h0, CHDR_STRC_OPCODE_RESYNC, cfg_this_epid);
   wire [127:0] strc_payload = fc_resync_req ? strc_resync_payload : strc_init_payload;
 
