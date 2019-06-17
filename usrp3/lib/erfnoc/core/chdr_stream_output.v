@@ -394,12 +394,12 @@ module chdr_stream_output #(
         // ------------------
         // Send the CHDR header for a stream command
         ST_STRC_HDR: begin
-          if (chdr_out_tready) begin
+          if (chdr_out_tvalid && chdr_out_tready) begin
             state <= ST_STRC_W0;
             // Update seqnum for the next packet
             strc_seq_num <= strc_seq_num + 16'd1;
           end
-	  // Update byte count for stream command
+          // Update byte count for stream command
           strc_cnt_bytes <= send_cnt_bytes;
         end
 
@@ -407,7 +407,7 @@ module chdr_stream_output #(
         // ------------------
         // Send the first line of a stream command
         ST_STRC_W0: begin
-          if (chdr_out_tready)
+          if (chdr_out_tvalid && chdr_out_tready)
             if (CHDR_W < 128)
               state <= ST_STRC_W1;
             else
@@ -418,7 +418,7 @@ module chdr_stream_output #(
         // ------------------
         // Send the second line of a stream command
         ST_STRC_W1: begin
-          if (chdr_out_tready)
+          if (chdr_out_tvalid && chdr_out_tready)
             state <= fc_resync_req ? ST_PASS_DATA : ST_STRC_WAIT;
         end
 
@@ -499,18 +499,18 @@ module chdr_stream_output #(
       ST_STRC_HDR: begin
         chdr_out_tdata  = strc_header;
         chdr_out_tlast  = 1'b0;
-        chdr_out_tvalid = 1'b1;
+        chdr_out_tvalid = ok_to_send;
       end
       ST_STRC_W0: begin
         chdr_out_tdata  = strc_payload;
         chdr_out_tlast  = (CHDR_W < 128) ? 1'b0 : 1'b1;
-        chdr_out_tvalid = 1'b1;
+        chdr_out_tvalid = ok_to_send;
       end
       ST_STRC_W1: begin
         // We will enter this state only if CHDR_W = 64
         chdr_out_tdata  = strc_payload[127:64];
         chdr_out_tlast  = 1'b1;
-        chdr_out_tvalid = 1'b1;
+        chdr_out_tvalid = ok_to_send;
       end
       default: begin
         chdr_out_tdata  = {CHDR_W{1'b0}};
