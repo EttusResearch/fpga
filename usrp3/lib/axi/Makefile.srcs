@@ -18,6 +18,8 @@ axi_replay.v \
 axi_embed_tlast.v \
 axi_extract_tlast.v \
 axi_fast_extract_tlast.v \
+axi_embed_tlast_tkeep.v \
+axi_extract_tlast_tkeep.v \
 axi_fast_fifo.v \
 axi_to_strobed.v \
 axis_data_swap.v \
