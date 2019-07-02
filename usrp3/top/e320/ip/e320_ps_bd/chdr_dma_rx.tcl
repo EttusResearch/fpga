@@ -41,7 +41,6 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
   create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi
 
   create_bd_pin -dir I -from 15 -to 0 frame_size
-  create_bd_pin -dir I clear
   create_bd_pin -dir O -type intr irq
   create_bd_pin -dir I -type rst m_dest_axi_aresetn
   create_bd_pin -dir I -type clk s_axi_aclk
@@ -51,6 +50,18 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
   #########################
   # Instantiate IPs
   #########################
+  set reset_inv [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 reset_inv ]
+  set_property -dict [ list \
+     CONFIG.C_SIZE {1} \
+     CONFIG.C_OPERATION {not} \
+  ] $reset_inv
+
+  set chdr_padder [ create_bd_cell -type module -reference chdr_pad_packet chdr_padder ]
+  set_property -dict [ list \
+     CONFIG.CHDR_W {64} \
+  ] $chdr_padder
+  set_property CONFIG.POLARITY ACTIVE_HIGH [get_bd_pins chdr_padder/rst]
+
   set axi_rx_dmac [ create_bd_cell -type ip -vlnv analog.com:user:axi_dmac:1.0 axi_rx_dmac ]
   set_property -dict [ list \
      CONFIG.ASYNC_CLK_DEST_REQ {true} \
@@ -61,19 +72,6 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
      CONFIG.SYNC_TRANSFER_START {false} \
   ] $axi_rx_dmac
 
-  set axis_to_cvita_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:axis_to_cvita:1.0 axis_to_cvita_0]
-
-  # NOTE: cvita_chunker is used to force incoming packets to elongate to MTU
-  set cvita_chunker_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_chunker:1.0 cvita_chunker_0 ]
-
-  set cvita_to_axis_0 [ create_bd_cell -type ip -vlnv ettus.com:ip:cvita_to_axis:1.0 cvita_to_axis_0]
-
-  set reset_inv [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 reset_inv ]
-  set_property -dict [ list \
-     CONFIG.C_OPERATION {not} \
-     CONFIG.C_SIZE {1} \
- ] $reset_inv
-
   #########################
   # Wiring
   #########################
@@ -81,33 +79,28 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
   # Top-level connections
   connect_bd_net -net aclk_1 \
      [get_bd_pins s_axis_aclk] \
+     [get_bd_pins chdr_padder/clk] \
      [get_bd_pins axi_rx_dmac/m_dest_axi_aclk] \
      [get_bd_pins axi_rx_dmac/s_axis_aclk]
   connect_bd_net -net aresetn_1 \
      [get_bd_pins m_dest_axi_aresetn] \
+     [get_bd_pins reset_inv/Op1] \
      [get_bd_pins axi_rx_dmac/m_dest_axi_aresetn]
+  connect_bd_net -net areset_1 \
+     [get_bd_pins reset_inv/Res] \
+     [get_bd_pins chdr_padder/rst]
   connect_bd_net -net s_axi_aclk_1 \
      [get_bd_pins s_axi_aclk] \
-     [get_bd_pins axi_rx_dmac/s_axi_aclk] \
-     [get_bd_pins cvita_to_axis_0/clk] \
-     [get_bd_pins axis_to_cvita_0/clk] \
-     [get_bd_pins cvita_chunker_0/clk]
+     [get_bd_pins axi_rx_dmac/s_axi_aclk]
   connect_bd_net -net s_axi_aresetn_1 \
      [get_bd_pins s_axi_aresetn] \
-     [get_bd_pins axi_rx_dmac/s_axi_aresetn] \
-     [get_bd_pins reset_inv/Op1]
-  connect_bd_net -net s_axi_reset \
-     [get_bd_pins cvita_chunker_0/reset] \
-     [get_bd_pins reset_inv/Res]
+     [get_bd_pins axi_rx_dmac/s_axi_aresetn]
   connect_bd_net -net axi_rx_dmac_irq \
      [get_bd_pins irq] \
      [get_bd_pins axi_rx_dmac/irq]
-  connect_bd_net -net frame_size_1 \
+  connect_bd_net -net mtu \
      [get_bd_pins frame_size] \
-     [get_bd_pins cvita_chunker_0/frame_size]
-  connect_bd_net -net clear_1 \
-     [get_bd_pins clear] \
-     [get_bd_pins cvita_chunker_0/clear]
+     [get_bd_pins chdr_padder/len]
 
   # Control and DMA ports
   connect_bd_intf_net -intf_net axi_rx_dmac_s_axi \
@@ -117,18 +110,12 @@ proc create_hier_cell_rx_dma_channel { parentCell nameHier } {
      [get_bd_intf_pins m_dest_axi] \
      [get_bd_intf_pins axi_rx_dmac/m_dest_axi]
 
-  # cvita ports
+  # AXI-Stream ports
   connect_bd_intf_net -intf_net s_axis_dma \
      [get_bd_intf_pins S_AXIS] \
-     [get_bd_intf_pins axis_to_cvita_0/s_axis]
-  connect_bd_intf_net -intf_net cvita_chunker_i \
-     [get_bd_intf_pins axis_to_cvita_0/o] \
-     [get_bd_intf_pins cvita_chunker_0/i]
-  connect_bd_intf_net -intf_net cvita_chunker_o \
-     [get_bd_intf_pins cvita_chunker_0/o] \
-     [get_bd_intf_pins cvita_to_axis_0/i]
-  connect_bd_intf_net -intf_net cvita_chunker_m_axis \
-     [get_bd_intf_pins cvita_to_axis_0/m_axis] \
+     [get_bd_intf_pins chdr_padder/s_axis]
+  connect_bd_intf_net -intf_net s_axis_dma_padded \
+     [get_bd_intf_pins chdr_padder/m_axis] \
      [get_bd_intf_pins axi_rx_dmac/s_axis]
 
   # Restore current instance
@@ -185,8 +172,6 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
   create_bd_pin -dir I clk40_rstn
   create_bd_pin -dir O -from [expr $numPorts - 1] -to 0 irq
   create_bd_pin -dir I -from [expr $numPorts * 32 - 1] -to 0 mtu_regs
-  create_bd_pin -dir I s_axis_tdest
-
   #########################
   # Instantiate IPs
   #########################
@@ -214,6 +199,8 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
   ] $axis_switch_0
 
   # Cross domains from incoming AXI-Stream to RX DMA engines domain
+  # Note that the fifo_generator_0 is hard-coded to have 4 TDEST bits, so we
+  # are limited to 16 RX DMA channels
   set fifo_generator_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:fifo_generator:13.2 fifo_generator_0 ]
   set_property -dict [ list \
      CONFIG.Clock_Type_AXI {Independent_Clock} \
@@ -235,13 +222,13 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
      CONFIG.Full_Threshold_Assert_Value_rach {15} \
      CONFIG.Full_Threshold_Assert_Value_wach {15} \
      CONFIG.Full_Threshold_Assert_Value_wrch {15} \
-     CONFIG.HAS_TKEEP {true} \
+     CONFIG.HAS_TKEEP {false} \
      CONFIG.INTERFACE_TYPE {AXI_STREAM} \
      CONFIG.Input_Depth_axis {1024} \
      CONFIG.Reset_Type {Asynchronous_Reset} \
      CONFIG.TDATA_NUM_BYTES {8} \
      CONFIG.TDEST_WIDTH {4} \
-     CONFIG.TKEEP_WIDTH {8} \
+     CONFIG.TKEEP_WIDTH {0} \
      CONFIG.TSTRB_WIDTH {8} \
      CONFIG.TUSER_WIDTH {0} \
   ] $fifo_generator_0
@@ -302,9 +289,6 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
      [get_bd_pins irq] \
      [get_bd_pins rx_dmac_irq_concat/dout]
 
-  connect_bd_net -net s_axis_tdest \
-     [get_bd_pins s_axis_tdest] \
-     [get_bd_pins fifo_generator_0/S_AXIS_tdest]
   #########################
   # Per-port Section
   #########################
@@ -345,10 +329,6 @@ proc create_hier_cell_rx_dma { parentCell nameHier numPorts } {
      connect_bd_net -net frame_size_${i} \
         [get_bd_pins dma${i}/frame_size] \
         [get_bd_pins mtu/mtu${i}]
-
-     connect_bd_net -net clear_${i} \
-        [get_bd_pins dma${i}/clear] \
-        [get_bd_pins mtu/clear${i}]
   }
 
   # Restore current instance

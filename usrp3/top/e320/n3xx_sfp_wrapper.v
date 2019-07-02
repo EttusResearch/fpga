@@ -13,12 +13,13 @@
 //////////////////////////////////////////////////////////////////////
 
 module n3xx_sfp_wrapper #(
-  parameter       PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
-  parameter       DWIDTH       = 32,
-  parameter       AWIDTH       = 14,
-  parameter [7:0] PORTNUM      = 8'd0,
-  parameter       MDIO_EN      = 0,
-  parameter [4:0] MDIO_PHYADDR = 5'd0
+  parameter        PROTOCOL     = "10GbE",    // Must be {10GbE, 1GbE, Aurora, Disabled}
+  parameter        DWIDTH       = 32,
+  parameter        AWIDTH       = 14,
+  parameter [7:0]  PORTNUM      = 8'd0,
+  parameter        MDIO_EN      = 0,
+  parameter [4:0]  MDIO_PHYADDR = 5'd0,
+  parameter [15:0] RFNOC_PROTOVER  = {8'd1, 8'd0}
 )(
   // Resets
   input         areset,
@@ -29,6 +30,7 @@ module n3xx_sfp_wrapper #(
   input         gb_refclk,
   input         misc_clk,
   input         bus_clk,
+  // FIXME: Merge E320 and N310 files
   input         user_clk,
   input         sync_clk,
 
@@ -92,19 +94,6 @@ module n3xx_sfp_wrapper #(
   input           v2e_tvalid,
   output          v2e_tready,
 
-  // Ethernet crossover
-  output  [63:0]  xo_tdata,
-  output  [3:0]   xo_tuser,
-  output          xo_tlast,
-  output          xo_tvalid,
-  input           xo_tready,
-
-  input   [63:0]  xi_tdata,
-  input   [3:0]   xi_tuser,
-  input           xi_tlast,
-  input           xi_tvalid,
-  output          xi_tready,
-
   // CPU
   output  [63:0]  e2c_tdata,
   output  [7:0]   e2c_tkeep,
@@ -119,7 +108,8 @@ module n3xx_sfp_wrapper #(
   output          c2e_tready,
 
   // MISC
-  output [31:0]   port_info,
+  output   [31:0] port_info,
+  input    [15:0] device_id,
 
   // Timebase Outputs
   output          sfp_pps,
@@ -179,8 +169,8 @@ module n3xx_sfp_wrapper #(
   wire  [DWIDTH-1:0]  reg_wr_data;
   wire                reg_rd_req;
   wire  [AWIDTH-1:0]  reg_rd_addr;
-  wire                reg_rd_resp, reg_rd_resp_io, reg_rd_resp_sw;
-  wire  [DWIDTH-1:0]  reg_rd_data, reg_rd_data_io, reg_rd_data_sw;
+  wire                reg_rd_resp, reg_rd_resp_io, reg_rd_resp_eth_if;
+  wire  [DWIDTH-1:0]  reg_rd_data, reg_rd_data_io, reg_rd_data_eth_if;
 
   axil_regport_master #(
     .DWIDTH         (DWIDTH),   // Width of the AXI4-Lite data bus (must be 32 or 64)
@@ -219,7 +209,6 @@ module n3xx_sfp_wrapper #(
     .reg_wr_req     (reg_wr_req),
     .reg_wr_addr    (reg_wr_addr),
     .reg_wr_data    (reg_wr_data),
-    .reg_wr_keep    (/*unused*/),
     // Register port: Read port (domain: reg_clk)
     .reg_rd_req     (reg_rd_req),
     .reg_rd_addr    (reg_rd_addr),
@@ -233,8 +222,8 @@ module n3xx_sfp_wrapper #(
     .NUM_SLAVES (2)
   ) reg_resp_mux_i (
     .clk(bus_clk), .reset(bus_rst),
-    .sla_rd_resp({reg_rd_resp_sw, reg_rd_resp_io}),
-    .sla_rd_data({reg_rd_data_sw, reg_rd_data_io}),
+    .sla_rd_resp({reg_rd_resp_eth_if, reg_rd_resp_io}),
+    .sla_rd_data({reg_rd_data_eth_if, reg_rd_data_io}),
     .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
   );
 
@@ -396,125 +385,97 @@ module n3xx_sfp_wrapper #(
     if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled" || PROTOCOL == "WhiteRabbit") begin
 
       //set unused wires to default value
-      assign xo_tdata       = 64'h0;
-      assign xo_tuser       = 4'h0;
-      assign xo_tlast       = 1'b0;
-      assign xo_tvalid      = 1'b0;
-      assign xi_tready      = 1'b1;
       assign e2c_tdata      = 64'h0;
       assign e2c_tkeep      = 8'h0;
       assign e2c_tlast      = 1'b0;
       assign e2c_tvalid     = 1'b0;
       assign c2e_tready     = 1'b1;
 
-      assign reg_rd_resp_sw = 1'b0;
-      assign reg_rd_data_sw = 'h0;
+      assign reg_rd_resp_eth_if = 1'b0;
+      assign reg_rd_data_eth_if = 'h0;
 
     end else begin
 
-      wire [3:0] e2c_tuser;
-      wire [3:0] c2e_tuser;
+    wire [3:0] e2c_tuser;
+    wire [3:0] c2e_tuser;
 
-      // In AXI Stream, tkeep is the byte qualifier that indicates
-      // whether the content of the associated byte
-      // of TDATA is processed as part of the data stream.
-      // tuser as used in eth_switch is the numbier of valid bytes
+    // In AXI Stream, tkeep is the byte qualifier that indicates
+    // whether the content of the associated byte
+    // of TDATA is processed as part of the data stream.
+    // tuser as used in eth_interface is the number of valid bytes
 
-      // Converting tuser to tkeep for ingress packets
-      assign e2c_tkeep = ~e2c_tlast ? 8'b1111_1111
-                       : (e2c_tuser == 4'd0) ? 8'b1111_1111
-                       : (e2c_tuser == 4'd1) ? 8'b0000_0001
-                       : (e2c_tuser == 4'd2) ? 8'b0000_0011
-                       : (e2c_tuser == 4'd3) ? 8'b0000_0111
-                       : (e2c_tuser == 4'd4) ? 8'b0000_1111
-                       : (e2c_tuser == 4'd5) ? 8'b0001_1111
-                       : (e2c_tuser == 4'd6) ? 8'b0011_1111
-                       : 8'b0111_1111;
+    // Converting tuser to tkeep for ingress packets
+    assign e2c_tkeep = ~e2c_tlast ? 8'b1111_1111
+                     : (e2c_tuser == 4'd0) ? 8'b1111_1111
+                     : (e2c_tuser == 4'd1) ? 8'b0000_0001
+                     : (e2c_tuser == 4'd2) ? 8'b0000_0011
+                     : (e2c_tuser == 4'd3) ? 8'b0000_0111
+                     : (e2c_tuser == 4'd4) ? 8'b0000_1111
+                     : (e2c_tuser == 4'd5) ? 8'b0001_1111
+                     : (e2c_tuser == 4'd6) ? 8'b0011_1111
+                     : 8'b0111_1111;
 
-      // Converting tkeep to tuser for egress packets
-      assign c2e_tuser = ~c2e_tlast ? 4'd0
-                       : (c2e_tkeep == 8'b1111_1111) ? 4'd0
-                       : (c2e_tkeep == 8'b0111_1111) ? 4'd7
-                       : (c2e_tkeep == 8'b0011_1111) ? 4'd6
-                       : (c2e_tkeep == 8'b0001_1111) ? 4'd5
-                       : (c2e_tkeep == 8'b0000_1111) ? 4'd4
-                       : (c2e_tkeep == 8'b0000_0111) ? 4'd3
-                       : (c2e_tkeep == 8'b0000_0011) ? 4'd2
-                       : (c2e_tkeep == 8'b0000_0001) ? 4'd1
-                       : 4'd0;
+    // Converting tkeep to tuser for egress packets
+    assign c2e_tuser = ~c2e_tlast ? 4'd0
+                     : (c2e_tkeep == 8'b1111_1111) ? 4'd0
+                     : (c2e_tkeep == 8'b0111_1111) ? 4'd7
+                     : (c2e_tkeep == 8'b0011_1111) ? 4'd6
+                     : (c2e_tkeep == 8'b0001_1111) ? 4'd5
+                     : (c2e_tkeep == 8'b0000_1111) ? 4'd4
+                     : (c2e_tkeep == 8'b0000_0111) ? 4'd3
+                     : (c2e_tkeep == 8'b0000_0011) ? 4'd2
+                     : (c2e_tkeep == 8'b0000_0001) ? 4'd1
+                     : 4'd0;
 
-      n3xx_eth_switch #(
-        .BASE           (REG_BASE_ETH_SWITCH), // Base Address
-        .REG_DWIDTH     (DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
-        .REG_AWIDTH     (AWIDTH)         // Width of the address bus
-      ) eth_switch (
-        .clk            (bus_clk),
-        .reset          (bus_rst),
-        .clear          (1'b0),
 
-        //RegPort
-        .reg_wr_req     (reg_wr_req),
-        .reg_wr_addr    (reg_wr_addr),
-        .reg_wr_data    (reg_wr_data),
-        .reg_wr_keep    (/*unused*/),
-        .reg_rd_req     (reg_rd_req),
-        .reg_rd_addr    (reg_rd_addr),
-        .reg_rd_resp    (reg_rd_resp_sw),
-        .reg_rd_data    (reg_rd_data_sw),
-
-        // SFP
-        .eth_tx_tdata   (sfpi_tdata),
-        .eth_tx_tuser   (sfpi_tuser),
-        .eth_tx_tlast   (sfpi_tlast),
-        .eth_tx_tvalid  (sfpi_tvalid),
-        .eth_tx_tready  (sfpi_tready),
-        .eth_rx_tdata   (sfpo_tdata),
-        .eth_rx_tuser   (sfpo_tuser),
-        .eth_rx_tlast   (sfpo_tlast),
-        .eth_rx_tvalid  (sfpo_tvalid),
-        .eth_rx_tready  (sfpo_tready),
-
-        // Ethernet to Vita
-        .e2v_tdata      (e2v_tdata),
-        .e2v_tlast      (e2v_tlast),
-        .e2v_tvalid     (e2v_tvalid),
-        .e2v_tready     (e2v_tready),
-
-        // Vita to Ethernet
-        .v2e_tdata      (v2e_tdata),
-        .v2e_tlast      (v2e_tlast),
-        .v2e_tvalid     (v2e_tvalid),
-        .v2e_tready     (v2e_tready),
-
-        // Crossover
-        .xo_tdata       (xo_tdata),
-        .xo_tuser       (xo_tuser),
-        .xo_tlast       (xo_tlast),
-        .xo_tvalid      (xo_tvalid),
-        .xo_tready      (xo_tready),
-        .xi_tdata       (xi_tdata),
-        .xi_tuser       (xi_tuser),
-        .xi_tlast       (xi_tlast),
-        .xi_tvalid      (xi_tvalid),
-        .xi_tready      (xi_tready),
-
-        // Ethernet to CPU, also endian swap here
-        .e2c_tdata      ({e2c_tdata[7:0], e2c_tdata[15:8], e2c_tdata[23:16], e2c_tdata[31:24],
-                          e2c_tdata[39:32], e2c_tdata[47:40], e2c_tdata[55:48], e2c_tdata[63:56]}),
-        .e2c_tuser      (e2c_tuser),
-        .e2c_tlast      (e2c_tlast),
-        .e2c_tvalid     (e2c_tvalid),
-        .e2c_tready     (e2c_tready),
-
-        // CPU to Ethernet, also endian swap here
-        .c2e_tdata      ({c2e_tdata[7:0], c2e_tdata[15:8], c2e_tdata[23:16], c2e_tdata[31:24],
-                          c2e_tdata[39:32], c2e_tdata[47:40], c2e_tdata[55:48], c2e_tdata[63:56]}),
-        .c2e_tuser      (c2e_tuser),
-        .c2e_tlast      (c2e_tlast),
-        .c2e_tvalid     (c2e_tvalid),
-        .c2e_tready     (c2e_tready),
-        .debug          ()
-      );
+    eth_interface #(
+       .PROTOVER(RFNOC_PROTOVER), .MTU(10), .NODE_INST(0), .BASE(REG_BASE_ETH_SWITCH)
+    ) eth_interface (
+       .clk           (bus_clk),
+       .reset         (bus_rst),
+       .device_id     (device_id),
+       .reg_wr_req    (reg_wr_req),
+       .reg_wr_addr   (reg_wr_addr),
+       .reg_wr_data   (reg_wr_data),
+       .reg_rd_req    (reg_rd_req),
+       .reg_rd_addr   (reg_rd_addr),
+       .reg_rd_resp   (reg_rd_resp_eth_if),
+       .reg_rd_data   (reg_rd_data_eth_if),
+       .eth_tx_tdata  (sfpi_tdata),
+       .eth_tx_tuser  (sfpi_tuser),
+       .eth_tx_tlast  (sfpi_tlast),
+       .eth_tx_tvalid (sfpi_tvalid),
+       .eth_tx_tready (sfpi_tready),
+       .eth_rx_tdata  (sfpo_tdata),
+       .eth_rx_tuser  (sfpo_tuser),
+       .eth_rx_tlast  (sfpo_tlast),
+       .eth_rx_tvalid (sfpo_tvalid),
+       .eth_rx_tready (sfpo_tready),
+       .e2v_tdata     (e2v_tdata),
+       .e2v_tlast     (e2v_tlast),
+       .e2v_tvalid    (e2v_tvalid),
+       .e2v_tready    (e2v_tready),
+       .v2e_tdata     (v2e_tdata),
+       .v2e_tlast     (v2e_tlast),
+       .v2e_tvalid    (v2e_tvalid),
+       .v2e_tready    (v2e_tready),
+       .e2c_tdata     ({e2c_tdata[7:0],   e2c_tdata[15:8],
+                        e2c_tdata[23:16], e2c_tdata[31:24],
+                        e2c_tdata[39:32], e2c_tdata[47:40],
+                        e2c_tdata[55:48], e2c_tdata[63:56]}),
+       .e2c_tuser     (e2c_tuser),
+       .e2c_tlast     (e2c_tlast),
+       .e2c_tvalid    (e2c_tvalid),
+       .e2c_tready    (e2c_tready),
+       .c2e_tdata     ({c2e_tdata[7:0],   c2e_tdata[15:8],
+                        c2e_tdata[23:16], c2e_tdata[31:24],
+                        c2e_tdata[39:32], c2e_tdata[47:40],
+                        c2e_tdata[55:48], c2e_tdata[63:56]}),
+       .c2e_tuser     (c2e_tuser),
+       .c2e_tlast     (c2e_tlast),
+       .c2e_tvalid    (c2e_tvalid),
+       .c2e_tready    (c2e_tready)
+    );
 
     end
   endgenerate

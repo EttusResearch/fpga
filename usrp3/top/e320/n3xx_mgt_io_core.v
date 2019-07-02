@@ -605,6 +605,7 @@ module n3xx_mgt_io_core #(
   //-----------------------------------------------------------------
   // Activity detector
   //-----------------------------------------------------------------
+  wire activity_int;
 
   pulse_stretch act_pulse_str_i (
     .clk(bus_clk),

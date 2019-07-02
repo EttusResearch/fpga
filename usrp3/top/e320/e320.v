@@ -10,166 +10,167 @@
 //
 /////////////////////////////////////////////////////////////////////
 
+`default_nettype none
 module e320 (
 
   // 5V Power Enable
-  output ENA_PAPWR,
+  output wire ENA_PAPWR,
 
   // GPIO
-  output      EN_GPIO_2V5,
-  output      EN_GPIO_3V3,
-  output      EN_GPIO_VAR_SUPPLY,
-  inout [7:0] GPIO_PREBUFF,
-  inout [7:0] GPIO_DIR,
-  output      GPIO_OE_N,
+  output wire      EN_GPIO_2V5,
+  output wire      EN_GPIO_3V3,
+  output wire      EN_GPIO_VAR_SUPPLY,
+  inout wire [7:0] GPIO_PREBUFF,
+  inout wire [7:0] GPIO_DIR,
+  output wire      GPIO_OE_N,
 
   // GPS
-  output CLK_GPS_PWR_EN,
-  output GPS_INITSURV_N,
-  output GPS_RST_N,
-  input  GPS_ALARM,
-  input  GPS_LOCK,
-  input  GPS_PHASELOCK,
-  input  GPS_SURVEY,
-  input  GPS_WARMUP,
+  output wire CLK_GPS_PWR_EN,
+  output wire GPS_INITSURV_N,
+  output wire GPS_RST_N,
+  input wire  GPS_ALARM,
+  input wire  GPS_LOCK,
+  input wire  GPS_PHASELOCK,
+  input wire  GPS_SURVEY,
+  input wire  GPS_WARMUP,
 
   // SFP
-  input  SFP1_RX_P,
-  input  SFP1_RX_N,
-  output SFP1_TX_P,
-  output SFP1_TX_N,
-  input  SFP1_RXLOS,
-  input  SFP1_TXFAULT,
-  input  SFP1_MOD_ABS, // Unused
-  output SFP1_RS0,
-  output SFP1_RS1,
-  output SFP1_TXDISABLE,
+  input wire  SFP1_RX_P,
+  input wire  SFP1_RX_N,
+  output wire SFP1_TX_P,
+  output wire SFP1_TX_N,
+  input wire  SFP1_RXLOS,
+  input wire  SFP1_TXFAULT,
+  input wire  SFP1_MOD_ABS, // Unused
+  output wire SFP1_RS0,
+  output wire SFP1_RS1,
+  output wire SFP1_TXDISABLE,
 
   // MGT Clocks
 
-  output CLK_PLL_SCLK,
-  output CLK_PLL_SDATA,
-  output CLK_PLL_SLE,
+  output wire CLK_PLL_SCLK,
+  output wire CLK_PLL_SDATA,
+  output wire CLK_PLL_SLE,
 
-  input  CLK_MGT_125M_P,
-  input  CLK_MGT_125M_N,
-  input  CLK_MGT_156_25M_P,
-  input  CLK_MGT_156_25M_N,
+  input wire  CLK_MGT_125M_P,
+  input wire  CLK_MGT_125M_N,
+  input wire  CLK_MGT_156_25M_P,
+  input wire  CLK_MGT_156_25M_N,
 
   // PS Connections
-  inout [53:0] PS_MIO,
-  inout        PS_CLK,
-  inout        PS_SRST_B,
-  inout        PS_POR_B,
-  inout        DDR_MODCLK_P,
-  inout        DDR_MODCLK_N,
-  inout        PS_DDR3_CKE,
-  inout        PS_DDR3_RESET_N,
-  inout [31:0] PS_DDR3_DQ,
-  inout [14:0] PS_DDR3_ADDR,
-  inout [3:0]  PS_DDR3_DM,
-  inout [2:0]  PS_DDR3_BA,
-  inout [3:0]  PS_DDR3_DQS_P,
-  inout [3:0]  PS_DDR3_DQS_N,
-  inout        PS_DDR3_ODT,
-  inout        PS_DDR3_VRN,
-  inout        PS_DDR3_VRP,
-  inout        PS_DDR3_WE_N,
-  inout        PS_DDR3_CS_N,
-  inout        PS_DDR3_CAS_N,
-  inout        PS_DDR3_RAS_N,
+  inout wire [53:0] PS_MIO,
+  inout wire        PS_CLK,
+  inout wire        PS_SRST_B,
+  inout wire        PS_POR_B,
+  inout wire        DDR_MODCLK_P,
+  inout wire        DDR_MODCLK_N,
+  inout wire        PS_DDR3_CKE,
+  inout wire        PS_DDR3_RESET_N,
+  inout wire [31:0] PS_DDR3_DQ,
+  inout wire [14:0] PS_DDR3_ADDR,
+  inout wire [3:0]  PS_DDR3_DM,
+  inout wire [2:0]  PS_DDR3_BA,
+  inout wire [3:0]  PS_DDR3_DQS_P,
+  inout wire [3:0]  PS_DDR3_DQS_N,
+  inout wire        PS_DDR3_ODT,
+  inout wire        PS_DDR3_VRN,
+  inout wire        PS_DDR3_VRP,
+  inout wire        PS_DDR3_WE_N,
+  inout wire        PS_DDR3_CS_N,
+  inout wire        PS_DDR3_CAS_N,
+  inout wire        PS_DDR3_RAS_N,
 
   // PL DRAM Interface
-  input         sys_clk_p,
-  input         sys_clk_n,
+  input wire         sys_clk_p,
+  input wire         sys_clk_n,
   //
-  inout  [31:0] ddr3_dq,
-  inout  [3:0]  ddr3_dqs_n,
-  inout  [3:0]  ddr3_dqs_p,
-  output [3:0]  ddr3_dm,
+  inout wire  [31:0] ddr3_dq,
+  inout wire  [3:0]  ddr3_dqs_n,
+  inout wire  [3:0]  ddr3_dqs_p,
+  output wire [3:0]  ddr3_dm,
   //
-  output [2:0]  ddr3_ba,
-  output [15:0] ddr3_addr,
-  output        ddr3_ras_n,
-  output        ddr3_cas_n,
-  output        ddr3_we_n,
+  output wire [2:0]  ddr3_ba,
+  output wire [15:0] ddr3_addr,
+  output wire        ddr3_ras_n,
+  output wire        ddr3_cas_n,
+  output wire        ddr3_we_n,
   //
-  output [0:0]  ddr3_cs_n,
-  output [0:0]  ddr3_cke,
-  output [0:0]  ddr3_odt,
+  output wire [0:0]  ddr3_cs_n,
+  output wire [0:0]  ddr3_cke,
+  output wire [0:0]  ddr3_odt,
   //
-  output [0:0]  ddr3_ck_p,
-  output [0:0]  ddr3_ck_n,
+  output wire [0:0]  ddr3_ck_p,
+  output wire [0:0]  ddr3_ck_n,
   //
-  output        ddr3_reset_n,
+  output wire        ddr3_reset_n,
 
   // LEDs
-  output LED_LINK1,
-  output LED_ACT1,
+  output wire LED_LINK1,
+  output wire LED_ACT1,
 
   // PPS, REFCLK
-  input  CLK_SYNC_INT,      // PPS from GPS
-  input  CLK_SYNC_INT_RAW,  // PPS_RAW from GPS (Unused)
-  input  CLK_SYNC_EXT,      // PPS from external connector
-  input  CLK_REF_RAW,       // FPGA reference clock (GPS or external)
-  output CLK_REF_SEL,       // Select for GPS or external reference clock
-  input  CLK_MUX_OUT,       // RF clock locked status
+  input wire  CLK_SYNC_INT,      // PPS from GPS
+  input wire  CLK_SYNC_INT_RAW,  // PPS_RAW from GPS (Unused)
+  input wire  CLK_SYNC_EXT,      // PPS from external connector
+  input wire  CLK_REF_RAW,       // FPGA reference clock (GPS or external)
+  output wire CLK_REF_SEL,       // Select for GPS or external reference clock
+  input wire  CLK_MUX_OUT,       // RF clock locked status
 
   // RF LVDS Data Interface
   //
   // Receive
-  input RX_CLK_P,
-  input RX_CLK_N,
-  input RX_FRAME_P,
-  input RX_FRAME_N,
-  input [5:0] RX_DATA_P,
-  input [5:0] RX_DATA_N,
+  input wire RX_CLK_P,
+  input wire RX_CLK_N,
+  input wire RX_FRAME_P,
+  input wire RX_FRAME_N,
+  input wire [5:0] RX_DATA_P,
+  input wire [5:0] RX_DATA_N,
   //
   // TraNSMIT
-  output TX_CLK_P,
-  output TX_CLK_N,
-  output TX_FRAME_P,
-  output TX_FRAME_N,
-  output [5:0] TX_DATA_P,
-  output [5:0] TX_DATA_N,
+  output wire TX_CLK_P,
+  output wire TX_CLK_N,
+  output wire TX_FRAME_P,
+  output wire TX_FRAME_N,
+  output wire [5:0] TX_DATA_P,
+  output wire [5:0] TX_DATA_N,
 
   // Switches
-  output [2:0] FE1_SEL,
-  output [2:0] FE2_SEL,
-  output [1:0] RX1_SEL,
-  output [1:0] RX2_SEL,
-  output [5:0] RX1_BSEL,
-  output [5:0] RX2_BSEL,
-  output [5:0] TX1_BSEL,
-  output [5:0] TX2_BSEL,
+  output wire [2:0] FE1_SEL,
+  output wire [2:0] FE2_SEL,
+  output wire [1:0] RX1_SEL,
+  output wire [1:0] RX2_SEL,
+  output wire [5:0] RX1_BSEL,
+  output wire [5:0] RX2_BSEL,
+  output wire [5:0] TX1_BSEL,
+  output wire [5:0] TX2_BSEL,
 
   // SPI
-  input  XCVR_SPI_MISO,
-  output XCVR_SPI_MOSI,
-  output XCVR_SPI_CLK,
-  output XCVR_SPI_CS_N,
+  input wire  XCVR_SPI_MISO,
+  output wire XCVR_SPI_MOSI,
+  output wire XCVR_SPI_CLK,
+  output wire XCVR_SPI_CS_N,
 
   // AD9361
-  output XCVR_ENABLE,
-  output XCVR_SYNC,
-  output XCVR_TXNRX,
-  output XCVR_ENA_AGC,
-  output XCVR_RESET_N,
-  input [7:0] XCVR_CTRL_OUT,
+  output wire XCVR_ENABLE,
+  output wire XCVR_SYNC,
+  output wire XCVR_TXNRX,
+  output wire XCVR_ENA_AGC,
+  output wire XCVR_RESET_N,
+  input wire [7:0] XCVR_CTRL_OUT,
 
   // Amplifiers
-  output TX_HFAMP1_ENA,
-  output TX_HFAMP2_ENA,
-  output TX_LFAMP1_ENA,
-  output TX_LFAMP2_ENA,
+  output wire TX_HFAMP1_ENA,
+  output wire TX_HFAMP2_ENA,
+  output wire TX_LFAMP1_ENA,
+  output wire TX_LFAMP2_ENA,
 
   // LEDs
-  output RX1_GRN_ENA,
-  output RX2_GRN_ENA,
-  output TX1_RED_ENA,
-  output TX2_RED_ENA,
-  output TXRX1_GRN_ENA,
-  output TXRX2_GRN_ENA
+  output wire RX1_GRN_ENA,
+  output wire RX2_GRN_ENA,
+  output wire TX1_RED_ENA,
+  output wire TX2_RED_ENA,
+  output wire TXRX1_GRN_ENA,
+  output wire TXRX2_GRN_ENA
 
 );
 
@@ -205,6 +206,7 @@ module e320 (
   localparam NUM_CHANNELS_PER_RADIO = 2;
   localparam NUM_DBOARDS = 1;
   localparam NUM_CHANNELS = NUM_RADIOS * NUM_CHANNELS_PER_RADIO;
+  localparam [15:0] RFNOC_PROTOVER  = {8'd1, 8'd0};
 
   // Clocks
   wire xgige_clk156;
@@ -273,9 +275,6 @@ module e320 (
   wire [1:0]  m_axi_xbar_rresp;
   wire [31:0] m_axi_xbar_rdata;
 
-  // Processing System
-  wire [15:0] IRQ_F2P;
-
   // ETH DMA
   wire        m_axi_eth_dma_arvalid;
   wire        m_axi_eth_dma_awvalid;
@@ -298,6 +297,22 @@ module e320 (
   wire [1:0]  m_axi_eth_dma_bresp;
   wire [1:0]  m_axi_eth_dma_rresp;
   wire [31:0] m_axi_eth_dma_rdata;
+
+  // Processing System
+  wire [15:0] IRQ_F2P;
+
+  // DMA xport adapter to PS
+  wire [63:0] m_axis_dma_tdata;
+  wire [3:0]  m_axis_dma_tuser;
+  wire        m_axis_dma_tlast;
+  wire        m_axis_dma_tready;
+  wire        m_axis_dma_tvalid;
+
+  wire [63:0] s_axis_dma_tdata;
+  wire [3:0]  s_axis_dma_tdest;
+  wire        s_axis_dma_tlast;
+  wire        s_axis_dma_tready;
+  wire        s_axis_dma_tvalid;
 
   // HP0 -- High Performance port 0
   wire [5:0]  s_axi_hp0_awid;
@@ -396,17 +411,6 @@ module e320 (
   wire        arm_eth_rx_irq;
   wire        arm_eth_tx_irq;
 
-  // DMA to PS
-  wire [63:0] o_cvita_dma_tdata;
-  wire        o_cvita_dma_tlast;
-  wire        o_cvita_dma_tready;
-  wire        o_cvita_dma_tvalid;
-
-  wire [63:0] i_cvita_dma_tdata;
-  wire        i_cvita_dma_tlast;
-  wire        i_cvita_dma_tready;
-  wire        i_cvita_dma_tvalid;
-
   // Vita to Ethernet
   wire [63:0] v2e_tdata;
   wire        v2e_tlast;
@@ -421,7 +425,8 @@ module e320 (
 
   // Misc
   wire [31:0] sfp_port_info;
-  wire        sfp_link_up;
+  wire [15:0] device_id;
+  wire        clocks_locked;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -1107,18 +1112,6 @@ module e320 (
     .v2e_tvalid(v2e_tvalid),
     .v2e_tready(v2e_tready),
 
-    // Crossover
-    .xo_tdata(),
-    .xo_tuser(),
-    .xo_tlast(),
-    .xo_tvalid(),
-    .xo_tready(1'b1),
-    .xi_tdata('b0),
-    .xi_tuser('b0),
-    .xi_tlast(1'b0),
-    .xi_tvalid(1'b0),
-    .xi_tready(),
-
     // Ethernet to CPU
     .e2c_tdata(arm_eth_rx_tdata_b),
     .e2c_tkeep(arm_eth_rx_tkeep_b),
@@ -1135,14 +1128,12 @@ module e320 (
 
     // Misc
     .port_info(sfp_port_info),
+    .device_id(device_id),
 
     // LED
-    .link_up(sfp_link_up),
+    .link_up(LED_LINK1),
     .activity(LED_ACT1)
   );
-
-  assign ps_gpio_in[60] = ps_gpio_tri[60] ? sfp_link_up : ps_gpio_out[60];
-  assign LED_LINK1 = sfp_link_up;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -1529,14 +1520,16 @@ module e320 (
     .S_AXI_GP0_ARESETN(clk40_rstn),
 
     // DMA
-    .i_cvita_dma_tdata(i_cvita_dma_tdata),
-    .i_cvita_dma_tlast(i_cvita_dma_tlast),
-    .i_cvita_dma_tready(i_cvita_dma_tready),
-    .i_cvita_dma_tvalid(i_cvita_dma_tvalid),
-    .o_cvita_dma_tdata(o_cvita_dma_tdata),
-    .o_cvita_dma_tlast(o_cvita_dma_tlast),
-    .o_cvita_dma_tready(o_cvita_dma_tready),
-    .o_cvita_dma_tvalid(o_cvita_dma_tvalid)
+    .s_axis_dma_tdata(s_axis_dma_tdata),
+    .s_axis_dma_tdest(s_axis_dma_tdest),
+    .s_axis_dma_tlast(s_axis_dma_tlast),
+    .s_axis_dma_tready(s_axis_dma_tready),
+    .s_axis_dma_tvalid(s_axis_dma_tvalid),
+    .m_axis_dma_tdata(m_axis_dma_tdata),
+    .m_axis_dma_tuser(m_axis_dma_tuser),
+    .m_axis_dma_tlast(m_axis_dma_tlast),
+    .m_axis_dma_tready(m_axis_dma_tready),
+    .m_axis_dma_tvalid(m_axis_dma_tvalid)
   );
 
   /////////////////////////////////////////////////////////////////////
@@ -1578,8 +1571,7 @@ module e320 (
   e320_core #(
     .REG_AWIDTH(REG_AWIDTH),
     .BUS_CLK_RATE(BUS_CLK_RATE),
-    .NUM_RADIO_CORES(NUM_RADIOS),
-    .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
+    .NUM_RADIOS(NUM_RADIOS),
     .NUM_CHANNELS(NUM_CHANNELS),
     .NUM_DBOARDS(NUM_DBOARDS),
     .FP_GPIO_WIDTH(FP_GPIO_WIDTH),
@@ -1592,6 +1584,7 @@ module e320 (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .ddr3_dma_clk(ddr3_dma_clk),
+    .clk40(clk40),
 
     // Clocking and PPS Controls/Indicators
     .pps_refclk(pps_refclk),
@@ -1671,6 +1664,7 @@ module e320 (
     .ddr3_axi_rvalid           (ddr3_axi_rvalid),
     .ddr3_axi_rready           (ddr3_axi_rready),
 
+
     // Radio ATR
     .rx_atr(rx_atr),
     .tx_atr(tx_atr),
@@ -1703,15 +1697,17 @@ module e320 (
     .tx(tx_flat),
 
     // DMA to PS
-    .dmao_tdata(i_cvita_dma_tdata),
-    .dmao_tlast(i_cvita_dma_tlast),
-    .dmao_tready(i_cvita_dma_tready),
-    .dmao_tvalid(i_cvita_dma_tvalid),
+    .m_dma_tdata(s_axis_dma_tdata),
+    .m_dma_tdest(s_axis_dma_tdest),
+    .m_dma_tlast(s_axis_dma_tlast),
+    .m_dma_tready(s_axis_dma_tready),
+    .m_dma_tvalid(s_axis_dma_tvalid),
 
-    .dmai_tdata(o_cvita_dma_tdata),
-    .dmai_tlast(o_cvita_dma_tlast),
-    .dmai_tready(o_cvita_dma_tready),
-    .dmai_tvalid(o_cvita_dma_tvalid),
+    .s_dma_tdata(m_axis_dma_tdata),
+    .s_dma_tuser(m_axis_dma_tuser),
+    .s_dma_tlast(m_axis_dma_tlast),
+    .s_dma_tready(m_axis_dma_tready),
+    .s_dma_tvalid(m_axis_dma_tvalid),
 
     // VITA to Ethernet
     .v2e_tdata(v2e_tdata),
@@ -1732,7 +1728,9 @@ module e320 (
     .dboard_status(dboard_status),
     .xadc_readback({20'h0, device_temp}),
     .fp_gpio_ctrl(fp_gpio_ctrl),
-    .dboard_ctrl(dboard_ctrl)
+    .dboard_ctrl(dboard_ctrl),
+    .device_id(device_id)
   );
 
 endmodule // e320
+`default_nettype wire

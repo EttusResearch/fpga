@@ -1,5 +1,5 @@
 #
-# Copyright 2008-2012 Ettus Research LLC
+# Copyright 2018-2019 Ettus Research, a National Instruments Brand
 #
 
 ##################################################
@@ -35,6 +35,13 @@ include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+
+IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
+EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
 
 ##################################################
 # Sources
@@ -43,12 +50,9 @@ TOP_SRCS = \
 e320.v \
 e320_core.v \
 e320_clocking.v \
-../n3xx/n3xx_db_fe_core.v \
 n3xx_sfp_wrapper.v \
 n3xx_mgt_io_core.v \
-../n3xx/n3xx_eth_switch.v \
-../n3xx/n3xx_eth_dispatch.v \
-../n3xx/n3xx_chdr_eth_framer.v
+$(IMAGE_CORE)
 
 MB_XDC = \
 mb_pins.xdc \
@@ -105,15 +109,19 @@ $(LIB_HLS_IP_SRCS) \
 $(EXTRAM_SRCS) \
 $(CAP_GEN_GENERIC_SRCS) \
 $(RFNOC_OOT_SRCS)\
-$(LIBCOREGEN_SRCS) \
+$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
+$(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS) \
 $(abspath $(MB_XDC))
+
+EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF)
+VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF) $(EDGE_TBL_DEF)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
@@ -125,4 +133,4 @@ synth: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-.PHONY: bin
+.PHONY: bin rtl

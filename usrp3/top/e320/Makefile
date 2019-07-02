@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Ettus Research LLC
+# Copyright 2018-2019 Ettus Research, a National Instruments Brand
 #
 
 # NOTE: All comments prefixed with a "##" will be displayed as a part of the "make help" target
@@ -30,8 +30,11 @@ ifndef TARGET
 endif
 TOP ?= e320
 
+DEFAULT_IMAGE_CORE_FILE_E320=e320_rfnoc_image_core.v
+DEFAULT_EDGE_FILE_E320=$(abspath e320_static_router.hex)
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.e320.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.e320.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2" DEFAULT_RFNOC_IMAGE_CORE_FILE=$(DEFAULT_IMAGE_CORE_FILE_$1) DEFAULT_EDGE_FILE=$(DEFAULT_EDGE_FILE_$1)
 
 # post_build($1=Device, $2=Option)
 ifeq ($(TARGET),bin)
@@ -67,20 +70,6 @@ E320_AA: build/usrp_e320_fpga_AA.dts
 	$(call vivado_build,E320,$(AA_DEFS) E320=1)
 	$(call post_build,E320,AA)
 
-##E320_RFNOC_1G:  1GigE on SFP+ Port. RFNOC CEs enabled.
-E320_RFNOC_1G:  build/usrp_e320_fpga_1G.dts
-	$(call vivado_build,E320,$(1G_DEFS) RFNOC=1 E320=1)
-	$(call post_build,E320,RFNOC_1G)
-
-##E320_RFNOC_XG:  10GigE on SFP+ Port. RFNOC CEs enabled.
-E320_RFNOC_XG: build/usrp_e320_fpga_XG.dts
-	$(call vivado_build,E320,$(XG_DEFS) RFNOC=1 E320=1)
-	$(call post_build,E320,RFNOC_XG)
-
-##E320_RFNOC_AA:  Aurora on SFP+ Port. RFNOC CEs enabled.
-E320_RFNOC_AA: build/usrp_e320_fpga_AA.dts
-	$(call vivado_build,E320,$(AA_DEFS) RFNOC=1 E320=1)
-	$(call post_build,E320,RFNOC_AA)
 
 build/%.dts: dts/%.dts dts/*.dtsi
 	-mkdir -p build

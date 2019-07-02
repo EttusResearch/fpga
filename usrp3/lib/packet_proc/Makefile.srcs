@@ -16,7 +16,6 @@ cvita_dest_lookup.v \
 cvita_insert_tlast.v \
 cvita_packet_debug.v \
 eth_dispatch.v \
-eth_interface.v \
 fix_short_packet.v \
 ip_hdr_checksum.v \
 source_flow_control.v \

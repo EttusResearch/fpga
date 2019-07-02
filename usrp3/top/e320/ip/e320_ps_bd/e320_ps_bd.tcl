@@ -55,8 +55,13 @@ proc create_root_design { parentCell } {
   # Create interface ports
   set DDR [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:ddrx_rtl:1.0 DDR ]
   set GPIO_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 GPIO_0 ]
-  set o_cvita_dma [ create_bd_intf_port -mode Master -vlnv ettus.com:interfaces:chdr_rtl:1.0 o_cvita_dma ]
-  set i_cvita_dma [ create_bd_intf_port -mode Slave -vlnv ettus.com:interfaces:chdr_rtl:1.0 i_cvita_dma ]
+  set m_axis_dma [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:axis_rtl:1.0 m_axis_dma ]
+  set s_axis_dma [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s_axis_dma ]
+  set_property -dict [ list \
+   CONFIG.HAS_TLAST 1 \
+   CONFIG.TDATA_NUM_BYTES 8 \
+   CONFIG.TDEST_WIDTH 4 \
+  ] $s_axis_dma
   set m_axi_eth_dma [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 m_axi_eth_dma ]
   set_property -dict [ list \
    CONFIG.ADDR_WIDTH {32} \
@@ -224,6 +229,8 @@ proc create_root_design { parentCell } {
   set S_AXI_HP0_ARESETN [ create_bd_port -dir I -type rst S_AXI_HP0_ARESETN ]
   set bus_clk [ create_bd_port -dir I -type clk bus_clk ]
   set_property -dict [ list \
+   CONFIG.ASSOCIATED_BUSIF {m_axis_dma:s_axis_dma} \
+   CONFIG.ASSOCIATED_RESET {bus_rstn} \
    CONFIG.FREQ_HZ {200000000} \
  ] $bus_clk
   set bus_rstn [ create_bd_port -dir I -type rst bus_rstn ]
@@ -247,7 +254,7 @@ proc create_root_design { parentCell } {
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
   set_property -dict [ list \
    CONFIG.ENABLE_ADVANCED_OPTIONS {0} \
-   CONFIG.NUM_MI {7} \
+   CONFIG.NUM_MI {6} \
  ] $axi_interconnect_0
 
   # Create instance: dma
@@ -700,17 +707,16 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net axi_interconnect_0_M00_AXI [get_bd_intf_ports m_axi_eth_dma] [get_bd_intf_pins axi_interconnect_0/M00_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M01_AXI [get_bd_intf_ports m_axi_net] [get_bd_intf_pins axi_interconnect_0/M01_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M02_AXI [get_bd_intf_ports m_axi_xbar] [get_bd_intf_pins axi_interconnect_0/M02_AXI]
-  connect_bd_intf_net -intf_net axi_interconnect_0_M03_AXI [get_bd_intf_pins axi_interconnect_0/M03_AXI] [get_bd_intf_pins dma/s_axi_dma_rx_mapper]
   connect_bd_intf_net -intf_net axi_interconnect_0_M05_AXI [get_bd_intf_pins axi_interconnect_0/M05_AXI] [get_bd_intf_pins dma/s_axi_tx_dmac]
   connect_bd_intf_net -intf_net axi_protocol_converter_hp0_M_AXI [get_bd_intf_pins axi_interconnect_hp0/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
   connect_bd_intf_net -intf_net dma_M_AXI_RX_DMA [get_bd_intf_pins dma/M_AXI_RX_DMA] [get_bd_intf_pins processing_system7_0/S_AXI_HP1]
   connect_bd_intf_net -intf_net dma_M_AXI_TX_DMA [get_bd_intf_pins dma/M_AXI_TX_DMA] [get_bd_intf_pins processing_system7_0/S_AXI_HP2]
-  connect_bd_intf_net -intf_net i_cvita_dma_1 [get_bd_intf_ports i_cvita_dma] [get_bd_intf_pins dma/i_cvita_dma]
-  connect_bd_intf_net -intf_net o_cvita_dma_1 [get_bd_intf_ports o_cvita_dma] [get_bd_intf_pins dma/o_cvita_dma]
+  connect_bd_intf_net -intf_net s_axis_dma_1 [get_bd_intf_ports s_axis_dma] [get_bd_intf_pins dma/s_axis_dma]
+  connect_bd_intf_net -intf_net m_axis_dma_1 [get_bd_intf_ports m_axis_dma] [get_bd_intf_pins dma/m_axis_dma]
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_GPIO_0 [get_bd_intf_ports GPIO_0] [get_bd_intf_pins processing_system7_0/GPIO_0]
   connect_bd_intf_net -intf_net processing_system7_0_USBIND_0 [get_bd_intf_ports USBIND_0] [get_bd_intf_pins processing_system7_0/USBIND_0]
-  connect_bd_intf_net -intf_net s_axi_regfile_1 [get_bd_intf_pins axi_interconnect_0/M06_AXI] [get_bd_intf_pins dma/s_axi_regfile]
+  connect_bd_intf_net -intf_net s_axi_regfile_1 [get_bd_intf_pins axi_interconnect_0/M03_AXI] [get_bd_intf_pins dma/s_axi_regfile]
   connect_bd_intf_net -intf_net s_axi_rx_dmac_1 [get_bd_intf_pins axi_interconnect_0/M04_AXI] [get_bd_intf_pins dma/s_axi_rx_dmac]
 
   # Create port connections
@@ -727,10 +733,10 @@ proc create_root_design { parentCell } {
   connect_bd_net -net S_AXI_GP0_ARESETN_1 [get_bd_ports S_AXI_GP0_ARESETN] [get_bd_pins axi_interconnect_0/ARESETN]
   connect_bd_net -net S_AXI_HP0_ACLK_1 [get_bd_ports S_AXI_HP0_ACLK] [get_bd_pins axi_interconnect_hp0/ACLK] [get_bd_pins axi_interconnect_hp0/M00_ACLK] [get_bd_pins axi_interconnect_hp0/S00_ACLK] [get_bd_pins axi_interconnect_hp0/S01_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK]
   connect_bd_net -net S_AXI_HP0_ARESETN_1 [get_bd_ports S_AXI_HP0_ARESETN] [get_bd_pins axi_interconnect_hp0/ARESETN] [get_bd_pins axi_interconnect_hp0/M00_ARESETN] [get_bd_pins axi_interconnect_hp0/S00_ARESETN] [get_bd_pins axi_interconnect_hp0/S01_ARESETN]
-  connect_bd_net -net bus_clk [get_bd_ports bus_clk] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins dma/bus_clk]
-  connect_bd_net -net bus_rstn [get_bd_ports bus_rstn] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins dma/bus_rstn]
-  connect_bd_net -net clk40 [get_bd_ports clk40] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M06_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins dma/clk40] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP2_ACLK]
-  connect_bd_net -net clk40_rstn [get_bd_ports clk40_rstn] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M06_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins dma/clk40_rstn]
+  connect_bd_net -net bus_clk [get_bd_ports bus_clk] [get_bd_pins dma/bus_clk]
+  connect_bd_net -net bus_rstn [get_bd_ports bus_rstn] [get_bd_pins dma/bus_rstn]
+  connect_bd_net -net clk40 [get_bd_ports clk40] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins dma/clk40] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP2_ACLK]
+  connect_bd_net -net clk40_rstn [get_bd_ports clk40_rstn] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins dma/clk40_rstn]
   connect_bd_net -net ddr_vrn [get_bd_ports DDR_VRN] [get_bd_pins processing_system7_0/DDR_VRN]
   connect_bd_net -net ddr_vrp [get_bd_ports DDR_VRP] [get_bd_pins processing_system7_0/DDR_VRP]
   connect_bd_net -net dma_tx_irq [get_bd_pins dma/tx_irq] [get_bd_pins xlconcat_0/In2]
@@ -784,7 +790,6 @@ proc create_root_design { parentCell } {
   create_bd_addr_seg -range 0x00010000 -offset 0x43CD0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_3/s_axi/axi_lite] SEG_axi_tx_dmac_3_axi_lite
   create_bd_addr_seg -range 0x00010000 -offset 0x43CE0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_4/s_axi/axi_lite] SEG_axi_tx_dmac_4_axi_lite
   create_bd_addr_seg -range 0x00010000 -offset 0x43CF0000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/tx/axi_tx_dmac_5/s_axi/axi_lite] SEG_axi_tx_dmac_5_axi_lite
-  create_bd_addr_seg -range 0x00001000 -offset 0x42000000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/ps_dma_rx_mapper/S_AXI/Mem0] SEG_ps_dma_rx_mapper_Mem0
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_0/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_1/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
   create_bd_addr_seg -range 0x40000000 -offset 0x00000000 [get_bd_addr_spaces dma/tx/axi_tx_dmac_2/m_src_axi] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] SEG_processing_system7_0_HP2_DDR_LOWOCM
