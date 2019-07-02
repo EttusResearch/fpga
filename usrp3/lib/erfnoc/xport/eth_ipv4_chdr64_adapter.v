@@ -41,7 +41,8 @@ module eth_ipv4_chdr64_adapter #(
   parameter        CPU_FIFO_SIZE    = MTU,
   parameter        RT_TBL_SIZE      = 6,
   parameter        NODE_INST        = 0,
-  parameter [0:0]  DROP_UNKNOWN_MAC = 1
+  parameter [0:0]  DROP_UNKNOWN_MAC = 1,
+  parameter [0:0]  IS_CPU_ARM       = 0
 )(
   // Clocking and reset interface
   input  wire        clk,
@@ -135,6 +136,9 @@ module eth_ipv4_chdr64_adapter #(
   wire        x2e_chdr_tlast, x2e_chdr_tvalid, x2e_chdr_tready;
   wire [63:0] e2x_fifo_tdata;
   wire        e2x_fifo_tlast, e2x_fifo_tvalid, e2x_fifo_tready;
+  wire [63:0] e2c_fifo_tdata;
+  wire [3:0]  e2c_fifo_tuser;
+  wire        e2c_fifo_tlast, e2c_fifo_tvalid, e2c_fifo_tready;
 
   chdr_xport_adapter_generic #(
     .PROTOVER(PROTOVER), .CHDR_W(64),
@@ -170,6 +174,39 @@ module eth_ipv4_chdr64_adapter #(
     .ctrlport_resp_data (/* unused */)
   );
 
+  generate
+    if (IS_CPU_ARM == 1'b1) begin
+      //---------------------------------------
+      // Ethernet framer for ARM
+      //---------------------------------------
+
+      // Strip the 6 octet ethernet padding we used internally
+      // before sending to ARM.
+      // Put SOF into bit[3] of tuser.
+      axi64_to_xge64 arm_framer (
+        .clk(clk),
+        .reset(rst),
+        .clear(1'b0),
+        .s_axis_tdata(e2c_chdr_tdata),
+        .s_axis_tuser(e2c_chdr_tuser),
+        .s_axis_tlast(e2c_chdr_tlast),
+        .s_axis_tvalid(e2c_chdr_tvalid),
+        .s_axis_tready(e2c_chdr_tready),
+        .m_axis_tdata(e2c_fifo_tdata),
+        .m_axis_tuser(e2c_fifo_tuser),
+        .m_axis_tlast(e2c_fifo_tlast),
+        .m_axis_tvalid(e2c_fifo_tvalid),
+        .m_axis_tready(e2c_fifo_tready)
+      );
+    end else begin
+      assign e2c_fifo_tdata  = e2c_chdr_tdata;
+      assign e2c_fifo_tuser  = e2c_chdr_tuser;
+      assign e2c_fifo_tlast  = e2c_chdr_tlast;
+      assign e2c_fifo_tvalid = e2c_chdr_tvalid;
+      assign e2c_chdr_tready = e2c_fifo_tready;
+    end
+  endgenerate
+
   //---------------------------------------
   // E2X and E2C Output Buffering
   //---------------------------------------
@@ -180,8 +217,8 @@ module eth_ipv4_chdr64_adapter #(
     .WIDTH(64+4+1),.SIZE(CPU_FIFO_SIZE)
   ) cpu_fifo_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({e2c_chdr_tlast, e2c_chdr_tuser, e2c_chdr_tdata}),
-    .i_tvalid(e2c_chdr_tvalid), .i_tready(e2c_chdr_tready),
+    .i_tdata({e2c_fifo_tlast, e2c_fifo_tuser, e2c_fifo_tdata}),
+    .i_tvalid(e2c_fifo_tvalid), .i_tready(e2c_fifo_tready),
     .o_tdata({m_cpu_tlast, m_cpu_tuser, m_cpu_tdata}),
     .o_tvalid(m_cpu_tvalid), .o_tready(m_cpu_tready),
     .occupied(), .space()
@@ -284,6 +321,50 @@ module eth_ipv4_chdr64_adapter #(
     endcase
   end
 
+  wire [63:0] c2e_tdata;
+  wire [3:0]  c2e_tuser;
+  wire        c2e_tlast;
+  wire        c2e_tvalid;
+  wire        c2e_tready;
+
+  generate
+    if (IS_CPU_ARM == 1'b1) begin
+      //---------------------------------------
+      // Ethernet deframer for ARM
+      //---------------------------------------
+
+      // Add pad of 6 empty bytes to the ethernet packet going from the CPU to the
+      // SFP. This padding added before MAC addresses aligns the source and
+      // destination IP addresses, UDP headers etc.
+      // Note that the xge_mac_wrapper strips this padding to recreate the ethernet
+      // packet
+      arm_deframer inst_arm_deframer
+      (
+        .clk(clk),
+        .reset(rst),
+        .clear(1'b0),
+
+        .s_axis_tdata(s_cpu_tdata),
+        .s_axis_tuser(s_cpu_tuser),
+        .s_axis_tlast(s_cpu_tlast),
+        .s_axis_tvalid(s_cpu_tvalid),
+        .s_axis_tready(s_cpu_tready),
+
+        .m_axis_tdata(c2e_tdata),
+        .m_axis_tuser(c2e_tuser),
+        .m_axis_tlast(c2e_tlast),
+        .m_axis_tvalid(c2e_tvalid),
+        .m_axis_tready(c2e_tready)
+      );
+    end else begin
+      assign c2e_tdata    = s_cpu_tdata;
+      assign c2e_tuser    = s_cpu_tuser;
+      assign c2e_tlast    = s_cpu_tlast;
+      assign c2e_tvalid   = s_cpu_tvalid;
+      assign s_cpu_tready = c2e_tready;
+    end
+  endgenerate
+
   //---------------------------------------
   // X2E and C2E MUX
   //---------------------------------------
@@ -291,8 +372,8 @@ module eth_ipv4_chdr64_adapter #(
     .SIZE(2), .PRIO(0), .WIDTH(64+4), .PRE_FIFO_SIZE(0), .POST_FIFO_SIZE(1)
   ) eth_mux_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({s_cpu_tuser, s_cpu_tdata, x2e_framed_tuser, x2e_framed_tdata}), .i_tlast({s_cpu_tlast, x2e_framed_tlast}),
-    .i_tvalid({s_cpu_tvalid, x2e_framed_tvalid}), .i_tready({s_cpu_tready, x2e_framed_tready}),
+    .i_tdata({c2e_tuser, c2e_tdata, x2e_framed_tuser, x2e_framed_tdata}), .i_tlast({c2e_tlast, x2e_framed_tlast}),
+    .i_tvalid({c2e_tvalid, x2e_framed_tvalid}), .i_tready({c2e_tready, x2e_framed_tready}),
     .o_tdata({m_mac_tuser, m_mac_tdata}), .o_tlast(m_mac_tlast),
     .o_tvalid(m_mac_tvalid), .o_tready(m_mac_tready)
   );
