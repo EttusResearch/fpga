@@ -54,6 +54,8 @@ module radio_tx_core #(
   output reg         m_ctrlport_req_wr = 1'b0,
   output reg  [19:0] m_ctrlport_req_addr,
   output reg  [31:0] m_ctrlport_req_data,
+  output wire        m_ctrlport_req_has_time,
+  output reg  [63:0] m_ctrlport_req_time,
   output wire [ 9:0] m_ctrlport_req_portid,
   output wire [15:0] m_ctrlport_req_rem_epid,
   output wire [ 9:0] m_ctrlport_req_rem_portid,
@@ -366,10 +368,11 @@ module radio_tx_core #(
 
   localparam ST_ERR_IDLE     = 0;
   localparam ST_ERR_CODE     = 1;
-  localparam ST_ERR_TIME_LO  = 2;
-  localparam ST_ERR_TIME_HI  = 3;
 
-  reg [1:0] err_state = ST_ERR_IDLE;
+  reg [0:0] err_state = ST_ERR_IDLE;
+
+  // All ctrlport requests have a time
+  assign m_ctrlport_req_has_time = 1'b1;
 
   always @(posedge radio_clk) begin
     if (radio_rst) begin
@@ -377,43 +380,24 @@ module radio_tx_core #(
       err_state         <= ST_ERR_IDLE;
       next_error_ready  <= 1'b0;
     end else begin
-      m_ctrlport_req_wr <= 1'b0;
-      next_error_ready  <= 1'b0;
+      m_ctrlport_req_wr       <= 1'b0;
+      next_error_ready        <= 1'b0;
 
       case (err_state)
         ST_ERR_IDLE : begin
           if (next_error_valid) begin
             // Setup write of error code
-            m_ctrlport_req_wr   <= 1'b1;
-            m_ctrlport_req_addr <= reg_error_addr;
-            m_ctrlport_req_data <= {{(32-ERR_TX_CODE_W){1'b0}}, next_error_code};
-            next_error_ready    <= 1'b1;
-            err_state           <= ST_ERR_CODE;
+            m_ctrlport_req_wr       <= 1'b1;
+            m_ctrlport_req_addr     <= reg_error_addr;
+            m_ctrlport_req_data     <= {{(32-ERR_TX_CODE_W){1'b0}}, next_error_code};
+            m_ctrlport_req_time     <= next_error_time;
+            next_error_ready        <= 1'b1;
+            err_state               <= ST_ERR_CODE;
           end
         end
 
         ST_ERR_CODE : begin
-          // Wait for write of error code. Setup write of low word of time when done.
-          if (m_ctrlport_resp_ack) begin
-            m_ctrlport_req_wr   <= 1'b1;
-            m_ctrlport_req_data <= next_error_time[31:0];
-            m_ctrlport_req_addr <= reg_error_addr + 8;
-            err_state           <= ST_ERR_TIME_LO;
-          end
-        end
-
-        ST_ERR_TIME_LO : begin
-          // Wait for write of low word of time. Setup write of high word when done.
-          if (m_ctrlport_resp_ack) begin
-            m_ctrlport_req_wr   <= 1'b1;
-            m_ctrlport_req_data <= next_error_time[63:32];
-            m_ctrlport_req_addr <= reg_error_addr + 12;
-            err_state           <= ST_ERR_TIME_HI;
-          end
-        end
-
-        ST_ERR_TIME_HI : begin
-          // Wait for write of high word of time
+          // Wait for write of error code and timestamp
           if (m_ctrlport_resp_ack) begin
             err_state <= ST_ERR_IDLE;
           end

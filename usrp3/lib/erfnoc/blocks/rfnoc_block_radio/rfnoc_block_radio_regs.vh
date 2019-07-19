@@ -53,7 +53,7 @@ localparam REG_RX_MAX_WORDS_PER_PKT = 'h28; // Maximum packet length to build fr
 localparam REG_RX_ERR_PORT          = 'h2C; // Port ID for error reporting
 localparam REG_RX_ERR_REM_PORT      = 'h30; // Remote port ID for error reporting
 localparam REG_RX_ERR_REM_EPID      = 'h34; // Remote EPID (endpoint ID) for error reporting
-localparam REG_RX_ERR_ADDR          = 'h38; // Offset to which to write error code (ADDR+0) and time (ADDR+8)
+localparam REG_RX_ERR_ADDR          = 'h38; // Offset to write error code to
 
 // TX Control Registers
 localparam REG_TX_IDLE_VALUE   = 'h40; // Value to output when transmitter is idle
@@ -61,7 +61,7 @@ localparam REG_TX_ERROR_POLICY = 'h44; // Tx error policy
 localparam REG_TX_ERR_PORT     = 'h48; // Port ID for error reporting
 localparam REG_TX_ERR_REM_PORT = 'h4C; // Remote port ID for error reporting
 localparam REG_TX_ERR_REM_EPID = 'h50; // Remote EPID (endpoint ID) for error reporting
-localparam REG_TX_ERR_ADDR     = 'h54; // Offset to which to write error code (ADDR+0) and time (ADDR+8)
+localparam REG_TX_ERR_ADDR     = 'h54; // Offset to write error code to
 
 
 //-----------------------------------------------------------------------------

@@ -53,6 +53,8 @@ module radio_rx_core #(
   output reg         m_ctrlport_req_wr = 1'b0,
   output reg  [19:0] m_ctrlport_req_addr,
   output reg  [31:0] m_ctrlport_req_data,
+  output wire        m_ctrlport_req_has_time,
+  output reg  [63:0] m_ctrlport_req_time,
   output wire [ 9:0] m_ctrlport_req_portid,
   output wire [15:0] m_ctrlport_req_rem_epid,
   output wire [ 9:0] m_ctrlport_req_rem_portid,
@@ -88,9 +90,7 @@ module radio_rx_core #(
   `include "rfnoc_block_radio_regs.vh"
   `include "../../core/rfnoc_chdr_utils.vh"
 
-  localparam NUM_WORDS_LEN        = RX_CMD_NUM_WORDS_LEN;
-  localparam ERR_TIME_LOW_OFFSET  = 8;
-  localparam ERR_TIME_HIGH_OFFSET = 12;
+  localparam NUM_WORDS_LEN = RX_CMD_NUM_WORDS_LEN;
 
 
   //---------------------------------------------------------------------------
@@ -302,9 +302,7 @@ module radio_rx_core #(
   localparam ST_RUNNING            = 2;
   localparam ST_STOP               = 3;
   localparam ST_REPORT_ERR         = 4;
-  localparam ST_REPORT_ERR_CODE    = 5;
-  localparam ST_REPORT_ERR_TIME_LO = 6;
-  localparam ST_REPORT_ERR_TIME_HI = 7;
+  localparam ST_REPORT_ERR_WAIT    = 5;
 
   reg [              2:0] state   = ST_IDLE; // Current state
   reg [NUM_WORDS_LEN-1:0] words_left;        // Words left in current command
@@ -325,6 +323,8 @@ module radio_rx_core #(
 
   reg time_now, time_past;
 
+  // All ctrlport requests have a time
+  assign m_ctrlport_req_has_time = 1'b1;
 
   always @(posedge radio_clk) begin
     if (radio_rst) begin
@@ -335,11 +335,11 @@ module radio_rx_core #(
       first_word        <= 1'b1;
     end else begin
       // Default assignments
-      out_fifo_tvalid   <= 1'b0;
-      out_fifo_tlast    <= 1'b0;
-      out_fifo_teob     <= 1'b0;
-      cmd_done          <= 1'b0;
-      m_ctrlport_req_wr <= 1'b0;
+      out_fifo_tvalid         <= 1'b0;
+      out_fifo_tlast          <= 1'b0;
+      out_fifo_teob           <= 1'b0;
+      cmd_done                <= 1'b0;
+      m_ctrlport_req_wr       <= 1'b0;
 
       // Register the time comparisons so they don't become the critical path
       time_now  <= (radio_time == cmd_time);
@@ -438,31 +438,12 @@ module radio_rx_core #(
           m_ctrlport_req_data                    <= 0;
           m_ctrlport_req_data[ERR_RX_CODE_W-1:0] <= error_code;
           m_ctrlport_req_addr                    <= reg_error_addr;
-          state                                  <= ST_REPORT_ERR_CODE;
+          m_ctrlport_req_time                    <= error_time;
+          state                                  <= ST_REPORT_ERR_WAIT;
         end
 
-        ST_REPORT_ERR_CODE : begin
-          // Wait for write of error code. Setup write of low word of time when done.
-          if (m_ctrlport_resp_ack) begin
-            m_ctrlport_req_wr   <= 1'b1;
-            m_ctrlport_req_data <= error_time[31:0];
-            m_ctrlport_req_addr <= reg_error_addr + ERR_TIME_LOW_OFFSET;
-            state               <= ST_REPORT_ERR_TIME_LO;
-          end
-        end
-
-        ST_REPORT_ERR_TIME_LO : begin
-          // Wait for write of low word of time. Setup write of high word when done.
-          if (m_ctrlport_resp_ack) begin
-            m_ctrlport_req_wr   <= 1'b1;
-            m_ctrlport_req_data <= error_time[63:32];
-            m_ctrlport_req_addr <= reg_error_addr + ERR_TIME_HIGH_OFFSET;
-            state               <= ST_REPORT_ERR_TIME_HI;
-          end
-        end
-
-        ST_REPORT_ERR_TIME_HI : begin
-          // Wait for write of high word of time
+        ST_REPORT_ERR_WAIT : begin
+          // Wait for write of error code and timestamp to complete
           if (m_ctrlport_resp_ack) begin
             state <= ST_IDLE;
           end

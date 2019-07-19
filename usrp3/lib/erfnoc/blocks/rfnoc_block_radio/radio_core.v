@@ -46,6 +46,8 @@ module radio_core #(
   output wire [15:0] m_ctrlport_req_rem_epid,
   output wire [ 9:0] m_ctrlport_req_rem_portid,
   output wire [31:0] m_ctrlport_req_data,
+  output wire        m_ctrlport_req_has_time,
+  output wire [63:0] m_ctrlport_req_time,
   input  wire        m_ctrlport_resp_ack,
 
 
@@ -184,10 +186,12 @@ module radio_core #(
   // Tx and Rx error reporting signals
   wire        ctrlport_err_tx_req_wr,         ctrlport_err_rx_req_wr;
   wire [19:0] ctrlport_err_tx_req_addr,       ctrlport_err_rx_req_addr;
+  wire [31:0] ctrlport_err_tx_req_data,       ctrlport_err_rx_req_data;
+  wire        ctrlport_err_tx_req_has_time,   ctrlport_err_rx_req_has_time;
+  wire [63:0] ctrlport_err_tx_req_time,       ctrlport_err_rx_req_time;
   wire [ 9:0] ctrlport_err_tx_req_portid,     ctrlport_err_rx_req_portid;
   wire [15:0] ctrlport_err_tx_req_rem_epid,   ctrlport_err_rx_req_rem_epid;
   wire [ 9:0] ctrlport_err_tx_req_rem_portid, ctrlport_err_rx_req_rem_portid;
-  wire [31:0] ctrlport_err_tx_req_data,       ctrlport_err_rx_req_data;
   wire        ctrlport_err_tx_resp_ack,       ctrlport_err_rx_resp_ack;
 
 
@@ -205,8 +209,8 @@ module radio_core #(
     .s_ctrlport_req_rem_portid ({ctrlport_err_tx_req_rem_portid, ctrlport_err_rx_req_rem_portid}),
     .s_ctrlport_req_data       ({ctrlport_err_tx_req_data,       ctrlport_err_rx_req_data}),
     .s_ctrlport_req_byte_en    (8'hFF),
-    .s_ctrlport_req_has_time   (2'b0),
-    .s_ctrlport_req_time       (128'b0),
+    .s_ctrlport_req_has_time   ({ctrlport_err_tx_req_has_time,   ctrlport_err_rx_req_has_time}),
+    .s_ctrlport_req_time       ({ctrlport_err_tx_req_time,       ctrlport_err_rx_req_time}),
     .s_ctrlport_resp_ack       ({ctrlport_err_tx_resp_ack,       ctrlport_err_rx_resp_ack}),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
@@ -218,8 +222,8 @@ module radio_core #(
     .m_ctrlport_req_rem_portid (m_ctrlport_req_rem_portid),
     .m_ctrlport_req_data       (m_ctrlport_req_data),
     .m_ctrlport_req_byte_en    (),
-    .m_ctrlport_req_has_time   (),
-    .m_ctrlport_req_time       (),
+    .m_ctrlport_req_has_time   (m_ctrlport_req_has_time),
+    .m_ctrlport_req_time       (m_ctrlport_req_time),
     .m_ctrlport_resp_ack       (m_ctrlport_resp_ack),
     .m_ctrlport_resp_status    (2'b0),
     .m_ctrlport_resp_data      (0)
@@ -304,6 +308,8 @@ module radio_core #(
     .m_ctrlport_req_wr         (ctrlport_err_tx_req_wr),
     .m_ctrlport_req_addr       (ctrlport_err_tx_req_addr),
     .m_ctrlport_req_data       (ctrlport_err_tx_req_data),
+    .m_ctrlport_req_has_time   (ctrlport_err_tx_req_has_time),
+    .m_ctrlport_req_time       (ctrlport_err_tx_req_time),
     .m_ctrlport_req_portid     (ctrlport_err_tx_req_portid),
     .m_ctrlport_req_rem_epid   (ctrlport_err_tx_req_rem_epid),
     .m_ctrlport_req_rem_portid (ctrlport_err_tx_req_rem_portid),
@@ -341,6 +347,8 @@ module radio_core #(
     .m_ctrlport_req_wr         (ctrlport_err_rx_req_wr),
     .m_ctrlport_req_addr       (ctrlport_err_rx_req_addr),
     .m_ctrlport_req_data       (ctrlport_err_rx_req_data),
+    .m_ctrlport_req_has_time   (ctrlport_err_rx_req_has_time),
+    .m_ctrlport_req_time       (ctrlport_err_rx_req_time),
     .m_ctrlport_req_portid     (ctrlport_err_rx_req_portid),
     .m_ctrlport_req_rem_epid   (ctrlport_err_rx_req_rem_epid),
     .m_ctrlport_req_rem_portid (ctrlport_err_rx_req_rem_portid),

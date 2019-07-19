@@ -521,40 +521,13 @@ module rfnoc_block_radio_tb #(
       word                            == error &&
       ctrl_packet.op_word.op_code     == CTRL_OP_WRITE &&
       ctrl_packet.op_word.address     == TX_ERR_ADDRESS &&
+      ctrl_packet.header.is_ack       == 1'b0 &&
+      ctrl_packet.header.has_time     == 1'b1 &&
+      ctrl_packet.header.num_data     == 1 &&
       ctrl_packet.header.dst_port     == TX_ERR_DST_PORT &&
       ctrl_packet.header.rem_dst_port == TX_ERR_REM_DST_PORT &&
       ctrl_packet.header.rem_dst_epid == TX_ERR_REM_DST_EPID,
       "Unexpected error code response");
-
-    // Send acknowledgment
-    ctrl_packet.header = 0;
-    ctrl_packet.header.is_ack = 1;
-    blk_ctrl.get_ctrl_bfm().put_ctrl(ctrl_packet);
-
-    // Get error time, low word
-    blk_ctrl.get_ctrl_bfm().get_ctrl(ctrl_packet);
-    test.assert_error(
-      ctrl_packet.op_word.op_code     == CTRL_OP_WRITE &&
-      ctrl_packet.op_word.address     == TX_ERR_ADDRESS+8 &&
-      ctrl_packet.header.dst_port     == TX_ERR_DST_PORT &&
-      ctrl_packet.header.rem_dst_port == TX_ERR_REM_DST_PORT &&
-      ctrl_packet.header.rem_dst_epid == TX_ERR_REM_DST_EPID,
-      "Unexpected error time response");
-
-    // Send acknowledgment
-    ctrl_packet.header = 0;
-    ctrl_packet.header.is_ack = 1;
-    blk_ctrl.get_ctrl_bfm().put_ctrl(ctrl_packet);
-
-    // Get error time, high word
-    blk_ctrl.get_ctrl_bfm().get_ctrl(ctrl_packet);
-    test.assert_error(
-      ctrl_packet.op_word.op_code     == CTRL_OP_WRITE &&
-      ctrl_packet.op_word.address     == TX_ERR_ADDRESS+12 &&
-      ctrl_packet.header.dst_port     == TX_ERR_DST_PORT &&
-      ctrl_packet.header.rem_dst_port == TX_ERR_REM_DST_PORT &&
-      ctrl_packet.header.rem_dst_epid == TX_ERR_REM_DST_EPID,
-      "Unexpected error time response");
 
     // Send acknowledgment
     ctrl_packet.header = 0;

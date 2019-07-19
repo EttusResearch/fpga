@@ -150,6 +150,8 @@ module rfnoc_block_radio #(
   wire [15:0] ctrlport_err_req_rem_epid;
   wire [ 9:0] ctrlport_err_req_rem_portid;
   wire [31:0] ctrlport_err_req_data;
+  wire        ctrlport_err_req_has_time;
+  wire [63:0] ctrlport_err_req_time;
   wire        ctrlport_err_resp_ack;
 
 
@@ -215,8 +217,8 @@ module rfnoc_block_radio #(
     .s_ctrlport_req_rem_portid (ctrlport_err_req_rem_portid),
     .s_ctrlport_req_data       (ctrlport_err_req_data),
     .s_ctrlport_req_byte_en    (4'hF),
-    .s_ctrlport_req_has_time   (1'b0),
-    .s_ctrlport_req_time       (64'b0),
+    .s_ctrlport_req_has_time   (ctrlport_err_req_has_time),
+    .s_ctrlport_req_time       (ctrlport_err_req_time),
     .s_ctrlport_resp_ack       (ctrlport_err_resp_ack),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
@@ -392,7 +394,9 @@ module rfnoc_block_radio #(
   wire [10*NUM_PORTS-1:0] ctrlport_err_radio_req_portid;
   wire [16*NUM_PORTS-1:0] ctrlport_err_radio_req_rem_epid;
   wire [10*NUM_PORTS-1:0] ctrlport_err_radio_req_rem_portid;
-  wire [32*NUM_PORTS-1:0] ctrlport_err_radio_resp_data;
+  wire [32*NUM_PORTS-1:0] ctrlport_err_radio_req_data;
+  wire [   NUM_PORTS-1:0] ctrlport_err_radio_req_has_time;
+  wire [64*NUM_PORTS-1:0] ctrlport_err_radio_req_time;
   wire [   NUM_PORTS-1:0] ctrlport_err_radio_resp_ack;
 
   ctrlport_combiner #(
@@ -407,10 +411,10 @@ module rfnoc_block_radio #(
     .s_ctrlport_req_portid     (ctrlport_err_radio_req_portid),
     .s_ctrlport_req_rem_epid   (ctrlport_err_radio_req_rem_epid),
     .s_ctrlport_req_rem_portid (ctrlport_err_radio_req_rem_portid),
-    .s_ctrlport_req_data       (ctrlport_err_radio_resp_data),
+    .s_ctrlport_req_data       (ctrlport_err_radio_req_data),
     .s_ctrlport_req_byte_en    ({4*NUM_PORTS{1'b1}}),
-    .s_ctrlport_req_has_time   ({NUM_PORTS{1'b0}}),
-    .s_ctrlport_req_time       ({NUM_PORTS{64'b0}}),
+    .s_ctrlport_req_has_time   (ctrlport_err_radio_req_has_time),
+    .s_ctrlport_req_time       (ctrlport_err_radio_req_time),
     .s_ctrlport_resp_ack       (ctrlport_err_radio_resp_ack),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
@@ -422,8 +426,8 @@ module rfnoc_block_radio #(
     .m_ctrlport_req_rem_portid (ctrlport_err_req_rem_portid),
     .m_ctrlport_req_data       (ctrlport_err_req_data),
     .m_ctrlport_req_byte_en    (),
-    .m_ctrlport_req_has_time   (),
-    .m_ctrlport_req_time       (),
+    .m_ctrlport_req_has_time   (ctrlport_err_req_has_time),
+    .m_ctrlport_req_time       (ctrlport_err_req_time),
     .m_ctrlport_resp_ack       (ctrlport_err_resp_ack),
     .m_ctrlport_resp_status    (2'b0),
     .m_ctrlport_resp_data      (32'b0)
@@ -498,7 +502,9 @@ module rfnoc_block_radio #(
         .m_ctrlport_req_portid     (ctrlport_err_radio_req_portid[i*10 +: 10]),
         .m_ctrlport_req_rem_epid   (ctrlport_err_radio_req_rem_epid[i*16 +: 16]),
         .m_ctrlport_req_rem_portid (ctrlport_err_radio_req_rem_portid[i*10 +: 10]),
-        .m_ctrlport_req_data       (ctrlport_err_radio_resp_data[i*32 +: 32]),
+        .m_ctrlport_req_data       (ctrlport_err_radio_req_data[i*32 +: 32]),
+        .m_ctrlport_req_has_time   (ctrlport_err_radio_req_has_time[i]),
+        .m_ctrlport_req_time       (ctrlport_err_radio_req_time[i*64 +: 64]),
         .m_ctrlport_resp_ack       (ctrlport_err_radio_resp_ack[i]),
 
         // Tx Data Stream
