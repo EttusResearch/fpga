@@ -137,6 +137,8 @@ module rfnoc_block_radio #(
   wire        ctrlport_reg_req_wr;
   wire        ctrlport_reg_req_rd;
   wire [19:0] ctrlport_reg_req_addr;
+  wire        ctrlport_reg_has_time;
+  wire [63:0] ctrlport_reg_time;
   wire [31:0] ctrlport_reg_req_data;
   wire [31:0] ctrlport_reg_resp_data;
   wire        ctrlport_reg_resp_ack;
@@ -200,8 +202,8 @@ module rfnoc_block_radio #(
     .m_ctrlport_req_addr       (ctrlport_reg_req_addr),
     .m_ctrlport_req_data       (ctrlport_reg_req_data),
     .m_ctrlport_req_byte_en    (),
-    .m_ctrlport_req_has_time   (),
-    .m_ctrlport_req_time       (),
+    .m_ctrlport_req_has_time   (ctrlport_reg_has_time),
+    .m_ctrlport_req_time       (ctrlport_reg_time),
     .m_ctrlport_resp_ack       (ctrlport_reg_resp_ack),
     .m_ctrlport_resp_status    (AXIS_CTRL_STS_OKAY),
     .m_ctrlport_resp_data      (ctrlport_reg_resp_data),
@@ -285,13 +287,9 @@ module rfnoc_block_radio #(
   wire [31:0] ctrlport_core_resp_data;
 
   ctrlport_decoder_param #(
-    .NUM_SLAVES  (3),
-    .PORT0_BASE  (SHARED_BASE_ADDR),
-    .PORT0_ADDR_W(SHARED_ADDR_W),
-    .PORT1_BASE  (RADIO_BASE_ADDR),
-    .PORT1_ADDR_W(RADIO_ADDR_W + $clog2(NUM_PORTS)),
-    .PORT2_BASE  (PERIPH_BASE_ADDR),
-    .PORT2_ADDR_W(PERIPH_ADDR_W)
+    .NUM_SLAVES (3),
+    .PORT_BASE  ({PERIPH_BASE_ADDR, RADIO_BASE_ADDR,                  SHARED_BASE_ADDR}),
+    .PORT_ADDR_W({PERIPH_ADDR_W,    RADIO_ADDR_W + $clog2(NUM_PORTS), SHARED_ADDR_W})
   ) ctrlport_decoder_param_i (
     .ctrlport_clk            (radio_clk),
     .ctrlport_rst            (radio_rst),
@@ -300,8 +298,8 @@ module rfnoc_block_radio #(
     .s_ctrlport_req_addr     (ctrlport_reg_req_addr),
     .s_ctrlport_req_data     (ctrlport_reg_req_data),
     .s_ctrlport_req_byte_en  (4'b0),
-    .s_ctrlport_req_has_time (1'b0),
-    .s_ctrlport_req_time     (64'b0),
+    .s_ctrlport_req_has_time (ctrlport_reg_has_time),
+    .s_ctrlport_req_time     (ctrlport_reg_time),
     .s_ctrlport_resp_ack     (ctrlport_reg_resp_ack),
     .s_ctrlport_resp_status  (),
     .s_ctrlport_resp_data    (ctrlport_reg_resp_data),

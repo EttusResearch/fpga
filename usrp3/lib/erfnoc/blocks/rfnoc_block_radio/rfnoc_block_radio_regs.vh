@@ -14,8 +14,8 @@
 // Shared Register Offsets (One Set Per Radio NoC Block)
 //-----------------------------------------------------------------------------
 
-localparam SHARED_BASE_ADDR = 'h00;  // Base address for shared radio registers
-localparam SHARED_ADDR_W    = 4;     // Address space size for shared registers
+localparam SHARED_BASE_ADDR = 20'h00;  // Base address for shared radio registers
+localparam SHARED_ADDR_W    = 4;       // Address space size for shared registers
 
 localparam REG_COMPAT_NUM = 'h00;  // Compatibility number register offset
 
@@ -33,10 +33,10 @@ localparam REG_COMPAT_NUM = 'h00;  // Compatibility number register offset
 //
 //-----------------------------------------------------------------------------
 
-localparam RADIO_BASE_ADDR = 'h1000; // Base address of first radio. Choose a 
-                                     // nice big power of 2 so we can just pass 
-                                     // the lower bits to the radio cores.
-localparam RADIO_ADDR_W    = 7;      // Address space size per radio
+localparam RADIO_BASE_ADDR = 20'h1000; // Base address of first radio. Choose a 
+                                       // nice big power of 2 so we can just pass 
+                                       // the lower bits to the radio cores.
+localparam RADIO_ADDR_W    = 7;        // Address space size per radio
 
 // General Radio Registers
 localparam REG_LOOPBACK_EN   = 'h00;   // Loopback enable (connect Tx output to Rx input)
