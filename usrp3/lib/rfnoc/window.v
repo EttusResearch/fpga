@@ -21,9 +21,9 @@ module window
    wire         n0_tready, n1_tready, n2_tready, n3_tready, n4_tready, n5_tready, n6_tready, n7_tready, n8_tready, n9_tready;
 
    wire [MAX_LOG2_OF_WINDOW_SIZE-1:0] n2_tdata;
-   wire [MAX_LOG2_OF_WINDOW_SIZE-1:0] max;
+   wire [MAX_LOG2_OF_WINDOW_SIZE:0] max;
 
-   setting_reg #(.my_addr(SR_WINDOW_SIZE), .width(MAX_LOG2_OF_WINDOW_SIZE)) reg_max
+   setting_reg #(.my_addr(SR_WINDOW_SIZE), .width(MAX_LOG2_OF_WINDOW_SIZE+1)) reg_max
      (.clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data), .out(max));
 
    split_stream_fifo #(.WIDTH(32), .ACTIVE_MASK(4'b0011)) split_head
