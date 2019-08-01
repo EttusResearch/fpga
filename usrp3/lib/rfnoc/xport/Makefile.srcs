@@ -12,4 +12,5 @@ chdr_xport_adapter_generic.v \
 eth_ipv4_chdr64_adapter.v \
 eth_ipv4_chdr64_dispatch.v \
 eth_interface.v \
+liberio_chdr64_adapter.v \
 ))
