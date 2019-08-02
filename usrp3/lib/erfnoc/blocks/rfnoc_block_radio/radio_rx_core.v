@@ -27,6 +27,7 @@
 //   SAMP_W    : Width of a radio sample
 //   NSPC      : Number of radio samples per radio clock cycle
 //
+`default_nettype none
 
 
 module radio_rx_core #(
@@ -107,8 +108,11 @@ module radio_rx_core #(
   reg  [             15:0] reg_error_rem_epid   = 0;  // Remote EPID to use for error reporting
   reg  [              9:0] reg_error_rem_portid = 0;  // Remote port ID to use for error reporting
   reg  [             19:0] reg_error_addr       = 0;  // Address to use for error reporting
-  wire                     reg_busy;                  // Indicates if the Rx state machine is busy with a command
 
+  wire [15:0] cmd_fifo_space;   // Empty space in the command FIFO
+  reg         cmd_stop     = 0; // Indicates a full stop request
+  wire        cmd_stop_ack;     // Acknowledgment that a stop has completed
+  reg         clear_fifo   = 0; // Signal to clear the command FIFO
 
   always @(posedge radio_clk) begin
     if (radio_rst) begin
@@ -123,20 +127,33 @@ module radio_rx_core #(
       reg_error_rem_epid   <= 0;
       reg_error_rem_portid <= 0;
       reg_error_addr       <= 0;
+      clear_fifo           <= 0;
+      cmd_stop             <= 0;
     end else begin
       // Default assignments
       s_ctrlport_resp_ack  <= 0;
       s_ctrlport_resp_data <= 0;
       reg_cmd_valid        <= 0;
+      clear_fifo           <= 0;
+
+      // Clear stop register when we enter the STOP state
+      if (cmd_stop_ack) cmd_stop <= 1'b0;
 
       // Handle register writes
       if (s_ctrlport_req_wr) begin
         case (s_ctrlport_req_addr)
           REG_RX_CMD: begin
-            reg_cmd_valid       <= 1;
-            reg_cmd_word        <= s_ctrlport_req_data[RX_CMD_LEN-1:0];
-            reg_cmd_timed       <= s_ctrlport_req_data[RX_CMD_TIMED_POS];
+            // All commands go into the command FIFO except STOP
+            reg_cmd_valid       <= (s_ctrlport_req_data[RX_CMD_LEN-1:0] != RX_CMD_STOP);
+            reg_cmd_word        <=  s_ctrlport_req_data[RX_CMD_LEN-1:0];
+            reg_cmd_timed       <=  s_ctrlport_req_data[RX_CMD_TIMED_POS];
             s_ctrlport_resp_ack <= 1;
+
+            // cmd_stop must remain asserted until it has completed
+            if (!cmd_stop || cmd_stop_ack) begin
+              cmd_stop <= (s_ctrlport_req_data[RX_CMD_LEN-1:0] == RX_CMD_STOP);
+            end
+            clear_fifo <= (s_ctrlport_req_data[RX_CMD_LEN-1:0] == RX_CMD_STOP);
           end
           REG_RX_CMD_NUM_WORDS_LO: begin
             reg_cmd_num_words[31:0] <= s_ctrlport_req_data;
@@ -181,8 +198,9 @@ module radio_rx_core #(
       if (s_ctrlport_req_rd) begin
         case (s_ctrlport_req_addr)
           REG_RX_STATUS: begin
-            s_ctrlport_resp_data[RX_STATUS_BUSY_POS] <= reg_busy;
-            s_ctrlport_resp_ack                      <= 1;
+            s_ctrlport_resp_data[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] 
+                                <= cmd_fifo_space[CMD_FIFO_SPACE_LEN-1:0];
+            s_ctrlport_resp_ack <= 1;
           end
           REG_RX_CMD: begin
             s_ctrlport_resp_data[RX_CMD_LEN-1:0]   <= reg_cmd_word;
@@ -233,63 +251,32 @@ module radio_rx_core #(
 
 
   //---------------------------------------------------------------------------
-  // Command Holding Register
-  //---------------------------------------------------------------------------
-  //
-  // This register stores the active command. Having a separate register 
-  // prevents new register writes from affecting the current command. Note that 
-  // any command will be dropped if there is already an active command that 
-  // hasn't yet completed.
-  //
+  // Command Queue
   //---------------------------------------------------------------------------
 
-  reg [             63:0] cmd_time;          // Time for next start of command
-  reg                     cmd_timed;         // Command is timed (use cmd_time)
-  reg [NUM_WORDS_LEN-1:0] cmd_num_words;     // Number of words for next command
-  reg                     cmd_continuous;    // Command is continuous (ignore cmd_num_words)
-  reg                     cmd_stop   = 1'b0; // Stop command was received
-  reg                     cmd_active = 1'b0; // Command is currently active
-  reg                     cmd_done;          // Handshake signal to indicate the
-                                             // active command has completed.
+  wire [             63:0] cmd_time;        // Time for next start of command
+  wire                     cmd_timed;       // Command is timed (use cmd_time)
+  wire [NUM_WORDS_LEN-1:0] cmd_num_words;   // Number of words for next command
+  wire                     cmd_continuous;  // Command is continuous (ignore cmd_num_words)
+  wire                     cmd_valid;       // cmd_* is a valid command
+  wire                     cmd_done;        // Command has completed and can be popped from FIFO
 
-  always @(posedge radio_clk) begin
-    if (radio_rst) begin
-      cmd_active <= 1'b0;
-      cmd_stop   <= 1'b0;
-    end else begin
-      if (!cmd_active) begin
-        // There's currently no command in progress. Check if a new command has 
-        // been written.
-        if (reg_cmd_valid) begin
-          // Load the new command
-          cmd_time       <= reg_cmd_time;
-          cmd_timed      <= reg_cmd_timed;
-          cmd_num_words  <= reg_cmd_num_words;
-          cmd_continuous <= (reg_cmd_word == RX_CMD_CONTINUOUS);
-          cmd_active     <= 1'b1;
-          cmd_stop       <= (reg_cmd_word == RX_CMD_STOP);
-        end
-      end else begin
-        // There is currently a command in progress. Check if a new command has
-        // been written.
-        if (reg_cmd_valid) begin
-          if(reg_cmd_word == RX_CMD_STOP) begin
-            // Stop the current command
-            cmd_stop <= 1'b1;
-          end
-          // Any other command gets dropped since we can't start a new command 
-          // while the current one is in progress.
-        end
-
-        // Check if the active command has finished
-        if (cmd_done) begin
-          // Reset control bits for a new command.
-          cmd_active <= 1'b0;
-          cmd_stop   <= 1'b0;
-        end
-      end
-    end
-  end
+  axi_fifo #(
+    .WIDTH (64 + 1 + NUM_WORDS_LEN + 1),
+    .SIZE  (5)      // Ideally, this size will lead to an SRL-based FIFO
+  ) cmd_fifo (
+    .clk      (radio_clk),
+    .reset    (radio_rst),
+    .clear    (clear_fifo),
+    .i_tdata  ({ reg_cmd_time, reg_cmd_timed, reg_cmd_num_words, (reg_cmd_word == RX_CMD_CONTINUOUS) }),
+    .i_tvalid (reg_cmd_valid),
+    .i_tready (),
+    .o_tdata  ({ cmd_time, cmd_timed, cmd_num_words, cmd_continuous }),
+    .o_tvalid (cmd_valid),
+    .o_tready (cmd_done),
+    .space    (cmd_fifo_space),
+    .occupied ()
+  );
 
 
   //---------------------------------------------------------------------------
@@ -326,6 +313,10 @@ module radio_rx_core #(
   // All ctrlport requests have a time
   assign m_ctrlport_req_has_time = 1'b1;
 
+  // Acknowledge STOP requests and pop the command FIFO in the STOP state
+  assign cmd_stop_ack = (state == ST_STOP);
+  assign cmd_done     = (state == ST_STOP);
+
   always @(posedge radio_clk) begin
     if (radio_rst) begin
       state             <= ST_IDLE;
@@ -338,7 +329,6 @@ module radio_rx_core #(
       out_fifo_tvalid         <= 1'b0;
       out_fifo_tlast          <= 1'b0;
       out_fifo_teob           <= 1'b0;
-      cmd_done                <= 1'b0;
       m_ctrlport_req_wr       <= 1'b0;
 
       // Register the time comparisons so they don't become the critical path
@@ -349,24 +339,23 @@ module radio_rx_core #(
         ST_IDLE : begin
           // Wait for a new command to arrive and allow a cycle for the time 
           // comparisons to update.
-          if (cmd_active) begin
+          if (cmd_valid) begin
             state <= ST_TIME_CHECK;
+          end else if (cmd_stop) begin
+            state <= ST_STOP;
           end
           first_word <= 1'b1;
         end
 
         ST_TIME_CHECK : begin
           if (cmd_stop) begin
-            // Nothing to do but clear the cmd_active bit (timed STOP
-            // commands are not supported).
-            cmd_done <= 1'b1;
-            state    <= ST_STOP;
+            // Nothing to do but stop (timed STOP commands are not supported)
+            state <= ST_STOP;
           end else if (cmd_timed && time_past) begin
             // Got this command later than its execution time
             //synthesis translate_off
             $display("WARNING: radio_rx_core: Late command error");
             //synthesis translate_on
-            cmd_done   <= 1'b1;
             error_code <= ERR_RX_LATE_CMD;
             error_time <= radio_time;
             state      <= ST_REPORT_ERR;
@@ -396,7 +385,6 @@ module radio_rx_core #(
             if ((words_left == 1 && !cmd_continuous) || cmd_stop) begin
               // This command has finished, or we've been asked to stop.
               state          <= ST_STOP;
-              cmd_done       <= 1'b1;
               out_fifo_tlast <= 1'b1;
               out_fifo_teob  <= 1'b1;
               first_word     <= 1'b1;
@@ -415,7 +403,6 @@ module radio_rx_core #(
               //synthesis translate_off
               $display("WARNING: radio_rx_core: Overrun error");
               //synthesis translate_on
-              cmd_done       <= 1'b1;
               out_fifo_tlast <= 1'b1;
               out_fifo_teob  <= 1'b1;
               seq_num        <= seq_num + 1;
@@ -428,7 +415,8 @@ module radio_rx_core #(
         end
 
         ST_STOP : begin
-          // This state adds a clock cycle for the cmd_active bit to clear
+          // This single-cycle state allows time for STOP to be acknowledged 
+          // and for the command FIFO to be popped.
           state <= ST_IDLE;
         end
 
@@ -445,7 +433,7 @@ module radio_rx_core #(
         ST_REPORT_ERR_WAIT : begin
           // Wait for write of error code and timestamp to complete
           if (m_ctrlport_resp_ack) begin
-            state <= ST_IDLE;
+            state <= ST_STOP;
           end
         end
 
@@ -455,8 +443,7 @@ module radio_rx_core #(
   end
 
 
-  assign radio_rx_running = (state == ST_RUNNING);             // We're actively acquiring
-  assign reg_busy         = (state != ST_IDLE) || cmd_active;  // We're busy with a command
+  assign radio_rx_running = (state == ST_RUNNING);  // We're actively acquiring
 
   // Directly connect the port ID, remote port ID, and remote EPID since they 
   // are only used for error reporting.
@@ -496,9 +483,12 @@ module radio_rx_core #(
     if (radio_rst) begin
       out_fifo_almost_full <= 1'b0;
     end else begin
-      out_fifo_almost_full <= (out_fifo_space < 4);
+      out_fifo_almost_full <= (out_fifo_space < 5);
     end
   end
 
 
 endmodule
+
+
+`default_nettype wire

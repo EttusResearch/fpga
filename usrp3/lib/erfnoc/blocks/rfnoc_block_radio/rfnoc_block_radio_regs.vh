@@ -79,7 +79,9 @@ localparam RX_CMD_NUM_WORDS_LEN = 48; // Number of bits that are used in the 64-
                                       // NUM_WORDS register (must be in range [33:64]).
 
 // REG_RX_STATUS bit fields
-localparam RX_STATUS_BUSY_POS = 0;  // Indicates if radio is busy executing a command.
+localparam CMD_FIFO_SPACE_POS = 0;  // Indicates if radio is busy executing a command.
+localparam CMD_FIFO_SPACE_LEN = 6;  // Length of the FIFO_SPACE field
+localparam CMD_FIFO_SPACE_MAX = 32; // Size of command FIFO
 
 // REG_TX_ERROR_POLICY bit fields
 localparam TX_ERR_POLICY_LEN  = 2; // Length of error policy bit field

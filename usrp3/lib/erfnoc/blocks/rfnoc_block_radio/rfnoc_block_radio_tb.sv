@@ -334,6 +334,7 @@ module rfnoc_block_radio_tb #(
     int              num_samples;     // Number of samples to send
     int              byte_length;     // Number of data bytes in next packet
     int              expected_length; // Expected byte length of the next packet
+    int              valid_words;     // Number of valid chdr_word_t in next packet
 
     num_samples = num_words * NIPC;
 
@@ -363,7 +364,8 @@ module rfnoc_block_radio_tb #(
       );
 
       // Loop over the packet, one chdr_word_t at a time
-      foreach (data[i]) begin
+      valid_words = int'($ceil(real'(byte_length) / ($bits(chdr_word_t)/8)));
+      for (int i = 0; i < valid_words; i++) begin
         // Check each sample of the next chdr_word_t value
         for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/ITEM_W; sub_sample++) begin
           chdr_word_t word;
@@ -377,6 +379,9 @@ module rfnoc_block_radio_tb #(
           );
           sample_val++;
           sample_count++;
+
+          // Check if the word is only partially full
+          if (sample_count >= num_samples) break;
         end
       end
     end
@@ -604,9 +609,9 @@ module rfnoc_block_radio_tb #(
     test.start_test("Rx Registers", 50us);
 
     // REG_RX_CMD_STATUS (read only)
-    expected = 0;
+    expected = CMD_FIFO_SPACE_MAX;
     read_radio(radio_num, REG_RX_STATUS, val);
-    test.assert_error(val == expected, "REG_RX_STATUS not initially 0");
+    test.assert_error(val == expected, "REG_RX_STATUS not initially CMD_FIFO_SPACE_MAX");
 
     // REG_RX_CMD (read/write). Test a bogus timed stop command just to check 
     // read/write of the register.
@@ -886,7 +891,7 @@ module rfnoc_block_radio_tb #(
       // Check that we're acquiring
       read_radio(radio_num, REG_RX_STATUS, val);
       test.assert_error(
-        val[RX_STATUS_BUSY_POS] == 1'b1,
+        val[CMD_FIFO_SPACE_POS +: CMD_FIFO_SPACE_LEN] != CMD_FIFO_SPACE_MAX,
         "Rx radio reports that it is not busy"
       );
 
@@ -899,7 +904,7 @@ module rfnoc_block_radio_tb #(
       // Verify that Rx stopped
       read_radio(radio_num, REG_RX_STATUS, val);
       test.assert_error(
-        val[RX_STATUS_BUSY_POS] == 1'b0,
+        val[CMD_FIFO_SPACE_POS +: CMD_FIFO_SPACE_LEN] == CMD_FIFO_SPACE_MAX,
         "Rx radio reports that it is still busy after overflow"
       );
 
@@ -937,6 +942,71 @@ module rfnoc_block_radio_tb #(
 
       // Discard any remaining packets
       while (blk_ctrl.num_received(radio_num)) blk_ctrl.get_chdr(radio_num, chdr_packet);
+    end
+
+    test.end_test();
+
+
+    //---------------
+    // Command Queue
+    //---------------
+
+    test.start_test("Rx (queue multiple commands)");
+
+    begin
+      logic [31:0] expected, val;
+
+      // Send one continuous command and verify the queue fullness
+      start_rx(radio_num);
+      expected = CMD_FIFO_SPACE_MAX-1;
+      read_radio(radio_num, REG_RX_STATUS, val);
+      test.assert_error(
+        val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
+        "CMD_FIFO_SPACE did not decrement"
+      );
+
+      // Fill the command FIFO, going one over
+      for (int i = 0; i < CMD_FIFO_SPACE_MAX; i++) begin
+        start_rx(radio_num, WPP);
+      end
+      expected = 0;
+      read_radio(radio_num, REG_RX_STATUS, val);
+      test.assert_error(
+        val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
+        "CMD_FIFO_SPACE did not reach 0"
+      );
+
+      // Issue stop command and verify that the FIFO empties
+      stop_rx(radio_num);
+      expected = CMD_FIFO_SPACE_MAX;
+      read_radio(radio_num, REG_RX_STATUS, val);
+      test.assert_error(
+        val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
+        "CMD_FIFO_SPACE did not return to max"
+      );
+
+      // Grab and discard any remaining packets
+      do begin
+        while (blk_ctrl.num_received(radio_num) != 0) begin
+          ChdrPacket #(CHDR_W) chdr_packet;
+          blk_ctrl.get_chdr(radio_num, chdr_packet);
+        end
+        #MAX_PKT_WAIT;
+      end while (blk_ctrl.num_received(radio_num) != 0);
+
+      // Queue several long commands back-to-back and make sure they all 
+      // complete. The lengths are unique to ensure we execute the right 
+      // commands in the expected order.
+      for (int i = 0; i < 3; i++) start_rx(radio_num, WPP*20+i);
+      for (int i = 0; i < 3; i++) check_rx(radio_num, WPP*20+i);
+
+      // Make sure we don't get any more data
+      do begin
+        while (blk_ctrl.num_received(radio_num) != 0) begin
+          test.assert_error(0, "Received unexpected packets");
+        end
+        #MAX_PKT_WAIT;
+      end while (blk_ctrl.num_received(radio_num) != 0);
     end
 
     test.end_test();
