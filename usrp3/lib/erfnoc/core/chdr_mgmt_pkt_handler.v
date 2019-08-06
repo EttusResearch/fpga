@@ -10,11 +10,12 @@
 //   management node, a control-port master to configure any slave.
 //   The output CHDR stream has an additional tdest and tid which can
 //   be used to make routing decisions for management packets only.
-//   tid will be high when tdest should be used.
+//   tid will be CHDR_MGMT_ROUTE_TDEST when tdest should be used.
 //
 // Parameters:
 //   - PROTOVER: RFNoC protocol version {8'd<major>, 8'd<minor>}
-//   - CHDR_W: Widht of the CHDR bus in bits
+//   - CHDR_W: Width of the CHDR bus in bits
+//   - USER_W: Width of the user/data bits that accompany an advertisement op
 //   - RESP_FIFO_SIZE: Log2 of the depth of the response FIFO
 //                     Maximum value = 8
 //
@@ -28,6 +29,7 @@
 module chdr_mgmt_pkt_handler #(
   parameter [15:0] PROTOVER       = {8'd1, 8'd0},
   parameter        CHDR_W         = 256,
+  parameter        USER_W         = 1,
   parameter [0:0]  MGMT_ONLY      = 0,
   parameter        RESP_FIFO_SIZE = 5
 )(
@@ -41,9 +43,10 @@ module chdr_mgmt_pkt_handler #(
   input  wire              s_axis_chdr_tlast,
   input  wire              s_axis_chdr_tvalid,
   output wire              s_axis_chdr_tready,
+  input  wire [USER_W-1:0] s_axis_chdr_tuser,
   // CHDR Data Out (AXI-Stream)             
   output wire [CHDR_W-1:0] m_axis_chdr_tdata,
-  output wire [1:0]        m_axis_chdr_tid,      // Routing mode. Valued defined in rfnoc_chdr_internal_utils.vh
+  output wire [1:0]        m_axis_chdr_tid,      // Routing mode. Values defined in rfnoc_chdr_internal_utils.vh
   output wire [9:0]        m_axis_chdr_tdest,    // Manual routing destination (only valid for tid = CHDR_MGMT_ROUTE_TDEST)
   output wire              m_axis_chdr_tlast,
   output wire              m_axis_chdr_tvalid,
@@ -56,6 +59,7 @@ module chdr_mgmt_pkt_handler #(
   input  wire              ctrlport_resp_ack,
   input  wire [31:0]       ctrlport_resp_data,
   // Mgmt packet advertisement  strobe
+  output wire [USER_W-1:0] op_data,
   output wire              op_stb,
   output wire [15:0]       op_dst_epid,
   output wire [15:0]       op_src_epid
@@ -76,6 +80,7 @@ module chdr_mgmt_pkt_handler #(
   localparam LOG2_CHDR_W_BYTES = $clog2(CHDR_W_BYTES);
 
   wire [CHDR_W-1:0] s_mgmt_tdata, m_mgmt_tdata;
+  wire [USER_W-1:0] s_mgmt_tuser;
   wire [9:0]        m_mgmt_tdest;
   wire [1:0]        m_mgmt_tid;
   wire              s_mgmt_tlast, s_mgmt_tvalid, s_mgmt_tready;
@@ -93,7 +98,7 @@ module chdr_mgmt_pkt_handler #(
 
     // We consume the management packet only if it is actually a management packet and we
     // don't know where it's going. If the packet has a valid EPID, it is a response that
-    // is capable of begin routed.
+    // is capable of being routed.
     wire consume_mgmt_pkt = (chdr_get_pkt_type(s_header[63:0]) == CHDR_PKT_TYPE_MGMT) && 
                             (chdr_get_dst_epid(s_header[63:0]) == NULL_EPID);
 
@@ -107,6 +112,11 @@ module chdr_mgmt_pkt_handler #(
       .o_tdata({s_mgmt_tdata, bypass_tdata}), .o_tlast({s_mgmt_tlast, bypass_tlast}),
       .o_tvalid({s_mgmt_tvalid, bypass_tvalid}), .o_tready({s_mgmt_tready, bypass_tready})
     );
+
+    // Only one cycle of delay, so can skip past the demux with the tuser bits
+    // Packets are longer than the latency through the axi_demux
+    assign s_mgmt_tuser               = s_axis_chdr_tuser;
+
     assign {bypass_tid, bypass_tdest} = {CHDR_MGMT_ROUTE_EPID, 10'h0};
 
     axi_mux #(
@@ -126,6 +136,7 @@ module chdr_mgmt_pkt_handler #(
     assign s_mgmt_tdata       = s_axis_chdr_tdata;
     assign s_mgmt_tlast       = s_axis_chdr_tlast;
     assign s_mgmt_tvalid      = s_axis_chdr_tvalid;
+    assign s_mgmt_tuser       = s_axis_chdr_tuser;
     assign s_axis_chdr_tready = s_mgmt_tready;
 
     assign m_axis_chdr_tdata  = m_mgmt_tdata;
@@ -140,20 +151,21 @@ module chdr_mgmt_pkt_handler #(
   //  Convert management packets to 64-bit
   //  For CHDR_W > 64, only the bottom 64 bits are used
   // ---------------------------------------------------
-  wire [63:0] i64_tdata;
-  wire        i64_tlast, i64_tvalid;
-  reg         i64_tready;
-  reg [63:0]  o64_tdata;
-  reg [9:0]   o64_tdest;
-  reg [1:0]   o64_tid;
-  reg         o64_tlast, o64_tvalid;
-  wire        o64_tready;
+  wire [63:0]       i64_tdata;
+  wire [USER_W-1:0] i64_tuser;
+  wire              i64_tlast, i64_tvalid;
+  reg               i64_tready;
+  reg [63:0]        o64_tdata;
+  reg [9:0]         o64_tdest;
+  reg [1:0]         o64_tid;
+  reg               o64_tlast, o64_tvalid;
+  wire              o64_tready;
 
-  axi_fifo #(.WIDTH(65), .SIZE(1)) in_flop_i (
+  axi_fifo #(.WIDTH(USER_W+65), .SIZE(1)) in_flop_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({s_mgmt_tlast, s_mgmt_tdata[63:0]}),
+    .i_tdata({s_mgmt_tuser, s_mgmt_tlast, s_mgmt_tdata[63:0]}),
     .i_tvalid(s_mgmt_tvalid), .i_tready(s_mgmt_tready),
-    .o_tdata({i64_tlast, i64_tdata}),
+    .o_tdata({i64_tuser, i64_tlast, i64_tdata}),
     .o_tvalid(i64_tvalid), .o_tready(i64_tready),
     .space(), .occupied()
   );
@@ -197,6 +209,7 @@ module chdr_mgmt_pkt_handler #(
   reg [9:0]  hops_remaining;                    // Number of hops remaining until pkt is consumed
   reg [7:0]  resp_op_code;                      // Opcode for the response
   reg [47:0] resp_op_payload;                   // Payload for the response
+  reg [USER_W-1:0] cached_tuser;                // Cached copy of the tuser bits (for the advertise op)
 
   // Shortcuts
   wire [7:0]  op_code = chdr_mgmt_get_op_code(i64_tdata);
@@ -225,6 +238,7 @@ module chdr_mgmt_pkt_handler #(
         ST_CHDR_IN_HDR: begin
           if (i64_tvalid && i64_tready) begin
             cached_chdr_hdr <= i64_tdata;
+            cached_tuser <= i64_tuser;
             stripped_len <= chdr_get_length(i64_tdata);
             num_mdata <= chdr_get_num_mdata(i64_tdata) - 5'd1;
             if (!i64_tlast) begin
@@ -556,6 +570,7 @@ module chdr_mgmt_pkt_handler #(
                        (op_code == CHDR_MGMT_OP_ADVERTISE);
   assign op_dst_epid = chdr_get_dst_epid(cached_chdr_hdr);
   assign op_src_epid = chdr_mgmt_get_src_epid(cached_mgmt_hdr);
+  assign op_data     = cached_tuser;
 
   // CHDR_MGMT_OP_CFG_WR_REQ
   // CHDR_MGMT_OP_CFG_RD_REQ

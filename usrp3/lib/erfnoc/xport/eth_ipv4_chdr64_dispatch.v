@@ -20,6 +20,9 @@
 //
 // Signals:
 //   - s_mac_*: The input Ethernet stream from the MAC (plus tuser for trailing bytes + err)
+//              The tuser bits are the values defined in xge_mac_wrapper. Most
+//              relevant is tuser[3], which signals a bad packet that must be
+//              dropped.
 //   - m_chdr_*: The output CHDR stream to the rfnoc infrastructure
 //   - m_cpu_*: The output Ethernet stream to the CPU (plus tuser for trailing bytes + err)
 //   - my_eth_addr: The Ethernet (MAC) address of this endpoint
@@ -82,6 +85,7 @@ module eth_ipv4_chdr64_dispatch #(
   wire [63:0] chdr_tdata;
   wire [95:0] chdr_tuser;
   wire        chdr_tlast, chdr_tvalid, chdr_tready;
+  wire        chdr_terror;
 
   axi_fifo #(
     .WIDTH(64+4+1),.SIZE(1)
@@ -132,7 +136,12 @@ module eth_ipv4_chdr64_dispatch #(
           if (!in_tlast) begin
             // Just cache addresses. No decisions to be made.
             eth_dst_addr_cached[47:32] <= in_tdata[15:0];
-            state <= ST_ETH_L1;
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else begin
+              state <= ST_ETH_L1;
+            end
           end else begin
             // Short packet: Violates min eth size of 64 bytes
             state <= ST_IDLE_ETH_L0;
@@ -148,7 +157,12 @@ module eth_ipv4_chdr64_dispatch #(
             // Just cache addresses. No decisions to be made.
             eth_dst_addr_cached[31:0] <= in_tdata[63:32];
             eth_src_addr_cached[47:16] <= in_tdata[31:0];
-            state <= ST_ETH_L2_IPV4_L0;
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else begin
+              state <= ST_ETH_L2_IPV4_L0;
+            end
           end else begin
             // Short packet: Violates min eth size of 64 bytes
             state <= ST_IDLE_ETH_L0;
@@ -162,7 +176,10 @@ module eth_ipv4_chdr64_dispatch #(
         ST_ETH_L2_IPV4_L0: begin
           if (!in_tlast) begin
             eth_src_addr_cached[15:0] <= in_tdata[63:48];
-            if (eth_dst_addr_cached == ETH_ADDR_BCAST) begin
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else if (eth_dst_addr_cached == ETH_ADDR_BCAST) begin
               // If Eth destination is bcast then fwd to CPU
               state <= ST_FWD_CPU;
             end else if (eth_dst_addr_cached != my_eth_addr && DROP_UNKNOWN_MAC) begin
@@ -189,7 +206,10 @@ module eth_ipv4_chdr64_dispatch #(
         // -------------------------------------
         ST_IPV4_L1: begin
           if (!in_tlast) begin
-            if (in_tdata[23:16] != IPV4_PROTO_UDP) begin
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else if (in_tdata[23:16] != IPV4_PROTO_UDP) begin
               // If this is not a UDP frame then fwd to CPU
               state <= ST_FWD_CPU;
             end else begin
@@ -210,7 +230,10 @@ module eth_ipv4_chdr64_dispatch #(
         ST_IPV4_L2: begin
           if (!in_tlast) begin
             ipv4_src_addr_cached <= in_tdata[63:32];
-            if (in_tdata[31:0] != my_ipv4_addr) begin
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else if (in_tdata[31:0] != my_ipv4_addr) begin
               // If IPv4 destination is not us then fwd to CPU
               state <= ST_FWD_CPU;
             end else begin
@@ -231,7 +254,10 @@ module eth_ipv4_chdr64_dispatch #(
         ST_IPV4_UDP_HDR: begin
           if (!in_tlast) begin
             udp_src_port_cached <= in_tdata[63:48];
-            if (in_tdata[47:32] == my_udp_chdr_port) begin
+            if (in_tuser[3]) begin
+              state <= ST_DROP_PKT;
+              discard_cpu_pkt <= 1'b1;
+            end else if (in_tdata[47:32] == my_udp_chdr_port) begin
               // The UDP port matches CHDR port
               state <= ST_FWD_CHDR;
               discard_cpu_pkt <= 1'b1;
@@ -345,6 +371,7 @@ module eth_ipv4_chdr64_dispatch #(
   assign chdr_tuser  = {udp_src_port_cached, ipv4_src_addr_cached, eth_src_addr_cached};
   assign chdr_tlast  = in_tlast;
   assign chdr_tvalid = in_tvalid && (state == ST_FWD_CHDR);
+  assign chdr_terror = in_tuser[3];
 
   //---------------------------------------
   // Output processing
@@ -373,7 +400,7 @@ module eth_ipv4_chdr64_dispatch #(
   //       regardless of the CHDR MTU
   axi_packet_gate #( .WIDTH(64+4), .SIZE(11), .USE_AS_BUFF(0) ) cpu_out_gate_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({o_cpu_tuser, o_cpu_tdata}), .i_tlast(o_cpu_tlast), .i_terror(o_cpu_terror),
+    .i_tdata({o_cpu_tuser, o_cpu_tdata}), .i_tlast(o_cpu_tlast), .i_terror(o_cpu_terror | o_cpu_tuser[3]),
     .i_tvalid(o_cpu_tvalid), .i_tready(o_cpu_tready),
     .o_tdata({m_cpu_tuser, m_cpu_tdata}), .o_tlast(m_cpu_tlast),
     .o_tvalid(m_cpu_tvalid), .o_tready(m_cpu_tready)
@@ -382,17 +409,33 @@ module eth_ipv4_chdr64_dispatch #(
   wire [63:0] o_chdr_tdata;
   wire [95:0] o_chdr_tuser;
   wire        o_chdr_tlast, o_chdr_tvalid, o_chdr_tready;
+  wire        o_chdr_data_tvalid, o_chdr_user_tvalid;
+  wire        o_chdr_data_tready, o_chdr_user_tready;
 
   axi_fifo #(
-    .WIDTH(64+96+1),.SIZE(1)
-  ) out_reg_chdr_i (
+    .WIDTH(96),.SIZE(8)
+  ) chdr_user_fifo_i (
     .clk(clk), .reset(rst), .clear(1'b0),
-    .i_tdata({chdr_tlast, chdr_tuser, chdr_tdata}),
-    .i_tvalid(chdr_tvalid), .i_tready(chdr_tready),
-    .o_tdata({o_chdr_tlast, o_chdr_tuser, o_chdr_tdata}),
-    .o_tvalid(o_chdr_tvalid), .o_tready(o_chdr_tready),
+    .i_tdata(chdr_tuser),
+    .i_tvalid(chdr_tvalid & chdr_tready & chdr_tlast & ~chdr_terror), .i_tready(/* Always ready */),
+    .o_tdata(o_chdr_tuser),
+    .o_tvalid(o_chdr_user_tvalid), .o_tready(o_chdr_user_tready),
     .space(), .occupied()
   );
+
+  axi_packet_gate #(
+    .WIDTH(64), .SIZE(11), .USE_AS_BUFF(1), .MIN_PKT_SIZE(1)
+  ) chdr_out_gate_i (
+    .clk(clk), .reset(rst), .clear(1'b0),
+    .i_tdata(chdr_tdata), .i_tlast(chdr_tlast), .i_terror(chdr_terror),
+    .i_tvalid(chdr_tvalid), .i_tready(chdr_tready),
+    .o_tdata(o_chdr_tdata), .o_tlast(o_chdr_tlast),
+    .o_tvalid(o_chdr_data_tvalid), .o_tready(o_chdr_data_tready)
+  );
+
+  assign o_chdr_tvalid = o_chdr_data_tvalid & o_chdr_user_tvalid;
+  assign o_chdr_user_tready = o_chdr_tready & o_chdr_data_tvalid & o_chdr_tlast;
+  assign o_chdr_data_tready = o_chdr_tready & o_chdr_user_tvalid;
 
   chdr_trim_payload #(
     .CHDR_W(64), .USER_W(96)

@@ -22,12 +22,15 @@
 //     a multi-packet buffer. When USE_AS_BUFF=0, the max number of packets 
 //     (regardless of size) that the module can store is 2. When USE_AS_BUFF=1,
 //     the entire storage of this module can be used to buffer packets but at
-//     the cost of some additional RAM.
+//     the cost of some additional RAM. Beware the sequence of (big packet,
+//     small packet, small packet), as some outside buffering may be needed
+//     to handle this case if USE_AS_BUFF=0.
 
 module axi_packet_gate #(
   parameter WIDTH       = 64,   // Width of datapath
   parameter SIZE        = 10,   // log2 of the buffer size (must be >= MTU of packet)
-  parameter USE_AS_BUFF = 0     // Allow the packet gate to be used as a buffer (uses more RAM)
+  parameter USE_AS_BUFF = 0,    // Allow the packet gate to be used as a buffer (uses more RAM)
+  parameter MIN_PKT_SIZE= 0     // log2 of minimum valid packet size (rounded down, used to reduce addr fifo size)
 ) (
   input  wire             clk, 
   input  wire             reset, 
@@ -119,7 +122,7 @@ module axi_packet_gate #(
   wire            afifo_o_tvalid, afifo_o_tready;
   wire            afifo_p_tvalid, afifo_p_tready;
 
-  axi_fifo #(.WIDTH(SIZE), .SIZE(USE_AS_BUFF==1 ? SIZE : 1)) addr_fifo_i (
+  axi_fifo #(.WIDTH(SIZE), .SIZE(USE_AS_BUFF==1 ? SIZE-MIN_PKT_SIZE : 1)) addr_fifo_i (
     .clk(clk), .reset(reset), .clear(clear),
     .i_tdata(afifo_i_tdata), .i_tvalid(afifo_i_tvalid), .i_tready(afifo_i_tready),
     .o_tdata(afifo_p_tdata), .o_tvalid(afifo_p_tvalid), .o_tready(afifo_p_tready),

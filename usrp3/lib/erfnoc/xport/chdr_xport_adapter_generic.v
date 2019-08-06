@@ -139,32 +139,34 @@ module chdr_xport_adapter_generic #(
   // ---------------------------------------------------
   wire              op_stb;
   wire [15:0]       op_src_epid;
+  wire [USER_W-1:0] op_data;
   wire              lookup_stb, lookup_res_stb, lookup_res_match;
   wire [15:0]       lookup_epid;
   wire [USER_W-1:0] lookup_res_val;
   reg  [USER_W-1:0] cam_tuser_cached = {USER_W{1'b0}};
 
   chdr_mgmt_pkt_handler #(
-    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .MGMT_ONLY(0)
+    .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .USER_W(USER_W), .MGMT_ONLY(0)
   ) mgmt_ep_i (
     .clk(clk), .rst(rst),
     .node_info(chdr_mgmt_build_node_info({10'h0, NODE_SUBTYPE}, NODE_INST, NODE_TYPE_TRANSPORT, device_id)),
     .s_axis_chdr_tdata(i_xport_tdata), .s_axis_chdr_tlast(i_xport_tlast),
     .s_axis_chdr_tvalid(i_xport_tvalid), .s_axis_chdr_tready(i_xport_tready),
+    .s_axis_chdr_tuser(i_xport_tuser),
     .m_axis_chdr_tdata(x2d_tdata), .m_axis_chdr_tlast(x2d_tlast),
     .m_axis_chdr_tdest(/* unused */), .m_axis_chdr_tid(x2d_tid),
     .m_axis_chdr_tvalid(x2d_tvalid), .m_axis_chdr_tready(x2d_tready),
     .ctrlport_req_wr(ctrlport_req_wr), .ctrlport_req_rd(ctrlport_req_rd),
     .ctrlport_req_addr(ctrlport_req_addr), .ctrlport_req_data(ctrlport_req_data),
     .ctrlport_resp_ack(ctrlport_resp_ack), .ctrlport_resp_data(ctrlport_resp_data),
-    .op_stb(op_stb), .op_dst_epid(/* unused */), .op_src_epid(op_src_epid)
+    .op_stb(op_stb), .op_dst_epid(/* unused */), .op_src_epid(op_src_epid), .op_data(op_data)
   );
 
   kv_map #(
     .KEY_WIDTH(16), .VAL_WIDTH(USER_W), .SIZE(TBL_SIZE)
   ) kv_map_i (
     .clk(clk), .reset(rst),
-    .insert_stb(op_stb), .insert_key(op_src_epid), .insert_val(i_xport_tuser),
+    .insert_stb(op_stb), .insert_key(op_src_epid), .insert_val(op_data),
     .insert_busy(/* Time between op_stb > Insertion time */),
     .find_key_stb(lookup_stb), .find_key(lookup_epid),
     .find_res_stb(lookup_res_stb),
