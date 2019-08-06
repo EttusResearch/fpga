@@ -11,6 +11,7 @@ RFNOC_CORE_HEADERS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/core/, \
 rfnoc_chdr_utils.vh \
 rfnoc_axis_ctrl_utils.vh \
 rfnoc_chdr_internal_utils.vh \
+ctrlport.vh \
 ))
 
 RFNOC_CORE_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/erfnoc/core/, \
