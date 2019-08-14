@@ -603,7 +603,7 @@ module rfnoc_block_radio_tb #(
 
 
   task test_rx_registers(int radio_num);
-    logic [63:0] val, expected;
+    logic [63:0] val, temp, expected;
     localparam int num_words_len = RX_CMD_NUM_WORDS_LEN;
 
     test.start_test("Rx Registers", 50us);
@@ -680,6 +680,15 @@ module rfnoc_block_radio_tb #(
     write_radio(radio_num, REG_RX_ERR_ADDR, expected);
     read_radio(radio_num, REG_RX_ERR_ADDR, val);
     test.assert_error(val == expected, "REG_RX_ERR_ADDR didn't update correctly");
+
+    // REG_RX_DATA (read-only)
+    temp = radio_tx_data[RADIO_W*radio_num +: RADIO_W];
+    read_radio(radio_num, REG_RX_DATA, val);
+    test.assert_error(
+      radio_rx_data[RADIO_W*radio_num +: RADIO_W] >= val && val >= temp, 
+      "REG_RX_DATA wasn't in the expected range");
+    read_radio(radio_num, REG_RX_DATA, temp);
+    test.assert_error(temp != val, "REG_RX_DATA didn't update");
 
     test.end_test();
   endtask : test_rx_registers

@@ -243,6 +243,10 @@ module radio_rx_core #(
             s_ctrlport_resp_data[19:0] <= reg_error_addr;
             s_ctrlport_resp_ack        <= 1;
           end
+          REG_RX_DATA: begin
+            s_ctrlport_resp_data <= radio_rx_data;
+            s_ctrlport_resp_ack  <= 1;
+          end
         endcase
       end
 

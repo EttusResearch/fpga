@@ -54,6 +54,7 @@ localparam REG_RX_ERR_PORT          = 'h2C; // Port ID for error reporting
 localparam REG_RX_ERR_REM_PORT      = 'h30; // Remote port ID for error reporting
 localparam REG_RX_ERR_REM_EPID      = 'h34; // Remote EPID (endpoint ID) for error reporting
 localparam REG_RX_ERR_ADDR          = 'h38; // Offset to write error code to
+localparam REG_RX_DATA              = 'h3C; // Read the current Rx output of the radio
 
 // TX Control Registers
 localparam REG_TX_IDLE_VALUE   = 'h40; // Value to output when transmitter is idle
