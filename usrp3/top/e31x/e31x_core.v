@@ -14,103 +14,110 @@
 //
 /////////////////////////////////////////////////////////////////////
 
+`default_nettype none
 module e31x_core #(
   parameter REG_DWIDTH   = 32,        // Width of the AXI4-Lite data bus (must be 32 or 64)
   parameter REG_AWIDTH   = 32,        // Width of the address bus
   parameter BUS_CLK_RATE = 200000000, // bus_clk rate
   parameter NUM_SFP_PORTS = 0,        // Number of SFP Ports
-  parameter NUM_RADIO_CORES = 1,
+  parameter NUM_RADIOS = 1,
   parameter NUM_CHANNELS_PER_RADIO = 2,
   parameter NUM_CHANNELS = 2,
   parameter NUM_DBOARDS = 1,
+  parameter NUM_CHANNELS_PER_DBOARD = 2,
   parameter FP_GPIO_WIDTH = 8,  // Front panel GPIO width
-  parameter DB_GPIO_WIDTH = 16  // Daughterboard GPIO width
+  parameter DB_GPIO_WIDTH = 16,  // Daughterboard GPIO width
+  parameter CHDR_WIDTH  = 16'd64 ,
+  parameter RFNOC_PROTOVER  = {8'd1, 8'd0}
 )(
   // Clocks and resets
-  input radio_clk,
-  input radio_rst,
-  input bus_clk,
-  input bus_rst,
+  input wire radio_clk,
+  input wire radio_rst,
+  input wire bus_clk,
+  input wire bus_rst,
 
   // Motherboard Registers: AXI lite interface
-  input                    s_axi_aclk,
-  input                    s_axi_aresetn,
-  input [REG_AWIDTH-1:0]   s_axi_awaddr,
-  input                    s_axi_awvalid,
-  output                   s_axi_awready,
+  input wire                    s_axi_aclk,
+  input wire                    s_axi_aresetn,
+  input wire [REG_AWIDTH-1:0]   s_axi_awaddr,
+  input wire                    s_axi_awvalid,
+  output wire                   s_axi_awready,
 
-  input [REG_DWIDTH-1:0]   s_axi_wdata,
-  input [REG_DWIDTH/8-1:0] s_axi_wstrb,
-  input                    s_axi_wvalid,
-  output                   s_axi_wready,
+  input wire [REG_DWIDTH-1:0]   s_axi_wdata,
+  input wire [REG_DWIDTH/8-1:0] s_axi_wstrb,
+  input wire                    s_axi_wvalid,
+  output wire                   s_axi_wready,
 
-  output [1:0]             s_axi_bresp,
-  output                   s_axi_bvalid,
-  input                    s_axi_bready,
+  output wire [1:0]             s_axi_bresp,
+  output wire                   s_axi_bvalid,
+  input wire                    s_axi_bready,
 
-  input [REG_AWIDTH-1:0]   s_axi_araddr,
-  input                    s_axi_arvalid,
-  output                   s_axi_arready,
+  input wire [REG_AWIDTH-1:0]   s_axi_araddr,
+  input wire                    s_axi_arvalid,
+  output wire                   s_axi_arready,
 
-  output [REG_DWIDTH-1:0]  s_axi_rdata,
-  output [1:0]             s_axi_rresp,
-  output                   s_axi_rvalid,
-  input                    s_axi_rready,
+  output wire [REG_DWIDTH-1:0]  s_axi_rdata,
+  output wire [1:0]             s_axi_rresp,
+  output wire                   s_axi_rvalid,
+  input wire                    s_axi_rready,
 
   // PPS and Clock Control
-  input            pps_refclk,
-  input            refclk_locked,
-  output reg [1:0] pps_select,
+  input wire            pps_refclk,
+  input wire            refclk_locked,
+  output reg [1:0]      pps_select,
 
   // PS GPIO source
-  input  [FP_GPIO_WIDTH-1:0]  ps_gpio_out,
-  input  [FP_GPIO_WIDTH-1:0]  ps_gpio_tri,
-  output [FP_GPIO_WIDTH-1:0]  ps_gpio_in,
+  input wire  [FP_GPIO_WIDTH-1:0]  ps_gpio_out,
+  input wire  [FP_GPIO_WIDTH-1:0]  ps_gpio_tri,
+  output wire [FP_GPIO_WIDTH-1:0]  ps_gpio_in,
 
   // Front Panel GPIO
-  input  [FP_GPIO_WIDTH-1:0] fp_gpio_in,
-  output [FP_GPIO_WIDTH-1:0] fp_gpio_tri,
-  output [FP_GPIO_WIDTH-1:0] fp_gpio_out,
+  input wire  [FP_GPIO_WIDTH-1:0] fp_gpio_in,
+  output wire [FP_GPIO_WIDTH-1:0] fp_gpio_tri,
+  output wire [FP_GPIO_WIDTH-1:0] fp_gpio_out,
 
   // Radio GPIO control
-  output [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_out_flat,
-  output [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_ddr_flat,
-  input  [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_in_flat,
-  input  [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_fab_flat,
+  output wire [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_out_flat,
+  output wire [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_ddr_flat,
+  input wire  [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_in_flat,
+  input wire  [DB_GPIO_WIDTH*NUM_CHANNELS-1:0] db_gpio_fab_flat,
 
   // TX/RX LEDs
-  output [32*NUM_CHANNELS-1:0] leds_flat,
+  output wire [32*NUM_CHANNELS-1:0] leds_flat,
 
   // Radio ATR
-  output [NUM_CHANNELS-1:0] rx_atr,
-  output [NUM_CHANNELS-1:0] tx_atr,
+  output wire [NUM_CHANNELS-1:0] rx_atr,
+  output wire [NUM_CHANNELS-1:0] tx_atr,
 
   // Radio Data
-  input  [NUM_CHANNELS-1:0]    rx_stb,
-  input  [NUM_CHANNELS-1:0]    tx_stb,
-  input  [32*NUM_CHANNELS-1:0] rx,
-  output [32*NUM_CHANNELS-1:0] tx,
+  input wire  [NUM_CHANNELS-1:0]    rx_stb,
+  input wire  [NUM_CHANNELS-1:0]    tx_stb,
+  input wire  [32*NUM_CHANNELS-1:0] rx,
+  output wire [32*NUM_CHANNELS-1:0] tx,
 
-  // DMA
-  output [63:0] dmao_tdata,
-  output        dmao_tlast,
-  output        dmao_tvalid,
-  input         dmao_tready,
+  // DMA xport adapter to PS
+  input wire  [63:0] s_dma_tdata,
+  input wire  [3:0]  s_dma_tuser,
+  input wire         s_dma_tlast,
+  output wire        s_dma_tready,
+  input wire         s_dma_tvalid,
 
-  input [63:0]  dmai_tdata,
-  input         dmai_tlast,
-  input         dmai_tvalid,
-  output        dmai_tready,
+  output wire [63:0] m_dma_tdata,
+  output wire [3:0]  m_dma_tdest,
+  output wire        m_dma_tlast,
+  input wire         m_dma_tready,
+  output wire        m_dma_tvalid,
 
   // Misc
-  input      [31:0] build_datestamp,
-  input      [31:0] sfp_ports_info,
-  input      [31:0] gps_status,
+  input wire [31:0] build_datestamp,
+  input wire [31:0] sfp_ports_info,
+  input wire [31:0] gps_status,
   output reg [31:0] gps_ctrl,
-  input      [31:0] dboard_status,
-  input      [31:0] xadc_readback,
+  input wire [31:0] dboard_status,
+  input wire [31:0] xadc_readback,
   output reg [31:0] fp_gpio_ctrl,
-  output reg [31:0] dboard_ctrl
+  output reg [31:0] dboard_ctrl,
+  output reg [15:0] device_id
 );
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -124,18 +131,10 @@ module e31x_core #(
   //
   /////////////////////////////////////////////////////////////////////////////////
 
-  localparam [15:0] COMPAT_MAJOR = 16'd1;
+  localparam [15:0] COMPAT_MAJOR = 16'd4;
   localparam [15:0] COMPAT_MINOR = 16'd0;
 
   /////////////////////////////////////////////////////////////////////////////////
-
-  // Computation engines that need access to IO
-  localparam NUM_IO_CE = NUM_RADIO_CORES; //NUM_RADIO_CORES
-  // Radio NOC ID
-  localparam NOC_ID_RADIO = 64'h12AD_1000_0000_3310;
-
-  // Base width of crossbar based on fixed components (ethernet, DMA)
-  localparam XBAR_FIXED_PORTS = 1 + NUM_SFP_PORTS;
 
   /////////////////////////////////////////////////////////////////////////////////
   //
@@ -144,45 +143,56 @@ module e31x_core #(
   /////////////////////////////////////////////////////////////////////////////////
 
   // Register base
-  localparam REG_BASE_MISC           = 14'h0;
-  localparam REG_BASE_XBAR           = 14'h1000;
-  localparam NUM_CORE_REGPORT_SLAVES = 2; // Global registers + Crossbar
+  localparam REG_BASE_MISC         = 14'h0;
+  localparam REG_BASE_TIMEKEEPER   = 14'h1000;
 
   // Misc Registers
   localparam REG_COMPAT_NUM        = REG_BASE_MISC + 14'h00;
   localparam REG_DATESTAMP         = REG_BASE_MISC + 14'h04;
   localparam REG_GIT_HASH          = REG_BASE_MISC + 14'h08;
   localparam REG_SCRATCH           = REG_BASE_MISC + 14'h0C;
-  localparam REG_NUM_CE            = REG_BASE_MISC + 14'h10;
-  localparam REG_NUM_IO_CE         = REG_BASE_MISC + 14'h14;
+  localparam REG_DEVICE_ID         = REG_BASE_MISC + 14'h10;
+  localparam REG_RFNOC_INFO        = REG_BASE_MISC + 14'h14;
   localparam REG_CLOCK_CTRL        = REG_BASE_MISC + 14'h18;
   localparam REG_XADC_READBACK     = REG_BASE_MISC + 14'h1C;
   localparam REG_BUS_CLK_RATE      = REG_BASE_MISC + 14'h20;
   localparam REG_BUS_CLK_COUNT     = REG_BASE_MISC + 14'h24;
+  localparam REG_SFP_PORT_INFO     = REG_BASE_MISC + 14'h28;
+  localparam REG_FP_GPIO_CTRL      = REG_BASE_MISC + 14'h2C;
   localparam REG_FP_GPIO_MASTER    = REG_BASE_MISC + 14'h30;
   localparam REG_FP_GPIO_RADIO_SRC = REG_BASE_MISC + 14'h34;
   localparam REG_GPS_CTRL          = REG_BASE_MISC + 14'h38;
   localparam REG_GPS_STATUS        = REG_BASE_MISC + 14'h3C;
   localparam REG_DBOARD_CTRL       = REG_BASE_MISC + 14'h40;
   localparam REG_DBOARD_STATUS     = REG_BASE_MISC + 14'h44;
-  localparam REG_XBAR_BASEPORT     = REG_BASE_MISC + 14'h48;
+  localparam REG_NUM_TIMEKEEPERS   = REG_BASE_MISC + 14'h48;
 
-  reg  [31:0]              fp_gpio_master_reg = 32'h0;
-  reg  [31:0]              fp_gpio_src_reg    = 32'h0;
+  localparam NUM_TIMEKEEPERS = 16'd1;
 
-  wire                     reg_wr_req;
-  wire [REG_AWIDTH-1:0]    reg_wr_addr;
-  wire [REG_DWIDTH-1:0]    reg_wr_data;
-  wire                     reg_rd_req;
-  wire [REG_AWIDTH-1:0]    reg_rd_addr;
-  wire                     reg_rd_resp;
-  wire [REG_DWIDTH-1:0]    reg_rd_data;
+  wire                  m_ctrlport_req_wr;
+  wire                  m_ctrlport_req_rd;
+  wire [19:0]           m_ctrlport_req_addr;
+  wire [31:0]           m_ctrlport_req_data;
+  wire                  m_ctrlport_req_has_time;
+  wire [63:0]           m_ctrlport_req_time;
+  wire                  m_ctrlport_resp_ack;
+  wire [31:0]           m_ctrlport_resp_data;
 
-  reg                      reg_rd_resp_glob;
-  reg  [REG_DWIDTH-1:0]    reg_rd_data_glob;
+  reg  [31:0]           fp_gpio_master_reg = 32'h0;
+  reg  [31:0]           fp_gpio_src_reg    = 32'h0;
 
-  wire [REG_DWIDTH-1:0]    reg_rd_data_xbar;
-  wire                     reg_rd_resp_xbar;
+  wire                  reg_wr_req;
+  wire [REG_AWIDTH-1:0] reg_wr_addr;
+  wire [REG_DWIDTH-1:0] reg_wr_data;
+  wire                  reg_rd_req;
+  wire [REG_AWIDTH-1:0] reg_rd_addr;
+  wire                  reg_rd_resp;
+  wire [REG_DWIDTH-1:0] reg_rd_data;
+
+  reg                   reg_rd_resp_glob;
+  reg  [REG_DWIDTH-1:0] reg_rd_data_glob;
+  wire                  reg_rd_resp_tk;
+  wire [REG_DWIDTH-1:0] reg_rd_data_tk;
 
   reg [31:0] scratch_reg = 32'h0;
   reg [31:0] bus_counter = 32'h0;
@@ -240,21 +250,6 @@ module e31x_core #(
     .reg_rd_data   (reg_rd_data)
   );
 
-  // Muxed Read Response on the regport
-  //    - Crossbar registers
-  //    - Global registers
-  regport_resp_mux #(
-    .WIDTH(REG_DWIDTH),
-    .NUM_SLAVES(NUM_CORE_REGPORT_SLAVES)
-  ) core_regport_resp_mux_i (
-    .clk(bus_clk),
-    .reset(bus_rst),
-    .sla_rd_resp({reg_rd_resp_glob, reg_rd_resp_xbar}),
-    .sla_rd_data({reg_rd_data_glob, reg_rd_data_xbar}),
-    .mst_rd_resp(reg_rd_resp),
-    .mst_rd_data(reg_rd_data)
-  );
-
   //--------------------------------------------------------------------
   // Global Registers
   // -------------------------------------------------------------------
@@ -263,12 +258,16 @@ module e31x_core #(
   always @ (posedge bus_clk) begin
     if (bus_rst) begin
       scratch_reg    <= 32'h0;
-      pps_select     <= 2'b00; // Default to internal
+      pps_select     <= 2'b01; // Default to internal
       fp_gpio_ctrl   <= 32'h9; // Default to OFF - 4'b1001
       gps_ctrl       <= 32'h3; // Default to gps_en, out of reset
-      dboard_ctrl    <= 32'h3; // Default to mimo, in reset
+      dboard_ctrl    <= 32'h1; // Default to mimo
+      device_id      <= 16'h0;
     end else if (reg_wr_req) begin
       case (reg_wr_addr)
+        REG_DEVICE_ID: begin
+          device_id <= reg_wr_data[15:0];
+        end
         REG_FP_GPIO_MASTER: begin
           fp_gpio_master_reg <= reg_wr_data;
         end
@@ -280,6 +279,9 @@ module e31x_core #(
         end
         REG_CLOCK_CTRL: begin
           pps_select  <= reg_wr_data[1:0];
+        end
+        REG_FP_GPIO_CTRL: begin
+          fp_gpio_ctrl <= reg_wr_data;
         end
         REG_GPS_CTRL: begin
           gps_ctrl    <= reg_wr_data;
@@ -302,8 +304,17 @@ module e31x_core #(
         reg_rd_resp_glob <= 1'b1;
 
         case (reg_rd_addr)
+        REG_DEVICE_ID:
+          reg_rd_data_glob <= device_id;
+
+        REG_RFNOC_INFO:
+          reg_rd_data_glob <= {CHDR_WIDTH[15:0], RFNOC_PROTOVER[15:0]};
+
         REG_COMPAT_NUM:
-          reg_rd_data_glob <= {COMPAT_MAJOR, COMPAT_MINOR};
+          reg_rd_data_glob <= {COMPAT_MAJOR[15:0], COMPAT_MINOR[15:0]};
+
+        REG_FP_GPIO_CTRL:
+          reg_rd_data_glob <= fp_gpio_ctrl;
 
         REG_FP_GPIO_MASTER:
           reg_rd_data_glob <= fp_gpio_master_reg;
@@ -320,16 +331,10 @@ module e31x_core #(
         REG_SCRATCH:
           reg_rd_data_glob <= scratch_reg;
 
-        REG_NUM_CE:
-          reg_rd_data_glob <= NUM_CE;
-
-        REG_NUM_IO_CE:
-          reg_rd_data_glob <= NUM_IO_CE;
-
         REG_CLOCK_CTRL: begin
           reg_rd_data_glob      <= 32'b0;
           reg_rd_data_glob[1:0] <= pps_select;
-          reg_rd_data_glob[2]   <= refclk_locked;
+          reg_rd_data_glob[3]   <= refclk_locked;
         end
 
         REG_XADC_READBACK:
@@ -340,6 +345,9 @@ module e31x_core #(
 
         REG_BUS_CLK_COUNT:
           reg_rd_data_glob <= bus_counter;
+
+        REG_SFP_PORT_INFO:
+          reg_rd_data_glob <= sfp_ports_info;
 
         REG_GPS_CTRL:
           reg_rd_data_glob <= gps_ctrl;
@@ -353,8 +361,8 @@ module e31x_core #(
         REG_DBOARD_STATUS:
           reg_rd_data_glob <= dboard_status;
 
-        REG_XBAR_BASEPORT:
-          reg_rd_data_glob <= XBAR_FIXED_PORTS;
+        REG_NUM_TIMEKEEPERS:
+          reg_rd_data_glob <= NUM_TIMEKEEPERS;
 
         default:
           reg_rd_resp_glob <= 1'b0;
@@ -366,36 +374,6 @@ module e31x_core #(
     end
   end
 
-  /////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // IOCE: CEs that need access to IO
-  //   - Radio 0
-  //
-  /////////////////////////////////////////////////////////////////////////////////////////////
-
-  wire     [NUM_IO_CE*64-1:0]  ioce_flat_o_tdata;
-  wire     [NUM_IO_CE*64-1:0]  ioce_flat_i_tdata;
-  wire     [63:0]              ioce_o_tdata[0:NUM_IO_CE-1];
-  wire     [63:0]              ioce_i_tdata[0:NUM_IO_CE-1];
-  wire     [NUM_IO_CE-1:0]     ioce_o_tlast;
-  wire     [NUM_IO_CE-1:0]     ioce_o_tvalid;
-  wire     [NUM_IO_CE-1:0]     ioce_o_tready;
-  wire     [NUM_IO_CE-1:0]     ioce_i_tlast;
-  wire     [NUM_IO_CE-1:0]     ioce_i_tvalid;
-  wire     [NUM_IO_CE-1:0]     ioce_i_tready;
-
-  genvar ioce_i;
-  generate for (ioce_i = 0; ioce_i < NUM_IO_CE; ioce_i = ioce_i + 1) begin
-     assign ioce_o_tdata[ioce_i] = ioce_flat_o_tdata[ioce_i*64 + 63 : ioce_i*64];
-     assign ioce_flat_i_tdata[ioce_i*64+63:ioce_i*64] = ioce_i_tdata[ioce_i];
-  end endgenerate
-
-  /////////////////////////////////////////////////////////////////////////////
-  //
-  // Radio
-  //
-  /////////////////////////////////////////////////////////////////////////////
-
   wire pps_radioclk;
 
   // Synchronize the PPS signal to the radio clock domain
@@ -403,77 +381,53 @@ module e31x_core #(
     .clk(radio_clk), .rst(1'b0), .in(pps_refclk), .out(pps_radioclk)
   );
 
-  localparam RADIO_INPUT_BUFF_SIZE   = 8'd11;
-  // The radio needs a larger output buffer compared to other blocks because it is a finite
-  // rate producer i.e. the input is not backpressured.
-  // Here, we allocate enough room from 2 MTU sized packets. This buffer serves as a
-  // packet gate so we need room for an additional packet if the first one is held due to
-  // contention on the crossbar. Any additional buffering will be largely a waste.
-  localparam RADIO_OUTPUT_BUFF_SIZE  = 8'd10;
+  /////////////////////////////////////////////////////////////////////////////
+  //
+  // DMA Transport Adapter
+  //
+  /////////////////////////////////////////////////////////////////////////////
+  wire [63:0] dmao_tdata;
+  wire        dmao_tlast;
+  wire        dmao_tvalid;
+  wire        dmao_tready;
 
-  wire [31:0] rx_int[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
-  wire        db_fe_set_stb[0:1];
-  wire [7:0]  db_fe_set_addr[0:1];
-  wire [31:0] db_fe_set_data[0:1];
-  wire        db_fe_rb_stb[0:1];
-  wire [7:0]  db_fe_rb_addr[0:1];
-  wire [63:0] db_fe_rb_data[0:1];
-  wire        rx_running[0:1], tx_running[0:1];
-  wire [NUM_RADIO_CORES-1:0] sync_out;
+  wire [63:0] dmai_tdata;
+  wire        dmai_tlast;
+  wire        dmai_tvalid;
+  wire        dmai_tready;
 
-  genvar i;
-  generate
-    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
-      assign rx_atr[i] = rx_running[i];
-      assign tx_atr[i] = tx_running[i];
-    end
-  endgenerate
-
-  noc_block_radio_core #(
-    .NOC_ID(NOC_ID_RADIO),
-    .NUM_CHANNELS(NUM_CHANNELS_PER_RADIO),
-    .STR_SINK_FIFOSIZE({NUM_CHANNELS_PER_RADIO{RADIO_INPUT_BUFF_SIZE}}),
-    .MTU(RADIO_OUTPUT_BUFF_SIZE)
-  ) noc_block_radio_core_i (
-    // Clocks and reset
-    .bus_clk(bus_clk),
-    .bus_rst(bus_rst),
-    .ce_clk(radio_clk),
-    .ce_rst(radio_rst),
-    //AXIS data to/from crossbar
-    .i_tdata(ioce_o_tdata[0]),
-    .i_tlast(ioce_o_tlast[0]),
-    .i_tvalid(ioce_o_tvalid[0]),
-    .i_tready(ioce_o_tready[0]),
-    .o_tdata(ioce_i_tdata[0]),
-    .o_tlast(ioce_i_tlast[0]),
-    .o_tvalid(ioce_i_tvalid[0]),
-    .o_tready(ioce_i_tready[0]),
-    // Radio front-end
-    .rx({rx_data[1],rx_data[0]}),
-    .rx_stb({rx_stb[1], rx_stb[0]}),
-    .tx({tx_data[1], tx_data[0]}),
-    .tx_stb({tx_stb[1], tx_stb[0]}),
-    // Timing and sync
-    .pps(pps_radioclk),
-    .sync_in(1'b0),
-    .sync_out(sync_out),
-    .rx_running({rx_running[1], rx_running[0]}),
-    .tx_running({tx_running[1], tx_running[0]}),
-    // Ctrl ports connected to radio dboard and front end core
-    .db_fe_set_stb ({db_fe_set_stb [1], db_fe_set_stb [0]}),
-    .db_fe_set_addr({db_fe_set_addr[1], db_fe_set_addr[0]}),
-    .db_fe_set_data({db_fe_set_data[1], db_fe_set_data[0]}),
-    .db_fe_rb_stb  ({db_fe_rb_stb  [1], db_fe_rb_stb  [0]}),
-    .db_fe_rb_addr ({db_fe_rb_addr [1], db_fe_rb_addr [0]}),
-    .db_fe_rb_data ({db_fe_rb_data [1], db_fe_rb_data [0]}),
-    //Debug
-    .debug()
+  liberio_chdr64_adapter #(
+    .DMA_ID_WIDTH                    (4)
+  ) dma_xport_adapter (
+    .clk                             (bus_clk),
+    .rst                             (bus_rst),
+    .device_id                       (device_id),
+    // From DMA engine to core
+    .s_dma_tdata                     (s_dma_tdata),
+    .s_dma_tuser                     (s_dma_tuser),
+    .s_dma_tlast                     (s_dma_tlast),
+    .s_dma_tvalid                    (s_dma_tvalid),
+    .s_dma_tready                    (s_dma_tready),
+    // From core to DMA engine
+    .m_dma_tdata                     (m_dma_tdata),
+    .m_dma_tuser                     (m_dma_tdest),
+    .m_dma_tlast                     (m_dma_tlast),
+    .m_dma_tvalid                    (m_dma_tvalid),
+    .m_dma_tready                    (m_dma_tready),
+    // CHDR buses
+    .s_chdr_tdata                    (dmao_tdata),
+    .s_chdr_tlast                    (dmao_tlast),
+    .s_chdr_tvalid                   (dmao_tvalid),
+    .s_chdr_tready                   (dmao_tready),
+    .m_chdr_tdata                    (dmai_tdata),
+    .m_chdr_tlast                    (dmai_tlast),
+    .m_chdr_tvalid                   (dmai_tvalid),
+    .m_chdr_tready                   (dmai_tready)
   );
 
   /////////////////////////////////////////////////////////////////////////////
   //
-  // Radio Front End Control
+  // Radio Daughter board and Front End Control
   //
   /////////////////////////////////////////////////////////////////////////////
 
@@ -487,11 +441,60 @@ module e31x_core #(
   wire [31:0] radio_gpio_in[0:NUM_CHANNELS-1];
   wire [31:0] leds[0:NUM_CHANNELS-1];
 
+  // Daughter board I/O
+  wire        rx_running[0:NUM_CHANNELS-1], tx_running[0:NUM_CHANNELS-1];
+  wire [31:0] rx_int[0:NUM_CHANNELS-1], rx_data[0:NUM_CHANNELS-1], tx_int[0:NUM_CHANNELS-1], tx_data[0:NUM_CHANNELS-1];
+  //wire        rx_stb[0:NUM_CHANNELS-1], tx_stb[0:NUM_CHANNELS-1];
+  wire        db_fe_set_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_set_addr[0:NUM_CHANNELS-1];
+  wire [31:0] db_fe_set_data[0:NUM_CHANNELS-1];
+  wire        db_fe_rb_stb[0:NUM_CHANNELS-1];
+  wire [7:0]  db_fe_rb_addr[0:NUM_CHANNELS-1];
+  wire [63:0] db_fe_rb_data[0:NUM_CHANNELS-1];
+
+  wire [NUM_RADIOS-1:0] sync_out;
+
+  genvar i;
   generate
     for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
+      assign rx_atr[i] = rx_running[i];
+      assign tx_atr[i] = tx_running[i];
+    end
+  endgenerate
+
+
+  //------------------------------------
+  // Daughterboard Control
+  // -----------------------------------
+
+  localparam [7:0] SR_DB_BASE = 8'd160;
+  localparam [7:0] RB_DB_BASE = 8'd16;
+
+  generate
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin: gen_db_control
+      db_control #(
+        .USE_SPI_CLK(0),
+        .SR_BASE(SR_DB_BASE),
+        .RB_BASE(RB_DB_BASE)
+      ) db_control_i (
+        .clk(radio_clk), .reset(radio_rst),
+        .set_stb(db_fe_set_stb[i]), .set_addr(db_fe_set_addr[i]), .set_data(db_fe_set_data[i]),
+        .rb_stb(db_fe_rb_stb[i]), .rb_addr(db_fe_rb_addr[i]), .rb_data(db_fe_rb_data[i]),
+        .run_rx(rx_running[i]), .run_tx(tx_running[i]),
+        .misc_ins(32'h0), .misc_outs(),
+        .fp_gpio_in(radio_gpio_in[i]), .fp_gpio_out(radio_gpio_out[i]), .fp_gpio_ddr(radio_gpio_ddr[i]), .fp_gpio_fab(32'h0),
+        .db_gpio_in(db_gpio_in[i]), .db_gpio_out(db_gpio_out[i]), .db_gpio_ddr(db_gpio_ddr[i]), .db_gpio_fab(),
+        .leds(leds[i]),
+        .spi_clk(1'b0), .spi_rst(1'b0), .sen(), .sclk(), .mosi(), .miso(1'b0)
+      );
+    end
+  endgenerate
+
+  generate
+    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin: gen_gpio_control
       // Radio Data
-      assign rx_int[i] = rx[32*i+31:32*i];
-      assign tx[32*i+31:32*i] = tx_int[i];
+      assign rx_data[i] = rx[32*i+31:32*i];
+      assign tx[32*i+31:32*i] = tx_data[i];
       // GPIO
       assign db_gpio_out_flat[DB_GPIO_WIDTH*i +: DB_GPIO_WIDTH] = db_gpio_out[i];
       assign db_gpio_ddr_flat[DB_GPIO_WIDTH*i +: DB_GPIO_WIDTH] = db_gpio_ddr[i];
@@ -501,124 +504,6 @@ module e31x_core #(
       assign leds_flat[32*i+31:32*i] = leds[i];
     end
   endgenerate
-
-  generate
-    for (i = 0; i < NUM_CHANNELS; i = i + 1) begin
-      n3xx_db_fe_core db_fe_core_i (
-        .clk(radio_clk),
-        .reset(radio_rst),
-        .set_stb(db_fe_set_stb[i]),
-        .set_addr(db_fe_set_addr[i]),
-        .set_data(db_fe_set_data[i]),
-        .rb_stb(db_fe_rb_stb[i]),
-        .rb_addr(db_fe_rb_addr[i]),
-        .rb_data(db_fe_rb_data[i]),
-        .time_sync(sync_out[i < 2 ? 0 : 1]),
-        .tx_stb(tx_stb[i]),
-        .tx_data_in(tx_data[i]),
-        .tx_data_out(tx_int[i]),
-        .tx_running(tx_running[i]),
-        .rx_stb(rx_stb[i]),
-        .rx_data_in(rx_int[i]),
-        .rx_data_out(rx_data[i]),
-        .rx_running(rx_running[i]),
-        .misc_ins(32'h0),
-        .misc_outs(),
-        .fp_gpio_in(radio_gpio_in[i]),
-        .fp_gpio_out(radio_gpio_out[i]),
-        .fp_gpio_ddr(radio_gpio_ddr[i]),
-        .fp_gpio_fab(32'h0),
-        .db_gpio_in(db_gpio_in[i]),
-        .db_gpio_out(db_gpio_out[i]),
-        .db_gpio_ddr(db_gpio_ddr[i]),
-        .db_gpio_fab(db_gpio_fab[i]),
-        .leds(leds[i]),
-        .spi_clk(1'b0),
-        .spi_rst(1'b0),
-        .sen(),
-        .sclk(),
-        .mosi(),
-        .miso(1'b0)
-      );
-    end
-  endgenerate
-
-  ////////////////////////////////////////////////////////////////////////
-  //
-  // axi_crossbar ports:
-  //   The crossbar has 16 ports out of which Port 4 to Port 15 can be used
-  //   for RFNOC blocks. Note that Radio and DRAM are always included by default
-  //   but DDC/DUC and other blocks are not and need to be included via
-  //   rfnoc_ce_default_inst_e31x.v which can be edited manually or
-  //   automatically generated by rfnoc mod tool.
-  //
-  // 0  - DMA to PS
-  // 1  - Radio
-  // 2  - CE0
-  // ...
-  // ...
-  // 15 - CE13
-  //
-  ////////////////////////////////////////////////////////////////////////
-
-  // Included automatically instantiated CEs sources file created by RFNoC mod tool
-
-`ifdef RFNOC
-  `include "rfnoc_ce_auto_inst_e31x.v"
-`else
-  `include "rfnoc_ce_default_inst_e31x.v"
-`endif
-
-  localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE + NUM_IO_CE;
-
-  wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_o_tdata;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tlast;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tvalid;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_o_tready;
-
-  wire  [(NUM_CE + NUM_IO_CE)*64-1:0] xbar_ce_i_tdata;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tlast;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tvalid;
-  wire  [(NUM_CE + NUM_IO_CE)-1:0]    xbar_ce_i_tready;
-
-  assign xbar_ce_i_tdata                      = {ce_flat_i_tdata, ioce_flat_i_tdata};
-  assign xbar_ce_i_tvalid                     = {ce_i_tvalid, ioce_i_tvalid};
-  assign {ce_i_tready, ioce_i_tready}         = xbar_ce_i_tready;
-  assign xbar_ce_i_tlast                      = {ce_i_tlast, ioce_i_tlast};
-
-  assign {ce_flat_o_tdata, ioce_flat_o_tdata} = xbar_ce_o_tdata;
-  assign {ce_o_tvalid, ioce_o_tvalid}         = xbar_ce_o_tvalid;
-  assign xbar_ce_o_tready                     = {ce_o_tready, ioce_o_tready};
-  assign {ce_o_tlast, ioce_o_tlast}           = xbar_ce_o_tlast;
-
-  // Note: The custom accelerator inputs / outputs bitwidth grow based on NUM_CE
-  axi_crossbar_regport #(
-    .REG_BASE(REG_BASE_XBAR),
-    .REG_DWIDTH(REG_DWIDTH),  // Width of the AXI4-Lite data bus (must be 32 or 64)
-    .REG_AWIDTH(REG_AWIDTH),  // Width of the address bus
-    .FIFO_WIDTH(64),
-    .DST_WIDTH(16),
-    .NUM_INPUTS(XBAR_NUM_PORTS),
-    .NUM_OUTPUTS(XBAR_NUM_PORTS)
-  ) axi_crossbar_regport_i (
-    .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-    .i_tdata({xbar_ce_i_tdata,dmai_tdata}),
-    .i_tlast({xbar_ce_i_tlast,dmai_tlast}),
-    .i_tvalid({xbar_ce_i_tvalid,dmai_tvalid}),
-    .i_tready({xbar_ce_i_tready,dmai_tready}),
-    .o_tdata({xbar_ce_o_tdata,dmao_tdata}),
-    .o_tlast({xbar_ce_o_tlast,dmao_tlast}),
-    .o_tvalid({xbar_ce_o_tvalid,dmao_tvalid}),
-    .o_tready({xbar_ce_o_tready,dmao_tready}),
-    .pkt_present({xbar_ce_i_tvalid,dmai_tvalid}),
-    .reg_wr_req(reg_wr_req),
-    .reg_wr_addr(reg_wr_addr),
-    .reg_wr_data(reg_wr_data),
-    .reg_rd_req(reg_rd_req),
-    .reg_rd_addr(reg_rd_addr),
-    .reg_rd_data(reg_rd_data_xbar),
-    .reg_rd_resp(reg_rd_resp_xbar)
-  );
 
   /////////////////////////////////////////////////////////////////////////////
   //
@@ -705,5 +590,105 @@ module e31x_core #(
     end
   endgenerate
 
+  // Regport Mux for response
+  regport_resp_mux #(
+    .WIDTH      (32),
+    .NUM_SLAVES (2)
+  ) reg_resp_mux_i (
+    .clk(bus_clk), .reset(bus_rst),
+    .sla_rd_resp({reg_rd_resp_tk, reg_rd_resp_glob}),
+    .sla_rd_data({reg_rd_data_tk, reg_rd_data_glob}),
+    .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
+  );
+
+   // Timekeeper
+   wire [63:0] radio_time;
+
+   timekeeper #(
+     .BASE_ADDR      (REG_BASE_TIMEKEEPER),
+     .TIME_INCREMENT (1'b1)
+   ) timekeeper_i (
+     .tb_clk                (radio_clk),
+     .tb_rst                (radio_rst),
+     .s_ctrlport_clk        (bus_clk),
+     .s_ctrlport_req_wr     (reg_wr_req),
+     .s_ctrlport_req_rd     (reg_rd_req),
+     .s_ctrlport_req_addr   (reg_wr_req ? reg_wr_addr: reg_rd_addr),
+     .s_ctrlport_req_data   (reg_wr_data),
+     .s_ctrlport_resp_ack   (reg_rd_resp_tk),
+     .s_ctrlport_resp_data  (reg_rd_data_tk),
+     .sample_rx_stb         (rx_stb[0]),
+     .pps                   (pps_radioclk),
+     .tb_timestamp          (radio_time),
+     .tb_timestamp_last_pps (),
+     .tb_period_ns_q32      ()
+   );
+
+
+  rfnoc_image_core #(
+    .PROTOVER(RFNOC_PROTOVER)
+  ) rfnoc_image_core_i (
+    .chdr_aclk               (bus_clk    ),
+    .ctrl_aclk               (bus_clk    ), //TODO: X310 uses bus_clk_div2. we can also reduce it here.
+    .core_arst               (bus_rst    ),
+    .device_id               (device_id  ),
+    .radio_clk               (radio_clk  ),
+    .m_ctrlport_req_wr       (m_ctrlport_req_wr      ),
+    .m_ctrlport_req_rd       (m_ctrlport_req_rd      ),
+    .m_ctrlport_req_addr     (m_ctrlport_req_addr    ),
+    .m_ctrlport_req_data     (m_ctrlport_req_data    ),
+    .m_ctrlport_req_byte_en  (),
+    .m_ctrlport_req_has_time (m_ctrlport_req_has_time),
+    .m_ctrlport_req_time     (m_ctrlport_req_time    ),
+    .m_ctrlport_resp_ack     (m_ctrlport_resp_ack    ),
+    .m_ctrlport_resp_status  (2'b0),
+    .m_ctrlport_resp_data    (m_ctrlport_resp_data   ),
+    .radio_time              (radio_time             ),
+    .radio_rx_stb            ({rx_stb[1],     rx_stb[0]    }),
+    .radio_rx_data           ({rx_data[1],    rx_data[0]   }),
+    .radio_rx_running        ({rx_running[1], rx_running[0]}),
+    .radio_tx_stb            ({tx_stb[1],     tx_stb[0]    }),
+    .radio_tx_data           ({tx_data[1],    tx_data[0]   }),
+    .radio_tx_running        ({tx_running[1], tx_running[0]}),
+    .s_dma_tdata             (dmai_tdata),
+    .s_dma_tlast             (dmai_tlast),
+    .s_dma_tvalid            (dmai_tvalid),
+    .s_dma_tready            (dmai_tready),
+    .m_dma_tdata             (dmao_tdata),
+    .m_dma_tlast             (dmao_tlast),
+    .m_dma_tvalid            (dmao_tvalid),
+    .m_dma_tready            (dmao_tready)
+  );
+
+  //---------------------------------------------------------------------------
+  // Convert Control Port to Settings Bus
+  //---------------------------------------------------------------------------
+
+  ctrlport_to_settings_bus # (
+    .NUM_PORTS (2),
+    .USE_TIME  (1)
+  ) ctrlport_to_settings_bus_i (
+    .ctrlport_clk             (radio_clk),
+    .ctrlport_rst             (radio_rst),
+    .s_ctrlport_req_wr        (m_ctrlport_req_wr),
+    .s_ctrlport_req_rd        (m_ctrlport_req_rd),
+    .s_ctrlport_req_addr      (m_ctrlport_req_addr),
+    .s_ctrlport_req_data      (m_ctrlport_req_data),
+    .s_ctrlport_req_has_time  (m_ctrlport_req_has_time),
+    .s_ctrlport_req_time      (m_ctrlport_req_time),
+    .s_ctrlport_resp_ack      (m_ctrlport_resp_ack),
+    .s_ctrlport_resp_data     (m_ctrlport_resp_data),
+    .set_data                 ({db_fe_set_data[1], db_fe_set_data[0]}),
+    .set_addr                 ({db_fe_set_addr[1], db_fe_set_addr[0]}),
+    .set_stb                  ({db_fe_set_stb[1],  db_fe_set_stb[0] }),
+    .set_time                 (),
+    .set_has_time             (),
+    .rb_stb                   ({db_fe_rb_stb[1],   db_fe_rb_stb[0]  }),
+    .rb_addr                  ({db_fe_rb_addr[1],  db_fe_rb_addr[0] }),
+    .rb_data                  ({db_fe_rb_data[1],  db_fe_rb_data[0] }),
+    .timestamp                (radio_time)
+  );
+
 endmodule //e31x_core
+`default_nettype wire
 

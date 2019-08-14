@@ -329,14 +329,16 @@ module e31x (
     .m_axi_pmu_wvalid(m_axi_pmu_wvalid),
 
     // DMA
-    .i_cvita_dma_tdata(),
-    .i_cvita_dma_tlast(),
-    .i_cvita_dma_tready(),
-    .i_cvita_dma_tvalid(),
-    .o_cvita_dma_tdata(),
-    .o_cvita_dma_tlast(),
-    .o_cvita_dma_tready(),
-    .o_cvita_dma_tvalid()
+    .s_axis_dma_tdata(),
+    .s_axis_dma_tdest(),
+    .s_axis_dma_tlast(),
+    .s_axis_dma_tready(),
+    .s_axis_dma_tvalid(1'b0),
+    .m_axis_dma_tdata(),
+    .m_axis_dma_tuser(),
+    .m_axis_dma_tlast(),
+    .m_axis_dma_tready(1'b1),
+    .m_axis_dma_tvalid()
   );
 
   /////////////////////////////////////////////////////////////////////

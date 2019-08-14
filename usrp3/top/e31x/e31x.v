@@ -211,16 +211,18 @@ module e31x (
   wire [3:0]  m_axi_pmu_wstrb;
   wire        m_axi_pmu_wvalid;
 
-  // DMA to PS
-  wire [63:0] o_cvita_dma_tdata;
-  wire        o_cvita_dma_tlast;
-  wire        o_cvita_dma_tready;
-  wire        o_cvita_dma_tvalid;
+  // DMA xport adapter to PS
+  wire [63:0] m_axis_dma_tdata;
+  wire [3:0]  m_axis_dma_tuser;
+  wire        m_axis_dma_tlast;
+  wire        m_axis_dma_tready;
+  wire        m_axis_dma_tvalid;
 
-  wire [63:0] i_cvita_dma_tdata;
-  wire        i_cvita_dma_tlast;
-  wire        i_cvita_dma_tready;
-  wire        i_cvita_dma_tvalid;
+  wire [63:0] s_axis_dma_tdata;
+  wire [3:0]  s_axis_dma_tdest;
+  wire        s_axis_dma_tlast;
+  wire        s_axis_dma_tready;
+  wire        s_axis_dma_tvalid;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -492,14 +494,16 @@ module e31x (
     .m_axi_pmu_wvalid(m_axi_pmu_wvalid),
 
     // DMA
-    .i_cvita_dma_tdata(i_cvita_dma_tdata),
-    .i_cvita_dma_tlast(i_cvita_dma_tlast),
-    .i_cvita_dma_tready(i_cvita_dma_tready),
-    .i_cvita_dma_tvalid(i_cvita_dma_tvalid),
-    .o_cvita_dma_tdata(o_cvita_dma_tdata),
-    .o_cvita_dma_tlast(o_cvita_dma_tlast),
-    .o_cvita_dma_tready(o_cvita_dma_tready),
-    .o_cvita_dma_tvalid(o_cvita_dma_tvalid)
+    .s_axis_dma_tdata(s_axis_dma_tdata),
+    .s_axis_dma_tdest(s_axis_dma_tdest),
+    .s_axis_dma_tlast(s_axis_dma_tlast),
+    .s_axis_dma_tready(s_axis_dma_tready),
+    .s_axis_dma_tvalid(s_axis_dma_tvalid),
+    .m_axis_dma_tdata(m_axis_dma_tdata),
+    .m_axis_dma_tuser(m_axis_dma_tuser),
+    .m_axis_dma_tlast(m_axis_dma_tlast),
+    .m_axis_dma_tready(m_axis_dma_tready),
+    .m_axis_dma_tvalid(m_axis_dma_tvalid)
   );
 
   /////////////////////////////////////////////////////////////////////
@@ -716,10 +720,11 @@ module e31x (
     .REG_AWIDTH(REG_AWIDTH),
     .BUS_CLK_RATE(BUS_CLK_RATE),
     .NUM_SFP_PORTS(NUM_SFP_PORTS),
-    .NUM_RADIO_CORES(NUM_RADIOS),
+    .NUM_RADIOS(NUM_RADIOS),
     .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
     .NUM_CHANNELS(NUM_CHANNELS),
     .NUM_DBOARDS(NUM_DBOARDS),
+    .NUM_CHANNELS_PER_DBOARD(NUM_CHANNELS_PER_RADIO),
     .FP_GPIO_WIDTH(FP_GPIO_WIDTH),
     .DB_GPIO_WIDTH(DB_GPIO_WIDTH)
   ) e31x_core_inst (
@@ -792,15 +797,17 @@ module e31x (
     .tx(tx_flat),
 
     // DMA to PS
-    .dmao_tdata(i_cvita_dma_tdata),
-    .dmao_tlast(i_cvita_dma_tlast),
-    .dmao_tready(i_cvita_dma_tready),
-    .dmao_tvalid(i_cvita_dma_tvalid),
+    .m_dma_tdata(s_axis_dma_tdata),
+    .m_dma_tdest(s_axis_dma_tdest),
+    .m_dma_tlast(s_axis_dma_tlast),
+    .m_dma_tready(s_axis_dma_tready),
+    .m_dma_tvalid(s_axis_dma_tvalid),
 
-    .dmai_tdata(o_cvita_dma_tdata),
-    .dmai_tlast(o_cvita_dma_tlast),
-    .dmai_tready(o_cvita_dma_tready),
-    .dmai_tvalid(o_cvita_dma_tvalid),
+    .s_dma_tdata(m_axis_dma_tdata),
+    .s_dma_tuser(m_axis_dma_tuser),
+    .s_dma_tlast(m_axis_dma_tlast),
+    .s_dma_tready(m_axis_dma_tready),
+    .s_dma_tvalid(m_axis_dma_tvalid),
 
     .build_datestamp(build_datestamp),
     .sfp_ports_info(),

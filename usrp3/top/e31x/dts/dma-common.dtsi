@@ -84,6 +84,25 @@ fragment@3 {
 				};
 			};
 		};
+		tx_dma4: dma@43CE0000 {
+			compatible = "adi,axi-dmac-1.00.a";
+			reg = <0x43CE0000 0x10000>;
+			interrupts = <0 53 4>;
+			clocks = <&clkc 15>;
+			#dma-cells = <1>;
+			adi,channels {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				dma-channel@0 {
+					reg = <0>;
+					adi,source-bus-type = <0>;
+					adi,source-bus-width = <0x20>;
+					adi,destination-bus-type = <1>;
+					adi,destination-bus-width = <0x20>;
+					adi,length-width = <24>;
+				};
+			};
+		};
 		rx_dma0: dma@43C00000 {
 			compatible = "adi,axi-dmac-1.00.a";
 			reg = <0x43C00000 0x10000>;
@@ -161,6 +180,26 @@ fragment@3 {
 			};
 		};
 
+		rx_dma4: dma@43C40000 {
+			compatible = "adi,axi-dmac-1.00.a";
+			reg = <0x43C40000 0x10000>;
+			interrupts = <0 52 4>;
+			clocks = <&clkc 15>;
+			#dma-cells = <1>;
+			adi,channels {
+				#size-cells = <0>;
+				#address-cells = <1>;
+				dma-channel@0 {
+					reg = <0>;
+					adi,source-bus-type = <1>;
+					adi,source-bus-width = <0x20>;
+					adi,destination-bus-type = <0>;
+					adi,destination-bus-width = <0x20>;
+					adi,length-width = <24>;
+				};
+			};
+		};
+
 		usrp_rx_dma0: usrp-rx-dma@43c00000 {
 			compatible = "ettus,usrp-rx-dma";
 			dmas = <&rx_dma0 0>;
@@ -202,6 +241,15 @@ fragment@3 {
 			offset = <0xc>;
 		};
 
+		usrp_rx_dma4: usrp-rx-dma@43c40000 {
+			compatible = "ettus,usrp-rx-dma";
+			dmas = <&rx_dma4 0>;
+			dma-names = "dma";
+			port-id = <4>;
+
+			regmap = <&dma_conf0>;
+			offset = <0x10>;
+		};
 		usrp_tx_dma0: usrp-tx-dma@43ca0000 {
 			compatible = "ettus,usrp-tx-dma";
 			dmas = <&tx_dma0 0>;
@@ -232,10 +280,12 @@ fragment@3 {
 		};
 
 
-		ps_dma_dest_regs@42000000 {
-			compatible = "usrp-uio";
-			reg = <0x42000000 0x1000>;
-			reg-names = "liberio";
+
+		usrp_tx_dma4: usrp-tx-dma@43ce0000 {
+			compatible = "ettus,usrp-tx-dma";
+			dmas = <&tx_dma4 0>;
+			dma-names = "dma";
+			port-id = <4>;
 			status = "okay";
 		};
 

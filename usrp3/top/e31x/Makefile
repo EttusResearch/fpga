@@ -26,8 +26,11 @@ ifndef TARGET
 endif
 TOP ?= e31x
 
+DEFAULT_IMAGE_CORE_FILE_E31X=e31x_rfnoc_image_core.v
+DEFAULT_EDGE_FILE_E31X=$(abspath e310_static_router.hex)
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.e31x.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.e31x.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2" DEFAULT_RFNOC_IMAGE_CORE_FILE=$(DEFAULT_IMAGE_CORE_FILE_E31X) DEFAULT_EDGE_FILE=$(DEFAULT_EDGE_FILE_E31X)
 
 # post_build($1=Device, $2=Option)
 ifeq ($(TARGET),bin)
@@ -68,15 +71,6 @@ E310_SG3 E310_sg3:  build/usrp_e310_sg3_fpga.dts
 	$(call vivado_build,E310_SG3, E310_SG3=1)
 	$(call post_build,$@,E310_SG3)
 
-##E310_SG1_RFNOC: Build USRP E3XX (Speed Grade 1). RFNoC CEs enabled.
-E310_SG1_RFNOC E310_RFNOC:  build/usrp_e310_sg1_fpga.dts
-	$(call vivado_build,E310_SG1,RFNOC=1 E310_SG1=1)
-	$(call post_build,$@,E310_SG1_RFNOC)
-
-##E310_SG3_RFNOC: Build USRP E3XX (Speed Grade 3). RFNoC CEs enabled.
-E310_SG3_RFNOC E310_RFNOC_sg3: build/usrp_e310_sg3_fpga.dts
-	$(call vivado_build,E310_SG3,RFNOC=1 E310_SG3=1)
-	$(call post_build,$@,E310_SG3_RFNOC)
 
 build/%.dts: dts/%.dts dts/*.dtsi
 	-mkdir -p build

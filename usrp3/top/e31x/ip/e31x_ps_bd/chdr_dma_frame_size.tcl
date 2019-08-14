@@ -50,20 +50,6 @@ proc create_hier_cell_mtu { parentCell nameHier numPorts } {
 
      create_bd_pin -dir O -from 15 -to 0 mtu$i
      connect_bd_net [get_bd_pins mtu$i] [get_bd_pins $xlslice/Dout]
-
-     set xlslice_clr [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_clr_$i ]
-     set_property -dict [ list \
-        CONFIG.DIN_FROM [expr $i * 32 + 31] \
-        CONFIG.DIN_TO [expr $i * 32 + 31] \
-        CONFIG.DIN_WIDTH [expr $numPorts * 32] \
-        CONFIG.DOUT_WIDTH {1} \
-     ] $xlslice_clr
-
-     connect_bd_net -net mtu_regs_1 [get_bd_pins $xlslice_clr/Din]
-
-     create_bd_pin -dir O clear$i
-     connect_bd_net [get_bd_pins clear$i] [get_bd_pins $xlslice_clr/Dout]
-
   }
 
   # Restore current instance

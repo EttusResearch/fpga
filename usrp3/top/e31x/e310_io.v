@@ -34,7 +34,7 @@ module e310_io (
   synchronizer #(.STAGES(3), .INITIAL_VAL(1'b1)) sychronizer_radio_rst (
     .clk(radio_clk), .rst(areset), .in(1'b0), .out(radio_rst));
 
-  (* mark_debug = "true" *) wire mimo_sync;
+  wire mimo_sync;
   synchronizer synchronizer_mimo (.clk(radio_clk), .rst(radio_rst), .in(mimo), .out(mimo_sync));
 
   /****************************************************************************
@@ -44,7 +44,7 @@ module e310_io (
   BUFR bufr_rx_clk (.I(rx_clk), .O(rx_clk_bufr));
   BUFG bufg_radio_clk (.I(rx_clk_bufr), .O(radio_clk));
 
-  (* mark_debug = "true" *) wire [11:0] rx_i, rx_q;
+  wire [11:0] rx_i, rx_q;
   genvar n;
   generate
     for (n = 0; n < 12; n = n + 1) begin
@@ -54,7 +54,7 @@ module e310_io (
     end
   endgenerate
 
-  (* mark_debug = "true" *) wire rx_frame_rising, rx_frame_falling;
+  wire rx_frame_rising, rx_frame_falling;
   IDDR #(.DDR_CLK_EDGE("SAME_EDGE")) iddr_frame (
     .C(rx_clk_bufr), .CE(1'b1), .R(1'b0), .S(1'b0),
     .D(rx_frame), .Q1(rx_frame_rising), .Q2(rx_frame_falling));
@@ -85,8 +85,8 @@ module e310_io (
   /****************************************************************************
   ** TX Output Interface
   ****************************************************************************/
-  (* mark_debug = "true" *) reg [11:0] tx_i, tx_q;
-  (* mark_debug = "true" *) reg tx_frame_int = 1'b1;
+  reg [11:0] tx_i, tx_q;
+  reg tx_frame_int = 1'b1;
   generate
     for (n = 0; n < 12; n = n + 1) begin
       ODDR #(.DDR_CLK_EDGE("SAME_EDGE")) oddr (
@@ -104,7 +104,7 @@ module e310_io (
     .C(radio_clk), .CE(1'b1), .R(1'b0), .S(1'b0),
     .D1(1'b1), .D2(1'b0), .Q(tx_clk));
 
-  (* mark_debug = "true" *) reg [11:0] tx_i1_hold, tx_q1_hold;
+  reg [11:0] tx_i1_hold, tx_q1_hold;
   always @(posedge radio_clk or posedge radio_rst) begin
     if (radio_rst) begin
       tx_stb       <= 1'b0;

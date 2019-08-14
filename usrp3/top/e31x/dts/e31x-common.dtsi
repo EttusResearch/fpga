@@ -12,20 +12,10 @@ fragment@2 {
 		#size-cells = <1>;
 		uio@40010000 {
 			compatible = "usrp-uio";
-			reg = <0x40010000 0x1000>;
+			reg = <0x40010000 0x2000>;
 			reg-names = "mboard-regs";
 			status = "okay";
 		};
-
-		crossbar@40011000 {
-			compatible = "ni,platform-crossbar-rp";
-			reg = <0x40011000 0x1000>;
-			status = "okay";
-			rfnoc,ports = <0x10>;
-			clocks = <&clkc 15>;
-			clock-names = "bus_clk";
-		};
-
 	};
 };
 

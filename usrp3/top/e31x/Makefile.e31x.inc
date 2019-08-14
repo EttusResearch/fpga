@@ -27,11 +27,15 @@ include $(LIB_DIR)/fifo/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
-include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+
+IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
+EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
 
 ##################################################
 # Sources
@@ -40,14 +44,13 @@ include $(LIB_DIR)/rfnoc/Makefile.srcs
 TOP_SRCS = \
 ppsloop.v \
 axi_pmu.v \
-spi_slave.v \
-../n3xx/n3xx_db_fe_core.v \
-../n3xx/n3xx_chdr_eth_framer.v
+spi_slave.v
 
 ifneq (IDLE,$(findstring IDLE, $(EXTRA_DEFS)))
 TOP_SRCS += e31x.v
 TOP_SRCS += e31x_core.v
 TOP_SRCS += e310_io.v
+TOP_SRCS += $(EDGE_FILE) $(IMAGE_CORE)
 MB_XDC = \
 e31x_pins.xdc \
 e31x_timing.xdc
@@ -82,15 +85,19 @@ $(EXTRAM_SRCS) \
 $(CAP_GEN_GENERIC_SRCS) \
 $(RFNOC_OOT_SRCS)\
 $(LIBCOREGEN_SRCS) \
+$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
+$(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS) \
 $(abspath $(MB_XDC))
 
+EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF)
+VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF) $(EDGE_TBL_DEF)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
@@ -102,4 +109,4 @@ synth: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-.PHONY: bin
+.PHONY: bin rtl
