@@ -36,12 +36,17 @@ include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/white_rabbit/wr_cores_v4_2/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(BASE_DIR)/n3xx/Makefile.OOT.inc
-include $(BASE_DIR)/n3xx/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/rh/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/eiscat/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
+include $(LIB_DIR)/erfnoc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+
+IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
+EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
 
 ##################################################
 # Sources
@@ -53,12 +58,10 @@ n3xx_mgt_wrapper.v \
 n3xx_mgt_io_core.v \
 n3xx_clocking.v \
 n3xx_db_fe_core.v \
-n3xx_chdr_eth_framer.v \
-n3xx_eth_dispatch.v \
-n3xx_eth_switch.v
+$(IMAGE_CORE)
 
 ifndef EISCAT
-TOP_SRCS += n3xx_core.v 
+TOP_SRCS += n3xx_core.v
 endif
 
 MB_CLOCKS_XDC = $(abspath mb_clocks.xdc)
@@ -135,14 +138,19 @@ $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIB_HLS_IP_SRCS) $(LIBCOREGEN_SRCS) \
-$(WHITE_RABBIT_SRCS)
+$(WHITE_RABBIT_SRCS) \
+$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
+$(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS)
+
+EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 
 ##################################################
 # Dependency Targets
 ##################################################
 .SECONDEXPANSION:
 
-VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF)
+VERILOG_DEFS=$(EXTRA_DEFS) $(CUSTOM_DEFS) $(GIT_HASH_VERILOG_DEF) $(EDGE_TBL_DEF)
 
 # DESIGN_SRCS and VERILOG_DEFS must be defined
 bin: .prereqs $$(DESIGN_SRCS) ip
@@ -154,4 +162,4 @@ synth: .prereqs $$(DESIGN_SRCS) ip
 rtl: .prereqs $$(DESIGN_SRCS) ip
 	$(call CHECK_VIVADO_DESIGN,$(TOOLS_DIR)/scripts/viv_check_syntax.tcl,$(TOP_MODULE),$(ARCH),$(PART_ID))
 
-.PHONY: bin
+.PHONY: bin rtl

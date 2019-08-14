@@ -137,8 +137,26 @@ CONFIG.CONST_VAL {0} \
         CONFIG.DMA_TYPE_SRC {0} \
      ] $axi_tx_dmac
 
-     connect_bd_intf_net -intf_net [format "S%02d_AXIS_1" ${i}] \
+     # Add a tuser signal indicating which DMA channel originated the packet
+     # Hard-coded to handle up to 16 DMA channels
+     # Convert i (in decimal) to 4-bit binary:
+     binary scan [binary format c ${i}] B* i_binary
+     set i_binary [string range ${i_binary} end-3 end]
+
+     set tuser_appender [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_${i} ]
+     set_property -dict [ list \
+        CONFIG.M_TUSER_WIDTH.VALUE_SRC USER \
+     ] $tuser_appender
+     set_property -dict [ list \
+        CONFIG.M_TUSER_WIDTH {4} \
+        CONFIG.TUSER_REMAP 4'b${i_binary} \
+     ] $tuser_appender
+
+     connect_bd_intf_net -intf_net [format "axis_subset_converter_%d_S_AXIS" ${i}] \
         [get_bd_intf_pins $axi_tx_dmac/m_axis] \
+        [get_bd_intf_pins ${tuser_appender}/S_AXIS]
+     connect_bd_intf_net -intf_net [format "S%02d_AXIS_1" ${i}] \
+        [get_bd_intf_pins ${tuser_appender}/M_AXIS] \
         [get_bd_intf_pins [format "axis_interconnect_0/S%02d_AXIS" ${i}]]
      connect_bd_intf_net -intf_net axi_dmac_${i}_m_src_axi \
         [get_bd_intf_pins [format "axi_crossbar_0/S%02d_AXI" ${i}]] \
@@ -154,12 +172,14 @@ CONFIG.CONST_VAL {0} \
         [get_bd_pins $axi_tx_dmac/m_axis_aclk] \
         [get_bd_pins $axi_tx_dmac/m_src_axi_aclk] \
         [get_bd_pins $axi_tx_dmac/s_axi_aclk] \
+	[get_bd_pins $tuser_appender/aclk] \
         [get_bd_pins [format "axis_interconnect_0/S%02d_AXIS_ACLK" ${i}]]
 
      connect_bd_net -net clk40_rstn \
         [get_bd_pins [format "axi_interconnect_0/M%02d_ARESETN" ${i}]] \
         [get_bd_pins $axi_tx_dmac/m_src_axi_aresetn] \
         [get_bd_pins $axi_tx_dmac/s_axi_aresetn] \
+	[get_bd_pins $tuser_appender/aresetn] \
         [get_bd_pins [format "axis_interconnect_0/S%02d_AXIS_ARESETN" ${i}]]
 
      connect_bd_net -net xlconstant_0_dout \

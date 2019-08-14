@@ -103,19 +103,6 @@ module n3xx_mgt_channel_wrapper #(
   input  wire [LANES-1:0]        v2e_tvalid,
   output wire [LANES-1:0]        v2e_tready,
 
-  // Ethernet crossover
-  output wire [LANES*64-1:0]     xo_tdata,
-  output wire [LANES*4-1:0]      xo_tuser,
-  output wire [LANES-1:0]        xo_tlast,
-  output wire [LANES-1:0]        xo_tvalid,
-  input  wire [LANES-1:0]        xo_tready,
-
-  input  wire [LANES*64-1:0]     xi_tdata,
-  input  wire [LANES*4-1:0]      xi_tuser,
-  input  wire [LANES-1:0]        xi_tlast,
-  input  wire [LANES-1:0]        xi_tvalid,
-  output wire [LANES-1:0]        xi_tready,
-
   // CPU
   output wire [LANES*64-1:0]     e2c_tdata,
   output wire [LANES*8-1:0]      e2c_tkeep,
@@ -131,6 +118,7 @@ module n3xx_mgt_channel_wrapper #(
 
   // MISC
   output wire [LANES*32-1:0]     port_info,
+  input wire [15:0]              device_id,
 
   // Sideband White Rabbit Control
   input  wire                    wr_reset_n,
@@ -271,7 +259,7 @@ module n3xx_mgt_channel_wrapper #(
   //--------------------------------------------------------------
 
   genvar l;
-  generate 
+  generate
     for (l = 0; l < LANES; l = l + 1) begin: lanes
       n3xx_mgt_wrapper #(
         .PROTOCOL       (PROTOCOL),
@@ -348,6 +336,7 @@ module n3xx_mgt_channel_wrapper #(
         .c2e_tready     (c2e_tready[l]),
 
         .port_info      (port_info[l*32 +: 32]),
+        .device_id      (device_id),
 
         // Sideband White Rabbit Control
         .wr_reset_n     (wr_reset_n),

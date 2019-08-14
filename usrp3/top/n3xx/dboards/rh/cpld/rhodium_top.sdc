@@ -18,8 +18,8 @@ set clk_uncertainty 0.150
 
 # The PS SPI clock is maximum 10 MHz. It is driven from another source and
 # provided with the data.
-# CPLD_PS_SPI_CLK_25: 10 MHz
-set sclk_ps_period 100.000
+# CPLD_PS_SPI_CLK_25: 8 MHz
+set sclk_ps_period 125.000
 
 # Create clock for the PS's SPI interface
 create_clock -name sclk_ps -period $sclk_ps_period \
@@ -90,7 +90,7 @@ set_clock_uncertainty -to [get_clocks {sclk_ps sclk_pl sclk_pl_wr clkdist_clk
 # The master will use these values to time its SPI interface.
 # The PL's write-only values are smaller because there are no external chip
 # dependencies.
-set setup_ps 15
+set setup_ps 25
 set hold_ps 30
 
 # PL SPI is constrained on the master with an allowed skew value of +/- 3 ns

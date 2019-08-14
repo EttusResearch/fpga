@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////
 ///
-// Copyright 2018 Ettus Research, A National Instruments Company
+// Copyright 2018-2019 Ettus Research, A National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
@@ -1217,18 +1217,6 @@ module n3xx (
     .v2e_tvalid     (v2e_qsfp_tvalid),
     .v2e_tready     (v2e_qsfp_tready),
 
-    // Crossover
-    .xo_tdata       (),
-    .xo_tuser       (),
-    .xo_tlast       (),
-    .xo_tvalid      (),
-    .xo_tready      (1'b1),
-    .xi_tdata       (),
-    .xi_tuser       (),
-    .xi_tlast       (),
-    .xi_tvalid      (1'b0),
-    .xi_tready      (),
-
     // Ethernet to CPU
     .e2c_tdata      (arm_eth_qsfp_rx_tdata_b),
     .e2c_tkeep      (arm_eth_qsfp_rx_tkeep_b),
@@ -1287,6 +1275,7 @@ module n3xx (
     .wr_axi_rlast   (),
 
     .port_info      (),
+    .device_id      (device_id),
 
     .link_up        (qsfp_link_up),
     .activity       ()
@@ -1613,21 +1602,25 @@ module n3xx (
   wire          e01_tlast, e01_tvalid, e01_tready;
   wire          e10_tlast, e10_tvalid, e10_tready;
 
-  // ARM DMA
-  wire [63:0] o_cvita_dma_tdata;
-  wire        o_cvita_dma_tlast;
-  wire        o_cvita_dma_tready;
-  wire        o_cvita_dma_tvalid;
 
-  wire [63:0] i_cvita_dma_tdata;
-  wire        i_cvita_dma_tlast;
-  wire        i_cvita_dma_tready;
-  wire        i_cvita_dma_tvalid;
+  // DMA xport adapter to PS
+  wire [63:0] m_axis_dma_tdata;
+  wire [3:0]  m_axis_dma_tuser;
+  wire        m_axis_dma_tlast;
+  wire        m_axis_dma_tready;
+  wire        m_axis_dma_tvalid;
+
+  wire [63:0] s_axis_dma_tdata;
+  wire [3:0]  s_axis_dma_tdest;
+  wire        s_axis_dma_tlast;
+  wire        s_axis_dma_tready;
+  wire        s_axis_dma_tvalid;
 
   // Misc
   wire [31:0] sfp_port0_info;
   wire [31:0] sfp_port1_info;
   wire sfp0_link_up, sfp1_link_up;
+  wire [15:0] device_id;
 
   /////////////////////////////////////////////////////////////////////
   //
@@ -1725,18 +1718,6 @@ module n3xx (
      .v2e_tvalid(v2e_sfp0_tvalid),
      .v2e_tready(v2e_sfp0_tready),
 
-     // Crossover
-     .xo_tdata(e01_tdata),
-     .xo_tuser(e01_tuser),
-     .xo_tlast(e01_tlast),
-     .xo_tvalid(e01_tvalid),
-     .xo_tready(e01_tready),
-     .xi_tdata(e10_tdata),
-     .xi_tuser(e10_tuser),
-     .xi_tlast(e10_tlast),
-     .xi_tvalid(e10_tvalid),
-     .xi_tready(e10_tready),
-
      // Ethernet to CPU
      .e2c_tdata(arm_eth_sfp0_rx_tdata_b),
      .e2c_tkeep(arm_eth_sfp0_rx_tkeep_b),
@@ -1799,6 +1780,7 @@ module n3xx (
 
      // Misc
      .port_info(sfp_port0_info),
+     .device_id(device_id),
 
      // LED
      .link_up(sfp0_link_up),
@@ -1907,18 +1889,6 @@ module n3xx (
      .v2e_tvalid(v2e_sfp1_tvalid),
      .v2e_tready(v2e_sfp1_tready),
 
-     // Crossover
-     .xo_tdata(e10_tdata),
-     .xo_tuser(e10_tuser),
-     .xo_tlast(e10_tlast),
-     .xo_tvalid(e10_tvalid),
-     .xo_tready(e10_tready),
-     .xi_tdata(e01_tdata),
-     .xi_tuser(e01_tuser),
-     .xi_tlast(e01_tlast),
-     .xi_tvalid(e01_tvalid),
-     .xi_tready(e01_tready),
-
      // Ethernet to CPU
      .e2c_tdata(arm_eth_sfp1_rx_tdata_b),
      .e2c_tkeep(arm_eth_sfp1_rx_tkeep_b),
@@ -1935,6 +1905,7 @@ module n3xx (
 
      // Misc
      .port_info(sfp_port1_info),
+     .device_id(device_id),
 
      // LED
      .link_up(sfp1_link_up),
@@ -2791,9 +2762,11 @@ module n3xx (
     .M_AXI_WR_araddr(m_axi_wr_araddr),
     .M_AXI_WR_arready(m_axi_wr_arready),
     .M_AXI_WR_arvalid(m_axi_wr_arvalid),
+    .M_AXI_WR_arprot(),
     .M_AXI_WR_awaddr(m_axi_wr_awaddr),
     .M_AXI_WR_awready(m_axi_wr_awready),
     .M_AXI_WR_awvalid(m_axi_wr_awvalid),
+    .M_AXI_WR_awprot(),
     .M_AXI_WR_bready(m_axi_wr_bready),
     .M_AXI_WR_bresp(m_axi_wr_bresp),
     .M_AXI_WR_bvalid(m_axi_wr_bvalid),
@@ -2841,6 +2814,7 @@ module n3xx (
     .S_AXI_GP0_arprot(S_AXI_GP0_ARPROT),
     .S_AXI_GP0_arqos(4'b0000),
     .S_AXI_GP0_arready(S_AXI_GP0_ARREADY),
+    .S_AXI_GP0_arregion(4'b0000),
     .S_AXI_GP0_arsize(S_AXI_GP0_ARSIZE),
     .S_AXI_GP0_arvalid(S_AXI_GP0_ARVALID),
     .S_AXI_GP0_awaddr(S_AXI_GP0_AWADDR),
@@ -2881,6 +2855,7 @@ module n3xx (
     .S_AXI_GP1_arlock(1'b0),
     .S_AXI_GP1_arprot(S_AXI_GP1_ARPROT),
     .S_AXI_GP1_arqos(4'b000),
+    .S_AXI_GP1_arregion(4'b0000),
     .S_AXI_GP1_arready(S_AXI_GP1_ARREADY),
     .S_AXI_GP1_arsize(S_AXI_GP1_ARSIZE),
     .S_AXI_GP1_arvalid(S_AXI_GP1_ARVALID),
@@ -2993,15 +2968,16 @@ module n3xx (
     .S_AXI_HP1_wvalid(S_AXI_HP1_WVALID),
 
     // ARM DMA
-    .o_cvita_dma_tdata(o_cvita_dma_tdata),
-    .o_cvita_dma_tlast(o_cvita_dma_tlast),
-    .o_cvita_dma_tready(o_cvita_dma_tready),
-    .o_cvita_dma_tvalid(o_cvita_dma_tvalid),
-
-    .i_cvita_dma_tdata(i_cvita_dma_tdata),
-    .i_cvita_dma_tlast(i_cvita_dma_tlast),
-    .i_cvita_dma_tready(i_cvita_dma_tready),
-    .i_cvita_dma_tvalid(i_cvita_dma_tvalid),
+    .s_axis_dma_tdata(s_axis_dma_tdata),
+    .s_axis_dma_tdest(s_axis_dma_tdest),
+    .s_axis_dma_tlast(s_axis_dma_tlast),
+    .s_axis_dma_tready(s_axis_dma_tready),
+    .s_axis_dma_tvalid(s_axis_dma_tvalid),
+    .m_axis_dma_tdata(m_axis_dma_tdata),
+    .m_axis_dma_tuser(m_axis_dma_tuser),
+    .m_axis_dma_tlast(m_axis_dma_tlast),
+    .m_axis_dma_tready(m_axis_dma_tready),
+    .m_axis_dma_tvalid(m_axis_dma_tvalid),
 
     // Misc Interrupts, GPIO, clk
     .IRQ_F2P(IRQ_F2P),
@@ -3358,12 +3334,10 @@ module n3xx (
     .BUS_CLK_RATE(BUS_CLK_RATE),
     .FP_GPIO_WIDTH(FP_GPIO_WIDTH),
     .CHANNEL_WIDTH(CHANNEL_WIDTH),
-    .NUM_RADIO_CORES(NUM_RADIOS),
     .NUM_CHANNELS_PER_RADIO(NUM_CHANNELS_PER_RADIO),
     .NUM_CHANNELS(NUM_CHANNELS),
     .NUM_DBOARDS(NUM_DBOARDS),
     .NUM_SPI_PER_DBOARD(4),
-    .RADIO_NOC_ID(64'h12AD_1000_0000_0320),
     .USE_CORRECTION(1),
   `ifdef USE_REPLAY
     .USE_REPLAY(1)
@@ -3382,6 +3356,7 @@ module n3xx (
     .bus_clk(bus_clk),
     .bus_rst(bus_rst),
     .ddr3_dma_clk(ddr3_dma_clk),
+    .clk40(clk40),
 
     // Clocking and PPS Controls/Indicators
     .pps(pps_radioclk1x),
@@ -3494,16 +3469,18 @@ module n3xx (
     .ddr3_axi_rvalid           (ddr3_axi_rvalid),
     .ddr3_axi_rready           (ddr3_axi_rready),
 
-    //DMA
-    .dmao_tdata(i_cvita_dma_tdata),
-    .dmao_tlast(i_cvita_dma_tlast),
-    .dmao_tready(i_cvita_dma_tready),
-    .dmao_tvalid(i_cvita_dma_tvalid),
+    // DMA to PS
+    .m_dma_tdata(s_axis_dma_tdata),
+    .m_dma_tdest(s_axis_dma_tdest),
+    .m_dma_tlast(s_axis_dma_tlast),
+    .m_dma_tready(s_axis_dma_tready),
+    .m_dma_tvalid(s_axis_dma_tvalid),
 
-    .dmai_tdata(o_cvita_dma_tdata),
-    .dmai_tlast(o_cvita_dma_tlast),
-    .dmai_tready(o_cvita_dma_tready),
-    .dmai_tvalid(o_cvita_dma_tvalid),
+    .s_dma_tdata(m_axis_dma_tdata),
+    .s_dma_tuser(m_axis_dma_tuser),
+    .s_dma_tlast(m_axis_dma_tlast),
+    .s_dma_tready(m_axis_dma_tready),
+    .s_dma_tvalid(m_axis_dma_tvalid),
 
     // VITA to Ethernet
     .v2e0_tdata(v2e0_tdata),
@@ -3538,7 +3515,8 @@ module n3xx (
 
     .build_datestamp(build_datestamp),
     .xadc_readback({20'h0, device_temp}),
-    .sfp_ports_info({sfp_port1_info, sfp_port0_info})
+    .sfp_ports_info({sfp_port1_info, sfp_port0_info}),
+    .device_id(device_id)
   );
 
   // Register the ATR bits once between sending them out to the CPLD to avoid

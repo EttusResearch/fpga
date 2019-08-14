@@ -18,7 +18,6 @@ module n3xx_db_fe_core #(
   // Commands from Radio Core
   input  set_stb, input [7:0] set_addr, input  [31:0] set_data,
   output rb_stb,  input [7:0] rb_addr,  output [63:0] rb_data,
-  input  time_sync,
   // Radio datapath
   input  tx_stb, input [WIDTH-1:0] tx_data_in, output [WIDTH-1:0] tx_data_out, input tx_running,
   input  rx_stb, input [WIDTH-1:0] rx_data_in, output [WIDTH-1:0] rx_data_out, input rx_running,
@@ -30,8 +29,8 @@ module n3xx_db_fe_core #(
   input spi_clk, input spi_rst, output [NUM_SPI_SEN-1:0] sen, output sclk, output mosi, input miso
 );
 
-  localparam [7:0] SR_TX_FE_BASE = SR_DB_FE_BASE + 8'd64;
-  localparam [7:0] SR_RX_FE_BASE = SR_DB_FE_BASE + 8'd72;
+  localparam [7:0] SR_TX_FE_BASE = SR_DB_FE_BASE + 8'd48;
+  localparam [7:0] SR_RX_FE_BASE = SR_DB_FE_BASE + 8'd64;
 
   db_control #(
     .USE_SPI_CLK(USE_SPI_CLK), .SR_BASE(SR_DB_FE_BASE), .RB_BASE(RB_DB_FE_BASE),
@@ -68,7 +67,7 @@ module n3xx_db_fe_core #(
         .BYPASS_DC_OFFSET_CORR(0), .BYPASS_IQ_COMP(0), .BYPASS_REALMODE_DSP(1),
         .DEVICE("7SERIES")
       ) rx_fe_corr_i (
-        .clk(clk), .reset(reset), .sync_in(time_sync),
+        .clk(clk), .reset(reset), .sync_in(),
         .set_stb(set_stb), .set_addr(set_addr), .set_data(set_data),
         .adc_stb(rx_stb), .adc_i(rx_data_in[31:16]), .adc_q(rx_data_in[15:0]),
         .rx_stb(), .rx_i(rx_data_out[31:16]), .rx_q(rx_data_out[15:0])

@@ -55,7 +55,13 @@ proc create_root_design { parentCell } {
   # Create interface ports
   set DDR [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:ddrx_rtl:1.0 DDR ]
   set GPIO_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 GPIO_0 ]
-  set o_cvita_dma [ create_bd_intf_port -mode Master -vlnv ettus.com:interfaces:chdr_rtl:1.0 o_cvita_dma ]
+  set m_axis_dma [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:axis_rtl:1.0 m_axis_dma ]
+  set s_axis_dma [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:axis_rtl:1.0 s_axis_dma ]
+  set_property -dict [ list \
+   CONFIG.HAS_TLAST 1 \
+   CONFIG.TDATA_NUM_BYTES 8 \
+   CONFIG.TDEST_WIDTH 4 \
+  ] $s_axis_dma
   set WR_UART [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:uart_rtl:1.0 WR_UART ]
   set M_AXI_ETH_DMA0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_ETH_DMA0 ]
   set_property -dict [ list \
@@ -192,7 +198,6 @@ CONFIG.NUM_READ_OUTSTANDING {2} \
 CONFIG.NUM_WRITE_OUTSTANDING {2} \
 CONFIG.PROTOCOL {AXI4LITE} \
  ] $M_AXI_XBAR
-  set i_cvita_dma [ create_bd_intf_port -mode Slave -vlnv ettus.com:interfaces:chdr_rtl:1.0 i_cvita_dma ]
   set S_AXI_GP0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 S_AXI_GP0 ]
   set_property -dict [ list \
 CONFIG.ADDR_WIDTH {32} \
@@ -382,6 +387,8 @@ CONFIG.FREQ_HZ {40000000} \
   set S_AXI_HP1_ARESETN [ create_bd_port -dir I -type rst S_AXI_HP1_ARESETN ]
   set bus_clk [ create_bd_port -dir I -type clk bus_clk ]
   set_property -dict [ list \
+CONFIG.ASSOCIATED_BUSIF {m_axis_dma:s_axis_dma} \
+CONFIG.ASSOCIATED_RESET {bus_rstn} \
 CONFIG.FREQ_HZ {200000000} \
  ] $bus_clk
   set bus_rstn [ create_bd_port -dir I -type rst bus_rstn ]
@@ -428,7 +435,7 @@ CONFIG.NUM_SI {2} \
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
   set_property -dict [ list \
 CONFIG.ENABLE_ADVANCED_OPTIONS {0} \
-CONFIG.NUM_MI {17} \
+CONFIG.NUM_MI {16} \
  ] $axi_interconnect_0
 
   # Create instance: axi_uartlite_0, and set properties
@@ -536,7 +543,7 @@ CONFIG.DOUT_WIDTH {8} \
   connect_bd_intf_net -intf_net axi_interconnect_0_M04_AXI [get_bd_intf_ports M_AXI_XBAR] [get_bd_intf_pins axi_interconnect_0/M04_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M05_AXI [get_bd_intf_ports M_AXI_JESD0] [get_bd_intf_pins axi_interconnect_0/M05_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M06_AXI [get_bd_intf_ports M_AXI_JESD1] [get_bd_intf_pins axi_interconnect_0/M06_AXI]
-  connect_bd_intf_net -intf_net axi_interconnect_0_M07_AXI [get_bd_intf_pins axi_interconnect_0/M07_AXI] [get_bd_intf_pins dma/s_axi_dma_rx_mapper]
+  connect_bd_intf_net -intf_net axi_interconnect_0_M07_AXI [get_bd_intf_ports M_AXI_NET2] [get_bd_intf_pins axi_interconnect_0/M07_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M08_AXI [get_bd_intf_pins axi_interconnect_0/M08_AXI] [get_bd_intf_pins dma/s_axi_rx_dmac]
   connect_bd_intf_net -intf_net axi_interconnect_0_M09_AXI [get_bd_intf_pins axi_interconnect_0/M09_AXI] [get_bd_intf_pins dma/s_axi_tx_dmac]
   connect_bd_intf_net -intf_net axi_interconnect_0_M10_AXI [get_bd_intf_pins axi_interconnect_0/M10_AXI] [get_bd_intf_pins dma/s_axi_regfile]
@@ -545,16 +552,16 @@ CONFIG.DOUT_WIDTH {8} \
   connect_bd_intf_net -intf_net axi_interconnect_0_M13_AXI [get_bd_intf_pins axi_interconnect_0/M13_AXI] [get_bd_intf_pins axi_uartlite_0/S_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M14_AXI [get_bd_intf_ports M_AXI_WR] [get_bd_intf_pins axi_interconnect_0/M14_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M15_AXI [get_bd_intf_pins axi_iic_0/S_AXI] [get_bd_intf_pins axi_interconnect_0/M15_AXI]
-  connect_bd_intf_net -intf_net axi_interconnect_0_M16_AXI [get_bd_intf_ports M_AXI_NET2] [get_bd_intf_pins axi_interconnect_0/M16_AXI]
+
   connect_bd_intf_net -intf_net axi_protocol_converter_hp0_M_AXI [get_bd_intf_pins axi_interconnect_hp0/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
   connect_bd_intf_net -intf_net axi_protocol_converter_hp1_M_AXI [get_bd_intf_pins axi_interconnect_hp1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP1]
-  connect_bd_intf_net -intf_net o_cvita_dma_1 [get_bd_intf_ports o_cvita_dma] [get_bd_intf_pins dma/o_cvita_dma]
+  connect_bd_intf_net -intf_net dma_M_AXI_RX_DMA [get_bd_intf_pins dma/M_AXI_RX_DMA] [get_bd_intf_pins processing_system7_0/S_AXI_HP2]
   connect_bd_intf_net -intf_net dma_M_AXI_TX_DMA [get_bd_intf_pins dma/M_AXI_TX_DMA] [get_bd_intf_pins processing_system7_0/S_AXI_HP3]
-  connect_bd_intf_net -intf_net i_cvita_dma_1 [get_bd_intf_ports i_cvita_dma] [get_bd_intf_pins dma/i_cvita_dma]
+  connect_bd_intf_net -intf_net s_axis_dma_1 [get_bd_intf_ports s_axis_dma] [get_bd_intf_pins dma/s_axis_dma]
+  connect_bd_intf_net -intf_net m_axis_dma_1 [get_bd_intf_ports m_axis_dma] [get_bd_intf_pins dma/m_axis_dma]
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_GPIO_0 [get_bd_intf_ports GPIO_0] [get_bd_intf_pins processing_system7_0/GPIO_0]
   connect_bd_intf_net -intf_net processing_system7_0_USBIND_0 [get_bd_intf_ports USBIND_0] [get_bd_intf_pins processing_system7_0/USBIND_0]
-  connect_bd_intf_net -intf_net rx_dma_M_AXI_RX_DMA [get_bd_intf_pins dma/M_AXI_RX_DMA] [get_bd_intf_pins processing_system7_0/S_AXI_HP2]
   connect_bd_intf_net -intf_net WR_UART [get_bd_intf_ports WR_UART] [get_bd_intf_pins axi_uartlite_0/UART]
 
   # Create port connections
@@ -575,10 +582,10 @@ CONFIG.DOUT_WIDTH {8} \
   connect_bd_net -net S_AXI_HP0_ARESETN_1 [get_bd_ports S_AXI_HP0_ARESETN] [get_bd_pins axi_interconnect_hp0/M00_ARESETN] [get_bd_pins axi_interconnect_hp0/S00_ARESETN] [get_bd_pins axi_interconnect_hp0/ARESETN]
   connect_bd_net -net S_AXI_HP1_ACLK_1 [get_bd_ports S_AXI_HP1_ACLK] [get_bd_pins axi_interconnect_hp1/M00_ACLK] [get_bd_pins axi_interconnect_hp1/S00_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP1_ACLK] [get_bd_pins axi_interconnect_hp1/ACLK]
   connect_bd_net -net S_AXI_HP1_ARESETN_1 [get_bd_ports S_AXI_HP1_ARESETN] [get_bd_pins axi_interconnect_hp1/M00_ARESETN] [get_bd_pins axi_interconnect_hp1/S00_ARESETN] [get_bd_pins axi_interconnect_hp1/ARESETN]
-  connect_bd_net -net bus_clk [get_bd_ports bus_clk] [get_bd_pins axi_interconnect_0/M07_ACLK] [get_bd_pins dma/bus_clk]
-  connect_bd_net -net bus_rstn [get_bd_ports bus_rstn] [get_bd_pins axi_interconnect_0/M07_ARESETN] [get_bd_pins dma/bus_rstn]
-  connect_bd_net -net clk40 [get_bd_ports clk40] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M06_ACLK] [get_bd_pins axi_interconnect_0/M08_ACLK] [get_bd_pins axi_interconnect_0/M09_ACLK] [get_bd_pins axi_interconnect_0/M10_ACLK] [get_bd_pins dma/clk40] [get_bd_pins processing_system7_0/S_AXI_HP2_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP3_ACLK] [get_bd_pins axi_interconnect_0/M11_ACLK] [get_bd_pins axi_interconnect_0/M12_ACLK] [get_bd_pins axi_interconnect_0/M15_ACLK] [get_bd_pins axi_interconnect_0/M16_ACLK]
-  connect_bd_net -net clk40_rstn [get_bd_ports clk40_rstn] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M06_ARESETN] [get_bd_pins axi_interconnect_0/M08_ARESETN] [get_bd_pins axi_interconnect_0/M09_ARESETN] [get_bd_pins axi_interconnect_0/M10_ARESETN] [get_bd_pins axi_interconnect_0/M11_ARESETN] [get_bd_pins axi_interconnect_0/M12_ARESETN] [get_bd_pins axi_interconnect_0/M15_ARESETN] [get_bd_pins axi_interconnect_0/M16_ARESETN] [get_bd_pins dma/clk40_rstn]
+  connect_bd_net -net bus_clk [get_bd_ports bus_clk] [get_bd_pins dma/bus_clk]
+  connect_bd_net -net bus_rstn [get_bd_ports bus_rstn] [get_bd_pins dma/bus_rstn]
+  connect_bd_net -net clk40 [get_bd_ports clk40] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M06_ACLK] [get_bd_pins axi_interconnect_0/M07_ACLK] [get_bd_pins axi_interconnect_0/M08_ACLK] [get_bd_pins axi_interconnect_0/M09_ACLK] [get_bd_pins axi_interconnect_0/M10_ACLK] [get_bd_pins dma/clk40] [get_bd_pins processing_system7_0/S_AXI_HP2_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP3_ACLK] [get_bd_pins axi_interconnect_0/M11_ACLK] [get_bd_pins axi_interconnect_0/M12_ACLK] [get_bd_pins axi_interconnect_0/M15_ACLK]
+  connect_bd_net -net clk40_rstn [get_bd_ports clk40_rstn] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M06_ARESETN] [get_bd_pins axi_interconnect_0/M07_ARESETN] [get_bd_pins axi_interconnect_0/M08_ARESETN] [get_bd_pins axi_interconnect_0/M09_ARESETN] [get_bd_pins axi_interconnect_0/M10_ARESETN] [get_bd_pins axi_interconnect_0/M11_ARESETN] [get_bd_pins axi_interconnect_0/M12_ARESETN] [get_bd_pins axi_interconnect_0/M15_ARESETN] [get_bd_pins dma/clk40_rstn]
   connect_bd_net -net M_AXI_WR_CLK [get_bd_ports M_AXI_WR_CLK] [get_bd_pins axi_interconnect_0/M14_ACLK]
   connect_bd_net -net M_AXI_WR_RSTn [get_bd_ports M_AXI_WR_RSTn] [get_bd_pins axi_interconnect_0/M14_ARESETN]
   connect_bd_net -net ddr_vrn [get_bd_ports DDR_VRN] [get_bd_pins processing_system7_0/DDR_VRN]
@@ -674,7 +681,6 @@ CONFIG.DOUT_WIDTH {8} \
   create_bd_addr_seg -range 0x10000 -offset 0x43C70000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma7/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite23
   create_bd_addr_seg -range 0x10000 -offset 0x43C80000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma8/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite25
   create_bd_addr_seg -range 0x10000 -offset 0x43C90000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/rx/dma9/axi_rx_dmac/s_axi/axi_lite] SEG_axi_rx_dmac_axi_lite27
-  create_bd_addr_seg -range 0x1000 -offset 0x42000000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs dma/ps_dma_rx_mapper/S_AXI/Mem0] SEG_ps_dma_rx_mapper_Mem0
   create_bd_addr_seg -range 0x1000 -offset 0x42100000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs jtag_0/S_AXI/reg0] SEG_jtag_0_reg0
   create_bd_addr_seg -range 0x1000 -offset 0x42200000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs jtag_1/S_AXI/reg0] SEG_jtag_1_reg0
   create_bd_addr_seg -range 0x1000 -offset 0x42C00000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs {axi_uartlite_0/S_AXI/Reg }] SEG_WR_UART_Reg

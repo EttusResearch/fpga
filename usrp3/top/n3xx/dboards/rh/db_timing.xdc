@@ -59,7 +59,7 @@ set_min_delay $MIN_OUT_DELAY -to $CPLD_SPI_OUTS
 #   6.071 ns (Max at Slow Process Corner)
 # Therefore, we round those number to their immediate succesor respectively.
 set MIN_IN_DELAY   2.0
-set MAX_IN_DELAY   7.0
+set MAX_IN_DELAY   10.0
 
 set PS_SPI_INPUTS_0 [get_pins -hierarchical -filter {NAME =~ "*/PS7_i/EMIOSPI0MI"}]
 set PS_SPI_INPUTS_1 [get_pins -hierarchical -filter {NAME =~ "*/PS7_i/EMIOSPI1MI"}]

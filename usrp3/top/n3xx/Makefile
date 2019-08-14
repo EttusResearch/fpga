@@ -44,8 +44,15 @@ ifndef TARGET
 endif
 TOP ?= n3xx
 
+DEFAULT_IMAGE_CORE_FILE_N300=n300_rfnoc_image_core.v
+DEFAULT_IMAGE_CORE_FILE_N310=n310_rfnoc_image_core.v
+DEFAULT_IMAGE_CORE_FILE_N320=n320_rfnoc_image_core.v
+DEFAULT_EDGE_FILE_N300=$(abspath n300_static_router.hex)
+DEFAULT_EDGE_FILE_N310=$(abspath n310_static_router.hex)
+DEFAULT_EDGE_FILE_N320=$(abspath n320_static_router.hex)
+
 # vivado_build($1=Device, $2=Definitions)
-vivado_build = make -f Makefile.n3xx.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
+vivado_build = make -f Makefile.n3xx.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2" DEFAULT_RFNOC_IMAGE_CORE_FILE=$(DEFAULT_IMAGE_CORE_FILE_$1) DEFAULT_EDGE_FILE=$(DEFAULT_EDGE_FILE_$1)
 
 # post_build($1=Device, $2=Option)
 ifeq ($(TARGET),bin)
@@ -131,66 +138,6 @@ N300_AA: build/usrp_n300_fpga_AA.dts
 	$(call vivado_build,N300,$(AA_DEFS) N300=1)
 	$(call post_build,N300,AA)
 
-##N310_RFNOC_WX: 1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_WX:
-	$(call vivado_build,N310,$(WX_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_WX)
-
-##N310_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_HG:
-	$(call vivado_build,N310,$(HG_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_HG)
-
-##N310_RFNOC_XG: 10GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_XG:
-	$(call vivado_build,N310,$(XG_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_XG)
-
-##N310_RFNOC_HA: 1GigE on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_HA:
-	$(call vivado_build,N310,$(HA_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_HA)
-
-##N310_RFNOC_XA: 10GigE on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_XA:
-	$(call vivado_build,N310,$(XA_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_XA)
-
-##N310_RFNOC_AA: Aurora on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N310_RFNOC_AA:
-	$(call vivado_build,N310,$(AA_DEFS) RFNOC=1 N310=1)
-	$(call post_build,N310,RFNOC_AA)
-
-##N300_RFNOC_WX: 1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_WX:
-	$(call vivado_build,N300,$(WX_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_WX)
-
-##N300_RFNOC_HG: 1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_HG:
-	$(call vivado_build,N300,$(HG_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_HG)
-
-##N300_RFNOC_XG: 10GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_XG:
-	$(call vivado_build,N300,$(XG_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_XG)
-
-##N300_RFNOC_HA: 1GigE on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_HA:
-	$(call vivado_build,N300,$(HA_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_HA)
-
-##N300_RFNOC_XA: 10GigE on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_XA:
-	$(call vivado_build,N300,$(XA_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_XA)
-
-##N300_RFNOC_AA: Aurora on SFP+ Port0, Aurora on SFP+ Port1. RFNoC CEs enabled.
-N300_RFNOC_AA:
-	$(call vivado_build,N300,$(AA_DEFS) RFNOC=1 N300=1)
-	$(call post_build,N300,RFNOC_AA)
-
 ##N320_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1.
 N320_WX:  build/usrp_n320_fpga_WX.dts
 	$(call vivado_build,N320,$(WX_DEFS) N320=1)
@@ -215,31 +162,6 @@ N320_XQ: build/usrp_n320_fpga_XQ.dts
 N320_AQ: build/usrp_n320_fpga_AQ.dts
 	$(call vivado_build,N320,$(AQ_DEFS) N320=1)
 	$(call post_build,N320,AQ)
-
-##N320_RFNOC_WX:  1GigE White Rabbit on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N320_RFNOC_WX:  build/usrp_n320_fpga_WX.dts
-	$(call vivado_build,N320,$(WX_DEFS) RFNOC=1 N320=1)
-	$(call post_build,N320,RFNOC_WX)
-
-##N320_RFNOC_HG:  1GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N320_RFNOC_HG: build/usrp_n320_fpga_HG.dts
-	$(call vivado_build,N320,$(HG_DEFS) RFNOC=1 N320=1)
-	$(call post_build,N320,RFNOC_HG)
-
-##N320_RFNOC_XG:  10GigE on SFP+ Port0, 10Gig on SFP+ Port1. RFNoC CEs enabled.
-N320_RFNOC_XG: build/usrp_n320_fpga_XG.dts
-	$(call vivado_build,N320,$(XG_DEFS) RFNOC=1 N320=1)
-	$(call post_build,N320,RFNOC_XG)
-
-##N320_RFNOC_XQ:  WR on SFP+ Port0, 10Gig on QSFP+ Port0,1. RFNoC CEs enabled.
-N320_RFNOC_XQ: build/usrp_n320_fpga_XQ.dts
-	$(call vivado_build,N320,$(XQ_DEFS) RFNOC=1 N320=1)
-	$(call post_build,N320,RFNOC_XQ)
-
-##N320_RFNOC_AQ:  10Gig on SFP+ Port0,1 Aurora on QSFP+ Port0,1,2,3. RFNoC CEs enabled.
-N320_RFNOC_AQ: build/usrp_n320_fpga_AQ.dts
-	$(call vivado_build,N320,$(AQ_DEFS) RFNOC=1 N320=1)
-	$(call post_build,N320,RFNOC_AQ)
 
 build/%.dts: dts/%.dts dts/*.dtsi
 	-mkdir -p build

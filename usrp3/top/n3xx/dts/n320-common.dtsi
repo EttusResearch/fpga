@@ -1,141 +1,157 @@
-// SPDX-License-Identifier: GPL-2.0 OR X11
 /*
  * Copyright (c) 2018 National Instruments Corp
+ *
+ * SPDX-License-Identifier: GPL-2.0 OR X11
  */
 
-&fpga_full {
-	uio@40010000 {
-		compatible = "usrp-uio";
-		reg = <0x40010000 0x1000>;
-		reg-names = "mboard-regs";
-		status = "okay";
-	};
+fragment@2 {
+	target = <&amba>;
+	reg = <0x0002>;
+	__overlay__ {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		uio@40010000 {
+			compatible = "usrp-uio";
+			reg = <0x40010000 0x2000>;
+			reg-names = "mboard-regs";
+			status = "okay";
+		};
 
-	crossbar@40011000 {
-		compatible = "ni,platform-crossbar-rp";
-		reg = <0x40011000 0x1000>;
-		status = "okay";
-		rfnoc,ports = <0x10>;
-		clocks = <&clkc 15>;
-		clock-names = "bus_clk";
-	};
+		uio@40014000 {
+			compatible = "usrp-uio";
+			reg = <0x40014000 0x4000>;
+			reg-names = "dboard-regs-0";
+			status = "okay";
+		};
 
-	uio@40014000 {
-		compatible = "usrp-uio";
-		reg = <0x40014000 0x4000>;
-		reg-names = "dboard-regs-0";
-		status = "okay";
-	};
+		uio@40018000 {
+			compatible = "usrp-uio";
+			reg = <0x40018000 0x4000>;
+			reg-names = "dboard-regs-1";
+			status = "okay";
+		};
 
-	uio@40018000 {
-		compatible = "usrp-uio";
-		reg = <0x40018000 0x4000>;
-		reg-names = "dboard-regs-1";
-		status = "okay";
-	};
+		uio@42100000 {
+			compatible = "usrp-uio";
+			reg = <0x42100000 0x1000>;
+			reg-names = "dboard-jtag-0";
+			status = "okay";
+		};
 
-	uio@42100000 {
-		compatible = "usrp-uio";
-		reg = <0x42100000 0x1000>;
-		reg-names = "dboard-jtag-0";
-		status = "okay";
-	};
-
-	uio@42200000 {
-		compatible = "usrp-uio";
-		reg = <0x42200000 0x1000>;
-		reg-names = "dboard-jtag-1";
-		status = "okay";
+		uio@42200000 {
+			compatible = "usrp-uio";
+			reg = <0x42200000 0x1000>;
+			reg-names = "dboard-jtag-1";
+			status = "okay";
+		};
 	};
 };
 
-&spi0 {
-	status = "okay";
-
-	cs-gpios = <0>, <0>, <0>, <&gpio0 67 0>, <&gpio0 68 0>;
-
-	spidev0: spidev@0 {
-		compatible = "rohm,dh2228fv";
-		reg = <0>;
+fragment@5 {
+	target = <&spi0>;
+	reg = <0x0005>;
+	__overlay__ {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
 
-	spidev1: spidev@1 {
-		compatible = "rohm,dh2228fv";
-		reg = <1>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		cs-gpios = <0>, <0>, <0>, <&gpio0 67 0>, <&gpio0 68 0>;
 
-	spidev2: spidev@2 {
-		compatible = "rohm,dh2228fv";
-		reg = <2>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		spidev0: spidev@0 {
+			compatible = "rohm,dh2228fv";
+			reg = <0>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
 
-	spidev3: spidev@3 {
-		compatible = "rohm,dh2228fv";
-		reg = <3>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		spidev1: spidev@1 {
+			compatible = "rohm,dh2228fv";
+			reg = <1>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
 
-	spidev4: spidev@4 {
-		compatible = "rohm,dh2228fv";
-		reg = <4>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
+		spidev2: spidev@2 {
+			compatible = "rohm,dh2228fv";
+			reg = <2>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+
+		spidev3: spidev@3 {
+			compatible = "rohm,dh2228fv";
+			reg = <3>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+
+		spidev4: spidev@4 {
+			compatible = "rohm,dh2228fv";
+			reg = <4>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+
 	};
 };
 
-&spi1 {
-	status = "okay";
-
-	cs-gpios = <0>, <0>, <0>, <&gpio0 69 0>, <&gpio0 70 0>;
-
-	spidev5: spidev@0 {
-		compatible = "rohm,dh2228fv";
-		reg = <0>;
+fragment@6 {
+	target = <&spi1>;
+	reg = <0x0006>;
+	__overlay__ {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
 
-	spidev6: spidev@1 {
-		compatible = "rohm,dh2228fv";
-		reg = <1>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		cs-gpios = <0>, <0>, <0>, <&gpio0 69 0>, <&gpio0 70 0>;
 
-	spidev7: spidev@2 {
-		compatible = "rohm,dh2228fv";
-		reg = <2>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		spidev5: spidev@0 {
+			compatible = "rohm,dh2228fv";
+			reg = <0>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
 
-	spidev8: spidev@3 {
-		compatible = "rohm,dh2228fv";
-		reg = <3>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
-	};
+		spidev6: spidev@1 {
+			compatible = "rohm,dh2228fv";
+			reg = <1>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
 
-	spidev9: spidev@4 {
-		compatible = "rohm,dh2228fv";
-		reg = <4>;
-		status = "okay";
-		spi-max-frequency = <1000000>;
+		spidev7: spidev@2 {
+			compatible = "rohm,dh2228fv";
+			reg = <2>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+
+		spidev8: spidev@3 {
+			compatible = "rohm,dh2228fv";
+			reg = <3>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
+
+		spidev9: spidev@4 {
+			compatible = "rohm,dh2228fv";
+			reg = <4>;
+			status = "okay";
+			spi-max-frequency = <1000000>;
+		};
 	};
 };
 
-&usrpio_i2c0 {
-	rhodium_lodist_gpio: rhodium-lodist-gpio@22 {
-		compatible = "nxp,tca6424";
-		reg = <0x22>;
-		gpio-controller;
-		#gpio-cells = <2>;
-	};
+fragment@7 {
+        target = <&usrpio_i2c0>;
+        reg = <0x0007>;
+        __overlay__ {
+                rhodium_lodist_gpio: rhodium-lodist-gpio@22 {
+                        compatible = "nxp,tca6424";
+                        reg = <0x22>;
+                        gpio-controller;
+                        #gpio-cells = <2>;
+                };
+        };
 };
+

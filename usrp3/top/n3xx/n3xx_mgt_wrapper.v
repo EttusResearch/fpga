@@ -78,34 +78,22 @@ module n3xx_mgt_wrapper #(
   input  wire        v2e_tvalid,
   output wire        v2e_tready,
 
-  // Ethernet crossover
-  output wire [63:0] xo_tdata,
-  output wire [3:0]  xo_tuser,
-  output wire        xo_tlast,
-  output wire        xo_tvalid,
-  input  wire        xo_tready,
-
-  input  wire [63:0] xi_tdata,
-  input  wire [3:0]  xi_tuser,
-  input  wire        xi_tlast,
-  input  wire        xi_tvalid,
-  output wire        xi_tready,
-
   // CPU
-  output wire [63:0]  e2c_tdata,
-  output wire [7:0]   e2c_tkeep,
-  output wire         e2c_tlast,
-  output wire         e2c_tvalid,
-  input  wire         e2c_tready,
+  output wire [63:0] e2c_tdata,
+  output wire [7:0]  e2c_tkeep,
+  output wire        e2c_tlast,
+  output wire        e2c_tvalid,
+  input  wire        e2c_tready,
 
-  input  wire [63:0]  c2e_tdata,
-  input  wire [7:0]   c2e_tkeep,
-  input  wire         c2e_tlast,
-  input  wire         c2e_tvalid,
-  output wire         c2e_tready,
+  input  wire [63:0] c2e_tdata,
+  input  wire [7:0]  c2e_tkeep,
+  input  wire        c2e_tlast,
+  input  wire        c2e_tvalid,
+  output wire        c2e_tready,
 
   // MISC
-  output wire [31:0]  port_info,
+  output wire [31:0] port_info,
+  input  wire [15:0] device_id,
 
   // Timebase Outputs
   output wire         mod_pps,
@@ -160,8 +148,8 @@ module n3xx_mgt_wrapper #(
   localparam [REG_AWIDTH-1:0] REG_BASE_ETH_SWITCH  = {REG_AWIDTH{1'b0}} + 16'h1000 + REG_BASE;
 
   // AXI4-Lite to RegPort (PS to PL Register Access)
-  wire                    reg_rd_resp_io, reg_rd_resp_sw;
-  wire  [REG_DWIDTH-1:0]  reg_rd_data_io, reg_rd_data_sw;
+  wire                    reg_rd_resp_io, reg_rd_resp_eth_if;
+  wire  [REG_DWIDTH-1:0]  reg_rd_data_io, reg_rd_data_eth_if;
 
   // Regport Mux for response
   regport_resp_mux #(
@@ -169,8 +157,8 @@ module n3xx_mgt_wrapper #(
     .NUM_SLAVES (2)
   ) reg_resp_mux_i (
     .clk(bus_clk), .reset(bus_rst),
-    .sla_rd_resp({reg_rd_resp_sw, reg_rd_resp_io}),
-    .sla_rd_data({reg_rd_data_sw, reg_rd_data_io}),
+    .sla_rd_resp({reg_rd_resp_eth_if, reg_rd_resp_io}),
+    .sla_rd_data({reg_rd_data_eth_if, reg_rd_data_io}),
     .mst_rd_resp(reg_rd_resp), .mst_rd_data(reg_rd_data)
   );
 
@@ -343,19 +331,14 @@ module n3xx_mgt_wrapper #(
     if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled" || PROTOCOL == "WhiteRabbit") begin
 
       //set unused wires to default value
-      assign xo_tdata       = 64'h0;
-      assign xo_tuser       = 4'h0;
-      assign xo_tlast       = 1'b0;
-      assign xo_tvalid      = 1'b0;
-      assign xi_tready      = 1'b1;
       assign e2c_tdata      = 64'h0;
       assign e2c_tkeep      = 8'h0;
       assign e2c_tlast      = 1'b0;
       assign e2c_tvalid     = 1'b0;
       assign c2e_tready     = 1'b1;
 
-      assign reg_rd_resp_sw = 1'b0;
-      assign reg_rd_data_sw = 'h0;
+      assign reg_rd_resp_eth_if = 1'b0;
+      assign reg_rd_data_eth_if = 'h0;
 
       assign e2v_tdata      = mgto_tdata;
       assign e2v_tlast      = mgto_tlast;
@@ -400,78 +383,57 @@ module n3xx_mgt_wrapper #(
                        : (c2e_tkeep == 8'b0000_0001) ? 4'd1
                        : 4'd0;
 
-      n3xx_eth_switch #(
-        .BASE           (REG_BASE_ETH_SWITCH), // Base Address
-        .REG_DWIDTH     (REG_DWIDTH),        // Width of the AXI4-Lite data bus (must be 32 or 64)
-        .REG_AWIDTH     (REG_AWIDTH)         // Width of the address bus
-      ) eth_switch (
-        .clk            (bus_clk),
-        .reset          (bus_rst),
-        .clear          (1'b0),
-
-        //RegPort
-        .reg_wr_req     (reg_wr_req),
-        .reg_wr_addr    (reg_wr_addr),
-        .reg_wr_data    (reg_wr_data),
-        .reg_wr_keep    (/*unused*/),
-        .reg_rd_req     (reg_rd_req),
-        .reg_rd_addr    (reg_rd_addr),
-        .reg_rd_resp    (reg_rd_resp_sw),
-        .reg_rd_data    (reg_rd_data_sw),
-
-        // SFP
-        .eth_tx_tdata   (mgti_tdata),
-        .eth_tx_tuser   (mgti_tuser),
-        .eth_tx_tlast   (mgti_tlast),
-        .eth_tx_tvalid  (mgti_tvalid),
-        .eth_tx_tready  (mgti_tready),
-        .eth_rx_tdata   (mgto_tdata),
-        .eth_rx_tuser   (mgto_tuser),
-        .eth_rx_tlast   (mgto_tlast),
-        .eth_rx_tvalid  (mgto_tvalid),
-        .eth_rx_tready  (mgto_tready),
-
-        // Ethernet to Vita
-        .e2v_tdata      (e2v_tdata),
-        .e2v_tlast      (e2v_tlast),
-        .e2v_tvalid     (e2v_tvalid),
-        .e2v_tready     (e2v_tready),
-
-        // Vita to Ethernet
-        .v2e_tdata      (v2e_tdata),
-        .v2e_tlast      (v2e_tlast),
-        .v2e_tvalid     (v2e_tvalid),
-        .v2e_tready     (v2e_tready),
-
-        // Crossover
-        .xo_tdata       (xo_tdata),
-        .xo_tuser       (xo_tuser),
-        .xo_tlast       (xo_tlast),
-        .xo_tvalid      (xo_tvalid),
-        .xo_tready      (xo_tready),
-        .xi_tdata       (xi_tdata),
-        .xi_tuser       (xi_tuser),
-        .xi_tlast       (xi_tlast),
-        .xi_tvalid      (xi_tvalid),
-        .xi_tready      (xi_tready),
-
-        // Ethernet to CPU, also endian swap here
-        .e2c_tdata      ({e2c_tdata[7:0], e2c_tdata[15:8], e2c_tdata[23:16], e2c_tdata[31:24],
-                          e2c_tdata[39:32], e2c_tdata[47:40], e2c_tdata[55:48], e2c_tdata[63:56]}),
-        .e2c_tuser      (e2c_tuser),
-        .e2c_tlast      (e2c_tlast),
-        .e2c_tvalid     (e2c_tvalid),
-        .e2c_tready     (e2c_tready),
-
-        // CPU to Ethernet, also endian swap here
-        .c2e_tdata      ({c2e_tdata[7:0], c2e_tdata[15:8], c2e_tdata[23:16], c2e_tdata[31:24],
-                          c2e_tdata[39:32], c2e_tdata[47:40], c2e_tdata[55:48], c2e_tdata[63:56]}),
-        .c2e_tuser      (c2e_tuser),
-        .c2e_tlast      (c2e_tlast),
-        .c2e_tvalid     (c2e_tvalid),
-        .c2e_tready     (c2e_tready),
-        .debug          ()
-      );
+  eth_interface #(
+     .PROTOVER({8'd1,8'd0}),//FIXME. This should come from outside
+     .MTU(10),
+     .NODE_INST(0),
+     .BASE(REG_BASE_ETH_SWITCH)
+  ) eth_interface (
+     .clk           (bus_clk),
+     .reset         (bus_rst),
+     .device_id     (device_id),
+     .reg_wr_req    (reg_wr_req),
+     .reg_wr_addr   (reg_wr_addr),
+     .reg_wr_data   (reg_wr_data),
+     .reg_rd_req    (reg_rd_req),
+     .reg_rd_addr   (reg_rd_addr),
+     .reg_rd_resp   (reg_rd_resp_eth_if),
+     .reg_rd_data   (reg_rd_data_eth_if),
+     .eth_tx_tdata  (mgti_tdata),
+     .eth_tx_tuser  (mgti_tuser),
+     .eth_tx_tlast  (mgti_tlast),
+     .eth_tx_tvalid (mgti_tvalid),
+     .eth_tx_tready (mgti_tready),
+     .eth_rx_tdata  (mgto_tdata),
+     .eth_rx_tuser  (mgto_tuser),
+     .eth_rx_tlast  (mgto_tlast),
+     .eth_rx_tvalid (mgto_tvalid),
+     .eth_rx_tready (mgto_tready),
+     .e2v_tdata     (e2v_tdata),
+     .e2v_tlast     (e2v_tlast),
+     .e2v_tvalid    (e2v_tvalid),
+     .e2v_tready    (e2v_tready),
+     .v2e_tdata     (v2e_tdata),
+     .v2e_tlast     (v2e_tlast),
+     .v2e_tvalid    (v2e_tvalid),
+     .v2e_tready    (v2e_tready),
+     .e2c_tdata     ({e2c_tdata[7:0],   e2c_tdata[15:8],
+                      e2c_tdata[23:16], e2c_tdata[31:24],
+                      e2c_tdata[39:32], e2c_tdata[47:40],
+                      e2c_tdata[55:48], e2c_tdata[63:56]}),
+     .e2c_tuser     (e2c_tuser),
+     .e2c_tlast     (e2c_tlast),
+     .e2c_tvalid    (e2c_tvalid),
+     .e2c_tready    (e2c_tready),
+     .c2e_tdata     ({c2e_tdata[7:0],   c2e_tdata[15:8],
+                      c2e_tdata[23:16], c2e_tdata[31:24],
+                      c2e_tdata[39:32], c2e_tdata[47:40],
+                      c2e_tdata[55:48], c2e_tdata[63:56]}),
+     .c2e_tuser     (c2e_tuser),
+     .c2e_tlast     (c2e_tlast),
+     .c2e_tvalid    (c2e_tvalid),
+     .c2e_tready    (c2e_tready)
+  );
 
     end
   endgenerate
