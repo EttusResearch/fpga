@@ -65,6 +65,7 @@ proc create_hier_cell_tx_dma { parentCell nameHier numPorts } {
   set axis_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axis_interconnect:2.1 axis_interconnect_0 ]
   set_property -dict [ list \
      CONFIG.ARB_ON_TLAST {1} \
+     CONFIG.ARB_ON_MAX_XFERS {0} \
      CONFIG.ENABLE_ADVANCED_OPTIONS {1} \
      CONFIG.M00_HAS_REGSLICE {1} \
      CONFIG.NUM_MI {1} \
