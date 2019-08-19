@@ -7,20 +7,20 @@
 //
 // Description:
 //
-// This block splits a single control port interface into multiple. It is used 
-// when you have a single master that needs to access multiple slaves. For 
-// example, a NoC block where the registers are implemented in multiple 
+// This block splits a single control port interface into multiple. It is used
+// when you have a single master that needs to access multiple slaves. For
+// example, a NoC block where the registers are implemented in multiple
 // submodules that must be read/written by a single NoC shell.
 //
-// Note that this block does not do any address decoding, so the connected 
+// Note that this block does not do any address decoding, so the connected
 // slaves must use non-overlapping address spaces.
 //
-// This module takes the request received by its single slave interface and 
-// outputs it on all its master interfaces. In the opposite direction, it takes 
-// the responses received by its multiple master interfaces and combines them 
-// into a single response on its slave interface. This is done by using the ack 
-// bit of each response to mask the other bits of the response, then OR'ing all 
-// of the masked responses together onto a single response bus. This is valid 
+// This module takes the request received by its single slave interface and
+// outputs it on all its master interfaces. In the opposite direction, it takes
+// the responses received by its multiple master interfaces and combines them
+// into a single response on its slave interface. This is done by using the ack
+// bit of each response to mask the other bits of the response, then OR'ing all
+// of the masked responses together onto a single response bus. This is valid
 // because only one block is allowed to respond to a single request.
 //
 // Parameters:
@@ -64,19 +64,20 @@ module ctrlport_splitter #(
   // Split the requests among the slaves
   //---------------------------------------------------------------------------
 
-  genvar i;
-  for (i = 0; i < NUM_SLAVES; i = i+1) begin : gen_split
-    // No special logic is required to split the requests from the master among 
-    // multiple slaves.
-    assign m_ctrlport_req_wr[i]           = s_ctrlport_req_wr;
-    assign m_ctrlport_req_rd[i]           = s_ctrlport_req_rd;
-    assign m_ctrlport_req_addr[20*i+:20]  = s_ctrlport_req_addr;
-    assign m_ctrlport_req_data[32*i+:32]  = s_ctrlport_req_data;
-    assign m_ctrlport_req_byte_en[4*i+:4] = s_ctrlport_req_byte_en;
-    assign m_ctrlport_req_has_time[i]     = s_ctrlport_req_has_time;
-    assign m_ctrlport_req_time[64*i+:64]  = s_ctrlport_req_time;
-  end
-
+  generate
+    genvar i;
+    for (i = 0; i < NUM_SLAVES; i = i+1) begin : gen_split
+      // No special logic is required to split the requests from the master among
+      // multiple slaves.
+      assign m_ctrlport_req_wr[i]           = s_ctrlport_req_wr;
+      assign m_ctrlport_req_rd[i]           = s_ctrlport_req_rd;
+      assign m_ctrlport_req_addr[20*i+:20]  = s_ctrlport_req_addr;
+      assign m_ctrlport_req_data[32*i+:32]  = s_ctrlport_req_data;
+      assign m_ctrlport_req_byte_en[4*i+:4] = s_ctrlport_req_byte_en;
+      assign m_ctrlport_req_has_time[i]     = s_ctrlport_req_has_time;
+      assign m_ctrlport_req_time[64*i+:64]  = s_ctrlport_req_time;
+    end
+  endgenerate
 
   //---------------------------------------------------------------------------
   // Decode the responses
