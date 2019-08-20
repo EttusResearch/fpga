@@ -272,7 +272,7 @@ module axi_fir_filter #(
           .sample_in_stb(s_axis_data_tvalid & s_axis_data_tready),
           .sample_in_a(sample_in[i]),
           // sample_in_b is used to implement symmetric coefficients, always 0 if SYMMETRIC_COEFFS = 0
-          .sample_in_b(((SYMMETRIC_COEFFS == 0) || ((ODD_LEN == 1) && (i == NUM_SLICES-1))) ? 0 : sample_shift_reg[NUM_COEFFS-1]),
+          .sample_in_b(((SYMMETRIC_COEFFS == 0) || ((ODD_LEN == 1) && (i == NUM_SLICES-1))) ? {IN_WIDTH{1'b0}} : sample_shift_reg[NUM_COEFFS-1]),
           .sample_forward(sample_in[i+1]),
           // For proper coeffient loading, coeff_forward must be shifted in backwards. coeffs[] is already backwards.
           .coeff_in(((USE_EMBEDDED_REGS_COEFFS == 1) && (RELOADABLE_COEFFS == 1)) ? coeff_forward[i+1] : coeffs[i]),
