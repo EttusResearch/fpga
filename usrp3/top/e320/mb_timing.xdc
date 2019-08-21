@@ -113,9 +113,9 @@ set_false_path -to [get_pins -hierarchical -filter {NAME =~ */synchronizer_false
 
 # MIG core reset
 # According to Xilinx AR 61112, it is safe to make sys_rst a false path.
-set_false_path -from [get_pins bus_reset_gen/reset_double_sync/synchronizer_false_path/stages[9].value_reg[9][0]/C] \
+set_false_path -from [get_pins bus_reset_gen/reset_out_reg/C] \
                -to   [get_clocks ddr3_ui_clk]
-set_false_path -from [get_pins bus_reset_gen/reset_double_sync/synchronizer_false_path/stages[9].value_reg[9][0]/C] \
+set_false_path -from [get_pins bus_reset_gen/reset_out_reg/C] \
                -to   [get_clocks ddr3_ui_clk_2x]
 
 # USR_ACCESS build date

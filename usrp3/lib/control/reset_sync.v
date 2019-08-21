@@ -1,6 +1,6 @@
 //
 // Copyright 2011 Ettus Research LLC
-// Copyright 2018 Ettus Research, a National Instruments Company
+// Copyright 2018-2019 Ettus Research, a National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
@@ -14,7 +14,9 @@ module reset_sync (
   // glitch-free input reset
   input  reset_in,
   // output reset in the clk domain
-  output reset_out);
+  output reg reset_out);
+
+  wire reset_c;
 
   synchronizer #(
     // The input reset is async to the output clk domain... so timing should not be
@@ -26,7 +28,10 @@ module reset_sync (
     .INITIAL_VAL(1),
     .STAGES(10)
   ) reset_double_sync (
-    .clk(clk), .rst(1'b0), .in(reset_in), .out(reset_out)
+    .clk(clk), .rst(1'b0), .in(reset_in), .out(reset_c)
   );
+
+  always @(posedge clk)
+      reset_out <= reset_c;
 
 endmodule // reset_sync
