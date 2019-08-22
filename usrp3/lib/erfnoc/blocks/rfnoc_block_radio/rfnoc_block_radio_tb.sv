@@ -1052,10 +1052,12 @@ module rfnoc_block_radio_tb #(
     // Grab and verify a partial packet
     start_tx(radio_num, WPP*3/4);
     check_tx(radio_num, WPP*3/4);
+    check_error(ERR_TX_EOB_ACK);
 
     // Grab and verify multiple packets
     start_tx(radio_num, WPP*3/2);
     check_tx(radio_num, WPP*3/2);
+    check_error(ERR_TX_EOB_ACK);
 
     test.end_test();
 
@@ -1087,10 +1089,12 @@ module rfnoc_block_radio_tb #(
     // Grab and verify a partial packet
     start_tx_timed(radio_num, WPP*3/4, radio_time + 200);
     check_tx_timed(radio_num, WPP*3/4, radio_time + 200);
+    check_error(ERR_TX_EOB_ACK);
 
     // Grab and verify whole packets
     start_tx_timed(radio_num, WPP*2, radio_time + 200);
     check_tx_timed(radio_num, WPP*2, radio_time + 200);
+    check_error(ERR_TX_EOB_ACK);
 
     test.end_test();
 
@@ -1169,6 +1173,7 @@ module rfnoc_block_radio_tb #(
     // Make sure good transmissions can go through now.
     start_tx_timed(radio_num, WPP, radio_time + 200);
     check_tx_timed(radio_num, WPP, radio_time + 200);
+    check_error(ERR_TX_EOB_ACK);
 
     test.end_test();
 
@@ -1249,6 +1254,7 @@ module rfnoc_block_radio_tb #(
 
     // Check the results
     check_rx(radio_num, WPP*2);
+    check_error(ERR_TX_EOB_ACK);
 
     // Turn off loopback
     write_radio(radio_num, REG_LOOPBACK_EN, 0);

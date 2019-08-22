@@ -121,3 +121,4 @@ localparam ERR_TX_CODE_W = 2;  // Bit width of error code values
 //
 localparam ERR_TX_UNDERRUN  = 1;  // Data underflow (data not available when needed)
 localparam ERR_TX_LATE_DATA = 2;  // Late data (arrived after indicated time)
+localparam ERR_TX_EOB_ACK   = 3;  // Acknowledge end-of-burst (this is not an error)

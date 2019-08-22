@@ -275,7 +275,11 @@ module radio_tx_core #(
               new_error_valid <= 1'b1;
               state           <= ST_POLICY_WAIT;
             end else if (s_axis_tlast & eob) begin
-              // We're done with this burst of packets, so go back to idle
+              // We're done with this burst of packets, so acknowledge EOB and
+              // go back to idle.
+              new_error_code  <= ERR_TX_EOB_ACK;
+              new_error_time  <= radio_time;
+              new_error_valid <= 1'b1;
               state <= ST_IDLE;
             end
           end
