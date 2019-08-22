@@ -10,6 +10,8 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - [GNU Make](https://www.gnu.org/software/make/)
 - (Recommended) [GNU Bash](https://www.gnu.org/software/bash/)
 
+The N200 will work with the WebPack version of ISE.
+
 ### Requirements
 
 - [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx12_2/irn.pdf)

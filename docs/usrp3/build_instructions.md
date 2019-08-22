@@ -15,6 +15,9 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 - [Doxygen](http://www.stack.nl/~dimitri/doxygen/index.html) (Optional: To build the manual)
 - [ModelSim](https://www.mentor.com/products/fv/modelsim/) (Optional: For simulation)
 
+The following USRPs work with the free WebPack versions:
+- USRP E310/E312/E313
+
 ##### NOTE: AR#71898 Tactical Patch for Vivado 2018.3
 The DDR3 Memory Interface Generator (MIG) IP in Vivado 2018.3 has a known issue that affects the generation of the IP in USRP N3xx build and produce the following error:
 ```

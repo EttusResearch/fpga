@@ -4,7 +4,9 @@
 
 - Navigate to `usrp3/top/{project}` where project is:
   + x300: For USRP X300 and USRP X310
-  + e300: For USRP E310
+  + e3xx: For USRP E310
+  + e320: For USRP E320
+  + n3xx: For USRP N300/N310/N320
 
 - To setup up the Ettus Research Xilinx build environment run
   + `source setupenv.sh` (If Vivado is installed in the default path /opt/Xilinx/Vivado) _OR_
