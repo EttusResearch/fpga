@@ -5,7 +5,7 @@
 //
 // Module: rfnoc_core_kernel
 // Description:
-//   The main utility and software interface module for an 
+//   The main utility and software interface module for an
 //   assembled rfnoc design
 //
 // Parameters:
@@ -16,6 +16,7 @@
 //                      clocks are glitch-free and startup safely
 //   - NUM_BLOCKS: Number of blocks instantiated in the design
 //   - NUM_STREAM_ENDPOINTS: Number of stream EPs instantiated in the design
+//   - NUM_ENDPOINTS_CTRL: Number of stream EPs connected to the ctrl crossbar
 //   - NUM_TRANSPORTS: Number of transports instantiated in the design
 //   - NUM_EDGES: Number of edges of static connection in the design
 //   - CHDR_XBAR_PRESENT: 1 if the CHDR crossbar is present. If 0 then
@@ -83,7 +84,7 @@ module rfnoc_core_kernel #(
   // -----------------------------------
   // Clocking and Resets
   // -----------------------------------
-  
+
   generate if (SAFE_START_CLKS == 1) begin
     // Safe startup logic for the CHDR and Control clocks:
     // chdr_aclk and ctrl_aclk can be unbuffered.
@@ -240,7 +241,7 @@ module rfnoc_core_kernel #(
   // Block Address Space
   // -----------------------------------
 
-  // Arrange the backend block wires into a 2-d array where the 
+  // Arrange the backend block wires into a 2-d array where the
   // outer index represents the slot number and the inner index represents
   // a register index for that slot. We have 512 bits of read/write
   // data which translates to 16 32-bit registers per slot. The first slot
@@ -251,7 +252,7 @@ module rfnoc_core_kernel #(
   localparam NUM_REGS_PER_SLOT = 512/32;
   localparam NUM_SLOTS = 1 /*this*/ + NUM_STREAM_ENDPOINTS + NUM_BLOCKS;
   localparam BLOCK_OFFSET = 1 /*this*/ + NUM_STREAM_ENDPOINTS;
-  
+
   reg  [31:0] config_arr_2d [0:NUM_SLOTS-1][0:NUM_REGS_PER_SLOT-1];
   wire [31:0] status_arr_2d [0:NUM_SLOTS-1][0:NUM_REGS_PER_SLOT-1];
 
@@ -299,7 +300,7 @@ module rfnoc_core_kernel #(
 
   // Global port count register
   localparam [0:0] STATIC_ROUTER_PRESENT = (NUM_EDGES == 12'd0) ? 1'b0 : 1'b1;
-  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_PORT_CNT] = 
+  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_PORT_CNT] =
     {STATIC_ROUTER_PRESENT, CHDR_XBAR_PRESENT,
      NUM_TRANSPORTS[9:0], NUM_BLOCKS[9:0], NUM_STREAM_ENDPOINTS[9:0]};
   // Global edge count register
@@ -319,7 +320,7 @@ module rfnoc_core_kernel #(
   // * Maximum Depth: 16384 entries
   // * Layout:
   //   - 0x000 : HEADER
-  //   - 0x001 : EDGE_0_DEF 
+  //   - 0x001 : EDGE_0_DEF
   //   - 0x002 : EDGE_1_DEF
   //   ...
   //   - 0xFFF : EDGE_4094_DEF

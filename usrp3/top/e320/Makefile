@@ -18,25 +18,33 @@
 XG_DEFS=SFP_10GBE=1  BUILD_10G=1    $(OPTIONS)
 AA_DEFS=SFP_AURORA=1 BUILD_AURORA=1 $(OPTIONS)
 
-# Option to stop after RTL elaboration. Use this flag as a synthesis check.
-ifdef CHECK
-TARGET = rtl
-else
-TARGET = bin
+# Set build option (check RTL, run synthesis, or do a full build)
+ifndef TARGET
+	ifdef CHECK
+		TARGET = rtl
+	else ifdef SYNTH
+		TARGET = synth
+	else
+		TARGET = bin
+	endif
 endif
 TOP ?= e320
 
 # vivado_build($1=Device, $2=Definitions)
 vivado_build = make -f Makefile.e320.inc $(TARGET) NAME=$@ ARCH=$(XIL_ARCH_$1) PART_ID=$(XIL_PART_ID_$1) $2 TOP_MODULE=$(TOP) EXTRA_DEFS="$2"
 
-# vivado_build($1=Device, $2=Option)
-post_build = @\
-	mkdir -p build; \
-	echo "Exporting bitstream file..."; \
-	cp build-$(1)_$(2)/e320.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
-	echo "Exporting build report..."; \
-	cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
-	echo "Build DONE ... $(1)_$(2)";
+# post_build($1=Device, $2=Option)
+ifeq ($(TARGET),bin)
+	post_build = @\
+		mkdir -p build; \
+		echo "Exporting bitstream file..."; \
+		cp build-$(1)_$(2)/e320.bit build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).bit; \
+		echo "Exporting build report..."; \
+		cp build-$(1)_$(2)/build.rpt build/usrp_`echo $(1) | tr A-Z a-z`_fpga_$(2).rpt; \
+		echo "Build DONE ... $(1)_$(2)";
+else
+	post_build = @echo "Skipping bitfile export."
+endif
 
 ##
 ##Supported Targets
@@ -97,6 +105,7 @@ help:     ##Show this help message.
 ##-----------------
 ##GUI=1        Launch the build in the Vivado GUI.
 ##CHECK=1      Launch the syntax checker instead of building a bitfile.
+##SYNTH=1      Launch the build but stop after synthesis.
 ##TOP=<module> Specify a top module for syntax checking. (Optional. Default is the bitfile top)
 
 .PHONY: all clean cleanall help
