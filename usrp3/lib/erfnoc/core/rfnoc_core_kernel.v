@@ -46,6 +46,7 @@ module rfnoc_core_kernel #(
   parameter        SAFE_START_CLKS      = 0,
   parameter [9:0]  NUM_BLOCKS           = 0,
   parameter [9:0]  NUM_STREAM_ENDPOINTS = 0,
+  parameter [9:0]  NUM_ENDPOINTS_CTRL   = 0,
   parameter [9:0]  NUM_TRANSPORTS       = 0,
   parameter [11:0] NUM_EDGES            = 0,
   parameter [0:0]  CHDR_XBAR_PRESENT    = 1,
@@ -290,10 +291,11 @@ module rfnoc_core_kernel #(
   end
 
   // Global Registers
-  localparam [3:0] REG_GLOBAL_PROTOVER    = 4'd0;  // Offset = 0x00
-  localparam [3:0] REG_GLOBAL_PORT_CNT    = 4'd1;  // Offset = 0x04
-  localparam [3:0] REG_GLOBAL_EDGE_CNT    = 4'd2;  // Offset = 0x08
-  localparam [3:0] REG_GLOBAL_DEVICE_INFO = 4'd3;  // Offset = 0x0C
+  localparam [3:0] REG_GLOBAL_PROTOVER          = 4'd0;  // Offset = 0x00
+  localparam [3:0] REG_GLOBAL_PORT_CNT          = 4'd1;  // Offset = 0x04
+  localparam [3:0] REG_GLOBAL_EDGE_CNT          = 4'd2;  // Offset = 0x08
+  localparam [3:0] REG_GLOBAL_DEVICE_INFO       = 4'd3;  // Offset = 0x0C
+  localparam [3:0] REG_GLOBAL_ENDPOINT_CTRL_CNT = 4'd4;  // Offset = 0x10
 
   // Signature and protocol version
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_PROTOVER] = {16'h12C6, PROTOVER[15:0]};
@@ -307,6 +309,8 @@ module rfnoc_core_kernel #(
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_EDGE_CNT] = {20'd0, NUM_EDGES[11:0]};
   // Device information
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_DEVICE_INFO] = {DEVICE_TYPE, device_id};
+  // Number of stream endpoint connected to the ctrl crossbar
+  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_ENDPOINT_CTRL_CNT] = {22'b0, NUM_ENDPOINTS_CTRL[9:0]};
 
   // -----------------------------------
   // Connections Address Space
