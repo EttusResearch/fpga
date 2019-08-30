@@ -15,6 +15,7 @@ module noc_shell_radio #(
   parameter        CHDR_W          = 64,
   parameter [ 0:0] CTRLPORT_SLV_EN = 1,
   parameter [ 0:0] CTRLPORT_MST_EN = 1,
+  parameter [ 5:0] CTRL_FIFO_SIZE  = 9,
   parameter [ 5:0] NUM_DATA_I      = 1,
   parameter [ 5:0] NUM_DATA_O      = 1,
   parameter        ITEM_W          = 32,
@@ -121,8 +122,6 @@ module noc_shell_radio #(
   input  wire [              NUM_DATA_O-1:0] s_axis_teob
 );
   
-  localparam CTRL_FIFO_SIZE = 5;
-
   localparam SNK_INFO_FIFO_SIZE = 4;
   localparam SNK_PYLD_FIFO_SIZE = PYLD_FIFO_SIZE;
   localparam SRC_INFO_FIFO_SIZE = 4;

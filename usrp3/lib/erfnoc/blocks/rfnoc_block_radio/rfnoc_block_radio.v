@@ -16,6 +16,8 @@
 //   NUM_PORTS        : Number of radio channels (RX/TX pairs)
 //   MTU              : Maximum transmission unit (i.e., maximum packet size) 
 //                      in CHDR words is 2**MTU.
+//   CTRL_FIFO_SIZE   : Size of the Control Port slave FIFO. This affects the
+//                      number of outstanding commands that can be pending.
 //   PERIPH_BASE_ADDR : CTRL port peripheral window base address
 //   PERIPH_ADDR_W    : CTRL port peripheral address space = 2**PERIPH_ADDR_W
 //
@@ -28,6 +30,7 @@ module rfnoc_block_radio #(
   parameter ITEM_W           = 32,
   parameter NUM_PORTS        = 2,
   parameter MTU              = 10,
+  parameter CTRL_FIFO_SIZE   = 9,
   parameter PERIPH_BASE_ADDR = 20'h80000,
   parameter PERIPH_ADDR_W    = 19
 ) (
@@ -168,6 +171,7 @@ module rfnoc_block_radio #(
     .CHDR_W          (CHDR_W),
     .CTRLPORT_SLV_EN (1),
     .CTRLPORT_MST_EN (1),
+    .CTRL_FIFO_SIZE  (CTRL_FIFO_SIZE),
     .NUM_DATA_I      (NUM_PORTS),
     .NUM_DATA_O      (NUM_PORTS),
     .ITEM_W          (ITEM_W),
