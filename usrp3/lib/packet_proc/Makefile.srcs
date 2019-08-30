@@ -9,8 +9,8 @@
 # Packet Processing Sources
 ##################################################
 PACKET_PROC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/packet_proc/, \
-cvita_chunker.v \
-cvita_dechunker.v \
+chdr_chunker.v \
+chdr_dechunker.v \
 cvita_dest_lookup.v \
 ip_hdr_checksum.v \
 arm_deframer.v \

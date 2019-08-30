@@ -6,7 +6,7 @@
 //
 
 
-module cvita_dechunker # (
+module chdr_dechunker # (
    parameter PAD_VALUE = 64'hFFFFFFFF_FFFFFFFF
 ) (
    input          clk,
@@ -17,7 +17,7 @@ module cvita_dechunker # (
    input [63:0]   i_tdata,
    input          i_tvalid,
    output         i_tready,
-   
+
    output [63:0]  o_tdata,
    output         o_tlast,
    output         o_tvalid,
@@ -35,7 +35,8 @@ module cvita_dechunker # (
    reg [15:0]  frame_rem, pkt_rem;
    wire        i_tlast;
 
-   wire [15:0] cvita_len_ceil = i_tdata[47:32] + 7;
+   // axi_len = ceil(length / 8)
+   wire [15:0] cvita_len_ceil = i_tdata[31:16] + 7;
    wire [15:0] axi_len = {3'b000, cvita_len_ceil[15:3]};
 
    always @(posedge clk) begin
@@ -52,11 +53,11 @@ module cvita_dechunker # (
                   state <= ST_DATA;
                else
                   state <= ST_PADDING;
-                  
+
                frame_rem <= frame_size - 16'd1;
                pkt_rem   <= axi_len - 16'd1;
             end
-         
+
             ST_DATA: begin
                if (o_tlast) begin
                   state   <= i_tlast ? ST_HEADER : ST_PADDING;
@@ -77,17 +78,24 @@ module cvita_dechunker # (
                   frame_rem <= frame_rem - 16'd1;
                end
             end
-         endcase   
-      end   
+
+            ST_ERROR: begin
+               // We never leave the error state. However, we can't reach it
+               // with PCIe if we configure our transport according to the
+               // NI-RIO configuration.
+               state <= ST_ERROR;
+            end
+         endcase
+      end
    end
-   
+
    assign i_tready = o_tready | (state == ST_PADDING);
    assign i_tlast = (frame_rem == 16'd1); //Temp signal
-   
+
    assign o_tvalid = i_tvalid & (state != ST_PADDING);
    assign o_tlast = (pkt_rem != 0) ? (pkt_rem == 16'd1) : (axi_len == 16'd1);
    assign o_tdata  = i_tdata;
-   
+
    assign error = (state == ST_ERROR);
 
-endmodule // cvita_dechunker
+endmodule // chdr_dechunker

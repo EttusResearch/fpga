@@ -54,8 +54,8 @@ module bus_int #(
     output [63:0] sfp1_tx_tdata, output [3:0] sfp1_tx_tuser, output sfp1_tx_tlast, output sfp1_tx_tvalid, input sfp1_tx_tready,
     input [63:0] sfp1_rx_tdata, input [3:0] sfp1_rx_tuser, input sfp1_rx_tlast, input sfp1_rx_tvalid, output sfp1_rx_tready,
     // PCIe
-    output [63:0] pcio_tdata, output pcio_tlast, output pcio_tvalid, input pcio_tready,
-    input [63:0] pcii_tdata, input pcii_tlast, input pcii_tvalid, output pcii_tready,
+    output [63:0] pcio_tdata, output [2:0] pcio_tuser, output pcio_tlast, output pcio_tvalid, input pcio_tready,
+    input [63:0] pcii_tdata, input [2:0] pcii_tuser, input pcii_tlast, input pcii_tvalid, output pcii_tready,
     //iop2 message fifos
     output [63:0] o_iop2_msg_tdata, output o_iop2_msg_tvalid, output o_iop2_msg_tlast, input o_iop2_msg_tready,
     input [63:0] i_iop2_msg_tdata, input i_iop2_msg_tvalid, input i_iop2_msg_tlast, output i_iop2_msg_tready,
@@ -673,6 +673,53 @@ module bus_int #(
       .o1_tdata({zpuo1_tuser,zpuo1_tdata}), .o1_tlast(zpuo1_tlast), .o1_tvalid(zpuo1_tvalid), .o1_tready(zpuo1_tready),
       .o2_tdata(), .o2_tlast(), .o2_tvalid(), .o2_tready(1'b1),
       .o3_tdata(), .o3_tlast(), .o3_tvalid(), .o3_tready(1'b1));
+   //
+   // End ETH interfaces
+   ////////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////
+    // PCIe Interface
+    //
+    localparam DMA_RX_DEST_WIDTH = 3;
+    // PCIe to CHDR (p2c) and CHDR to PCIe (c2p)
+    wire [63:0] 	  p2c_tdata;
+    wire        	  p2c_tlast, p2c_tvalid, p2c_tready;
+    wire [63:0] 	  c2p_tdata;
+    wire        	  c2p_tlast, c2p_tvalid, c2p_tready;
+    // Transport adapter with the management interface
+    nirio_chdr64_adapter #(
+       .PROTOVER(RFNOC_PROTOVER),
+       .DMA_ID_WIDTH(DMA_RX_DEST_WIDTH)
+    ) nirio_xport_adapter
+    (
+        .clk(clk), .rst(reset),
+        .device_id(device_id),
+        // From x300_pcie_int
+        .s_dma_tdata(pcii_tdata),
+        .s_dma_tuser(pcii_tuser),
+        .s_dma_tlast(pcii_tlast),
+        .s_dma_tvalid(pcii_tvalid),
+        .s_dma_tready(pcii_tready),
+        // To x300_pcie_int
+        .m_dma_tdata(pcio_tdata),
+        .m_dma_tuser(pcio_tuser),
+        .m_dma_tlast(pcio_tlast),
+        .m_dma_tvalid(pcio_tvalid),
+        .m_dma_tready(pcio_tready),
+        // From xport adapter into the image core
+        .m_chdr_tdata(p2c_tdata),
+        .m_chdr_tlast(p2c_tlast),
+        .m_chdr_tvalid(p2c_tvalid),
+        .m_chdr_tready(p2c_tready),
+        // From image core into the xport adapter
+        .s_chdr_tdata(c2p_tdata),
+        .s_chdr_tlast(c2p_tlast),
+        .s_chdr_tvalid(c2p_tvalid),
+        .s_chdr_tready(c2p_tready)
+    );
+    //
+    // End PCIe Interface
+    ///////////////////////////////////////////////////////////////////////////
 
   rfnoc_image_core #(
     .PROTOVER(RFNOC_PROTOVER)
@@ -784,14 +831,15 @@ module bus_int #(
     .m_eth1_tlast            (v2e1_tlast ),
     .m_eth1_tvalid           (v2e1_tvalid),
     .m_eth1_tready           (v2e1_tready),
-    .s_pcie_tdata            (pcii_tdata ),
-    .s_pcie_tlast            (pcii_tlast ),
-    .s_pcie_tvalid           (pcii_tvalid),
-    .s_pcie_tready           (pcii_tready),
-    .m_pcie_tdata            (pcio_tdata ),
-    .m_pcie_tlast            (pcio_tlast ),
-    .m_pcie_tvalid           (pcio_tvalid),
-    .m_pcie_tready           (pcio_tready)
+
+    .s_pcie_tdata            (p2c_tdata ),
+    .s_pcie_tlast            (p2c_tlast ),
+    .s_pcie_tvalid           (p2c_tvalid),
+    .s_pcie_tready           (p2c_tready),
+    .m_pcie_tdata            (c2p_tdata ),
+    .m_pcie_tlast            (c2p_tlast ),
+    .m_pcie_tvalid           (c2p_tvalid),
+    .m_pcie_tready           (c2p_tready)
   );
 
   //---------------------------------------------------------------------------

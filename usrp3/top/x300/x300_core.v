@@ -186,13 +186,15 @@ module x300_core #(
 
    //PCIe
    output [63:0] pcio_tdata,
-   output pcio_tlast,
-   output pcio_tvalid,
-   input pcio_tready,
-   input [63:0] pcii_tdata,
-   input pcii_tlast,
-   input pcii_tvalid,
-   output pcii_tready,
+   output [2:0]  pcio_tuser,
+   output        pcio_tlast,
+   output        pcio_tvalid,
+   input         pcio_tready,
+   input [63:0]  pcii_tdata,
+   input [2:0]   pcii_tuser,
+   input         pcii_tlast,
+   input         pcii_tvalid,
+   output        pcii_tready,
 
    // Debug
    output [1:0] led_misc,
@@ -327,8 +329,8 @@ module x300_core #(
       .o_iop2_msg_tdata(o_iop2_msg_tdata), .o_iop2_msg_tvalid(o_iop2_msg_tvalid), .o_iop2_msg_tlast(o_iop2_msg_tlast), .o_iop2_msg_tready(o_iop2_msg_tready),
       .i_iop2_msg_tdata(i_iop2_msg_tdata), .i_iop2_msg_tvalid(i_iop2_msg_tvalid), .i_iop2_msg_tlast(i_iop2_msg_tlast), .i_iop2_msg_tready(i_iop2_msg_tready),
       // PCIe
-      .pcio_tdata(pcio_tdata), .pcio_tlast(pcio_tlast), .pcio_tvalid(pcio_tvalid), .pcio_tready(pcio_tready),
-      .pcii_tdata(pcii_tdata), .pcii_tlast(pcii_tlast), .pcii_tvalid(pcii_tvalid), .pcii_tready(pcii_tready),
+      .pcio_tdata(pcio_tdata), .pcio_tuser(pcio_tuser), .pcio_tlast(pcio_tlast), .pcio_tvalid(pcio_tvalid), .pcio_tready(pcio_tready),
+      .pcii_tdata(pcii_tdata), .pcii_tuser(pcii_tuser), .pcii_tlast(pcii_tlast), .pcii_tvalid(pcii_tvalid), .pcii_tready(pcii_tready),
       // Wishbone Slave Interface(s)
       .sfp0_wb_dat_i(sfp0_wb_dat_i), .sfp0_wb_dat_o(sfp0_wb_dat_o), .sfp0_wb_adr(sfp0_wb_adr),
       .sfp0_wb_sel(sfp0_wb_sel), .sfp0_wb_ack(sfp0_wb_ack), .sfp0_wb_stb(sfp0_wb_stb),

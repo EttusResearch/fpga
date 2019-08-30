@@ -41,7 +41,6 @@ module pcie_dma_ctrl #(
     output reg [NUM_STREAMS-1:0]            set_enabled,
     output reg [NUM_STREAMS-1:0]            set_clear,
     output [(NUM_STREAMS*FRAME_SIZE_W)-1:0] set_frame_size,
-    output [(NUM_STREAMS*3)-1:0]            swap_lanes,
     
     input  [NUM_STREAMS-1:0]                packet_stb,
     input  [NUM_STREAMS-1:0]                sample_stb,
@@ -83,14 +82,12 @@ module pcie_dma_ctrl #(
     reg [31:0]              pkt_count_mem[0:NUM_STREAMS-1];
     reg [31:0]              samp_count_mem[0:NUM_STREAMS-1];
     reg [FRAME_SIZE_W-1:0]  frame_size_mem[0:NUM_STREAMS-1];
-    reg [NUM_STREAMS-1:0]   sw_buf_width_mem;
 
     genvar i;
     generate
         for (i=0; i<NUM_STREAMS; i=i+1) begin: dma_ctrl_logic_generator
             //Memory -> output translations
             assign set_frame_size[(FRAME_SIZE_W*(i+1))-1:(FRAME_SIZE_W*i)] = frame_size_mem[i];
-            assign swap_lanes[(3*(i+1))-1:(3*i)] = { ~(sw_buf_width_mem[i]), 2'b00 }; //Optimized for only 2 modes
         
             //Setting registers
             always @(posedge clk) begin
@@ -98,12 +95,10 @@ module pcie_dma_ctrl #(
                     frame_size_mem[i] <= DEFAULT_FSIZE;
                     set_clear[i] <= 0;
                     set_enabled[i] <= 0;
-                    sw_buf_width_mem[i] <= 1;
                 end else if (regi_tready & regi_tvalid & regi_wr) begin
                     if (regi_addr == `GET_REG_OFFSET(DMA_CTRL_STATUS_REG, i)) begin
                         set_clear[i]        <= regi_payload[0];                 //DMA_CTRL_STATUS_REG[0] == Clear DMA queues
                         set_enabled[i]      <= regi_payload[1];                 //DMA_CTRL_STATUS_REG[1] == Enable DMA channel
-                        sw_buf_width_mem[i] <= regi_payload[4];                 //DMA_CTRL_STATUS_REG[5:4] == SW Buffer Size (See note above)
                     end else if (regi_addr == `GET_REG_OFFSET(DMA_FSIZE_REG, i)) begin
                         frame_size_mem[i] <= regi_payload[FRAME_SIZE_W-1:0];    //DMA_FSIZE_REG[14:0] == DMA Frame size
                     end

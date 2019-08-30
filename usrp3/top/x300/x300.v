@@ -659,8 +659,10 @@ module x300
    localparam NUM_RX_STREAMS       = `LVFPGA_IFACE_NUM_RX_DMA_CNT;
    localparam TX_STREAM_START_IDX  = `LVFPGA_IFACE_TX_DMA_INDEX;
    localparam RX_STREAM_START_IDX  = `LVFPGA_IFACE_RX_DMA_INDEX;
+   localparam DMA_DEST_WIDTH       = 3;
 
    wire [DMA_STREAM_WIDTH-1:0] dmatx_tdata,  dmarx_tdata,  pcii_tdata,  pcio_tdata;
+   wire [DMA_DEST_WIDTH-1:0]   dmatx_tuser, dmarx_tuser, pcii_tuser, pcio_tuser;
    wire                        dmatx_tvalid, dmarx_tvalid, pcii_tvalid, pcio_tvalid;
    wire                        dmatx_tlast,  dmarx_tlast,  pcii_tlast,  pcio_tlast;
    wire                        dmatx_tready, dmarx_tready, pcii_tready, pcio_tready;
@@ -806,14 +808,16 @@ module x300
       .chinch_reg_rc(chinch_reg_rc),
       .chinch_reg_rdy(chinch_reg_rdy),
 
-      //DMA TX FIFO (Bus Clock Domain)
+      //DMA TX FIFO (Bus Clock Domain). Note: tuser is used for muxing.
       .dmatx_tdata(dmatx_tdata),
+      .dmatx_tuser(dmatx_tuser),
       .dmatx_tlast(dmatx_tlast),
       .dmatx_tvalid(dmatx_tvalid),
       .dmatx_tready(dmatx_tready),
 
-      //DMA RX FIFO (Bus Clock Domain)
+      //DMA RX FIFO (Bus Clock Domain). Note: tuser is used for muxing.
       .dmarx_tdata(dmarx_tdata),
+      .dmarx_tuser(dmarx_tuser),
       .dmarx_tlast(dmarx_tlast),
       .dmarx_tvalid(dmarx_tvalid),
       .dmarx_tready(dmarx_tready),
@@ -839,16 +843,16 @@ module x300
    // so add an additional stage of pipelining to give the tool more routing
    // slack. This is significantly help timing closure.
 
-   axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) pcii_pipeline_srl (
+   axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1+DMA_DEST_WIDTH)) pcii_pipeline_srl (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({dmatx_tlast, dmatx_tdata}), .i_tvalid(dmatx_tvalid), .i_tready(dmatx_tready),
-      .o_tdata({pcii_tlast, pcii_tdata}), .o_tvalid(pcii_tvalid), .o_tready(pcii_tready),
+      .i_tdata({dmatx_tuser, dmatx_tlast, dmatx_tdata}), .i_tvalid(dmatx_tvalid), .i_tready(dmatx_tready),
+      .o_tdata({pcii_tuser, pcii_tlast, pcii_tdata}), .o_tvalid(pcii_tvalid), .o_tready(pcii_tready),
       .space(), .occupied());
 
-   axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1)) pcio_pipeline_srl (
+   axi_fifo_short #(.WIDTH(DMA_STREAM_WIDTH+1+DMA_DEST_WIDTH)) pcio_pipeline_srl (
       .clk(bus_clk), .reset(bus_rst), .clear(1'b0),
-      .i_tdata({pcio_tlast, pcio_tdata}), .i_tvalid(pcio_tvalid), .i_tready(pcio_tready),
-      .o_tdata({dmarx_tlast, dmarx_tdata}), .o_tvalid(dmarx_tvalid), .o_tready(dmarx_tready),
+      .i_tdata({pcio_tuser, pcio_tlast, pcio_tdata}), .i_tvalid(pcio_tvalid), .i_tready(pcio_tready),
+      .o_tdata({dmarx_tuser, dmarx_tlast, dmarx_tdata}), .o_tvalid(dmarx_tvalid), .o_tready(dmarx_tready),
       .space(), .occupied());
 
    //////////////////////////////////////////////////////////////////////
@@ -1441,10 +1445,12 @@ module x300
       .i_iop2_msg_tready         (i_iop2_msg_tready),
       // PCIe DMA Data
       .pcio_tdata                (pcio_tdata),
+      .pcio_tuser                (pcio_tuser),
       .pcio_tlast                (pcio_tlast),
       .pcio_tvalid               (pcio_tvalid),
       .pcio_tready               (pcio_tready),
       .pcii_tdata                (pcii_tdata),
+      .pcii_tuser                (pcii_tuser),
       .pcii_tlast                (pcii_tlast),
       .pcii_tvalid               (pcii_tvalid),
       .pcii_tready               (pcii_tready)

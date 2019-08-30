@@ -1,6 +1,7 @@
 //
 // Copyright 2013 Ettus Research LLC
 // Copyright 2018 Ettus Research, a National Instruments Company
+// Copyright 2019 Ettus Research, a National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
@@ -8,13 +9,14 @@
 
 `timescale 1ns/10ps
 
-module cvita_chunker_tb();
+module chdr_dechunker_tb();
 
    // TB stimulus
    reg clk    = 0;
    reg reset  = 1;
    reg clear  = 0;
    reg [15:0] quantum;
+   wire error;
 
    // Check vars
    reg [31:0] o_xfer_count = 0, i_xfer_count = 0;
@@ -23,8 +25,8 @@ module cvita_chunker_tb();
    
    always #10 clk = ~clk;
    
-   initial $dumpfile("chdr_chunker_tb.vcd");
-   initial $dumpvars(0,chdr_chunker_tb);
+   initial $dumpfile("chdr_dechunker_tb.vcd");
+   initial $dumpvars(0,chdr_dechunker_tb);
 
    function check_result;
       input [31:0]   o_xfer_count_arg;
@@ -59,26 +61,27 @@ module cvita_chunker_tb();
    task send_packet;
       input [63:0] data_start;
       input [31:0] len;
+      input [31:0] quant;
       
       begin
-         if(len < 9) begin
-            {i_tlast, i_tdata} <= { 1'b1, data_start[63:48],len[15:0], data_start[31:0] };
+         if(quant < 2) begin
+            {i_tlast, i_tdata} <= { 1'b1, data_start[63:32], len[15:0], data_start[15:0] };
             i_tvalid <= 1;
             @(posedge clk);
             i_tvalid <= 0;
          end else begin
-            {i_tlast, i_tdata} <= { 1'b0, data_start[63:48],len[15:0], data_start[31:0] };
+            {i_tlast, i_tdata} <= { 1'b0, data_start[63:32], len[15:0], data_start[15:0] };
             i_tvalid <= 1;
             @(posedge clk);
-            repeat(((len-1)/8)-1) begin
+            repeat(quant - 2) begin
                i_tdata <= i_tdata + 64'h0000_0002_0000_0002;
                @(posedge clk);
             end
             i_tdata <= i_tdata + 64'h0000_0002_0000_0002;
             i_tlast <= 1;
             @(posedge clk);
-            i_tvalid <= 0;
-        end // else: !if(len < 3)
+            i_tvalid <= 1'b0;
+         end // else: !if(quant < 2)
       end
    endtask // send_packet
 
@@ -107,73 +110,68 @@ module cvita_chunker_tb();
 
    wire [63:0] o_tdata;
    wire        o_tlast, o_tvalid, o_tready;
-   wire        error;
    
+   reg result;
    initial begin
-      quantum <= 256;
+      quantum <= 8;
       i_tvalid <= 0;
       while(reset) @(posedge clk);
 
       $write ("Running test case: First packet after reset");
-      send_packet(64'h00000001_00000000, 128);
-      while(o_tvalid) @(posedge clk);
-      check_result(256,16,64'hFFFFFFFF_FFFFFFFF,0);
+      send_packet(64'h00000001_00000000, 32, 8);
+      @(posedge clk);
+      result = check_result(4,8,64'hxxxxxxxx_xxxxxx06, 0);
 
-      reset_quantum_atomic(8);
+      reset_quantum_atomic(10);
 
       $write ("Running test case: sizeof(packet) < quantum");
-      send_packet(64'h00000001_00000000, 40);
-      while(o_tvalid) @(posedge clk);
-      check_result(8,5,64'hFFFFFFFF_FFFFFFFF,0);
-
-      reset_quantum_atomic(5);
+      send_packet(64'h00000001_00000000, 64, 10);
+      @(posedge clk);
+      result = check_result(8,10,64'hxxxxxxxx_xxxxxx0e, 0);
 
       $write ("Running test case: sizeof(packet) == quantum");
-      send_packet(64'h00000001_00000000, 40);
-      while(o_tvalid) @(posedge clk);
-      check_result(5,5,64'h00000030_00000008,0);
+      send_packet(64'h00000001_00000000, 80, 10);
+      @(posedge clk);
+      result = check_result(10,10,64'hxxxxxxxx_xxxxxx12, 0);
       
       $write ("Running test case: sizeof(packet) == quantum - 64bits");
-      send_packet(64'h00000001_00000000, 32);
-      while(o_tvalid) @(posedge clk);
-      check_result(5,4,64'hFFFFFFFF_FFFFFFFF,0);
+      send_packet(64'h00000001_00000000, 72, 10);
+      @(posedge clk);
+      result = check_result(9,10,64'hxxxxxxxx_xxxxxx10, 0);
 
       $write ("Running test case: sizeof(packet) == quantum + 64bits");
-      send_packet(64'h00000001_00000000, 48);
-      while(o_tvalid) @(posedge clk);
-      check_result(32'hxxxxxxxx,32'hxxxxxxxx,64'hxxxxxxxx_xxxxxxxx,1);
+      send_packet(64'h00000001_00000000, 88, 10);
+      @(posedge clk);
+      result = check_result(32'hxxxxxxxx,10,64'hxxxxxxxx_xxxxxxxx, 1);
 
-      $write ("Running test case: Error reset");
-      reset_quantum_atomic(8);
-      check_result(32'hxxxxxxxx,32'hxxxxxxxx,64'hxxxxxxxx_xxxxxxxx,0);
-      
+      reset_quantum_atomic(10);
+
       $write ("Running test case: sizeof(packet) > quantum");
-      send_packet(64'h00000001_00000000, 80);
-      while(o_tvalid) @(posedge clk);
-      check_result(32'hxxxxxxxx,32'hxxxxxxxx,64'hxxxxxxxx_xxxxxxxx,1);
+      send_packet(64'h00000001_00000000, 88, 10);
+      @(posedge clk);
+      result = check_result(32'hxxxxxxxx,10,64'hxxxxxxxx_xxxxxxxx, 1);
 
       reset_quantum_atomic(8);
 
       $write ("Running test case: sizeof(packet) == 2");
-      send_packet(64'h00000001_00000000, 8);
-      while(o_tvalid) @(posedge clk);
-      check_result(8,1,64'hFFFFFFFF_FFFFFFFF,0);
+      send_packet(64'h00000001_00000000, 8, 8);
+      @(posedge clk);
+      result = check_result(1,8,64'hxxxxxxxx_xxxxxx00, 0);
 
-      $write ("Running test case: Multiple packets back-to-back");
-      send_packet(64'h00000001_00000000, 40);
-      while(o_tvalid) @(posedge clk);
-      send_packet(64'h00000001_00000000, 16);
-      while(o_tvalid) @(posedge clk);
-      send_packet(64'h00000001_00000000, 64);
-      while(o_tvalid) @(posedge clk);
-      check_result(24,15,64'h0000004e0000000e,0);
+      $write ("Running test case: Multiple packets");
+      send_packet(64'h00000001_00000000, 8, 8);
+      send_packet(64'h00000001_00000000, 16, 8);
+      send_packet(64'h00000001_00000000, 24, 8);
+      send_packet(64'h00000001_00000000, 32, 8);
+      @(posedge clk);
+      result = check_result(10,32,64'hxxxxxxxx_xxxxxx06, 0);
 
    end // initial begin
 
 
-   chdr_chunker dut (
+   chdr_dechunker dut (
       .clk(clk), .reset(reset), .clear(clear), .frame_size(quantum),
-      .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
+      .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
       .error(error));
       
@@ -187,4 +185,4 @@ module cvita_chunker_tb();
       if (i_tvalid & i_tready) i_xfer_count <= i_xfer_count + 1;
    end
 
-endmodule // chdr_chunker_tb
+endmodule // chdr_dechunker_tb

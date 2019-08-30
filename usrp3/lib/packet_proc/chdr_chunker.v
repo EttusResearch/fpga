@@ -1,18 +1,19 @@
 //
 // Copyright 2013 Ettus Research LLC
 // Copyright 2018 Ettus Research, a National Instruments Company
+// Copyright 2019 Ettus Research, a National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
 
-// Quantize cvita packets to a configurable quantum value. o_tlast and 
-// i_tready will be held off until the entire quantized packet is xferred. 
+// Quantize chdr packets to a configurable quantum value. o_tlast and
+// i_tready will be held off until the entire quantized packet is xferred.
 // If quantum is changed, it is the responsibility of the client to clear
 // this module. error is asserted if a packet is larger than the quantum
 // error can be reset by asserting reset or clear.
 
 `default_nettype none
-module cvita_chunker # (
+module chdr_chunker # (
    parameter PAD_VALUE = 64'hFFFFFFFF_FFFFFFFF,
              HOLD_ERROR = 1'b1 // If high, hold error until reset, else pulse
 ) (
@@ -25,12 +26,12 @@ module cvita_chunker # (
    input wire          i_tlast,
    input wire          i_tvalid,
    output reg          i_tready,
-   
+
    output wire [63:0]  o_tdata,
    output wire         o_tlast,
    output reg          o_tvalid,
    input  wire         o_tready,
-   
+
    output wire         error
 );
 
@@ -42,8 +43,9 @@ module cvita_chunker # (
    reg [1:0]   state;
    reg [15:0]  frame_rem;
 
-   wire [15:0] cvita_len_ceil = i_tdata[47:32] + 16'd7;
-   wire [15:0] axi_len = {3'b000, cvita_len_ceil[15:3]};
+   // axi_len = ceil(length / 8)
+   wire [15:0] chdr_len_ceil = i_tdata[31:16] + 16'd7;
+   wire [15:0] axi_len = {3'b000, chdr_len_ceil[15:3]};
 
    always @(posedge clk) begin
       if (reset | clear) begin
@@ -62,7 +64,7 @@ module cvita_chunker # (
                      state <= ST_PADDING;
                   else
                      state <= ST_DATA;
-                     
+
                   frame_rem <= frame_size - 16'd1;
                end
             end
@@ -127,7 +129,7 @@ module cvita_chunker # (
 
    assign error = (state == ST_ERROR);
 
-endmodule // cvita_chunker
+endmodule // chdr_chunker
 
 `default_nettype wire
 

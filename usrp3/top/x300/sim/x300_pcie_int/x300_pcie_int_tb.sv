@@ -117,13 +117,13 @@ module x300_pcie_int_tb();
         input [31:0] quant;
     begin
         if(quant < 2) begin
-            i_tdata <= { sid[63:48],len[15:0], sid[31:0] };
+            i_tdata <= { sid[63:32],len[15:0], sid[15:0] };
             i_tvalid <= 1;
             @(posedge clk);
             i_tvalid <= 0;
             @(posedge clk);
         end else begin
-            i_tdata <= { sid[63:48],len[15:0], sid[31:0] };
+            i_tdata <= { sid[63:32],len[15:0], sid[15:0] };
             i_tvalid <= 1;
             @(posedge clk);
             i_tdata <= 64'h0000_0001_0000_0000;
@@ -177,11 +177,12 @@ module x300_pcie_int_tb();
     end
     endtask // wait_for_pkt_loopback
 
-    wire [63:0]     dma_loop_tdata;
-    wire            dma_loop_tvalid, dma_loop_tlast, dma_loop_tready;
+    wire [63:0] dma_loop_tdata ;
+    wire [ 2:0] dma_loop_tuser ;
+    wire        dma_loop_tvalid, dma_loop_tlast, dma_loop_tready;
 
-    wire [63:0]     iop2_msg_tdata;
-    wire            iop2_msg_tvalid, iop2_msg_tlast, iop2_msg_tready;
+    wire [63:0] iop2_msg_tdata ;
+    wire        iop2_msg_tvalid, iop2_msg_tlast, iop2_msg_tready;
 
    
     initial begin : tb_main
@@ -270,10 +271,12 @@ module x300_pcie_int_tb();
 
         `TEST_CASE_START("Loopback packet");
         reset_dma_counts();
-        select_channels(0,1);
+        usr_regport_request(WRITE, 20'h40200, 32'h0000_0012);
+        usr_regport_request(WRITE, 20'h40400, 32'h0000_0012);
+        select_channels(0,0);
         send_packet(16'h00D2, 80, 32);
         wait_for_pkt_loopback();
-        `TEST_CASE_DONE((dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[1]==32));
+        `TEST_CASE_DONE((dma_sample_cnt==10 && dma_packet_cnt==1 && dma_out_sample_cnt[0]==32));
 
         reset_dma_counts();
         select_channels(1,0);
@@ -467,74 +470,76 @@ module x300_pcie_int_tb();
     
 
     x300_pcie_int #(
-        .DMA_STREAM_WIDTH(64),
-        .NUM_TX_STREAMS(6),
-        .NUM_RX_STREAMS(6),
+        .DMA_STREAM_WIDTH  (64),
+        .NUM_TX_STREAMS    (6 ),
+        .NUM_RX_STREAMS    (6 ),
         .REGPORT_ADDR_WIDTH(20),
         .REGPORT_DATA_WIDTH(32),
-        .IOP2_MSG_WIDTH(64)
+        .IOP2_MSG_WIDTH    (64)
     ) x300_pcie_int (
-        .ioport2_clk(clk),
-        .bus_clk(clk),
-        .bus_rst(reset),
-
-        //DMA TX FIFOs (IoPort2 Clock Domain)
-        .dmatx_tdata_iop2(i_tdata_par),
-        .dmatx_tvalid_iop2(i_tvalid_par),
-        .dmatx_tready_iop2(i_tready_par),
-
-        //DMA TX FIFOs (IoPort2 Clock Domain)
-        .dmarx_tdata_iop2(o_tdata_par),
-        .dmarx_tvalid_iop2(o_tvalid_par),
-        .dmarx_tready_iop2(o_tready_par),
-
-        //PCIe User Regport
-        .pcie_usr_reg_wr(pcie_usr_reg_wr),
-        .pcie_usr_reg_rd(pcie_usr_reg_rd),
-        .pcie_usr_reg_addr(pcie_usr_reg_addr),
-        .pcie_usr_reg_data_in(pcie_usr_reg_data_in),
-        .pcie_usr_reg_len(pcie_usr_reg_len),        
-        .pcie_usr_reg_data_out(pcie_usr_reg_data_out),
-        .pcie_usr_reg_rc(pcie_usr_reg_rc),
-        .pcie_usr_reg_rdy(pcie_usr_reg_rdy),
-
-        //Chinch Regport
-        .chinch_reg_wr(chinch_reg_wr),
-        .chinch_reg_rd(chinch_reg_rd),
-        .chinch_reg_addr(chinch_reg_addr),
-        .chinch_reg_data_out(chinch_reg_data_out),
-        .chinch_reg_len(chinch_reg_len),        
-        .chinch_reg_data_in(chinch_reg_data_in),
-        .chinch_reg_rc(chinch_reg_rc),
-        .chinch_reg_rdy(chinch_reg_rdy),
-
-        //DMA TX FIFO (Bus Clock Domain)
-        .dmatx_tdata(dma_loop_tdata),
-        .dmatx_tlast(dma_loop_tlast),
-        .dmatx_tvalid(dma_loop_tvalid),
-        .dmatx_tready(dma_loop_tready),
-
-        //DMA RX FIFO (Bus Clock Domain)
-        .dmarx_tdata(dma_loop_tdata),
-        .dmarx_tlast(dma_loop_tlast),
-        .dmarx_tvalid(dma_loop_tvalid),
-        .dmarx_tready(dma_loop_tready),
-
-        //Message FIFO Out (Bus Clock Domain)
-        .rego_tdata(iop2_msg_tdata),
-        .rego_tvalid(iop2_msg_tvalid),
-        .rego_tlast(iop2_msg_tlast),
-        .rego_tready(iop2_msg_tready),
-
-        //Message FIFO In (Bus Clock Domain)
-        .regi_tdata(iop2_msg_tdata),
-        .regi_tvalid(iop2_msg_tvalid),
-        .regi_tlast(iop2_msg_tlast),
-        .regi_tready(iop2_msg_tready),
+        .ioport2_clk          (clk                  ),
+        .bus_clk              (clk                  ),
+        .bus_rst              (reset                ),
         
-        .debug()
+        //DMA TX FIFOs (IoPort2 Clock Domain)
+        .dmatx_tdata_iop2     (i_tdata_par          ),
+        .dmatx_tvalid_iop2    (i_tvalid_par         ),
+        .dmatx_tready_iop2    (i_tready_par         ),
+        
+        //DMA TX FIFOs (IoPort2 Clock Domain)
+        .dmarx_tdata_iop2     (o_tdata_par          ),
+        .dmarx_tvalid_iop2    (o_tvalid_par         ),
+        .dmarx_tready_iop2    (o_tready_par         ),
+        
+        //PCIe User Regport
+        .pcie_usr_reg_wr      (pcie_usr_reg_wr      ),
+        .pcie_usr_reg_rd      (pcie_usr_reg_rd      ),
+        .pcie_usr_reg_addr    (pcie_usr_reg_addr    ),
+        .pcie_usr_reg_data_in (pcie_usr_reg_data_in ),
+        .pcie_usr_reg_len     (pcie_usr_reg_len     ),
+        .pcie_usr_reg_data_out(pcie_usr_reg_data_out),
+        .pcie_usr_reg_rc      (pcie_usr_reg_rc      ),
+        .pcie_usr_reg_rdy     (pcie_usr_reg_rdy     ),
+        
+        //Chinch Regport
+        .chinch_reg_wr        (chinch_reg_wr        ),
+        .chinch_reg_rd        (chinch_reg_rd        ),
+        .chinch_reg_addr      (chinch_reg_addr      ),
+        .chinch_reg_data_out  (chinch_reg_data_out  ),
+        .chinch_reg_len       (chinch_reg_len       ),
+        .chinch_reg_data_in   (chinch_reg_data_in   ),
+        .chinch_reg_rc        (chinch_reg_rc        ),
+        .chinch_reg_rdy       (chinch_reg_rdy       ),
+        
+        //DMA TX FIFO (Bus Clock Domain)
+        .dmatx_tdata          (dma_loop_tdata       ),
+        .dmatx_tuser          (dma_loop_tuser       ),
+        .dmatx_tlast          (dma_loop_tlast       ),
+        .dmatx_tvalid         (dma_loop_tvalid      ),
+        .dmatx_tready         (dma_loop_tready      ),
+        
+        //DMA RX FIFO (Bus Clock Domain)
+        .dmarx_tdata          (dma_loop_tdata       ),
+        .dmarx_tuser          (dma_loop_tuser       ),
+        .dmarx_tlast          (dma_loop_tlast       ),
+        .dmarx_tvalid         (dma_loop_tvalid      ),
+        .dmarx_tready         (dma_loop_tready      ),
+        
+        //Message FIFO Out (Bus Clock Domain)
+        .rego_tdata           (iop2_msg_tdata       ),
+        .rego_tvalid          (iop2_msg_tvalid      ),
+        .rego_tlast           (iop2_msg_tlast       ),
+        .rego_tready          (iop2_msg_tready      ),
+        
+        //Message FIFO In (Bus Clock Domain)
+        .regi_tdata           (iop2_msg_tdata       ),
+        .regi_tvalid          (iop2_msg_tvalid      ),
+        .regi_tlast           (iop2_msg_tlast       ),
+        .regi_tready          (iop2_msg_tready      ),
+        
+        .debug                (                     )
     );
-    
+
     always @(posedge clk) begin
         if (dma_loop_tvalid & dma_loop_tready) begin
             dma_sample_cnt <= dma_sample_cnt + 32'd1;
