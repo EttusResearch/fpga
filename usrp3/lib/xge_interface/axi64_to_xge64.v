@@ -50,7 +50,7 @@ module axi64_to_xge64
       end
       else begin
          if (s_axis_tvalid && s_axis_tready) begin
-            saved <= s_axis_tdata[15:0];
+            saved <= s_axis_tdata[63:48];
             last_occ <= s_axis_tuser[2:0];
             last_sof <= (state == STORE_FIRST) ;
          end
@@ -79,7 +79,7 @@ module axi64_to_xge64
       end
    end
 
-   assign m_axis_tdata[63:0] = {saved, s_axis_tdata[63:16]};
+   assign m_axis_tdata[63:0] = {s_axis_tdata[47:0], saved};
    assign m_axis_tuser[3] = last_sof;
    assign m_axis_tlast = (state == RELEASE_LAST)? 1'b1 : last_line;
    assign m_axis_tuser[2:0] = ((state == RELEASE_LAST)? last_occ : (last_line? s_axis_tuser[2:0] : 3'b110)) + 3'b010;

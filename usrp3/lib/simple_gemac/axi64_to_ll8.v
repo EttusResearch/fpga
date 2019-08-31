@@ -50,17 +50,7 @@ module axi64_to_ll8
    assign eof_int = axi64_tlast_gated & (axi64_tuser_gated[2:0] == (state + 3'd1));
 
    always @*
-     case(state)
-       0 : data_int <= axi64_tdata_gated[63:56];
-       1 : data_int <= axi64_tdata_gated[55:48];
-       2 : data_int <= axi64_tdata_gated[47:40];
-       3 : data_int <= axi64_tdata_gated[39:32];
-       4 : data_int <= axi64_tdata_gated[31:24];
-       5 : data_int <= axi64_tdata_gated[23:16];
-       6 : data_int <= axi64_tdata_gated[15:8];
-       7 : data_int <= axi64_tdata_gated[7:0];
-       default : data_int <= axi64_tdata_gated[7:0];
-     endcase // case (state)
+     data_int <= axi64_tdata_gated[state*8 +: 8];
 
    axi_fifo_short #(.WIDTH(9)) ll8_fifo
      (.clk(clk), .reset(reset), .clear(0),

@@ -41,7 +41,7 @@ module ll8_to_axi64
      if(reset | clear)
        begin
 	  state <= START_BYTE;
-	  holding <= {label_wire, 56'h0};
+	  holding <= {56'h0, label_wire};
 	  err <= 1'b0;
 	  eof <= 1'b0;
 	  occ <= 3'd0;
@@ -52,24 +52,11 @@ module ll8_to_axi64
 	 begin
 	    state <= START_BYTE;
 	    done <= 1'b0;
-	    holding <= {label_wire, 56'h0};
+	    holding <= {56'h0, label_wire};
 	 end
        else if(valid_int & ready_int)
 	 begin
-	    case(state)
-	      4'd0: 
-		begin
-		   holding[63:56] <= data_int;
-		   holding[55:0] <= 56'h0;
-		end
-	      4'd1: holding[55:48] <= data_int;
-	      4'd2: holding[47:40] <= data_int;
-	      4'd3: holding[39:32] <= data_int;
-	      4'd4: holding[31:24] <= data_int;
-	      4'd5: holding[23:16] <= data_int;
-	      4'd6: holding[15:8] <= data_int;
-	      4'd7: holding[7:0] <= data_int;
-	    endcase // case (state)
+	    holding[state*8 +: 8] <= data_int;
 	    
 	    err <= error_int;
 	    eof <= eof_int;

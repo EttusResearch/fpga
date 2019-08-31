@@ -57,7 +57,7 @@ module arm_deframer (
   always @(posedge clk)begin
     if (s_axis_tvalid & s_axis_tready) begin
       // Register the last 6 bytes of data for one cycle
-      holding_reg  <= s_axis_tdata[47:0];
+      holding_reg  <= s_axis_tdata[63:16];
       // Register the tuser in case there is a new line
       // tuser should be valid for one extra cycle in that case
       holding_user <= s_axis_tuser[2:0];
@@ -74,7 +74,7 @@ module arm_deframer (
       START : begin
         // Pad with 6 bytes of Zeros at the beginning of the packet
         // Shift the first 2 bytes to the end
-        m_axis_tdata  = {48'b0, s_axis_tdata[63:48]};
+        m_axis_tdata  = {s_axis_tdata[15:0], 48'b0};
         m_axis_tvalid = s_axis_tvalid;
         m_axis_tlast  = s_axis_tlast;
         m_axis_tuser  = 4'b0;
@@ -85,7 +85,7 @@ module arm_deframer (
       BODY : begin
         // Shift the remaining packet by 6 bytes.
         // Here we're using register version of data and tvalid.
-        m_axis_tdata  = {holding_reg, s_axis_tdata[63:48]};
+        m_axis_tdata  = {s_axis_tdata[15:0], holding_reg};
         m_axis_tvalid = s_axis_tvalid;
         m_axis_tlast  = new_line? 1'b0: s_axis_tvalid & s_axis_tlast;
         // Modify the tuser according to the new packet i.e. add 6 to it.
@@ -95,7 +95,7 @@ module arm_deframer (
         else next_state = BODY;
       end
       EXTRA : begin
-        m_axis_tdata  = {holding_reg, 16'b0};
+        m_axis_tdata  = {16'b0, holding_reg};
         m_axis_tvalid = 1'b1;
         m_axis_tlast  = 1'b1;
         // Modify the tuser according to the new shifted packet i.e. add 6 to it.

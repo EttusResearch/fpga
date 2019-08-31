@@ -93,10 +93,9 @@ module xge64_to_axi64
 	       // Assert on this condition, add H/W to deal with overflow later.
 	       $display("ERROR: xge64_to_axi64, valid & ~axis_tready");
 	     
-	     holding_reg <= datain[47:0];
-	     axis_tdata[63:56] <= LABEL; // Tag packet with label
-	     axis_tdata[55:16] <= 40'h0;
-	     axis_tdata[15:0] <= datain[63:48];
+	     holding_reg <= datain[16 +: 48];
+	     axis_tdata[48 +: 16] <= datain[15:0];
+	     axis_tdata[47:0] <= {40'h0, LABEL}; // Tag packet with label
 	  end
 	  
 	  IN_USE: begin
@@ -109,9 +108,9 @@ module xge64_to_axi64
 		// In the case of 3 through 8 valid octets in the final 64bits input, 
 		// we must run another cycle afterwards since we have 6 more bytes still in holding.
 		err_reg <= err;
-		holding_reg[47:0] <= datain[47:0];
-		axis_tdata[63:16] <= holding_reg[47:0];
-		axis_tdata[15:0] <= datain[63:48];
+		holding_reg <= datain[16 +: 48];
+		axis_tdata[63:48] <= datain[15:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 		
 		case(occ[2:0])
@@ -156,9 +155,9 @@ module xge64_to_axi64
 	     else if (valid & axis_tready) begin
 		// No EOF indication so in packet payload somewhere still.
 		state <= IN_USE;
-		holding_reg[47:0] <= datain[47:0];
-		axis_tdata[63:16] <= holding_reg[47:0];
-		axis_tdata[15:0] <= datain[63:48];
+		holding_reg <= datain[16 +: 48];
+		axis_tdata[63:48] <= datain[15:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end
 	     else if (valid & ~axis_tready) begin
@@ -187,7 +186,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF1};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;
@@ -205,7 +204,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF2};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;
@@ -223,7 +222,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF3};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;
@@ -241,7 +240,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF4};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;
@@ -259,7 +258,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF5};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;
@@ -277,7 +276,7 @@ module xge64_to_axi64
 		state <= EMPTY;
 		axis_tlast <= 1;
 		axis_tuser <= {err_reg, EOF6};
-		axis_tdata[63:16] <= holding_reg[47:0];
+		axis_tdata[47:0] <= holding_reg;
 		axis_tvalid <= 1;
 	     end else begin
 		state <= ERROR1;

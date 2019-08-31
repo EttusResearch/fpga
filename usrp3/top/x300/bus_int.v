@@ -170,7 +170,7 @@ module bus_int #(
    localparam RB_XADC_VALS       = 8'd11;
    localparam RB_NUM_TIMEKEEPERS = 8'd12;
 
-   localparam COMPAT_MAJOR       = 16'h0025;
+   localparam COMPAT_MAJOR       = 16'h0026;
    localparam COMPAT_MINOR       = 16'h0000;
    localparam NUM_TIMEKEEPERS    = 1;
 

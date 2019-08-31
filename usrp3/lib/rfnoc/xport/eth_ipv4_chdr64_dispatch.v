@@ -30,6 +30,7 @@
 //   - my_udp_chdr_port: The UDP port allocated for CHDR traffic on this endpoint
 //
 
+`default_nettype none
 module eth_ipv4_chdr64_dispatch #(
   parameter [0:0] DROP_UNKNOWN_MAC = 1
 )(
@@ -67,6 +68,26 @@ module eth_ipv4_chdr64_dispatch #(
   localparam [47:0] ETH_ADDR_BCAST = {48{1'b1}};
   localparam [15:0] ETH_TYPE_IPV4 = 16'h0800;
   localparam [7:0]  IPV4_PROTO_UDP = 8'h11;
+
+  //---------------------------------------
+  // Byte-swapping function
+  //---------------------------------------
+  function [15:0] bswap16(
+    input  [15:0] din
+  );
+    begin
+      bswap16 = {din[0 +: 8], din[8 +: 8]};
+    end
+  endfunction
+
+  function [31:0] bswap32(
+    input  [31:0] din
+  );
+    begin
+      bswap32 = {din[0 +: 8], din[8 +: 8],
+                 din[16+: 8], din[24+: 8]};
+    end
+  endfunction
 
   //---------------------------------------
   // Input pipeline stage
@@ -129,13 +150,13 @@ module eth_ipv4_chdr64_dispatch #(
       case (state)
         // Idle or First line of Eth frame
         // ----------------------------------
-        // | Preamble (48) | DstMAC_HI (16) |
+        // | DstMAC_HI (16) | Preamble (48) |
         // ----------------------------------
         ST_IDLE_ETH_L0: begin
           discard_cpu_pkt <= 1'b0;
           if (!in_tlast) begin
             // Just cache addresses. No decisions to be made.
-            eth_dst_addr_cached[47:32] <= in_tdata[15:0];
+            eth_dst_addr_cached[47:32] <= bswap16(in_tdata[48 +: 16]);
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
@@ -150,13 +171,13 @@ module eth_ipv4_chdr64_dispatch #(
 
         // Second line of Eth frame
         // -----------------------------------
-        // | DstMAC_LO (32) | SrcMAC_HI (32) |
+        // | SrcMAC_HI (32) | DstMAC_LO (32) |
         // -----------------------------------
         ST_ETH_L1: begin
           if (!in_tlast) begin
             // Just cache addresses. No decisions to be made.
-            eth_dst_addr_cached[31:0] <= in_tdata[63:32];
-            eth_src_addr_cached[47:16] <= in_tdata[31:0];
+            eth_dst_addr_cached[31:0] <= bswap32(in_tdata[0 +: 32]);
+            eth_src_addr_cached[47:16] <= bswap32(in_tdata[32 +: 32]);
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
@@ -171,11 +192,11 @@ module eth_ipv4_chdr64_dispatch #(
 
         // End Eth frame and start of IP
         // --------------------------------------------------
-        // | SrcMAC_LO (16) | EthType (16) |IPv4_Line0 (32) |
+        // | IPv4_Line0 (32)| EthType (16) | SrcMAC_LO (16) |
         // --------------------------------------------------
         ST_ETH_L2_IPV4_L0: begin
           if (!in_tlast) begin
-            eth_src_addr_cached[15:0] <= in_tdata[63:48];
+            eth_src_addr_cached[15:0] <= bswap16(in_tdata[0 +: 16]);
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
@@ -186,7 +207,7 @@ module eth_ipv4_chdr64_dispatch #(
               // If Eth destination is not us then drop the packet
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
-            end else if (in_tdata[47:32] != ETH_TYPE_IPV4) begin
+            end else if (bswap16(in_tdata[16 +: 16]) != ETH_TYPE_IPV4) begin
               // If this is not an IPv4 frame then fwd to CPU
               state <= ST_FWD_CPU;
             end else begin
@@ -209,7 +230,7 @@ module eth_ipv4_chdr64_dispatch #(
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
-            end else if (in_tdata[23:16] != IPV4_PROTO_UDP) begin
+            end else if (in_tdata[40 +: 8] != IPV4_PROTO_UDP) begin
               // If this is not a UDP frame then fwd to CPU
               state <= ST_FWD_CPU;
             end else begin
@@ -225,15 +246,15 @@ module eth_ipv4_chdr64_dispatch #(
 
         // Continue IPv4 header
         // -----------------------------------
-        // | IPSrcAddr (32) | IPDstAddr (32) |
+        // | IPDstAddr (32) | IPSrcAddr (32) |
         // -----------------------------------
         ST_IPV4_L2: begin
           if (!in_tlast) begin
-            ipv4_src_addr_cached <= in_tdata[63:32];
+            ipv4_src_addr_cached <= bswap32(in_tdata[0 +: 32]);
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
-            end else if (in_tdata[31:0] != my_ipv4_addr) begin
+            end else if (bswap32(in_tdata[32 +: 32]) != my_ipv4_addr) begin
               // If IPv4 destination is not us then fwd to CPU
               state <= ST_FWD_CPU;
             end else begin
@@ -249,15 +270,15 @@ module eth_ipv4_chdr64_dispatch #(
 
         // UDP header
         // -----------------------------------------------------------
-        // | SrcPort (16) | DstPort (16) | Length (16) | ChkSum (16) |
+        // | Chksum (16) | Length (16) | DstPort (16) | SrcPort (16) |
         // -----------------------------------------------------------
         ST_IPV4_UDP_HDR: begin
           if (!in_tlast) begin
-            udp_src_port_cached <= in_tdata[63:48];
+            udp_src_port_cached <= bswap16(in_tdata[0 +: 16]);
             if (in_tuser[3]) begin
               state <= ST_DROP_PKT;
               discard_cpu_pkt <= 1'b1;
-            end else if (in_tdata[47:32] == my_udp_chdr_port) begin
+            end else if (bswap16(in_tdata[16 +: 16]) == my_udp_chdr_port) begin
               // The UDP port matches CHDR port
               state <= ST_FWD_CHDR;
               discard_cpu_pkt <= 1'b1;
@@ -448,3 +469,4 @@ module eth_ipv4_chdr64_dispatch #(
   );
 
 endmodule // eth_ipv4_chdr64_dispatch
+`default_nettype wire

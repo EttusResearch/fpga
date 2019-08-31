@@ -117,5 +117,5 @@
 
 
 // Changed system packet interface to big endian (12/12/2009)
-// Comment out to use legacy mode
-`define BIGENDIAN
+// Comment out to use legacy mode (i.e. the correct mode)
+//`define BIGENDIAN

@@ -35,6 +35,7 @@
 //   - my_udp_chdr_port: The UDP port allocated for CHDR traffic on this endpoint
 //
 
+`default_nettype none
 module eth_ipv4_chdr64_adapter #(
   parameter [15:0] PROTOVER         = {8'd1, 8'd0},
   parameter        MTU              = 10,
@@ -89,6 +90,20 @@ module eth_ipv4_chdr64_adapter #(
   `include "../core/rfnoc_chdr_utils.vh"
   `include "../core/rfnoc_chdr_internal_utils.vh"
   `include "rfnoc_xport_types.vh"
+
+  //-----------------------------------------------------------------------
+  // Byte-swapping function
+  // Ethernet fields we wrote out left-to-right, but AXI-Stream time-orders
+  // its data right-to-left.
+  //-----------------------------------------------------------------------
+  function [63:0] bswap64(
+    input  [63:0] din
+  );
+    begin
+      bswap64 = {din[0 +: 8], din[8 +: 8], din[16 +: 8], din[24 +: 8],
+                 din[32+: 8], din[40+: 8], din[48 +: 8], din[56 +: 8]};
+    end
+  endfunction
 
   //---------------------------------------
   // E2X and E2C DEMUX
@@ -311,12 +326,12 @@ module eth_ipv4_chdr64_adapter #(
 
   always @(*) begin
     case(frame_state)
-      ST_ETH_L0         : frame_tdata <= {pad[47:0], mac_dst[47:32]};
-      ST_ETH_L1         : frame_tdata <= {mac_dst[31:0], my_eth_addr[47:16]};
-      ST_ETH_L2_IPV4_L0 : frame_tdata <= {my_eth_addr[15:0], eth_type[15:0], misc_ip[15:0], ip_len[15:0]};
-      ST_IPV4_L1        : frame_tdata <= {ident[15:0], flag_frag[15:0], ttl_prot[15:0], iphdr_checksum[15:0]};
-      ST_IPV4_L2        : frame_tdata <= {my_ipv4_addr[31:0], ip_dst[31:0]};
-      ST_IPV4_UDP_HDR   : frame_tdata <= {my_udp_chdr_port[15:0], udp_dst[15:0], udp_len[15:0], udp_checksum[15:0]};
+      ST_ETH_L0         : frame_tdata <= bswap64({pad[47:0], mac_dst[47:32]});
+      ST_ETH_L1         : frame_tdata <= bswap64({mac_dst[31:0], my_eth_addr[47:16]});
+      ST_ETH_L2_IPV4_L0 : frame_tdata <= bswap64({my_eth_addr[15:0], eth_type[15:0], misc_ip[15:0], ip_len[15:0]});
+      ST_IPV4_L1        : frame_tdata <= bswap64({ident[15:0], flag_frag[15:0], ttl_prot[15:0], iphdr_checksum[15:0]});
+      ST_IPV4_L2        : frame_tdata <= bswap64({my_ipv4_addr[31:0], ip_dst[31:0]});
+      ST_IPV4_UDP_HDR   : frame_tdata <= bswap64({my_udp_chdr_port[15:0], udp_dst[15:0], udp_len[15:0], udp_checksum[15:0]});
       default           : frame_tdata <= x2e_chdr_tdata;
     endcase
   end
@@ -379,3 +394,4 @@ module eth_ipv4_chdr64_adapter #(
   );
 
 endmodule // eth_ipv4_chdr64_adapter
+`default_nettype wire
