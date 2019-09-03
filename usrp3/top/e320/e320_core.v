@@ -1126,5 +1126,5 @@ module e320_core #(
     end
   endgenerate
 
-endmodule //n310_core
+endmodule //e320_core
 
