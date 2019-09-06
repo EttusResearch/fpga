@@ -1388,7 +1388,6 @@ module x300
       .ddr3_axi_clk              (ddr3_axi_clk),
       .ddr3_axi_clk_x2           (ddr3_axi_clk_x2),
       .ddr3_axi_rst              (ddr3_axi_rst),
-      .ddr3_running              (ddr3_running),
       // Slave Interface Write Address Ports
       .ddr3_axi_awid             (s_axi_awid),
       .ddr3_axi_awaddr           (s_axi_awaddr),
