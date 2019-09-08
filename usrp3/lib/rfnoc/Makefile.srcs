@@ -1,47 +1,33 @@
 #
-# Copyright 2014 Ettus Research LLC
+# Copyright 2019 Ettus Research, A National Instruments Brand
 #
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+
+##################################################
+# RFNoC Includes
+##################################################
+include $(BASE_DIR)/../lib/rfnoc/core/Makefile.srcs
+include $(BASE_DIR)/../lib/rfnoc/crossbar/Makefile.srcs
+include $(BASE_DIR)/../lib/rfnoc/utils/Makefile.srcs
+include $(BASE_DIR)/../lib/rfnoc/xport/Makefile.srcs
+
+RFNOC_FRAMEWORK_SRCS = $(RFNOC_CORE_SRCS) $(RFNOC_XBAR_SRCS) $(RFNOC_UTIL_SRCS) $(RFNOC_XPORT_SRCS)
 
 ##################################################
 # RFNoC Sources
 ##################################################
 RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/, \
-cmd_pkt_proc.v \
 chdr_fifo_large.v \
 chdr_framer.v \
 chdr_framer_2clk.v \
 chdr_deframer.v \
 chdr_deframer_2clk.v \
-noc_shell.v \
-noc_shell_regs.vh \
 chdr_pkt_types.vh \
 axi_packet_mux.v \
 axi_wrapper.v \
 axi_bit_reduce.v \
-noc_block_axi_fifo_loopback.v \
-noc_block_axi_dma_fifo.v \
-noc_block_replay.v \
-noc_block_fir_filter.v \
-noc_block_fft.v \
-noc_block_null_source_sink.v \
-noc_block_schmidl_cox.v \
-noc_block_packet_resizer.v \
-noc_block_sos_filter.v \
-noc_block_split_stream.v \
-noc_block_vector_iir.v \
-noc_block_addsub.v \
-noc_block_window.v \
-noc_block_keep_one_in_n.v \
-noc_block_pfb.v \
-noc_block_export_io.v \
-noc_block_conv_encoder_qpsk.v \
-noc_block_siggen.v \
-noc_block_digital_gain.v \
-noc_block_debug.v \
-pfb.v \
-pfb_stage.v \
 null_source.v \
-schmidl_cox.v \
 split_stream.v \
 split_stream_fifo.v \
 conj.v \
@@ -53,21 +39,14 @@ complex_to_magsq.v \
 phase_accum.v \
 complex_invert.v \
 periodic_framer.v \
-threshold_scaled.v \
 moving_sum.v \
-peak_finder.v \
 window.v \
 counter.v \
-puncture.v \
-symbol_to_gray_bits.v \
 ram_to_fifo.v \
 const.v \
 const_sreg.v \
 cmul.v \
 cadd.v \
-noc_input_port.v \
-noc_output_port.v \
-noc_responder.v \
 keep_one_in_n.v \
 vector_iir.v \
 addsub.v \
@@ -96,10 +75,7 @@ axi_serializer.v \
 axi_deserializer.v \
 axi_packer.v \
 complex_to_mag_approx.v \
-noc_block_file_source.v \
 file_source.v \
-ofdm_plateau_detector.v \
-ofdm_peak_detector.v \
 fosphor/delay.v \
 fosphor/fifo_srl.v \
 fosphor/rng.v \
@@ -115,15 +91,6 @@ fosphor/f15_packetizer.v \
 fosphor/f15_rise_decay.v \
 fosphor/f15_wf_agg.v \
 fosphor/axi_logpwr.v \
-noc_block_logpwr.v \
-noc_block_fosphor.v \
-noc_block_moving_avg.v \
-ofdm_constellation_demapper.v \
-noc_block_ofdm_constellation_demapper.v \
-one_tap_equalizer.v \
-noc_block_eq.v \
-noc_block_ddc.v \
-noc_block_duc.v \
 cvita_hdr_parser.v \
 cvita_hdr_encoder.v \
 cvita_hdr_decoder.v \
@@ -138,7 +105,6 @@ ddc.v \
 duc.v \
 cic_decimate.v \
 cic_interpolate.v \
-sine_tone.v \
 axi_fir_filter.v \
 fir_filter_slice.v \
 axi_fir_filter_dec.v \
@@ -147,5 +113,4 @@ dds_freq_tune.v \
 dds_timed.v \
 datapath_gatekeeper.v \
 biquad_filter.v \
-noc_traffic_counter.v \
 ))

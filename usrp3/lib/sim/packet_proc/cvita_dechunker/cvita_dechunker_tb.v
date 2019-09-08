@@ -6,9 +6,9 @@
 //
 
 
-`timescale 500ps/1ps
+`timescale 1ns/10ps
 
-module cvita_dechunker_tb();
+module chdr_dechunker_tb();
 
    // TB stimulus
    reg clk    = 0;
@@ -24,8 +24,8 @@ module cvita_dechunker_tb();
    
    always #10 clk = ~clk;
    
-   initial $dumpfile("cvita_dechunker_tb.vcd");
-   initial $dumpvars(0,cvita_dechunker_tb);
+   initial $dumpfile("chdr_dechunker_tb.vcd");
+   initial $dumpvars(0,chdr_dechunker_tb);
 
    function check_result;
       input [31:0]   o_xfer_count_arg;
@@ -167,7 +167,7 @@ module cvita_dechunker_tb();
    end // initial begin
 
 
-   cvita_dechunker dut (
+   chdr_dechunker dut (
       .clk(clk), .reset(reset), .clear(clear), .frame_size(quantum),
       .i_tdata(i_tdata), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
@@ -183,4 +183,4 @@ module cvita_dechunker_tb();
       if (i_tvalid & i_tready) i_xfer_count <= i_xfer_count + 1;
    end
 
-endmodule // cvita_dechunker_tb
+endmodule // chdr_dechunker_tb

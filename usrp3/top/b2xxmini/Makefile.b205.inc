@@ -23,7 +23,6 @@ include ../../lib/control_200/Makefile.srcs
 include ../../lib/packet_proc/Makefile.srcs
 include ../../lib/packet_proc_200/Makefile.srcs
 include ../../lib/timing/Makefile.srcs
-include ../../lib/vita/Makefile.srcs
 include ../../lib/vita_200/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
@@ -51,7 +50,7 @@ synthesis_tool "XST (VHDL/Verilog)" \
 simulator "ISE Simulator (VHDL/Verilog)" \
 "Preferred Language" "Verilog" \
 "Enable Message Filtering" FALSE \
-"Display Incremental Messages" FALSE 
+"Display Incremental Messages" FALSE
 
 ##################################################
 # Sources
@@ -74,7 +73,7 @@ $(GPIF2_SRCS) $(PACKET_PROC_SRCS) $(PACKET_PROC_200_SRCS) \
 $(WISHBONE_SRCS) \
 $(TIMING_SRCS) \
 $(DSP_SRCS) \
-$(VITA_SRCS) $(VITA_200_SRCS) \
+$(VITA_200_SRCS) \
 $(AXI_SRCS) \
 $(RADIO_200_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
@@ -112,7 +111,7 @@ MAP_PROPERTIES = \
 "Register Duplication" TRUE
 
 PLACE_ROUTE_PROPERTIES = \
-"Place & Route Effort Level (Overall)" High 
+"Place & Route Effort Level (Overall)" High
 
 STATIC_TIMING_PROPERTIES = \
 "Number of Paths in Error/Verbose Report" 10 \

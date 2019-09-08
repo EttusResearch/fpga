@@ -126,4 +126,4 @@ module gpif2_error_checker
 		    i_tdata};     // [31:0]    [95:64]
    
 
-endmodule // cvita_insert_tlast
+endmodule // gpif2_error_checker

@@ -28,17 +28,15 @@ include $(LIB_DIR)/simple_gemac/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
-include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
 
 IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
 EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
@@ -99,7 +97,6 @@ $(BD_SRCS) \
 $(RADIO_SRCS) \
 $(RFNOC_SRCS) \
 $(TIMING_SRCS) \
-$(VITA_SRCS) \
 $(CAT_CAP_GEN_SRCS) \
 $(DRAM_SRCS) \
 $(COREGEN_DSP_SRCS) \

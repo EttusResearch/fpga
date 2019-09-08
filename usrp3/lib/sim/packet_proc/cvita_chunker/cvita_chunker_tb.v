@@ -6,7 +6,7 @@
 //
 
 
-`timescale 500ps/1ps
+`timescale 1ns/10ps
 
 module cvita_chunker_tb();
 
@@ -23,8 +23,8 @@ module cvita_chunker_tb();
    
    always #10 clk = ~clk;
    
-   initial $dumpfile("cvita_chunker_tb.vcd");
-   initial $dumpvars(0,cvita_chunker_tb);
+   initial $dumpfile("chdr_chunker_tb.vcd");
+   initial $dumpvars(0,chdr_chunker_tb);
 
    function check_result;
       input [31:0]   o_xfer_count_arg;
@@ -171,7 +171,7 @@ module cvita_chunker_tb();
    end // initial begin
 
 
-   cvita_chunker dut (
+   chdr_chunker dut (
       .clk(clk), .reset(reset), .clear(clear), .frame_size(quantum),
       .i_tdata(i_tdata), .i_tlast(i_tlast), .i_tvalid(i_tvalid), .i_tready(i_tready),
       .o_tdata(o_tdata), .o_tlast(o_tlast), .o_tvalid(o_tvalid), .o_tready(o_tready),
@@ -187,4 +187,4 @@ module cvita_chunker_tb();
       if (i_tvalid & i_tready) i_xfer_count <= i_xfer_count + 1;
    end
 
-endmodule // cvita_chunker_tb
+endmodule // chdr_chunker_tb

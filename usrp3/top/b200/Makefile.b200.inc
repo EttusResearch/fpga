@@ -23,7 +23,6 @@ include ../../lib/control_200/Makefile.srcs
 include ../../lib/packet_proc/Makefile.srcs
 include ../../lib/packet_proc_200/Makefile.srcs
 include ../../lib/timing/Makefile.srcs
-include ../../lib/vita/Makefile.srcs
 include ../../lib/vita_200/Makefile.srcs
 include ../../lib/wishbone/Makefile.srcs
 include ../../lib/axi/Makefile.srcs
@@ -88,7 +87,7 @@ $(GPIF2_SRCS) $(PACKET_PROC_SRCS) $(PACKET_PROC_200_SRCS) \
 $(WISHBONE_SRCS) \
 $(TIMING_SRCS) \
 $(DSP_SRCS) \
-$(VITA_SRCS) $(VITA_200_SRCS) \
+$(VITA_200_SRCS) \
 $(AXI_SRCS) \
 $(RADIO_200_SRCS) \
 $(CAT_CAP_GEN_SRCS) \

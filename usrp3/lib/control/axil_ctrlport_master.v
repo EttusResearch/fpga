@@ -64,7 +64,7 @@ module axil_ctrlport_master #(
 );
 
   `include "../axi/axi_defs.v"
-  `include "../erfnoc/core/ctrlport.vh"
+  `include "../rfnoc/core/ctrlport.vh"
 
   //----------------------------------------------------------
   // unused ctrlport outputs

@@ -28,22 +28,19 @@ include $(LIB_DIR)/simple_gemac/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
-include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/white_rabbit/wr_cores_v4_2/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/rh/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
-include $(BASE_DIR)/n3xx/dboards/eiscat/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
-include $(LIB_DIR)/erfnoc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
 
 IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
 EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
@@ -58,11 +55,8 @@ n3xx_mgt_wrapper.v \
 n3xx_mgt_io_core.v \
 n3xx_clocking.v \
 n3xx_db_fe_core.v \
+WrapBufg.vhd \
 $(IMAGE_CORE)
-
-ifndef EISCAT
-TOP_SRCS += n3xx_core.v
-endif
 
 MB_CLOCKS_XDC = $(abspath mb_clocks.xdc)
 
@@ -96,12 +90,6 @@ else
 DRAM_SRCS =
 endif
 
-ifdef EISCAT
-DB_CLOCKS_XDC =
-DB_SRCS = $(EISCAT_DB_XDC) $(EISCAT_DB_TIMING_XDC) \
-$(EISCAT_TOP_SRCS) $(EISCAT_DB_SRCS) $(EISCAT_SYSREF_SRCS) \
-$(IP_DELAY_TAP_BRAM_SRCS)
-else
 ifdef N300
 DB_CLOCKS_XDC =
 DB_SRCS = $(MAGNESIUM_DB_TIMING_XDC) \
@@ -121,7 +109,6 @@ DB_CLOCKS_XDC = $(RHODIUM_DB_CLOCKS_XDC)
 DB_SRCS = $(RHODIUM_DB_XDC) \
 $(RHODIUM_TOP_SRCS) $(RHODIUM_DB_SRCS)
 endif
-endif
 
 DB_SRCS += $(DB_COMMON_SRCS)
 
@@ -135,7 +122,7 @@ $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) $(WISHBONE_SRCS) \
 $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(AURORA_PHY_SRCS) \
 $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
-$(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
+$(PACKET_PROC_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIB_HLS_IP_SRCS) $(LIBCOREGEN_SRCS) \
 $(WHITE_RABBIT_SRCS) \

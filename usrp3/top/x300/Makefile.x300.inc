@@ -29,21 +29,18 @@ include $(LIB_DIR)/timing/Makefile.srcs
 include $(LIB_DIR)/zpu/Makefile.srcs
 include $(LIB_DIR)/wishbone/Makefile.srcs
 include $(LIB_DIR)/packet_proc/Makefile.srcs
-include $(LIB_DIR)/vita/Makefile.srcs
 include $(LIB_DIR)/xge/Makefile.srcs
 include $(LIB_DIR)/xge_interface/Makefile.srcs
 include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/io_port2/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
-include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_axi_ram_fifo/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_radio/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_duc/Makefile.srcs
-include $(LIB_DIR)/erfnoc/blocks/rfnoc_block_null_src_sink/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_axi_ram_fifo/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_null_src_sink/Makefile.srcs
 
 IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
 EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
@@ -64,7 +61,6 @@ gen_ddrlvds.v \
 bus_int.v \
 x300.xdc \
 timing.xdc \
-x300_edges.dat \
 $(IMAGE_CORE)
 
 ifdef BUILD_10G
@@ -99,7 +95,7 @@ $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
 $(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
 $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(SFP_SERDES_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
-$(PACKET_PROC_SRCS) $(VITA_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
+$(PACKET_PROC_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) \
 $(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \

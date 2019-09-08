@@ -6,11 +6,8 @@
 include $(BASE_DIR)/../lib/fifo/Makefile.srcs
 include $(BASE_DIR)/../lib/axi/Makefile.srcs
 include $(BASE_DIR)/../lib/control/Makefile.srcs
-include $(BASE_DIR)/../lib/vita/Makefile.srcs
 include $(BASE_DIR)/../lib/timing/Makefile.srcs
-include $(BASE_DIR)/../lib/packet_proc/Makefile.srcs
 include $(BASE_DIR)/../lib/dsp/Makefile.srcs
-include $(BASE_DIR)/../lib/radio/Makefile.srcs
 include $(BASE_DIR)/../lib/rfnoc/Makefile.srcs
 
 # Use sim version of axi_fifo_2clk
@@ -21,10 +18,7 @@ SIM_DESIGN_SRCS = $(abspath \
 $(FIFO_SRCS) \
 $(AXI_SRCS) \
 $(CONTROL_LIB_SRCS) \
-$(VITA_SRCS) \
 $(TIMING_SRCS) \
-$(PACKET_PROC_SRCS) \
 $(DSP_SRCS) \
-$(RADIO_SRCS) \
 $(RFNOC_SRCS) \
 )

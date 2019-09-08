@@ -32,6 +32,7 @@ DESIGN_SRCS += $(abspath \
 SIM_TOP = arm_deframer_tb
 
 SIM_SRCS = $(abspath \
+$(SIM_PROTORFNOC_SRCS) \
 arm_deframer_tb.sv \
 )
 

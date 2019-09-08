@@ -10,4 +10,5 @@
 ##################################################
 CONTROL_LIB_200_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/control_200/, \
 cvita_uart.v \
+radio_ctrl_proc.v \
 ))

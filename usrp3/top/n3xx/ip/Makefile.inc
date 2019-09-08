@@ -23,7 +23,6 @@ include $(IP_DIR)/axi_eth_dma/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_32/Makefile.inc
 include $(IP_DIR)/axi4_to_axi3_protocol_converter_64/Makefile.inc
 include $(IP_DIR)/n310_ps_bd/Makefile.inc
-include $(IP_DIR)/delay_tap_bram/Makefile.inc
 
 BD_SRCS = \
 $(IP_AXI_INTERCON_2X64_256_BD_SRCS) \
