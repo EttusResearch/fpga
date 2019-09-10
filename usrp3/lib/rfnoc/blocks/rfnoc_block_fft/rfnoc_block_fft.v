@@ -141,7 +141,7 @@ module rfnoc_block_fft #(
     .CHDR_W         (CHDR_W     ),
     .CTRLPORT_SLV_EN(0          ),
     .CTRLPORT_MST_EN(1          ),
-    .SYNC_CLKS      (1          ),
+    .SYNC_CLKS      (0          ),
     .NUM_DATA_I     (1          ),
     .NUM_DATA_O     (1          ),
     .ITEM_W         (ITEM_W     ),
