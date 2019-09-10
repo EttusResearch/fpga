@@ -7,5 +7,9 @@
 /dts-v1/;
 /plugin/;
 
+/{
+
 #include "e31x-sg1-idle-fpga.dtsi"
 #include "e31x-pmu.dtsi"
+
+};

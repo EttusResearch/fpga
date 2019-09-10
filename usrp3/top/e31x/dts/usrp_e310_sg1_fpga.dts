@@ -7,7 +7,11 @@
 /dts-v1/;
 /plugin/;
 
+/{
+
 #include "e31x-sg1-fpga.dtsi"
 #include "e31x-common.dtsi"
 #include "e31x-pmu.dtsi"
 #include "dma-common.dtsi"
+
+};

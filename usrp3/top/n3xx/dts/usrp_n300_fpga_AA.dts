@@ -1,29 +1,39 @@
-// SPDX-License-Identifier: GPL-2.0 OR X11
 /*
  * Copyright (c) 2017 National Instruments Corp
+ *
+ * SPDX-License-Identifier: GPL-2.0 OR X11
  */
 
 /dts-v1/;
 /plugin/;
 
+/{
+
 #include "n300-fpga.dtsi"
 
-&fpga_full {
-	uio@40004000 {
-		compatible = "usrp-uio";
-		reg = <0x40004000 0x1000>;
-		reg-names = "misc-auro-regs0";
-		status = "okay";
-	};
+fragment@1 {
+	target = <&amba>;
+	reg = <0x0001>;
+	__overlay__ {
+		uio@40004000 {
+			compatible = "usrp-uio";
+			reg = <0x40004000 0x1000>;
+			reg-names = "misc-auro-regs0";
+			status = "okay";
+		};
 
 
-	uio@4000c000 {
-		compatible = "usrp-uio";
-		reg = <0x4000c000 0x1000>;
-		reg-names = "misc-auro-regs1";
-		status = "okay";
+		uio@4000c000 {
+			compatible = "usrp-uio";
+			reg = <0x4000c000 0x1000>;
+			reg-names = "misc-auro-regs1";
+			status = "okay";
+		};
 	};
 };
 
 #include "n300-common.dtsi"
 #include "dma-common.dtsi"
+
+};
+
