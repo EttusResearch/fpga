@@ -23,7 +23,7 @@ include Makefile.srcs
 DESIGN_SRCS += $(abspath \
 $(RFNOC_CORE_SRCS) \
 $(RFNOC_UTIL_SRCS) \
-$(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(RFNOC_OOT_SRCS) \
 )
 
 #-------------------------------------------------

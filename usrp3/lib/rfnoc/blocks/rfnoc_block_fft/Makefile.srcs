@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 
-RFNOC_BLOCK_FFT_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_fft/, \
+RFNOC_OOT_SRCS += $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_fft/, \
 noc_shell_fft.v \
 rfnoc_block_fft.v \
 ))

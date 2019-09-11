@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 
-RFNOC_BLOCK_FIR_FILTER_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_fir_filter/, \
+RFNOC_OOT_SRCS += $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_fir_filter/, \
 noc_shell_fir_filter.v \
 rfnoc_fir_filter_regs.vh \
 rfnoc_fir_filter_core.v \

@@ -1,5 +1,5 @@
 #
-# Copyright 2008-2018 Ettus Research, a National Instruments Company
+# Copyright 2008-2019 Ettus Research, a National Instruments Brand
 #
 
 ##################################################
@@ -37,10 +37,18 @@ include $(LIB_DIR)/rfnoc/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/rh/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/mg/Makefile.srcs
 include $(BASE_DIR)/n3xx/dboards/common/Makefile.srcs
-include $(LIB_DIR)/rfnoc/Makefile.srcs
+# For sake of convenience, we include the Makefile.srcs for DRAM FIFO, DDC, and
+# DUC, and of course the radio. Any other block needs to use the
+# RFNOC_OOT_MAKEFILE_SRCS variable (see below).
+include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_axi_ram_fifo/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
+# If out-of-tree modules want to be compiled into this image, then they need to
+# pass in the RFNOC_OOT_MAKEFILE_SRCS as a list of Makefile.srcs files.
+# Those files need to amend the RFNOC_OOT_SRCS variable with a list of actual
+# source files.
+include $(RFNOC_OOT_MAKEFILE_SRCS)
 
 IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
 EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
@@ -119,16 +127,18 @@ DESIGN_SRCS = $(MB_CLOCKS_XDC) $(DB_CLOCKS_XDC) $(abspath $(MB_XDC)) $(DB_SRCS) 
 $(abspath $(TOP_SRCS)) $(AXI_SRCS) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
-$(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) $(WISHBONE_SRCS) \
+$(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) $(WISHBONE_SRCS) \
 $(XGE_SRCS) $(XGE_INTERFACE_SRCS) $(AURORA_PHY_SRCS) \
 $(TEN_GIGE_PHY_SRCS) $(ONE_GIGE_PHY_SRCS) \
 $(PACKET_PROC_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
 $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
 $(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) $(LIB_HLS_IP_SRCS) $(LIBCOREGEN_SRCS) \
 $(WHITE_RABBIT_SRCS) \
-$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
-$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
-$(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS)
+$(RFNOC_FRAMEWORK_SRCS) \
+$(RFNOC_BLOCK_AXI_RAM_FIFO_SRCS) \
+$(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) \
+$(RFNOC_BLOCK_RADIO_SRCS) \
+$(LIBCOREGEN_SRCS)
 
 EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 

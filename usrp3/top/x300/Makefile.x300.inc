@@ -36,11 +36,18 @@ include $(LIB_DIR)/io_port2/Makefile.srcs
 include $(LIB_DIR)/axi/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+# For sake of convenience, we include the Makefile.srcs for DRAM FIFO, DDC, and
+# DUC, and of course the radio. Any other block needs to use the
+# RFNOC_OOT_MAKEFILE_SRCS variable (see below).
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_axi_ram_fifo/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_radio/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_ddc/Makefile.srcs
 include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_duc/Makefile.srcs
-include $(LIB_DIR)/rfnoc/blocks/rfnoc_block_null_src_sink/Makefile.srcs
+# If out-of-tree modules want to be compiled into this image, then they need to
+# pass in the RFNOC_OOT_MAKEFILE_SRCS as a list of Makefile.srcs files.
+# Those files need to amend the RFNOC_OOT_SRCS variable with a list of actual
+# source files.
+include $(RFNOC_OOT_MAKEFILE_SRCS)
 
 IMAGE_CORE ?= $(DEFAULT_RFNOC_IMAGE_CORE_FILE)
 EDGE_FILE ?= $(DEFAULT_EDGE_FILE)
@@ -92,15 +99,16 @@ endif
 DESIGN_SRCS = $(abspath $(TOP_SRCS)) $(FIFO_SRCS) \
 $(CONTROL_LIB_SRCS) $(SDR_LIB_SRCS) $(SERDES_SRCS) \
 $(SIMPLE_GEMAC_SRCS) $(TIMING_SRCS) $(COREGEN_DSP_SRCS) \
-$(VRT_SRCS) $(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
+$(UDP_SRCS) $(COREGEN_SRCS) $(EXTRAM_SRCS) \
 $(ZPU_CORE_SRCS) $(WISHBONE_SRCS) \
 $(SFP_SERDES_SRCS) $(IOPORT2_SRCS) $(COREGEN_CHIPSCOPE_SRCS) \
 $(PACKET_PROC_SRCS) $(DSP_SRCS) $(DRAM_SRCS) \
-$(AXI_SRCS) $(RADIO_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
-$(RFNOC_SRCS) $(RFNOC_OOT_SRCS) $(LIB_IP_XCI_SRCS) \
-$(RFNOC_FRAMEWORK_SRCS) $(RFNOC_BLOCK_NULL_SRC_SINK_SRCS) \
+$(AXI_SRCS) $(CAP_GEN_GENERIC_SRCS) $(IP_XCI_SRCS) $(BD_SRCS) \
+$(RFNOC_SRCS) $(LIB_IP_XCI_SRCS) \
+$(RFNOC_FRAMEWORK_SRCS) \
 $(RFNOC_BLOCK_DUC_SRCS) $(RFNOC_BLOCK_DDC_SRCS) $(RFNOC_BLOCK_RADIO_SRCS) \
-$(RFNOC_BLOCK_AXI_RAM_FIFO_SRCS) $(RFNOC_BLOCK_EXAMPLE_SRCS) $(LIBCOREGEN_SRCS)
+$(RFNOC_BLOCK_AXI_RAM_FIFO_SRCS) $(LIBCOREGEN_SRCS) \
+$(RFNOC_OOT_SRCS)
 
 EDGE_TBL_DEF="RFNOC_EDGE_TBL_FILE=$(EDGE_FILE)"
 

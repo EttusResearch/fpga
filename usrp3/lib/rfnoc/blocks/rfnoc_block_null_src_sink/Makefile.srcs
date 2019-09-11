@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Ettus Research, A National Instruments Company
+# Copyright 2019 Ettus Research, A National Instruments Brand
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
@@ -7,6 +7,6 @@
 ##################################################
 # RFNoC Utility Sources
 ##################################################
-RFNOC_BLOCK_NULL_SRC_SINK_SRCS = $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_null_src_sink/, \
+RFNOC_OOT_SRCS += $(abspath $(addprefix $(BASE_DIR)/../lib/rfnoc/blocks/rfnoc_block_null_src_sink/, \
 rfnoc_block_null_src_sink.v \
 ))
