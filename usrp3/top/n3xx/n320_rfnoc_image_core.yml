@@ -54,8 +54,8 @@ connections:
     - { srcblk: ddc1, srcport: port0, dstblk: ep1,  dstport: in0 }
     - { srcblk: radio0, srcport: ctrl_port, dstblk: _device_, dstport: ctrlport_radio0 }
     - { srcblk: radio1, srcport: ctrl_port, dstblk: _device_, dstport: ctrlport_radio1 }
-    - { srcblk: _device_, srcport: radio_ch0, dstblk: radio0, dstport: radio_ch0 }
-    - { srcblk: _device_, srcport: radio_ch1, dstblk: radio1, dstport: radio_ch0 }
+    - { srcblk: _device_, srcport: radio_ch0, dstblk: radio0, dstport: radio_iface }
+    - { srcblk: _device_, srcport: radio_ch1, dstblk: radio1, dstport: radio_iface }
     - { srcblk: _device_, srcport: time_keeper, dstblk: radio0, dstport: time_keeper }
     - { srcblk: _device_, srcport: time_keeper, dstblk: radio1, dstport: time_keeper }
 
