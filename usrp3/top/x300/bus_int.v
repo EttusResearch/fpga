@@ -93,7 +93,7 @@ module bus_int #(
     input           ddr3_axi_rst,
     // Write Address Ports
     output  [1*2-1:0]    ddr3_axi_awid,
-    output  [30*2-1:0]   ddr3_axi_awaddr,
+    output  [32*2-1:0]   ddr3_axi_awaddr,
     output  [8*2-1:0]    ddr3_axi_awlen,
     output  [3*2-1:0]    ddr3_axi_awsize,
     output  [2*2-1:0]    ddr3_axi_awburst,
@@ -116,7 +116,7 @@ module bus_int #(
     input   [1*2-1:0]    ddr3_axi_bvalid,
     // Read Address Ports
     output  [1*2-1:0]    ddr3_axi_arid,
-    output  [30*2-1:0]   ddr3_axi_araddr,
+    output  [32*2-1:0]   ddr3_axi_araddr,
     output  [8*2-1:0]    ddr3_axi_arlen,
     output  [3*2-1:0]    ddr3_axi_arsize,
     output  [2*2-1:0]    ddr3_axi_arburst,

@@ -43,8 +43,15 @@ noc_blocks:
       block_desc: 'ddc_2x64.yml'
     radio1:
       block_desc: 'radio_2x64.yml'
-    dram0:
+    fifo0:
       block_desc: 'axi_ram_fifo_2x64.yml'
+      parameters:
+        # These parameters match memory interface on the x300/X310
+        MEM_DATA_W: 64
+        MEM_ADDR_W: 30
+        FIFO_ADDR_BASE: "{30'h02000000, 30'h00000000}"
+        FIFO_ADDR_MASK: "{30'h01FFFFFF, 30'h01FFFFFF}"
+        MEM_CLK_RATE: "300e6"
 
 # A list of all static connections in design
 # ------------------------------------------
@@ -54,15 +61,15 @@ noc_blocks:
 #         - dstblk = Destination block to connect
 #         - dstport = Port on the destination block to connect
 connections:
-    - { srcblk: ep0,  srcport: out0, dstblk: dram0, dstport: port0 }
-    - { srcblk: dram0,  srcport: port0, dstblk: duc0, dstport: port0 }
+    - { srcblk: ep0,  srcport: out0, dstblk: fifo0, dstport: port0 }
+    - { srcblk: fifo0,  srcport: port0, dstblk: duc0, dstport: port0 }
     - { srcblk: duc0, srcport: port0, dstblk: radio0, dstport: port0 }
     - { srcblk: radio0, srcport: port0, dstblk: ddc0,  dstport: port0 }
     - { srcblk: radio0, srcport: port1, dstblk: ddc0,  dstport: port1 }
     - { srcblk: ddc0, srcport: port0, dstblk: ep0,  dstport: in0 }
     - { srcblk: ddc0, srcport: port1, dstblk: ep1,  dstport: in0 }
-    - { srcblk: ep2,  srcport: out0, dstblk: dram0, dstport: port1 }
-    - { srcblk: dram0,  srcport: port1, dstblk: duc1, dstport: port0 }
+    - { srcblk: ep2,  srcport: out0, dstblk: fifo0, dstport: port1 }
+    - { srcblk: fifo0,  srcport: port1, dstblk: duc1, dstport: port0 }
     - { srcblk: duc1, srcport: port0, dstblk: radio1, dstport: port0 }
     - { srcblk: radio1, srcport: port0, dstblk: ddc1,  dstport: port0 }
     - { srcblk: radio1, srcport: port1, dstblk: ddc1,  dstport: port1 }
@@ -74,7 +81,7 @@ connections:
     - { srcblk: _device_, srcport: x300_radio1, dstblk: radio1, dstport: x300_radio }
     - { srcblk: _device_, srcport: time_keeper, dstblk: radio0, dstport: time_keeper }
     - { srcblk: _device_, srcport: time_keeper, dstblk: radio1, dstport: time_keeper }
-    - { srcblk: _device_, srcport: axi_ram_fifo, dstblk: dram0, dstport: axi_ram_fifo }
+    - { srcblk: _device_, srcport: dram, dstblk: fifo0, dstport: axi_ram }
 
 # A list of all clock domain connections in design
 # # ------------------------------------------
