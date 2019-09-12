@@ -52,6 +52,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
   localparam int CIC_MAX_DECIM = 255;
   localparam int BURST_TIMEOUT = 64;
   localparam int MEM_CLK_RATE  = int'(1.0e9/MEM_CLK_PER);  // Frequency in Hz
+  localparam int AWIDTH        = MEM_ADDR_W+1;
 
   // Put FIFO 0 at the bottom of the memory and FIFO 1 immediately above it.
   localparam bit [MEM_ADDR_W-1:0] FIFO_ADDR_BASE_0 = 0;
@@ -103,7 +104,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
   // AXI Write Address Channel
   wire [         NUM_PORTS*1-1:0] m_axi_awid;
-  wire [NUM_PORTS*MEM_ADDR_W-1:0] m_axi_awaddr;
+  wire [    NUM_PORTS*AWIDTH-1:0] m_axi_awaddr;
   wire [         NUM_PORTS*8-1:0] m_axi_awlen;
   wire [         NUM_PORTS*3-1:0] m_axi_awsize;
   wire [         NUM_PORTS*2-1:0] m_axi_awburst;
@@ -130,7 +131,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
   wire [         NUM_PORTS*1-1:0] m_axi_bready;
   // AXI Read Address Channel
   wire [         NUM_PORTS*1-1:0] m_axi_arid;
-  wire [NUM_PORTS*MEM_ADDR_W-1:0] m_axi_araddr;
+  wire [    NUM_PORTS*AWIDTH-1:0] m_axi_araddr;
   wire [         NUM_PORTS*8-1:0] m_axi_arlen;
   wire [         NUM_PORTS*3-1:0] m_axi_arsize;
   wire [         NUM_PORTS*2-1:0] m_axi_arburst;
@@ -157,7 +158,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
   for (genvar i = 0; i < NUM_PORTS; i = i+1) begin : gen_sim_axi_ram
     sim_axi_ram #(
-      .AWIDTH     (MEM_ADDR_W),
+      .AWIDTH     (AWIDTH),
       .DWIDTH     (MEM_DATA_W),
       .IDWIDTH    (1),
       .BIG_ENDIAN (0),
@@ -166,7 +167,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
       .s_aclk        (mem_clk),
       .s_aresetn     (~mem_rst),
       .s_axi_awid    (m_axi_awid[i]),
-      .s_axi_awaddr  (m_axi_awaddr[i*MEM_ADDR_W +: MEM_ADDR_W]),
+      .s_axi_awaddr  (m_axi_awaddr[i*AWIDTH +: AWIDTH]),
       .s_axi_awlen   (m_axi_awlen[i*8 +: 8]),
       .s_axi_awsize  (m_axi_awsize[i*3 +: 3]),
       .s_axi_awburst (m_axi_awburst[i*2 +: 2]),
@@ -182,7 +183,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
       .s_axi_bvalid  (m_axi_bvalid[i]),
       .s_axi_bready  (m_axi_bready[i]),
       .s_axi_arid    (m_axi_arid[i]),
-      .s_axi_araddr  (m_axi_araddr[i*MEM_ADDR_W +: MEM_ADDR_W]),
+      .s_axi_araddr  (m_axi_araddr[i*AWIDTH +: AWIDTH]),
       .s_axi_arlen   (m_axi_arlen[i*8 +: 8]),
       .s_axi_arsize  (m_axi_arsize[i*3 +: 3]),
       .s_axi_arburst (m_axi_arburst[i*2 +: 2]),
@@ -234,6 +235,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
     .MTU            (MTU),
     .MEM_DATA_W     (MEM_DATA_W),
     .MEM_ADDR_W     (MEM_ADDR_W),
+    .AWIDTH         (AWIDTH),
     .FIFO_ADDR_BASE ({ FIFO_ADDR_BASE_1, FIFO_ADDR_BASE_0 }),
     .FIFO_ADDR_MASK ({NUM_PORTS{FIFO_ADDR_MASK}}),
     .BURST_TIMEOUT  ({NUM_PORTS{BURST_TIMEOUT}}),

@@ -26,9 +26,12 @@
 //                    interface. This must be no bigger than CHDR_W and it must 
 //                    evenly divide CHDR_W.
 //
-//   MEM_ADDR_W     : Width of the byte address to use for the AXI 
-//                    memory-mapped interface. This effectively sets the 
-//                    maximum combined size of all FIFOs.
+//   MEM_ADDR_W     : Width of the byte address to use for RAM addressing. This
+//                    effectively sets the maximum combined size of all FIFOs.
+//                    This must be less than or equal to AWIDTH.
+//
+//   AWIDTH         : Width of the address bus for the AXI memory-mapped
+//                    interface. This must be at least as big as MEM_DATA_W.
 //
 //   FIFO_ADDR_BASE : Default base byte address of each FIFO. When NUM_PORTS > 
 //                    1, this should be the concatenation of all the FIFO base 
@@ -63,6 +66,7 @@ module rfnoc_block_axi_ram_fifo #(
   parameter                            MTU            = 10,
   parameter                            MEM_DATA_W     = CHDR_W,
   parameter                            MEM_ADDR_W     = 32,
+  parameter                            AWIDTH         = 32,
   parameter [NUM_PORTS*MEM_ADDR_W-1:0] FIFO_ADDR_BASE = {NUM_PORTS{ {MEM_ADDR_W{1'b0}} }},
   parameter [NUM_PORTS*MEM_ADDR_W-1:0] FIFO_ADDR_MASK = {NUM_PORTS{ {(MEM_ADDR_W-$clog2(NUM_PORTS)){1'b1}} }},
   parameter [        NUM_PORTS*32-1:0] BURST_TIMEOUT  = {NUM_PORTS{ 32'd256 }},
@@ -123,7 +127,7 @@ module rfnoc_block_axi_ram_fifo #(
 
   // AXI Write Address Channel
   output wire [         NUM_PORTS*1-1:0] m_axi_awid,     // Write address ID. This signal is the identification tag for the write address signals
-  output wire [NUM_PORTS*MEM_ADDR_W-1:0] m_axi_awaddr,   // Write address. The write address gives the address of the first transfer in a write burst
+  output wire [    NUM_PORTS*AWIDTH-1:0] m_axi_awaddr,   // Write address. The write address gives the address of the first transfer in a write burst
   output wire [         NUM_PORTS*8-1:0] m_axi_awlen,    // Burst length. The burst length gives the exact number of transfers in a burst.
   output wire [         NUM_PORTS*3-1:0] m_axi_awsize,   // Burst size. This signal indicates the size of each transfer in the burst.
   output wire [         NUM_PORTS*2-1:0] m_axi_awburst,  // Burst type. The burst type and the size information, determine how the address is calculated
@@ -153,7 +157,7 @@ module rfnoc_block_axi_ram_fifo #(
   
   // AXI Read Address Channel
   output wire [         NUM_PORTS*1-1:0] m_axi_arid,     // Read address ID. This signal is the identification tag for the read address group of signals
-  output wire [NUM_PORTS*MEM_ADDR_W-1:0] m_axi_araddr,   // Read address. The read address gives the address of the first transfer in a read burst
+  output wire [    NUM_PORTS*AWIDTH-1:0] m_axi_araddr,   // Read address. The read address gives the address of the first transfer in a read burst
   output wire [         NUM_PORTS*8-1:0] m_axi_arlen,    // Burst length. This signal indicates the exact number of transfers in a burst.
   output wire [         NUM_PORTS*3-1:0] m_axi_arsize,   // Burst size. This signal indicates the size of each transfer in the burst.
   output wire [         NUM_PORTS*2-1:0] m_axi_arburst,  // Burst type. The burst type and the size information determine how the address for each transfer
@@ -192,6 +196,9 @@ module rfnoc_block_axi_ram_fifo #(
   
   if (CHDR_W % MEM_DATA_W != 0 && MEM_DATA_W % CHDR_W != 0)
     CHDR_W_must_be_a_multiple_of_MEM_DATA_W_or_vice_versa();
+
+  if (MEM_ADDR_W > AWIDTH)
+    MEM_ADDR_W_must_be_greater_than_AWIDTH();
 
 
   //---------------------------------------------------------------------------
@@ -362,6 +369,13 @@ module rfnoc_block_axi_ram_fifo #(
   genvar i;
   for (i = 0; i < NUM_PORTS; i = i + 1) begin : gen_ram_fifos
 
+    wire [MEM_ADDR_W-1:0] m_axi_awaddr_int;
+    wire [MEM_ADDR_W-1:0] m_axi_araddr_int;
+
+    // Resize the addresses from MEM_ADDR_W to AWIDTH
+    assign m_axi_awaddr[(AWIDTH*(i+1))-1:AWIDTH*i] = m_axi_awaddr_int;
+    assign m_axi_araddr[(AWIDTH*(i+1))-1:AWIDTH*i] = m_axi_araddr_int;
+
     axi_ram_fifo #(
       .MEM_ADDR_W     (MEM_ADDR_W),
       .MEM_DATA_W     (MEM_DATA_W),
@@ -413,7 +427,7 @@ module rfnoc_block_axi_ram_fifo #(
 
       // AXI Write address channel
       .m_axi_awid     (m_axi_awid[i]),
-      .m_axi_awaddr   (m_axi_awaddr[(MEM_ADDR_W*(i+1))-1:MEM_ADDR_W*i]),
+      .m_axi_awaddr   (m_axi_awaddr_int),
       .m_axi_awlen    (m_axi_awlen[(8*(i+1))-1:8*i]),
       .m_axi_awsize   (m_axi_awsize[(3*(i+1))-1:3*i]),
       .m_axi_awburst  (m_axi_awburst[(2*(i+1))-1:2*i]),
@@ -443,7 +457,7 @@ module rfnoc_block_axi_ram_fifo #(
       //
       // AXI Read address channel
       .m_axi_arid     (m_axi_arid[i]),
-      .m_axi_araddr   (m_axi_araddr[(MEM_ADDR_W*(i+1))-1:MEM_ADDR_W*i]),
+      .m_axi_araddr   (m_axi_araddr_int),
       .m_axi_arlen    (m_axi_arlen[(8*(i+1))-1:8*i]),
       .m_axi_arsize   (m_axi_arsize[(3*(i+1))-1:3*i]),
       .m_axi_arburst  (m_axi_arburst[(2*(i+1))-1:2*i]),
