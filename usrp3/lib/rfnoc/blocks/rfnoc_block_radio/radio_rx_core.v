@@ -85,6 +85,7 @@ module radio_rx_core #(
   input  wire                   m_axis_tready,
   // Sideband info
   output wire [           63:0] m_axis_ttimestamp,
+  output wire                   m_axis_thas_time,
   output wire                   m_axis_teob
 );
 
@@ -108,11 +109,14 @@ module radio_rx_core #(
   reg  [             15:0] reg_error_rem_epid   = 0;  // Remote EPID to use for error reporting
   reg  [              9:0] reg_error_rem_portid = 0;  // Remote port ID to use for error reporting
   reg  [             19:0] reg_error_addr       = 0;  // Address to use for error reporting
+  reg                      reg_has_time         = 1;  // Whether or not to use timestamps on data
 
   wire [15:0] cmd_fifo_space;   // Empty space in the command FIFO
   reg         cmd_stop     = 0; // Indicates a full stop request
   wire        cmd_stop_ack;     // Acknowledgment that a stop has completed
   reg         clear_fifo   = 0; // Signal to clear the command FIFO
+
+  assign m_axis_thas_time = reg_has_time;
 
   always @(posedge radio_clk) begin
     if (radio_rst) begin
@@ -127,6 +131,7 @@ module radio_rx_core #(
       reg_error_rem_epid   <= 0;
       reg_error_rem_portid <= 0;
       reg_error_addr       <= 0;
+      reg_has_time         <= 1;
       clear_fifo           <= 0;
       cmd_stop             <= 0;
     end else begin
@@ -191,6 +196,10 @@ module radio_rx_core #(
             reg_error_addr      <= s_ctrlport_req_data[19:0];
             s_ctrlport_resp_ack <= 1;
           end
+          REG_RX_HAS_TIME: begin
+            reg_has_time        <= s_ctrlport_req_data[0:0];
+            s_ctrlport_resp_ack <= 1;
+          end
         endcase
       end
 
@@ -246,6 +255,10 @@ module radio_rx_core #(
           REG_RX_DATA: begin
             s_ctrlport_resp_data <= radio_rx_data;
             s_ctrlport_resp_ack  <= 1;
+          end
+          REG_RX_HAS_TIME: begin
+            s_ctrlport_resp_data[0] <= reg_has_time;
+            s_ctrlport_resp_ack     <= 1;
           end
         endcase
       end

@@ -134,6 +134,7 @@ module rfnoc_block_radio #(
   wire [        NUM_PORTS-1:0] axis_rx_tvalid;
   wire [        NUM_PORTS-1:0] axis_rx_tready;
   wire [     64*NUM_PORTS-1:0] axis_rx_ttimestamp;
+  wire [        NUM_PORTS-1:0] axis_rx_thas_time;
   wire [        NUM_PORTS-1:0] axis_rx_teob;
 
   // Control port signals used for register access (NoC shell masters user logic)
@@ -243,7 +244,7 @@ module rfnoc_block_radio #(
     .s_axis_tvalid             (axis_rx_tvalid),
     .s_axis_tready             (axis_rx_tready),
     .s_axis_ttimestamp         (axis_rx_ttimestamp),
-    .s_axis_thas_time          ({NUM_PORTS{1'b1}}),      // Rx packet always include a timestamp
+    .s_axis_thas_time          (axis_rx_thas_time),
     .s_axis_teov               ({NUM_PORTS{1'b0}}),
     .s_axis_teob               (axis_rx_teob)
   );
@@ -528,6 +529,7 @@ module rfnoc_block_radio #(
         .m_axis_tready             (axis_rx_tready[i]),
         // Sideband Info
         .m_axis_ttimestamp         (axis_rx_ttimestamp[i*64 +: 64]),
+        .m_axis_thas_time          (axis_rx_thas_time[i]),
         .m_axis_teob               (axis_rx_teob[i]),
 
         // Radio Data

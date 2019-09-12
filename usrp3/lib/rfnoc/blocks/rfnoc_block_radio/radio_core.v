@@ -72,6 +72,7 @@ module radio_core #(
   input  wire                     m_axis_tready,
   // Sideband info
   output wire [             63:0] m_axis_ttimestamp,
+  output wire                     m_axis_thas_time,
   output wire                     m_axis_teob,
 
 
@@ -362,6 +363,7 @@ module radio_core #(
     .m_axis_tvalid             (m_axis_tvalid),
     .m_axis_tready             (m_axis_tready),
     .m_axis_ttimestamp         (m_axis_ttimestamp),
+    .m_axis_thas_time          (m_axis_thas_time),
     .m_axis_teob               (m_axis_teob)
   );
 
