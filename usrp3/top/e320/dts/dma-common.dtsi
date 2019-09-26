@@ -8,6 +8,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CA0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -27,6 +28,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CB0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -46,6 +48,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CC0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -65,6 +68,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CD0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -84,6 +88,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CE0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -103,6 +108,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43CF0000 0x10000>;
 		interrupts = <0 53 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -122,6 +128,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C00000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -141,6 +148,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C10000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -160,6 +168,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C20000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -179,6 +188,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C30000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -198,6 +208,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C40000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
@@ -217,6 +228,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C50000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
