@@ -29,6 +29,16 @@ noc_blocks:
       block_desc: 'ddc_2x64.yml'
     radio0:
       block_desc: 'radio_2x64.yml'
+    fifo0:
+      block_desc: 'axi_ram_fifo_2x64.yml'
+      parameters:
+        # These parameters correspond to the memory interface on the E320
+        MEM_ADDR_W:   31
+        MEM_DATA_W:   64
+        MEM_CLK_RATE: "300e6"
+        # Create two non-overlapping 32 MB buffers by default
+        FIFO_ADDR_BASE: "{31'h02000000, 31'h00000000}"
+        FIFO_ADDR_MASK: "{31'h01FFFFFF, 31'h01FFFFFF}"
 
 # A list of all static connections in design
 # ------------------------------------------
@@ -38,26 +48,34 @@ noc_blocks:
 #         - dstblk = Destination block to connect
 #         - dstport = Port on the destination block to connect
 connections:
-    - { srcblk: ep0,  srcport: out0, dstblk: duc0, dstport: port0 }
-    - { srcblk: duc0, srcport: port0, dstblk: radio0, dstport: port0 }
-    - { srcblk: radio0, srcport: port0, dstblk: ddc0,  dstport: port0 }
-    - { srcblk: ddc0, srcport: port0, dstblk: ep0,  dstport: in0 }
-    - { srcblk: ep1,  srcport: out0, dstblk: duc0, dstport: port1 }
-    - { srcblk: duc0, srcport: port1, dstblk: radio0, dstport: port1 }
-    - { srcblk: radio0, srcport: port1, dstblk: ddc0,  dstport: port1 }
-    - { srcblk: ddc0, srcport: port1, dstblk: ep1,  dstport: in0 }
-    - { srcblk: radio0, srcport: ctrl_port, dstblk: _device_, dstport: ctrl_port }
-    - { srcblk: _device_, srcport: x300_radio, dstblk: radio0, dstport: x300_radio }
-    - { srcblk: _device_, srcport: time_keeper, dstblk: radio0, dstport: time_keeper }
+    # ep0 to radio0(0) - RFA TX
+    - { srcblk: ep0,   srcport: out0,  dstblk: fifo0,  dstport: port0 }
+    - { srcblk: fifo0, srcport: port0, dstblk: duc0,   dstport: port0 }
+    - { srcblk: duc0,  srcport: port0, dstblk: radio0, dstport: port0 }
+    # radio(0) to ep0 - RFA RX
+    - { srcblk: radio0, srcport: port0, dstblk: ddc0, dstport: port0 }
+    - { srcblk: ddc0,   srcport: port0, dstblk: ep0,  dstport: in0   }
+    # ep1 to radio0(1) - RFB TX
+    - { srcblk: ep1,   srcport: out0,  dstblk: fifo0,  dstport: port1 }
+    - { srcblk: fifo0, srcport: port1, dstblk: duc0,   dstport: port1 }
+    - { srcblk: duc0,  srcport: port1, dstblk: radio0, dstport: port1 }
+    # radio0(1) to ep1 - RFB RX
+    - { srcblk: radio0, srcport: port1, dstblk: ddc0, dstport: port1 }
+    - { srcblk: ddc0,   srcport: port1, dstblk: ep1,  dstport: in0   }
+    # BSP Connections
+    - { srcblk: radio0,   srcport: ctrl_port,   dstblk: _device_, dstport: ctrl_port   }
+    - { srcblk: _device_, srcport: x300_radio,  dstblk: radio0,   dstport: x300_radio  }
+    - { srcblk: _device_, srcport: time_keeper, dstblk: radio0,   dstport: time_keeper }
+    - { srcblk: _device_, srcport: dram,        dstblk: fifo0,    dstport: axi_ram     }
 
 # A list of all clock domain connections in design
-# # ------------------------------------------
-# # Format: A list of connection maps (list of key-value pairs) with the following keys
-# #         - srcblk  = Source block to connect (Always "_device"_)
-# #         - srcport = Clock domain on the source block to connect
-# #         - dstblk  = Destination block to connect
-# #         - dstport = Clock domain on the destination block to connect
+# ------------------------------------------
+# Format: A list of connection maps (list of key-value pairs) with the following keys
+#         - srcblk  = Source block to connect (Always "_device"_)
+#         - srcport = Clock domain on the source block to connect
+#         - dstblk  = Destination block to connect
+#         - dstport = Clock domain on the destination block to connect
 clk_domains:
-    - { srcblk: _device_, srcport: radio, dstblk: radio0, dstport: radio }
-    - { srcblk: _device_, srcport: rfnoc_chdr, dstblk: duc0, dstport: duc }
-    - { srcblk: _device_, srcport: rfnoc_chdr, dstblk: ddc0, dstport: ddc }
+    - { srcblk: _device_, srcport: radio,      dstblk: radio0, dstport: radio }
+    - { srcblk: _device_, srcport: rfnoc_chdr, dstblk: duc0,   dstport: duc   }
+    - { srcblk: _device_, srcport: rfnoc_chdr, dstblk: ddc0,   dstport: ddc   }
