@@ -34,7 +34,7 @@ module rfnoc_block_ddc #(
   //---------------------------------------------------------------------------
 
   input wire rfnoc_chdr_clk,
-  input wire ddc_clk,
+  input wire ce_clk,
 
   // CHDR inputs from framework
   input  wire [NUM_PORTS*CHDR_W-1:0] s_rfnoc_chdr_tdata,
@@ -120,9 +120,9 @@ module rfnoc_block_ddc #(
 
   wire ddc_rst;
 
-  // Cross the CHDR reset to the ddc_clk domain
+  // Cross the CHDR reset to the ce_clk domain
   synchronizer ddc_rst_sync_i (
-    .clk (ddc_clk),
+    .clk (ce_clk),
     .rst (1'b0),
     .in  (rfnoc_chdr_rst),
     .out (ddc_rst)
@@ -169,7 +169,7 @@ module rfnoc_block_ddc #(
     .m_rfnoc_ctrl_tlast        (m_rfnoc_ctrl_tlast),
     .m_rfnoc_ctrl_tvalid       (m_rfnoc_ctrl_tvalid),
     .m_rfnoc_ctrl_tready       (m_rfnoc_ctrl_tready),
-    .ctrlport_clk              (ddc_clk),
+    .ctrlport_clk              (ce_clk),
     .ctrlport_rst              (ddc_rst),
     .m_ctrlport_req_wr         (ctrlport_req_wr),
     .m_ctrlport_req_rd         (ctrlport_req_rd),
@@ -194,7 +194,7 @@ module rfnoc_block_ddc #(
     .s_ctrlport_resp_ack       (),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
-    .axis_data_clk             (ddc_clk),
+    .axis_data_clk             (ce_clk),
     .axis_data_rst             (ddc_rst),
     .m_axis_tdata              (m_axis_data_tdata),
     .m_axis_tkeep              (),
@@ -239,7 +239,7 @@ module rfnoc_block_ddc #(
   ctrlport_to_settings_bus # (
     .NUM_PORTS (NUM_PORTS)
   ) ctrlport_to_settings_bus_i (
-    .ctrlport_clk             (ddc_clk),
+    .ctrlport_clk             (ce_clk),
     .ctrlport_rst             (ddc_rst),
     .s_ctrlport_req_wr        (ctrlport_req_wr),
     .s_ctrlport_req_rd        (ctrlport_req_rd),
@@ -332,7 +332,7 @@ module rfnoc_block_ddc #(
         .NUM_TAGS(1),
         .SR_TAG_ADDRS(SR_FREQ_ADDR))
       axi_tag_time (
-        .clk(ddc_clk),
+        .clk(ce_clk),
         .reset(ddc_rst),
         .clear(clear_tx_seqnum[i]),
         .tick_rate(16'd1),
@@ -370,7 +370,7 @@ module rfnoc_block_ddc #(
         .SR_M_ADDR(SR_M_ADDR),
         .SR_CONFIG_ADDR(SR_CONFIG_ADDR))
       axi_rate_change (
-        .clk(ddc_clk), .reset(ddc_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
+        .clk(ce_clk), .reset(ddc_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .i_tdata({m_axis_tagged_tag,m_axis_tagged_tdata}), .i_tlast(m_axis_tagged_tlast),
@@ -403,7 +403,7 @@ module rfnoc_block_ddc #(
         .NUM_HB(NUM_HB),
         .CIC_MAX_DECIM(CIC_MAX_DECIM))
       ddc (
-        .clk(ddc_clk), .reset(ddc_rst),
+        .clk(ce_clk), .reset(ddc_rst),
         .clear(clear_user | clear_tx_seqnum[i]), // Use AXI Rate Change's clear user to reset block to initial state after EOB
         .set_stb(out_set_stb), .set_addr(out_set_addr), .set_data(out_set_data),
         .timed_set_stb(timed_set_stb), .timed_set_addr(timed_set_addr), .timed_set_data(timed_set_data),

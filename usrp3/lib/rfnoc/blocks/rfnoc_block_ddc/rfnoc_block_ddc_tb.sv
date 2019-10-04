@@ -49,11 +49,11 @@ module rfnoc_block_ddc_tb();
 
   bit rfnoc_chdr_clk;
   bit rfnoc_ctrl_clk;
-  bit ddc_clk;
+  bit ce_clk;
 
   sim_clock_gen #(CHDR_CLK_PER) rfnoc_chdr_clk_gen (.clk(rfnoc_chdr_clk), .rst());
   sim_clock_gen #(CHDR_CLK_PER) rfnoc_ctrl_clk_gen (.clk(rfnoc_ctrl_clk), .rst());
-  sim_clock_gen #(DDC_CLK_PER)  ddc_clk_gen        (.clk(ddc_clk), .rst());
+  sim_clock_gen #(DDC_CLK_PER)  ddc_clk_gen        (.clk(ce_clk), .rst());
 
 
   //---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ module rfnoc_block_ddc_tb();
   AxiStreamIf #(CHDR_W) s_chdr [NUM_PORTS] (rfnoc_chdr_clk, 1'b0);
 
   // Bus functional model for a software block controller
-  RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W)) blk_ctrl = 
+  RfnocBlockCtrlBfm #(.CHDR_W(CHDR_W)) blk_ctrl =
     new(backend, m_ctrl, s_ctrl);
 
   // Connect block controller to BFMs
@@ -120,7 +120,7 @@ module rfnoc_block_ddc_tb();
     .CIC_MAX_DECIM  (CIC_MAX_DECIM)
   ) rfnoc_block_ddc_i (
     .rfnoc_chdr_clk          (backend.chdr_clk),
-    .ddc_clk                 (ddc_clk),
+    .ce_clk                  (ce_clk),
     .s_rfnoc_chdr_tdata      (s_rfnoc_chdr_tdata),
     .s_rfnoc_chdr_tlast      (s_rfnoc_chdr_tlast),
     .s_rfnoc_chdr_tvalid     (s_rfnoc_chdr_tvalid),
@@ -142,7 +142,7 @@ module rfnoc_block_ddc_tb();
     .m_rfnoc_ctrl_tready     (s_ctrl.tready)
   );
 
- 
+
   //---------------------------------------------------------------------------
   // Helper Tasks
   //---------------------------------------------------------------------------
@@ -177,7 +177,7 @@ module rfnoc_block_ddc_tb();
     // CIC rate cannot be set to 0
     cic_rate = (_decim_rate[7:0] == 8'd0) ? 8'd1 : _decim_rate[7:0];
     test.assert_error(
-      hb_enables <= NUM_HB, 
+      hb_enables <= NUM_HB,
       "Enabled halfbands may not exceed total number of half bands."
     );
     test.assert_error(
@@ -286,7 +286,7 @@ module rfnoc_block_ddc_tb();
     //-------------------------------------------------------------------------
     // Reset
     //-------------------------------------------------------------------------
-    
+
     test.start_test("Wait for Reset", 10us);
     fork
       blk_ctrl.reset_chdr();
@@ -294,11 +294,11 @@ module rfnoc_block_ddc_tb();
     join;
     test.end_test();
 
-    
+
     //-------------------------------------------------------------------------
     // Check NoC ID and Block Info
     //-------------------------------------------------------------------------
-    
+
     test.start_test("Verify Block Info", 2us);
     test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_ddc_i.NOC_ID, "Incorrect NOC_ID Value");
     test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
@@ -346,7 +346,7 @@ module rfnoc_block_ddc_tb();
       if (EXTENDED_TEST) send_ramp(port, 200);  // HBs enabled: 3, CIC rate: 25
       send_ramp(port, 255);                     // HBs enabled: 0, CIC rate: 255
       if (EXTENDED_TEST) send_ramp(port, 2040); // HBs enabled: 3, CIC rate: 255
-      
+
       test.end_test();
     end
 
@@ -355,7 +355,7 @@ module rfnoc_block_ddc_tb();
     // Test timed tune
     //-------------------------------------------------------------------------
 
-    // This test has not been implemented because the RFNoC FFT has not been 
+    // This test has not been implemented because the RFNoC FFT has not been
     // ported yet.
 
 
@@ -377,7 +377,7 @@ module rfnoc_block_ddc_tb();
     // Finish
     //-------------------------------------------------------------------------
 
-    // End the TB, but don't $finish, since we don't want to kill other 
+    // End the TB, but don't $finish, since we don't want to kill other
     // instances of this testbench that may be running.
     test.end_tb(0);
 

@@ -34,7 +34,7 @@ module rfnoc_block_duc #(
   //---------------------------------------------------------------------------
 
   input wire rfnoc_chdr_clk,
-  input wire duc_clk,
+  input wire ce_clk,
 
   // CHDR inputs from framework
   input  wire [NUM_PORTS*CHDR_W-1:0] s_rfnoc_chdr_tdata,
@@ -120,9 +120,9 @@ module rfnoc_block_duc #(
 
   wire duc_rst;
 
-  // Cross the CHDR reset to the duc_clk domain
+  // Cross the CHDR reset to the ce_clk domain
   synchronizer duc_rst_sync_i (
-    .clk (duc_clk),
+    .clk (ce_clk),
     .rst (1'b0),
     .in  (rfnoc_chdr_rst),
     .out (duc_rst)
@@ -170,7 +170,7 @@ module rfnoc_block_duc #(
     .m_rfnoc_ctrl_tlast        (m_rfnoc_ctrl_tlast),
     .m_rfnoc_ctrl_tvalid       (m_rfnoc_ctrl_tvalid),
     .m_rfnoc_ctrl_tready       (m_rfnoc_ctrl_tready),
-    .ctrlport_clk              (duc_clk),
+    .ctrlport_clk              (ce_clk),
     .ctrlport_rst              (duc_rst),
     .m_ctrlport_req_wr         (ctrlport_req_wr),
     .m_ctrlport_req_rd         (ctrlport_req_rd),
@@ -195,7 +195,7 @@ module rfnoc_block_duc #(
     .s_ctrlport_resp_ack       (),
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
-    .axis_data_clk             (duc_clk),
+    .axis_data_clk             (ce_clk),
     .axis_data_rst             (duc_rst),
     .m_axis_tdata              (m_axis_data_tdata),
     .m_axis_tkeep              (),
@@ -239,7 +239,7 @@ module rfnoc_block_duc #(
   ctrlport_to_settings_bus # (
     .NUM_PORTS (NUM_PORTS)
   ) ctrlport_to_settings_bus_i (
-    .ctrlport_clk             (duc_clk),
+    .ctrlport_clk             (ce_clk),
     .ctrlport_rst             (duc_rst),
     .s_ctrlport_req_wr        (ctrlport_req_wr),
     .s_ctrlport_req_rd        (ctrlport_req_rd),
@@ -328,7 +328,7 @@ module rfnoc_block_duc #(
         .SR_FREQ_ADDR(SR_FREQ_ADDR),
         .SR_SCALE_IQ_ADDR(SR_SCALE_IQ_ADDR))
       dds_timed (
-        .clk(duc_clk), .reset(duc_rst), .clear(clear_tx_seqnum[i]),
+        .clk(ce_clk), .reset(duc_rst), .clear(clear_tx_seqnum[i]),
         .timed_cmd_fifo_full(),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .set_time(set_time_int), .set_has_time(set_has_time_int),
@@ -353,7 +353,7 @@ module rfnoc_block_duc #(
         .SR_M_ADDR(SR_M_ADDR),
         .SR_CONFIG_ADDR(SR_CONFIG_ADDR))
       axi_rate_change (
-        .clk(duc_clk), .reset(duc_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
+        .clk(ce_clk), .reset(duc_rst), .clear(clear_tx_seqnum[i]), .clear_user(clear_user),
         .src_sid(src_sid[16*i+15:16*i]), .dst_sid(next_dst_sid[16*i+15:16*i]),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .i_tdata(m_axis_data_tdata[ITEM_W*i+:ITEM_W]), .i_tlast(m_axis_data_tlast[i]), .i_tvalid(m_axis_data_tvalid[i]),
@@ -376,7 +376,7 @@ module rfnoc_block_duc #(
         .NUM_HB(NUM_HB),
         .CIC_MAX_INTERP(CIC_MAX_INTERP))
       duc (
-        .clk(duc_clk), .reset(duc_rst), .clear(clear_duc),
+        .clk(ce_clk), .reset(duc_rst), .clear(clear_duc),
         .set_stb(set_stb_int), .set_addr(set_addr_int), .set_data(set_data_int),
         .i_tdata(sample_tdata), .i_tuser(128'b0), .i_tvalid(sample_tvalid), .i_tready(sample_tready),
         .o_tdata(sample_duc_tdata), .o_tuser(), .o_tvalid(sample_duc_tvalid), .o_tready(sample_duc_tready));
