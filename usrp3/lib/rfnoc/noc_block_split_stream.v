@@ -23,12 +23,8 @@ module noc_block_split_stream #(
   // RFNoC Shell
   //
   ////////////////////////////////////////////////////////////
-  wire [31:0]    set_data;
-  wire [7:0]     set_addr;
-  wire [1:0]     set_stb;
-
-  wire [63:0]    cmdout_tdata, ackin_tdata;
-  wire           cmdout_tlast, cmdout_tvalid, cmdout_tready, ackin_tlast, ackin_tvalid, ackin_tready;
+  wire [63:0]    cmdout_tdata;
+  wire           cmdout_tlast, cmdout_tvalid, ackin_tready;
 
   wire [63:0]    str_sink_tdata;
   wire           str_sink_tlast, str_sink_tvalid, str_sink_tready;
@@ -61,11 +57,11 @@ module noc_block_split_stream #(
     // Compute Engine Clock Domain
     .clk(ce_clk), .reset(ce_rst),
     // Control Sink
-    .set_data(set_data), .set_addr(set_addr), .set_stb(set_stb), .set_time(), .set_has_time(),
-    .rb_stb(1'b1), .rb_data(64'd0), .rb_addr(),
+    .set_data(), .set_addr(), .set_stb(), .set_time(), .set_has_time(),
+    .rb_stb({NUM_OUTPUTS{1'b1}}), .rb_data({NUM_OUTPUTS{64'd0}}), .rb_addr(),
     // Control Source
-    .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(cmdout_tready),
-    .ackin_tdata(ackin_tdata), .ackin_tlast(ackin_tlast), .ackin_tvalid(ackin_tvalid), .ackin_tready(ackin_tready),
+    .cmdout_tdata(cmdout_tdata), .cmdout_tlast(cmdout_tlast), .cmdout_tvalid(cmdout_tvalid), .cmdout_tready(),
+    .ackin_tdata(), .ackin_tlast(), .ackin_tvalid(), .ackin_tready(ackin_tready),
     // Stream Sink
     .str_sink_tdata(str_sink_tdata), .str_sink_tlast(str_sink_tlast), .str_sink_tvalid(str_sink_tvalid), .str_sink_tready(str_sink_tready),
     // Stream Source
