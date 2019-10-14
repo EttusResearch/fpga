@@ -9,6 +9,7 @@
 ##################################################
 SIM_RFNOC_SRCS = $(abspath $(addprefix $(BASE_DIR)/../sim/rfnoc/, \
 PkgTestExec.sv \
+test_exec.svh \
 sim_clock_gen.sv \
 PkgAxiStreamBfm.sv \
 PkgChdrUtils.sv \
