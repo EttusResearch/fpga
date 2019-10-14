@@ -34,10 +34,12 @@ package PkgTestExec;
     timeout_t tb_timeout;             // Handle to timeout for the overall testbench
     timeout_t test_timeout;           // Handle to timeout for current test
 
+    semaphore test_sem;               // Testbench semaphore
 
-    function new(string tb_name);
+
+    function new();
       $timeformat(-9, 0, " ns", 12);
-      this.tb_name = tb_name;
+      this.test_sem = new(1);
     endfunction : new
 
 
@@ -48,10 +50,15 @@ package PkgTestExec;
     //                 This is a catch-all, in case things go very wrong during
     //                 simulation and cause it to never end.
     //
-    task start_tb(realtime time_limit = 10ms);
+    task start_tb(string tb_name, realtime time_limit = 10ms);
+      // Get the sempahore, to prevent multiple overlapping instances of the
+      // same testbench.
+      test_sem.get();
+
       $display("========================================================");
       $display("TESTBENCH STARTED: %s", tb_name);
       $display("========================================================");
+      this.tb_name = tb_name;
       start_time   = $time;
       test_status  = {};
       num_started  = 0;
@@ -92,6 +99,9 @@ package PkgTestExec;
       end_timeout(tb_timeout);
 
       if (finish) $finish();
+
+      // Release the semaphore to allow new instances of the testbench to run
+      test_sem.put();
     endfunction : end_tb
 
 
@@ -270,6 +280,18 @@ package PkgTestExec;
     endfunction;
 
   endclass : TestExec
+
+
+  //---------------------------------------------------------------------------
+  // Test Object
+  //---------------------------------------------------------------------------
+  //
+  // This is the default TestExec object instance shared by all instances of
+  // the running the testbench.
+  //
+  //---------------------------------------------------------------------------
+
+  TestExec test = new();
 
 endpackage : PkgTestExec
 
