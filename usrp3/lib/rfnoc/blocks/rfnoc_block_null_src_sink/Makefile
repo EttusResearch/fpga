@@ -29,13 +29,10 @@ $(RFNOC_OOT_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 SIM_TOP = rfnoc_block_null_src_sink_tb
 
 SIM_SRCS = \
 $(abspath rfnoc_block_null_src_sink_tb.sv) \
-$(SIM_RFNOC_SRCS)
 
 # MODELSIM_USER_DO = $(abspath wave.do)
 

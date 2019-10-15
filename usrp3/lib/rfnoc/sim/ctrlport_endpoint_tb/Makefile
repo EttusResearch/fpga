@@ -25,13 +25,10 @@ $(RFNOC_CORE_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 SIM_TOP = ctrlport_endpoint_tb
 
 SIM_SRCS = \
 $(abspath ctrlport_endpoint_tb.sv) \
-$(SIM_RFNOC_SRCS)
 
 #-------------------------------------------------
 # Bottom-of-Makefile

@@ -50,15 +50,12 @@ $(RFNOC_BLOCK_DDC_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 # Define only one toplevel module
 SIM_TOP = rfnoc_block_ddc_tb
 
-# Add test bench, user design under test, and 
+# Add test bench, user design under test, and
 # additional user created files
 SIM_SRCS = \
-$(SIM_RFNOC_SRCS) \
 $(COREGEN_DSP_SRCS) \
 $(abspath rfnoc_block_ddc_tb.sv)
 

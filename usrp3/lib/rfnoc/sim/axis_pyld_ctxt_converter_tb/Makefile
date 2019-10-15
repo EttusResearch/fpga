@@ -29,13 +29,10 @@ $(RFNOC_XBAR_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 SIM_TOP = axis_pyld_ctxt_converter_tb
 
 SIM_SRCS = \
 $(abspath axis_pyld_ctxt_converter_tb.sv) \
-$(SIM_RFNOC_SRCS)
 
 # MODELSIM_USER_DO = $(abspath wave.do)
 

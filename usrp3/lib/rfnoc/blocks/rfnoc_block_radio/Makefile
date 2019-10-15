@@ -29,12 +29,9 @@ $(RFNOC_BLOCK_RADIO_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 SIM_TOP = rfnoc_block_radio_all_tb
 
 SIM_SRCS = \
-$(SIM_RFNOC_SRCS) \
 $(abspath sim_radio_gen.sv) \
 $(abspath rfnoc_block_radio_tb.sv) \
 $(abspath rfnoc_block_radio_all_tb.sv)

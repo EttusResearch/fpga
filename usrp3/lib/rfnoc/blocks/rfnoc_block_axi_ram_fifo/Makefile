@@ -29,17 +29,12 @@ $(RFNOC_BLOCK_AXI_RAM_FIFO_SRCS) \
 #-------------------------------------------------
 # Testbench Specific
 #-------------------------------------------------
-include $(BASE_DIR)/../sim/rfnoc/Makefile.srcs
-
 SIM_TOP = rfnoc_block_axi_ram_fifo_all_tb
 
 SIM_SRCS = \
-$(SIM_RFNOC_SRCS) \
 $(abspath sim_axi_ram.sv) \
 $(abspath rfnoc_block_axi_ram_fifo_tb.sv) \
 $(abspath rfnoc_block_axi_ram_fifo_all_tb.sv)
-
-# MODELSIM_USER_DO = $(abspath wave.do)
 
 #-------------------------------------------------
 # Bottom-of-Makefile
