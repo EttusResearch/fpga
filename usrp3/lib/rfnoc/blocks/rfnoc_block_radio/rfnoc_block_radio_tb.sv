@@ -19,9 +19,8 @@ module rfnoc_block_radio_tb #(
   parameter bit TEST_REGS  = 1    // Do register tests
 );
 
-  // Simulation timing
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -64,9 +63,15 @@ module rfnoc_block_radio_tb #(
   bit rfnoc_ctrl_clk;
   bit radio_clk;
 
-  sim_clock_gen #(CHDR_CLK_PER)  rfnoc_chdr_clk_gen (.clk(rfnoc_chdr_clk), .rst());
-  sim_clock_gen #(CTRL_CLK_PER)  rfnoc_ctrl_clk_gen (.clk(rfnoc_ctrl_clk), .rst());
-  sim_clock_gen #(RADIO_CLK_PER) radio_clk_gen      (.clk(radio_clk),      .rst());
+  // Don't start the clocks automatically (AUTOSTART=0), since we expect
+  // multiple instances of this testbench to run in sequence. They will be
+  // started before the first test.
+  sim_clock_gen #(.PERIOD(CHDR_CLK_PER), .AUTOSTART(0))
+    rfnoc_chdr_clk_gen (.clk(rfnoc_chdr_clk), .rst());
+  sim_clock_gen #(.PERIOD(CTRL_CLK_PER), .AUTOSTART(0))
+    rfnoc_ctrl_clk_gen (.clk(rfnoc_ctrl_clk), .rst());
+  sim_clock_gen #(.PERIOD(RADIO_CLK_PER), .AUTOSTART(0)) 
+    radio_clk_gen (.clk(radio_clk), .rst());
 
 
 
@@ -358,7 +363,7 @@ module rfnoc_block_radio_tb #(
       end
 
       // Check that the length matches our expectation
-      test.assert_error(
+      `ASSERT_ERROR(
         byte_length == expected_length,
         "Received packet didn't have expected length."
       );
@@ -370,7 +375,7 @@ module rfnoc_block_radio_tb #(
         for (int sub_sample = 0; sub_sample < $bits(chdr_word_t)/ITEM_W; sub_sample++) begin
           chdr_word_t word;
           word = data[i][ITEM_W*sub_sample +: ITEM_W];  // Work around Vivado 2018.3 issue
-          test.assert_error(
+          `ASSERT_ERROR(
             word == sample_val,
             $sformatf(
               "Sample %0d (0x%X) didn't match expected value (0x%X)",
@@ -478,7 +483,7 @@ module rfnoc_block_radio_tb #(
 
     // Check the time
     if (!$isunknown(start_time)) begin
-      test.assert_error(
+      `ASSERT_ERROR(
         radio_time - start_time <= NIPC*2,
         $sformatf("Packet transmitted at radio time 0x%0X but expected 0x%0X", radio_time, start_time)
       );
@@ -493,7 +498,7 @@ module rfnoc_block_radio_tb #(
 
       // Check each sample of the radio word
       for (int sub_sample = 0; sub_sample < NIPC; sub_sample++) begin
-        test.assert_error(
+        `ASSERT_ERROR(
           radio_tx_data[radio_num*RADIO_W + ITEM_W*sub_sample +: ITEM_W] == sample_val,
           "Radio output doesn't match expected value"
         );
@@ -522,7 +527,7 @@ module rfnoc_block_radio_tb #(
     // Get error code
     blk_ctrl.get_ctrl_bfm().get_ctrl(ctrl_packet);
     word = ctrl_packet.data[0];   // Work around Vivado 2018.3 issue
-    test.assert_error(
+    `ASSERT_ERROR(
       word                            == error &&
       ctrl_packet.op_word.op_code     == CTRL_OP_WRITE &&
       ctrl_packet.op_word.address     == TX_ERR_ADDRESS &&
@@ -550,12 +555,12 @@ module rfnoc_block_radio_tb #(
     test.start_test("Verify Block Info", 2us);
 
     // Get static block info and validate it
-    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_radio_i.NOC_ID, "Incorrect noc_id Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect num_data_i Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect num_data_o Value");
-    test.assert_error(blk_ctrl.get_ctrl_fifosize() == rfnoc_block_radio_i.noc_shell_radio_i.CTRL_FIFO_SIZE,
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == rfnoc_block_radio_i.NOC_ID, "Incorrect noc_id Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect num_data_i Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect num_data_o Value");
+    `ASSERT_ERROR(blk_ctrl.get_ctrl_fifosize() == rfnoc_block_radio_i.noc_shell_radio_i.CTRL_FIFO_SIZE,
       "Incorrect ctrl_fifosize Value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect mtu Value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect mtu Value");
 
     test.end_test();
   endtask : test_block_info
@@ -568,7 +573,7 @@ module rfnoc_block_radio_tb #(
 
     // Compatibility number
     read_shared(REG_COMPAT_NUM, val);
-    test.assert_error(
+    `ASSERT_ERROR(
       val == {
         rfnoc_block_radio_i.compat_major,
         rfnoc_block_radio_i.compat_minor
@@ -586,16 +591,16 @@ module rfnoc_block_radio_tb #(
 
     // Test loopback enable register (read/write)
     read_radio(radio_num, REG_LOOPBACK_EN, val);
-    test.assert_error(val == 0, "Initial value of REG_LOOPBACK_EN is incorrect");
+    `ASSERT_ERROR(val == 0, "Initial value of REG_LOOPBACK_EN is incorrect");
     write_radio(radio_num, REG_LOOPBACK_EN, 32'hFFFFFFFF);
     read_radio(radio_num, REG_LOOPBACK_EN, val);
-    test.assert_error(val == 1, "REG_LOOPBACK_EN didn't update correctly");
+    `ASSERT_ERROR(val == 1, "REG_LOOPBACK_EN didn't update correctly");
     write_radio(radio_num, REG_LOOPBACK_EN, 0);
 
     // Read ITEM_W and NIPC (read only)
     read_radio(radio_num, REG_RADIO_WIDTH, val);
-    test.assert_error(val[15:0] == NIPC, "Value of NIPC register is incorrect");
-    test.assert_error(val[31:16] == ITEM_W, "Value of ITEM_W register is incorrect");
+    `ASSERT_ERROR(val[15:0] == NIPC, "Value of NIPC register is incorrect");
+    `ASSERT_ERROR(val[31:16] == ITEM_W, "Value of ITEM_W register is incorrect");
 
     test.end_test();
   endtask : test_general_registers
@@ -611,7 +616,7 @@ module rfnoc_block_radio_tb #(
     // REG_RX_CMD_STATUS (read only)
     expected = CMD_FIFO_SPACE_MAX;
     read_radio(radio_num, REG_RX_STATUS, val);
-    test.assert_error(val == expected, "REG_RX_STATUS not initially CMD_FIFO_SPACE_MAX");
+    `ASSERT_ERROR(val == expected, "REG_RX_STATUS not initially CMD_FIFO_SPACE_MAX");
 
     // REG_RX_CMD (read/write). Test a bogus timed stop command just to check 
     // read/write of the register.
@@ -620,75 +625,75 @@ module rfnoc_block_radio_tb #(
     expected[RX_CMD_TIMED_POS] = 1'b1;
     write_radio(radio_num, REG_RX_CMD, expected);
     read_radio(radio_num, REG_RX_CMD, val);
-    test.assert_error(val == expected, "REG_RX_CMD didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_CMD didn't update correctly");
 
     // REG_RX_CMD_NUM_WORDS (read/write)
     read_radio_64(radio_num, REG_RX_CMD_NUM_WORDS_LO, val);
-    test.assert_error(val == 0, "REG_RX_CMD_NUM_WORDS not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_CMD_NUM_WORDS not initially 0");
     expected = 64'hFEDCBA9876543210;
     write_radio_64(radio_num, REG_RX_CMD_NUM_WORDS_LO, expected);
     read_radio_64(radio_num, REG_RX_CMD_NUM_WORDS_LO, val);
-    test.assert_error(
+    `ASSERT_ERROR(
       val == expected[num_words_len-1:0],
      "REG_RX_CMD_NUM_WORDS didn't update correctly"
     );
 
     // REG_RX_CMD_TIME (read/write)
     read_radio_64(radio_num, REG_RX_CMD_TIME_LO, val);
-    test.assert_error(val == 0, "REG_RX_CMD_TIME not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_CMD_TIME not initially 0");
     expected = 64'hBEADFEED0123F1FE;
     write_radio_64(radio_num, REG_RX_CMD_TIME_LO, expected);
     read_radio_64(radio_num, REG_RX_CMD_TIME_LO, val);
-    test.assert_error(val == expected, "REG_RX_CMD_TIME didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_CMD_TIME didn't update correctly");
 
     // REG_RX_MAX_WORDS_PER_PKT (read/write)
     read_radio(radio_num, REG_RX_MAX_WORDS_PER_PKT, val);
-    test.assert_error(val == 64, "REG_RX_MAX_WORDS_PER_PKT not initially 64");
+    `ASSERT_ERROR(val == 64, "REG_RX_MAX_WORDS_PER_PKT not initially 64");
     expected = 32'hABBEC001;
     write_radio(radio_num, REG_RX_MAX_WORDS_PER_PKT, expected);
     read_radio(radio_num, REG_RX_MAX_WORDS_PER_PKT, val);
-    test.assert_error(val == expected, "REG_RX_MAX_WORDS_PER_PKT didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_MAX_WORDS_PER_PKT didn't update correctly");
 
     // REG_RX_ERR_PORT (read/write)
     read_radio(radio_num, REG_RX_ERR_PORT, val);
-    test.assert_error(val == 0, "REG_RX_ERR_PORT not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_ERR_PORT not initially 0");
     expected = $urandom() & 32'h000001FF;
     write_radio(radio_num, REG_RX_ERR_PORT, expected);
     read_radio(radio_num, REG_RX_ERR_PORT, val);
-    test.assert_error(val == expected, "REG_RX_ERR_PORT didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_ERR_PORT didn't update correctly");
 
     // REG_RX_ERR_REM_PORT (read/write)
     read_radio(radio_num, REG_RX_ERR_REM_PORT, val);
-    test.assert_error(val == 0, "REG_RX_ERR_REM_PORT not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_ERR_REM_PORT not initially 0");
     expected = $urandom() & 32'h000001FF;
     write_radio(radio_num, REG_RX_ERR_REM_PORT, expected);
     read_radio(radio_num, REG_RX_ERR_REM_PORT, val);
-    test.assert_error(val == expected, "REG_RX_ERR_REM_PORT didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_ERR_REM_PORT didn't update correctly");
 
     // REG_RX_ERR_REM_EPID (read/write)
     read_radio(radio_num, REG_RX_ERR_REM_EPID, val);
-    test.assert_error(val == 0, "REG_RX_ERR_REM_EPID not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_ERR_REM_EPID not initially 0");
     expected = $urandom() & 32'h0000FFFF;
     write_radio(radio_num, REG_RX_ERR_REM_EPID, expected);
     read_radio(radio_num, REG_RX_ERR_REM_EPID, val);
-    test.assert_error(val == expected, "REG_RX_ERR_REM_EPID didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_ERR_REM_EPID didn't update correctly");
 
     // REG_RX_ERR_ADDR (read/write)
     read_radio(radio_num, REG_RX_ERR_ADDR, val);
-    test.assert_error(val == 0, "REG_RX_ERR_ADDR not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_RX_ERR_ADDR not initially 0");
     expected = $urandom() & 32'h000FFFFF;
     write_radio(radio_num, REG_RX_ERR_ADDR, expected);
     read_radio(radio_num, REG_RX_ERR_ADDR, val);
-    test.assert_error(val == expected, "REG_RX_ERR_ADDR didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_RX_ERR_ADDR didn't update correctly");
 
     // REG_RX_DATA (read-only)
     temp = radio_tx_data[RADIO_W*radio_num +: RADIO_W];
     read_radio(radio_num, REG_RX_DATA, val);
-    test.assert_error(
+    `ASSERT_ERROR(
       radio_rx_data[RADIO_W*radio_num +: RADIO_W] >= val && val >= temp, 
       "REG_RX_DATA wasn't in the expected range");
     read_radio(radio_num, REG_RX_DATA, temp);
-    test.assert_error(temp != val, "REG_RX_DATA didn't update");
+    `ASSERT_ERROR(temp != val, "REG_RX_DATA didn't update");
 
     test.end_test();
   endtask : test_rx_registers
@@ -702,56 +707,56 @@ module rfnoc_block_radio_tb #(
 
     // REG_TX_IDLE_VALUE (read/write)
     read_radio(radio_num, REG_TX_IDLE_VALUE, val);
-    test.assert_error(val == 0, "REG_TX_IDLE_VALUE not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_TX_IDLE_VALUE not initially 0");
     expected = $urandom() & {ITEM_W{1'b1}};
     write_radio(radio_num, REG_TX_IDLE_VALUE, expected);
     read_radio(radio_num, REG_TX_IDLE_VALUE, val);
-    test.assert_error(val == expected, "REG_TX_IDLE_VALUE didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_TX_IDLE_VALUE didn't update correctly");
 
     // REG_TX_ERROR_POLICY (read/write)
     read_radio(radio_num, REG_TX_ERROR_POLICY, val);
     expected = TX_ERR_POLICY_PACKET;
-    test.assert_error(val == expected, "REG_TX_ERROR_POLICY not initially 'PACKET'");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERROR_POLICY not initially 'PACKET'");
     expected = TX_ERR_POLICY_BURST;
     write_radio(radio_num, REG_TX_ERROR_POLICY, expected);
     read_radio(radio_num, REG_TX_ERROR_POLICY, val);
-    test.assert_error(val == expected, "REG_TX_ERROR_POLICY didn't update to 'BURST'");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERROR_POLICY didn't update to 'BURST'");
     expected = TX_ERR_POLICY_PACKET;
     write_radio(radio_num, REG_TX_ERROR_POLICY, 32'h03); // Try to set both bits!
     read_radio(radio_num, REG_TX_ERROR_POLICY, val);
-    test.assert_error(val == expected, "REG_TX_ERROR_POLICY didn't revert to 'PACKET'");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERROR_POLICY didn't revert to 'PACKET'");
 
     // REG_TX_ERR_PORT (read/write)
     read_radio(radio_num, REG_TX_ERR_PORT, val);
-    test.assert_error(val == 0, "REG_TX_ERR_PORT not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_TX_ERR_PORT not initially 0");
     expected = $urandom() & 32'h000001FF;
     write_radio(radio_num, REG_TX_ERR_PORT, expected);
     read_radio(radio_num, REG_TX_ERR_PORT, val);
-    test.assert_error(val == expected, "REG_TX_ERR_PORT didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERR_PORT didn't update correctly");
 
     // REG_TX_ERR_REM_PORT (read/write)
     read_radio(radio_num, REG_TX_ERR_REM_PORT, val);
-    test.assert_error(val == 0, "REG_TX_ERR_REM_PORT not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_TX_ERR_REM_PORT not initially 0");
     expected = $urandom() & 32'h000001FF;
     write_radio(radio_num, REG_TX_ERR_REM_PORT, expected);
     read_radio(radio_num, REG_TX_ERR_REM_PORT, val);
-    test.assert_error(val == expected, "REG_TX_ERR_REM_PORT didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERR_REM_PORT didn't update correctly");
 
     // REG_TX_ERR_REM_EPID (read/write)
     read_radio(radio_num, REG_TX_ERR_REM_EPID, val);
-    test.assert_error(val == 0, "REG_TX_ERR_REM_EPID not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_TX_ERR_REM_EPID not initially 0");
     expected = $urandom() & 32'h0000FFFF;
     write_radio(radio_num, REG_TX_ERR_REM_EPID, expected);
     read_radio(radio_num, REG_TX_ERR_REM_EPID, val);
-    test.assert_error(val == expected, "REG_TX_ERR_REM_EPID didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERR_REM_EPID didn't update correctly");
 
     // REG_TX_ERR_ADDR (read/write)
     read_radio(radio_num, REG_TX_ERR_ADDR, val);
-    test.assert_error(val == 0, "REG_TX_ERR_ADDR not initially 0");
+    `ASSERT_ERROR(val == 0, "REG_TX_ERR_ADDR not initially 0");
     expected = $urandom() & 32'h000FFFFF;
     write_radio(radio_num, REG_TX_ERR_ADDR, expected);
     read_radio(radio_num, REG_TX_ERR_ADDR, val);
-    test.assert_error(val == expected, "REG_TX_ERR_ADDR didn't update correctly");
+    `ASSERT_ERROR(val == expected, "REG_TX_ERR_ADDR didn't update correctly");
 
     test.end_test();
   endtask : test_tx_registers
@@ -784,7 +789,7 @@ module rfnoc_block_radio_tb #(
     // Wait long enough to receive another packet and then make sure we didn't 
     // receive anything. That is, make sure Rx actually stopped.
     #MAX_PKT_WAIT;
-    test.assert_error(
+    `ASSERT_ERROR(
       blk_ctrl.num_received(radio_num) == 0,
       "Received more packets than expected"
     );
@@ -832,7 +837,7 @@ module rfnoc_block_radio_tb #(
 
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
-      test.assert_error(
+      `ASSERT_ERROR(
         chdr_packet.timestamp - expected_time <= NIPC*2,
         "Received packet didn't have expected timestamp"
       );
@@ -859,7 +864,7 @@ module rfnoc_block_radio_tb #(
 
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
-      test.assert_error(
+      `ASSERT_ERROR(
         chdr_packet.timestamp - expected_time <= NIPC*2,
         "Received packet didn't have expected timestamp"
       );
@@ -903,7 +908,7 @@ module rfnoc_block_radio_tb #(
 
       // Check that we're acquiring
       read_radio(radio_num, REG_RX_STATUS, val);
-      test.assert_error(
+      `ASSERT_ERROR(
         val[CMD_FIFO_SPACE_POS +: CMD_FIFO_SPACE_LEN] != CMD_FIFO_SPACE_MAX,
         "Rx radio reports that it is not busy"
       );
@@ -916,7 +921,7 @@ module rfnoc_block_radio_tb #(
 
       // Verify that Rx stopped
       read_radio(radio_num, REG_RX_STATUS, val);
-      test.assert_error(
+      `ASSERT_ERROR(
         val[CMD_FIFO_SPACE_POS +: CMD_FIFO_SPACE_LEN] == CMD_FIFO_SPACE_MAX,
         "Rx radio reports that it is still busy after overflow"
       );
@@ -948,7 +953,7 @@ module rfnoc_block_radio_tb #(
     begin
       ChdrPacket #(CHDR_W) chdr_packet;
       #(MAX_PKT_WAIT);
-      test.assert_error(
+      `ASSERT_ERROR(
         blk_ctrl.num_received(radio_num) == 0,
         "Packets received for late Rx command"
       );
@@ -973,7 +978,7 @@ module rfnoc_block_radio_tb #(
       start_rx(radio_num);
       expected = CMD_FIFO_SPACE_MAX-1;
       read_radio(radio_num, REG_RX_STATUS, val);
-      test.assert_error(
+      `ASSERT_ERROR(
         val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
         "CMD_FIFO_SPACE did not decrement"
       );
@@ -984,7 +989,7 @@ module rfnoc_block_radio_tb #(
       end
       expected = 0;
       read_radio(radio_num, REG_RX_STATUS, val);
-      test.assert_error(
+      `ASSERT_ERROR(
         val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
         "CMD_FIFO_SPACE did not reach 0"
       );
@@ -993,7 +998,7 @@ module rfnoc_block_radio_tb #(
       stop_rx(radio_num);
       expected = CMD_FIFO_SPACE_MAX;
       read_radio(radio_num, REG_RX_STATUS, val);
-      test.assert_error(
+      `ASSERT_ERROR(
         val[CMD_FIFO_SPACE_POS+:CMD_FIFO_SPACE_LEN] == expected, 
         "CMD_FIFO_SPACE did not return to max"
       );
@@ -1016,7 +1021,7 @@ module rfnoc_block_radio_tb #(
       // Make sure we don't get any more data
       do begin
         while (blk_ctrl.num_received(radio_num) != 0) begin
-          test.assert_error(0, "Received unexpected packets");
+          `ASSERT_ERROR(0, "Received unexpected packets");
         end
         #MAX_PKT_WAIT;
       end while (blk_ctrl.num_received(radio_num) != 0);
@@ -1165,7 +1170,7 @@ module rfnoc_block_radio_tb #(
 //        begin
 //          forever begin
 //            @(posedge radio_clk)
-//            test.assert_error(
+//            `ASSERT_ERROR(
 //              radio_data === radio_tx_data[radio_num], 
 //              "Radio Tx output changed when late Tx packet should have been ignored"
 //            );
@@ -1219,13 +1224,13 @@ module rfnoc_block_radio_tb #(
       blk_ctrl.recv(radio_num, data, byte_length);
 
       // Check the length
-      test.assert_error(byte_length == RADIO_W/8, "Didn't receive expected length");
+      `ASSERT_ERROR(byte_length == RADIO_W/8, "Didn't receive expected length");
 
       // Check the payload
       foreach (data[i]) begin
         chdr_word_t word;
         word = data[i];   // Work around Vivado 2018.3 issue
-        test.assert_error(
+        `ASSERT_ERROR(
           word == {$bits(chdr_word_t)/ITEM_W{idle}},
           "Loopback data didn't match expected"
         );
@@ -1277,16 +1282,29 @@ module rfnoc_block_radio_tb #(
   // Test Process
   //---------------------------------------------------------------------------
 
-  TestExec  test = new("rfnoc_block_radio_tb");
   timeout_t timeout;
 
   initial begin : main
+    string tb_name;
 
     //-------------------------------------------------------------------------
     // Initialization
     //-------------------------------------------------------------------------
 
-    test.start_tb();
+    // Generate a string for the name of this instance of the testbench
+    tb_name = $sformatf(
+      "rfnoc_block_radio_tb\nCHDR_W = %0D, ITEM_W = %0D, NIPC = %0D, NUM_PORTS = %0D, STALL_PROB = %0D, STB_PROB = %0D, TEST_REGS = %0D",
+      CHDR_W, ITEM_W, NIPC, NUM_PORTS, STALL_PROB, STB_PROB, TEST_REGS
+    );
+
+    test.start_tb(tb_name);
+
+    // Don't start the clocks until after start_tb() returns. This ensures that
+    // the clocks aren't toggling while other instances of this testbench are
+    // running, which speeds up simulation time.
+    rfnoc_chdr_clk_gen.start();
+    rfnoc_ctrl_clk_gen.start();
+    radio_clk_gen.start();
 
     // Setup and start the stream endpoint BFM
     blk_ctrl = new(backend, m_ctrl, s_ctrl);

@@ -13,8 +13,8 @@ module rfnoc_block_fir_filter_tb #(
   parameter int NUM_PORTS = 2
 );
 
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -193,11 +193,9 @@ module rfnoc_block_fir_filter_tb #(
   // Test Process
   //---------------------------------------------------------------------------
 
-  TestExec test = new("rfnoc_block_fir_filter_tb");
-
   initial begin : tb_main
     // Display testbench start message
-    test.start_tb();
+    test.start_tb("rfnoc_block_fir_filter_tb");
 
     // Start the BFMs running
     blk_ctrl.run();
@@ -220,10 +218,10 @@ module rfnoc_block_fir_filter_tb #(
     //-------------------------------------------------------------------------
     
     test.start_test("Verify Block Info", 2us);
-    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_fir_filter_i.NOC_ID, "Incorrect NOC_ID Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == rfnoc_block_fir_filter_i.NOC_ID, "Incorrect NOC_ID Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
     test.end_test();
 
 
@@ -240,7 +238,7 @@ module rfnoc_block_fir_filter_tb #(
         test.start_test("Check filter length", 20us);
 
         read_reg(port, REG_FIR_NUM_COEFFS, num_coeffs);
-        test.assert_error(num_coeffs, "Incorrect number of coefficients");
+        `ASSERT_ERROR(num_coeffs, "Incorrect number of coefficients");
 
         // If using symmetric coefficients, send just first half
         if (SYMMETRIC_COEFFS) begin
@@ -302,7 +300,7 @@ module rfnoc_block_fir_filter_tb #(
         blk_ctrl.recv(port, recv_payload, num_bytes);
 
         // Check the length of the packet
-        test.assert_error(
+        `ASSERT_ERROR(
           num_bytes == NUM_COEFFS*4,
           "Received packet didn't have expected length"
         );
@@ -319,12 +317,12 @@ module rfnoc_block_fir_filter_tb #(
           $sformat(
             s, "Incorrect I value received on sample %0d! Expected: %0d, Received: %0d", 
             i, i_coeff, i_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (i_samp == i_coeff) || (i_samp-1 == i_coeff) || (i_samp+1 == i_coeff), s);
           $sformat(
             s, "Incorrect Q value received on sample %0d! Expected: %0d, Received: %0d", 
             i, q_coeff, q_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (q_samp == q_coeff) || (q_samp-1 == q_coeff) || (q_samp+1 == q_coeff), s);
         end
 
@@ -401,7 +399,7 @@ module rfnoc_block_fir_filter_tb #(
         blk_ctrl.recv(port, recv_payload, num_bytes);
 
         // Check the length of the packet
-        test.assert_error(
+        `ASSERT_ERROR(
           num_bytes == NUM_COEFFS*4,
           "Received packet didn't have expected length"
         );
@@ -418,12 +416,12 @@ module rfnoc_block_fir_filter_tb #(
           $sformat(
             s, "Incorrect I value received on sample %0d! Expected: %0d, Received: %0d", 
             i, i_coeff, i_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (i_samp == i_coeff) || (i_samp-1 == i_coeff) || (i_samp+1 == i_coeff), s);
           $sformat(
             s, "Incorrect Q value received on sample %0d! Expected: %0d, Received: %0d", 
             i, q_coeff, q_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (q_samp == q_coeff) || (q_samp-1 == q_coeff) || (q_samp+1 == q_coeff), s);
         end
 
@@ -478,7 +476,7 @@ module rfnoc_block_fir_filter_tb #(
         blk_ctrl.recv(port, recv_payload, num_bytes);
 
         // Check the length of the packet
-        test.assert_error(
+        `ASSERT_ERROR(
           num_bytes == NUM_COEFFS*4,
           "Received packet didn't have expected length"
         );
@@ -497,14 +495,14 @@ module rfnoc_block_fir_filter_tb #(
           $sformat(
             s, "Incorrect I value received on sample %0d! Expected: %0d, Received: %0d", 
             i, coeff_sum, i_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (i_samp == coeff_sum) || (i_samp-1 == coeff_sum) || (i_samp+1 == coeff_sum),
             s
           );
           $sformat(
             s, "Incorrect Q value received on sample %0d! Expected: %0d, Received: %0d", 
             i, coeff_sum, q_samp);
-          test.assert_error(
+          `ASSERT_ERROR(
             (q_samp == coeff_sum) || (q_samp-1 == coeff_sum) || (q_samp+1 == coeff_sum),
             s
           );

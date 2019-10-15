@@ -11,9 +11,8 @@
 
 module rfnoc_block_ddc_tb();
 
-  // Simulation timing
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -176,11 +175,11 @@ module rfnoc_block_ddc_tb();
     end
     // CIC rate cannot be set to 0
     cic_rate = (_decim_rate[7:0] == 8'd0) ? 8'd1 : _decim_rate[7:0];
-    test.assert_error(
+    `ASSERT_ERROR(
       hb_enables <= NUM_HB,
       "Enabled halfbands may not exceed total number of half bands."
     );
-    test.assert_error(
+    `ASSERT_ERROR(
       cic_rate > 0 && cic_rate <= CIC_MAX_DECIM,
       "CIC Decimation rate must be positive, not exceed the max cic decimation rate, and cannot equal 0!"
     );
@@ -236,20 +235,20 @@ module rfnoc_block_ddc_tb();
         if (~drop_partial_packet && (extra_samples > 0)) begin
           blk_ctrl.recv_adv(port, temp_payload, data_bytes, metadata, pkt_info);
           $sformat(s, "Invalid EOB state! Expected %b, Received: %b", 1'b0, pkt_info.eob);
-          test.assert_error(pkt_info.eob == 1'b0, s);
+          `ASSERT_ERROR(pkt_info.eob == 1'b0, s);
         end
         $display("Receiving packet");
         blk_ctrl.recv_adv(port, recv_payload, data_bytes, metadata, pkt_info);
         $display("Received!");
         $sformat(s, "Invalid EOB state! Expected %b, Received: %b", 1'b1, pkt_info.eob);
-        test.assert_error(pkt_info.eob == 1'b1, s);
+        `ASSERT_ERROR(pkt_info.eob == 1'b1, s);
         recv_payload = {temp_payload, recv_payload};
         if (drop_partial_packet) begin
           $sformat(s, "Incorrect packet size! Expected: %0d, Actual: %0d", PKT_SIZE_BYTES/8, recv_payload.size());
-          test.assert_error(recv_payload.size() == PKT_SIZE_BYTES/8, s);
+          `ASSERT_ERROR(recv_payload.size() == PKT_SIZE_BYTES/8, s);
         end else begin
           $sformat(s, "Incorrect packet size! Expected: %0d, Actual: %0d", PKT_SIZE_BYTES/8, recv_payload.size() + extra_samples);
-          test.assert_error(recv_payload.size() == PKT_SIZE_BYTES/8 + extra_samples, s);
+          `ASSERT_ERROR(recv_payload.size() == PKT_SIZE_BYTES/8 + extra_samples, s);
         end
         samples = 64'd0;
         samples_old = 64'd0;
@@ -259,7 +258,7 @@ module rfnoc_block_ddc_tb();
             // Need to check a range of values due to imperfect gain compensation
             $sformat(s, "Ramp word %0d invalid! Expected: %0d-%0d, Received: %0d", 2*i,
                 samples_old[16*j +: 16], samples_old[16*j +: 16]+16'd4, samples[16*j +: 16]);
-            test.assert_error((samples_old[16*j +: 16]+16'd4 >= samples[16*j +: 16]) && (samples >= samples_old[16*j +: 16]), s);
+            `ASSERT_ERROR((samples_old[16*j +: 16]+16'd4 >= samples[16*j +: 16]) && (samples >= samples_old[16*j +: 16]), s);
           end
           samples_old = samples;
         end
@@ -273,11 +272,9 @@ module rfnoc_block_ddc_tb();
   // Test Process
   //---------------------------------------------------------------------------
 
-  TestExec test = new("rfnoc_block_ddc_tb");
-
   initial begin : tb_main
     const int port = 0;
-    test.start_tb();
+    test.start_tb("rfnoc_block_ddc_tb");
 
     // Start the BFMs running
     blk_ctrl.run();
@@ -300,10 +297,10 @@ module rfnoc_block_ddc_tb();
     //-------------------------------------------------------------------------
 
     test.start_test("Verify Block Info", 2us);
-    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_ddc_i.NOC_ID, "Incorrect NOC_ID Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == rfnoc_block_ddc_i.NOC_ID, "Incorrect NOC_ID Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
     test.end_test();
 
 
@@ -315,9 +312,9 @@ module rfnoc_block_ddc_tb();
       logic [63:0] val64;
       test.start_test("Test registers", 10us);
       read_user_reg(port, RB_NUM_HB, val64);
-      test.assert_error(val64 == NUM_HB, "Register NUM_HB didn't read back expected value");
+      `ASSERT_ERROR(val64 == NUM_HB, "Register NUM_HB didn't read back expected value");
       read_user_reg(port, RB_CIC_MAX_DECIM, val64);
-      test.assert_error(val64 == CIC_MAX_DECIM, "Register CIC_MAX_DECIM didn't read back expected value");
+      `ASSERT_ERROR(val64 == CIC_MAX_DECIM, "Register CIC_MAX_DECIM didn't read back expected value");
       test.end_test();
     end
 

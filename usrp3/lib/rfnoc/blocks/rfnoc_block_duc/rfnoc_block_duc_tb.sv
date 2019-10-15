@@ -11,9 +11,8 @@
 
 module rfnoc_block_duc_tb();
 
-  // Simulation timing
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -175,8 +174,8 @@ module rfnoc_block_duc_tb();
 
       // CIC rate cannot be set to 0
       cic_rate = (_interp_rate[7:0] == 8'd0) ? 8'd1 : _interp_rate[7:0];
-      test.assert_error(hb_enables <= NUM_HB, "Enabled halfbands may not exceed total number of half bands.");
-      test.assert_error(cic_rate > 0 && cic_rate <= CIC_MAX_INTERP,
+      `ASSERT_ERROR(hb_enables <= NUM_HB, "Enabled halfbands may not exceed total number of half bands.");
+      `ASSERT_ERROR(cic_rate > 0 && cic_rate <= CIC_MAX_INTERP,
        "CIC Interpolation rate must be positive, not exceed the max cic interpolation rate, and cannot equal 0!");
 
       // Setup DUC
@@ -235,7 +234,7 @@ module rfnoc_block_duc_tb();
 
             // Check the packet size
             $sformat(s, "incorrect (drop) packet size! expected: %0d, actual: %0d", PKT_SIZE_BYTES/8, recv_payload.size());
-            test.assert_error(recv_payload.size() == PKT_SIZE_BYTES/8, s);
+            `ASSERT_ERROR(recv_payload.size() == PKT_SIZE_BYTES/8, s);
 
             // Check the timestamp
             if (has_time) begin
@@ -244,9 +243,9 @@ module rfnoc_block_duc_tb();
               expected_time = start_time + i * SPP;
               $sformat(s, "Incorrect timestamp: has_time = %0d, timestamp = 0x%0X, expected 0x%0X",
                        pkt_info.has_time, pkt_info.timestamp, expected_time);
-              test.assert_error(pkt_info.has_time == 1 && pkt_info.timestamp == expected_time, s);
+              `ASSERT_ERROR(pkt_info.has_time == 1 && pkt_info.timestamp == expected_time, s);
             end else begin
-              test.assert_error(pkt_info.has_time == 0, "Packet has timestamp when it shouldn't");
+              `ASSERT_ERROR(pkt_info.has_time == 0, "Packet has timestamp when it shouldn't");
             end
 
             // Check the sample values
@@ -254,7 +253,7 @@ module rfnoc_block_duc_tb();
             for (int j = 0; j < PKT_SIZE_BYTES/8; j++) begin
               samples = recv_payload[j];
               $sformat(s, "Ramp word %0d invalid! Expected a real value, Received: %0d", 2*j, samples);
-              test.assert_error(samples >= 0, s);
+              `ASSERT_ERROR(samples >= 0, s);
             end
           end
           $display("Check complete");
@@ -268,11 +267,9 @@ module rfnoc_block_duc_tb();
   // Test Process
   //---------------------------------------------------------------------------
 
-  TestExec test = new("rfnoc_block_duc_tb");
-
   initial begin : tb_main
     const int port = 0;
-    test.start_tb();
+    test.start_tb("rfnoc_block_duc_tb");
 
     // Start the BFMs running
     blk_ctrl.run();
@@ -295,10 +292,10 @@ module rfnoc_block_duc_tb();
     //-------------------------------------------------------------------------
 
     test.start_test("Verify Block Info", 2us);
-    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_duc_i.NOC_ID, "Incorrect NOC_ID value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect MTU value");
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == rfnoc_block_duc_i.NOC_ID, "Incorrect NOC_ID value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect MTU value");
     test.end_test();
 
 
@@ -310,9 +307,9 @@ module rfnoc_block_duc_tb();
       logic [63:0] val64;
       test.start_test("Test registers", 10us);
       read_user_reg(port, RB_NUM_HB, val64);
-      test.assert_error(val64 == NUM_HB, "Register NUM_HB didn't read back expected value");
+      `ASSERT_ERROR(val64 == NUM_HB, "Register NUM_HB didn't read back expected value");
       read_user_reg(port, RB_CIC_MAX_INTERP, val64);
-      test.assert_error(val64 ==CIC_MAX_INTERP, "Register RB_CIC_MAX_INTERP didn't read back expected value");
+      `ASSERT_ERROR(val64 ==CIC_MAX_INTERP, "Register RB_CIC_MAX_INTERP didn't read back expected value");
       test.end_test();
     end
 

@@ -8,19 +8,20 @@
 
 `default_nettype none
 
-import PkgTestExec::*;
-import PkgAxiStreamBfm::*;
-import PkgChdrUtils::*;
-import PkgChdrBfm::*;
 
 module axis_pyld_ctxt_converter_tb;
 
   // ----------------------------------------
   // Global settings
   // ----------------------------------------
-  // Simulation Timing
-  timeunit 1ns;
-  timeprecision 1ps;
+  
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
+
+  import PkgTestExec::*;
+  import PkgAxiStreamBfm::*;
+  import PkgChdrUtils::*;
+  import PkgChdrBfm::*;
 
   // Parameters
   localparam bit      VERBOSE           = 0;
@@ -188,9 +189,6 @@ module axis_pyld_ctxt_converter_tb;
     end
   end endgenerate
 
-  // Test Globals
-  TestExec test;
-
   function automatic bit pyld_pkts_equal(
     ref AxiStreamPacket #(MAX_PYLD_W) exp,
     ref AxiStreamPacket #(MAX_PYLD_W) act,
@@ -334,7 +332,7 @@ module axis_pyld_ctxt_converter_tb;
             test.end_timeout(timeout);
             if (VERBOSE) $display("[INST%0d:RxContext:%0d]\n%s", inst, p, rx_ctxt_pkt.sprint());
             if (VERBOSE) $display("[INST%0d:ExpContext:%0d]\n%s", inst, p, ctxt_pkt_arr[p].sprint());
-            test.assert_error(ctxt_pkt_arr[p].equal(rx_ctxt_pkt), "RX context packet did not match TX");
+            `ASSERT_ERROR(ctxt_pkt_arr[p].equal(rx_ctxt_pkt), "RX context packet did not match TX");
           end
         end
       end
@@ -348,7 +346,7 @@ module axis_pyld_ctxt_converter_tb;
             test.end_timeout(timeout);
             if (VERBOSE) $display("[INST%0d:RxPayload:%0d]\n%s", inst, p, rx_pyld_pkt.sprint());
             if (VERBOSE) $display("[INST%0d:ExpPayload:%0d]\n%s", inst, p, pyld_pkt_arr[p].sprint());
-            test.assert_error(pyld_pkts_equal(pyld_pkt_arr[p], rx_pyld_pkt, item_w, nipc), "RX payload packet did not match TX");
+            `ASSERT_ERROR(pyld_pkts_equal(pyld_pkt_arr[p], rx_pyld_pkt, item_w, nipc), "RX payload packet did not match TX");
           end
         end
       end
@@ -368,8 +366,7 @@ module axis_pyld_ctxt_converter_tb;
 
     // Initialize
     // ----------------------------------------
-    test = new("axis_pyld_ctxt_converter_tb");
-    test.start_tb();
+    test.start_tb("axis_pyld_ctxt_converter_tb");
 
     // Reset
     // ----------------------------------------
@@ -381,7 +378,7 @@ module axis_pyld_ctxt_converter_tb;
     while (|rfnoc_data_rst) @(posedge rfnoc_chdr_clk);
     repeat (100) @(posedge rfnoc_chdr_clk);
     test.end_timeout(timeout);
-    test.assert_error(!rfnoc_chdr_rst && !(|rfnoc_data_rst), "Reset did not deassert");
+    `ASSERT_ERROR(!rfnoc_chdr_rst && !(|rfnoc_data_rst), "Reset did not deassert");
     test.end_test();
 
     for (int inst_num = START_INST; inst_num <= STOP_INST; inst_num++) begin
@@ -401,7 +398,7 @@ module axis_pyld_ctxt_converter_tb;
           mst_cfg ? SLOW_STALL_PROB : FAST_STALL_PROB,
           slv_cfg ? SLOW_STALL_PROB : FAST_STALL_PROB
         );
-        test.assert_error(r2c_framer_errors[inst_num] === '0, "Encountered framer errors");
+        `ASSERT_ERROR(r2c_framer_errors[inst_num] === '0, "Encountered framer errors");
         test.end_test();
       end
 
@@ -412,10 +409,10 @@ module axis_pyld_ctxt_converter_tb;
       r2c_flush_timeout[inst_num] = $urandom_range(400, 200);
       r2c_flush_en[inst_num] = 1'b1;
       repeat (100) @(posedge rfnoc_chdr_clk);
-      test.assert_error(r2c_flush_active[inst_num] === 1, "Flushing did not begin on time");
-      test.assert_error(r2c_flush_done[inst_num] === 0, "Flushing ended prematurely");
+      `ASSERT_ERROR(r2c_flush_active[inst_num] === 1, "Flushing did not begin on time");
+      `ASSERT_ERROR(r2c_flush_done[inst_num] === 0, "Flushing ended prematurely");
       repeat (r2c_flush_timeout[inst_num] + 1) @(posedge rfnoc_chdr_clk);
-      test.assert_error(r2c_flush_done[inst_num] === 1, "Flushing did not end on time");
+      `ASSERT_ERROR(r2c_flush_done[inst_num] === 1, "Flushing did not end on time");
       r2c_flush_en[inst_num] = 1'b0;
       @(posedge rfnoc_chdr_clk);
       test.end_test();
@@ -425,10 +422,10 @@ module axis_pyld_ctxt_converter_tb;
       c2r_flush_timeout[inst_num] = $urandom_range(400, 200);
       c2r_flush_en[inst_num] = 1'b1;
       repeat (100) @(posedge rfnoc_data_clk[inst_num]);
-      test.assert_error(c2r_flush_active[inst_num] === 1, "Flushing did not begin on time");
-      test.assert_error(c2r_flush_done[inst_num] === 0, "Flushing ended prematurely");
+      `ASSERT_ERROR(c2r_flush_active[inst_num] === 1, "Flushing did not begin on time");
+      `ASSERT_ERROR(c2r_flush_done[inst_num] === 0, "Flushing ended prematurely");
       repeat (c2r_flush_timeout[inst_num] + 1) @(posedge rfnoc_data_clk[inst_num]);
-      test.assert_error(c2r_flush_done[inst_num] === 1, "Flushing did not end on time");
+      `ASSERT_ERROR(c2r_flush_done[inst_num] === 1, "Flushing did not end on time");
       c2r_flush_en[inst_num] = 1'b0;
       @(posedge rfnoc_data_clk[inst_num]);
       test.end_test();
@@ -438,14 +435,14 @@ module axis_pyld_ctxt_converter_tb;
       r2c_flush_timeout[inst_num] = $urandom_range(400, 200);
       r2c_flush_en[inst_num] = 1'b1;
       repeat (100) @(posedge rfnoc_chdr_clk);
-      test.assert_error(r2c_flush_active[inst_num] === 1, "Flushing did not begin on time");
-      test.assert_error(r2c_flush_done[inst_num] === 0, "Flushing ended prematurely");
+      `ASSERT_ERROR(r2c_flush_active[inst_num] === 1, "Flushing did not begin on time");
+      `ASSERT_ERROR(r2c_flush_done[inst_num] === 0, "Flushing ended prematurely");
       send_recv_data_packets(inst_num, INST_PARAMS[inst_num], NUM_PKTS_PER_TEST/10,
         FAST_STALL_PROB, FAST_STALL_PROB, 1 /*flushing*/
       );
       repeat (NUM_PKTS_PER_TEST/10 * (1<<MTU) * 4) @(posedge rfnoc_chdr_clk);
       repeat (r2c_flush_timeout[inst_num] + 1) @(posedge rfnoc_chdr_clk);
-      test.assert_error(r2c_flush_done[inst_num] === 1, "Flushing did not end on time");
+      `ASSERT_ERROR(r2c_flush_done[inst_num] === 1, "Flushing did not end on time");
       r2c_flush_en[inst_num] = 1'b0;
       @(posedge rfnoc_chdr_clk);
       test.end_test();
@@ -455,7 +452,7 @@ module axis_pyld_ctxt_converter_tb;
       send_recv_data_packets(inst_num, INST_PARAMS[inst_num], NUM_PKTS_PER_TEST/10,
         FAST_STALL_PROB, FAST_STALL_PROB
       );
-      test.assert_error(r2c_framer_errors[inst_num] === '0, "Encountered framer errors");
+      `ASSERT_ERROR(r2c_framer_errors[inst_num] === '0, "Encountered framer errors");
       test.end_test();
     end
 

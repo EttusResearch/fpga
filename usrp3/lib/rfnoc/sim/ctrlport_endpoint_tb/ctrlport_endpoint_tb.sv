@@ -8,15 +8,15 @@
 
 `default_nettype none
 
-import PkgTestExec::*;
-import PkgChdrUtils::*;
-import PkgAxisCtrlBfm::*;
 
 module ctrlport_endpoint_tb;
 
-  // Simulation Timing
-  timeunit 1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
+
+  import PkgTestExec::*;
+  import PkgChdrUtils::*;
+  import PkgAxisCtrlBfm::*;
 
   // Parameters
   localparam [9:0]  THIS_PORTID = 10'h17;
@@ -198,9 +198,6 @@ module ctrlport_endpoint_tb;
   assign axis_req_tready = axis_resp_tready;
   // ----------------------------
 
-  // Test Globals
-  TestExec test;
-
   // Task to send a ctrlport request and receive a response
   task ctrlport_transact(
     input         wr,
@@ -239,9 +236,9 @@ module ctrlport_endpoint_tb;
         $display("%s(addr=%0x, data=%0x, portid=%0x, has_time=%0b) = %0x (Status = %0d)",
           (rd&wr)?"WRRD":(rd?"RD":"WR"), addr, data, portid, has_time, resp_data, resp_status);
       end
-      test.assert_error(cp_mst_resp_status == addr[19:18],
+      `ASSERT_ERROR(cp_mst_resp_status == addr[19:18],
         "Received Ctrlport response had the wrong status");
-      test.assert_error(cp_mst_resp_data == data,
+      `ASSERT_ERROR(cp_mst_resp_data == data,
         "Received Ctrlport response had the wrong data");
     end
   endtask
@@ -340,7 +337,7 @@ module ctrlport_endpoint_tb;
     // Validate contents
     if (exp_pkt != null) begin
       if (VERBOSE) begin $display("[EXPECTED]"); exp_pkt.print(); end
-      test.assert_error(exp_pkt.equal(rx_pkt),
+      `ASSERT_ERROR(exp_pkt.equal(rx_pkt),
         "Received AXIS-Ctrl packet was incorrect");
     end
   endtask
@@ -359,8 +356,7 @@ module ctrlport_endpoint_tb;
 
     // Initialize
     // ----------------------------------------
-    test = new("ctrlport_endpoint_tb");
-    test.start_tb();
+    test.start_tb("ctrlport_endpoint_tb");
 
     // Start the BFMs
     axis_ctrl_bfm = new(m_ctrl, s_ctrl);
@@ -376,7 +372,7 @@ module ctrlport_endpoint_tb;
     while (rfnoc_ctrl_rst) @(posedge rfnoc_ctrl_clk);
     while (ctrlport_rst) @(posedge ctrlport_clk);
     test.end_timeout(timeout);
-    test.assert_error(!ctrlport_rst && !rfnoc_ctrl_rst, "Reset did not deassert");
+    `ASSERT_ERROR(!ctrlport_rst && !rfnoc_ctrl_rst, "Reset did not deassert");
     test.end_test();
 
     // AXIS-Ctrl Slave Test

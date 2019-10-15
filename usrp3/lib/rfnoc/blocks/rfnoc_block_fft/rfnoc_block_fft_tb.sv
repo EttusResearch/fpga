@@ -10,9 +10,8 @@
 
 module rfnoc_block_fft_tb();
 
-  // Simulation timing
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -138,8 +137,6 @@ module rfnoc_block_fft_tb();
   // Test Process
   //---------------------------------------------------------------------------
 
-  TestExec test = new("rfnoc_block_fft_tb");
-
   task automatic send_sine_wave (
     input int unsigned port
   );
@@ -172,7 +169,7 @@ module rfnoc_block_fft_tb();
         for (int n = 0; n < NUM_ITERATIONS; n++) begin
           blk_ctrl.recv(port, recv_payload, data_bytes);
 
-          test.assert_error(recv_payload.size * 2 == FFT_SIZE, "received wrong amount of data");
+          `ASSERT_ERROR(recv_payload.size * 2 == FFT_SIZE, "received wrong amount of data");
 
           for (int k = 0; k < FFT_SIZE/2; k++) begin
             chdr_word_t payload_word;
@@ -187,12 +184,12 @@ module rfnoc_block_fft_tb();
                 // the real part of the corresponding 1/8th sample rate FFT bin should always be greater than 0 and
                 // the complex part equal to 0.
                 
-                test.assert_error(real_val > 32'd0, "FFT bin real part is not greater than 0!");
-                test.assert_error(cplx_val == 32'd0, "FFT bin complex part is not 0!");
+                `ASSERT_ERROR(real_val > 32'd0, "FFT bin real part is not greater than 0!");
+                `ASSERT_ERROR(cplx_val == 32'd0, "FFT bin complex part is not 0!");
               end else begin
                 // Assert all other FFT bins should be 0 for both complex and real parts
-                test.assert_error(real_val == 32'd0, "FFT bin real part is not 0!");
-                test.assert_error(cplx_val == 32'd0, "FFT bin complex part is not 0!");
+                `ASSERT_ERROR(real_val == 32'd0, "FFT bin real part is not 0!");
+                `ASSERT_ERROR(cplx_val == 32'd0, "FFT bin complex part is not 0!");
               end
             end
           end
@@ -203,7 +200,7 @@ module rfnoc_block_fft_tb();
 
   initial begin : tb_main
     const int port = 0;
-    test.start_tb();
+    test.start_tb("rfnoc_block_fft_tb");
 
     // Start the BFMs running
     blk_ctrl.run();
@@ -225,10 +222,10 @@ module rfnoc_block_fft_tb();
     //-------------------------------------------------------------------------
     
     test.start_test("Verify Block Info", 2us);
-    test.assert_error(blk_ctrl.get_noc_id() == DUT.NOC_ID, "Incorrect NOC_ID Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == DUT.NOC_ID, "Incorrect NOC_ID Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
     test.end_test();
 
     //-------------------------------------------------------------------------

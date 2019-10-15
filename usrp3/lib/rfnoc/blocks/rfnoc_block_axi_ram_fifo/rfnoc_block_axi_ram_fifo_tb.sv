@@ -21,9 +21,8 @@ module rfnoc_block_axi_ram_fifo_tb #(
   parameter bit BIST          = 1
 );
 
-  // Simulation timing
-  timeunit      1ns;
-  timeprecision 1ps;
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
 
   import PkgTestExec::*;
   import PkgChdrUtils::*;
@@ -68,9 +67,15 @@ module rfnoc_block_axi_ram_fifo_tb #(
   bit rfnoc_ctrl_clk;
   bit mem_clk, mem_rst;
 
-  sim_clock_gen #(CHDR_CLK_PER) rfnoc_chdr_clk_gen (.clk(rfnoc_chdr_clk), .rst());
-  sim_clock_gen #(CTRL_CLK_PER) rfnoc_ctrl_clk_gen (.clk(rfnoc_ctrl_clk), .rst());
-  sim_clock_gen #(MEM_CLK_PER)  mem_clk_gen        (.clk(mem_clk),        .rst(mem_rst));
+  // Don't start the clocks automatically (AUTOSTART=0), since we expect
+  // multiple instances of this testbench to run in sequence. They will be
+  // started before the first test.
+  sim_clock_gen #(.PERIOD(CHDR_CLK_PER), .AUTOSTART(0))
+    rfnoc_chdr_clk_gen (.clk(rfnoc_chdr_clk), .rst());
+  sim_clock_gen #(.PERIOD(CTRL_CLK_PER), .AUTOSTART(0))
+    rfnoc_ctrl_clk_gen (.clk(rfnoc_ctrl_clk), .rst());
+  sim_clock_gen #(.PERIOD(MEM_CLK_PER), .AUOSTART(0))
+    mem_clk_gen        (.clk(mem_clk),        .rst(mem_rst));
 
 
   //---------------------------------------------------------------------------
@@ -374,10 +379,10 @@ module rfnoc_block_axi_ram_fifo_tb #(
   
   task test_block_info();
     test.start_test("Verify Block Info", 2us);
-    test.assert_error(blk_ctrl.get_noc_id() == rfnoc_block_axi_ram_fifo_i.NOC_ID, "Incorrect NOC_ID Value");
-    test.assert_error(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
-    test.assert_error(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
-    test.assert_error(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
+    `ASSERT_ERROR(blk_ctrl.get_noc_id() == rfnoc_block_axi_ram_fifo_i.NOC_ID, "Incorrect NOC_ID Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_i() == NUM_PORTS, "Incorrect NUM_DATA_I Value");
+    `ASSERT_ERROR(blk_ctrl.get_num_data_o() == NUM_PORTS, "Incorrect NUM_DATA_O Value");
+    `ASSERT_ERROR(blk_ctrl.get_mtu() == MTU, "Incorrect MTU Value");
     test.end_test();
   endtask : test_block_info
 
@@ -389,21 +394,21 @@ module rfnoc_block_axi_ram_fifo_tb #(
   task test_unused();
     test.start_test("Check unused/static signals");
     for (int port = 0; port < NUM_PORTS; port++) begin
-      test.assert_error(m_axi_awlock   [port*1 +: 1] == 1'b0, "m_axi_awlock value unexpected");
-      test.assert_error(m_axi_awcache  [port*4 +: 4] == 4'hF, "m_axi_awcache value unexpected");
-      test.assert_error(m_axi_awprot   [port*3 +: 3] == 3'h2, "m_axi_awprot value unexpected");
-      test.assert_error(m_axi_awqos    [port*4 +: 4] == 4'h0, "m_axi_awqos value unexpected");
-      test.assert_error(m_axi_awregion [port*4 +: 4] == 4'h0, "m_axi_awregion value unexpected");
-      test.assert_error(m_axi_awuser   [port*1 +: 1] == 1'b0, "m_axi_awuser value unexpected");
+      `ASSERT_ERROR(m_axi_awlock   [port*1 +: 1] == 1'b0, "m_axi_awlock value unexpected");
+      `ASSERT_ERROR(m_axi_awcache  [port*4 +: 4] == 4'hF, "m_axi_awcache value unexpected");
+      `ASSERT_ERROR(m_axi_awprot   [port*3 +: 3] == 3'h2, "m_axi_awprot value unexpected");
+      `ASSERT_ERROR(m_axi_awqos    [port*4 +: 4] == 4'h0, "m_axi_awqos value unexpected");
+      `ASSERT_ERROR(m_axi_awregion [port*4 +: 4] == 4'h0, "m_axi_awregion value unexpected");
+      `ASSERT_ERROR(m_axi_awuser   [port*1 +: 1] == 1'b0, "m_axi_awuser value unexpected");
       //
-      test.assert_error(m_axi_wuser    [port*1 +: 1] == 1'b0, "m_axi_wuser value unexpected");
+      `ASSERT_ERROR(m_axi_wuser    [port*1 +: 1] == 1'b0, "m_axi_wuser value unexpected");
       //
-      test.assert_error(m_axi_arlock   [port*1 +: 1] == 1'b0, "m_axi_arlock value unexpected");
-      test.assert_error(m_axi_arcache  [port*4 +: 4] == 4'hF, "m_axi_arcache value unexpected");
-      test.assert_error(m_axi_arprot   [port*3 +: 3] == 3'h2, "m_axi_arprot value unexpected");
-      test.assert_error(m_axi_arqos    [port*4 +: 4] == 4'h0, "m_axi_arqos value unexpected");
-      test.assert_error(m_axi_arregion [port*4 +: 4] == 4'h0, "m_axi_arregion value unexpected");
-      test.assert_error(m_axi_aruser   [port*1 +: 1] == 1'b0, "m_axi_aruser value unexpected");
+      `ASSERT_ERROR(m_axi_arlock   [port*1 +: 1] == 1'b0, "m_axi_arlock value unexpected");
+      `ASSERT_ERROR(m_axi_arcache  [port*4 +: 4] == 4'hF, "m_axi_arcache value unexpected");
+      `ASSERT_ERROR(m_axi_arprot   [port*3 +: 3] == 3'h2, "m_axi_arprot value unexpected");
+      `ASSERT_ERROR(m_axi_arqos    [port*4 +: 4] == 4'h0, "m_axi_arqos value unexpected");
+      `ASSERT_ERROR(m_axi_arregion [port*4 +: 4] == 4'h0, "m_axi_arregion value unexpected");
+      `ASSERT_ERROR(m_axi_aruser   [port*1 +: 1] == 1'b0, "m_axi_aruser value unexpected");
     end
     test.end_test();
   endtask : test_unused
@@ -427,7 +432,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
       expected32[REG_FIFO_MAGIC_POS +: REG_FIFO_MAGIC_W] = 16'hF1F0;
       expected32[REG_FIFO_BIST_PRSNT_POS] = (BIST != 0);
       read_reg(port, REG_FIFO_INFO, val32);
-      test.assert_error(val32 == expected32, "Initial value for REG_FIFO_INFO is not correct");
+      `ASSERT_ERROR(val32 == expected32, "Initial value for REG_FIFO_INFO is not correct");
 
       //
       // REG_FIFO_READ_SUPPRESS
@@ -436,19 +441,19 @@ module rfnoc_block_axi_ram_fifo_tb #(
       expected32[REG_FIFO_IN_FIFO_SIZE_POS+:REG_FIFO_IN_FIFO_SIZE_W] = IN_FIFO_SIZE;
       expected32[REG_FIFO_SUPPRESS_THRESH_POS+:REG_FIFO_SUPPRESS_THRESH_W] = 0;
       read_reg(port, REG_FIFO_READ_SUPPRESS, val32);
-      test.assert_error(val32 == expected32, "Initial value for REG_FIFO_READ_SUPPRESS is not correct");
+      `ASSERT_ERROR(val32 == expected32, "Initial value for REG_FIFO_READ_SUPPRESS is not correct");
 
       temp32 = expected32;
       expected32[REG_FIFO_SUPPRESS_THRESH_POS+:REG_FIFO_SUPPRESS_THRESH_W] = 
         ~val32[REG_FIFO_SUPPRESS_THRESH_POS+:REG_FIFO_SUPPRESS_THRESH_W];
       write_reg(port, REG_FIFO_READ_SUPPRESS, expected32);
       read_reg(port, REG_FIFO_READ_SUPPRESS, val32);
-      test.assert_error(val32 == expected32, "REG_FIFO_READ_SUPPRESS did not update");
+      `ASSERT_ERROR(val32 == expected32, "REG_FIFO_READ_SUPPRESS did not update");
 
       expected32 = temp32;
       write_reg(port, REG_FIFO_READ_SUPPRESS, expected32);
       read_reg(port, REG_FIFO_READ_SUPPRESS, val32);
-      test.assert_error(val32 == expected32, "REG_FIFO_READ_SUPPRESS did not reset");
+      `ASSERT_ERROR(val32 == expected32, "REG_FIFO_READ_SUPPRESS did not reset");
 
       //
       // REG_FIFO_MEM_SIZE
@@ -457,88 +462,88 @@ module rfnoc_block_axi_ram_fifo_tb #(
       expected32[REG_FIFO_DATA_SIZE_POS +: REG_FIFO_DATA_SIZE_W] = MEM_DATA_W;
       expected32[REG_FIFO_ADDR_SIZE_POS +: REG_FIFO_ADDR_SIZE_W] = MEM_ADDR_W;
       read_reg(port, REG_FIFO_MEM_SIZE, val32);
-      test.assert_error(val32 == expected32, "Incorrect REG_FIFO_MEM_SIZE value!");
+      `ASSERT_ERROR(val32 == expected32, "Incorrect REG_FIFO_MEM_SIZE value!");
 
       //
       // REG_FIFO_TIMEOUT
       //
       expected32 = BURST_TIMEOUT;
       read_reg(port, REG_FIFO_TIMEOUT, val32);
-      test.assert_error(val32 == expected32, "Initial value for REG_FIFO_TIMEOUT is not correct");
+      `ASSERT_ERROR(val32 == expected32, "Initial value for REG_FIFO_TIMEOUT is not correct");
 
       write_reg(port, REG_FIFO_TIMEOUT, {REG_TIMEOUT_W{1'b1}});
       read_reg(port, REG_FIFO_TIMEOUT, val32);
-      test.assert_error(val32 == {REG_TIMEOUT_W{1'b1}}, "REG_FIFO_TIMEOUT did not update");
+      `ASSERT_ERROR(val32 == {REG_TIMEOUT_W{1'b1}}, "REG_FIFO_TIMEOUT did not update");
 
       write_reg(port, REG_FIFO_TIMEOUT, expected32);
       read_reg(port, REG_FIFO_TIMEOUT, val32);
-      test.assert_error(val32 == expected32, "REG_FIFO_TIMEOUT did not reset");
+      `ASSERT_ERROR(val32 == expected32, "REG_FIFO_TIMEOUT did not reset");
 
       //
       // REG_FIFO_FULLNESS
       //
       read_reg_64(port, REG_FIFO_FULLNESS_LO, val64);
-      test.assert_error(val64 == 0, "Incorrect REG_FIFO_FULLNESS value!");
+      `ASSERT_ERROR(val64 == 0, "Incorrect REG_FIFO_FULLNESS value!");
 
       //
       // REG_FIFO_ADDR_BASE
       //
       expected64 = port * 2**FIFO_ADDR_W;
       read_reg_64(port, REG_FIFO_ADDR_BASE_LO, val64);
-      test.assert_error(val64 == expected64, "Initial value for REG_FIFO_ADDR_BASE is not correct");
+      `ASSERT_ERROR(val64 == expected64, "Initial value for REG_FIFO_ADDR_BASE is not correct");
 
       write_reg_64(port, REG_FIFO_ADDR_BASE_LO, {MEM_ADDR_W{1'b1}});
       read_reg_64(port, REG_FIFO_ADDR_BASE_LO, val64);
-      test.assert_error(val64 == {MEM_ADDR_W{1'b1}}, "REG_FIFO_ADDR_BASE did not update");
+      `ASSERT_ERROR(val64 == {MEM_ADDR_W{1'b1}}, "REG_FIFO_ADDR_BASE did not update");
 
       write_reg_64(port, REG_FIFO_ADDR_BASE_LO, expected64);
       read_reg_64(port, REG_FIFO_ADDR_BASE_LO, val64);
-      test.assert_error(val64 == expected64, "REG_FIFO_ADDR_BASE did not reset");
+      `ASSERT_ERROR(val64 == expected64, "REG_FIFO_ADDR_BASE did not reset");
 
       //
       // REG_FIFO_ADDR_MASK
       //
       expected64 = {FIFO_ADDR_W{1'b1}};
       read_reg_64(port, REG_FIFO_ADDR_MASK_LO, val64);
-      test.assert_error(val64 == expected64, "Initial value for REG_FIFO_ADDR_MASK_LO is not correct");
+      `ASSERT_ERROR(val64 == expected64, "Initial value for REG_FIFO_ADDR_MASK_LO is not correct");
 
       // Set to the max value
       write_reg_64(port, REG_FIFO_ADDR_MASK_LO, {MEM_ADDR_W{1'b1}});
       read_reg_64(port, REG_FIFO_ADDR_MASK_LO, val64);
-      test.assert_error(val64 == {MEM_ADDR_W{1'b1}}, "REG_FIFO_ADDR_MASK_LO did not update");
+      `ASSERT_ERROR(val64 == {MEM_ADDR_W{1'b1}}, "REG_FIFO_ADDR_MASK_LO did not update");
 
       // Set to the min value
       write_reg_64(port, REG_FIFO_ADDR_MASK_LO, 0);
       read_reg_64(port, REG_FIFO_ADDR_MASK_LO, val64);
       // Coerce to the minimum allowed value
       temp64 = rfnoc_block_axi_ram_fifo_i.gen_ram_fifos[0].axi_ram_fifo_i.FIFO_ADDR_MASK_MIN;
-      test.assert_error(val64 == temp64, "REG_FIFO_ADDR_MASK_LO did not update");
+      `ASSERT_ERROR(val64 == temp64, "REG_FIFO_ADDR_MASK_LO did not update");
 
       write_reg_64(port, REG_FIFO_ADDR_MASK_LO, expected64);
       read_reg_64(port, REG_FIFO_ADDR_MASK_LO, val64);
-      test.assert_error(val64 == expected64, "REG_FIFO_ADDR_MASK_LO did not reset");
+      `ASSERT_ERROR(val64 == expected64, "REG_FIFO_ADDR_MASK_LO did not reset");
 
       //
       // REG_FIFO_PACKET_CNT
       //
       read_reg(port, REG_FIFO_PACKET_CNT, val32);
-      test.assert_error(val32 == 0, "Incorrect REG_FIFO_PACKET_CNT value!");
+      `ASSERT_ERROR(val32 == 0, "Incorrect REG_FIFO_PACKET_CNT value!");
 
       if (BIST) begin
         read_reg(port, REG_BIST_CTRL, val32);
-        test.assert_error(val32 == 0, "Initial value for REG_BIST_CTRL is not correct");
+        `ASSERT_ERROR(val32 == 0, "Initial value for REG_BIST_CTRL is not correct");
         read_reg(port, REG_BIST_CLK_RATE, val32);
-        test.assert_error(val32 == MEM_CLK_RATE, "Initial value for REG_BIST_CLK_RATE is not correct");
+        `ASSERT_ERROR(val32 == MEM_CLK_RATE, "Initial value for REG_BIST_CLK_RATE is not correct");
         read_reg_64(port, REG_BIST_NUM_BYTES_LO, val64);
-        test.assert_error(val64 == 0, "Initial value for REG_BIST_NUM_BYTES is not correct");
+        `ASSERT_ERROR(val64 == 0, "Initial value for REG_BIST_NUM_BYTES is not correct");
         read_reg_64(port, REG_BIST_TX_BYTE_COUNT_LO, val64);
-        test.assert_error(val64 == 0, "Initial value for REG_BIST_TX_BYTE_COUNT is not correct");
+        `ASSERT_ERROR(val64 == 0, "Initial value for REG_BIST_TX_BYTE_COUNT is not correct");
         read_reg_64(port, REG_BIST_RX_BYTE_COUNT_LO, val64);
-        test.assert_error(val64 == 0, "Initial value for REG_BIST_RX_BYTE_COUNT is not correct");
+        `ASSERT_ERROR(val64 == 0, "Initial value for REG_BIST_RX_BYTE_COUNT is not correct");
         read_reg_64(port, REG_BIST_ERROR_COUNT_LO, val64);
-        test.assert_error(val64 == 0, "Initial value for REG_BIST_ERROR_COUNT is not correct");
+        `ASSERT_ERROR(val64 == 0, "Initial value for REG_BIST_ERROR_COUNT is not correct");
         read_reg_64(port, REG_BIST_CYCLE_COUNT_LO, val64);
-        test.assert_error(val64 == 0, "Initial value for REG_BIST_CYCLE_COUNT is not correct");
+        `ASSERT_ERROR(val64 == 0, "Initial value for REG_BIST_CYCLE_COUNT is not correct");
       end
     end
 
@@ -585,7 +590,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
         int data_bytes;
         blk_ctrl.recv(port, recv_data, data_bytes);
 
-        test.assert_error(
+        `ASSERT_ERROR(
           data_bytes == PKT_SIZE_BYTES, 
           "Length didn't match expected value"
         );
@@ -594,7 +599,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
           if (recv_data[i] != test_data[count]) begin
             $display("Expected %X, received %X on port %0d", test_data[count], recv_data[i], port);
           end
-          test.assert_error(
+          `ASSERT_ERROR(
             recv_data[i] == test_data[count], 
             "Received data doesn't match expected value"
           );
@@ -603,7 +608,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
       // Make sure the packet count updated
       read_reg(port, REG_FIFO_PACKET_CNT, val32);
-      test.assert_error(val32 > 0, "REG_FIFO_PACKET_CNT didn't update");
+      `ASSERT_ERROR(val32 > 0, "REG_FIFO_PACKET_CNT didn't update");
     end
 
     test.end_test();
@@ -627,11 +632,11 @@ module rfnoc_block_axi_ram_fifo_tb #(
       blk_ctrl.send(port, test_data, 1);
       blk_ctrl.recv(port, recv_data, data_bytes);
 
-      test.assert_error(
+      `ASSERT_ERROR(
         data_bytes == 1 && recv_data.size() == CHDR_W/$bits(chdr_word_t), 
         "Length didn't match expected value"
       );
-      test.assert_error(
+      `ASSERT_ERROR(
         recv_data[0][7:0] == test_data[0][7:0], 
         "Received data doesn't match expected value"
       );
@@ -698,7 +703,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
     for (int port = 0; port < NUM_PORTS; port++) begin
       read_reg_64(port, REG_FIFO_FULLNESS_LO, val64);
       // FIFO is full once it comes within 256 words of being full
-      test.assert_error(val64 >= (2**FIFO_ADDR_W / (MEM_DATA_W/8)) - 256, "FIFO not reading full");
+      `ASSERT_ERROR(val64 >= (2**FIFO_ADDR_W / (MEM_DATA_W/8)) - 256, "FIFO not reading full");
     end
 
     // Restore the input/output rates
@@ -724,13 +729,13 @@ module rfnoc_block_axi_ram_fifo_tb #(
         end
 
         // Check the length
-        test.assert_error(
+        `ASSERT_ERROR(
           data_bytes == expected_length, 
           "Length didn't match expected value"
         );
 
         for (int i = 0; i < recv_data.size(); i++, count++) begin
-          test.assert_error(
+          `ASSERT_ERROR(
             recv_data[i] == test_data[port][count], 
             "Received data doesn't match expected value"
           );
@@ -773,7 +778,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
     wait (!s_rfnoc_chdr_tvalid || !s_rfnoc_chdr_tready);
 
     // Make sure nothing made it through
-    test.assert_error(blk_ctrl.num_received(port) == 0, "Read suppression failed");
+    `ASSERT_ERROR(blk_ctrl.num_received(port) == 0, "Read suppression failed");
 
     // Turn down the threshold 
     val32[REG_FIFO_SUPPRESS_THRESH_POS +: REG_FIFO_SUPPRESS_THRESH_W] = {REG_FIFO_SUPPRESS_THRESH_W{1'b0}};
@@ -791,7 +796,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
         if (recv_data[i] != test_data[count]) begin
           $display("Expected %X, received %X on port %0d", test_data[count], recv_data[i], port);
         end
-        test.assert_error(
+        `ASSERT_ERROR(
           recv_data[i] == test_data[count], 
           "Received data doesn't match expected value"
         );
@@ -897,7 +902,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
           data_queue.get(trans);
 
           // Check the length
-          test.assert_error(
+          `ASSERT_ERROR(
             num_bytes == trans.num_bytes, 
             "Length didn't match expected value"
           );
@@ -907,7 +912,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
           // number of words so that we ignore any extra at the end.
           num_words = int'($ceil(real'(num_bytes)/($bits(chdr_word_t)/8)));
           for (int i = 0; i < num_words; i++) begin
-            test.assert_error(
+            `ASSERT_ERROR(
               recv_data[i] == trans.data[i],
               "Received data doesn't match expected value"
             );
@@ -958,7 +963,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
     // Make sure running bit gets set
     read_reg(port, REG_BIST_CTRL, val32);
-    test.assert_error(val32[REG_BIST_RUNNING_POS] == 1'b1, "RUNNING bit not set");
+    `ASSERT_ERROR(val32[REG_BIST_RUNNING_POS] == 1'b1, "RUNNING bit not set");
 
     // Wait for the test to complete
     do begin
@@ -967,13 +972,13 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
     // Check the results
     read_reg_64(port, REG_BIST_TX_BYTE_COUNT_LO, val64);
-    test.assert_error(val64 == num_bytes, "TX_BYTE_COUNT is not correct");
+    `ASSERT_ERROR(val64 == num_bytes, "TX_BYTE_COUNT is not correct");
     read_reg_64(port, REG_BIST_RX_BYTE_COUNT_LO, val64);
-    test.assert_error(val64 == num_bytes, "RX_BYTE_COUNT is not correct");
+    `ASSERT_ERROR(val64 == num_bytes, "RX_BYTE_COUNT is not correct");
     read_reg_64(port, REG_BIST_ERROR_COUNT_LO, val64);
-    test.assert_error(val64 == 0, "ERROR_COUNT is not zero");
+    `ASSERT_ERROR(val64 == 0, "ERROR_COUNT is not zero");
     read_reg_64(port, REG_BIST_CYCLE_COUNT_LO, val64);
-    test.assert_error(val64 > 0, "CYCLE_COUNT did not update");
+    `ASSERT_ERROR(val64 > 0, "CYCLE_COUNT did not update");
 
     // TODO:
     $warning("BIST Continuous mode is NOT being tested");
@@ -1018,7 +1023,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
     // Make sure running bit gets set
     read_reg(port, REG_BIST_CTRL, val32);
-    test.assert_error(val32[REG_BIST_RUNNING_POS] == 1'b1, "RUNNING bit not set");
+    `ASSERT_ERROR(val32[REG_BIST_RUNNING_POS] == 1'b1, "RUNNING bit not set");
 
     // Wait for the test to complete
     do begin
@@ -1027,13 +1032,13 @@ module rfnoc_block_axi_ram_fifo_tb #(
 
     // Check the results
     read_reg_64(port, REG_BIST_TX_BYTE_COUNT_LO, val64);
-    test.assert_error(val64 == num_bytes, "TX_BYTE_COUNT is not correct");
+    `ASSERT_ERROR(val64 == num_bytes, "TX_BYTE_COUNT is not correct");
     read_reg_64(port, REG_BIST_RX_BYTE_COUNT_LO, rx_byte_count);
-    test.assert_error(rx_byte_count == num_bytes, "RX_BYTE_COUNT is not correct");
+    `ASSERT_ERROR(rx_byte_count == num_bytes, "RX_BYTE_COUNT is not correct");
     read_reg_64(port, REG_BIST_ERROR_COUNT_LO, val64);
-    test.assert_error(val64 == 0, "ERROR_COUNT is not zero");
+    `ASSERT_ERROR(val64 == 0, "ERROR_COUNT is not zero");
     read_reg_64(port, REG_BIST_CYCLE_COUNT_LO, cycle_count);
-    test.assert_error(cycle_count > 0, "CYCLE_COUNT did not update");
+    `ASSERT_ERROR(cycle_count > 0, "CYCLE_COUNT did not update");
 
     // Throughput = num_bytes / time = num_bytes / (num_cyles * period)
     throughput = real'(rx_byte_count) / (real'(cycle_count) / real'(MEM_CLK_RATE));
@@ -1047,7 +1052,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
     $display("BIST Throughput: %0.1f MB/s", throughput / 1.0e6);
     $display("BIST Efficiency: %0.1f %%", efficiency * 100.0 );
 
-    test.assert_error(efficiency > 0.95, "BIST efficiency was lower than expected");
+    `ASSERT_ERROR(efficiency > 0.95, "BIST efficiency was lower than expected");
 
     // Restore the memory stall probability
     gen_sim_axi_ram[port].sim_axi_ram_i.set_stall_prob(STALL_PROB);
@@ -1060,11 +1065,23 @@ module rfnoc_block_axi_ram_fifo_tb #(
   // Main Test Process
   //---------------------------------------------------------------------------
 
-  TestExec test = new("rfnoc_block_axi_ram_fifo_tb");
-
   initial begin : tb_main
     const int port = 0;
-    test.start_tb();
+    string tb_name;
+
+    // Generate a string for the name of this instance of the testbench
+    tb_name = $sformatf(
+      "rfnoc_block_axi_ram_fifo_tb\nCHDR_W = %0D, NUM_PORTS = %0D, MEM_DATA_W = %0D, MEM_ADDR_W = %0D, FIFO_ADDR_W = %0D, IN_FIFO_SIZE = %0D, OUT_FIFO_SIZE = %0D, OVERFLOW = %0D, BIST = %0D",
+      CHDR_W, NUM_PORTS, MEM_DATA_W, MEM_ADDR_W, FIFO_ADDR_W, IN_FIFO_SIZE, OUT_FIFO_SIZE, OVERFLOW, BIST
+    );
+    test.start_tb(tb_name);
+
+    // Don't start the clocks until after start_tb() returns. This ensures that
+    // the clocks aren't toggling while other instances of this testbench are
+    // running, which speeds up simulation time.
+    rfnoc_chdr_clk_gen.start();
+    rfnoc_ctrl_clk_gen.start();
+    mem_clk_gen.start();
 
     // Start the BFMs running
     blk_ctrl.run();

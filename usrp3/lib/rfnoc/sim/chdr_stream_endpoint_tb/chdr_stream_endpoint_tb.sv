@@ -8,18 +8,19 @@
 
 `default_nettype none
 
-import PkgTestExec::*;
-import PkgChdrUtils::*;
-import PkgChdrBfm::*;
 
 module chdr_stream_endpoint_tb;
 
   // ----------------------------------------
   // Global settings
   // ----------------------------------------
-  // Simulation Timing
-  timeunit 1ns;
-  timeprecision 1ps;
+  
+  // Include macros and time declarations for use with PkgTestExec
+  `include "test_exec.svh"
+
+  import PkgTestExec::*;
+  import PkgChdrUtils::*;
+  import PkgChdrBfm::*;
 
   // Clocks and resets
   bit rfnoc_chdr_clk, rfnoc_chdr_rst;
@@ -240,7 +241,6 @@ module chdr_stream_endpoint_tb;
   // ----------------------------------------
   // BFMs and Test Models
   // ----------------------------------------
-  TestExec test;
 
   ChdrBfm #(CHDR_W) a0_data_bfm = new(m_a0_data, s_a0_data);
   ChdrBfm #(CHDR_W) b0_data_bfm = new(m_b0_data, s_b0_data);
@@ -327,7 +327,7 @@ module chdr_stream_endpoint_tb;
 
     // Send the packet and ensure that error counts are zero
     send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-    test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+    `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
       "Check Errs: Mgmt header was incorrect");
     seq_err_count = 32'hx;
     route_err_count = 32'hx;
@@ -404,7 +404,7 @@ module chdr_stream_endpoint_tb;
       if (VERBOSE) begin $write("ExpRx"); exp_chdr.print(); end
 
       // Validate contents
-      test.assert_error(exp_chdr.equal(rx_chdr),
+      `ASSERT_ERROR(exp_chdr.equal(rx_chdr),
         "Received CHDR control packet was incorrect");
     end
   endtask
@@ -479,12 +479,12 @@ module chdr_stream_endpoint_tb;
           test.end_timeout(rx_timeout);
           // Validate the packet
           if (VERBOSE) $display("%s:Rx%0d:%0d:",(src_epid == EPID_A)?"A":"B", vc, rxi, rx_chdr.sprint());
-          test.assert_error(ignore_seq_route_errs || rx_chdr.header.dst_epid == dst_epid, "Data Pkt: dst_epid was incorrect");
-          test.assert_error(ignore_seq_route_errs || (rx_chdr.header.seq_num  == rxi + seq_num_start), "Data Pkt: seq_num was incorrect");
+          `ASSERT_ERROR(ignore_seq_route_errs || rx_chdr.header.dst_epid == dst_epid, "Data Pkt: dst_epid was incorrect");
+          `ASSERT_ERROR(ignore_seq_route_errs || (rx_chdr.header.seq_num  == rxi + seq_num_start), "Data Pkt: seq_num was incorrect");
           if (rx_chdr.header.pkt_type == CHDR_DATA_WITH_TS)
-            test.assert_error(rx_chdr.timestamp  == rxi, "Data Pkt: timestamp was incorrect");
+            `ASSERT_ERROR(rx_chdr.timestamp  == rxi, "Data Pkt: timestamp was incorrect");
           foreach (rx_chdr.data[i]) begin
-            test.assert_error(rx_chdr.data[i] == {rxi << 16, i[15:0]}, "Data Pkt: payload was incorrect");
+            `ASSERT_ERROR(rx_chdr.data[i] == {rxi << 16, i[15:0]}, "Data Pkt: payload was incorrect");
           end
         end
       end
@@ -543,8 +543,7 @@ module chdr_stream_endpoint_tb;
 
     // Initialize
     // ----------------------------------------
-    test = new("chdr_stream_endpoint_tb");
-    test.start_tb();
+    test.start_tb("chdr_stream_endpoint_tb");
 
     // Start the BFMs
     a0_data_bfm.run();
@@ -566,7 +565,7 @@ module chdr_stream_endpoint_tb;
     while (rfnoc_ctrl_rst) @(posedge rfnoc_ctrl_clk);
     while (rfnoc_chdr_rst) @(posedge rfnoc_chdr_clk);
     test.end_timeout(timeout);
-    test.assert_error(!rfnoc_chdr_rst && !rfnoc_ctrl_rst, "Reset did not deassert");
+    `ASSERT_ERROR(!rfnoc_chdr_rst && !rfnoc_ctrl_rst, "Reset did not deassert");
     test.end_test();
 
     // Discover Topology
@@ -597,11 +596,11 @@ module chdr_stream_endpoint_tb;
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-      test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+      `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
         "Discover XB: Mgmt header was incorrect");
       exp_mgmt_op = '{op_payload:{2'h0, 8'd1/*ports_mgmt*/, 8'd3 /*ports*/, 10'd0 /*inst*/, 4'd1 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
-      test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
+      `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover XB: Mgmt response ops were incorrect");
 
       // *Status* We just discovered a crossbar with 3 ports! 
@@ -625,11 +624,11 @@ module chdr_stream_endpoint_tb;
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-      test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+      `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP A: Mgmt header was incorrect");
       exp_mgmt_op = '{op_payload:{{4'd1, 6'd2, 6'd2, 2'b11} /*ext_info*/, 10'd0 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
-      test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
+      `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP A: Mgmt response ops were incorrect");
 
       // *Status* We just discovered a stream endpoint on crossbar port 1
@@ -650,11 +649,11 @@ module chdr_stream_endpoint_tb;
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-      test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+      `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
         "Discover SEP B: Mgmt header was incorrect");
       exp_mgmt_op = '{op_payload:{{4'd1, 6'd2, 6'd2, 2'b11} /*ext_info*/, 10'd1 /*inst*/, 4'd2 /*type*/, DEV_ID},
         op_code:MGMT_OP_INFO_RESP, ops_pending:8'd0};
-      test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
+      `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op,
         "Discover SEP B: Mgmt response ops were incorrect");
 
       // *Status* We just discovered a stream endpoint on crossbar port 2
@@ -690,10 +689,10 @@ module chdr_stream_endpoint_tb;
 
       // Send the packet and check the response
       send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-      test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+      `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
         "Config Routes: Mgmt header was incorrect");
       exp_mgmt_op = '{op_payload:48'h0, op_code:MGMT_OP_NOP, ops_pending:8'd0};
-      test.assert_error(rx_mgmt_pl.ops[0] == exp_mgmt_op,
+      `ASSERT_ERROR(rx_mgmt_pl.ops[0] == exp_mgmt_op,
         "Config Routes: Mgmt response ops were incorrect");
     end
     test.end_test();
@@ -735,15 +734,15 @@ module chdr_stream_endpoint_tb;
   
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-        test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+        `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
           "Config SEP: Mgmt header was incorrect");
         exp_mgmt_op = '{op_payload:{16'h0, epids[i], sep_a.REG_EPID_SELF},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd1};
-        test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op,
+        `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op,
           "Config SEP: Mgmt response ops were incorrect");
         exp_mgmt_op = '{op_payload:{32'h0, sep_a.REG_OSTRM_CTRL_STATUS},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd0};
-        test.assert_error(rx_mgmt_pl.ops[2] == exp_mgmt_op,
+        `ASSERT_ERROR(rx_mgmt_pl.ops[2] == exp_mgmt_op,
           "Config SEP: Mgmt response ops were incorrect");
       end
     end
@@ -826,29 +825,29 @@ module chdr_stream_endpoint_tb;
 
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-        test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+        `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
           "Config SEP: Mgmt header was incorrect");
         exp_mgmt_op = '{op_payload:{32'h80000006, sep_a.REG_OSTRM_CTRL_STATUS},   // FC on, no errors and lossy
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd6};
-        test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{((1<<(MTU+1))*(CHDR_W/8)-1), sep_a.REG_OSTRM_BUFF_CAP_BYTES_LO},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd5};
-        test.assert_error(rx_mgmt_pl.ops[2] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[2] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{32'h0, sep_a.REG_OSTRM_BUFF_CAP_BYTES_HI},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd4};
-        test.assert_error(rx_mgmt_pl.ops[3] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[3] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{32'h00ffffff, sep_a.REG_OSTRM_BUFF_CAP_PKTS},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd3};
-        test.assert_error(rx_mgmt_pl.ops[4] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[4] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{32'h0, sep_a.REG_OSTRM_SEQ_ERR_CNT},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd2};
-        test.assert_error(rx_mgmt_pl.ops[5] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[5] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{32'h0, sep_a.REG_OSTRM_DATA_ERR_CNT},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd1};
-        test.assert_error(rx_mgmt_pl.ops[6] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[6] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
         exp_mgmt_op = '{op_payload:{32'h0, sep_a.REG_OSTRM_ROUTE_ERR_CNT},
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd0};
-        test.assert_error(rx_mgmt_pl.ops[7] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[7] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
       end
     end
     test.end_test();
@@ -980,9 +979,9 @@ module chdr_stream_endpoint_tb;
       logic [15:0] epids[2] = {EPID_A, EPID_B};
       foreach (epids[i]) begin
         mgmt_read_err_counts(epids[i], seq_err_count, route_err_count, data_err_count);
-        test.assert_error(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
-        test.assert_error(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
-        test.assert_error(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
+        `ASSERT_ERROR(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
+        `ASSERT_ERROR(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
+        `ASSERT_ERROR(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
       end
     end
     test.end_test();
@@ -998,9 +997,9 @@ module chdr_stream_endpoint_tb;
       b_seqerr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_A, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count == 32'd1, "Force SeqErr: Incorrect seq error count");
-      test.assert_error(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
+      `ASSERT_ERROR(seq_err_count == 32'd1, "Force SeqErr: Incorrect seq error count");
+      `ASSERT_ERROR(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
+      `ASSERT_ERROR(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
 
       // Second and third sequence error
       send_recv_data_packets(EPID_A, EPID_B, 1, cached_data_seqnum++, 1);
@@ -1009,9 +1008,9 @@ module chdr_stream_endpoint_tb;
       b_seqerr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_A, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count > 32'd1, "Force SeqErr: Incorrect seq error count");
-      test.assert_error(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
+      `ASSERT_ERROR(seq_err_count > 32'd1, "Force SeqErr: Incorrect seq error count");
+      `ASSERT_ERROR(route_err_count == 32'd0, "Force SeqErr: Incorrect route error count");
+      `ASSERT_ERROR(data_err_count == 32'd0, "Force SeqErr: Incorrect data error count");
     end
     test.end_test();
 
@@ -1027,9 +1026,9 @@ module chdr_stream_endpoint_tb;
       a_rterr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count == 32'd0, "Force RouteErr 1: Incorrect seq error count");
-      test.assert_error(route_err_count > 32'd0, "Force RouteErr 1: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force RouteErr 1: Incorrect data error count");
+      `ASSERT_ERROR(seq_err_count == 32'd0, "Force RouteErr 1: Incorrect seq error count");
+      `ASSERT_ERROR(route_err_count > 32'd0, "Force RouteErr 1: Incorrect route error count");
+      `ASSERT_ERROR(data_err_count == 32'd0, "Force RouteErr 1: Incorrect data error count");
       old_route_err_count = route_err_count;
 
       // Second routing error
@@ -1039,9 +1038,9 @@ module chdr_stream_endpoint_tb;
       a_rterr_prob = 0;
       repeat (100) @(posedge rfnoc_chdr_clk);  // Wait for sequence error to reach the upstream port
       mgmt_read_err_counts(EPID_B, seq_err_count, route_err_count, data_err_count);
-      test.assert_error(seq_err_count == 32'd0, "Force RouteErr 2: Incorrect seq error count");
-      test.assert_error(route_err_count > old_route_err_count, "Force RouteErr 2: Incorrect route error count");
-      test.assert_error(data_err_count == 32'd0, "Force RouteErr 2: Incorrect data error count");
+      `ASSERT_ERROR(seq_err_count == 32'd0, "Force RouteErr 2: Incorrect seq error count");
+      `ASSERT_ERROR(route_err_count > old_route_err_count, "Force RouteErr 2: Incorrect route error count");
+      `ASSERT_ERROR(data_err_count == 32'd0, "Force RouteErr 2: Incorrect data error count");
     end
     test.end_test();
 
@@ -1100,11 +1099,11 @@ module chdr_stream_endpoint_tb;
 
         // Send the packet and check the response
         send_recv_mgmt_packet(tx_mgmt_hdr, tx_mgmt_pl, rx_mgmt_hdr, rx_mgmt_pl);
-        test.assert_error(rx_mgmt_pl.header.num_hops == 1,
+        `ASSERT_ERROR(rx_mgmt_pl.header.num_hops == 1,
           "Config SEP: Mgmt header was incorrect");
         exp_mgmt_op = '{op_payload:{32'h80000002, sep_a.REG_OSTRM_CTRL_STATUS},   // FC on, no errors and lossy
           op_code:MGMT_OP_CFG_RD_RESP, ops_pending:8'd0};
-        test.assert_error(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
+        `ASSERT_ERROR(rx_mgmt_pl.ops[1] == exp_mgmt_op, "Config SEP: Mgmt response was incorrect");
       end
     end
     test.end_test();
@@ -1116,9 +1115,9 @@ module chdr_stream_endpoint_tb;
       logic [15:0] epids[2] = {EPID_A, EPID_B};
       foreach (epids[i]) begin
         mgmt_read_err_counts(epids[i], seq_err_count, route_err_count, data_err_count);
-        test.assert_error(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
-        test.assert_error(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
-        test.assert_error(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
+        `ASSERT_ERROR(seq_err_count == 32'd0, "Check NoErrs: Incorrect seq error count");
+        `ASSERT_ERROR(route_err_count == 32'd0, "Check NoErrs: Incorrect route error count");
+        `ASSERT_ERROR(data_err_count == 32'd0, "Check NoErrs: Incorrect data error count");
       end
     end
     test.end_test();
