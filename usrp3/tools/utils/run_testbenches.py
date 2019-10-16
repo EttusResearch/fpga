@@ -141,7 +141,7 @@ def parse_output(simout):
     ])
     m_fmt0 = re.match(b''.join(tb_match_fmt0), simout, re.DOTALL)
     tb_match_fmt1 = ([
-        b'.*TESTBENCH FINISHED: (.+)\n',
+        b'.*TESTBENCH FINISHED: (.*)\n',
         b' - Time elapsed:  (.+) ns.*\n',
         b' - Tests Run:     (.+)\n',
         b' - Tests Passed:  (.+)\n',
@@ -150,19 +150,32 @@ def parse_output(simout):
     ])
     m_fmt1 = re.match(b''.join(tb_match_fmt1), simout, re.DOTALL)
 
+    # Remove escape characters (colors) from Vivado output
+    ansi_escape = re.compile(r'(?:\x1B[\(@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    plain_simout = ansi_escape.sub('', simout.decode("utf-8"))
+
+    # Check for $error() and $fatal() output, which may be missed by the
+    # testbench or may occur in a subsequent instance, after a pass.
+    tb_match_error = ([
+        '\n',
+        '(Error|Fatal): .*\n',
+        'Time: .+\n',
+    ])
+    m_error = re.search(''.join(tb_match_error), plain_simout)
+
     # Figure out the returncode 
     retcode = RETCODE_UNKNOWN_ERR
     if m_fmt0 is not None or m_fmt1 is not None:
         retcode = RETCODE_SUCCESS
         if m_fmt0 is not None:
-            results['passed'] = (m_fmt0.group(6) == b'PASSED')
+            results['passed'] = (m_fmt0.group(6) == b'PASSED' and m_error is None)
             results['module'] = m_fmt0.group(1)
             results['sim_time_ns'] = int(m_fmt0.group(2))
             results['tc_expected'] = int(m_fmt0.group(3))
             results['tc_run'] = int(m_fmt0.group(4))
             results['tc_passed'] = int(m_fmt0.group(5))
         else:
-            results['passed'] = (m_fmt1.group(6) == b'PASSED')
+            results['passed'] = (m_fmt1.group(6) == b'PASSED' and m_error is None)
             results['module'] = m_fmt1.group(1)
             results['sim_time_ns'] = int(m_fmt1.group(2))
             results['tc_expected'] = int(m_fmt1.group(3))
