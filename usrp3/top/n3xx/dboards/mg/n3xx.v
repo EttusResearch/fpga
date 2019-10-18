@@ -1629,6 +1629,7 @@ module n3xx (
   // Misc
   wire [31:0] sfp_port0_info;
   wire [31:0] sfp_port1_info;
+  wire sfp0_link_up, sfp1_link_up;
   wire [15:0] device_id;
 
   /////////////////////////////////////////////////////////////////////
@@ -1791,9 +1792,12 @@ module n3xx (
      .device_id(device_id),
 
      // LED
-     .link_up(SFP_0_LED_B),
+     .link_up(sfp0_link_up),
      .activity(SFP_0_LED_A)
    );
+
+   assign ps_gpio_in[60] = ps_gpio_tri[60] ? sfp0_link_up : ps_gpio_out[60];
+   assign SFP_0_LED_B = sfp0_link_up;
 
 `ifndef SFP0_WR
   assign WB_DAC_SCLK  = 1'b0;
@@ -1913,9 +1917,12 @@ module n3xx (
      .device_id(device_id),
 
      // LED
-     .link_up(SFP_1_LED_B),
+     .link_up(sfp1_link_up),
      .activity(SFP_1_LED_A)
    );
+
+   assign ps_gpio_in[61] = ps_gpio_tri[61] ? sfp1_link_up : ps_gpio_out[61];
+   assign SFP_1_LED_B = sfp1_link_up;
 
   /////////////////////////////////////////////////////////////////////
   //

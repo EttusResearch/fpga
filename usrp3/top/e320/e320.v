@@ -425,6 +425,7 @@ module e320 (
 
   // Misc
   wire [31:0] sfp_port_info;
+  wire        sfp_link_up;
   wire [15:0] device_id;
   wire        clocks_locked;
 
@@ -1131,9 +1132,12 @@ module e320 (
     .device_id(device_id),
 
     // LED
-    .link_up(LED_LINK1),
+    .link_up(sfp_link_up),
     .activity(LED_ACT1)
   );
+
+  assign ps_gpio_in[60] = ps_gpio_tri[60] ? sfp_link_up : ps_gpio_out[60];
+  assign LED_LINK1 = sfp_link_up;
 
   /////////////////////////////////////////////////////////////////////
   //
