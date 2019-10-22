@@ -16,12 +16,12 @@
 //   conversion from CHDR_W to a user requested width for the payload data bus.
 //
 // Parameters:
-//   - CHDR_W            : Width of the input CHDR bus in bits
-//   - ITEM_W            : Width of the output item bus in bits
-//   - NIPC              : The number of output items delivered per cycle
-//   - SYNC_CLKS         : Are the CHDR and data clocks synchronous to each other?
-//   - INFO_FIFO_SIZE    : FIFO size for the packet info path
-//   - PAYLOAD_FIFO_SIZE : FIFO size for the payload path
+//   - CHDR_W         : Width of the input CHDR bus in bits
+//   - ITEM_W         : Width of the output item bus in bits
+//   - NIPC           : The number of output items delivered per cycle
+//   - SYNC_CLKS      : Are the CHDR and data clocks synchronous to each other?
+//   - INFO_FIFO_SIZE : Log2 of the FIFO size for the packet info data path
+//   - PYLD_FIFO_SIZE : Log2 of the FIFO size for the payload data path
 //
 // Signals:
 //   - s_axis_chdr_*  : Input CHDR stream (AXI-Stream)
@@ -31,12 +31,12 @@
 //
 
 module chdr_to_axis_data #(
-  parameter CHDR_W            = 256,
-  parameter ITEM_W            = 32,
-  parameter NIPC              = 2,
-  parameter SYNC_CLKS         = 0,
-  parameter INFO_FIFO_SIZE    = 1,
-  parameter PAYLOAD_FIFO_SIZE = 1
+  parameter CHDR_W         = 256,
+  parameter ITEM_W         = 32,
+  parameter NIPC           = 2,
+  parameter SYNC_CLKS      = 0,
+  parameter INFO_FIFO_SIZE = 5,
+  parameter PYLD_FIFO_SIZE = 5
 )(
   // Clock, reset and settings
   input  wire                     axis_chdr_clk,
@@ -305,7 +305,7 @@ module chdr_to_axis_data #(
       .o_tvalid(out_info_tvalid), .o_tready(out_info_tready),
       .space(), .occupied()
     );
-    axi_fifo #(.WIDTH(CHDR_W+CHDR_KEEP_W+1), .SIZE(PAYLOAD_FIFO_SIZE)) pyld_fifo_i (
+    axi_fifo #(.WIDTH(CHDR_W+CHDR_KEEP_W+1), .SIZE(PYLD_FIFO_SIZE)) pyld_fifo_i (
       .clk(axis_data_clk), .reset(axis_data_rst), .clear(1'b0),
       .i_tdata({in_pyld_tlast, in_pyld_tkeep, in_pyld_tdata}),
       .i_tvalid(in_pyld_tvalid), .i_tready(in_pyld_tready),
@@ -323,7 +323,7 @@ module chdr_to_axis_data #(
       .o_tdata(out_info_tdata),
       .o_tvalid(out_info_tvalid), .o_tready(out_info_tready)
     );
-    axi_fifo_2clk #(.WIDTH(CHDR_W+CHDR_KEEP_W+1), .SIZE(PAYLOAD_FIFO_SIZE)) pyld_fifo_i (
+    axi_fifo_2clk #(.WIDTH(CHDR_W+CHDR_KEEP_W+1), .SIZE(PYLD_FIFO_SIZE)) pyld_fifo_i (
       .reset(axis_chdr_rst),
       .i_aclk(axis_chdr_clk),
       .i_tdata({in_pyld_tlast, in_pyld_tkeep, in_pyld_tdata}),

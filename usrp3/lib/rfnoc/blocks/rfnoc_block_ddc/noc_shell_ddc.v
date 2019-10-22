@@ -221,12 +221,12 @@ module noc_shell_ddc #(
 
     for (i = 0; i < NUM_DATA_I; i = i + 1) begin: chdr_to_data
       chdr_to_axis_data #(
-        .CHDR_W            (CHDR_W),
-        .ITEM_W            (ITEM_W),
-        .NIPC              (NIPC),
-        .SYNC_CLKS         (0),
-        .INFO_FIFO_SIZE    (SNK_INFO_FIFO_SIZE),
-        .PAYLOAD_FIFO_SIZE (SNK_PYLD_FIFO_SIZE)
+        .CHDR_W         (CHDR_W),
+        .ITEM_W         (ITEM_W),
+        .NIPC           (NIPC),
+        .SYNC_CLKS      (0),
+        .INFO_FIFO_SIZE (SNK_INFO_FIFO_SIZE),
+        .PYLD_FIFO_SIZE (SNK_PYLD_FIFO_SIZE)
       ) chdr_to_axis_data_i (
         .axis_chdr_clk      (rfnoc_chdr_clk),
         .axis_chdr_rst      (rfnoc_chdr_rst),
