@@ -86,6 +86,11 @@ proc ::vivado_utils::initialize_project { {save_to_disk 0} } {
         } elseif [expr [lsearch {.dat} $src_ext] >= 0] {
             puts "BUILDER: Adding Data File : $src_file"
             add_files $src_file
+        } elseif [expr [string equal $src_ext ""] == 1] {
+            puts "BUILDER: Adding Folder Glob : $src_file"
+            set glob_all [glob $src_file/*.*]
+            puts "BUILDER: Globbed Files : $glob_all"
+            add_files $glob_all
         } else {
             puts "BUILDER: \[WARNING\] File ignored!!!: $src_file"
         }
