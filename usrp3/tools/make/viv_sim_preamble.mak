@@ -33,6 +33,8 @@ $(SIM_CONTROL_SRCS) \
 $(SIM_RFNOC_SRCS) \
 )
 
+# Predeclare RFNOC_OOT_SRCS to make sure it's not recursively expanded
+RFNOC_OOT_SRCS :=
 
 all:
 	$(error "all" or "<empty>" is not a valid target. Run make help for a list of supported targets.)

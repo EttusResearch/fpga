@@ -53,3 +53,7 @@ CHECK_VIVADO_DESIGN = \
 	export VIV_VERILOG_DEFS="$(VERILOG_DEFS)"; \
 	cd $(BUILD_DIR); \
 	$(TOOLS_DIR)/scripts/launch_vivado.py --parse-config $(TOOLS_DIR)/scripts/check_config.json -mode $(VIVADO_MODE) -source $(call RESOLVE_PATH,$(1)) -log build.log -journal $(2).jou
+
+
+# Predeclare RFNOC_OOT_SRCS to make sure it's not recursively expanded
+RFNOC_OOT_SRCS :=
