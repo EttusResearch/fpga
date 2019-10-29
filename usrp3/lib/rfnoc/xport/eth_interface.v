@@ -27,6 +27,11 @@ module eth_interface #(
   output reg       reg_rd_resp,
   output reg [31:0] reg_rd_data,
 
+  // Status ports (domain: clk)
+  output [47:0] my_mac,
+  output [31:0] my_ip,
+  output [15:0] my_udp_port,
+
   // Ethernet ports
   output [63:0] eth_tx_tdata,
   output [3:0]  eth_tx_tuser,
@@ -80,7 +85,7 @@ module eth_interface #(
   // Source UDP Port
   localparam [REG_AWIDTH-1:0] REG_UDP            = BASE + 'h1004;
 
-  // Registers for Bridge Network Mode in CPU
+  // Registers for Internal/Bridge Network Mode in CPU
   localparam [REG_AWIDTH-1:0] REG_BRIDGE_MAC_LSB = BASE + 'h1010;
   localparam [REG_AWIDTH-1:0] REG_BRIDGE_MAC_MSB = BASE + 'h1014;
   localparam [REG_AWIDTH-1:0] REG_BRIDGE_IP      = BASE + 'h1018;
@@ -101,9 +106,6 @@ module eth_interface #(
   reg [31:0]      bridge_ip_reg;
   reg [15:0]      bridge_udp_port;
   reg             bridge_en;
-  wire [47:0]     my_mac;
-  wire [31:0]     my_ip;
-  wire [15:0]     my_udp_port;
 
   assign my_mac       = bridge_en ? bridge_mac_reg : mac_reg;
   assign my_ip        = bridge_en ? bridge_ip_reg : ip_reg;

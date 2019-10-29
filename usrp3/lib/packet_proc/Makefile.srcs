@@ -14,5 +14,6 @@ cvita_dechunker.v \
 cvita_dest_lookup.v \
 ip_hdr_checksum.v \
 arm_deframer.v \
+arp_responder/arp_responder.vhd \
 ))
 
