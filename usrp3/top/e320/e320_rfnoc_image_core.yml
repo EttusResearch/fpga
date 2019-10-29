@@ -59,22 +59,22 @@ noc_blocks:
 #         - dstblk = Destination block to connect
 #         - dstport = Port on the destination block to connect
 connections:
-    # ep0 to radio0(0) - RFA TX
+    # ep0 to radio0(0) - RF0 TX
     - { srcblk: ep0,  srcport: out0,  dstblk: duc0,   dstport: port0 }
     - { srcblk: duc0, srcport: port0, dstblk: radio0, dstport: port0 }
-    # radio0(0) to ep0 - RFA RX
+    # radio0(0) to ep0 - RF0 RX
     - { srcblk: radio0, srcport: port0, dstblk: ddc0, dstport: port0 }
     - { srcblk: ddc0,   srcport: port0, dstblk: ep0,  dstport: in0   }
-    # ep1 to radio0(1) - RFB TX
+    # ep1 to radio0(1) - RF1 TX
     - { srcblk: ep1,  srcport: out0,  dstblk: duc0,   dstport: port1 }
     - { srcblk: duc0, srcport: port1, dstblk: radio0, dstport: port1 }
-    # radio0(1) to ep1 - RFB RX
+    # radio0(1) to ep1 - RF1 RX
     - { srcblk: radio0, srcport: port1, dstblk: ddc0, dstport: port1 }
     - { srcblk: ddc0,   srcport: port1, dstblk: ep1,  dstport: in0   }
     # ep2 to fifo0(0)
     - { srcblk: ep2,   srcport: out0,  dstblk: fifo0, dstport: port0 }
     - { srcblk: fifo0, srcport: port0, dstblk: ep2,   dstport: in0   }
-    # ep2 to fifo0(1)
+    # ep3 to fifo0(1)
     - { srcblk: ep3,   srcport: out0,  dstblk: fifo0, dstport: port1 }
     - { srcblk: fifo0, srcport: port1, dstblk: ep3,   dstport: in0   }
     # BSP Connections
