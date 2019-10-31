@@ -63,6 +63,42 @@ module x300_sfpp_io_core #(
 
    wire mdc, mdio_in, mdio_out;
 
+    // Flush logic: If the link is not up, we will flush all packets coming from
+    // the device. This avoids the MAC backpressuring when the PHY is down.
+    // The device will always send discovery packets to the transports during
+    // initialization, and they have no way of knowing if it's safe to travel
+    // down this route. c2mac == "CHDR to MAC"
+    wire  [63:0]     c2mac_tdata;
+    wire  [3:0]      c2mac_tuser;
+    wire             c2mac_tlast;
+    wire             c2mac_tvalid;
+    wire             c2mac_tready;
+
+    axis_packet_flush #(
+       .WIDTH(64+3), // tdata + tuser
+       .TIMEOUT_W(1), // Not using timeout
+       .FLUSH_PARTIAL_PKTS(0),
+       .PIPELINE("NONE")
+   ) linkup_flush (
+       .clk(bus_clk),
+       .reset(bus_rst),
+       .enable(~link_up), // enable flushing when link down
+       .timeout(1'b0),
+       .flushing(/* not required */),
+       .done(/* not required */),
+       // Input from device/crossbar
+       .s_axis_tdata  ({s_axis_tuser, s_axis_tdata}),
+       .s_axis_tlast  (s_axis_tlast),
+       .s_axis_tvalid (s_axis_tvalid),
+       .s_axis_tready (s_axis_tready),
+       // Output to MAC
+       .m_axis_tdata  ({c2mac_tuser, c2mac_tdata}),
+       .m_axis_tlast  (c2mac_tlast),
+       .m_axis_tvalid (c2mac_tvalid),
+       .m_axis_tready (c2mac_tready)
+   );
+
+
 generate
    if (PROTOCOL == "10GbE") begin
       //-----------------------------------------------------------------
@@ -140,11 +176,11 @@ generate
          .rx_tlast(m_axis_tlast),
          .rx_tvalid(m_axis_tvalid),
          .rx_tready(m_axis_tready),
-         .tx_tdata(s_axis_tdata),
-         .tx_tuser(s_axis_tuser),                // Bit[3] (error) is ignored for now.
-         .tx_tlast(s_axis_tlast),
-         .tx_tvalid(s_axis_tvalid),
-         .tx_tready(s_axis_tready),
+         .tx_tdata(c2mac_tdata),
+         .tx_tuser(c2mac_tuser),                // Bit[3] (error) is ignored for now.
+         .tx_tlast(c2mac_tlast),
+         .tx_tvalid(c2mac_tvalid),
+         .tx_tready(c2mac_tready),
          // Other
          .phy_ready(xge_phy_resetdone)
       );
@@ -219,11 +255,11 @@ generate
          .rx_tlast(m_axis_tlast),
          .rx_tvalid(m_axis_tvalid),
          .rx_tready(m_axis_tready),
-         .tx_tdata(s_axis_tdata),
-         .tx_tuser(s_axis_tuser),
-         .tx_tlast(s_axis_tlast),
-         .tx_tvalid(s_axis_tvalid),
-         .tx_tready(s_axis_tready),
+         .tx_tdata(c2mac_tdata),
+         .tx_tuser(c2mac_tuser),
+         .tx_tlast(c2mac_tlast),
+         .tx_tvalid(c2mac_tvalid),
+         .tx_tready(c2mac_tready),
          // MDIO
          .mdc(mdc),
          .mdio_in(mdio_in),
@@ -332,10 +368,10 @@ generate
          .phy_m_axis_tvalid(i_tvalid),
          .phy_m_axis_tready(i_tready),
          // User Interface (Synchronous to sys_clk)
-         .s_axis_tdata(s_axis_tdata),
-         .s_axis_tlast(s_axis_tlast),
-         .s_axis_tvalid(s_axis_tvalid),
-         .s_axis_tready(s_axis_tready),
+         .s_axis_tdata(c2mac_tdata),
+         .s_axis_tlast(c2mac_tlast),
+         .s_axis_tvalid(c2mac_tvalid),
+         .s_axis_tready(c2mac_tready),
          .m_axis_tdata(m_axis_tdata),
          .m_axis_tlast(m_axis_tlast),
          .m_axis_tvalid(m_axis_tvalid),
