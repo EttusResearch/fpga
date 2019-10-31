@@ -105,6 +105,41 @@ module n3xx_mgt_io_core #(
   wire [31:0] mac_ctrl_rst_val, phy_ctrl_rst_val;
   wire [1:0]  mac_led_ctl_rst_val = 2'h0;
 
+  // Flush logic: If the link is not up, we will flush all packets coming from
+  // the device. This avoids the MAC backpressuring when the PHY is down.
+  // The device will always send discovery packets to the transports during
+  // initialization, and they have no way of knowing if it's safe to travel
+  // down this route. c2mac == "CHDR to MAC"
+  wire  [63:0]     c2mac_tdata;
+  wire  [3:0]      c2mac_tuser;
+  wire             c2mac_tlast;
+  wire             c2mac_tvalid;
+  wire             c2mac_tready;
+
+  axis_packet_flush #(
+    .WIDTH(64+3), // tdata + tuser
+    .TIMEOUT_W(1), // Not using timeout
+    .FLUSH_PARTIAL_PKTS(0),
+    .PIPELINE("NONE")
+  ) linkup_flush (
+    .clk(bus_clk),
+    .reset(bus_rst),
+    .enable(~link_up), // enable flushing when link down
+    .timeout(1'b0),
+    .flushing(/* not required */),
+    .done(/* not required */),
+    // Input from device/crossbar
+    .s_axis_tdata  ({s_axis_tuser, s_axis_tdata}),
+    .s_axis_tlast  (s_axis_tlast),
+    .s_axis_tvalid (s_axis_tvalid),
+    .s_axis_tready (s_axis_tready),
+    // Output to MAC
+    .m_axis_tdata  ({c2mac_tuser, c2mac_tdata}),
+    .m_axis_tlast  (c2mac_tlast),
+    .m_axis_tvalid (c2mac_tvalid),
+    .m_axis_tready (c2mac_tready)
+  );
+
   generate
     if (PROTOCOL == "Aurora") begin
       assign mgt_protocol     = 8'd3;
@@ -346,11 +381,11 @@ module n3xx_mgt_io_core #(
         .rx_tlast(m_axis_tlast),
         .rx_tvalid(m_axis_tvalid),
         .rx_tready(m_axis_tready),
-        .tx_tdata(s_axis_tdata),
-        .tx_tuser(s_axis_tuser),   // Bit[3] (error) is ignored for now.
-        .tx_tlast(s_axis_tlast),
-        .tx_tvalid(s_axis_tvalid),
-        .tx_tready(s_axis_tready),
+        .tx_tdata(c2mac_tdata),
+        .tx_tuser(c2mac_tuser),   // Bit[3] (error) is ignored for now.
+        .tx_tlast(c2mac_tlast),
+        .tx_tvalid(c2mac_tvalid),
+        .tx_tready(c2mac_tready),
         // Other
         .phy_ready(xge_phy_resetdone),
         .ctrl_tx_enable(mac_ctrl_reg[0]),
@@ -483,11 +518,11 @@ module n3xx_mgt_io_core #(
         .rx_tlast(m_axis_tlast),
         .rx_tvalid(m_axis_tvalid),
         .rx_tready(m_axis_tready),
-        .tx_tdata(s_axis_tdata),
-        .tx_tuser(s_axis_tuser),
-        .tx_tlast(s_axis_tlast),
-        .tx_tvalid(s_axis_tvalid),
-        .tx_tready(s_axis_tready),
+        .tx_tdata(c2mac_tdata),
+        .tx_tuser(c2mac_tuser),
+        .tx_tlast(c2mac_tlast),
+        .tx_tvalid(c2mac_tvalid),
+        .tx_tready(c2mac_tready),
 
         .wb_clk_i(1'b0),
         .wb_rst_i(1'b0),
@@ -652,10 +687,10 @@ module n3xx_mgt_io_core #(
         .phy_m_axis_tvalid(m2p_tvalid),
         .phy_m_axis_tready(m2p_tready),
         // User Interface (Synchronous to sys_clk)
-        .s_axis_tdata(s_axis_tdata),
-        .s_axis_tlast(s_axis_tlast),
-        .s_axis_tvalid(s_axis_tvalid),
-        .s_axis_tready(s_axis_tready),
+        .s_axis_tdata(c2mac_tdata),
+        .s_axis_tlast(c2mac_tlast),
+        .s_axis_tvalid(c2mac_tvalid),
+        .s_axis_tready(c2mac_tready),
         .m_axis_tdata(m_axis_tdata),
         .m_axis_tlast(m_axis_tlast),
         .m_axis_tvalid(m_axis_tvalid),
@@ -746,7 +781,7 @@ module n3xx_mgt_io_core #(
 
       assign sfpp_tx_disable = 1'b0; // Always on.
 
-      assign s_axis_tready = 1'b1;
+      assign c2mac_tready = 1'b1;
       assign m_axis_tdata = 64'h0;
       assign m_axis_tuser = 4'h0;
       assign m_axis_tlast = 1'b0;
