@@ -29,7 +29,7 @@ module rfnoc_block_duc_tb();
   localparam real CHDR_CLK_PER   = 5.0;   // CHDR clock rate
   localparam real DUC_CLK_PER    = 4.0;   // DUC IP clock rate
   localparam int  EXTENDED_TEST  = 0;     // Perform a longer test
-  localparam int  SPP            = 256;   // Samples per packet
+  localparam int  SPP            = 128;   // Samples per packet
   localparam int  PKT_SIZE_BYTES = SPP*4; // Bytes per packet
   localparam int  STALL_PROB     = 25;    // BFM stall probability
 
@@ -146,13 +146,13 @@ module rfnoc_block_duc_tb();
   //---------------------------------------------------------------------------
 
   // Translate the desired register access to a ctrlport write request.
-  task automatic write_reg(int port, byte addr, bit [31:0] value);
+  task automatic write_reg(int port, byte unsigned addr, bit [31:0] value);
     blk_ctrl.reg_write(256*8*port + addr*8, value);
   endtask : write_reg
 
 
   // Translate the desired register access to a ctrlport read request.
-  task automatic read_user_reg(int port, byte addr, output logic [63:0] value);
+  task automatic read_user_reg(int port, byte unsigned addr, output logic [63:0] value);
     blk_ctrl.reg_read(256*8*port + addr*8 + 0, value[31: 0]);
     blk_ctrl.reg_read(256*8*port + addr*8 + 4, value[63:32]);
   endtask : read_user_reg
@@ -188,7 +188,7 @@ module rfnoc_block_duc_tb();
   endtask
 
 
-  // Test sending a packet of ones
+  // Test sending packets of ones
   task automatic send_ones(int port, int interp_rate, bit has_time);
     begin
       const bit [63:0] start_time = 64'h0123456789ABCDEF;
@@ -205,19 +205,23 @@ module rfnoc_block_duc_tb();
           chdr_word_t send_payload[$];
           packet_info_t pkt_info;
 
-          pkt_info = 0;
-          if (has_time) begin
-            pkt_info.has_time = 1;
-            pkt_info.timestamp = start_time;
-          end
-          pkt_info.eob = 1;
-
           $display("Send ones");
+
+          // Generate a payload of all ones
+          send_payload = {};
           for (int i = 0; i < PKT_SIZE_BYTES/8; i++) begin
             send_payload.push_back({16'hffff, 16'hffff, 16'hffff, 16'hffff});
           end
 
+          // Send two packets with EOB on the second packet
+          pkt_info = 0;
+          pkt_info.has_time  = has_time;
+          pkt_info.timestamp = start_time;
           blk_ctrl.send_packets(port, send_payload, /*data_bytes*/, /*metadata*/, pkt_info);
+          pkt_info.timestamp = start_time + SPP;
+          pkt_info.eob = 1;
+          blk_ctrl.send_packets(port, send_payload, /*data_bytes*/, /*metadata*/, pkt_info);
+          
           $display("Send ones complete");
         end
         begin
@@ -229,7 +233,7 @@ module rfnoc_block_duc_tb();
           packet_info_t pkt_info;
 
           $display("Check incoming samples");
-          for (int i = 0; i < interp_rate; i++) begin
+          for (int i = 0; i < 2*interp_rate; i++) begin
             blk_ctrl.recv_adv(port, recv_payload, data_bytes, metadata, pkt_info);
 
             // Check the packet size
@@ -246,6 +250,14 @@ module rfnoc_block_duc_tb();
               `ASSERT_ERROR(pkt_info.has_time == 1 && pkt_info.timestamp == expected_time, s);
             end else begin
               `ASSERT_ERROR(pkt_info.has_time == 0, "Packet has timestamp when it shouldn't");
+            end
+
+            // Check EOB
+            if (i == 2*interp_rate-1) begin
+              `ASSERT_ERROR(pkt_info.eob == 1, "EOB not set on last packet");
+            end else begin
+              `ASSERT_ERROR(pkt_info.eob == 0, 
+                $sformatf("EOB unexpectedly set on packet %0d", i));
             end
 
             // Check the sample values
