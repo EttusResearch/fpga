@@ -444,7 +444,7 @@ module rfnoc_block_radio_tb #(
           byte_length = SPP * ITEM_W/8;
           blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
           break;
-        end else if (sample_count == num_samples) begin
+        end else if (sample_count >= num_samples) begin
           pkt_info.eob = eob;
           byte_length = (sample_count % SPP) * ITEM_W/8;
           blk_ctrl.send(radio_num, data, byte_length, {}, pkt_info);
@@ -832,13 +832,13 @@ module rfnoc_block_radio_tb #(
       test.start_test("Rx (finite, timed)", 100us);
 
       // Send Rx command with time in the future
-      expected_time = radio_time + 1200;
+      expected_time = radio_time + 2000;
       start_rx_timed(radio_num, WPP, expected_time);
 
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
       `ASSERT_ERROR(
-        chdr_packet.timestamp - expected_time <= NIPC*2,
+        chdr_packet.timestamp == expected_time,
         "Received packet didn't have expected timestamp"
       );
 
@@ -859,13 +859,13 @@ module rfnoc_block_radio_tb #(
       test.start_test("Rx (continuous, timed)", 100us);
 
       // Send Rx command with time in the future
-      expected_time = radio_time + 1000;
+      expected_time = radio_time + 2000;
       start_rx_timed(radio_num, 0, expected_time);
 
       // Take a peak at the timestamp in the received packet to check it
       blk_ctrl.peek_chdr(radio_num, chdr_packet);
       `ASSERT_ERROR(
-        chdr_packet.timestamp - expected_time <= NIPC*2,
+        chdr_packet.timestamp == expected_time,
         "Received packet didn't have expected timestamp"
       );
 

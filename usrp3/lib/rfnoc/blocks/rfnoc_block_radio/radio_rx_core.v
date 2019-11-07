@@ -325,7 +325,8 @@ module radio_rx_core #(
   reg                    out_fifo_teob;
   reg                    out_fifo_almost_full;
 
-  reg time_now, time_past;
+  reg [63:0] radio_time_low_samp, radio_time_hi_samp;
+  reg        time_now, time_past;
 
   // All ctrlport requests have a time
   assign m_ctrlport_req_has_time = 1'b1;
@@ -348,15 +349,24 @@ module radio_rx_core #(
       out_fifo_teob           <= 1'b0;
       m_ctrlport_req_wr       <= 1'b0;
 
-      // Register the time comparisons so they don't become the critical path
-      time_now  <= (radio_time == cmd_time);
-      time_past <= (radio_time >  cmd_time);
+      if (radio_rx_stb) begin
+        // Get the time for the low sample and the high sample of the radio
+        // word (needed when NISPC > 1). Compensate for the delay required to
+        // check the time by adding 3 clock cycles worth of samples.
+        radio_time_low_samp <= (radio_time + 3*NSPC);
+        radio_time_hi_samp  <= (radio_time + 3*NSPC + (NSPC-1));
+
+        // Register the time comparisons so they don't become the critical path
+        time_now  <= (cmd_time >= radio_time_low_samp &&
+                      cmd_time <= radio_time_hi_samp);
+        time_past <= (cmd_time <  radio_time_low_samp);
+      end
 
       case (state)
         ST_IDLE : begin
           // Wait for a new command to arrive and allow a cycle for the time 
           // comparisons to update.
-          if (cmd_valid) begin
+          if (cmd_valid && radio_rx_stb) begin
             state <= ST_TIME_CHECK;
           end else if (cmd_stop) begin
             state <= ST_STOP;
@@ -368,7 +378,7 @@ module radio_rx_core #(
           if (cmd_stop) begin
             // Nothing to do but stop (timed STOP commands are not supported)
             state <= ST_STOP;
-          end else if (cmd_timed && time_past) begin
+          end else if (cmd_timed && time_past && radio_rx_stb) begin
             // Got this command later than its execution time
             //synthesis translate_off
             $display("WARNING: radio_rx_core: Late command error");
@@ -376,7 +386,7 @@ module radio_rx_core #(
             error_code <= ERR_RX_LATE_CMD;
             error_time <= radio_time;
             state      <= ST_REPORT_ERR;
-          end else if (!cmd_timed || time_now) begin
+          end else if (!cmd_timed || (time_now && radio_rx_stb)) begin
             // Either it's time to run this command or it should run
             // immediately.
             words_left     <= cmd_num_words;
