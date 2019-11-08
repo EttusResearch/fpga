@@ -270,7 +270,7 @@ module rfnoc_block_axi_ram_fifo_tb #(
     .m_rfnoc_ctrl_tvalid (s_ctrl.tvalid),
     .m_rfnoc_ctrl_tready (s_ctrl.tready),
     .mem_clk             (mem_clk),
-    .mem_rst             (mem_rst),
+    .axi_rst             (mem_rst),
     .m_axi_awid          (m_axi_awid),
     .m_axi_awaddr        (m_axi_awaddr),
     .m_axi_awlen         (m_axi_awlen),

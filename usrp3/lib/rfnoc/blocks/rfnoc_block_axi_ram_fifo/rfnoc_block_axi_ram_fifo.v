@@ -121,9 +121,9 @@ module rfnoc_block_axi_ram_fifo #(
   // AXI Memory Mapped Interface
   //---------------------------------------------------------------------------
 
-  // AXI Interface Clock
+  // AXI Interface Clock and Reset
   input wire mem_clk,
-  input wire mem_rst,
+  input wire axi_rst,
 
   // AXI Write Address Channel
   output wire [         NUM_PORTS*1-1:0] m_axi_awid,     // Write address ID. This signal is the identification tag for the write address signals
@@ -262,7 +262,7 @@ module rfnoc_block_axi_ram_fifo #(
     .m_rfnoc_ctrl_tvalid       (m_rfnoc_ctrl_tvalid),
     .m_rfnoc_ctrl_tready       (m_rfnoc_ctrl_tready),
     .ctrlport_clk              (mem_clk),
-    .ctrlport_rst              (mem_rst),
+    .ctrlport_rst              (axi_rst),
     .m_ctrlport_req_wr         (ctrlport_req_wr),
     .m_ctrlport_req_rd         (ctrlport_req_rd),
     .m_ctrlport_req_addr       (ctrlport_req_addr),
@@ -287,7 +287,7 @@ module rfnoc_block_axi_ram_fifo #(
     .s_ctrlport_resp_status    (),
     .s_ctrlport_resp_data      (),
     .axis_data_clk             (mem_clk),
-    .axis_data_rst             (mem_rst),
+    .axis_data_rst             (axi_rst),
     .m_axis_tdata              (m_axis_data_tdata),
     .m_axis_tkeep              (m_axis_data_tkeep),
     .m_axis_tlast              (m_axis_data_tlast),
@@ -300,7 +300,7 @@ module rfnoc_block_axi_ram_fifo #(
     .s_axis_tready             (s_axis_data_tready)
   );
 
-  wire mem_rst_shell;
+  wire rfnoc_chdr_rst_mem_clk;
   reg  mem_rst_block;
 
   // Cross the CHDR reset to the mem_clk domain
@@ -312,12 +312,12 @@ module rfnoc_block_axi_ram_fifo #(
     .pulse_a (rfnoc_chdr_rst),
     .busy_a  (),
     .clk_b   (mem_clk),
-    .pulse_b (mem_rst_shell)
+    .pulse_b (rfnoc_chdr_rst_mem_clk)
   );
 
   // Combine the resets in a glitch-free manner
   always @(posedge mem_clk) begin
-    mem_rst_block <= mem_rst | mem_rst_shell;
+    mem_rst_block <= axi_rst | rfnoc_chdr_rst_mem_clk;
   end
 
 
@@ -338,7 +338,7 @@ module rfnoc_block_axi_ram_fifo #(
     .SLAVE_ADDR_W (RAM_FIFO_ADDR_W)
   ) ctrlport_splitter_i (
     .ctrlport_clk            (mem_clk),
-    .ctrlport_rst            (mem_rst),
+    .ctrlport_rst            (mem_rst_block),
     .s_ctrlport_req_wr       (ctrlport_req_wr),
     .s_ctrlport_req_rd       (ctrlport_req_rd),
     .s_ctrlport_req_addr     (ctrlport_req_addr),

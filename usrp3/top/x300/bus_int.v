@@ -683,6 +683,7 @@ module bus_int #(
     .device_id               (device_id  ),
     .radio_clk               (radio_clk  ),
     .ce_clk                  (ce_clk     ),
+    .dram_clk                (ddr3_axi_clk_x2),
     .m_ctrlport_radio1_req_wr       (m_ctrlport_req_wr_radio1      ),
     .m_ctrlport_radio1_req_rd       (m_ctrlport_req_rd_radio1      ),
     .m_ctrlport_radio1_req_addr     (m_ctrlport_req_addr_radio1    ),
@@ -717,8 +718,7 @@ module bus_int #(
     .radio_tx_data_radio1           (radio_tx_data[127:64] ),
     .radio_tx_running_radio1        (radio_tx_running[3:2] ),
     // DRAM interface
-    .mem_clk                 (ddr3_axi_clk_x2),
-    .mem_rst                 (ddr3_axi_rst),
+    .axi_rst                 (ddr3_axi_rst),
     // Slave Interface Write Address Ports
     .m_axi_awid              (ddr3_axi_awid   ),
     .m_axi_awaddr            (ddr3_axi_awaddr ),

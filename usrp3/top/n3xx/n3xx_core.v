@@ -1048,6 +1048,7 @@ module n3xx_core #(
     .core_arst               (bus_rst    ),
     .device_id               (device_id  ),
     .radio_clk               (radio_clk  ),
+    .dram_clk                (ddr3_dma_clk),
     `ifndef N300
       .m_ctrlport_radio1_req_wr       (m_ctrlport_req_wr_radio1      ),
       .m_ctrlport_radio1_req_rd       (m_ctrlport_req_rd_radio1      ),
@@ -1070,8 +1071,7 @@ module n3xx_core #(
     .m_ctrlport_radio0_resp_ack     (m_ctrlport_resp_ack_radio0    ),
     .m_ctrlport_radio0_resp_status  (m_ctrlport_resp_status_radio0 ),
     .m_ctrlport_radio0_resp_data    (m_ctrlport_resp_data_radio0   ),
-    .mem_clk        (ddr3_dma_clk),
-    .mem_rst        (ddr3_dma_rst),
+    .axi_rst        (ddr3_dma_rst),
     .m_axi_awid     ({dram_axi_awid    [3], dram_axi_awid    [2], dram_axi_awid    [1], dram_axi_awid    [0]}),
     .m_axi_awaddr   ({dram_axi_awaddr  [3], dram_axi_awaddr  [2], dram_axi_awaddr  [1], dram_axi_awaddr  [0]}),
     .m_axi_awlen    ({dram_axi_awlen   [3], dram_axi_awlen   [2], dram_axi_awlen   [1], dram_axi_awlen   [0]}),
