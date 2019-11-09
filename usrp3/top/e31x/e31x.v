@@ -1,6 +1,7 @@
 /////////////////////////////////////////////////////////////////////
 //
 // Copyright 2018 Ettus Research, A National Instruments Company
+// Copyright 2019 Ettus Research, A National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
@@ -691,16 +692,6 @@ module e31x (
 
   /////////////////////////////////////////////////////////////////////
   //
-  // GPSDO Control and Status
-  //
-  /////////////////////////////////////////////////////////////////////
-
-  wire [31:0] gps_ctrl;
-  wire [31:0] gps_status;
-  // Not used
-
-  /////////////////////////////////////////////////////////////////////
-  //
   // E320 Core:
   //   - xbar
   //   - Radio
@@ -811,8 +802,6 @@ module e31x (
 
     .build_datestamp(build_datestamp),
     .sfp_ports_info(),
-    .gps_status(gps_status),
-    .gps_ctrl(gps_ctrl),
     .dboard_status(dboard_status),
     .xadc_readback(32'h0), //Unused
     .fp_gpio_ctrl(), //Unused

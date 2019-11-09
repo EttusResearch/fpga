@@ -1,6 +1,7 @@
 /////////////////////////////////////////////////////////////////////
 //
 // Copyright 2018 Ettus Research, A National Instruments Company
+// Copyright 2019 Ettus Research, A National Instruments Brand
 //
 // SPDX-License-Identifier: LGPL-3.0
 //
@@ -111,8 +112,6 @@ module e31x_core #(
   // Misc
   input wire [31:0] build_datestamp,
   input wire [31:0] sfp_ports_info,
-  input wire [31:0] gps_status,
-  output reg [31:0] gps_ctrl,
   input wire [31:0] dboard_status,
   input wire [31:0] xadc_readback,
   output reg [31:0] fp_gpio_ctrl,
@@ -161,8 +160,6 @@ module e31x_core #(
   localparam REG_FP_GPIO_CTRL      = REG_BASE_MISC + 14'h2C;
   localparam REG_FP_GPIO_MASTER    = REG_BASE_MISC + 14'h30;
   localparam REG_FP_GPIO_RADIO_SRC = REG_BASE_MISC + 14'h34;
-  localparam REG_GPS_CTRL          = REG_BASE_MISC + 14'h38;
-  localparam REG_GPS_STATUS        = REG_BASE_MISC + 14'h3C;
   localparam REG_DBOARD_CTRL       = REG_BASE_MISC + 14'h40;
   localparam REG_DBOARD_STATUS     = REG_BASE_MISC + 14'h44;
   localparam REG_NUM_TIMEKEEPERS   = REG_BASE_MISC + 14'h48;
@@ -260,7 +257,6 @@ module e31x_core #(
       scratch_reg    <= 32'h0;
       pps_select     <= 2'b01; // Default to internal
       fp_gpio_ctrl   <= 32'h9; // Default to OFF - 4'b1001
-      gps_ctrl       <= 32'h3; // Default to gps_en, out of reset
       dboard_ctrl    <= 32'h1; // Default to mimo
       device_id      <= 16'h0;
     end else if (reg_wr_req) begin
@@ -282,9 +278,6 @@ module e31x_core #(
         end
         REG_FP_GPIO_CTRL: begin
           fp_gpio_ctrl <= reg_wr_data;
-        end
-        REG_GPS_CTRL: begin
-          gps_ctrl    <= reg_wr_data;
         end
         REG_DBOARD_CTRL: begin
           dboard_ctrl <= reg_wr_data;
@@ -348,12 +341,6 @@ module e31x_core #(
 
         REG_SFP_PORT_INFO:
           reg_rd_data_glob <= sfp_ports_info;
-
-        REG_GPS_CTRL:
-          reg_rd_data_glob <= gps_ctrl;
-
-        REG_GPS_STATUS:
-          reg_rd_data_glob <= gps_status;
 
         REG_DBOARD_CTRL:
           reg_rd_data_glob <= dboard_ctrl;
