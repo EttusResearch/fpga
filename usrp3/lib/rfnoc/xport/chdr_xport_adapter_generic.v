@@ -92,7 +92,6 @@ module chdr_xport_adapter_generic #(
   wire               i_xport_tlast, i_xport_tvalid, i_xport_tready;
   wire [CHDR_W-1:0]  o_xport_tdata;
   wire [USER_W-1:0]  o_xport_tuser;
-  wire               o_xport_tdest;
   wire               o_xport_tlast, o_xport_tvalid, o_xport_tready;
 
   localparam [$clog2(CHDR_W)-1:0] SWAP_LANES = ((CHDR_W / 64) - 1) << 6;
@@ -140,10 +139,9 @@ module chdr_xport_adapter_generic #(
   wire              op_stb;
   wire [15:0]       op_src_epid;
   wire [USER_W-1:0] op_data;
-  wire              lookup_stb, lookup_res_stb, lookup_res_match;
+  wire              lookup_stb, lookup_done_stb, lookup_result_match;
   wire [15:0]       lookup_epid;
-  wire [USER_W-1:0] lookup_res_val;
-  reg  [USER_W-1:0] cam_tuser_cached = {USER_W{1'b0}};
+  wire [USER_W-1:0] lookup_result_value;
 
   chdr_mgmt_pkt_handler #(
     .PROTOVER(PROTOVER), .CHDR_W(CHDR_W), .USER_W(USER_W), .MGMT_ONLY(0)
@@ -169,15 +167,10 @@ module chdr_xport_adapter_generic #(
     .insert_stb(op_stb), .insert_key(op_src_epid), .insert_val(op_data),
     .insert_busy(/* Time between op_stb > Insertion time */),
     .find_key_stb(lookup_stb), .find_key(lookup_epid),
-    .find_res_stb(lookup_res_stb),
-    .find_res_match(lookup_res_match), .find_res_val(lookup_res_val),
+    .find_res_stb(lookup_done_stb),
+    .find_res_match(lookup_result_match), .find_res_val(lookup_result_value),
     .count(/* unused */)
   );
-
-  always @(posedge clk) begin
-    if (lookup_res_stb)
-      cam_tuser_cached <= lookup_res_match ? lookup_res_val : {USER_W{1'b0}};
-  end
 
   reg i_xport_hdr = 1'b1;
   always @(posedge clk) begin
@@ -228,25 +221,40 @@ module chdr_xport_adapter_generic #(
   // MUX => Transport
   // ---------------------------------------------------
 
-  // The map takes 3 cycles for a lookup and we add one more
-  // register for a total of 4 cycles. We need to make sure
-  // that the data-path has at least that much latency before
-  // it hits the output.
-  axis_shift_register #(
-    .WIDTH(CHDR_W+1), .NSPC(1), .LATENCY(4),
-    .SIDEBAND_DATAPATH(0), .GAPLESS(0),
-    .PIPELINE("NONE")
-  ) xport_delayline_i (
-    .clk(clk), .reset(rst),
-    .s_axis_tdata({m2x_tdest, m2x_tdata}), .s_axis_tkeep(1'b1), .s_axis_tlast(m2x_tlast),
-    .s_axis_tvalid(m2x_tvalid), .s_axis_tready(m2x_tready),
-    .m_axis_tdata({o_xport_tdest, o_xport_tdata}), .m_axis_tkeep(), .m_axis_tlast(o_xport_tlast),
-    .m_axis_tvalid(o_xport_tvalid), .m_axis_tready(o_xport_tready),
-    .stage_stb(), .stage_eop(),
-    .m_sideband_data(), .m_sideband_keep(),
-    .s_sideband_data('h0)
-  );
+  // In this section we must determine what value to put in tuser. If tdest is
+  // 1 then tuser is passed through unchanged. If tdest is 0 then the tuser
+  // value is looked up in the KV map using the EPID in the packet header.
+  //
+  // To do this we split the data (tdata, tlast) and the routing information
+  // (tdest, tuser, and the EPID) into two FIFOs. This allows us to perform a
+  // routing lookup and decide what to do while we continue to buffer data.
+  //
+  // With small packets, multiple routing lookups might be enqueued in the
+  // lookup_fifo, but we can only do one lookup at a time. Output logic
+  // controls release of packets from the data FIFO to ensure we only output
+  // one packet per lookup after the lookup is complete.
 
+  wire              data_fifo_i_tready;
+  wire [CHDR_W-1:0] data_fifo_o_tdata;
+  wire              data_fifo_o_tlast;
+  wire              data_fifo_o_tvalid;
+  wire              data_fifo_o_tready;
+  wire              lookup_fifo_i_tready;
+  wire              lookup_fifo_tdest;
+  wire [USER_W-1:0] lookup_fifo_tuser;
+  wire [      15:0] lookup_fifo_tepid;
+  wire              lookup_fifo_o_tvalid;
+  wire              lookup_fifo_o_tready;
+
+  wire             non_lookup_done_stb;
+  reg              data_fifo_o_hdr = 1'b1;
+  reg              pass_packet;
+  reg [USER_W-1:0] result_tuser;
+  reg              result_tuser_valid;
+  reg [USER_W-1:0] reg_o_tuser;
+
+
+  // Track when the next m2x word contains is the start of a new packet
   reg m2x_hdr = 1'b1;
   always @(posedge clk) begin
     if (rst)
@@ -255,17 +263,135 @@ module chdr_xport_adapter_generic #(
       m2x_hdr <= m2x_tlast;
   end
 
-  reg [USER_W-1:0] x2x_tuser_cached = {USER_W{1'b0}};
+  // We can only accept data from the mux when when both the data_fifo and
+  // lookup_fifo are ready.
+  assign m2x_tready = data_fifo_i_tready && lookup_fifo_i_tready;
+
+  // The data_fifo only takes the packet data (tdata, tlast). We use an
+  // axi_fifo_short module for the data_fifo because it can tolerate tvalid
+  // going low before a transfer completes.
+  axi_fifo_short #(
+    .WIDTH (1+CHDR_W)
+  ) data_fifo (
+    .clk      (clk),
+    .reset    (rst),
+    .clear    (1'b0),
+    .i_tdata  ({m2x_tlast, m2x_tdata}),
+    .i_tvalid (m2x_tvalid && m2x_tready),
+    .i_tready (data_fifo_i_tready),
+    .o_tdata  ({data_fifo_o_tlast, data_fifo_o_tdata}),
+    .o_tvalid (data_fifo_o_tvalid),
+    .o_tready (data_fifo_o_tready),
+    .space    (),
+    .occupied ()
+  );
+
+  // The lookup FIFO only takes the header routing info (tdest, tuser, epid).
+  // We use axi_fifo_short since it can tolerate tvalid going low before a
+  // transfer completes.
+  axi_fifo_short #(
+    .WIDTH (1+USER_W+16)
+  ) lookup_fifo (
+    .clk      (clk),
+    .reset    (rst),
+    .clear    (1'b0),
+    .i_tdata  ({m2x_tdest, m2x_tuser, chdr_get_dst_epid(m2x_tdata[63:0])}),
+    .i_tvalid (m2x_tvalid && m2x_tready && m2x_hdr),
+    .i_tready (lookup_fifo_i_tready),
+    .o_tdata  ({lookup_fifo_tdest, lookup_fifo_tuser, lookup_fifo_tepid}),
+    .o_tvalid (lookup_fifo_o_tvalid),
+    .o_tready (lookup_fifo_o_tready),
+    .space    (),
+    .occupied ()
+  );
+
+  // Keep track of when we are busy doing a lookup in the KV map.
+  reg lookup_busy = 1'b0;
   always @(posedge clk) begin
-    if (m2x_tvalid && m2x_tready && m2x_hdr)
-      x2x_tuser_cached <= m2x_tuser;
+    if (rst)
+      lookup_busy <= 1'b0;
+    else begin
+      if (lookup_stb)
+        lookup_busy <= 1'b1;
+      else if (lookup_done_stb)
+        lookup_busy <= 1'b0;
+    end
   end
 
-  // Lookup tuser in the map only if a packet is coming from the m_axis_rfnoc path
-  assign lookup_stb = (!m2x_tdest) && m2x_hdr && m2x_tvalid && m2x_tready;
-  assign lookup_epid = chdr_get_dst_epid(m2x_tdata[63:0]);
+  // Determine if we can use the output of the lookup_fifo to do a KV map
+  // lookup. We only perform a KV map lookup if tdest is 0 and we can only do
+  // so if the KV map is free and the holding register for the tuser value is
+  // available.
+  assign lookup_epid = lookup_fifo_tepid;
+  assign lookup_stb  = lookup_fifo_o_tvalid && !lookup_busy &&
+                       !lookup_fifo_tdest   && !result_tuser_valid;
 
-  // Pick tuser based on the source of the data
-  assign o_xport_tuser = o_xport_tdest ? x2x_tuser_cached : cam_tuser_cached;
+  // Determine if we can use the output of the lookup FIFO directly (no lookup
+  // is needed). We can only use it if we're not already doing a KV lookup and
+  // if the holding register for the tuser value is available.
+  assign non_lookup_done_stb = lookup_fifo_o_tvalid && !lookup_busy &&
+                               lookup_fifo_tdest    && !result_tuser_valid;
+
+  // Pop the routing info off of the lookup_fifo if we've started its lookup
+  assign lookup_fifo_o_tready = lookup_stb || non_lookup_done_stb;
+
+  // Track when the next data_fifo_o word is the start of a new packet
+  always @(posedge clk) begin
+    if (rst)
+      data_fifo_o_hdr <= 1'b1;
+    else if (data_fifo_o_tvalid && data_fifo_o_tready && pass_packet)
+      data_fifo_o_hdr <= data_fifo_o_tlast;
+  end
+
+  // Store the lookup result in a holding register. This can come from the KV
+  // map or the incoming tuser.
+  always @(posedge clk) begin
+    if (rst) begin
+      result_tuser       <= {USER_W{1'bX}};    // Don't care
+      result_tuser_valid <= 1'b0;
+    end else begin
+      // The tuser holding register becomes available as soon as we start
+      // transmitting the corresponding packet.
+      if (data_fifo_o_tvalid && data_fifo_o_tready && data_fifo_o_hdr && pass_packet) begin
+        result_tuser_valid <= 1'b0;
+      end
+
+      // Load the result of the lookup
+      if (lookup_done_stb) begin
+        result_tuser       <= lookup_result_match ? lookup_result_value : {USER_W{1'b0}};
+        result_tuser_valid <= 1'b1;
+      end else if (non_lookup_done_stb) begin
+        result_tuser       <= lookup_fifo_tuser;
+        result_tuser_valid <= 1'b1;
+      end
+    end
+  end
+
+  // Control when the packet from the data_fifo can be passed through. Put the
+  // tuser value into a register for the duration of the packet.
+  always @(posedge clk) begin
+    if (rst) begin
+      pass_packet <= 1'b0;
+      reg_o_tuser <= {USER_W{1'bX}};    // Don't care
+    end else begin
+      // We're done passing through a packet when tlast goes out
+      if (data_fifo_o_tvalid && data_fifo_o_tready && data_fifo_o_tlast && pass_packet) begin
+        pass_packet <= 1'b0;
+      end
+
+      // We can pass the next packet through when we're at the start of a
+      // packet and we have the tuser value waiting in the holding register.
+      if (data_fifo_o_hdr && result_tuser_valid && !pass_packet) begin
+        reg_o_tuser <= result_tuser;
+        pass_packet <= 1'b1;
+      end
+    end
+  end
+
+  assign o_xport_tdata      = data_fifo_o_tdata;
+  assign o_xport_tuser      = reg_o_tuser;
+  assign o_xport_tlast      = data_fifo_o_tlast;
+  assign o_xport_tvalid     = data_fifo_o_tvalid & pass_packet;
+  assign data_fifo_o_tready = o_xport_tready & pass_packet;
 
 endmodule // chdr_xport_adapter_generic
