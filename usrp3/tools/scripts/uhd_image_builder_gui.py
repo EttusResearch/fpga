@@ -419,7 +419,10 @@ class MainWindow(QtWidgets.QWidget):
                                          '..', '..', 'top', self.target, 'Makefile')
         pattern = "^\#\S*{}.*".format(self.build_target)
         with open(selected_makefile) as fil:
-            help_string = re.findall(pattern, fil.read(), re.MULTILINE)[0].replace("##","")
+            try:
+                help_string = re.findall(pattern, fil.read(), re.MULTILINE)[0].replace("##","")
+            except IndexError:
+                help_string = ""
             self.help_display.setText(help_string)
 
     @pyqtSlot()
