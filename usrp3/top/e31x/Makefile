@@ -50,18 +50,22 @@ E310_SG3_IDLE E3XX_idle_sg3:  build/usrp_e310_sg3_idle_fpga.dts
 	$(call vivado_build,E310_SG3, E310_IDLE_IMAGE=1 E310_SG3=1)
 	$(call post_build,$@,E310_SG3_IDLE)
 
+##E310_SG1: Speed-grade 1
 E310_SG1 E310:  build/usrp_e310_sg1_fpga.dts
 	$(call vivado_build,E310_SG1, E310_SG1=1)
 	$(call post_build,$@,E310_SG1)
 
+##E310_SG3: Speed-grade 3
 E310_SG3 E310_sg3:  build/usrp_e310_sg3_fpga.dts
 	$(call vivado_build,E310_SG3, E310_SG3=1)
 	$(call post_build,$@,E310_SG3)
 
+##E310_SG1_RFNOC: Speed-grade 1, RFNOC CEs enabled.
 E310_SG1_RFNOC E310_RFNOC:  build/usrp_e310_sg1_fpga.dts
 	$(call vivado_build,E310_SG1,RFNOC=1 E310_SG1=1)
 	$(call post_build,$@,E310_SG1_RFNOC)
 
+##E310_SG3_RFNOC: Speed-grade 3, RFNOC CEs enabled.
 E310_SG3_RFNOC E310_RFNOC_sg3: build/usrp_e310_sg3_fpga.dts
 	$(call vivado_build,E310_SG3,RFNOC=1 E310_SG3=1)
 	$(call post_build,$@,E310_SG3_RFNOC)
