@@ -146,7 +146,7 @@ class MainWindow(QtWidgets.QWidget):
         self.model_targets.setHorizontalHeaderItem(0, QtGui.QStandardItem("Select build target"))
         self.targets.setModel(self.model_targets)
         self.populate_target('x300')
-        self.populate_target('e300')
+        self.populate_target('e31x')
         self.populate_target('e320')
         self.populate_target('n3xx')
         grid.addWidget(self.targets, 0, 0, 8, 1)
@@ -399,7 +399,7 @@ class MainWindow(QtWidgets.QWidget):
             self.target = 'x300'
             self.max_allowed_blocks = 10
         elif self.device == 'E310':
-            self.target = 'e300'
+            self.target = 'e31x'
             self.max_allowed_blocks = 14
         elif self.device == 'E320':
             self.target = 'e320'
