@@ -605,7 +605,7 @@ class MainWindow(QtWidgets.QWidget):
         """
         Parses the Makefile available and lists the build targets into the left pannel
         """
-        pattern = "^(?!\#)^\S*_RFNOC[^:]*"
+        pattern = r"^(?!\#)^\S*_RFNOC[^ :]*"
         build_targets = os.path.join(uhd_image_builder.get_scriptpath(), '..', '..', 'top',
                                      selected_target, 'Makefile')
         with open(build_targets) as fil:
