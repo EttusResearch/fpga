@@ -238,10 +238,10 @@ def get_target_name(zip_filename):
 def verify_package(zip_filename):
     """Verify the contents of the image package match the expected list of files"""
     # First, determine which target this was built for
-    pkg_target = get_target_name(zip_filename)
+    pkg_target = get_target_name(os.path.split(zip_filename)[1])
     if not pkg_target:
-        print("Error: Could not determine package from filename",
-              file=sys.stderr)
+        print("Error: Could not determine package from filename {}"
+              .format(zip_filename), file=sys.stderr)
         return False
 
     expected_filelist = PACKAGE_MAPPING[pkg_target]['files']
