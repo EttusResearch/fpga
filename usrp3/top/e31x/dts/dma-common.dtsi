@@ -190,6 +190,7 @@
 		compatible = "adi,axi-dmac-1.00.a";
 		reg = <0x43C40000 0x10000>;
 		interrupts = <0 52 4>;
+		interrupt-parent = <&intc>;
 		clocks = <&clkc 15>;
 		#dma-cells = <1>;
 		adi,channels {
