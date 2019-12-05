@@ -10,6 +10,7 @@ module eth_interface #(
   parameter        MTU         = 10,
   parameter        NODE_INST   = 0,
   parameter        RT_TBL_SIZE = 6,
+  parameter        REG_AWIDTH  = 14,
   parameter        BASE        = 0
 ) (
   input         clk,
@@ -70,7 +71,6 @@ module eth_interface #(
   localparam [47:0] DEFAULT_MAC_ADDR  = {8'h00, 8'h80, 8'h2f, 8'h16, 8'hc5, 8'h2f};
   localparam [31:0] DEFAULT_IP_ADDR   = {8'd192, 8'd168, 8'd10, 8'd2};
   localparam [31:0] DEFAULT_UDP_PORT  = 16'd49153;
-  localparam REG_AWIDTH = 14;
 
   //---------------------------------------------------------
   // Registers
@@ -135,7 +135,7 @@ module eth_interface #(
           ip_reg                <= reg_wr_data;
 
         REG_UDP:
-          udp_port              <= reg_wr_data;
+          udp_port              <= reg_wr_data[15:0];
 
         REG_BRIDGE_MAC_LSB:
           bridge_mac_reg[31:0]  <= reg_wr_data;
@@ -147,7 +147,7 @@ module eth_interface #(
           bridge_ip_reg         <= reg_wr_data;
 
         REG_BRIDGE_UDP:
-          bridge_udp_port       <= reg_wr_data;
+          bridge_udp_port       <= reg_wr_data[15:0];
 
         REG_BRIDGE_ENABLE:
           bridge_en             <= reg_wr_data[0];
@@ -171,7 +171,7 @@ module eth_interface #(
           reg_rd_data <= ip_reg;
 
         REG_UDP:
-          reg_rd_data <= udp_port;
+          reg_rd_data <= {16'b0, udp_port};
 
         REG_BRIDGE_MAC_LSB:
           reg_rd_data <= bridge_mac_reg[31:0];
@@ -183,7 +183,7 @@ module eth_interface #(
           reg_rd_data <= bridge_ip_reg;
 
         REG_BRIDGE_UDP:
-          reg_rd_data <= bridge_udp_port;
+          reg_rd_data <= {16'b0, bridge_udp_port};
 
         REG_BRIDGE_ENABLE:
           reg_rd_data <= {31'b0,bridge_en};

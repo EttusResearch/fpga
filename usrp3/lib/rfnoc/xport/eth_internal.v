@@ -274,7 +274,11 @@ module eth_internal #(
   );
 
   eth_interface #(
-     .PROTOVER(RFNOC_PROTOVER), .MTU(10), .NODE_INST(0), .BASE(REG_BASE_ETH_SWITCH)
+     .PROTOVER(RFNOC_PROTOVER),
+     .MTU(10),
+     .NODE_INST(0),
+     .REG_AWIDTH (AWIDTH),
+     .BASE(REG_BASE_ETH_SWITCH)
   ) eth_interface (
     .clk           (bus_clk),
     .reset         (bus_rst),
