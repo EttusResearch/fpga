@@ -9,7 +9,14 @@
 
 `timescale 1ns/10ps
 
+`define NS_PER_TICK 1
+`define NUM_TEST_CASES 8
+
+`include "sim_exec_report.vh"
+
+
 module chdr_dechunker_tb();
+   `TEST_BENCH_INIT("chdr_dechunker_tb", `NUM_TEST_CASES, `NS_PER_TICK)
 
    // TB stimulus
    reg clk    = 0;
@@ -41,14 +48,12 @@ module chdr_dechunker_tb();
          check_result = check_result & ((o_last_tdata_arg == o_last_tdata) !== 0);
          check_result = check_result & ((error_arg == error) != 0);
          
-         if (check_result) begin
-            $display ("... Passed");
-         end else begin
-            $display ("... FAILED!!!");
+         if (!check_result) begin
             $display ("o_xfer_count = %d (Expected %d)",o_xfer_count,o_xfer_count_arg);
             $display ("i_xfer_count = %d (Expected %d)",i_xfer_count,i_xfer_count_arg);
             $display ("o_last_tdata = %h (Expected %h)",o_last_tdata,o_last_tdata_arg);
             $display ("error = %d  (Expected %d)",error,error_arg);
+            `ASSERT_ERROR(0, "Result did not match expected value");
          end
 
          //Reset vars
@@ -99,8 +104,6 @@ module chdr_dechunker_tb();
 
    initial begin
       #100 reset = 0;
-      #200000;
-      $finish;
    end
    
    reg [63:0]  i_tdata;
@@ -117,55 +120,64 @@ module chdr_dechunker_tb();
       i_tvalid <= 0;
       while(reset) @(posedge clk);
 
-      $write ("Running test case: First packet after reset");
+      `TEST_CASE_START("Running test case: First packet after reset");
       send_packet(64'h00000001_00000000, 32, 8);
       @(posedge clk);
       result = check_result(4,8,64'hxxxxxxxx_xxxxxx06, 0);
+      `TEST_CASE_DONE(result);
 
       reset_quantum_atomic(10);
 
-      $write ("Running test case: sizeof(packet) < quantum");
+      `TEST_CASE_START("Running test case: sizeof(packet) < quantum");
       send_packet(64'h00000001_00000000, 64, 10);
       @(posedge clk);
       result = check_result(8,10,64'hxxxxxxxx_xxxxxx0e, 0);
+      `TEST_CASE_DONE(result);
 
-      $write ("Running test case: sizeof(packet) == quantum");
+      `TEST_CASE_START("Running test case: sizeof(packet) == quantum");
       send_packet(64'h00000001_00000000, 80, 10);
       @(posedge clk);
       result = check_result(10,10,64'hxxxxxxxx_xxxxxx12, 0);
+      `TEST_CASE_DONE(result);
       
-      $write ("Running test case: sizeof(packet) == quantum - 64bits");
+      `TEST_CASE_START("Running test case: sizeof(packet) == quantum - 64bits");
       send_packet(64'h00000001_00000000, 72, 10);
       @(posedge clk);
       result = check_result(9,10,64'hxxxxxxxx_xxxxxx10, 0);
+      `TEST_CASE_DONE(result);
 
-      $write ("Running test case: sizeof(packet) == quantum + 64bits");
+      `TEST_CASE_START("Running test case: sizeof(packet) == quantum + 64bits");
       send_packet(64'h00000001_00000000, 88, 10);
       @(posedge clk);
       result = check_result(32'hxxxxxxxx,10,64'hxxxxxxxx_xxxxxxxx, 1);
+      `TEST_CASE_DONE(result);
 
       reset_quantum_atomic(10);
 
-      $write ("Running test case: sizeof(packet) > quantum");
+      `TEST_CASE_START("Running test case: sizeof(packet) > quantum");
       send_packet(64'h00000001_00000000, 88, 10);
       @(posedge clk);
       result = check_result(32'hxxxxxxxx,10,64'hxxxxxxxx_xxxxxxxx, 1);
+      `TEST_CASE_DONE(result);
 
       reset_quantum_atomic(8);
 
-      $write ("Running test case: sizeof(packet) == 2");
+      `TEST_CASE_START("Running test case: sizeof(packet) == 2");
       send_packet(64'h00000001_00000000, 8, 8);
       @(posedge clk);
       result = check_result(1,8,64'hxxxxxxxx_xxxxxx00, 0);
+      `TEST_CASE_DONE(result);
 
-      $write ("Running test case: Multiple packets");
+      `TEST_CASE_START("Running test case: Multiple packets");
       send_packet(64'h00000001_00000000, 8, 8);
       send_packet(64'h00000001_00000000, 16, 8);
       send_packet(64'h00000001_00000000, 24, 8);
       send_packet(64'h00000001_00000000, 32, 8);
       @(posedge clk);
       result = check_result(10,32,64'hxxxxxxxx_xxxxxx06, 0);
+      `TEST_CASE_DONE(result);
 
+      `TEST_BENCH_DONE;
    end // initial begin
 
 

@@ -19,7 +19,7 @@ SIM_TOP = chdr_dechunker_tb
 # Add test bench, user design under test, and
 # additional user created files
 SIM_SRCS = $(abspath \
-chdr_dechunker_tb.v \
+chdr_dechunker_tb.sv \
 )
 
 MODELSIM_USER_DO = $(abspath wave.do)
