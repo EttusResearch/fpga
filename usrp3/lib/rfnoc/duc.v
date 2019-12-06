@@ -8,7 +8,7 @@
 //! RFNoC specific digital up-conversion chain
 // High level block diagram:
 //
-// HB1 -> HB2 -> CIC -> CORDIC -> Scaler
+// HB1 -> HB2 -> CIC -> DDS/multiplier -> Scaler
 
 // We don't care about framing here, hence no tlast
 
@@ -111,7 +111,7 @@ module duc #(
   * Halfbands
   *************************************************************************/
 
-  // Sign extend from 16 to 24 bits to increase the accuracy from the CORDIC
+  // Sign extend from 16 to 24 bits to increase the accuracy from the frequency shifter
   wire [2*CWIDTH-1:0] o_tdata_extd;
 
   sign_extend #(.bits_in(WIDTH), .bits_out(CWIDTH)) sign_extend_in_i (
@@ -269,7 +269,7 @@ module duc #(
   assign o_tvalid = reset_on_live_change ? 1'b0 : o_tvalid_clip;
   assign i_tready_cartesian = reset_on_live_change ? 1'b0 : o_tready;
 
-  // Note: To facilitate timed CORDIC tunes, the code has been moved outside
-  //       the duc module to cordic_timed.v.
+  // Note: To facilitate timed tunes, the code has been moved outside
+  //       the duc module to dds_timed.v.
 
 endmodule // duc

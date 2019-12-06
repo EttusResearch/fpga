@@ -20,7 +20,7 @@ module ddc #(
   parameter WIDTH            = 24
 )(
   input clk, input reset,
-  input clear, // Resets everything except the CORDIC timed phase inc FIFO and phase inc
+  input clear, // Resets everything except the timed phase inc FIFO and phase inc
   input set_stb, input [7:0] set_addr, input [31:0] set_data,
   input timed_set_stb, input [7:0] timed_set_addr, input [31:0] timed_set_data,
   input [31:0] sample_in_tdata,
@@ -235,7 +235,7 @@ module ddc #(
     .space(dds_input_fifo_space), .occupied(dds_input_fifo_occupied)
     );
         
-  // after fifo, do q quick sign extend op to get up to 24 bits. to match how the cordic deals with the data path.
+  // after fifo, do q quick sign extend op to get up to 24 bits. to match how the dds deals with the data path.
   // add extra bits to fit the dds width, 5 bits added here
   sign_extend #(
     .bits_in(SAMPLE_WIDTH), .bits_out(WIDTH))
@@ -273,7 +273,7 @@ module ddc #(
   );
 
    //48 = WIDTH*2
-  //chop off top byte because it's not actually used and we want to match expected gain/bit use found in cordic impl  
+  //chop off top byte because it's not actually used and we want to match expected gain/bit use found in freq shift
   assign i_dds_clip = {dds_out_i_tdata[15:0],8'h00};
   assign q_dds_clip = {dds_out_q_tdata[15:0],8'h00};
   assign strobe_dds_clip = dds_out_tvalid & sample_out_tready;
