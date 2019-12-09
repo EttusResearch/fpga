@@ -267,7 +267,7 @@ module noc_shell
           .o_tdata({set_addr_bclk[8*k+7:8*k], set_data_bclk[32*k+31:32*k]}),
           .o_tvalid(set_stb_bclk[k]), .o_tready(set_stb_bclk[k]));
 
-       localparam [31:0] STR_SINK_FIFO_SIZE_BYTES = 2**(STR_SINK_FIFOSIZE[8*k+7:8*k]+3);
+       localparam [31:0] STR_SINK_FIFO_SIZE_BYTES = (k < INPUT_PORTS) ? 2**(STR_SINK_FIFOSIZE[8*k+7:8*k]+3) : 0;
        // "Lines" is the most useful unit for the command FIFO size, since
        // commands take either 2 or 3 lines. Software can do the rest of the
        // math to figure out how many actual command packets it can send.
@@ -282,7 +282,7 @@ module noc_shell
            case(rb_addr_noc_shell)
              RB_NOC_ID               : {rb_stb_int, rb_data_int} <= {     1'b1, NOC_ID};
              RB_GLOBAL_PARAMS        : {rb_stb_int, rb_data_int} <= {     1'b1, {datain_pkt_cnt, dataout_pkt_cnt, 16'd0, 3'd0, INPUT_PORTS[4:0], 3'd0, OUTPUT_PORTS[4:0]}};
-             RB_FIFOSIZE             : {rb_stb_int, rb_data_int} <= {     1'b1, {k < INPUT_PORTS ? {CMD_FIFO_SIZE_LINES, STR_SINK_FIFO_SIZE_BYTES} : 64'd0}};
+             RB_FIFOSIZE             : {rb_stb_int, rb_data_int} <= {     1'b1, {CMD_FIFO_SIZE_LINES, STR_SINK_FIFO_SIZE_BYTES}};
              RB_MTU                  : {rb_stb_int, rb_data_int} <= {     1'b1, {k < OUTPUT_PORTS ? MTU[8*k+7:8*k]              : 64'd0}};
              RB_BLOCK_PORT_SIDS      : {rb_stb_int, rb_data_int} <= {     1'b1, {src_sid[16*k+15:16*k],
                                                                                 k < OUTPUT_PORTS ? next_dst_sid[16*k+15:16*k]     : 16'd0,
