@@ -193,7 +193,7 @@ module rx_frontend_gen3 #(
 
       // 90 degree mixer
       quarter_rate_downconverter #(.WIDTH(24)) qr_dc_i(
-        .clk(clk), .reset(reset || sync_in),
+        .clk(clk), .reset(reset || sync_in || phase_reset),
         .i_tdata({adc_i_comp, adc_q_comp}), .i_tlast(1'b1), .i_tvalid(adc_comp_stb), .i_tready(),
         .o_tdata({adc_i_dsp_cout, adc_q_dsp_cout}), .o_tlast(), .o_tvalid(adc_dsp_cout_stb), .o_tready(1'b1),
         .dirctn(phase_dir));
@@ -239,7 +239,7 @@ module rx_frontend_gen3 #(
     .clk(clk),.reset(reset), .in(adc_i_dsp),.strobe_in(adc_dsp_stb), .out(rx_i_out), .strobe_out(rx_stb));
   round_sd #(.WIDTH_IN(24),.WIDTH_OUT(16)) round_q (
     .clk(clk),.reset(reset), .in(adc_q_dsp),.strobe_in(adc_dsp_stb), .out(rx_q_out), .strobe_out());
-    
+
   assign rx_i = bypass_all ? adc_i : rx_i_out;
   assign rx_q = bypass_all ? adc_q : rx_q_out;
 
