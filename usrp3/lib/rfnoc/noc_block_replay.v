@@ -8,7 +8,7 @@
 // Description: RFNoC data record and replay block. See axi_replay.v for 
 //              details of operation.
 
-//`default_nettype none
+`default_nettype none
 
 
 
@@ -253,20 +253,23 @@ module noc_block_replay #(
   genvar i;
   generate
     for (i = 0; i < NUM_REPLAY_BLOCKS; i = i+1) begin : gen_replay_blocks
+      wire [127:0] s_axis_data_tuser_tmp;
 
-      // Generate the TUSER signal. Some of these fields will be updated by the 
-      // axi_wrapper (chdr_framer).
-      assign s_axis_data_tuser[(128*(i+1))-1 : 128*i] = {
-        2'b00,                              // Packet Type = 0 (Data)
-        1'b0,                               // Has Time = 0 (No)
-        1'b0,                               // EOB = 0 (No)
-        12'h000,                            // Sequence Number
-        16'h0000,                           // Length in Bytes
-        src_id[(16*(i+1))-1 : 16*i],        // Source ID
-        next_dst_sid[(16*(i+1))-1 : 16*i],  // Destination ID
-        64'h0000_0000_0000_0000             // Timestamp
-      };
-      
+      // Update the src and dst fields in the header
+      cvita_hdr_modify cvita_hdr_modify_i (
+        .header_in  (s_axis_data_tuser_tmp),
+        .header_out (s_axis_data_tuser[(128*(i+1))-1 : 128*i]),
+        .use_pkt_type       (0), .pkt_type       (2'b0),
+        .use_has_time       (0), .has_time       (1'b0),
+        .use_eob            (0), .eob            (1'b0),
+        .use_seqnum         (0), .seqnum         (12'b0),
+        .use_length         (0), .length         (16'b0),
+        .use_payload_length (0), .payload_length (16'b0),
+        .use_src_sid        (1), .src_sid        (src_id[(16*(i+1))-1       : 16*i]),
+        .use_dst_sid        (1), .dst_sid        (next_dst_sid[(16*(i+1))-1 : 16*i]),
+        .use_vita_time      (0), .vita_time      (64'b0)
+      );
+
 
       //-----------------------------------------------------------------------
       // AXI Wrapper
@@ -382,6 +385,7 @@ module noc_block_replay #(
         //
         // Output
         .o_tdata  (s_axis_data_tdata [( DWIDTH*(i+1))-1 :  DWIDTH*i]),
+        .o_tuser  (s_axis_data_tuser_tmp),
         .o_tvalid (s_axis_data_tvalid[( 1*(i+1))-1 :  1*i]),
         .o_tlast  (s_axis_data_tlast [( 1*(i+1))-1 :  1*i]),
         .o_tready (s_axis_data_tready[( 1*(i+1))-1 :  1*i]),
@@ -445,7 +449,7 @@ module noc_block_replay #(
         .m_axi_wlast  (m_axi_wlast [( 1*(i+1))-1 :  1*i]), // input m_axi_wlast
         .m_axi_wvalid (m_axi_wvalid[( 1*(i+1))-1 :  1*i]), // input m_axi_wvalid
         .m_axi_wready (m_axi_wready[( 1*(i+1))-1 :  1*i]), // output m_axi_wready
-        .m_axi_wuser  (),
+        .m_axi_wuser  (m_axi_wuser [( 1*(i+1))-1 :  1*i]), // output m_axi_wuser
         
         // Write Response
         .m_axi_bid    (m_axi_bid   [( 1*(i+1))-1 : 1*i]), // output [0 : 0] m_axi_bid
@@ -518,7 +522,7 @@ module noc_block_replay #(
     end
   endgenerate
 
-
-
-
 endmodule
+
+
+`default_nettype wire

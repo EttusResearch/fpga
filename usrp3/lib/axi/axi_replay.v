@@ -9,6 +9,8 @@
 // This block implements the state machine and control logic for recording and 
 // playback of AXI-Stream data, using a DMA-accessible memory as a buffer.
 
+`default_nettype none
+
 
 module axi_replay #(
   parameter DATA_WIDTH  = 64,
@@ -41,6 +43,7 @@ module axi_replay #(
 
   // Output
   output wire [DATA_WIDTH-1:0] o_tdata,
+  output wire [         127:0] o_tuser,
   output wire                  o_tvalid,
   output wire                  o_tlast,
   input  wire                  o_tready,
@@ -87,6 +90,8 @@ module axi_replay #(
   localparam [7:0] SR_PLAY_BASE_ADDR   = 132;
   localparam [7:0] SR_PLAY_BUFFER_SIZE = 133;
   localparam [7:0] SR_RX_CTRL_COMMAND  = 152; // Same offset as radio
+  localparam [7:0] SR_RX_CTRL_TIME_HI  = 153; // Same offset as radio
+  localparam [7:0] SR_RX_CTRL_TIME_LO  = 154; // Same offset as radio
   localparam [7:0] SR_RX_CTRL_HALT     = 155; // Same offset as radio
   localparam [7:0] SR_RX_CTRL_MAXLEN   = 156; // Same offset as radio
 
@@ -98,6 +103,7 @@ module axi_replay #(
   // (MEM_BURST_SIZE). A size of 9 (512 64-bit words) is one 36-kbit BRAM.
   localparam REC_FIFO_ADDR_WIDTH  = 9;  // Log2 of input/record FIFO size
   localparam PLAY_FIFO_ADDR_WIDTH = 9;  // Log2 of output/playback FIFO size
+  localparam HDR_FIFO_ADDR_WIDTH  = 5;  // Log2 of output/time FIFO size
   //
   // Amount of data to buffer before writing to RAM. This should be a power of 
   // two so that it evenly divides the AXI_ALIGNMENT requirement. It also must 
@@ -119,19 +125,21 @@ module axi_replay #(
   // Command wires
   wire                   cmd_send_imm_cf, cmd_chain_cf, cmd_reload_cf, cmd_stop_cf;
   wire [LINES_WIDTH-1:0] cmd_num_lines_cf;
+  wire [           63:0] cmd_time_cf;
 
   // Settings registers signals
-  wire [ ADDR_WIDTH-1:0] rec_base_addr_sr;    // Byte address
-  wire [ ADDR_WIDTH-1:0] rec_buffer_size_sr;  // Size in bytes
-  wire [ ADDR_WIDTH-1:0] play_base_addr_sr;   // Byte address
-  wire [ ADDR_WIDTH-1:0] play_buffer_size_sr; // Size in bytes
+  wire [ ADDR_WIDTH-1:0] rec_base_addr_tmp,    rec_base_addr_sr;    // Byte address
+  wire [ ADDR_WIDTH-1:0] rec_buffer_size_tmp,  rec_buffer_size_sr;  // Size in bytes
+  wire [ ADDR_WIDTH-1:0] play_base_addr_tmp,   play_base_addr_sr;   // Byte address
+  wire [ ADDR_WIDTH-1:0] play_buffer_size_tmp, play_buffer_size_sr; // Size in bytes
   reg                    rec_restart;
   reg                    rec_restart_clear;
   wire [  CMD_WIDTH-1:0] command;
   wire                   command_valid;
+  wire            [63:0] command_time;
   reg                    play_halt;
   reg                    play_halt_clear;
-  wire [COUNT_WIDTH:0]   play_max_len_sr;
+  wire [  COUNT_WIDTH:0] play_max_len_sr;  // Width is COUNT_WIDTH+1 to support 2**COUNT_WIDTH
 
   // Command FIFO
   wire cmd_fifo_valid;
@@ -169,9 +177,10 @@ module axi_replay #(
     .strobe  (set_stb),
     .addr    (set_addr),
     .in      (set_data),
-    .out     (rec_base_addr_sr),
+    .out     (rec_base_addr_tmp),
     .changed ()
   );
+  assign rec_base_addr_sr = { rec_base_addr_tmp[ADDR_WIDTH-1:3], 3'b0 };
 
 
   // Record Buffer Size Register. This indicates the portion of the RAM 
@@ -186,9 +195,10 @@ module axi_replay #(
     .strobe  (set_stb),
     .addr    (set_addr),
     .in      (set_data),
-    .out     (rec_buffer_size_sr),
+    .out     (rec_buffer_size_tmp),
     .changed ()
   );
+  assign rec_buffer_size_sr = { rec_buffer_size_tmp[ADDR_WIDTH-1:3], 3'b0 };
 
 
   // Playback Base Address Register. Address is a byte address. This must be a 
@@ -202,9 +212,10 @@ module axi_replay #(
     .strobe  (set_stb),
     .addr    (set_addr),
     .in      (set_data),
-    .out     (play_base_addr_sr),
+    .out     (play_base_addr_tmp),
     .changed ()
   );
+  assign play_base_addr_sr = { play_base_addr_tmp[ADDR_WIDTH-1:3], 3'b0 };
 
 
   // Playback Buffer Size Register. This indicates the portion of the RAM 
@@ -219,9 +230,10 @@ module axi_replay #(
     .strobe  (set_stb),
     .addr    (set_addr),
     .in      (set_data),
-    .out     (play_buffer_size_sr),
+    .out     (play_buffer_size_tmp),
     .changed ()
   );
+  assign play_buffer_size_sr = { play_buffer_size_tmp[ADDR_WIDTH-1:3], 3'b0 };
 
 
   // Record Buffer Restart Register. Software must write to this register after 
@@ -274,7 +286,7 @@ module axi_replay #(
   //   stop        [28]  When done with num_lines, stop transferring if 
   //                     cmd_chain is set.
   //   
-  //   num_lines [27:0]  Number of samples to transfer to/from block.
+  //   num_lines [27:0]  Number of 64-bit words to transfer to/from block.
   //
   setting_reg #(
     .my_addr (SR_RX_CTRL_COMMAND),
@@ -289,6 +301,33 @@ module axi_replay #(
     .changed (command_valid)
   );
 
+  // Playback Start Time (Upper Bits)
+  setting_reg #(
+    .my_addr (SR_RX_CTRL_TIME_HI),
+    .width   (32)
+  ) sr_time_hi (
+    .clk     (clk),
+    .rst     (rst),
+    .strobe  (set_stb),
+    .addr    (set_addr),
+    .in      (set_data),
+    .out     (command_time[63:32]),
+    .changed ()
+  );
+
+  // Playback Start Time (Lower Bits)
+  setting_reg #(
+    .my_addr (SR_RX_CTRL_TIME_LO),
+    .width   (32)
+  ) sr_time_lo (
+    .clk     (clk),
+    .rst     (rst),
+    .strobe  (set_stb),
+    .addr    (set_addr),
+    .in      (set_data),
+    .out     (command_time[31:0]),
+    .changed ()
+  );
 
   // Max Length Register. This register sets the number of words for the 
   // maximum packet size.
@@ -315,7 +354,7 @@ module axi_replay #(
       SR_REC_FULLNESS     : rb_data = rec_buffer_used * WORD_SIZE;
       SR_PLAY_BASE_ADDR   : rb_data = play_base_addr_sr;
       SR_PLAY_BUFFER_SIZE : rb_data = play_buffer_size_sr;
-      SR_RX_CTRL_MAXLEN   : rb_data = play_max_len_sr;
+      SR_RX_CTRL_MAXLEN   : rb_data = {{(64-(COUNT_WIDTH+1)){1'b0}}, play_max_len_sr};
       default             : rb_data = 32'h0;
     endcase
   end
@@ -330,15 +369,15 @@ module axi_replay #(
   //---------------------------------------------------------------------------
 
   axi_fifo_short #(
-    .WIDTH (CMD_WIDTH)
+    .WIDTH (CMD_WIDTH + 64)
   ) command_fifo (
     .clk      (clk),
     .reset    (rst),
     .clear    (play_halt_clear),
-    .i_tdata  (command),
+    .i_tdata  ({command, command_time}),
     .i_tvalid (command_valid),
     .i_tready (),
-    .o_tdata  ({cmd_send_imm_cf, cmd_chain_cf, cmd_reload_cf, cmd_stop_cf, cmd_num_lines_cf}),
+    .o_tdata  ({cmd_send_imm_cf, cmd_chain_cf, cmd_reload_cf, cmd_stop_cf, cmd_num_lines_cf, cmd_time_cf}),
     .o_tvalid (cmd_fifo_valid),
     .o_tready (cmd_fifo_ready),
     .occupied (),
@@ -390,7 +429,6 @@ module axi_replay #(
   reg [2:0] rec_state;
 
   // Registers
-  reg [ADDR_WIDTH-1:0] rec_base_addr;   // Last base address pulled from settings register
   reg [ADDR_WIDTH-1:0] rec_buffer_size; // Last buffer size pulled from settings register
   reg [ADDR_WIDTH-1:0] rec_addr;        // Current offset into record buffer
   reg [ADDR_WIDTH-1:0] rec_size;        // Number of words to transfer next
@@ -405,13 +443,18 @@ module axi_replay #(
   always @(posedge clk) begin
     if (rst) begin
       rec_state        <= REC_WAIT_FIFO;
-      rec_addr         <= 0;
       write_ctrl_valid <= 1'b0;
-
-      rec_buffer_avail <= 0;
-      rec_buffer_used  <= 0;
       rec_wait_timer   <= 0;
       rec_wait_timeout <= 0;
+      rec_buffer_avail <= 0;
+      rec_buffer_used  <= 0;
+
+      // Don't care:
+      rec_addr    <= 0;
+      rec_size_0  <= {ADDR_WIDTH{1'bX}};
+      rec_size    <= {ADDR_WIDTH{1'bX}};
+      write_count <= {COUNT_WIDTH{1'bX}};
+      write_addr  <= {ADDR_WIDTH{1'bX}};
 
     end else begin
 
@@ -452,7 +495,6 @@ module axi_replay #(
 
             // Latch the new register values. We don't want them to change 
             // while we're running.
-            rec_base_addr   <= rec_base_addr_sr;
             rec_buffer_size <= rec_buffer_size_sr / WORD_SIZE;   // Store size in words
 
             // Reset counters and address any time we update the buffer size or 
@@ -560,8 +602,6 @@ module axi_replay #(
   reg [2:0] play_state;
 
   // Registers
-  reg [ADDR_WIDTH-1:0] play_base_addr;    // Last base address pulled from settings register
-  reg [ADDR_WIDTH-1:0] play_buffer_size;  // Last buffer size pulled from settings register
   reg [ADDR_WIDTH-1:0] play_addr;         // Current byte offset into record buffer
   reg [ADDR_WIDTH-1:0] play_addr_0;       // Pipeline stage for computing play_addr
   reg [ADDR_WIDTH-1:0] play_addr_1;       // Pipeline stage for computing play_addr
@@ -572,6 +612,9 @@ module axi_replay #(
   reg [LINES_WIDTH-1:0] play_words_remaining; // Number of lines left to read for command
   reg                   cmd_chain;            // Copy of cmd_chain from last command
   reg                   cmd_reload;           // Copy of cmd_reload from last command
+  reg                   cmd_send_imm;         // Copy of cmd_send_imm  from last command
+  reg            [63:0] cmd_time;             // COpy of cmd_time from last command
+  reg                   last_trans;           // Is this the last read transaction for the command?
 
   reg play_full_burst_avail;     // True if we there's a full burst to read
   reg play_buffer_avail_nonzero; // True if > 0
@@ -589,6 +632,32 @@ module axi_replay #(
     if (rst) begin
       play_state     <= PLAY_IDLE;
       cmd_fifo_ready <= 1'b0;
+
+      // Don't care:
+      play_full_burst_avail     <= 1'bX;
+      play_buffer_avail_nonzero <= 1'bX;
+      cmd_num_lines_cf_nonzero  <= 1'bX;
+      play_buffer_end           <= {ADDR_WIDTH{1'bX}};
+      read_ctrl_valid           <= 1'bX;
+      play_halt_clear           <= 1'bX;
+      play_addr                 <= {ADDR_WIDTH{1'bX}};
+      cmd_num_lines             <= {LINES_WIDTH{1'bX}};
+      cmd_reload                <= 1'bX;
+      cmd_chain                 <= 1'bX;
+      cmd_send_imm              <= 1'bX;
+      cmd_time                  <= {64{1'bX}};
+      play_buffer_avail         <= {ADDR_WIDTH{1'bX}};
+      play_words_remaining      <= {LINES_WIDTH{1'bX}};
+      max_dma_size              <= {ADDR_WIDTH{1'bX}};
+      play_words_remaining_m1   <= {ADDR_WIDTH{1'bX}};
+      max_dma_size_m1           <= {ADDR_WIDTH{1'bX}};
+      max_dma_size_ok           <= 1'bX;
+      read_count                <= {COUNT_WIDTH{1'bX}};
+      read_addr                 <= {ADDR_WIDTH{1'bX}};
+      play_addr_0               <= {ADDR_WIDTH{1'bX}};
+      play_buffer_avail_0       <= {ADDR_WIDTH{1'bX}};
+      play_addr_1               <= {ADDR_WIDTH{1'bX}};
+      last_trans                <= 1'bX;
 
     end else begin
       
@@ -612,13 +681,13 @@ module axi_replay #(
           play_addr <= play_base_addr_sr;
 
           // Save off command info, in case we need to repeat the command
-          cmd_num_lines    <= cmd_num_lines_cf;
-          cmd_reload       <= cmd_reload_cf;
-          cmd_chain        <= cmd_chain_cf;
+          cmd_num_lines <= cmd_num_lines_cf;
+          cmd_reload    <= cmd_reload_cf;
+          cmd_chain     <= cmd_chain_cf;
+          cmd_send_imm  <= cmd_send_imm_cf;
+          cmd_time      <= cmd_time_cf;
 
           // Save the buffer info so it doesn't update during playback
-          play_base_addr    <= play_base_addr_sr;
-          play_buffer_size  <= play_buffer_size_sr;
           play_buffer_avail <= play_buffer_size_sr / WORD_SIZE;
 
           // Wait until we receive a command and we have enough data recorded 
@@ -627,14 +696,11 @@ module axi_replay #(
             // Load the number of word remaining to complete this command
             play_words_remaining <= cmd_num_lines_cf;
 
-            // We don't support time yet, so we require send_imm to do 
-            // anything. Also, we can't do anything until we have data recorded.
             if (cmd_stop_cf) begin
               // Do nothing, except clear command from the FIFO
               cmd_fifo_ready <= 1'b1;
-            end else if (cmd_send_imm_cf
-                         && play_buffer_avail_nonzero 
-                         && cmd_num_lines_cf_nonzero) begin
+            end else if (play_buffer_avail_nonzero &&
+                         cmd_num_lines_cf_nonzero) begin
               // Dequeue the command from the FIFO
               cmd_fifo_ready <= 1'b1;
 
@@ -669,6 +735,8 @@ module axi_replay #(
           play_words_remaining_m1 <= play_words_remaining-1;
           max_dma_size_m1         <= max_dma_size-1;
           max_dma_size_ok         <= play_words_remaining >= max_dma_size;
+          last_trans              <= (play_words_remaining <= max_dma_size) && 
+                                     !cmd_chain && !cmd_reload;
           play_state              <= PLAY_DMA_REQ;
         end
 
@@ -720,6 +788,9 @@ module axi_replay #(
               play_addr_1       <= play_addr_0;
               play_buffer_avail <= play_buffer_avail_0;
             end
+
+            // Update the time for the first word of the next transaction
+            cmd_time <= cmd_time + (read_count + 1) * (DATA_WIDTH/32);
 
             play_state <= PLAY_DONE_CHECK;
           end
@@ -775,13 +846,16 @@ module axi_replay #(
 
 
   //---------------------------------------------------------------------------
-  // TLAST Generation
+  // TLAST and TUSER Generation
   //---------------------------------------------------------------------------
   //
-  // This block monitors the signals to/from the DMA master and generates the 
-  // TLAST signal. We assert TLAST at the end of every read transaction and 
-  // after every play_max_len_sr words, so that no packets are longer than the 
-  // length indicated by the max_len register.
+  // This block monitors the signals to/from the DMA master and generates the
+  // TLAST and TUSER signals. We assert TLAST at the end of every read
+  // transaction and after every play_max_len_sr words, so that no packets are
+  // longer than the length indicated by the max_len register.
+  //
+  // TUSER consists of the timestamp, has_time flag, and eob flag. These are
+  // generated by the playback logic for each DMA transaction.
   //
   // The timing of this block relies on the fact that read_ctrl_ready is not 
   // reasserted by the DMA master until after TLAST gets asserted.
@@ -789,19 +863,31 @@ module axi_replay #(
   //---------------------------------------------------------------------------
 
   reg [COUNT_WIDTH-1:0] read_counter;
-  reg [COUNT_WIDTH-1:0] length_counter;
+  reg [  COUNT_WIDTH:0] length_counter;
+  reg [           63:0] time_counter;
   reg                   play_fifo_i_tlast;
+  reg                   has_time;
+  reg                   eob;
 
   always @(posedge clk)
   begin
     if (rst) begin
       play_fifo_i_tlast <= 1'b0;
+      // Don't care:
+      read_counter      <= {COUNT_WIDTH{1'bX}};
+      length_counter    <= {COUNT_WIDTH+1{1'bX}};
+      time_counter      <= 64'bX;
+      has_time          <= 1'bX;
+      eob               <= 1'bX;
     end else begin
       // Check if we're requesting a read transaction
       if (read_ctrl_valid && read_ctrl_ready) begin
         // Initialize read_counter for new transaction
         read_counter   <= read_count;
         length_counter <= play_max_len_sr;
+        time_counter   <= cmd_time;
+        has_time       <= ~cmd_send_imm;
+        eob            <= last_trans && (read_count < play_max_len_sr);
 
         // If read_count is 0, then the first word is also the last word
         if (read_count == 0) begin
@@ -811,7 +897,8 @@ module axi_replay #(
       // Track the number of words read out by DMA master
       end else if (read_data_valid && read_data_ready) begin
         read_counter   <= read_counter - 1;
-        length_counter <= length_counter - 1;        
+        length_counter <= length_counter - 1;
+        time_counter   <= time_counter + (DATA_WIDTH/32);  // Add number of samples per word
 
         // Check if the word currently being output is the last word of a 
         // packet, which means we need to clear tlast. 
@@ -825,10 +912,13 @@ module axi_replay #(
           // Restart length counter
           length_counter <= play_max_len_sr;
 
+          // Check if next packet is the end of the burst (EOB)
+          eob <= last_trans && (read_counter <= play_max_len_sr);
+
         // Check if the next word to be output should be the last of a packet.
         end else if (read_counter == 1 || length_counter == 2) begin
           play_fifo_i_tlast <= 1'b1;
-        end 
+        end
       end
 
     end
@@ -839,8 +929,8 @@ module axi_replay #(
   // Playback Output Data FIFO 
   //---------------------------------------------------------------------------
   //
-  // This FIFO buffers data that has been read out of RAM as part of a playback 
-  // operation.
+  // The play_axi_fifo buffers data that has been read out of RAM as part of a
+  // playback operation.
   //
   //---------------------------------------------------------------------------
 
@@ -864,4 +954,82 @@ module axi_replay #(
     .occupied ()
   );
 
+  reg play_fifo_i_sop = 1'b1;
+
+  // Make play_fifo_i_sop true whenever the next play_fifo_i word is the start
+  // of a packet.
+  always @(posedge clk) begin
+    if (rst) begin
+      play_fifo_i_sop <= 1'b1;
+    end else begin
+      if (play_fifo_i_tvalid & play_fifo_i_tready) begin
+        play_fifo_i_sop <= play_fifo_i_tlast;
+      end
+    end
+  end
+
+
+  //---------------------------------------------------------------------------
+  // Header Info FIFO
+  //---------------------------------------------------------------------------
+  //
+  // The hdr_axi_fifo contains the header information for the next packet, with
+  // one word per packet. This will be used to drive TUSER.
+  //
+  //---------------------------------------------------------------------------
+
+  wire [65:0] hdr_fifo_i_tdata;
+  wire        hdr_fifo_i_tvalid;
+  wire        hdr_fifo_i_tready;
+  wire [65:0] hdr_fifo_o_tdata;
+  wire        hdr_fifo_o_tready;
+
+  axi_fifo #(
+    .WIDTH (66),
+    .SIZE  (HDR_FIFO_ADDR_WIDTH)
+  ) hdr_axi_fifo (
+    .clk      (clk),
+    .reset    (rst),
+    .clear    (1'b0),
+    //
+    .i_tdata  (hdr_fifo_i_tdata),
+    .i_tvalid (hdr_fifo_i_tvalid),
+    .i_tready (hdr_fifo_i_tready),
+    //
+    .o_tdata  (hdr_fifo_o_tdata),
+    .o_tvalid (),
+    .o_tready (hdr_fifo_o_tready),
+    //
+    .space    (),
+    .occupied ()
+  );
+
+  assign hdr_fifo_i_tdata = {has_time, eob, time_counter};
+
+  // Pop the timestamp whenever we finish reading out a data packet
+  assign hdr_fifo_o_tready = o_tvalid & o_tready & o_tlast;
+
+  // Write the timestamp at the start of each packet
+  assign hdr_fifo_i_tvalid = play_fifo_i_tvalid & play_fifo_i_tready & play_fifo_i_sop;
+
+  // Build the packet header (TUSER)
+  cvita_hdr_encoder cvita_hdr_encoder_i (
+    .pkt_type       (2'b00),                   // Packet Type = 0 (Data)
+    .has_time       (hdr_fifo_o_tdata[65]),
+    .eob            (hdr_fifo_o_tdata[64]),
+    .seqnum         (12'h000),                 // To be filled in later
+    .payload_length (16'h0000),                // To be filled in later
+    .src_sid        (16'h0000),                // To be filled in later
+    .dst_sid        (16'h0000),                // To be filled in later
+    .vita_time      (hdr_fifo_o_tdata[63:0]), // Timestamp
+    .header         (o_tuser)
+  );
+
+  // FIXME: There's nothing to prevent overflow on hdr_axi_fifo. Right now we
+  // just assume we'll never have more than 2^HDR_FIFO_ADDR_WIDTH packets
+  // buffered at one time.
+
 endmodule
+
+
+`default_nettype wire

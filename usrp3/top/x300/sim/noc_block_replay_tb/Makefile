@@ -51,9 +51,10 @@ SIM_RUNTIME_US = 150000
 # additional user created files
 SIM_SRCS = \
 $(abspath noc_block_replay_tb.sv) \
-$(abspath replay_sim_wrapper.sv) \
+$(abspath replay_sim_ram.sv) \
 $(LIB_DIR)/axi/axi_replay.v \
 $(LIB_DIR)/rfnoc/noc_block_replay.v \
+$(LIB_DIR)/sim/models/axi_ram_model.sv \
 $(IP_DDR3_32BIT_SIM_OUTS)
 
 #-------------------------------------------------

@@ -3,168 +3,165 @@
 //
 // SPDX-License-Identifier: LGPL-3.0
 //
-// Module: replay_sim_wrapper
+// Module: replay_sim_ram
 //
 // Description:
 //
-// Simulation wrapper for the replay RFNoC block. This module instantiates the 
-// memory (DRAM or SRAM depending on the simulation wanted) along with 
-// noc_block_replay. Using SRAM dramatically speeds up simulation time, but 
-// does not model the timing behavior of DRAM.
+//   Simulation model for the RAM to use for the replay block. This module
+//   instantiates the memory (DRAM, SRAM, or a generic AXI RAM depending on the
+//   RAM_MODEL parameter).
+//
+// Parameters:
+//
+//   RAM_MODEL : Can be "DRAM", "SRAM", or "AXI_RAM". DRAM uses a full DRAM
+//               controller and memory model, but takes a long time to
+//               simulate. SRAM is faster but might not catch flow control
+//               issues due to its high speed. AXI_RAM is a generic simulation
+//               models that simulates occasional random memory stalls.
+//
 
 `include "sim_axi4_lib.svh"
 
-//`default_nettype none
+`default_nettype none
 
 `timescale 1ns/1ps
 
 
 
-module replay_sim_wrapper #(
-  parameter USE_SRAM_MEMORY = 0
+module replay_sim_ram #(
+  parameter RAM_MODEL = "AXI_RAM"
 ) (
-  input  wire        bus_clk,
-  input  wire        bus_rst,
   input  wire        ce_clk,
   input  wire        ce_rst,
   input  wire        sys_clk,
   input  wire        sys_rst_n,
-  
-  input  wire [63:0] i_tdata,
-  input  wire        i_tlast,
-  input  wire        i_tvalid,
-  output wire        i_tready,
 
-  output wire [63:0] o_tdata,
-  output wire        o_tlast,
-  output wire        o_tvalid,
-  input  wire        o_tready,
+  output wire        init_done,
 
-  output wire        init_done
+  axi4_rd_t          dma0_axi_rd,
+  axi4_wr_t          dma0_axi_wr,
+  axi4_rd_t          dma1_axi_rd,
+  axi4_wr_t          dma1_axi_wr
 );
 
   //---------------------------------------------------------------------------
-  // Declarations
+  // AXI_RAM Option
+  //---------------------------------------------------------------------------
+  //
+  // In this case, we instantiate a generic AXI_RAM for each replay block. This
+  // gives us the fastest simulation. we instantiate a separate RAM for each
+  // replay block, rather than use an AXI interconnect block to share a single
+  // RAM. This means that when simulating with SRAM, collisions between replay
+  // blocks is not possible.
+  //
   //---------------------------------------------------------------------------
 
-  // AXI interconnect and MIG interfaces
-  axi4_rd_t #(.DWIDTH(64),  .AWIDTH(32), .IDWIDTH(1)) dma0_axi_rd(.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(64),  .AWIDTH(32), .IDWIDTH(1)) dma0_axi_wr(.clk(sys_clk));
-  axi4_rd_t #(.DWIDTH(64),  .AWIDTH(32), .IDWIDTH(1)) dma1_axi_rd(.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(64),  .AWIDTH(32), .IDWIDTH(1)) dma1_axi_wr(.clk(sys_clk));
-  axi4_rd_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_rd (.clk(sys_clk));
-  axi4_wr_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_wr (.clk(sys_clk));
+  generate if (RAM_MODEL == "AXI_RAM") begin
 
-  wire [31:0] ddr3_dq;      // Data pins. Input for Reads; Output for Writes.
-  wire [ 3:0] ddr3_dqs_n;   // Data Strobes. Input for Reads; Output for Writes.
-  wire [ 3:0] ddr3_dqs_p;
-  wire [14:0] ddr3_addr;    // Address
-  wire [ 2:0] ddr3_ba;      // Bank Address
-  wire        ddr3_ras_n;   // Row Address Strobe
-  wire        ddr3_cas_n;   // Column address select
-  wire        ddr3_we_n;    // Write Enable
-  wire        ddr3_reset_n; // SDRAM reset pin
-  wire [ 0:0] ddr3_ck_p;    // Differential clock
-  wire [ 0:0] ddr3_ck_n;
-  wire [ 0:0] ddr3_cke;     // Clock Enable
-  wire [ 0:0] ddr3_cs_n;    // Chip Select
-  wire [ 3:0] ddr3_dm;      // Data Mask
-  wire [ 0:0] ddr3_odt;     // On-Die termination enable
-  
-  wire ddr3_axi_clk;    // 1/4 DDR external clock rate
-  wire ddr3_axi_clk_x2; // 1/2 DDR external clock rate
-  wire ddr3_axi_rst;    // UI reset from MIG
+    localparam AWIDTH     = 32;
+    localparam DWIDTH     = 64;
+    localparam STALL_PROB = 25;
 
+    // In this case, there's no MIG, so we must generate the status signal
+    // indicating the MIG is initialized.
+    assign init_done = 1;
 
-  //---------------------------------------------------------------------------
-  // DUT
-  //---------------------------------------------------------------------------
+    axi_ram_model #(
+      .AWIDTH     (AWIDTH),
+      .DWIDTH     (DWIDTH),
+      .IDWIDTH    (1),
+      .BIG_ENDIAN (0),
+      .STALL_PROB (STALL_PROB)
+    ) axi_ram_model_0 (
+      .s_aclk        (ce_clk),
+      .s_aresetn     (~ce_rst),
+      .s_axi_awid    (dma0_axi_wr.addr.id),
+      .s_axi_awaddr  (dma0_axi_wr.addr.addr),
+      .s_axi_awlen   (dma0_axi_wr.addr.len),
+      .s_axi_awsize  (dma0_axi_wr.addr.size),
+      .s_axi_awburst (dma0_axi_wr.addr.burst),
+      .s_axi_awvalid (dma0_axi_wr.addr.valid),
+      .s_axi_awready (dma0_axi_wr.addr.ready),
+      .s_axi_wdata   (dma0_axi_wr.data.data),
+      .s_axi_wstrb   (dma0_axi_wr.data.strb),
+      .s_axi_wlast   (dma0_axi_wr.data.last),
+      .s_axi_wvalid  (dma0_axi_wr.data.valid),
+      .s_axi_wready  (dma0_axi_wr.data.ready),
+      .s_axi_bid     (dma0_axi_wr.resp.id),
+      .s_axi_bresp   (dma0_axi_wr.resp.resp),
+      .s_axi_bvalid  (dma0_axi_wr.resp.valid),
+      .s_axi_bready  (dma0_axi_wr.resp.ready),
+      .s_axi_arid    (dma0_axi_rd.addr.id),
+      .s_axi_araddr  (dma0_axi_rd.addr.addr),
+      .s_axi_arlen   (dma0_axi_rd.addr.len),
+      .s_axi_arsize  (dma0_axi_rd.addr.size),
+      .s_axi_arburst (dma0_axi_rd.addr.burst),
+      .s_axi_arvalid (dma0_axi_rd.addr.valid),
+      .s_axi_arready (dma0_axi_rd.addr.ready),
+      .s_axi_rid     (dma0_axi_rd.data.id),
+      .s_axi_rdata   (dma0_axi_rd.data.data),
+      .s_axi_rresp   (dma0_axi_rd.data.resp),
+      .s_axi_rlast   (dma0_axi_rd.data.last),
+      .s_axi_rvalid  (dma0_axi_rd.data.valid),
+      .s_axi_rready  (dma0_axi_rd.data.ready)
+    );
 
-  noc_block_replay #(
-    .STR_SINK_FIFOSIZE (11),
-    .MTU               (12),
-    .NUM_REPLAY_BLOCKS (2)
-  ) noc_block_replay_i (
-    .bus_clk (bus_clk),
-    .bus_rst (bus_rst),
-    .ce_clk  (ce_clk),
-    .ce_rst  (ce_rst),
-    
-    .i_tdata  (i_tdata),
-    .i_tlast  (i_tlast),
-    .i_tvalid (i_tvalid),
-    .i_tready (i_tready),
-    
-    .o_tdata  (o_tdata),
-    .o_tlast  (o_tlast),
-    .o_tvalid (o_tvalid),
-    .o_tready (o_tready),
-    
-    .m_axi_awid     ({dma1_axi_wr.addr.id, dma0_axi_wr.addr.id}),
-    .m_axi_awaddr   ({dma1_axi_wr.addr.addr, dma0_axi_wr.addr.addr}),
-    .m_axi_awlen    ({dma1_axi_wr.addr.len, dma0_axi_wr.addr.len}),
-    .m_axi_awsize   ({dma1_axi_wr.addr.size, dma0_axi_wr.addr.size}),
-    .m_axi_awburst  ({dma1_axi_wr.addr.burst, dma0_axi_wr.addr.burst}),
-    .m_axi_awlock   ({dma1_axi_wr.addr.lock, dma0_axi_wr.addr.lock}),
-    .m_axi_awcache  ({dma1_axi_wr.addr.cache, dma0_axi_wr.addr.cache}),
-    .m_axi_awprot   ({dma1_axi_wr.addr.prot, dma0_axi_wr.addr.prot}),
-    .m_axi_awqos    ({dma1_axi_wr.addr.qos, dma0_axi_wr.addr.qos}),
-    .m_axi_awregion ({dma1_axi_wr.addr.region, dma0_axi_wr.addr.region}),
-    .m_axi_awuser   ({dma1_axi_wr.addr.user, dma0_axi_wr.addr.user}),
-    .m_axi_awvalid  ({dma1_axi_wr.addr.valid, dma0_axi_wr.addr.valid}),
-    .m_axi_awready  ({dma1_axi_wr.addr.ready, dma0_axi_wr.addr.ready}),
-    .m_axi_wdata    ({dma1_axi_wr.data.data, dma0_axi_wr.data.data}),
-    .m_axi_wstrb    ({dma1_axi_wr.data.strb, dma0_axi_wr.data.strb}),
-    .m_axi_wlast    ({dma1_axi_wr.data.last, dma0_axi_wr.data.last}),
-    .m_axi_wuser    ({dma1_axi_wr.data.user, dma0_axi_wr.data.user}),
-    .m_axi_wvalid   ({dma1_axi_wr.data.valid, dma0_axi_wr.data.valid}),
-    .m_axi_wready   ({dma1_axi_wr.data.ready, dma0_axi_wr.data.ready}),
-    .m_axi_bid      ({dma1_axi_wr.resp.id, dma0_axi_wr.resp.id}),
-    .m_axi_bresp    ({dma1_axi_wr.resp.resp, dma0_axi_wr.resp.resp}),
-    .m_axi_buser    ({dma1_axi_wr.resp.user, dma0_axi_wr.resp.user}),
-    .m_axi_bvalid   ({dma1_axi_wr.resp.valid, dma0_axi_wr.resp.valid}),
-    .m_axi_bready   ({dma1_axi_wr.resp.ready, dma0_axi_wr.resp.ready}),
-    .m_axi_arid     ({dma1_axi_rd.addr.id, dma0_axi_rd.addr.id}),
-    .m_axi_araddr   ({dma1_axi_rd.addr.addr, dma0_axi_rd.addr.addr}),
-    .m_axi_arlen    ({dma1_axi_rd.addr.len, dma0_axi_rd.addr.len}),
-    .m_axi_arsize   ({dma1_axi_rd.addr.size, dma0_axi_rd.addr.size}),
-    .m_axi_arburst  ({dma1_axi_rd.addr.burst, dma0_axi_rd.addr.burst}),
-    .m_axi_arlock   ({dma1_axi_rd.addr.lock, dma0_axi_rd.addr.lock}),
-    .m_axi_arcache  ({dma1_axi_rd.addr.cache, dma0_axi_rd.addr.cache}),
-    .m_axi_arprot   ({dma1_axi_rd.addr.prot, dma0_axi_rd.addr.prot}),
-    .m_axi_arqos    ({dma1_axi_rd.addr.qos, dma0_axi_rd.addr.qos}),
-    .m_axi_arregion ({dma1_axi_rd.addr.region, dma0_axi_rd.addr.region}),
-    .m_axi_aruser   ({dma1_axi_rd.addr.user, dma0_axi_rd.addr.user}),
-    .m_axi_arvalid  ({dma1_axi_rd.addr.valid, dma0_axi_rd.addr.valid}),
-    .m_axi_arready  ({dma1_axi_rd.addr.ready, dma0_axi_rd.addr.ready}),
-    .m_axi_rid      ({dma1_axi_rd.data.id, dma0_axi_rd.data.id}),
-    .m_axi_rdata    ({dma1_axi_rd.data.data, dma0_axi_rd.data.data}),
-    .m_axi_rresp    ({dma1_axi_rd.data.resp, dma0_axi_rd.data.resp}),
-    .m_axi_rlast    ({dma1_axi_rd.data.last, dma0_axi_rd.data.last}),
-    .m_axi_ruser    ({dma1_axi_rd.data.user, dma0_axi_rd.data.user}),
-    .m_axi_rvalid   ({dma1_axi_rd.data.valid, dma0_axi_rd.data.valid}),
-    .m_axi_rready   ({dma1_axi_rd.data.ready, dma0_axi_rd.data.ready}),
-    
-    .debug ()
-  );
-
+    axi_ram_model #(
+      .AWIDTH     (AWIDTH),
+      .DWIDTH     (DWIDTH),
+      .IDWIDTH    (1),
+      .BIG_ENDIAN (0),
+      .STALL_PROB (STALL_PROB)
+    ) axi_ram_model_1 (
+      .s_aclk        (ce_clk),
+      .s_aresetn     (~ce_rst),
+      .s_axi_awid    (dma1_axi_wr.addr.id),
+      .s_axi_awaddr  (dma1_axi_wr.addr.addr),
+      .s_axi_awlen   (dma1_axi_wr.addr.len),
+      .s_axi_awsize  (dma1_axi_wr.addr.size),
+      .s_axi_awburst (dma1_axi_wr.addr.burst),
+      .s_axi_awvalid (dma1_axi_wr.addr.valid),
+      .s_axi_awready (dma1_axi_wr.addr.ready),
+      .s_axi_wdata   (dma1_axi_wr.data.data),
+      .s_axi_wstrb   (dma1_axi_wr.data.strb),
+      .s_axi_wlast   (dma1_axi_wr.data.last),
+      .s_axi_wvalid  (dma1_axi_wr.data.valid),
+      .s_axi_wready  (dma1_axi_wr.data.ready),
+      .s_axi_bid     (dma1_axi_wr.resp.id),
+      .s_axi_bresp   (dma1_axi_wr.resp.resp),
+      .s_axi_bvalid  (dma1_axi_wr.resp.valid),
+      .s_axi_bready  (dma1_axi_wr.resp.ready),
+      .s_axi_arid    (dma1_axi_rd.addr.id),
+      .s_axi_araddr  (dma1_axi_rd.addr.addr),
+      .s_axi_arlen   (dma1_axi_rd.addr.len),
+      .s_axi_arsize  (dma1_axi_rd.addr.size),
+      .s_axi_arburst (dma1_axi_rd.addr.burst),
+      .s_axi_arvalid (dma1_axi_rd.addr.valid),
+      .s_axi_arready (dma1_axi_rd.addr.ready),
+      .s_axi_rid     (dma1_axi_rd.data.id),
+      .s_axi_rdata   (dma1_axi_rd.data.data),
+      .s_axi_rresp   (dma1_axi_rd.data.resp),
+      .s_axi_rlast   (dma1_axi_rd.data.last),
+      .s_axi_rvalid  (dma1_axi_rd.data.valid),
+      .s_axi_rready  (dma1_axi_rd.data.ready)
+    );
 
 
   //---------------------------------------------------------------------------
   // SRAM Option
   //---------------------------------------------------------------------------
   //
-  // In this case, we instantiate a separate SRAM for each replay block, rather 
-  // than use an AXI interconnect block to share a single SRAM. This is due 
-  // port widths of the IP that already exists, although new IP could be 
-  // created. This means that when simulating with SRAM, collisions between 
+  // In this case, we instantiate a separate SRAM for each replay block, rather
+  // than use an AXI interconnect block to share a single SRAM. This is due
+  // port widths of the IP that already exists, although new IP could be
+  // created. This means that when simulating with SRAM, collisions between
   // replay blocks is not possible.
   //
   //---------------------------------------------------------------------------
 
-  generate if (USE_SRAM_MEMORY) begin
+  end else if (RAM_MODEL == "SRAM") begin
 
-    // In this case, there's no MIG, so we must generate the status signal 
+    // In this case, there's no MIG, so we must generate the status signal
     // indicating the MIG is initialized.
     assign init_done = 1;
 
@@ -242,12 +239,37 @@ module replay_sim_wrapper #(
   // DDR3/MIG Simulation Option
   //---------------------------------------------------------------------------
   //
-  // In this case, we instantiate the AXI interconnect, MIG (Xilinx DRAM memory 
+  // In this case, we instantiate the AXI interconnect, MIG (Xilinx DRAM memory
   // interface IP), and DDR3 memory models.
   //
   //---------------------------------------------------------------------------
 
-  end else begin
+  end else if (RAM_MODEL == "DRAM") begin
+
+    axi4_rd_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_rd (.clk(sys_clk));
+    axi4_wr_t #(.DWIDTH(256), .AWIDTH(30), .IDWIDTH(4)) mig_axi_wr (.clk(sys_clk));
+
+    wire [31:0] ddr3_dq;      // Data pins. Input for Reads; Output for Writes.
+    wire [ 3:0] ddr3_dqs_n;   // Data Strobes. Input for Reads; Output for Writes.
+    wire [ 3:0] ddr3_dqs_p;
+    wire [14:0] ddr3_addr;    // Address
+    wire [ 2:0] ddr3_ba;      // Bank Address
+    wire        ddr3_ras_n;   // Row Address Strobe
+    wire        ddr3_cas_n;   // Column address select
+    wire        ddr3_we_n;    // Write Enable
+    wire        ddr3_reset_n; // SDRAM reset pin
+    wire [ 0:0] ddr3_ck_p;    // Differential clock
+    wire [ 0:0] ddr3_ck_n;
+    wire [ 0:0] ddr3_cke;     // Clock Enable
+    wire [ 0:0] ddr3_cs_n;    // Chip Select
+    wire [ 3:0] ddr3_dm;      // Data Mask
+    wire [ 0:0] ddr3_odt;     // On-Die termination enable
+
+    wire ddr3_idelay_refclk;
+
+    wire ddr3_axi_clk;    // 1/4 DDR external clock rate
+    wire ddr3_axi_clk_x2; // 1/2 DDR external clock rate
+    wire ddr3_axi_rst;    // UI reset from MIG
 
     //-------------------------------------------------------------------------
     // AXI Interconnect Crossbar
@@ -300,7 +322,7 @@ module replay_sim_wrapper #(
       .S00_AXI_RLAST   (dma0_axi_rd.data.last),  // output S00_AXI_RLAST
       .S00_AXI_RVALID  (dma0_axi_rd.data.valid), // output S00_AXI_RVALID
       .S00_AXI_RREADY  (dma0_axi_rd.data.ready), // input S00_AXI_RREADY
-      
+
       // Slave Port 1
       //
       .S01_AXI_ACLK    (ce_clk),                 // input S00_AXI_ACLK
@@ -342,7 +364,7 @@ module replay_sim_wrapper #(
       .S01_AXI_RLAST   (dma1_axi_rd.data.last),  // output S00_AXI_RLAST
       .S01_AXI_RVALID  (dma1_axi_rd.data.valid), // output S00_AXI_RVALID
       .S01_AXI_RREADY  (dma1_axi_rd.data.ready), // input S00_AXI_RREADY
-      
+
       // Master Port 0
       //
       .M00_AXI_ACLK    (ddr3_axi_clk),          // input M00_AXI_ACLK
@@ -385,7 +407,7 @@ module replay_sim_wrapper #(
       .M00_AXI_RVALID  (mig_axi_rd.data.valid), // input M00_AXI_RVALID
       .M00_AXI_RREADY  (mig_axi_rd.data.ready)  // output M00_AXI_RREADY
     );
-  
+
 
     //-------------------------------------------------------------------------
     // MIG Instance
@@ -409,7 +431,7 @@ module replay_sim_wrapper #(
       .ddr3_cs_n           (ddr3_cs_n),
       .ddr3_dm             (ddr3_dm),
       .ddr3_odt            (ddr3_odt),
-      
+
       // Application interface ports
       .ui_clk          (ddr3_axi_clk),
       .ui_addn_clk_0   (ddr3_axi_clk_x2),
@@ -427,7 +449,7 @@ module replay_sim_wrapper #(
       .app_ref_ack     (),
       .app_zq_req      (1'b0),
       .app_zq_ack      (),
-      
+
       // Slave Interface Write Address Ports
       .s_axi_awid    (mig_axi_wr.addr.id),
       .s_axi_awaddr  (mig_axi_wr.addr.addr),
@@ -440,20 +462,20 @@ module replay_sim_wrapper #(
       .s_axi_awqos   (mig_axi_wr.addr.qos),
       .s_axi_awvalid (mig_axi_wr.addr.valid),
       .s_axi_awready (mig_axi_wr.addr.ready),
-      
+
       // Slave Interface Write Data Ports
       .s_axi_wdata  (mig_axi_wr.data.data),
       .s_axi_wstrb  (mig_axi_wr.data.strb),
       .s_axi_wlast  (mig_axi_wr.data.last),
       .s_axi_wvalid (mig_axi_wr.data.valid),
       .s_axi_wready (mig_axi_wr.data.ready),
-      
+
       // Slave Interface Write Response Ports
       .s_axi_bid    (mig_axi_wr.resp.id),
       .s_axi_bresp  (mig_axi_wr.resp.resp),
       .s_axi_bvalid (mig_axi_wr.resp.valid),
       .s_axi_bready (mig_axi_wr.resp.ready),
-      
+
       // Slave Interface Read Address Ports
       .s_axi_arid    (mig_axi_rd.addr.id),
       .s_axi_araddr  (mig_axi_rd.addr.addr),
@@ -466,7 +488,7 @@ module replay_sim_wrapper #(
       .s_axi_arqos   (mig_axi_rd.addr.qos),
       .s_axi_arvalid (mig_axi_rd.addr.valid),
       .s_axi_arready (mig_axi_rd.addr.ready),
-      
+
       // Slave Interface Read Data Ports
       .s_axi_rid    (mig_axi_rd.data.id),
       .s_axi_rdata  (mig_axi_rd.data.data),
@@ -474,12 +496,12 @@ module replay_sim_wrapper #(
       .s_axi_rlast  (mig_axi_rd.data.last),
       .s_axi_rvalid (mig_axi_rd.data.valid),
       .s_axi_rready (mig_axi_rd.data.ready),
-      
+
       // System Clock Ports
       .sys_clk_i (sys_clk),
       .sys_rst   (~sys_rst_n)
     );
-    
+
 
     //-------------------------------------------------------------------------
     // DDR3 SDRAM Models
@@ -505,7 +527,7 @@ module replay_sim_wrapper #(
       .tdqs_n  (),                // Unused on x16
       .odt     (ddr3_odt)
     );
-    
+
     ddr3_model #(
       .DEBUG (0)  //Disable verbose prints
     ) ddr3_model_i1 (
@@ -530,3 +552,6 @@ module replay_sim_wrapper #(
   end endgenerate
 
 endmodule
+
+
+`default_nettype wire
