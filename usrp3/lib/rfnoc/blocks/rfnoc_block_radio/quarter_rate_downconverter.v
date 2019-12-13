@@ -24,6 +24,7 @@ module quarter_rate_downconverter #(
 )(
   input clk,
   input reset,
+  input phase_sync,
 
   input [2*WIDTH-1:0] i_tdata,
   input i_tlast,
@@ -53,7 +54,7 @@ module quarter_rate_downconverter #(
 
   // The state machine doing the rotations among states
   always @(posedge clk) begin
-    if(reset) begin
+    if(reset || phase_sync) begin
        cur_state <= S0;
     end else begin
       case (cur_state)
