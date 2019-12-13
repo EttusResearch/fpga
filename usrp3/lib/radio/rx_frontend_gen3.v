@@ -32,7 +32,7 @@ module rx_frontend_gen3 #(
   wire [1:0]         iq_map_reserved;
   wire [17:0]        mag_corr, phase_corr;
   wire               phase_dir;
-  wire               phase_reset;
+  wire               phase_sync;
 
   reg  [23:0]        adc_i_mux, adc_q_mux;
   reg                adc_mux_stb;
@@ -65,7 +65,7 @@ module rx_frontend_gen3 #(
   //   direction bit == 1: the phase is increased by -pi/2 (clockwise)
   setting_reg #(.my_addr(SR_HET_PHASE_INCR), .width(1)) sr_phase_dir (
     .clk(clk),.rst(reset),.strobe(set_stb),.addr(set_addr),
-    .in(set_data),.out(phase_dir),.changed(phase_reset));
+    .in(set_data),.out(phase_dir),.changed(phase_sync));
 
   /********************************************************
   ** IQ Mapping (swapping, inversion, real-mode)
@@ -193,7 +193,7 @@ module rx_frontend_gen3 #(
 
       // 90 degree mixer
       quarter_rate_downconverter #(.WIDTH(24)) qr_dc_i(
-        .clk(clk), .reset(reset || sync_in || phase_reset),
+        .clk(clk), .reset(reset || sync_in), .phase_sync(phase_sync),
         .i_tdata({adc_i_comp, adc_q_comp}), .i_tlast(1'b1), .i_tvalid(adc_comp_stb), .i_tready(),
         .o_tdata({adc_i_dsp_cout, adc_q_dsp_cout}), .o_tlast(), .o_tvalid(adc_dsp_cout_stb), .o_tready(1'b1),
         .dirctn(phase_dir));
