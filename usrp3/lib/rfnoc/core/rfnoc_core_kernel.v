@@ -35,9 +35,9 @@
 //   - core_ctrl_rst: Output sync Control reset for all infrastructure modules (not blocks)
 //   - s_axis_ctrl_* : Slave AXIS-Ctrl for the primary (zero'th) control endpoint
 //   - m_axis_ctrl_* : Master AXIS-Ctrl for the primary (zero'th) control endpoint
-//   - device_id: The dynamic device_id to read through the Device Info regiser
-//   - rfnoc_core_config: The backend config port for all blocks in the design
-//   - rfnoc_core_status: The backend status port for all blocks in the design
+//   - device_id: The dynamic device_id to read through the Device Info register (domain: core_chdr_clk)
+//   - rfnoc_core_config: The backend config port for all blocks in the design (domain: core_ctrl_clk)
+//   - rfnoc_core_status: The backend status port for all blocks in the design (domain: core_ctrl_clk)
 
 module rfnoc_core_kernel #(
   parameter [15:0] PROTOVER             = {8'd1, 8'd0},
@@ -72,9 +72,9 @@ module rfnoc_core_kernel #(
   output wire                        m_axis_ctrl_tlast,
   output wire                        m_axis_ctrl_tvalid,
   input  wire                        m_axis_ctrl_tready,
-  // Global info
+  // Global info (domain: core_chdr_clk)
   input  wire [15:0]                 device_id,
-  // Backend config/status for each block
+  // Backend config/status for each block (domain: core_ctrl_clk)
   output wire [(512*NUM_BLOCKS)-1:0] rfnoc_core_config,
   input  wire [(512*NUM_BLOCKS)-1:0] rfnoc_core_status
 );
@@ -297,6 +297,32 @@ module rfnoc_core_kernel #(
   localparam [3:0] REG_GLOBAL_DEVICE_INFO       = 4'd3;  // Offset = 0x0C
   localparam [3:0] REG_GLOBAL_ENDPOINT_CTRL_CNT = 4'd4;  // Offset = 0x10
 
+  // Clock-crossing for device_id.
+  // FIFO going from core_chdr_clk domain to core_ctrl_clk.
+  wire        device_id_fifo_ovalid;
+  wire [15:0] device_id_fifo_odata;
+  axi_fifo_2clk # (
+    .WIDTH     (16),
+    .SIZE      (2)
+  ) device_id_fifo_i (
+    .reset     (1'b0),
+    .i_aclk    (core_chdr_clk),
+    .i_tdata   (device_id),
+    .i_tvalid  (1'b1),
+    .i_tready  (),
+    .o_aclk    (core_ctrl_clk),
+    .o_tdata   (device_id_fifo_odata),
+    .o_tvalid  (device_id_fifo_ovalid),
+    .o_tready  (1'b1)
+  );
+  // Register the FIFO's output to always have valid data available.
+  reg  [15:0] device_id_ctrl_clk = 16'h0;
+  always @(posedge core_ctrl_clk) begin
+    if (device_id_fifo_ovalid) begin
+      device_id_ctrl_clk <= device_id_fifo_odata;
+    end
+  end
+
   // Signature and protocol version
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_PROTOVER] = {16'h12C6, PROTOVER[15:0]};
 
@@ -308,7 +334,7 @@ module rfnoc_core_kernel #(
   // Global edge count register
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_EDGE_CNT] = {20'd0, NUM_EDGES[11:0]};
   // Device information
-  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_DEVICE_INFO] = {DEVICE_TYPE, device_id};
+  assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_DEVICE_INFO] = {DEVICE_TYPE, device_id_ctrl_clk};
   // Number of stream endpoint connected to the ctrl crossbar
   assign status_arr_2d[RFNOC_CORE_PORT_ID][REG_GLOBAL_ENDPOINT_CTRL_CNT] = {22'b0, NUM_ENDPOINTS_CTRL[9:0]};
 
