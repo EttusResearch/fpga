@@ -19,12 +19,12 @@ module eth_interface #(
 
   // Register port: Write port (domain: clk)
   input        reg_wr_req,
-  input [13:0] reg_wr_addr,
+  input [REG_AWIDTH-1:0] reg_wr_addr,
   input [31:0] reg_wr_data,
 
   // Register port: Read port (domain: clk)
   input         reg_rd_req,
-  input  [13:0] reg_rd_addr,
+  input  [REG_AWIDTH-1:0] reg_rd_addr,
   output reg       reg_rd_resp,
   output reg [31:0] reg_rd_data,
 
