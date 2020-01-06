@@ -561,6 +561,10 @@ module e31x_core #(
   //
   ////////////////////////////////////////////////////////////////////////
 
+  // Default CE clock for this device
+  wire ce_clk = bus_clk;
+  wire ce_rst = bus_rst;
+
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
 
 `ifdef RFNOC

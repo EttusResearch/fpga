@@ -983,6 +983,10 @@ module e320_core #(
   localparam XBAR_FIXED_PORTS = 2;
   localparam XBAR_NUM_PORTS = XBAR_FIXED_PORTS + NUM_CE + NUM_IO_CE;
 
+  // Default CE clock for this device
+  wire ce_clk = bus_clk;
+  wire ce_rst = bus_rst;
+
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
 
 `ifdef RFNOC

@@ -14,9 +14,6 @@
     end
   endgenerate
 
-  wire ce_clk = bus_clk;
-  wire ce_rst = bus_rst;
-
   noc_block_ddc #( .NUM_CHAINS(NUM_CHANNELS_PER_RADIO)) inst_noc_block_ddc (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),

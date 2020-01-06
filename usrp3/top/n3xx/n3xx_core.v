@@ -1112,6 +1112,15 @@ module n3xx_core #(
   //
   /////////////////////////////////////////////////////////////////////////////////
 
+  // Default CE clock for this device. Use the faster radio clock on N320.
+`ifdef N320
+  wire ce_clk = radio_clk;
+  wire ce_rst = radio_rst;
+`else
+  wire ce_clk = bus_clk;
+  wire ce_rst = bus_rst;
+`endif
+
   // Included automatically instantiated CEs sources file created by RFNoC mod tool
 `ifdef RFNOC
   `ifdef N310

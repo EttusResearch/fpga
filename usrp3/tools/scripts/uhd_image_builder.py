@@ -41,8 +41,6 @@ generate
     assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
   end
 endgenerate
-wire ce_clk = radio_clk;
-wire ce_rst = radio_rst;
 """
 
 BLOCK_TMPL = """

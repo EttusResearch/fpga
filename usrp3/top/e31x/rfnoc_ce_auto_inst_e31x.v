@@ -14,9 +14,6 @@
     end
   endgenerate
 
-  wire ce_clk = radio_clk;
-  wire ce_rst = radio_rst;
-
   noc_block_axi_fifo_loopback inst_noc_block_axi_fifo_loopback (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
     .ce_clk(ce_clk), .ce_rst(ce_rst),

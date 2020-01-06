@@ -5,7 +5,7 @@
   wire [NUM_CE-1:0]    ce_o_tlast, ce_o_tvalid, ce_o_tready, ce_i_tlast, ce_i_tvalid, ce_i_tready;
   wire [63:0]          ce_debug[0:NUM_CE-1];
 
-  // Flattern CE tdata arrays
+  // Flatten CE tdata arrays
   genvar k;
   generate
     for (k = 0; k < NUM_CE; k = k + 1) begin
@@ -13,9 +13,6 @@
       assign ce_flat_i_tdata[k*64+63:k*64] = ce_i_tdata[k];
     end
   endgenerate
-
-  wire ce_clk = radio_clk;
-  wire ce_rst = radio_rst;
 
   noc_block_ddc #( .STR_SINK_FIFOSIZE(12), .NUM_CHAINS(1), .NOC_ID(64'hDDC0_0000_0000_0001)) inst_noc_block_ddc_0 (
     .bus_clk(bus_clk), .bus_rst(bus_rst),
