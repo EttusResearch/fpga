@@ -827,9 +827,8 @@ module e320 (
   assign tx_q1 = tx_flat[47:36];
   assign tx_i1 = tx_flat[63:52];
 
-  // Rx is valid whenever the interface is aligned
-  assign rx_stb = {rx_aligned, rx_aligned};
-  // Tx can always accept data
+  // Tx and Rx have samples on every clock, so keep stb asserted
+  assign rx_stb = { 1'b1, 1'b1 };
   assign tx_stb = { 1'b1, 1'b1 };
 
   // These delays depend on the internal clock routing delays of the FPGA.
