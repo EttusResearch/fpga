@@ -6,8 +6,7 @@
 
 The USRP FPGA build system requires a UNIX-like environment with the following dependencies
 
-- [Xilinx Vivado 2018.3](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2018-3.html) (For 7 Series FPGAs)
-  - AR#71898 Tactical Patch required for USRP N3xx devices. See note below.
+- [Xilinx Vivado 2019.1](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2019-1.html) (For 7 Series FPGAs)
 - [Xilinx ISE 14.7](http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/design-tools/v2012_4---14_7.html) (For all other FPGAs)
 - [GNU Make 3.6+](https://www.gnu.org/software/make/)
 - [GNU Bash 4.0+](https://www.gnu.org/software/bash/)
@@ -17,14 +16,6 @@ The USRP FPGA build system requires a UNIX-like environment with the following d
 
 The following USRPs work with the free WebPack versions:
 - USRP E310/E312/E313
-
-##### NOTE: AR#71898 Tactical Patch for Vivado 2018.3
-The DDR3 Memory Interface Generator (MIG) IP in Vivado 2018.3 has a known issue that affects the generation of the IP in USRP N3xx build and produce the following error:
-```
-ERROR: [DRC BIVC-1] Bank IO standard Vcc: Conflicting Vcc voltages in bank 34. For example, the following two ports in this bank have conflicting VCCOs:  
-ddr3_ck_p[0] (DIFF_SSTL15, requiring VCCO=1.500) and ddr3_addr[15] (LVCMOS18, requiring VCCO=1.800)
-```
-The [AR#71898 Tactical Path](https://www.xilinx.com/support/answers/71898.html) must be installed to successfully build all supported FPGA images.
 
 ### What FPGA does my USRP have?
 
@@ -40,7 +31,7 @@ The [AR#71898 Tactical Path](https://www.xilinx.com/support/answers/71898.html) 
 
 ### Requirements
 
-- [Xilinx Vivado Release Notes](https://www.xilinx.com/support/documentation/sw_manuals/xilinx2018_3/ug973-vivado-release-notes-install-license.pdf)
+- [Xilinx Vivado Release Notes](https://www.xilinx.com/support/documentation/sw_manuals/xilinx2019_1/ug973-vivado-release-notes-install-license.pdf)
 - [Xilinx ISE Platform Requirements](http://www.xilinx.com/support/documentation/sw_manuals/xilinx14_7/irn.pdf)
 
 ## Build Environment Setup
