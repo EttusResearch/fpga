@@ -1,6 +1,6 @@
 //
 // Copyright 2015 Ettus Research
-// Copyright 2018 Ettus Research, a National Instruments Company
+// Copyright 2018-2020 Ettus Research, a National Instruments Company
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 //
@@ -83,9 +83,9 @@ module axi_wrapper
       .o_tdata(m_axis_data_tdata), .o_tuser(m_axis_data_tuser_int), .o_tlast(m_axis_data_tlast_int), .o_tvalid(m_axis_data_tvalid), .o_tready(m_axis_data_tready)
    );
 
-   assign m_axis_data_tuser[127:80] = m_axis_data_tuser_int[127:80];
-   assign m_axis_data_tuser[79:64]  = RESIZE_INPUT_PACKET ? (m_axis_data_tuser_int[125] ? m_axis_pkt_len_reg+16 : m_axis_pkt_len_reg+8) : m_axis_data_tuser_int[79:64];
-   assign m_axis_data_tuser[63:0]   = m_axis_data_tuser_int[63:0];
+   assign m_axis_data_tuser[127:112] = m_axis_data_tuser_int[127:112];
+   assign m_axis_data_tuser[111: 96] = RESIZE_INPUT_PACKET ? (m_axis_data_tuser_int[125] ? m_axis_pkt_len_reg+16 : m_axis_pkt_len_reg+8) : m_axis_data_tuser_int[111: 96];
+   assign m_axis_data_tuser[95:0]   = m_axis_data_tuser_int[95:0];
 
    // Only store header once per packet
    always @(posedge clk)
