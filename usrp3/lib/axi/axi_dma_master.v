@@ -7,7 +7,7 @@
 
 `include "axi_defs.v"
 
-`define DEBUG if (1)
+`define DEBUG if (0)
 
 module axi_dma_master
   (

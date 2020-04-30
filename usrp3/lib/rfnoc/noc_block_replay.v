@@ -23,7 +23,10 @@ module noc_block_replay #(
   parameter MTU = 10,
 
   // Number of replay blocks to implement
-  parameter NUM_REPLAY_BLOCKS = 1
+  parameter NUM_REPLAY_BLOCKS = 1,
+
+  // Memory width to use internally
+  parameter MEM_ADDR_W = 30
 ) (
   //
   // Clocks and Resets
@@ -109,20 +112,19 @@ module noc_block_replay #(
   // Constants
   //---------------------------------------------------------------------------
 
-  localparam DWIDTH = 64;   // CHDR standard unit
-  localparam AWIDTH = 30;   // DRAM byte address width to use
-  localparam CWIDTH = 8;    // Width of DMA count
+  localparam MEM_DATA_W = 64;   // CHDR standard unit
+  localparam MEM_COUNT_W = 8;   // Width of DMA count
 
   //---------------------------------------------------------------------------
   // Declarations
   //---------------------------------------------------------------------------
 
-  wire [NUM_REPLAY_BLOCKS*DWIDTH-1:0] m_axis_data_tdata; 
+  wire [NUM_REPLAY_BLOCKS*MEM_DATA_W-1:0] m_axis_data_tdata; 
   wire [       NUM_REPLAY_BLOCKS-1:0] m_axis_data_tlast; 
   wire [       NUM_REPLAY_BLOCKS-1:0] m_axis_data_tvalid;
   wire [       NUM_REPLAY_BLOCKS-1:0] m_axis_data_tready;
 
-  wire [NUM_REPLAY_BLOCKS*DWIDTH-1:0] s_axis_data_tdata; 
+  wire [NUM_REPLAY_BLOCKS*MEM_DATA_W-1:0] s_axis_data_tdata; 
   wire [   NUM_REPLAY_BLOCKS*128-1:0] s_axis_data_tuser;
   wire [       NUM_REPLAY_BLOCKS-1:0] s_axis_data_tlast; 
   wire [       NUM_REPLAY_BLOCKS-1:0] s_axis_data_tvalid;
@@ -143,21 +145,21 @@ module noc_block_replay #(
   wire [(NUM_REPLAY_BLOCKS*16)-1:0] src_id;
   wire [(NUM_REPLAY_BLOCKS*16)-1:0] next_dst_sid;   
 
-  wire [NUM_REPLAY_BLOCKS*AWIDTH-1:0] write_addr;      
-  wire [     NUM_REPLAY_BLOCKS*8-1:0] write_count;     
-  wire [       NUM_REPLAY_BLOCKS-1:0] write_ctrl_valid;
-  wire [       NUM_REPLAY_BLOCKS-1:0] write_ctrl_ready;
-  wire [    NUM_REPLAY_BLOCKS*64-1:0] write_data;      
-  wire [       NUM_REPLAY_BLOCKS-1:0] write_data_valid;
-  wire [       NUM_REPLAY_BLOCKS-1:0] write_data_ready;
+  wire [NUM_REPLAY_BLOCKS*MEM_ADDR_W-1:0] write_addr;
+  wire [         NUM_REPLAY_BLOCKS*8-1:0] write_count;
+  wire [           NUM_REPLAY_BLOCKS-1:0] write_ctrl_valid;
+  wire [           NUM_REPLAY_BLOCKS-1:0] write_ctrl_ready;
+  wire [        NUM_REPLAY_BLOCKS*64-1:0] write_data;
+  wire [           NUM_REPLAY_BLOCKS-1:0] write_data_valid;
+  wire [           NUM_REPLAY_BLOCKS-1:0] write_data_ready;
 
-  wire [NUM_REPLAY_BLOCKS*AWIDTH-1:0] read_addr;      
-  wire [     NUM_REPLAY_BLOCKS*8-1:0] read_count;     
-  wire [       NUM_REPLAY_BLOCKS-1:0] read_ctrl_valid;
-  wire [       NUM_REPLAY_BLOCKS-1:0] read_ctrl_ready;
-  wire [    NUM_REPLAY_BLOCKS*64-1:0] read_data;      
-  wire [       NUM_REPLAY_BLOCKS-1:0] read_data_valid;
-  wire [       NUM_REPLAY_BLOCKS-1:0] read_data_ready;
+  wire [NUM_REPLAY_BLOCKS*MEM_ADDR_W-1:0] read_addr;
+  wire [         NUM_REPLAY_BLOCKS*8-1:0] read_count;
+  wire [           NUM_REPLAY_BLOCKS-1:0] read_ctrl_valid;
+  wire [           NUM_REPLAY_BLOCKS-1:0] read_ctrl_ready;
+  wire [        NUM_REPLAY_BLOCKS*64-1:0] read_data;
+  wire [           NUM_REPLAY_BLOCKS-1:0] read_data_valid;
+  wire [           NUM_REPLAY_BLOCKS-1:0] read_data_ready;
 
 
   //---------------------------------------------------------------------------
@@ -259,15 +261,15 @@ module noc_block_replay #(
       cvita_hdr_modify cvita_hdr_modify_i (
         .header_in  (s_axis_data_tuser_tmp),
         .header_out (s_axis_data_tuser[(128*(i+1))-1 : 128*i]),
-        .use_pkt_type       (0), .pkt_type       (2'b0),
-        .use_has_time       (0), .has_time       (1'b0),
-        .use_eob            (0), .eob            (1'b0),
-        .use_seqnum         (0), .seqnum         (12'b0),
-        .use_length         (0), .length         (16'b0),
-        .use_payload_length (0), .payload_length (16'b0),
-        .use_src_sid        (1), .src_sid        (src_id[(16*(i+1))-1       : 16*i]),
-        .use_dst_sid        (1), .dst_sid        (next_dst_sid[(16*(i+1))-1 : 16*i]),
-        .use_vita_time      (0), .vita_time      (64'b0)
+        .use_pkt_type       (1'b0), .pkt_type       (2'b0),
+        .use_has_time       (1'b0), .has_time       (1'b0),
+        .use_eob            (1'b0), .eob            (1'b0),
+        .use_seqnum         (1'b0), .seqnum         (12'b0),
+        .use_length         (1'b0), .length         (16'b0),
+        .use_payload_length (1'b0), .payload_length (16'b0),
+        .use_src_sid        (1'b1), .src_sid        (src_id[(16*(i+1))-1       : 16*i]),
+        .use_dst_sid        (1'b1), .dst_sid        (next_dst_sid[(16*(i+1))-1 : 16*i]),
+        .use_vita_time      (1'b0), .vita_time      (64'b0)
       );
 
 
@@ -361,54 +363,54 @@ module noc_block_replay #(
       assign rb_data[(64*(i+1))-1:64*i+32] = 32'h0;
 
       axi_replay #(
-        .DATA_WIDTH  (DWIDTH),
-        .ADDR_WIDTH  (AWIDTH),
-        .COUNT_WIDTH (CWIDTH)
+        .MEM_DATA_W  (MEM_DATA_W),
+        .MEM_ADDR_W  (MEM_ADDR_W),
+        .MEM_COUNT_W (MEM_COUNT_W)
       ) axi_replay_i (
         .clk (ce_clk),
         .rst (ce_rst),
         
         // Settings Bus
-        .set_stb  (set_stb [( 1*(i+1))-1 :  1*i]),
-        .set_addr (set_addr[( 8*(i+1))-1 :  8*i]),
-        .set_data (set_data[(32*(i+1))-1 : 32*i]),
+        .set_stb  (set_stb [(    1*(i+1))-1 :  1*i]),
+        .set_addr (set_addr[(    8*(i+1))-1 :  8*i]),
+        .set_data (set_data[(   32*(i+1))-1 : 32*i]),
         .rb_data  (rb_data [(64*(i+1)-32)-1 : 64*i]),   // Connect lower 32 bits of each 64-bit word
-        .rb_addr  (rb_addr [( 8*(i+1))-1 :  8*i]),
+        .rb_addr  (rb_addr [(    8*(i+1))-1 :  8*i]),
         
         // AXI Stream Interface
         //
         // Input
-        .i_tdata  (m_axis_data_tdata [( DWIDTH*(i+1))-1 :  DWIDTH*i]),
-        .i_tvalid (m_axis_data_tvalid[( 1*(i+1))-1 :  1*i]),
-        .i_tlast  (m_axis_data_tlast [( 1*(i+1))-1 :  1*i]),
-        .i_tready (m_axis_data_tready[( 1*(i+1))-1 :  1*i]),
+        .i_tdata  (m_axis_data_tdata [( MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
+        .i_tvalid (m_axis_data_tvalid[(          1*(i+1))-1 :  1*i]),
+        .i_tlast  (m_axis_data_tlast [(          1*(i+1))-1 :  1*i]),
+        .i_tready (m_axis_data_tready[(          1*(i+1))-1 :  1*i]),
         //
         // Output
-        .o_tdata  (s_axis_data_tdata [( DWIDTH*(i+1))-1 :  DWIDTH*i]),
+        .o_tdata  (s_axis_data_tdata [( MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
         .o_tuser  (s_axis_data_tuser_tmp),
-        .o_tvalid (s_axis_data_tvalid[( 1*(i+1))-1 :  1*i]),
-        .o_tlast  (s_axis_data_tlast [( 1*(i+1))-1 :  1*i]),
-        .o_tready (s_axis_data_tready[( 1*(i+1))-1 :  1*i]),
+        .o_tvalid (s_axis_data_tvalid[(          1*(i+1))-1 :  1*i]),
+        .o_tlast  (s_axis_data_tlast [(          1*(i+1))-1 :  1*i]),
+        .o_tready (s_axis_data_tready[(          1*(i+1))-1 :  1*i]),
         
         // DMA Interface
         //
         // Write interface
-        .write_addr       (write_addr      [( AWIDTH*(i+1))-1 : AWIDTH*i]),
-        .write_count      (write_count     [( CWIDTH*(i+1))-1 : CWIDTH*i]),
-        .write_ctrl_valid (write_ctrl_valid[(      1*(i+1))-1 :      1*i]),
-        .write_ctrl_ready (write_ctrl_ready[(      1*(i+1))-1 :      1*i]),
-        .write_data       (write_data      [( DWIDTH*(i+1))-1 : DWIDTH*i]),
-        .write_data_valid (write_data_valid[(      1*(i+1))-1 :      1*i]),
-        .write_data_ready (write_data_ready[(      1*(i+1))-1 :      1*i]),
+        .write_addr       (write_addr      [(  MEM_ADDR_W*(i+1))-1 : MEM_ADDR_W*i]),
+        .write_count      (write_count     [( MEM_COUNT_W*(i+1))-1 : MEM_COUNT_W*i]),
+        .write_ctrl_valid (write_ctrl_valid[(           1*(i+1))-1 :      1*i]),
+        .write_ctrl_ready (write_ctrl_ready[(           1*(i+1))-1 :      1*i]),
+        .write_data       (write_data      [(  MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
+        .write_data_valid (write_data_valid[(           1*(i+1))-1 :      1*i]),
+        .write_data_ready (write_data_ready[(           1*(i+1))-1 :      1*i]),
         //
         // Read interface
-        .read_addr        (read_addr      [( AWIDTH*(i+1))-1 : AWIDTH*i]),
-        .read_count       (read_count     [( CWIDTH*(i+1))-1 : CWIDTH*i]),
-        .read_ctrl_valid  (read_ctrl_valid[(      1*(i+1))-1 :      1*i]),
-        .read_ctrl_ready  (read_ctrl_ready[(      1*(i+1))-1 :      1*i]),
-        .read_data        (read_data      [( DWIDTH*(i+1))-1 : DWIDTH*i]),
-        .read_data_valid  (read_data_valid[(      1*(i+1))-1 :      1*i]),
-        .read_data_ready  (read_data_ready[(      1*(i+1))-1 :      1*i])
+        .read_addr        (read_addr      [(  MEM_ADDR_W*(i+1))-1 : MEM_ADDR_W*i]),
+        .read_count       (read_count     [( MEM_COUNT_W*(i+1))-1 : MEM_COUNT_W*i]),
+        .read_ctrl_valid  (read_ctrl_valid[(           1*(i+1))-1 :      1*i]),
+        .read_ctrl_ready  (read_ctrl_ready[(           1*(i+1))-1 :      1*i]),
+        .read_data        (read_data      [(  MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
+        .read_data_valid  (read_data_valid[(           1*(i+1))-1 :      1*i]),
+        .read_data_ready  (read_data_ready[(           1*(i+1))-1 :      1*i])
       );
 
 
@@ -487,31 +489,31 @@ module noc_block_replay #(
         //
 
         // Byte address for start of write transaction (64-bit aligned)
-        .write_addr ({{(32-AWIDTH){1'b0}}, write_addr[( AWIDTH*(i+1))-1 : AWIDTH*i]}),
+        .write_addr ({{(32-MEM_ADDR_W){1'b0}}, write_addr[( MEM_ADDR_W*(i+1))-1 : MEM_ADDR_W*i]}),
         
         // Count of 64-bit words to write, minus 1
-        .write_count      (write_count     [( CWIDTH*(i+1))-1 : CWIDTH*i]),
-        .write_ctrl_valid (write_ctrl_valid[(      1*(i+1))-1 :      1*i]),
-        .write_ctrl_ready (write_ctrl_ready[(      1*(i+1))-1 :      1*i]),
-        .write_data       (write_data      [( DWIDTH*(i+1))-1 : DWIDTH*i]),
-        .write_data_valid (write_data_valid[(      1*(i+1))-1 :      1*i]),
-        .write_data_ready (write_data_ready[(      1*(i+1))-1 :      1*i]),
+        .write_count      (write_count     [( MEM_COUNT_W*(i+1))-1 : MEM_COUNT_W*i]),
+        .write_ctrl_valid (write_ctrl_valid[(           1*(i+1))-1 :      1*i]),
+        .write_ctrl_ready (write_ctrl_ready[(           1*(i+1))-1 :      1*i]),
+        .write_data       (write_data      [(  MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
+        .write_data_valid (write_data_valid[(           1*(i+1))-1 :      1*i]),
+        .write_data_ready (write_data_ready[(           1*(i+1))-1 :      1*i]),
         
         //
         // DMA interface for Read transactions
         //
 
         // Byte address for start of read transaction (64-bit aligned)
-        .read_addr ({{(32-AWIDTH){1'b0}}, read_addr[( AWIDTH*(i+1))-1 : AWIDTH*i]}),
+        .read_addr ({{(32-MEM_ADDR_W){1'b0}}, read_addr[( MEM_ADDR_W*(i+1))-1 : MEM_ADDR_W*i]}),
         
         // Count of 64-bit words to read, minus 1
-        .read_count (read_count     [( CWIDTH*(i+1))-1 : CWIDTH*i]),
+        .read_count      (read_count     [( MEM_COUNT_W*(i+1))-1 : MEM_COUNT_W*i]),
         
-        .read_ctrl_valid (read_ctrl_valid[(      1*(i+1))-1 :      1*i]),
-        .read_ctrl_ready (read_ctrl_ready[(      1*(i+1))-1 :      1*i]),
-        .read_data       (read_data      [( DWIDTH*(i+1))-1 : DWIDTH*i]),
-        .read_data_valid (read_data_valid[(      1*(i+1))-1 :      1*i]),
-        .read_data_ready (read_data_ready[(      1*(i+1))-1 :      1*i]),
+        .read_ctrl_valid (read_ctrl_valid[(          1*(i+1))-1 :      1*i]),
+        .read_ctrl_ready (read_ctrl_ready[(          1*(i+1))-1 :      1*i]),
+        .read_data       (read_data      [( MEM_DATA_W*(i+1))-1 : MEM_DATA_W*i]),
+        .read_data_valid (read_data_valid[(          1*(i+1))-1 :      1*i]),
+        .read_data_ready (read_data_ready[(          1*(i+1))-1 :      1*i]),
         
         //
         // Debug

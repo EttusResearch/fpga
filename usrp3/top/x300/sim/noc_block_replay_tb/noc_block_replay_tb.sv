@@ -38,16 +38,16 @@ module noc_block_replay_tb ();
   localparam [7:0] SR_RX_CTRL_HALT     = 155; // Same offset as radio
   localparam [7:0] SR_RX_CTRL_MAXLEN   = 156; // Same offset as radio
 
-  // Memory burst size in 64-bit words, as defined in the axi_replay block. 
-  // This is essentially hard coded to match the maximum transfer size 
+  // Memory burst size in 64-bit words, as defined in the axi_replay block.
+  // This is essentially hard coded to match the maximum transfer size
   // supported by the DMA master.
-  const int MEM_BURST_SIZE = 
-    noc_block_replay.gen_replay_blocks[0].axi_replay_i.MEM_BURST_SIZE;
+  const int MEM_BURST_LEN =
+    noc_block_replay.gen_replay_blocks[0].axi_replay_i.MEM_BURST_LEN;
 
   // Number of bytes per word
-  localparam WORD_SIZE     = 8;   // Bytes per word
+  localparam MEM_WORD_SIZE = 8;   // Bytes per word
   localparam SAMPLE_SIZE   = 4;   // Size of sc16 in bytes
-  localparam SAMP_PER_WORD = WORD_SIZE / SAMPLE_SIZE;
+  localparam SAMP_PER_WORD = MEM_WORD_SIZE / SAMPLE_SIZE;
 
   // AXI alignment boundary, in bytes
   localparam AXI_ALIGNMENT = 4096;
@@ -62,13 +62,16 @@ module noc_block_replay_tb ();
   localparam NUM_STREAMS    = 2;     // Number of test bench streams
 
   // Packet size to use by default
-  localparam SPP = 256;             // Number of sc16 samples per packet
-  localparam BPP = SPP*SAMPLE_SIZE; // Number of bytes per packet
-  localparam WPP = BPP/WORD_SIZE;   // Number of 64-bit words per packet
+  localparam SPP = 256;                 // Number of sc16 samples per packet
+  localparam BPP = SPP*SAMPLE_SIZE;     // Number of bytes per packet
+  localparam WPP = BPP/MEM_WORD_SIZE;   // Number of 64-bit words per packet
 
   localparam USE_RANDOM = 1; // Use random instead of sequential data. Random
                              // is better for catching errors, but sequential
                              // is easier for debugging.
+
+  localparam MEM_ADDR_W = 16;  // Address width for replay block
+  localparam STALL_PROB = 25;  // Stall probability for memory model
 
   string test_step; // Current test, for tracking progress in waveform view
 
@@ -83,7 +86,7 @@ module noc_block_replay_tb ();
   `RFNOC_SIM_INIT(NUM_CE, NUM_STREAMS, BUS_CLK_PERIOD, CE_CLK_PERIOD);
   `RFNOC_ADD_BLOCK_CUSTOM(noc_block_replay, 0);
 
-  
+
   //---------------------------------------------------------------------------
   // Memory Model
   //---------------------------------------------------------------------------
@@ -97,7 +100,9 @@ module noc_block_replay_tb ();
   wire init_done;
 
   replay_sim_ram #(
-    .RAM_MODEL (RAM_MODEL)
+    .RAM_MODEL  (RAM_MODEL),
+    .MEM_ADDR_W (MEM_ADDR_W),
+    .STALL_PROB (STALL_PROB)
   ) replay_sim_ram_i (
     .ce_clk      (ce_clk),
     .ce_rst      (ce_rst),
@@ -118,7 +123,8 @@ module noc_block_replay_tb ();
   noc_block_replay #(
     .STR_SINK_FIFOSIZE (11),
     .MTU               (12),
-    .NUM_REPLAY_BLOCKS (2)
+    .NUM_REPLAY_BLOCKS (2),
+    .MEM_ADDR_W        (MEM_ADDR_W)
   ) noc_block_replay (
     .bus_clk (bus_clk),
     .bus_rst (bus_rst),
@@ -188,157 +194,9 @@ module noc_block_replay_tb ();
   // Tasks
   //---------------------------------------------------------------------------
 
-  // Read out and discard all packets received, stopping after there's been no
-  // packets for a delay of "timeout".
-  task automatic flush_rx(input int  stream  = 0, 
-                          input time timeout = CE_CLK_PERIOD*100);
-    cvita_payload_t  recv_payload;
-    cvita_metadata_t md;
-    time             prev_time;
-
-    begin
-      prev_time = $time;
-
-      while (1) begin
-        // Check if there's a frame waiting
-        if (noc_block_tb.str_sink_tvalid[stream]) begin
-          // Read frame
-          tb_streamer.recv(recv_payload, md, stream); 
-          // Restart timeout
-          prev_time = $time;   
-
-        end else begin
-          // If timeout has expired, we're done
-          if ($time - prev_time > timeout) break;
-          // No frame, so wait a cycle
-          #(CE_CLK_PERIOD);
-        end
-      end
-    end
-  endtask : flush_rx
-
-
-  // Wait until the expected number of words are accumulated in the record 
-  // buffer. Produce a failure if the data never arrives.
-  task automatic wait_record_fullness(input int  num_bytes,
-                                      input time timeout,
-                                      input int  block_num = 0);
-    time         prev_time;
-    logic [63:0] readback;
-
-    begin
-      // Poll SR_REC_FULLNESS until fullness is reached
-      prev_time = $time;
-      while (1) begin
-        tb_streamer.read_user_reg(sid_noc_block_replay, SR_REC_FULLNESS, readback, block_num);
-        if (readback >= num_bytes) break;
-
-        // Check if it's taking too long
-        if ($time - prev_time > timeout) begin
-          `ASSERT_FATAL(0, "Timeout waiting for fullness to be reached");
-        end
-      end
-    end
-  endtask : wait_record_fullness
-
-
-  // Read the data on the indicated stream and check that it matches 
-  // exp_payload. Also check that the length of the packets received add up to 
-  // the length of exp_payload, if it takes multiple packets. An error string 
-  // is returned if there's an error, otherwise an empty string.
-  task automatic verify_rx_data(output string         error_msg,
-                                input cvita_payload_t exp_payload,
-                                input int             stream = 0,
-                                input logic           eob = 1'bX,
-                                input logic [63:0]    timestamp = 64'bX);
-    cvita_payload_t  recv_payload;
-    cvita_metadata_t md;
-    int              word_count;
-    int              packet_count;
-    logic     [63:0] expected_value;
-    logic     [63:0] actual_value;
-    logic     [63:0] expected_time;
-
-    begin
-      word_count    = 0;
-      packet_count  = 0;
-      error_msg     = "";
-      expected_time = timestamp;
-
-      while (word_count < exp_payload.size()) begin
-        // Grab the next frame
-        while (recv_payload.size() > 0) void'(recv_payload.pop_back());
-        tb_streamer.recv(recv_payload, md, stream);
-
-        // Check the packet length
-        if (word_count + recv_payload.size() > exp_payload.size()) begin
-          $sformat(error_msg, 
-                   "On packet %0d, size exceeds expected by %0d words", 
-                   packet_count, 
-                   (word_count + recv_payload.size()) - exp_payload.size());
-          return;
-        end
-
-        // Check the EOB flag
-        if (eob !== 1'bX) begin
-          if (word_count + recv_payload.size() >= exp_payload.size()) begin
-            // This is the last packet, so make sure EOB matches expected value
-            if (md.eob != eob) begin
-              $sformat(error_msg, 
-                       "On packet %0d, expected EOB to be %0b, actual is %0b", 
-                       packet_count, eob, md.eob);
-              return;
-            end
-          end else begin
-            // This is NOT the last packet, so EOB should be 0
-            if (md.eob != 1'b0) begin
-              $sformat(error_msg, 
-                       "On packet %0d, expected EOB to be 0 mid-burst, actual is %0b", 
-                       packet_count, md.eob);
-              return;
-            end
-          end
-        end
-
-        // Check the time
-        if (timestamp !== 64'bX) begin
-          if (!md.timestamp) begin
-            $sformat(error_msg, 
-                     "On packet %0d, timestamp is missing", 
-                     packet_count);
-            return;
-          end
-          if (expected_time != md.timestamp) begin
-            $sformat(error_msg, 
-                     "On packet %0d, expected timestamp %X but received %X", 
-                     packet_count, expected_time, md.timestamp);
-            return;
-          end
-          expected_time = expected_time + recv_payload.size() * 2;  // Two samples per word
-        end
-
-        packet_count++;
-
-        // Check the data
-        for (int i = 0; i < recv_payload.size(); i++) begin
-          expected_value = exp_payload[word_count];
-          actual_value   = recv_payload[i];
-          if (actual_value != expected_value) begin
-            $sformat(error_msg, 
-                     "On word %0d (packet %0d, word offset %0d), Expected: 0x%x, Received: 0x%x", 
-                     word_count, packet_count, i, expected_value, actual_value);
-            return;
-          end
-          word_count++;
-        end
-      end
-    end
-  endtask : verify_rx_data
-
-
-  // Generate a payload that's either random or sequential data, depending on 
+  // Generate a payload that's either random or sequential data, depending on
   // USE_RANDOM.
-  task automatic gen_payload(output cvita_payload_t payload, 
+  task automatic gen_payload(output cvita_payload_t payload,
                              input int              num_words);
     logic [63:0] word;
 
@@ -357,41 +215,224 @@ module noc_block_replay_tb ();
   endtask : gen_payload
 
 
+  // Read out and discard all packets received, stopping after there's been no
+  // packets for a delay of "timeout".
+  task automatic flush_rx(input int  port,
+                          input time timeout = CE_CLK_PERIOD*100);
+    cvita_payload_t  recv_payload;
+    cvita_metadata_t md;
+    time             prev_time;
+
+    begin
+      prev_time = $time;
+
+      while (1) begin
+        // Check if there's a frame waiting
+        if (noc_block_tb.str_sink_tvalid[port]) begin
+          // Read frame
+          tb_streamer.recv(recv_payload, md, port);
+          // Restart timeout
+          prev_time = $time;
+
+        end else begin
+          // If timeout has expired, we're done
+          if ($time - prev_time > timeout) break;
+          // No frame, so wait a cycle
+          #(CE_CLK_PERIOD);
+        end
+      end
+    end
+  endtask : flush_rx
+
+
+  // Wait until the expected number of words are accumulated in the record
+  // buffer. Produce a failure if the data never arrives.
+  task automatic wait_record_fullness(input int  port,
+                                      input int  num_bytes,
+                                      input time timeout = (10 + num_bytes) * BUS_CLK_PERIOD * 10);
+    time         prev_time;
+    logic [63:0] readback;
+
+    begin
+      // Poll SR_REC_FULLNESS until fullness is reached
+      prev_time = $time;
+      while (1) begin
+        tb_streamer.read_user_reg(sid_noc_block_replay, SR_REC_FULLNESS, readback, port);
+        if (readback >= num_bytes) break;
+
+        // Check if it's taking too long
+        if ($time - prev_time > timeout) begin
+          `ASSERT_FATAL(0, "Timeout waiting for fullness to be reached");
+        end
+      end
+    end
+  endtask : wait_record_fullness
+
+
+  // Read the data on the indicated port and check that it matches exp_items.
+  // Also check that the length of the packets received add up to the length of
+  // exp_items, if it takes multiple packets. An error string is returned if
+  // there's an error, otherwise an empty string is returned.
+  //
+  //  port      : Port on which to receive and verify the data
+  //  error_msg : Output string to write error message to, if any
+  //  exp_items : Queue of the items you expect to receive
+  //  eob       : Indicates if we expect EOB to be set for the last item (set
+  //              to 1'bX to skip this check)
+  // timestamp  : The timestamp we expect to receive for the first item (set to
+  //              'X to skip timestamp checking)
+  //
+  task automatic verify_rx_data(input int             port = 0,
+                                output string         error_msg,
+                                input cvita_payload_t exp_payload,
+                                input logic           eob = 1'b1,
+                                input logic [63:0]    timestamp = 64'bX);
+    cvita_payload_t  recv_payload;
+    cvita_metadata_t md;
+    int              word_count;
+    int              packet_count;
+    logic     [63:0] expected_value;
+    logic     [63:0] actual_value;
+    logic     [63:0] expected_time;
+
+    begin
+      word_count    = 0;
+      packet_count  = 0;
+      error_msg     = "";
+      expected_time = timestamp;
+
+      while (word_count < exp_payload.size()) begin
+        // Grab the next frame
+        while (recv_payload.size() > 0) void'(recv_payload.pop_back());
+        tb_streamer.recv(recv_payload, md, port);
+
+        // Check the packet length
+        if (word_count + recv_payload.size() > exp_payload.size()) begin
+          $sformat(error_msg,
+                   "On packet %0d, size exceeds expected by %0d words",
+                   packet_count,
+                   (word_count + recv_payload.size()) - exp_payload.size());
+          return;
+        end
+
+        // Check the EOB flag
+        if (eob !== 1'bX) begin
+          if (word_count + recv_payload.size() >= exp_payload.size()) begin
+            // This is the last packet, so make sure EOB matches expected value
+            if (md.eob != eob) begin
+              $sformat(error_msg,
+                       "On packet %0d, expected EOB to be %0b, actual is %0b",
+                       packet_count, eob, md.eob);
+              return;
+            end
+          end else begin
+            // This is NOT the last packet, so EOB should be 0
+            if (md.eob != 1'b0) begin
+              $sformat(error_msg,
+                       "On packet %0d, expected EOB to be 0 mid-burst, actual is %0b",
+                       packet_count, md.eob);
+              return;
+            end
+          end
+        end
+
+        // Check the time
+        if (timestamp !== 64'bX) begin
+          if (!md.timestamp) begin
+            $sformat(error_msg,
+                     "On packet %0d, timestamp is missing",
+                     packet_count);
+            return;
+          end
+          if (expected_time != md.timestamp) begin
+            $sformat(error_msg,
+                     "On packet %0d, expected timestamp %X but received %X",
+                     packet_count, expected_time, md.timestamp);
+            return;
+          end
+          expected_time = expected_time + recv_payload.size() * 2;  // Two samples per word
+        end else begin
+          // Make sure we don't have a timestamp unexpectedly
+          if (md.timestamp) begin
+            $sformat(error_msg,
+                     "On packet %0d, expected no timestamp but received one",
+                     packet_count);
+          end
+        end
+
+        packet_count++;
+
+        // Check the data
+        for (int i = 0; i < recv_payload.size(); i++) begin
+          expected_value = exp_payload[word_count];
+          actual_value   = recv_payload[i];
+          if (actual_value != expected_value) begin
+            $sformat(error_msg,
+                     "On word %0d (packet %0d, word offset %0d), Expected: 0x%x, Received: 0x%x",
+                     word_count, packet_count, i, expected_value, actual_value);
+            return;
+          end
+          word_count++;
+        end
+      end
+    end
+  endtask : verify_rx_data
+
+
+  // Record data and start its playback
+  //
+  //   port         : Replay block port to use
+  //   send_payload : Data to send to the replay block to be recorded
+  //   buffer_size  : Buffer size in bytes to configure for record buffer
+  //   num_words    : Number of words to play back
+  //   wpp          : Words per packet for playback
+  //   base_addr    : Base address to use for record buffer
+  //   continuous   : Set to 1 for continuous playback, 0 for num_items only
+  //   timestamp    : Timestamp to use for playback
+  //
   task automatic start_replay (
-    input cvita_payload_t  rec_payload,   // Payload of data to record
-    input int unsigned     base_addr   = 0,
-    input int unsigned     buffer_size = 1024 * WORD_SIZE,
-    input int unsigned     num_words   = 1024,
-    input bit              continuous  = 1'b0,
-    input longint unsigned timestamp   = 64'bX,
-    input int              port        = 0);
+    input int             port,
+    input cvita_payload_t send_payload,
+    input int unsigned    buffer_size = 1024 * MEM_WORD_SIZE,
+    input int unsigned    num_words   = 1024,
+    input int             wpp         = WPP,
+    input int unsigned    base_addr   = 0,
+    input bit             continuous  = 1'b0,
+    input logic [63:0]    timestamp   = 64'bX);
 
     cvita_metadata_t md;
     logic     [31:0] cmd;
     bit              send_imm;
     int              expected_fullness;
 
+    // Check for bad input arguments
+    `ASSERT_FATAL(base_addr < 2**MEM_ADDR_W,
+      "Base address is beyond available memory");
+    `ASSERT_FATAL(longint'(base_addr) + buffer_size <= 2**MEM_ADDR_W,
+      "Buffer size extends beyond available memory");
+
     // Update record buffer settings
     tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, base_addr, port);
     tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, buffer_size, port);
     tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, base_addr, port);
     tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE, buffer_size, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, wpp, port);
 
     // Restart the record buffer
     tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, port);
 
     // Write num_words to record buffer
-    tb_streamer.send(rec_payload, md, port);
+    tb_streamer.send(send_payload, md, port);
 
     // Wait until all the data has been written (up to the size of the buffer)
-    expected_fullness = rec_payload.size() * WORD_SIZE < buffer_size ? 
-        rec_payload.size() * WORD_SIZE : buffer_size;
-    wait_record_fullness(expected_fullness, expected_fullness * 15 * BUS_CLK_PERIOD);
+    expected_fullness = send_payload.size() * MEM_WORD_SIZE < buffer_size ?
+        send_payload.size() * MEM_WORD_SIZE : buffer_size;
+    wait_record_fullness(port, expected_fullness);
 
     // Set the time for playback
     if (timestamp !== 64'bX) begin
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_HI, timestamp[63:32], 0);
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_LO, timestamp[31: 0], 0);
+      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_HI, timestamp[63:32], port);
+      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_LO, timestamp[31: 0], port);
       send_imm = 1'b0;
     end else begin
       send_imm = 1'b1;
@@ -410,7 +451,7 @@ module noc_block_replay_tb ();
   endtask : start_replay
 
 
-  task automatic stop_replay(int port = 0);
+  task automatic stop_replay(int port);
     logic [31:0] cmd;
     cmd       = 0;
     cmd[31]   = 0;    // send_imm
@@ -421,71 +462,24 @@ module noc_block_replay_tb ();
     tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, port);
 
     // Keep reading frames until we've cleared them all
-    flush_rx();
+    flush_rx(port);
   endtask : stop_replay
 
 
-  task automatic halt_replay(int port = 0);
+  task automatic halt_replay(int port);
     tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, port);
 
     // Keep reading frames until we've cleared them all
-    flush_rx();
+    flush_rx(port);
   endtask : halt_replay
 
 
+  //---------------------------------------------------------------------------
+  // Test Registers
+  //---------------------------------------------------------------------------
 
-  //---------------------------------------------------------------------------
-  // Test Code
-  //---------------------------------------------------------------------------
-  
-  initial begin : tb_main
-    logic [31:0] random_word;
+  task automatic test_registers();
     logic [63:0] readback;
-    string       str;
-
-
-    //-------------------------------------------------------------------------
-    // Test -- Reset
-    //-------------------------------------------------------------------------
-
-    test_step = "Wait for Reset";
-    `TEST_CASE_START(test_step);
-    while (bus_rst) @(posedge bus_clk);
-    while (ce_rst) @(posedge ce_clk);
-    `TEST_CASE_DONE(~bus_rst & ~ce_rst);
-
-
-    //-------------------------------------------------------------------------
-    // Test -- Check for correct NoC IDs
-    //-------------------------------------------------------------------------
-
-    test_step = "Check NoC ID";
-    `TEST_CASE_START(test_step);
-
-    // Read NOC IDs
-    tb_streamer.read_reg(sid_noc_block_replay, RB_NOC_ID, readback);
-    $display("Read NOC ID: %16x", readback);
-    `ASSERT_ERROR(readback == noc_block_replay.NOC_ID, "Incorrect NOC ID");
-    
-    `TEST_CASE_DONE(1);
-
-
-    //-------------------------------------------------------------------------
-    // Test -- Connect RFNoC blocks
-    //-------------------------------------------------------------------------
-
-    test_step = "Connect RFNoC blocks";
-    `TEST_CASE_START(test_step);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,     0, noc_block_replay, 0, S8, SPP);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_replay, 0, noc_block_tb,     0, S8, SPP);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,     1, noc_block_replay, 1, S8, SPP);
-    `RFNOC_CONNECT_BLOCK_PORT(noc_block_replay, 1, noc_block_tb,     1, S8, SPP);
-    `TEST_CASE_DONE(1);
-
-
-    //-------------------------------------------------------------------------
-    // Test -- Test Registers
-    //-------------------------------------------------------------------------
 
     test_step = "Test Registers";
     `TEST_CASE_START(test_step);
@@ -539,45 +533,37 @@ module noc_block_replay_tb ();
     tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, WPP, 0);
     tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, WPP, 1);
     //
-    tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE, 0);
-    tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE, 1);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_LEN, 0);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_LEN, 1);
     tb_streamer.read_user_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, readback, 0);
-    `ASSERT_FATAL(readback == MEM_BURST_SIZE, "Incorrect packet size, block 0")
+    `ASSERT_FATAL(readback == MEM_BURST_LEN, "Incorrect packet size, block 0")
     tb_streamer.read_user_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, readback, 1);
-    `ASSERT_FATAL(readback == MEM_BURST_SIZE, "Incorrect packet size, block 1")
+    `ASSERT_FATAL(readback == MEM_BURST_LEN, "Incorrect packet size, block 1")
 
     `TEST_CASE_DONE(1);
+  endtask : test_registers
 
 
-    //-------------------------------------------------------------------------
-    // Test -- Wait for DRAM calibration to complete
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test Basic Recording and Playback of both FIFOs
+  //---------------------------------------------------------------------------
+  //
+  // This tests basic functionality of two replay buffers. It also checks
+  // that updates to an adjacent buffer don't affect the other.
+  //
+  //---------------------------------------------------------------------------
 
-    test_step = "Wait for DRAM calibration to complete";
-    `TEST_CASE_START(test_step);
-    while (init_done !== 1'b1) @(posedge bus_clk);
-    `TEST_CASE_DONE(init_done);
-
-
-    //-------------------------------------------------------------------------
-    // Test -- Basic Recording and Playback of both FIFOs
-    //-------------------------------------------------------------------------
-    //
-    // This tests basic functionality of two replay buffers. It also checks 
-    // that updates to an adjacent buffer don't affect the other.
-    //
-    //-------------------------------------------------------------------------
-
+  task automatic test_basic();
     test_step = "Basic Recording and Playback";
     `TEST_CASE_START(test_step);
 
-    // Configure the buffers so that they are adjacent, to catch any 
-    // encroachment on the other buffer. We'll put buffer 0 at a higher address 
+    // Configure the buffers so that they are adjacent, to catch any
+    // encroachment on the other buffer. We'll put buffer 0 at a higher address
     // then see if changes to buffer 1 spill into buffer 0.
-    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 1024+SPP, 0);
-    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE,    SPP, 0);
-    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR,     1024, 1);
-    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE,    SPP, 1);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR,  1024+SPP, 0);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE,     SPP, 0);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR,      1024, 1);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE,     SPP, 1);
     tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, 1024+SPP, 0);
     tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE,    SPP, 0);
     tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR,     1024, 1);
@@ -599,7 +585,7 @@ module noc_block_replay_tb ();
         // Empty the payload queue
         while (send_payload.size() > 0) void'(send_payload.pop_back());
 
-        num_words = SPP / WORD_SIZE;
+        num_words = SPP / MEM_WORD_SIZE;
         gen_payload(send_payload, num_words);
 
         // Save a copy of what goes into buffer 0
@@ -607,10 +593,10 @@ module noc_block_replay_tb ();
 
         // Send the payload
         tb_streamer.send(send_payload, md, buffer_num);
-  
+
         // Wait until all the data has been written
-        wait_record_fullness(num_words*WORD_SIZE, BUS_CLK_PERIOD*num_words*WORD_SIZE);
-  
+        wait_record_fullness(buffer_num, num_words*MEM_WORD_SIZE);
+
         // Start replay
         cmd       = 0;
         cmd[31]   = 1;         // send_imm
@@ -619,9 +605,9 @@ module noc_block_replay_tb ();
         cmd[28]   = 0;         // stop
         cmd[27:0] = num_words; // num_lines
         tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, buffer_num);
-  
+
         // Check the output
-        verify_rx_data(error_string, send_payload, buffer_num, 1);
+        verify_rx_data(buffer_num, error_string, send_payload, 1);
         `ASSERT_FATAL(error_string == "", error_string);
 
         if (buffer_num == 1) begin
@@ -635,7 +621,7 @@ module noc_block_replay_tb ();
           tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
 
           // Check the output
-          verify_rx_data(error_string, send_payload_buff0, 0, 1);
+          verify_rx_data(0, error_string, send_payload_buff0, 1);
           `ASSERT_FATAL(error_string == "", error_string);
         end
       end
@@ -644,557 +630,721 @@ module noc_block_replay_tb ();
 
     `TEST_CASE_DONE(1);
 
+  endtask : test_basic
 
-    //-------------------------------------------------------------------------
-    // Test packet sizes
-    //-------------------------------------------------------------------------
-    //
-    // Test boundary conditions where the packet size is close to the memory
-    // burst size.
-    //
-    //-------------------------------------------------------------------------
 
-    test_step = "Test packet equals buffer size";
+  //---------------------------------------------------------------------------
+  // Test packet sizes
+  //---------------------------------------------------------------------------
+  //
+  // Test boundary conditions where the packet size is close to the memory
+  // burst size.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_packet_sizes(int port = 0);
+    cvita_payload_t send_payload;
+    string          error_string;
+    int             buffer_size;
+    int             num_words;
+
+    test_step = "Test packet size";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t send_payload;
-      string          error_string;
-      int             old_packet_size;
+    // Calculate 
+    buffer_size = 2 * MEM_BURST_LEN * MEM_WORD_SIZE;
+    num_words   = 2 * MEM_BURST_LEN;
 
-      static int buffer_size = 2*MEM_BURST_SIZE * WORD_SIZE; // Size in bytes
-      static int num_words   = MEM_BURST_SIZE;               // Multiple of the burst size
+    // Generate payload to use for testing
+    gen_payload(send_payload, num_words);
 
-      // Generate payload to use for testing
-      gen_payload(send_payload, num_words);
+    // For each test below, we record two memory bursts and playback two memory
+    // bursts. Each time we change the playback packet size to test boundary
+    // conditions.
 
-      // Read the current packet size, then change it to the memory burst size.
-      tb_streamer.read_user_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, old_packet_size, 0);
+    // Test packet size equals burst size
+    start_replay(port, send_payload, buffer_size, num_words, MEM_BURST_LEN);
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
-      // Test packet size equals burst size
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE, 0);
-      start_replay(send_payload, 0, buffer_size, num_words);
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
+    // Test packet size one less than burst size
+    start_replay(port, send_payload, buffer_size, num_words, MEM_BURST_LEN-1);
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
-      // Test packet size equals burst size
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE-1, 0);
-      start_replay(send_payload, 0, buffer_size, num_words);
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
+    // Test packet size one more than burst size
+    start_replay(port, send_payload, buffer_size, num_words, MEM_BURST_LEN+1);
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
-      // Test packet size equals burst size
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE+1, 0);
-      start_replay(send_payload, 0, buffer_size, num_words);
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
+    // For each test below, we record two memory bursts and playback one memory
+    // burst plus or minus one word, keeping the packet size the same.
+    num_words = MEM_BURST_LEN;
 
-      // Restore the packet size
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, old_packet_size, 0);
-    end
+    // Playback one less than burst/packet size
+    start_replay(port, send_payload, buffer_size, num_words-1, MEM_BURST_LEN);
+    verify_rx_data(port, error_string, send_payload[0:num_words-2], 1);
+    `ASSERT_FATAL(error_string == "", error_string);
+
+    // Playback one more than burst/packet size
+    start_replay(port, send_payload, buffer_size, num_words+1, MEM_BURST_LEN);
+    verify_rx_data(port, error_string, send_payload[0:num_words], 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
     `TEST_CASE_DONE(1);
+  endtask : test_packet_sizes
 
 
-    //-------------------------------------------------------------------------
-    // Test small replay (less than a RAM burst or packet)
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test small replay
+  //---------------------------------------------------------------------------
+  //
+  // Make sure the smallest possible replay size works correctly.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_small_replay(int port = 0);
+    cvita_payload_t send_payload;
+    string          error_string;
+    int             num_words;
 
     test_step = "Test small replay";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t send_payload;
-      string          error_string;
-      int             num_words;
-
-      num_words = 1;
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, 1024, BPP, num_words);
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
-    end
+    // Test single word playback
+    num_words = 1;
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, BPP, num_words, WPP, 1024);
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
     `TEST_CASE_DONE(1);
-    
+  endtask : test_small_replay
 
-    //-------------------------------------------------------------------------
-    // Test playback that's larger than buffer
-    //-------------------------------------------------------------------------
-    //
-    // We want to make sure that playback wraps as expected back to the
-    // beginning of the buffer and that buffers that aren't a multiple of the
-    // burst size wrap correctly.
-    //
-    //-------------------------------------------------------------------------
+
+  //---------------------------------------------------------------------------
+  // Test playback that's larger than buffer
+  //---------------------------------------------------------------------------
+  //
+  // We want to make sure that playback wraps as expected back to the beginning
+  // of the buffer and that buffers that aren't a multiple of the burst size
+  // wrap correctly.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_oversized_playback(int port = 0);
+    cvita_payload_t  send_payload;
+    cvita_payload_t  exp_payload;
+    string           error_string;
+    int              buffer_size;
+    int              num_words_rec;
+    int              num_words_play;
 
     test_step = "Test oversized playback";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
+    // Set number of words to test to the smallest size possible
+    buffer_size    = (3 * MEM_BURST_LEN) / 2 * MEM_WORD_SIZE;  // 1.5 memory bursts in size (in bytes)
+    num_words_rec  = buffer_size / MEM_WORD_SIZE;              // Same as buffer_size (in words)
+    num_words_play = 2 * MEM_BURST_LEN;                        // 2 memory bursts in size (in words)
 
-      logic [31:0] cmd;
+    // Start playback of data
+    gen_payload(send_payload, num_words_rec);
+    start_replay(port, send_payload, buffer_size, num_words_play);
 
-      // Set number of words to test to the smallest size possible
-      static int buffer_size    = (3 * MEM_BURST_SIZE) / 2 * WORD_SIZE;   // 1.5 memory bursts in size (in bytes)
-      static int num_words_rec  = buffer_size / WORD_SIZE;                // Same as buffer_size (in words)
-      static int num_words_play = 2 * MEM_BURST_SIZE;                     // 2 memory bursts in size (in words)
-
-      // Start playback of data
-      gen_payload(send_payload, num_words_rec);
-      start_replay(send_payload, 0, buffer_size, num_words_play);
-
-      // First two frames should be what we recorded (1.5 * MEM_BURST_SIZE)
-      verify_rx_data(error_string, send_payload, 0, 0);
-      `ASSERT_FATAL(error_string == "", error_string);
-
-      // Then we should get another frame that's half a burst in length and 
-      // matches the beginning of the record buffer.
-      verify_rx_data(error_string, send_payload[0:MEM_BURST_SIZE/2-1], 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
-
-    end
+    // Since we recorded 1.5 memory bursts and are playing back 2, we should
+    // get the a repeat of the first third of data.
+    exp_payload = { send_payload, send_payload[0:num_words_rec/3-1] };
+    verify_rx_data(port, error_string, exp_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
     `TEST_CASE_DONE(1);
+  endtask : test_oversized_playback
 
 
-    //-------------------------------------------------------------------------
-    // Test chain mode
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test chained mode
+  //---------------------------------------------------------------------------
+
+  task automatic test_chained(int port = 0);
+    cvita_payload_t  send_payload;
+    cvita_metadata_t md;
+    string           error_string;
+    int              num_words;
+    logic [31:0]     cmd;
 
     test_step = "Test chain mode";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      cvita_metadata_t md;
-      string           error_string;
+    num_words = 70;
 
-      logic [31:0] cmd;
+    // Update record buffer settings
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, num_words*MEM_WORD_SIZE, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, 0, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE, num_words*MEM_WORD_SIZE, port);
 
-      static int num_words = 70;
+    // Restart the record buffer
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, port);
 
-      // Update record buffer settings
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, num_words*WORD_SIZE, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, 0, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE, num_words*WORD_SIZE, 0);
+    // Write num_words to record buffer
+    gen_payload(send_payload, num_words);
+    tb_streamer.send(send_payload, md, port);
 
-      // Restart the record buffer
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, 0);
-    
-      // Write num_words to record buffer
-      gen_payload(send_payload, num_words);
-      tb_streamer.send(send_payload, md, 0);
+    // Wait until all the data has been written
+    wait_record_fullness(port, num_words*MEM_WORD_SIZE);
 
-      // Wait until all the data has been written
-      wait_record_fullness(num_words*WORD_SIZE, BUS_CLK_PERIOD*num_words*5);
+    // Send two commands, chained together, each sending half the data
+    cmd       = 0;
+    cmd[31]   = 1;           // send_imm
+    cmd[30]   = 1;           // chain
+    cmd[29]   = 0;           // reload
+    cmd[28]   = 0;           // stop
+    cmd[27:0] = num_words/2; // num_lines
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, port);
 
-      // Send two commands, chained together, each sending half the data
-      cmd       = 0;
-      cmd[31]   = 1;           // send_imm
-      cmd[30]   = 1;           // chain
-      cmd[29]   = 0;           // reload
-      cmd[28]   = 0;           // stop
-      cmd[27:0] = num_words/2; // num_lines
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
+    cmd       = 0;
+    cmd[31]   = 0;           // send_imm
+    cmd[30]   = 0;           // chain
+    cmd[29]   = 0;           // reload
+    cmd[28]   = 0;           // stop
+    cmd[27:0] = num_words/2; // num_lines
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, port);
 
-      cmd       = 0;
-      cmd[31]   = 0;           // send_imm
-      cmd[30]   = 0;           // chain
-      cmd[29]   = 0;           // reload
-      cmd[28]   = 0;           // stop
-      cmd[27:0] = num_words/2; // num_lines
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
-
-      // Check the output, looking for the full set of data
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
-
-    end
+    // Check the output, looking for the full set of data
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
     `TEST_CASE_DONE(1);
+  endtask : test_chained
 
 
-    //-------------------------------------------------------------------------
-    // Test chained reload (automatic replay)
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test chained reload (continuous replay)
+  //---------------------------------------------------------------------------
 
-    test_step = "Test reload (automatic replay)";
+  task automatic test_chained_reload(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    int              buffer_words;
+    int              replay_words;
+
+    test_step = "Test chained reload (automatic replay)";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
+    // Number of words to store in buffer
+    buffer_words = 37;
 
-      // Number of words to store in buffer
-      static int buffer_words = 37;
-      
-      // Number of words to replay per command. Make it something different
-      // form the buffer size (buffer_words) to verify that the data is
-      // continuous between reloads of the original command.
-      static int replay_words = 27;
+    // Number of words to replay per command. Make it something different
+    // form the buffer size (buffer_words) to verify that the data is
+    // continuous between reloads of the original command.
+    replay_words = 27;
 
-      // Generate buffer_words of data to record
-      gen_payload(send_payload, buffer_words);
+    // Generate buffer_words of data to record
+    gen_payload(send_payload, buffer_words);
 
-      // Start playback of replay_words data in continuous mode (i.e., chained
-      // reload).
-      start_replay(send_payload, 0, buffer_words*WORD_SIZE, replay_words, 1);
-      
-      // Check the output, 3 times to make sure it's being repeated
-      for (int k = 0; k < 3; k ++) begin
-        verify_rx_data(error_string, send_payload, 0, 0);
-        `ASSERT_FATAL(error_string == "", error_string);
-      end
+    // Start playback of replay_words data in continuous mode (i.e., chained
+    // reload).
+    start_replay(port, send_payload, buffer_words*MEM_WORD_SIZE, replay_words, WPP, 0, 1);
 
-      // Test stopping
-      stop_replay();
+    // Check the output, looking for the full set of data, multiple times
+    repeat(5) begin
+      verify_rx_data(port, error_string, send_payload, 0);
+      `ASSERT_FATAL(error_string == "", error_string);
     end
 
+    // Test stopping
+    stop_replay(port);
+
     `TEST_CASE_DONE(1);
+  endtask : test_chained_reload
 
 
-    //-------------------------------------------------------------------------
-    // Test halt
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test halt
+  //---------------------------------------------------------------------------
+
+  task automatic test_halt(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    int              num_words;
 
     test_step = "Test halt";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t send_payload;
-      cvita_metadata_t md;
-      string           error_string;
+    num_words = 23;
 
-      static int num_words = 23;
+    // Start playback of continuous data
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, num_words*MEM_WORD_SIZE, num_words, WPP, 0, 1);
 
-      // Start playback of continuous data
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, 0, num_words*WORD_SIZE, num_words, 1);
-      
-      // Grab 3 packets, to make sure it's being repeated
-      for (int k = 0; k < 3; k ++) begin
-        verify_rx_data(error_string, send_payload, 0, 0);
-        `ASSERT_FATAL(error_string == "", error_string);
-      end
-
-      // Send halt command
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, 0);
-
-      // Keep reading frames until we've cleared them all. If the halt failed 
-      // then this should timeout.
-      flush_rx();
-      
-      // Send an extra halt to make sure that it gets properly ignored and 
-      // doesn't break the next command.
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, 0);   
+    // Grab 3 packets, to make sure it's being repeated
+    repeat (3) begin
+      verify_rx_data(port, error_string, send_payload, 0);
+      `ASSERT_FATAL(error_string == "", error_string);
     end
 
+    // Send halt command
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, port);
+
+    // Keep reading frames until we've cleared them all. If the halt failed
+    // then this should timeout.
+    flush_rx(port);
+
+    // Send an extra halt to make sure that it gets properly ignored and
+    // doesn't break the next command.
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_HALT, 0, port);
+
     `TEST_CASE_DONE(1);
+  endtask : test_halt
 
 
-    //-------------------------------------------------------------------------
-    // Test overfilled record buffer
-    //-------------------------------------------------------------------------
-    //
-    // Record more words than the buffer can fit. Make sure we don't overfill 
-    // our buffer and make sure reading it back loops only the data that should 
-    // have been captured.
-    //
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test overfilled record buffer
+  //---------------------------------------------------------------------------
+  //
+  // Record more words than the buffer can fit. Make sure we don't overfill our
+  // buffer and make sure reading it back loops only the data that should have
+  // been captured.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_overfilled_record(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    int              num_words;
+    int              buffer_words;
+    int              buffer_size;
+    logic [63:0]     readback;
 
     test_step = "Test overfilled record buffer";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
+    // Number of words to record (num_words) is larger than buffer size.
+    num_words    = 97;
+    buffer_words = 43;                            // Buffer size in words
+    buffer_size  = buffer_words * MEM_WORD_SIZE;  // Buffer size in bytes
 
-      // Number of words to record (num_words) is larger than buffer size.
-      static int num_words    = 97;
-      static int buffer_words = 43;                        // Buffer size in words
-      static int buffer_size  = buffer_words * WORD_SIZE;  // Buffer size in bytes
+    // Restart the record buffer
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, port);
 
-      // Restart the record buffer
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, 0);
-    
-      // Generate more record data than can fit in the buffer
-      gen_payload(send_payload, num_words);
-     
-      // Start playback
-      start_replay(send_payload, 0, buffer_size, num_words);
+    // Generate more record data than can fit in the buffer
+    gen_payload(send_payload, num_words);
 
-      // We should get two frames of buffer_words, then one smaller frame to 
-      // bring us up to num_words total.
-      send_payload = send_payload[0 : buffer_words-1];
-      for (int i = 0; i < 2; i ++) begin
-        verify_rx_data(error_string, send_payload, 0, 0);
-        `ASSERT_FATAL(error_string == "", error_string);
-      end
-      send_payload = send_payload[0 : (num_words % buffer_words)-1];
-      verify_rx_data(error_string, send_payload, 0, 1);
+    // Start playback
+    start_replay(port, send_payload, buffer_size, num_words);
+
+    // We should get two frames of buffer_words, then one smaller frame to
+    // bring us up to num_words total.
+    send_payload = send_payload[0 : buffer_words-1];
+    for (int i = 0; i < 2; i ++) begin
+      verify_rx_data(port, error_string, send_payload, 0);
       `ASSERT_FATAL(error_string == "", error_string);
-
-      // Make sure SR_REC_FULLNESS didn't keep increasing
-      tb_streamer.read_user_reg(sid_noc_block_replay, SR_REC_FULLNESS, readback, 0);
-      `ASSERT_FATAL(readback == buffer_words*WORD_SIZE, "SR_REC_FULLNESS went beyond expected bounds");
-
-      // Reset record buffer so that it accepts the rest of the data that's 
-      // stalled in the crossbar or input FIFO.
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, num_words*WORD_SIZE, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, 0);
-
-      // Wait until all the data has been written
-      wait_record_fullness((num_words - buffer_words)*WORD_SIZE, BUS_CLK_PERIOD*num_words*5);
     end
+    send_payload = send_payload[0 : (num_words % buffer_words)-1];
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
+
+    // Make sure SR_REC_FULLNESS didn't keep increasing
+    tb_streamer.read_user_reg(sid_noc_block_replay, SR_REC_FULLNESS, readback, port);
+    `ASSERT_FATAL(readback == buffer_words*MEM_WORD_SIZE, "SR_REC_FULLNESS went beyond expected bounds");
+
+    // Reset record buffer so that it accepts the rest of the data that's
+    // stalled in the crossbar or input FIFO.
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, num_words*MEM_WORD_SIZE, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, port);
+
+    // Wait until all the data has been written
+    wait_record_fullness(port, (num_words - buffer_words)*MEM_WORD_SIZE);
 
     `TEST_CASE_DONE(1);
 
+  endtask : test_overfilled_record
 
-    //-------------------------------------------------------------------------
-    // Test burst size
-    //-------------------------------------------------------------------------
-    //
-    // Record amount of data that's larger than the configured RAM burst length 
-    // to make sure full-length bursts are handled correctly.
-    //
-    //-------------------------------------------------------------------------
+
+  //---------------------------------------------------------------------------
+  // Test burst size
+  //---------------------------------------------------------------------------
+  //
+  // Record amount of data that's larger than the configured RAM burst length
+  // to make sure full-length bursts are handled correctly.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_burst_size(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    int              num_words;
+    int              buffer_size;
 
     test_step = "Test burst size";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
+    num_words   = 4*MEM_BURST_LEN;           // Multiple of the burst size
+    buffer_size = num_words * MEM_WORD_SIZE; // Size in bytes
 
-      static int num_words   = 4*MEM_BURST_SIZE; // Multiple of the burst size
-      static int buffer_size = 4*MEM_BURST_SIZE * WORD_SIZE; // Size in bytes
-
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, 0, buffer_size, num_words);
-      verify_rx_data(error_string, send_payload, 0, 1);
-      `ASSERT_FATAL(error_string == "", error_string);
-    end
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, buffer_size, num_words);
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_FATAL(error_string == "", error_string);
 
     `TEST_CASE_DONE(1);
+  endtask : test_burst_size
 
 
-    //-------------------------------------------------------------------------
-    // Test 4k AXI boundary
-    //-------------------------------------------------------------------------
-    //
-    // Record larger than the configured RAM burst length to make sure 
-    // full-length bursts are handled correctly.
-    //
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test 4k AXI boundary
+  //---------------------------------------------------------------------------
+  //
+  // Make sure crossing the AXI 4k boundary is handled correctly.
+  //
+  //---------------------------------------------------------------------------
+
+  task automatic test_4k_boundary(int port = 0);
+    cvita_payload_t  send_payload;
+    cvita_payload_t  temp_payload;
+    string           error_string;
+    int              num_words;
+    int              buffer_size;
+    int              base_addr;
 
     test_step = "Test 4k AXI Boundary";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      cvita_payload_t  temp_payload;
-      string           error_string;
+    //
+    // Test bursting up to and after boundary
+    //
 
-      static int num_words   = 2*MEM_BURST_SIZE;           // Multiple of the burst size
-      static int buffer_size = 4*MEM_BURST_SIZE*WORD_SIZE; // Size in bytes
-      static int base_addr   = AXI_ALIGNMENT-(num_words/2)*WORD_SIZE;
+    // Setup two bursts
+    num_words   = 2*MEM_BURST_LEN;
+    buffer_size = num_words * MEM_WORD_SIZE;    // Size in bytes
 
-      // Record data across the 4k boundary then replay it
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, base_addr, buffer_size, num_words);
-
-      // Verify the data, making sure we get two packets, since the access 
-      // should have been split due to crossing 4k boundary.
-      for (int i = 0; i < 2; i++) begin
-        temp_payload = send_payload[i*num_words/2 : (i+1)*(num_words/2)-1];
-        verify_rx_data(error_string, temp_payload, 0, (i == 1 ? 1 : 0));
-        `ASSERT_FATAL(error_string == "", error_string);
-      end
-
+    // Choose a base address such that we end the first burst at the 4 KiB
+    // boundary and start the next burst on the boundary.
+    if (num_words/2 * MEM_WORD_SIZE >= AXI_ALIGNMENT) begin
+      // In this case our memory burst size is bigger than 4K, so we're
+      // guaranteed to cross the 4K alignment boundary.
+      base_addr = 0;
+    end else begin
+      base_addr = AXI_ALIGNMENT - (num_words/2)*MEM_WORD_SIZE;
     end
 
+    // Record data across the 4K boundary then play it back
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, buffer_size, num_words, WPP, base_addr);
+
+    // Verify the data
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_ERROR(error_string == "", error_string);
+
+    //
+    // Test bursting across boundary
+    //
+
+    // Setup a single burst across the 4 KiB boundary
+    num_words   = MEM_BURST_LEN;
+    buffer_size = num_words * MEM_WORD_SIZE;    // Size in bytes
+
+    // Choose a base address such that we end a burst on the 4 KiB boundary,
+    // then continue on the other side.
+    if (num_words/2 * MEM_WORD_SIZE >= AXI_ALIGNMENT) begin
+      // In this case our memory burst size is bigger than 4K, so we're
+      // guaranteed to cross the 4K alignment boundary.
+      base_addr = 0;
+    end else begin
+      base_addr = AXI_ALIGNMENT - (num_words/2)*MEM_WORD_SIZE;
+    end
+
+    // Record data across the 4K boundary then play it back
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, buffer_size, num_words, WPP, base_addr);
+
+    // Verify the data received
+    verify_rx_data(port, error_string, send_payload, 1);
+    `ASSERT_ERROR(error_string == "", error_string);
+
     `TEST_CASE_DONE(1);
+  endtask : test_4k_boundary
 
 
-    //-------------------------------------------------------------------------
-    // Test small packet size (smaller than memory burst size)
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test small packet sizes
+  //---------------------------------------------------------------------------
+
+  task automatic test_small_packet(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    int              buffer_size;
+    int              num_words;
+    int              wpp;
 
     test_step = "Test small packet size";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
+    //
+    // Test smaller than burst size
+    //
 
-      logic [31:0] cmd;
+    // Set number of words to test to the smallest size possible
+    buffer_size = 2 * MEM_BURST_LEN * MEM_WORD_SIZE;    // 2 memory bursts in size (in bytes)
+    num_words   = buffer_size / MEM_WORD_SIZE;          // Same as buffer_size (in words)
+    wpp         = MEM_BURST_LEN / 4;                    // Words per packet
 
-      // Set number of words to test to the smallest size possible
-      static int buffer_size = 2 * MEM_BURST_SIZE * WORD_SIZE;   // 2 memory bursts in size (in bytes)
-      static int num_words   = buffer_size / WORD_SIZE;          // Same as buffer_size (in words)
-      
-      int old_packet_size;
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, buffer_size, num_words, wpp);
 
-      // Save the current packet size, then change it to a small value
-      tb_streamer.read_user_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, old_packet_size, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, MEM_BURST_SIZE/4, 0);
-
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, 0, buffer_size, num_words);
-
-      // We should get 8 small packets instead of 2 large ones
-      for (int k = 0; k < 8; k ++) begin
-        verify_rx_data(error_string, 
-                       send_payload[MEM_BURST_SIZE/4*k:MEM_BURST_SIZE/4*(k+1)-1],
-                       0, (k == 7 ? 1 : 0));
-        `ASSERT_FATAL(error_string == "", error_string);
-      end
-
-      // Restore the packet size
-      tb_streamer.write_reg(sid_noc_block_replay, SR_RX_CTRL_MAXLEN, old_packet_size, 0);
-
+    // We should get 8 small packets instead of 2 large ones
+    for (int k = 0; k < 8; k ++) begin
+      verify_rx_data(port, error_string,
+                     send_payload[wpp*k:wpp*(k+1)-1],
+                     (k == 7 ? 1 : 0));
+      `ASSERT_FATAL(error_string == "", error_string);
     end
 
-    `TEST_CASE_DONE(1);
-
-
-    //-------------------------------------------------------------------------
-    // Test basic timed playback
-    //-------------------------------------------------------------------------
-
-    test_step = "Test basic timed playback";
-    `TEST_CASE_START(test_step);
-
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
-      logic     [64:0] timestamp;
-      int              num_words;
-      int              buffer_size;
-
-      num_words   = 70;
-      buffer_size = num_words * WORD_SIZE;
-      timestamp   = 64'h0123456789ABCDEF;
-
-      gen_payload(send_payload, num_words);
-      start_replay(send_payload, 0, buffer_size, num_words, 0, timestamp);
-
-      verify_rx_data(error_string, send_payload, 0, 1, timestamp);
+    //
+    // Test shortest supported packet size (WPP = 2)
+    //
+    
+    wpp = 2;
+    num_words = wpp*10;
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, BPP, num_words, wpp, 1024);
+    for (int i=0; i < num_words; i+=2) begin
+      verify_rx_data(port, error_string, send_payload[i:i+1], i == num_words-2 ? 1 : 0);
       `ASSERT_FATAL(error_string == "", error_string);
     end
 
     `TEST_CASE_DONE(1);
+  endtask : test_small_packet
 
 
-    //-------------------------------------------------------------------------
-    // Test chained timed playback
-    //-------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+  // Test basic timed playback
+  //---------------------------------------------------------------------------
 
-    test_step = "Test chained timed playback";
+  task automatic test_basic_timed(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    logic     [64:0] timestamp;
+    int              num_words;
+    int              buffer_size;
+    int              wpp;
+
+    test_step = "Test basic playback, timed";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      cvita_metadata_t md;
-      string           error_string;
-      logic     [64:0] timestamp;
-      logic     [31:0] cmd;
-      int              buffer_size;
-      int              num_words;
+    num_words   = MEM_BURST_LEN;
+    buffer_size = num_words * MEM_WORD_SIZE;
+    timestamp   = 64'h0123456789ABCDEF;
 
-      num_words   = 70;
-      buffer_size = num_words * WORD_SIZE;
+    // Set the packet size small enough so that we get multiple packets
+    // (multiple timestamps).
+    wpp = num_words/8;
 
-      // Update record buffer settings
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, buffer_size, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, 0, 0);
-      tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE, buffer_size, 0);
+    gen_payload(send_payload, num_words);
+    start_replay(port, send_payload, buffer_size, num_words, wpp, 0, 0, timestamp);
 
-      // Restart the record buffer
-      tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, 0);
+    verify_rx_data(port, error_string, send_payload, 1, timestamp);
+    `ASSERT_FATAL(error_string == "", error_string);
 
-      // Write num_words to record buffer
-      gen_payload(send_payload, num_words);
-      tb_streamer.send(send_payload, md, 0);
+    `TEST_CASE_DONE(1);
+  endtask : test_basic_timed
 
-      // Wait until all the data has been written
-      wait_record_fullness(num_words*WORD_SIZE, BUS_CLK_PERIOD*num_words*5);
 
-      // Set the time for playback
-      timestamp = 64'h0123456789ABCDEF;
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_HI, timestamp[63:32], 0);
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_LO, timestamp[31: 0], 0);
+  //---------------------------------------------------------------------------
+  // Test chained playback, timed
+  //---------------------------------------------------------------------------
 
-      // Send command to playback data at specified time
-      cmd       = 0;
-      cmd[31]   = 0;           // send_imm
-      cmd[30]   = 1;           // chain
-      cmd[29]   = 0;           // reload
-      cmd[28]   = 0;           // stop
-      cmd[27:0] = num_words/2; // num_lines
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
+  task automatic test_chained_timed(int port = 0);
 
-      cmd       = 0;
-      cmd[31]   = 0;           // send_imm
-      cmd[30]   = 0;           // chain
-      cmd[29]   = 0;           // reload
-      cmd[28]   = 0;           // stop
-      cmd[27:0] = num_words/2; // num_lines
-      tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, 0);
+    cvita_payload_t  send_payload;
+    cvita_metadata_t md;
+    string           error_string;
+    logic     [64:0] timestamp;
+    logic     [31:0] cmd;
+    int              buffer_size;
+    int              num_words;
 
-      // Check the output, looking for the full set of data
-      verify_rx_data(error_string, send_payload, 0, 1, timestamp);
+    test_step = "Test chained playback, timed";
+    `TEST_CASE_START(test_step);
+
+    num_words   = 70;
+    buffer_size = num_words * MEM_WORD_SIZE;
+
+    // Update record buffer settings
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BASE_ADDR, 0, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_BUFFER_SIZE, buffer_size, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BASE_ADDR, 0, port);
+    tb_streamer.write_reg(sid_noc_block_replay, SR_PLAY_BUFFER_SIZE, buffer_size, port);
+
+    // Restart the record buffer
+    tb_streamer.write_reg(sid_noc_block_replay, SR_REC_RESTART, 0, port);
+
+    // Write num_words to record buffer
+    gen_payload(send_payload, num_words);
+    tb_streamer.send(send_payload, md, port);
+
+    // Wait until all the data has been written
+    wait_record_fullness(port, num_words*MEM_WORD_SIZE);
+
+    // Set the time for playback
+    timestamp = 64'h0123456789ABCDEF;
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_HI, timestamp[63:32], port);
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_TIME_LO, timestamp[31: 0], port);
+
+    // Send command to playback data at specified time
+    cmd       = 0;
+    cmd[31]   = 0;           // send_imm
+    cmd[30]   = 1;           // chain
+    cmd[29]   = 0;           // reload
+    cmd[28]   = 0;           // stop
+    cmd[27:0] = num_words/2; // num_lines
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, port);
+
+    cmd       = 0;
+    cmd[31]   = 0;           // send_imm
+    cmd[30]   = 0;           // chain
+    cmd[29]   = 0;           // reload
+    cmd[28]   = 0;           // stop
+    cmd[27:0] = num_words/2; // num_lines
+    tb_streamer.write_user_reg(sid_noc_block_replay, SR_RX_CTRL_COMMAND, cmd, port);
+
+    // Check the output, looking for the full set of data
+    verify_rx_data(port, error_string, send_payload, 1, timestamp);
+    `ASSERT_FATAL(error_string == "", error_string);
+
+    `TEST_CASE_DONE(1);
+  endtask : test_chained_timed
+
+
+  //---------------------------------------------------------------------------
+  // Test chained reload, timed (automatic replay)
+  //---------------------------------------------------------------------------
+
+  task automatic test_chained_reload_timed(int port = 0);
+    cvita_payload_t  send_payload;
+    string           error_string;
+    logic     [64:0] timestamp;
+    int              buffer_words;
+    int              replay_words;
+
+    test_step = "Test chained reload, timed";
+    `TEST_CASE_START(test_step);
+
+    // Number of words to store in buffer
+    buffer_words = 37;
+
+    // Number of words to replay per command. Make it something different
+    // form the buffer size (buffer_words) to verify that the data is
+    // continuous between reloads of the original command.
+    replay_words = 27;
+
+    // Generate buffer_words of data to record
+    gen_payload(send_payload, buffer_words);
+
+    // Start playback of replay_words data in continuous mode (i.e., chained
+    // reload).
+    timestamp = 64'h3210012332100123;
+    start_replay(port, send_payload, buffer_words*MEM_WORD_SIZE, replay_words, WPP, 0, 1, timestamp);
+
+    // Check the output, 3 times to make sure it's being repeated
+    for (int k = 0; k < 3; k ++) begin
+      verify_rx_data(port, error_string, send_payload, 0, timestamp);
       `ASSERT_FATAL(error_string == "", error_string);
+      timestamp = timestamp + buffer_words*SAMP_PER_WORD;
     end
 
+    // Test stopping
+    stop_replay(port);
+
     `TEST_CASE_DONE(1);
+  endtask : test_chained_reload_timed
+
+
+
+  //---------------------------------------------------------------------------
+  // Main Test Process
+  //---------------------------------------------------------------------------
+
+  initial begin : tb_main
+    logic [31:0] random_word;
+    logic [63:0] readback;
+    string       str;
+    static int   port = 1;
 
 
     //-------------------------------------------------------------------------
-    // Test chained timed reload (automatic replay)
+    // Test -- Reset
     //-------------------------------------------------------------------------
 
-    test_step = "Test chained timed reload";
+    test_step = "Wait for Reset";
+    `TEST_CASE_START(test_step);
+    while (bus_rst) @(posedge bus_clk);
+    while (ce_rst) @(posedge ce_clk);
+    `TEST_CASE_DONE(~bus_rst & ~ce_rst);
+
+
+    //-------------------------------------------------------------------------
+    // Test -- Check for correct NoC IDs
+    //-------------------------------------------------------------------------
+
+    test_step = "Check NoC ID";
     `TEST_CASE_START(test_step);
 
-    begin
-      cvita_payload_t  send_payload;
-      string           error_string;
-      logic     [64:0] timestamp;
-
-      // Number of words to store in buffer
-      static int buffer_words = 37;
-      
-      // Number of words to replay per command. Make it something different
-      // form the buffer size (buffer_words) to verify that the data is
-      // continuous between reloads of the original command.
-      static int replay_words = 27;
-
-      // Generate buffer_words of data to record
-      gen_payload(send_payload, buffer_words);
-
-      // Start playback of replay_words data in continuous mode (i.e., chained
-      // reload).
-      timestamp = 64'h3210012332100123;
-      start_replay(send_payload, 0, buffer_words*WORD_SIZE, replay_words, 1, timestamp);
-
-      // Check the output, 3 times to make sure it's being repeated
-      for (int k = 0; k < 3; k ++) begin
-        verify_rx_data(error_string, send_payload, 0, 0, timestamp);
-        `ASSERT_FATAL(error_string == "", error_string);
-        timestamp = timestamp + buffer_words*SAMP_PER_WORD;
-      end
-
-      // Test stopping
-      stop_replay();
-    end
+    // Read NOC IDs
+    tb_streamer.read_reg(sid_noc_block_replay, RB_NOC_ID, readback);
+    $display("Read NOC ID: %16x", readback);
+    `ASSERT_ERROR(readback == noc_block_replay.NOC_ID, "Incorrect NOC ID");
 
     `TEST_CASE_DONE(1);
+
+
+    //-------------------------------------------------------------------------
+    // Test -- Connect RFNoC blocks
+    //-------------------------------------------------------------------------
+
+    test_step = "Connect RFNoC blocks";
+    `TEST_CASE_START(test_step);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,     0, noc_block_replay, 0, S8, SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_replay, 0, noc_block_tb,     0, S8, SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_tb,     1, noc_block_replay, 1, S8, SPP);
+    `RFNOC_CONNECT_BLOCK_PORT(noc_block_replay, 1, noc_block_tb,     1, S8, SPP);
+    `TEST_CASE_DONE(1);
+
+
+    //-------------------------------------------------------------------------
+    // Test -- Wait for DRAM calibration to complete
+    //-------------------------------------------------------------------------
+
+    test_step = "Wait for DRAM calibration to complete";
+    `TEST_CASE_START(test_step);
+    while (init_done !== 1'b1) @(posedge bus_clk);
+    `TEST_CASE_DONE(init_done);
+
+
+    //-------------------------------------------------------------------------
+    // Test sequences
+    //-------------------------------------------------------------------------
+
+    // These tests check two replay ports
+    test_registers();
+    test_basic();
+
+    // These tests check the port indicated
+    port = 1;
+    test_packet_sizes(port);
+    test_small_replay(port);
+    test_oversized_playback(port);
+    test_chained(port);
+    test_chained_reload(port);
+    test_halt(port);
+    test_overfilled_record(port);
+    test_burst_size(port);
+    test_4k_boundary(port);
+    test_small_packet(port);
+    test_basic_timed(port);
+    test_chained_timed(port);
+    test_chained_reload_timed(port);
 
 
     //-------------------------------------------------------------------------
@@ -1202,8 +1352,8 @@ module noc_block_replay_tb ();
     //-------------------------------------------------------------------------
 
     `TEST_BENCH_DONE;
-  end
-endmodule
+  end : tb_main
 
+endmodule : noc_block_replay_tb
 
 `default_nettype wire

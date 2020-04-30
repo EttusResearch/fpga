@@ -29,7 +29,9 @@
 
 
 module replay_sim_ram #(
-  parameter RAM_MODEL = "AXI_RAM"
+  parameter RAM_MODEL  = "AXI_RAM",
+  parameter MEM_ADDR_W = 32,  // Memory size to use with AXI_RAM
+  parameter STALL_PROB = 25   // Stall probability to use with AXI_RAM
 ) (
   input  wire        ce_clk,
   input  wire        ce_rst,
@@ -58,9 +60,8 @@ module replay_sim_ram #(
 
   generate if (RAM_MODEL == "AXI_RAM") begin
 
-    localparam AWIDTH     = 32;
+    localparam AWIDTH     = MEM_ADDR_W;
     localparam DWIDTH     = 64;
-    localparam STALL_PROB = 25;
 
     // In this case, there's no MIG, so we must generate the status signal
     // indicating the MIG is initialized.
