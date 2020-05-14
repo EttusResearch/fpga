@@ -44,7 +44,9 @@ module axi_rate_change #(
   // Settings registers
   parameter SR_N_ADDR               = 0,
   parameter SR_M_ADDR               = 1,
-  parameter SR_CONFIG_ADDR          = 2
+  parameter SR_CONFIG_ADDR          = 2,
+  parameter DEFAULT_N               = 1,
+  parameter DEFAULT_M               = 1
 )(
   input clk, input reset, input clear,
   output clear_user,  // Strobed after end of burst. Throttles input. Useful for resetting user code between bursts.
@@ -83,13 +85,13 @@ module axi_rate_change #(
   ********************************************************/
   wire [$clog2(MAX_N+1)-1:0] sr_n;
   wire n_changed;
-  setting_reg #(.my_addr(SR_N_ADDR), .width($clog2(MAX_N+1)), .at_reset(1)) set_n (
+  setting_reg #(.my_addr(SR_N_ADDR), .width($clog2(MAX_N+1)), .at_reset(DEFAULT_N)) set_n (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(sr_n), .changed(n_changed));
 
   wire [$clog2(MAX_M+1)-1:0] sr_m;
   wire m_changed;
-  setting_reg #(.my_addr(SR_M_ADDR), .width($clog2(MAX_M+1)), .at_reset(1)) set_m (
+  setting_reg #(.my_addr(SR_M_ADDR), .width($clog2(MAX_M+1)), .at_reset(DEFAULT_M)) set_m (
     .clk(clk), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
     .out(sr_m), .changed(m_changed));
 
@@ -158,8 +160,8 @@ module axi_rate_change #(
 
   always @(posedge clk) begin
     if (reset | clear) begin
-      n                     <= 1;
-      m                     <= 1;
+      n                     <= DEFAULT_N;
+      m                     <= DEFAULT_M;
       rate_changed          <= 1'b0;
       first_header          <= 1'b1;
       partial_first_word    <= 1'b1;
@@ -284,7 +286,9 @@ module axi_rate_change #(
     .WIDTH(WIDTH+1),
     .HOLD_LAST_WORD(1),
     .MAX_PKT_SIZE(MAX_N),
-    .SR_PKT_SIZE_ADDR(SR_N_ADDR))
+    .SR_PKT_SIZE_ADDR(SR_N_ADDR),
+    .DEFAULT_N(DEFAULT_N),
+    .DEFAULT_M(DEFAULT_M))
   axi_drop_partial_packet (
     .clk(clk), .reset(reset), .clear(clear | send_done),
     .flush(word_cnt_div_n_tvalid & word_cnt_div_n_tready),  // Flush on EOB
