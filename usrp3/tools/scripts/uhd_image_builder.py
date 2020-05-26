@@ -145,6 +145,9 @@ def setup_parser():
     return parser
 
 def get_default_parameters():
+    """
+    Return default block parameters
+    """
     default = {"clock" : "ce",
                "parameters" : None,
                "extraports" : None}
@@ -216,7 +219,7 @@ def create_auto_inst(blocks, blockparams, max_num_blocks, fill_with_fifos=False)
     """
     Returns the Verilog source for the auto_inst file.
     """
-    if len(blocks) == 0:
+    if not blocks:
         print("[GEN_RFNOC_INST ERROR] No blocks specified!")
         exit(1)
     if len(blocks) > max_num_blocks:
@@ -228,9 +231,9 @@ def create_auto_inst(blocks, blockparams, max_num_blocks, fill_with_fifos=False)
         num_ce = len(blocks)
     vfile = HEADER_TMPL.format(num_ce=num_ce)
     blocks_in_blacklist = [block for block in blocks if block in BLACKLIST]
-    if len(blocks_in_blacklist):
-        print("[RFNoC ERROR]: The following blocks require special treatment and"\
-                " can't be instantiated with this tool:  ")
+    if blocks_in_blacklist:
+        print("[RFNoC ERROR]: The following blocks require special treatment and"
+              " can't be instantiated with this tool:")
         for element in blocks_in_blacklist:
             print(" * ", element)
         print("Remove them from the command and run the uhd_image_builder.py again.")
@@ -259,11 +262,12 @@ def file_generator(args, vfile):
     presence of -o, it just generates a version of the verilog file which
     is  not intended to be build
     """
-    print("Adding CE instantiation file for '{}'".format(args.target))
-    inst_file_path = args.outfile if args.outfile else \
+    print("Adding CE instantiation file for '{}'".format(dtarget(args)))
+    inst_file_path = os.path.normpath(args.outfile if args.outfile else \
         os.path.join(
-            get_scriptpath(), '..', '..', 'top', device_dict(args.device),
-            'rfnoc_ce_auto_inst_{}.v'.format(args.device))
+            get_scriptpath(), '..', '..', 'top', get_device_dir(args.device),
+            'rfnoc_ce_auto_inst_{}.v'.format(args.device)))
+    print("Writing CE instantiation file to: {}".format(inst_file_path))
     open(inst_file_path, 'w').write(vfile)
 
 def append_re_line_sequence(filename, linepattern, newline):
@@ -273,23 +277,22 @@ def append_re_line_sequence(filename, linepattern, newline):
     unchanged"""
     oldfile = open(filename, 'r').read()
     lines = re.findall(newline, oldfile, flags=re.MULTILINE)
-    if len(lines) != 0:
-        pass
-    else:
-        pattern_lines = re.findall(linepattern, oldfile, flags=re.MULTILINE)
-        if len(pattern_lines) == 0:
-            open(filename, 'a').write(newline)
-            return
-        last_line = pattern_lines[-1]
-        newfile = oldfile.replace(last_line, last_line + newline + '\n')
-        open(filename, 'w').write(newfile)
+    if lines:
+        return
+    pattern_lines = re.findall(linepattern, oldfile, flags=re.MULTILINE)
+    if not pattern_lines:
+        open(filename, 'a').write(newline)
+        return
+    last_line = pattern_lines[-1]
+    newfile = oldfile.replace(last_line, last_line + newline + '\n')
+    open(filename, 'w').write(newfile)
 
 def create_oot_include(device, include_dirs):
     """
     Create the include file for OOT RFNoC sources
     """
     oot_dir_list = []
-    target_dir = device_dict(device.lower())
+    target_dir = get_device_dir(device.lower())
     dest_srcs_file = os.path.join(get_scriptpath(), '..', '..', 'top',\
             target_dir, 'Makefile.OOT.inc')
     incfile = open(dest_srcs_file, 'w')
@@ -322,8 +325,10 @@ def create_oot_include(device, include_dirs):
                 elif os.path.isfile(os.path.join(oot_path, 'fpga-src', 'Makefile.srcs')):
                     # Legacy: Check for fpga-src/Makefile.srcs
                     # Read, then append to file
-                    curr_srcs = open(os.path.join(oot_path, 'fpga-src', 'Makefile.srcs'), 'r').read()
-                    curr_srcs = curr_srcs.replace('SOURCES_PATH', os.path.join(oot_path, 'fpga-src', ''))
+                    curr_srcs = \
+                        open(os.path.join(oot_path, 'fpga-src', 'Makefile.srcs'), 'r').read()
+                    curr_srcs = \
+                        curr_srcs.replace('SOURCES_PATH', os.path.join(oot_path, 'fpga-src', ''))
                     incfile.write(OOT_SRCS_TMPL.format(sources=curr_srcs))
                 else:
                     print('No valid makefile found at ' + os.path.abspath(currpath))
@@ -347,7 +352,7 @@ def append_item_into_file(device, include_dir):
         oot_srcs_list = readfile(oot_srcs_file)
         return [w.replace('SOURCES_PATH', include_dir) for w in oot_srcs_list]
     # Here we go
-    target_dir = device_dict(device.lower())
+    target_dir = get_device_dir(device.lower())
     if include_dir is not None:
         for directory in include_dir:
             dirs = os.path.join(directory, '')
@@ -360,15 +365,14 @@ def append_item_into_file(device, include_dir):
             linepattern = re.escape('RFNOC_OOT_SRCS = \\\n')
             oldfile = open(dest_srcs_file, 'r').read()
             prefixlines = re.findall(prefixpattern, oldfile, flags=re.MULTILINE)
-            if len(prefixlines) == 0:
+            if not prefixlines:
                 lines = re.findall(linepattern, oldfile, flags=re.MULTILINE)
-                if len(lines) == 0:
+                if not lines:
                     print("Pattern {} not found. Could not write `{}'"
                           .format(linepattern, oldfile))
                     return
-                else:
-                    last_line = lines[-1]
-                    srcs = "".join(oot_srcs_list)
+                last_line = lines[-1]
+                srcs = "".join(oot_srcs_list)
             else:
                 last_line = prefixlines[-1]
                 srcs = "".join([
@@ -413,10 +417,10 @@ def readfile(files):
 def build(args):
     " build "
     cwd = get_scriptpath()
-    target_dir = device_dict(args.device.lower())
-    build_dir = os.path.join(cwd, '..', '..', 'top', target_dir)
+    target_dir = get_device_dir(args.device.lower())
+    build_dir = os.path.normpath(os.path.join(cwd, '..', '..', 'top', target_dir))
     if os.path.isdir(build_dir):
-        print("changing temporarily working directory to {0}".\
+        print("Temporarily changing working directory to {0}".\
                 format(build_dir))
         os.chdir(build_dir)
         make_cmd = ". ./setupenv.sh "
@@ -427,56 +431,53 @@ def build(args):
             make_cmd = make_cmd + " GUI=1"
         # Wrap it into a bash call:
         make_cmd = '/bin/bash -c "{0}"'.format(make_cmd)
+        print("Executing make command: `{}'".format(make_cmd))
         ret_val = os.system(make_cmd)
         os.chdir(cwd)
     return ret_val
 
-def device_dict(args):
+def get_device_dir(device):
     """
-    helps selecting the device building folder based on the targeted device
+    Find top directory for a given device
     """
-    build_dir = {
-        'x300':'x300',
-        'x310':'x300',
-        'e300':'e31x',
-        'e31x':'e31x',
-        'e320':'e320',
-        'n300':'n3xx',
-        'n310':'n3xx',
-        'n320':'n3xx'
-    }
-    return build_dir[args]
+    return {
+        'x300': 'x300',
+        'x310': 'x300',
+        'e300': 'e31x',
+        'e31x': 'e31x',
+        'e320': 'e320',
+        'n300': 'n3xx',
+        'n310': 'n3xx',
+        'n320': 'n3xx'
+    }[device]
 
 def dtarget(args):
     """
     If no target specified,  selects the default building target based on the
     targeted device
     """
-    if args.target is None:
-        default_trgt = {
-            'x300':'X300_RFNOC_HG',
-            'x310':'X310_RFNOC_HG',
-            'e31x':'E310_SG3_RFNOC',
-            'e320':'E320_RFNOC_1G',
-            'n300':'N300_RFNOC_HG',
-            'n310':'N310_RFNOC_HG',
-            'n320':'N320_RFNOC_XG',
-        }
-        return default_trgt[args.device.lower()]
-    else:
+    if args.target:
         return args.target
+    return {
+        'x300': 'X300_RFNOC_HG',
+        'x310': 'X310_RFNOC_HG',
+        'e31x': 'E310_SG3_RFNOC',
+        'e320': 'E320_RFNOC_1G',
+        'n300': 'N300_RFNOC_HG',
+        'n310': 'N310_RFNOC_HG',
+        'n320': 'N320_RFNOC_XG',
+    }[args.device]
 
 def checkdir_v(include_dir):
     """
-    Checks the existance of verilog files in the given include dir
+    Checks the existance of Verilog files in the given include dir
     """
-    nfiles = glob.glob(os.path.join(include_dir,'')+'*.v')
-    if len(nfiles) == 0:
+    nfiles = glob.glob(os.path.join(include_dir, '') + '*.v')
+    if not nfiles:
         print('[ERROR] No verilog files found in the given directory')
         exit(0)
     else:
         print('Verilog sources found!')
-    return
 
 def get_scriptpath():
     """
@@ -503,9 +504,8 @@ def get_relative_path(base, target):
             basedir = os.path.dirname(basedir)
             total_path = os.path.join('..', total_path)
         return total_path
-    else:
-        print("Could not determine relative path")
-        return path_tail
+    print("Could not determine relative path")
+    return path_tail
 
 def main():
     " Go, go, go! "
@@ -522,12 +522,10 @@ def main():
         vfile = open(args.auto_inst_src, 'r').read()
     file_generator(args, vfile)
     create_oot_include(args.device, args.include_dir)
-    if args.outfile is  None:
+    if args.outfile is None:
         return build(args)
-    else:
-        print("Instantiation file generated at {}".\
-                format(args.outfile))
-        return 0
+    print("Instantiation file generated at {}".format(args.outfile))
+    return 0
 
 if __name__ == "__main__":
     exit(main())
