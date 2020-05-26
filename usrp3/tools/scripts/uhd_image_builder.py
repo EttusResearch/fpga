@@ -121,8 +121,8 @@ def setup_parser():
         default=None)
     parser.add_argument(
         "-d", "--device",
-        help="Device to be programmed [x300, x310, e310, e320, n300, n310, n320]",
-        default="x310")
+        choices=['x300', 'x310', 'n300', 'n310', 'n320', 'e31x', 'e320'],
+        help="Device to be programmed", default="x310")
     parser.add_argument(
         "-t", "--target",
         help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG,\
@@ -259,14 +259,12 @@ def file_generator(args, vfile):
     presence of -o, it just generates a version of the verilog file which
     is  not intended to be build
     """
-    fpga_utils_path = get_scriptpath()
-    print("Adding CE instantiation file for '%s'" % args.target)
-    path_to_file = fpga_utils_path +'/../../top/' + device_dict(args.device.lower()) +\
-            '/rfnoc_ce_auto_inst_' + args.device.lower() + '.v'
-    if args.outfile is None:
-        open(path_to_file, 'w').write(vfile)
-    else:
-        open(args.outfile, 'w').write(vfile)
+    print("Adding CE instantiation file for '{}'".format(args.target))
+    inst_file_path = args.outfile if args.outfile else \
+        os.path.join(
+            get_scriptpath(), '..', '..', 'top', device_dict(args.device),
+            'rfnoc_ce_auto_inst_{}.v'.format(args.device))
+    open(inst_file_path, 'w').write(vfile)
 
 def append_re_line_sequence(filename, linepattern, newline):
     """ Detects the re 'linepattern' in the file. After its last occurrence,
@@ -441,7 +439,7 @@ def device_dict(args):
         'x300':'x300',
         'x310':'x300',
         'e300':'e31x',
-        'e310':'e31x',
+        'e31x':'e31x',
         'e320':'e320',
         'n300':'n3xx',
         'n310':'n3xx',
@@ -458,7 +456,7 @@ def dtarget(args):
         default_trgt = {
             'x300':'X300_RFNOC_HG',
             'x310':'X310_RFNOC_HG',
-            'e310':'E310_SG3_RFNOC',
+            'e31x':'E310_SG3_RFNOC',
             'e320':'E320_RFNOC_1G',
             'n300':'N300_RFNOC_HG',
             'n310':'N310_RFNOC_HG',
