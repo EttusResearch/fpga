@@ -35,6 +35,7 @@ include $(LIB_DIR)/dsp/Makefile.srcs
 include $(LIB_DIR)/radio/Makefile.srcs
 include $(LIB_DIR)/io_cap_gen/Makefile.srcs
 include $(LIB_DIR)/rfnoc/Makefile.srcs
+include $(BASE_DIR)/e320/Makefile.OOT.inc
 
 ##################################################
 # Sources
