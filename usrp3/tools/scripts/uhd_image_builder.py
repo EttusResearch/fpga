@@ -122,6 +122,7 @@ def setup_parser():
     parser.add_argument(
         "-d", "--device",
         choices=['x300', 'x310', 'n300', 'n310', 'n320', 'e31x', 'e320'],
+        type=str.lower,
         help="Device to be programmed", default="x310")
     parser.add_argument(
         "-t", "--target",
