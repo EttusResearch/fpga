@@ -101,7 +101,7 @@ def setup_parser():
     parser.add_argument(
         "-m", "--max-num-blocks", type=int,
         help="Maximum number of blocks (Max. Allowed for x310|x300: 10,\
-                for e300: 14, for e320: 12, for n300: 11, \
+                for e310: 14, for e320: 12, for n300: 11, \
                 for n310/n320: 10)",
         default=10)
     parser.add_argument(
@@ -121,13 +121,13 @@ def setup_parser():
         default=None)
     parser.add_argument(
         "-d", "--device",
-        choices=['x300', 'x310', 'n300', 'n310', 'n320', 'e31x', 'e320'],
+        choices=['x300', 'x310', 'n300', 'n310', 'n320', 'e310', 'e320'],
         type=str.lower,
         help="Device to be programmed", default="x310")
     parser.add_argument(
         "-t", "--target",
-        help="Build target - image type [X3X0_RFNOC_HG, X3X0_RFNOC_XG,\
-                E310_RFNOC_sg3, E320_RFNOC_1G, N310_RFNOC_HG, ...]",
+        help="Build target - image type [X300_RFNOC_HG, X310_RFNOC_HG,\
+                E310_SG3_RFNOC, E320_RFNOC_1G, N310_RFNOC_HG, ...]",
         default=None)
     parser.add_argument(
         "-g", "--GUI",
@@ -261,13 +261,13 @@ def file_generator(args, vfile):
     Takes the target device as an argument and, if no '-o' directive is given,
     replaces the auto_ce file in the corresponding top folder. With the
     presence of -o, it just generates a version of the verilog file which
-    is  not intended to be build
+    is not intended to be built
     """
     print("Adding CE instantiation file for '{}'".format(dtarget(args)))
     inst_file_path = os.path.normpath(args.outfile if args.outfile else \
         os.path.join(
             get_scriptpath(), '..', '..', 'top', get_device_dir(args.device),
-            'rfnoc_ce_auto_inst_{}.v'.format(args.device)))
+            get_auto_inst_filename(args.device)))
     print("Writing CE instantiation file to: {}".format(inst_file_path))
     open(inst_file_path, 'w').write(vfile)
 
@@ -444,13 +444,24 @@ def get_device_dir(device):
     return {
         'x300': 'x300',
         'x310': 'x300',
-        'e300': 'e31x',
-        'e31x': 'e31x',
+        'e310': 'e31x',
         'e320': 'e320',
         'n300': 'n3xx',
         'n310': 'n3xx',
         'n320': 'n3xx'
     }[device]
+
+def get_auto_inst_filename(device):
+    """
+    Return rfnoc_ce_auto_inst_xxxx.v filename for a given device
+    """
+    # Special case, correct e310 to e31x
+    if device == 'e310':
+        d = 'e31x'
+    else:
+        d = device
+
+    return 'rfnoc_ce_auto_inst_{}.v'.format(d)
 
 def dtarget(args):
     """
@@ -462,7 +473,7 @@ def dtarget(args):
     return {
         'x300': 'X300_RFNOC_HG',
         'x310': 'X310_RFNOC_HG',
-        'e31x': 'E310_SG3_RFNOC',
+        'e310': 'E310_SG3_RFNOC',
         'e320': 'E320_RFNOC_1G',
         'n300': 'N300_RFNOC_HG',
         'n310': 'N310_RFNOC_HG',
