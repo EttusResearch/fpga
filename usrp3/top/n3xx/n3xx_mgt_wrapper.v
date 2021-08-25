@@ -340,9 +340,8 @@ module n3xx_mgt_wrapper #(
 
   generate
     // Tie off the Ethernet switch for these protocols that do not use it.
-    if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled" || PROTOCOL == "WhiteRabbit") begin
-
-      //set unused wires to default value
+    if(PROTOCOL == "Aurora" || PROTOCOL == "Disabled") begin
+      // Set unused wires to default value
       assign xo_tdata       = 64'h0;
       assign xo_tuser       = 4'h0;
       assign xo_tlast       = 1'b0;
@@ -366,6 +365,26 @@ module n3xx_mgt_wrapper #(
       assign mgti_tlast     = v2e_tlast;
       assign mgti_tvalid    = v2e_tvalid;
       assign v2e_tready     = mgti_tready;
+ 
+    end else if(PROTOCOL == "WhiteRabbit") begin
+      // Set unused wires to default values
+      assign e2c_tdata      = 64'h0;
+      assign e2c_tkeep      = 8'h0;
+      assign e2c_tlast      = 1'b0;
+      assign e2c_tvalid     = 1'b0;
+      assign c2e_tready     = 1'b1;
+
+      assign reg_rd_resp_sw = 1'b0;
+      assign reg_rd_data_sw = 'h0;
+
+      assign e2v_tdata      = 64'b0;
+      assign e2v_tlast      =  1'b0;
+      assign e2v_tvalid     =  1'b0;
+
+      assign mgti_tdata     = 64'b0;
+      assign mgti_tlast     = 1'b0;
+      assign mgti_tvalid    = 1'b0;
+      assign v2e_tready     = 1'b1;
 
     end else begin
 
