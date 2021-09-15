@@ -259,7 +259,7 @@ module n3xx_mgt_channel_wrapper #(
   wire [LANES-1:0]      mod_pps_flat;
   wire [LANES-1:0]      mod_refclk_flat;
 
-  // NOTE: Connecting WR signals of first lane only
+  // NOTE: Connecting White Rabbit signals of first lane only
   assign mod_pps = mod_pps_flat[0];
   assign mod_refclk = mod_refclk_flat[0];
 
